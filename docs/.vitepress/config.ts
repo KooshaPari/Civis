@@ -8,6 +8,10 @@ export default defineConfig({
   ignoreDeadLinks: true,
   srcExclude: ['fragemented/**', 'context/**'],
 
+  markdown: {
+    config: (md) => md.set({ html: false })
+  },
+
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },

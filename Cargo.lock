@@ -109,20 +109,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-metrics"
-version = "0.1.0"
-
-[[package]]
-name = "civ-policy"
-version = "0.1.0"
-
-[[package]]
 name = "civ-server"
 version = "0.1.0"
 dependencies = [
  "civ-engine",
- "civ-metrics",
- "civ-policy",
 ]
 
 [[package]]

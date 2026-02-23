@@ -7,14 +7,23 @@
 //!
 //! - `engine` - Full ECS-based simulation with tick loop
 //! - `step` - Simple step function for basic simulation
+//! - `policy` - Policy/consumption calculations
+//! - `metrics` - Tyranny/legitimacy metrics
+//! - `io` - File I/O utilities
 
 pub mod engine;
+pub mod policy;
+pub mod metrics;
+pub mod io;
 
 pub use engine::{
     Simulation, SimulationSnapshot, WorldState,
     Position, Citizen, JobType, Building, BuildingType,
     Resources, Production, ResourceType, MilitaryUnit, UnitType,
 };
+
+pub use policy::{effective_consumption, PolicyInput};
+pub use metrics::{compute, Metrics};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

@@ -103,13 +103,10 @@ dependencies = [
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
+ "tempfile",
  "tracing",
  "tracing-subscriber",
 ]
-
-[[package]]
-name = "civ-io"
-version = "0.1.0"
 
 [[package]]
 name = "civ-metrics"

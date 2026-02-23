@@ -12,6 +12,8 @@ hero:
     - theme: alt
       text: Venture Specs
       link: /venture/
+
+> **Canonical Docs**: [CHANGELOG.md](./CHANGELOG.md) | [WORKLOG.md](./WORKLOG.md) | [PRD.md](./PRD.md)
 ---
 
 ## Documentation Entry Points

@@ -1,5 +1,39 @@
 import { defineConfig } from 'vitepress'
 
+// Supported locales: en, zh-CN, zh-TW, fa, fa-Latn
+const locales = {
+  root: {
+    label: "English",
+    lang: "en",
+    title: 'Civ + Venture Specs',
+    description: 'Planning closure, technical specs, and governance docs'
+  },
+  "zh-CN": {
+    label: "简体中文",
+    lang: "zh-CN",
+    title: 'Civ + 风险投资规范',
+    description: '规划终结、技术规范和治理文档'
+  },
+  "zh-TW": {
+    label: "繁體中文",
+    lang: "zh-TW",
+    title: 'Civ + 風險投資規範',
+    description: '規劃終結、技術規範和治理文檔'
+  },
+  fa: {
+    label: "فارسی",
+    lang: "fa",
+    title: 'مشخصات Civ + Venture',
+    description: 'بستن برنامه ریزی، مشخصات فنی و مستندات حکمرانی'
+  },
+  "fa-Latn": {
+    label: "Pinglish",
+    lang: "fa-Latn",
+    title: 'Civ + Venture Specs',
+    description: 'Planning closure, technical specs (Latin)'
+  }
+};
+
 export default defineConfig({
   title: 'Civ + Venture Specs',
   description: 'Planning closure, technical specs, and governance docs',
@@ -7,7 +41,7 @@ export default defineConfig({
   lastUpdated: true,
   ignoreDeadLinks: true,
   srcExclude: ['fragemented/**', 'context/**', 'specs/**', 'models/civ-sim/fragemented/**'],
-
+  locales,
   markdown: {
     config: (md) => md.set({ html: false })
   },
@@ -18,7 +52,17 @@ export default defineConfig({
       { text: 'Civ', link: '/civ/' },
       { text: 'Venture', link: '/venture/' },
       { text: 'Governance', link: '/governance/' },
-      { text: 'Traceability', link: '/traceability/' }
+      { text: 'Traceability', link: '/traceability/' },
+      {
+        text: "🌐 Language",
+        items: [
+          { text: "English", link: "/" },
+          { text: "简体中文", link: "/zh-CN/" },
+          { text: "繁體中文", link: "/zh-TW/" },
+          { text: "فارسی", link: "/fa/" },
+          { text: "Pinglish", link: "/fa-Latn/" }
+        ]
+      }
     ],
 
     sidebar: {

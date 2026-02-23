@@ -6,6 +6,7 @@ export default defineConfig({
   outDir: '../docs-dist',
   lastUpdated: true,
   ignoreDeadLinks: true,
+  srcExclude: ['fragemented/**', 'context/**'],
 
   themeConfig: {
     nav: [

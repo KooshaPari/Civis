@@ -1,28 +1,33 @@
-# CivLab (Scaffold)
+# civ
 
-CivLab is a deterministic socio-economic simulation scaffold centered on policy-driven world evolution.
+CIV is a deterministic simulation and policy-driven architecture workspace.
 
-## Workspace Layout
+## What This Repository Includes
 
-- `crates/engine`: deterministic tick/state core
-- `crates/policy`: policy interfaces and decision transforms
-- `crates/metrics`: measurable outputs (waste/surplus/tyranny/legitimacy)
-- `crates/io`: scenario/schema loading boundaries
-- `crates/server`: executable entrypoint and orchestration shell
-- `schemas/`: policy and scenario schemas
-- `scenarios/`: runnable scenario fixtures
-- `docs/`: specs, ADRs, governance, architecture
+- Core Rust workspace and crates
+- Governance and specification docs
+- VitePress documentation site
+- CI workflows for quality and docs/pages deployment
 
 ## Quick Start
 
-```bash
-cargo check
-cargo test
-cargo run -p civ-server
-```
+1. Install Rust toolchain and Node.js.
+2. Run `cargo test`.
+3. Run `task quality`.
+4. Build docs with `npm run docs:build`.
+
+## Documentation
+
+- Root specs: `PRD.md`, `ADR.md`, `FUNCTIONAL_REQUIREMENTS.md`, `PLAN.md`, `USER_JOURNEYS.md`
+- Reference trackers: `docs/reference/`
+- Guides and checklists: `docs/guides/`, `docs/checklists/`
+
+## CI/CD
+
+- `.github/workflows/quality.yml`
+- `.github/workflows/docs-site.yml`
+- `.github/workflows/pages.yml`
 
 ## Governance
 
-- Spec-first changes in `docs/specs/`
-- Deterministic quality gates before merge
-- Explicit assumptions/invariants linked to implementation changes
+This repo follows spec-first, deterministic, fail-loud practices.

@@ -6,7 +6,7 @@ export default defineConfig({
   outDir: '../docs-dist',
   lastUpdated: true,
   ignoreDeadLinks: true,
-  srcExclude: ['fragemented/**', 'context/**'],
+  srcExclude: ['fragemented/**', 'context/**', 'specs/**', 'models/civ-sim/fragemented/**'],
 
   markdown: {
     config: (md) => md.set({ html: false })

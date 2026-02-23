@@ -18,6 +18,7 @@ pub use engine::{
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::fmt;
 
 /// Fixed-point type: i64 with 18 decimal places of precision
 /// Stored as raw i64, divided by 10^18 for actual value
@@ -57,6 +58,12 @@ impl Fixed {
     
     pub fn clamp(self, min: Fixed, max: Fixed) -> Fixed {
         Fixed { raw: self.raw.clamp(min.raw, max.raw) }
+    }
+}
+
+impl fmt::Display for Fixed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_f64())
     }
 }
 

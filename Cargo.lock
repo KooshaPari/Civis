@@ -114,10 +114,16 @@ version = "0.1.0"
 [[package]]
 name = "civ-metrics"
 version = "0.1.0"
+dependencies = [
+ "civ-engine",
+]
 
 [[package]]
 name = "civ-policy"
 version = "0.1.0"
+dependencies = [
+ "civ-engine",
+]
 
 [[package]]
 name = "civ-server"

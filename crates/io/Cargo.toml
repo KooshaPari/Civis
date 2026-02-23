@@ -1,0 +1,6 @@
+[package]
+name = "civ-io"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

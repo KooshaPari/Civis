@@ -1,0 +1,9 @@
+[package]
+name = "civ-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+civ-engine = { path = "../engine" }
+civ-policy = { path = "../policy" }
+civ-metrics = { path = "../metrics" }

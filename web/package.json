@@ -1,0 +1,10 @@
+{
+  "name": "civ-web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo 'web scaffold ready'",
+    "build": "echo 'web build scaffold'",
+    "test": "echo 'web test scaffold'"
+  }
+}

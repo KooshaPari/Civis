@@ -1,0 +1,12 @@
+{
+  "name": "civ-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:build": "vitepress build docs",
+    "docs:dev": "vitepress dev docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.5.0"
+  }
+}

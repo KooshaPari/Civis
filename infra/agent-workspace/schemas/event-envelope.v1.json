@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civlab.local/schemas/event-envelope.v1.json",
+  "title": "EventEnvelopeV1",
+  "type": "object",
+  "required": ["event_id", "event_type", "trace_id", "created_at", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 8},
+    "event_type": {"type": "string"},
+    "trace_id": {"type": "string", "minLength": 8},
+    "workflow_id": {"type": "string"},
+    "task_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"}
+  },
+  "additionalProperties": false
+}

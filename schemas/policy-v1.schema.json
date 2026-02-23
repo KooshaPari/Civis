@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civlab.local/schemas/policy-v1.schema.json",
+  "title": "PolicyV1",
+  "type": "object",
+  "required": ["name", "base_consumption_joules", "scarcity_multiplier"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "base_consumption_joules": { "type": "number", "minimum": 0 },
+    "scarcity_multiplier": { "type": "number", "minimum": 0 }
+  },
+  "additionalProperties": false
+}

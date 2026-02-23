@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "coverage": {
+    "min": 80,
+    "branch": true,
+    "fail_under": 80
+  },
+  "complexity": {
+    "max_cyclomatic": 12,
+    "max_cognitive": 20,
+    "max_function_lines": 60,
+    "max_duplication_pct": 8,
+    "ratchet_enabled": true,
+    "baseline_file": ".complexity-baseline.json"
+  },
+  "traceability": {
+    "require_fr_tags": true,
+    "orphan_check": true,
+    "tag_patterns": [
+      "@trace CIV-[A-Z]+-[0-9]+",
+      "CIV-[A-Z]+-[0-9]+"
+    ]
+  },
+  "stacks": {
+    "rust": {
+      "lint": "cargo clippy --workspace --all-targets -- -D warnings",
+      "test": "cargo test",
+      "format": "cargo fmt --check"
+    },
+    "markdown": {
+      "lint": "markdownlint-cli2"
+    }
+  }
+}

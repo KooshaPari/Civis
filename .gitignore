@@ -1,0 +1,12 @@
+/target
+/node_modules
+/.task
+.DS_Store
+.env
+*.log
+
+/docs/node_modules
+/docs-dist
+/docs/.vitepress/dist
+
+.codex/

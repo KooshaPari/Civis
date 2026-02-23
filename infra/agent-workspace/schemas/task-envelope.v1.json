@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civlab.local/schemas/task-envelope.v1.json",
+  "title": "TaskEnvelopeV1",
+  "type": "object",
+  "required": ["task_id", "workflow_id", "task_type", "agent_role", "input", "created_at"],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 8},
+    "workflow_id": {"type": "string", "minLength": 8},
+    "task_type": {"type": "string"},
+    "agent_role": {"type": "string"},
+    "input": {"type": "object"},
+    "max_retries": {"type": "integer", "minimum": 0, "maximum": 10},
+    "budget_eau": {"type": "number", "minimum": 0},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

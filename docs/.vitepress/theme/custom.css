@@ -1,0 +1,22 @@
+:root {
+  --vp-c-brand-1: #126e82;
+  --vp-c-brand-2: #1d8ca3;
+  --vp-c-brand-3: #0f5b6b;
+}
+
+.callout {
+  border-left: 4px solid var(--vp-c-brand-1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 14px 0;
+  background: var(--vp-c-bg-soft);
+}
+
+.callout .title {
+  margin: 0 0 6px 0;
+  font-weight: 600;
+}
+
+.callout.warning { border-left-color: #b7791f; }
+.callout.danger { border-left-color: #c53030; }
+.callout.note { border-left-color: #4a5568; }

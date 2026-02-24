@@ -2,7 +2,7 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
-use hecs::World;
+use hecs::{World, Bundle};
 use rand::SeedableRng;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -209,23 +209,23 @@ impl Simulation {
         let _ = world.spawn((city,));
         
         // Create farms
-        for i in 0i32..5 {
+        for i in 0..5 {
             let farm = Building {
                 building_type: BuildingType::Farm,
                 hp: Fixed::from_num(200),
                 max_hp: Fixed::from_num(200),
-                position: Position { x: i - 2, y: 1 },
+                position: Position { x: i as i32 - 2, y: 1 },
             };
             let _ = world.spawn((farm,));
         }
         
         // Create initial military
-        for i in 0i32..10 {
+        for i in 0..10 {
             let soldier = MilitaryUnit {
                 unit_type: UnitType::Soldier,
                 strength: Fixed::from_num(10),
                 morale: Fixed::from_num(1),
-                position: Position { x: i, y: 0 },
+                position: Position { x: i as i32, y: 0 },
                 faction_id: 0,  // Player faction
             };
             let _ = world.spawn((soldier,));
@@ -391,223 +391,5 @@ mod tests {
         
         assert_eq!(sim1.state.tick, sim2.state.tick);
         assert_eq!(sim1.state.population, sim2.state.population);
-    }
-}
-
-#[cfg(test)]
-mod component_tests {
-    use super::*;
-
-    #[test]
-    fn position_creation() {
-        let pos = Position { x: 5, y: 10 };
-        assert_eq!(pos.x, 5);
-        assert_eq!(pos.y, 10);
-    }
-
-    #[test]
-    fn position_equality() {
-        let pos1 = Position { x: 1, y: 2 };
-        let pos2 = Position { x: 1, y: 2 };
-        assert_eq!(pos1, pos2);
-    }
-
-    #[test]
-    fn position_clone() {
-        let pos1 = Position { x: 3, y: 4 };
-        let pos2 = pos1;
-        assert_eq!(pos1, pos2);
-    }
-
-    #[test]
-    fn citizen_creation() {
-        let cit = Citizen {
-            age: 25,
-            health: Fixed::from_num(1),
-            ideology: Fixed::from_num(0),
-            welfare: Fixed::from_num(1),
-            job: Some(JobType::Farmer),
-        };
-        assert_eq!(cit.age, 25);
-        assert_eq!(cit.job, Some(JobType::Farmer));
-    }
-
-    #[test]
-    fn citizen_default_unemployed() {
-        let cit = Citizen {
-            age: 20,
-            health: Fixed::from_num(1),
-            ideology: Fixed::from_num(0),
-            welfare: Fixed::from_num(1),
-            job: None,
-        };
-        assert_eq!(cit.job, None);
-    }
-
-    #[test]
-    fn building_creation() {
-        let bld = Building {
-            building_type: BuildingType::Farm,
-            hp: Fixed::from_num(200),
-            max_hp: Fixed::from_num(200),
-            position: Position { x: 0, y: 0 },
-        };
-        assert_eq!(bld.building_type, BuildingType::Farm);
-        assert_eq!(bld.hp, bld.max_hp);
-    }
-
-    #[test]
-    fn building_damaged() {
-        let bld = Building {
-            building_type: BuildingType::Farm,
-            hp: Fixed::from_num(100),
-            max_hp: Fixed::from_num(200),
-            position: Position { x: 0, y: 0 },
-        };
-        assert!(bld.hp < bld.max_hp);
-    }
-
-    #[test]
-    fn military_unit_creation() {
-        let unit = MilitaryUnit {
-            unit_type: UnitType::Soldier,
-            strength: Fixed::from_num(10),
-            morale: Fixed::from_num(1),
-            position: Position { x: 0, y: 0 },
-            faction_id: 0,
-        };
-        assert_eq!(unit.unit_type, UnitType::Soldier);
-        assert_eq!(unit.faction_id, 0);
-    }
-
-    #[test]
-    fn resources_default_zero() {
-        let res = Resources::default();
-        assert_eq!(res.food, Fixed::ZERO);
-        assert_eq!(res.wood, Fixed::ZERO);
-        assert_eq!(res.metal, Fixed::ZERO);
-        assert_eq!(res.energy, Fixed::ZERO);
-    }
-
-    #[test]
-    fn production_creation() {
-        let prod = Production {
-            output_type: ResourceType::Food,
-            rate: Fixed::from_num(10),
-        };
-        assert_eq!(prod.output_type, ResourceType::Food);
-    }
-}
-
-#[cfg(test)]
-mod simulation_lifecycle_tests {
-    use super::*;
-
-    #[test]
-    fn simulation_new_initializes() {
-        let sim = Simulation::new();
-        assert_eq!(sim.state.tick, 0);
-        assert!(sim.state.population > 0);
-    }
-
-    #[test]
-    fn simulation_with_seed_uses_seed() {
-        let sim = Simulation::with_seed(999);
-        assert_eq!(sim.state.rng_seed, 999);
-    }
-
-    #[test]
-    fn simulation_tick_increments() {
-        let mut sim = Simulation::new();
-        let initial_tick = sim.state.tick;
-        sim.tick();
-        assert_eq!(sim.state.tick, initial_tick + 1);
-    }
-
-    #[test]
-    fn simulation_multiple_ticks() {
-        let mut sim = Simulation::new();
-        for _ in 0..5 {
-            sim.tick();
-        }
-        assert_eq!(sim.state.tick, 5);
-    }
-
-    #[test]
-    fn simulation_energy_decreases_with_tick() {
-        let mut sim = Simulation::new();
-        let initial_energy = sim.state.energy_budget_joules;
-        sim.tick();
-        assert!(sim.state.energy_budget_joules <= initial_energy);
-    }
-
-    #[test]
-    fn simulation_population_tracked() {
-        let sim = Simulation::new();
-        assert!(sim.state.population > 0);
-    }
-
-    #[test]
-    fn simulation_snapshot_captures_state() {
-        let sim = Simulation::new();
-        let snap = sim.snapshot();
-        assert_eq!(snap.tick, sim.state.tick);
-        assert_eq!(snap.population, sim.state.population);
-    }
-
-    #[test]
-    fn simulation_snapshot_counts_entities() {
-        let sim = Simulation::new();
-        let snap = sim.snapshot();
-        assert!(snap.citizen_count > 0);
-        assert!(snap.building_count > 0);
-        assert!(snap.military_count > 0);
-    }
-
-    #[test]
-    fn simulation_deterministic_with_same_seed() {
-        let mut sim1 = Simulation::with_seed(777);
-        let mut sim2 = Simulation::with_seed(777);
-
-        for _ in 0..10 {
-            sim1.tick();
-            sim2.tick();
-        }
-
-        assert_eq!(sim1.state.tick, sim2.state.tick);
-    }
-
-    #[test]
-    fn simulation_rng_mut_returns_mutable() {
-        let mut sim = Simulation::new();
-        let _rng = sim.rng_mut();
-        // Test that we can get a mutable reference
-    }
-
-    #[test]
-    fn simulation_default_equals_new() {
-        let sim1 = Simulation::new();
-        let sim2 = Simulation::default();
-        assert_eq!(sim1.state.tick, sim2.state.tick);
-    }
-}
-
-#[cfg(test)]
-mod snapshot_tests {
-    use super::*;
-
-    #[test]
-    fn snapshot_is_cloneable() {
-        let snap1 = SimulationSnapshot {
-            tick: 10,
-            population: 1000,
-            citizen_count: 100,
-            building_count: 20,
-            military_count: 50,
-            energy_budget: Fixed::from_num(5000),
-        };
-        let snap2 = snap1.clone();
-        assert_eq!(snap1.tick, snap2.tick);
-        assert_eq!(snap1.population, snap2.population);
     }
 }

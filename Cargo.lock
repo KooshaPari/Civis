@@ -103,29 +103,9 @@ dependencies = [
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
+ "tempfile",
  "tracing",
  "tracing-subscriber",
-]
-
-[[package]]
-name = "civ-io"
-version = "0.1.0"
-dependencies = [
- "tempfile",
-]
-
-[[package]]
-name = "civ-metrics"
-version = "0.1.0"
-dependencies = [
- "civ-engine",
-]
-
-[[package]]
-name = "civ-policy"
-version = "0.1.0"
-dependencies = [
- "civ-engine",
 ]
 
 [[package]]
@@ -133,8 +113,6 @@ name = "civ-server"
 version = "0.1.0"
 dependencies = [
  "civ-engine",
- "civ-metrics",
- "civ-policy",
 ]
 
 [[package]]

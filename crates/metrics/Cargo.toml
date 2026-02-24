@@ -1,7 +1,0 @@
-[package]
-name = "civ-metrics"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-civ-engine = { path = "../engine" }

@@ -1,7 +1,0 @@
-[package]
-name = "civ-policy"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-civ-engine = { path = "../engine" }

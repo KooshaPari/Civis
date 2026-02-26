@@ -10,3 +10,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["CivLab"]
 license = "MIT"
+
+[workspace.dependencies]
+pheno-core = { path = "../phenotype-config/pheno-core" }
+pheno-db = { path = "../phenotype-config/pheno-db" }

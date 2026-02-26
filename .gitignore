@@ -10,3 +10,8 @@
 /docs/.vitepress/dist
 
 .codex/
+
+# Phenotype Config
+.phenotype/
+config.db
+*.key

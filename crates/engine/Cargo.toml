@@ -21,6 +21,8 @@ tracing-subscriber = "0.3"
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
+pheno-core = { workspace = true }
+pheno-db = { workspace = true }
 
 [dev-dependencies]
 proptest = "1.4"

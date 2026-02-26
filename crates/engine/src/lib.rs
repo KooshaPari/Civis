@@ -12,6 +12,7 @@
 //! - `io` - File I/O utilities
 
 pub mod engine;
+pub mod phenotype_init;
 pub mod policy;
 pub mod metrics;
 pub mod io;

@@ -171,3 +171,10 @@ Run validation with: `bash scripts/validate-docs.sh`
 **Last updated**: 2026-02-20  
 **Total documents**: 237  
 **Last validation**: See `scripts/validate-docs.sh`
+
+
+## Governance
+
+- [Stacked PRs and Release Channels](./context/governance/STACKED_PRS_AND_RELEASE_CHANNELS.md)
+- [Stacked PR Bookset](./context/governance/bookset/README.md)
+- [Git-Backed Documentation](./context/governance/git-backed-documentation/README.md)

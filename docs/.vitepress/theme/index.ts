@@ -1,11 +1,9 @@
 import DefaultTheme from 'vitepress/theme'
-import type { Theme } from 'vitepress'
-import './custom.css'
-import Callout from './components/Callout.vue'
+import CategorySwitcher from '../components/CategorySwitcher.vue'
 
 export default {
-  extends: DefaultTheme,
+  ...DefaultTheme,
   enhanceApp({ app }) {
-    app.component('Callout', Callout)
+    app.component('CategorySwitcher', CategorySwitcher)
   }
-} satisfies Theme
+}

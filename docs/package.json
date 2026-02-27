@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "docs:index": "bash scripts/generate-doc-index.sh",
     "dev": "bunx vitepress dev",
     "build": "bunx vitepress build",
     "preview": "bunx vitepress preview"

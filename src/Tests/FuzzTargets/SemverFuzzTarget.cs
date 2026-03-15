@@ -24,7 +24,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// Core fuzz action: treat arbitrary bytes as a version string candidate,
         /// then check it against a set of known range patterns.
         /// </summary>
-        public static void FuzzAction(ReadOnlySpan<byte> data)
+        internal static void FuzzAction(ReadOnlySpan<byte> data)
         {
             try
             {
@@ -51,7 +51,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz LibFuzzer entry point.
         /// </summary>
-        public static void RunLibFuzzer(string[] args)
+        internal static void RunLibFuzzer(string[] args)
         {
             Fuzzer.LibFuzzer.Run(FuzzAction);
         }
@@ -59,7 +59,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz out-of-process entry point for AFL++.
         /// </summary>
-        public static void RunAfl(string[] args)
+        internal static void RunAfl(string[] args)
         {
             Fuzzer.OutOfProcess.Run(stream =>
             {

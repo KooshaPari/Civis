@@ -21,7 +21,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// Core fuzz action: treat arbitrary bytes as pack.yaml content and attempt
         /// full PackManifest deserialization, then touch every property.
         /// </summary>
-        public static void FuzzAction(ReadOnlySpan<byte> data)
+        internal static void FuzzAction(ReadOnlySpan<byte> data)
         {
             try
             {
@@ -62,7 +62,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz LibFuzzer entry point.
         /// </summary>
-        public static void RunLibFuzzer(string[] args)
+        internal static void RunLibFuzzer(string[] args)
         {
             Fuzzer.LibFuzzer.Run(FuzzAction);
         }
@@ -70,7 +70,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz out-of-process entry point for AFL++.
         /// </summary>
-        public static void RunAfl(string[] args)
+        internal static void RunAfl(string[] args)
         {
             Fuzzer.OutOfProcess.Run(stream =>
             {

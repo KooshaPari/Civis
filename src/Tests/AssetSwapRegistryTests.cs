@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using DINOForge.SDK.Assets;
 using FluentAssertions;
@@ -164,25 +163,20 @@ namespace DINOForge.Tests
             // Arrange — 10 threads, each registers 10 unique addresses = 100 total
             const int threadCount = 10;
             const int itemsPerThread = 10;
-
-            // Use unique prefix so other concurrent tests don't collide with our addresses
-            string prefix = $"concurrent-test/{System.Guid.NewGuid():N}";
+            int countBefore = AssetSwapRegistry.Count;
 
             // Act
             Parallel.For(0, threadCount, threadIndex =>
             {
                 for (int j = 0; j < itemsPerThread; j++)
                 {
-                    string address = $"{prefix}/thread{threadIndex}/item{j}.prefab";
+                    string address = $"addr/thread{threadIndex}/item{j}.prefab";
                     AssetSwapRegistry.Register(new AssetSwapRequest(address, "/mod.bundle", $"Asset_{threadIndex}_{j}"));
                 }
             });
 
-            // Assert — verify all 100 unique addresses from this test are registered
-            // (use address-based check to tolerate other parallel test classes adding items)
-            IReadOnlyList<AssetSwapRequest> allPending = AssetSwapRegistry.GetPending();
-            System.Collections.Generic.IEnumerable<AssetSwapRequest> ourItems = allPending.Where(r => r.AssetAddress.StartsWith(prefix));
-            ourItems.Should().HaveCount(threadCount * itemsPerThread);
+            // Assert — all 100 unique registrations must be present (other tests may also have items)
+            AssetSwapRegistry.Count.Should().Be(countBefore + threadCount * itemsPerThread);
         }
     }
 }

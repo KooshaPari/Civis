@@ -6,15 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Added
-
-- **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
-- **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
-
-### Fixed
-
-- **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false
-- **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
 
 ### Changed
 
@@ -23,16 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Desktop Companion startup crash** — `Icon="Code"` is not a valid WinUI 3 Symbol enum value; changed to `Icon="Repair"`; added `Program.cs` with `DISABLE_XAML_GENERATED_MAIN` proper WinUI 3 unpackaged entry point; removed `BoolToVisibilityConverter` from bool-typed `IsOpen`/`IsEnabled` bindings causing `InvalidCastException`
-- **Desktop Companion double Settings button** — `NavigationView` auto-inserts a built-in Settings footer item; set `IsSettingsVisible="False"` so only our custom footer item appears
-- **Desktop Companion Settings crash on save** — `BoolToVisibilityConverter` was bound to `IsEnabled` (a `bool` target) on the Save button, causing `InvalidCastException`; replaced with `IsNotSaving` computed property (mirrors `IsLoading`/`IsNotLoading` pattern on DashboardViewModel)
-- **Desktop Companion page crash on open** — all four page code-behinds used `ConfigureAwait(false)` in `OnNavigatedTo`; ViewModel property-change notifications fired off the UI thread crashing WinUI 3; changed to `ConfigureAwait(true)`
-- **Desktop Companion Pack List crash** — `BoolToVisibilityConverter` bound to `ErrorCount` (`int`) in `PackListPage.xaml`; WinUI 3 `x:Bind` cannot cast `int` to `bool` for a converter expecting `bool`; added `HasErrors` computed bool property to `PackViewModel` and bound the error badge `Visibility` to that instead
-- **Desktop Companion Pack List crash (INotifyPropertyChanged)** — `PackViewModel` did not implement `INotifyPropertyChanged`; WinUI 3 `x:Bind OneWay` in DataTemplates can throw when the data context doesn't support property change notification; `PackViewModel` now extends `ObservableObject` with `[ObservableProperty]` on `Enabled`; `int` fields (`ErrorCount`, `LoadOrder`) bound to TextBlock.Text via explicit string properties (`ErrorCountText`, `LoadOrderText`) to avoid x:Bind type coercion issues; `ToggleSwitch.IsOn` changed to `TwoWay` binding; toggle changes auto-persist via `PropertyChanged` subscription in the ViewModel
-- **Desktop Companion MainWindow.xaml** — background linter repeatedly replaces NavigationView with a `<TextBlock>` placeholder, removing `<Frame x:Name="ContentFrame"/>` and causing CS0103; restored full NavigationView with MicaBackdrop, IsSettingsVisible=False, and Frame
-- **Release workflow checkout** — `workflow_dispatch` retro-builds now checkout `main` instead of the old tag ref; old tag code doesn't compile against current SDK/workflows; `inputs.tag` is used only for release name/version/upload target
-- **CI + Release workflow build order** — added explicit ordered pre-build of SDK/Bridge/Domains/Installer in both `ci.yml` and `release.yml`; prevents CS0006 "metadata file not found" when Tests compiles before its dependencies on net11.0
-- **CompatibilityChecker tests** — updated framework version ranges to `>=99.0.0` for incompatibility tests; `AllVersionsCompatible` updated from `>=0.1.0 <1.0.0` to `>=0.1.0`
-- **AssetSwapRegistry concurrent tests** — use Guid-prefixed addresses + `Where(prefix)` filter to isolate test assertions from other parallel test classes sharing the static registry; eliminates flaky count mismatches
+- **Release workflow build order** — explicit ordered pre-build of SDK/Bridge/Domains/Installer before CI solution build; prevents CS0006 "metadata file not found" when Tests compiles before its dependencies
+- **CompatibilityChecker tests** — updated framework version ranges to `>=99.0.0` for incompatibility tests (MinVer now sets SDK version from git tags, so old `>=1.0.0` is satisfied); `AllVersionsCompatible` updated from `>=0.1.0 <1.0.0` to `>=0.1.0`
+- **AssetSwapRegistry concurrent test** — capture `countBefore` to handle pre-existing items from other parallel tests
+
 - **CI .NET version** — all workflows now install .NET 8 + 9 + 10 to match `global.json` SDK 10.0.201; restores global.json to 10.0.201 (latestMajor) which was reverted incorrectly in prior commits
 
 ### Added
@@ -45,6 +30,197 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **VFXIntegrationTests** — refactored from runtime-instantiation to source-inspection contracts; tests now compile without Unity runtime dependency
 - **Star Wars vanilla bundles** — removed 42 primitive placeholder AssetBundles; units now fall back to vanilla DINO visuals until real assets are imported
+
+## [0.11.0] - 2026-03-15
+
+### Fixed
+
+- **Release workflow `workflow_dispatch`** — added manual trigger with `tag` input for retroactive artifact builds; checkout & version extraction use input tag when dispatched manually
+- **Release workflow .NET version** — installed only .NET 8 but PackCompiler targets net9.0; all releases since v0.7.1 failed before producing any artifacts; now installs both 8.0.x and 9.0.x
+- **Required-artifact gate in release workflow** — new verification step before GitHub Release publish; fails with named list of missing files if any of the 6 required artifacts (Installer EXE, SHA256, Windows ZIP, SDK NuGet, Templates NuGet, SHA256SUMS.txt) are absent
+- **PackCompiler CS1591 warnings** — suppressed missing XML doc warnings (internal tool, not a public library API)
+- **AssetValidationService / PrefabGenerationService CS8602/CS8604** — null-forgiving on LOD0/1/2 after validated non-null; compiler could not track through early-return guard
+- **CompanionTests double-compilation** — excluded `CompanionTests\` from main Tests project (has own `.csproj`, was accidentally globbed in causing CS0246 on missing Moq)
+
+### Added
+
+- **`scripts/install-companion.ps1`** — `irm .../install-companion.ps1 | iex`; auto-fetches latest release, installs WindowsAppRuntime if needed, SHA256 verification, desktop shortcut
+- **`scripts/install-companion.sh`** — `curl -fsSL .../install-companion.sh | bash` (WSL)
+- **Release workflow** — Desktop Companion zip + sha256 added as release artifacts (`DINOForge.Companion-vX.Y.Z-win-x64.zip`)
+- **`WORKLOG.md`** — unified active work item log (WI-001 through WI-006)
+- **`docs/WBS.md`** — full work breakdown structure covering M8-M11 (79 tasks)
+- **`docs/adr/ADR-011-desktop-companion.md`** — WinUI 3 / WindowsAppSDK companion app decision record
+- **`docs/adr/ADR-012-fuzzing-strategy.md`** — FsCheck + SharpFuzz fuzzing strategy decision record
+- **`docs/roadmap/index.md`** — M9 (Desktop Companion), M10 (Fuzzing), M11 (Coverage + Code Completion) milestones added
+- **`docs/product-requirements-document.md`** v0.6.0 — Desktop Companion, fuzzing, and code completion requirements (user/tech/biz)
+
+- `SyncCommand` CLI command for content synchronization
+- `packs/warfare-aerial/` — new aerial warfare pack with airfield buildings and aerial unit doctrines
+- `packs/warfare-aerial/stats/aerial_buffs.yaml` — stat overrides for aerial units
+- `packs/warfare-starwars/stats/starwars_buffs.yaml` — stat overrides for Star Wars units
+
+### Changed
+
+- Archived 6 inactive placeholder packs to `packs/_archived/` (economy-balanced, example-balance, scenario-tutorial, warfare-airforce, warfare-guerrilla, warfare-modern)
+- Synced all `packages.lock.json` files across projects
+- Added `stats` load sections to `packs/warfare-aerial/pack.yaml` and `packs/warfare-starwars/pack.yaml`
+
+- `AssetSwapRequest.VanillaMapping` — optional field passed from `UnitDefinition.VanillaMapping` so `AssetSwapSystem` can narrow entity targeting to the correct ECS archetype during live RenderMesh swap
+- `AssetSwapSystem` improvements — expanded entity query and swap logic using `VanillaMapping` for precision targeting
+- `ModPlatform` status message now surfaces first error detail for faster in-game debugging
+- `Plugin.cs` wires `HudIndicator` to receive pack counts on every load/reload via `OnHudCountsChanged`
+
+## [0.10.0] - 2026-03-14
+
+### Security
+
+- **SixLabors.ImageSharp 3.0.2 → 3.1.11** — patches 7 CVEs in PackCompiler: 3 high severity (OOB write CVE-2024-41132, Use After Free CVE-2024-41133, CVE-2024-41134) and 4 medium severity (memory allocation, data leakage, infinite loop issues); supersedes Dependabot PR #24
+
+### Added
+
+- **LOD Calculation Tests** (`LODCalculationTests.cs`) — polycount targets, LOD ratios, and screen threshold math
+- **VFX Pool Logic Tests** (`VFXPoolLogicTests.cs`) — pool lifecycle, faction coloring, and impact positioning (215 tests)
+- **Phase 3A/3B LOD test expansions** — raw GLB path reference assertions and distinct asset path per-unit checks
+- **MCP server `cwd` config** — `src/Tools/DinoforgeMcp` CWD set so `python -m dinoforge_mcp.server` resolves correctly
+
+### Fixed
+
+- **UI panel alpha flicker** — `DebugPanel.Show()` and `ModMenuPanel.Show()` set `_animT = 1f` so `AnimatePanel()` doesn't reset alpha to ~0 on the next frame
+- **`example-balance` pack ID** — `pack.yaml` `id:` aligned with directory name; fixed `ContentLoaderIntegrationTests` failures
+- **`RegisterItems<T>` deserialization** — narrowed `catch {}` scope to list-parse only; registration failures no longer swallowed silently
+- **Integration test resilience** — `PackLoadingTests` and `StatTests` skip gracefully when game is unavailable
+
+### Added
+
+- **LOD Calculation Tests** — `LODCalculationTests.cs` covering polycount targets, LOD ratios, and screen threshold math
+- **VFX Pool Logic Tests** — `VFXPoolLogicTests.cs` covering pool lifecycle, faction coloring, and impact positioning
+- **Phase 3A/3B LOD test expansions** — additional assertions for raw GLB path references and distinct asset paths per unit
+- **Integration test resilience** — `PackLoadingTests` and `StatTests` now skip gracefully when game is unavailable
+
+### Changed
+
+- Lock files synced across all 17 projects (CRLF normalization + dependency updates)
+- `ThemeColorPalette` refactored to resolve naming conflicts; minor fixes in `CompatibilityChecker`, `PackManifest`, `Registry`, `BalanceCalculator`, `PackCompiler`, and `DumpTools`
+- Runtime UI whitespace formatting applied to `DebugPanel.cs` and `ModMenuPanel.cs`
+- Unity AssetBundles and prefab GUIDs synchronized after Unity project rebuild
+
+## [0.9.1] - 2026-03-14
+
+### Added
+
+- **Unity AssetBundles** — 75 colored primitive placeholder bundles (StandaloneWindows64) for all 50 warfare-starwars visual_asset keys; Republic units are white+blue, CIS units are grey, special units (Jedi Knight, General Grievous) have distinct colors
+- **unity-assetbundle-builder project** — headless Unity 2021.3.45f1 editor project with `BuildAll.Run` for reproducible bundle generation; keys match YAML `visual_asset` fields exactly so `ContentLoader.RegisterAssetSwaps()` auto-wires them on `LoadPack()`
+- **Phase 7 AssetBundle coverage** — all 14 `Phase7VisualAssetIntegrationTests` pass; 941 total unit tests, 0 failing
+
+## [0.9.0] - 2026-03-13
+
+### Added
+
+- **AssetSwapRegistry** — unified asset swapping system wired into ContentLoader after unit/building registration
+- **Bridge Client + UI diagnostics** — integrated bridge communication layer with in-game diagnostic overlays
+- **PackStatInjector** — wire pack unit stats to vanilla ECS entities via `vanilla_mapping` configuration
+- **Comprehensive VitePress documentation expansion** — complete site depth with architecture guides, asset pipeline workflows, and integration documentation
+- **File organization** — systematic kebab-case renaming of documentation files and archive materials for improved navigation
+
+### Fixed
+
+- **YAML deserialization forward-compatibility** — YamlDotNet deserializer now ignores unmatched properties, allowing optional fields in YAML definitions without breaking load
+- Multiple CI and integration test resolutions
+- Code formatting and linting standardizations across bridge and test suites
+- Registry_StarWarsPack_LoadsAndUnitsHaveVisualAsset test failure due to extra weapon fields
+
+### Changed
+
+- Documentation file structure reorganized to kebab-case conventions for consistency
+- SDK services staged and consolidated for v0.9+ integration work
+
+### Tests
+
+- All integration tests passing; BridgeRoundTripTests added for bridge smoke testing
+## [0.8.0] - 2026-03-13
+
+### Added
+
+- `warfare-airforce` content pack — 8 aerial units (4 Western Coalition + 4 Eastern Bloc: fighter jets, attack helicopters, strategic bombers, drones), 3 shared airbase buildings (airstrip, radar tower, AA battery), 8 weapons, 2 aerial doctrines, and 2 wave templates; depends on `warfare-modern`
+- Aviation content clarification: Star Wars aerial units (V-19 Torrent Starfighter, Tri-Fighter) confirmed embedded in `warfare-starwars` under `vanilla_mapping: aerial_fighter`; `warfare-airforce` provides the modern-era equivalent
+- Pack header comments added to `warfare-starwars/pack.yaml` documenting aerial unit locations
+- `BridgeRoundTripTests` — end-to-end bridge smoke test (499 lines, integration tests project)
+
+### Fixed
+
+- Bridge resource query returning 0 — corrected component path and entity filter
+- `VFXIntegrationTests` nullable reference warnings (CS8602/CS8603) — added `!` null-forgiving operators on `_poolManager` usages
+- CI: `ResourceReaderTests.cs` formatting standardised to pass pre-commit hooks
+- CI: CodeQL build now runs `restore` before build step; `gh-pages` deploy has `contents:write` permission
+- CI: CodeQL build now passes `/p:BuildProjectReferences=true` to fix domain DLL ordering
+
+### Tests
+
+- 916 unit tests passing
+
+## [0.7.1] - 2026-03-14
+
+### Added
+
+- `UnitDefinition.VisualAsset` (`visual_asset:` YAML alias) — Addressables key for 3D prefab, deserialized from unit YAML and stored in registry
+- `BuildingDefinition.VisualAsset` (`visual_asset:` YAML alias) — same for buildings
+- `Phase7VisualAssetIntegrationTests` — 14 tests validating the full YAML → ContentLoader → Registry → Addressables key resolution chain for all 28 units and 22 buildings
+
+### Tests
+
+- 916 tests passing (14 new Phase 7 integration tests)
+
+## [0.7.0] - 2026-03-13
+
+### Added
+
+- **Aviation system — faction-aware targeting**: `AerialTargetingSystem` now queries only `Components.Enemy`-tagged entities; aerial units no longer attack friendly units
+- **Aviation system — anti-air building wiring**: `AerialBuildingMapper` attaches `AntiAirComponent` to buildings with `defense_tags: [AntiAir]` at startup sweep via `AerialSpawnSystem`
+- `BuildingDefinition` extended with `DefenseTags` (`List<string>`) and `AntiAir` (`BuildingAntiAirProperties`) for YAML deserialization
+- `AerialSpawnSystem.Initialize(RegistryManager)` called from `ModPlatform.LoadPacks()` to wire building registry
+- **Phase 5 building expansion**: 12 new buildings (6 Republic + 6 CIS) with `visual_asset` keys, prefabs, and `v1_1_0_buildings_expansion` pipeline section
+- **Phase 5 unit pipeline section**: `v1_2_0_units_phase5` with 8 units (rep_jedi_knight, rep_clone_commando, rep_clone_sniper, rep_clone_wall_guard, cis_b1_squad, cis_medical_droid, cis_magnaguard, cis_tri_fighter)
+- `AviationStarWarsTests.cs` — 24 tests: aerial unit YAML config, anti-air building config, faction aerial counts, asset pipeline section validation
+- `warfare-modern` content pack: 24 units, 20 buildings, 9 weapons, 4 doctrines, 10 waves (Western Coalition vs Eastern Bloc)
+- Sketchfab sourcing manifests for all 12 Phase 5 expansion buildings
+- VitePress docs sidebar reorganized into 8 sections; all 37 docs linked
+
+### Fixed
+
+- Star Wars manifest updated to canonical unit/building IDs (`rep_clone_trooper`, `cis_b1_droid`, etc.); aerial and anti-air units wired into faction lists
+- Legacy `clone-trooper.yaml` removed (superseded by `republic_units.yaml`)
+- All pending packages.lock.json files committed (fixes CI `--locked-mode` restore failure)
+
+### Tests
+
+- 903 unit tests passing (24 new aviation+SW tests)
+
+## [0.6.0] - 2026-03-13
+
+### Added
+
+- Star Wars Clone Wars content pack (`warfare-starwars`) — 28 units (Republic + CIS factions) and 22 buildings with full YAML definitions
+- Full asset pipeline end-to-end: import → validate → optimize → generate → build, driven by `asset_pipeline.yaml`
+- 38+ Addressables catalog entries (buildings + units) each with 3-level LOD (100% / 60% / 30% polycount)
+- Phase 3A/3B/4 LOD configuration and validation tests — 38 new tests (845 → 903 total passing)
+- `visual_asset` Addressables key injected for all 28 Star Wars units and 22 buildings via YAML definition update (Phase 5)
+- 28 unit prefab files generated for Republic and CIS factions
+- `AssetConfig` computed path properties: `ImportedPath`, `OptimizedPath`, `PrefabsPath`
+- `warfare-guerrilla` asymmetric warfare content pack (Guerrilla faction)
+- 19 Star Wars assets normalized and stylized via Blender 4.5 LTS headless pipeline (3-level LOD decimation, faction palette application)
+- 100% unit and building visual asset coverage for Star Wars pack
+
+### Fixed
+
+- Asset pipeline `asset_pipeline.yaml` section ordering so Phase 4 building tests pass correctly
+- Duplicate `visual_asset` fields removed from republic_units.yaml and cis_units.yaml (de-duplication pass)
+- Phase 4 building test counts relaxed to `BeGreaterThanOrEqualTo` to accommodate expanded building roster (22 buildings)
+
+### Tests
+
+- 903 unit tests passing (up from ~845)
+
+## [Unreleased]
 
 ### Added
 
@@ -451,196 +627,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated warfare pack entries (modern, starwars, guerrilla) to flag M9 dependency
 - Documentation updated to clarify M9+ requirements for total conversion packs
 
-## [0.11.0] - 2026-03-15
-
-### Fixed
-
-- **Release workflow `workflow_dispatch`** — added manual trigger with `tag` input for retroactive artifact builds; checkout & version extraction use input tag when dispatched manually
-- **Release workflow .NET version** — installed only .NET 8 but PackCompiler targets net9.0; all releases since v0.7.1 failed before producing any artifacts; now installs both 8.0.x and 9.0.x
-- **Required-artifact gate in release workflow** — new verification step before GitHub Release publish; fails with named list of missing files if any of the 6 required artifacts (Installer EXE, SHA256, Windows ZIP, SDK NuGet, Templates NuGet, SHA256SUMS.txt) are absent
-- **PackCompiler CS1591 warnings** — suppressed missing XML doc warnings (internal tool, not a public library API)
-- **AssetValidationService / PrefabGenerationService CS8602/CS8604** — null-forgiving on LOD0/1/2 after validated non-null; compiler could not track through early-return guard
-- **CompanionTests double-compilation** — excluded `CompanionTests\` from main Tests project (has own `.csproj`, was accidentally globbed in causing CS0246 on missing Moq)
-
-### Added
-
-- **`scripts/install-companion.ps1`** — `irm .../install-companion.ps1 | iex`; auto-fetches latest release, installs WindowsAppRuntime if needed, SHA256 verification, desktop shortcut
-- **`scripts/install-companion.sh`** — `curl -fsSL .../install-companion.sh | bash` (WSL)
-- **Release workflow** — Desktop Companion zip + sha256 added as release artifacts (`DINOForge.Companion-vX.Y.Z-win-x64.zip`)
-- **`WORKLOG.md`** — unified active work item log (WI-001 through WI-006)
-- **`docs/WBS.md`** — full work breakdown structure covering M8-M11 (79 tasks)
-- **`docs/adr/ADR-011-desktop-companion.md`** — WinUI 3 / WindowsAppSDK companion app decision record
-- **`docs/adr/ADR-012-fuzzing-strategy.md`** — FsCheck + SharpFuzz fuzzing strategy decision record
-- **`docs/roadmap/index.md`** — M9 (Desktop Companion), M10 (Fuzzing), M11 (Coverage + Code Completion) milestones added
-- **`docs/product-requirements-document.md`** v0.6.0 — Desktop Companion, fuzzing, and code completion requirements (user/tech/biz)
-
-- `SyncCommand` CLI command for content synchronization
-- `packs/warfare-aerial/` — new aerial warfare pack with airfield buildings and aerial unit doctrines
-- `packs/warfare-aerial/stats/aerial_buffs.yaml` — stat overrides for aerial units
-- `packs/warfare-starwars/stats/starwars_buffs.yaml` — stat overrides for Star Wars units
-
-### Changed
-
-- Archived 6 inactive placeholder packs to `packs/_archived/` (economy-balanced, example-balance, scenario-tutorial, warfare-airforce, warfare-guerrilla, warfare-modern)
-- Synced all `packages.lock.json` files across projects
-- Added `stats` load sections to `packs/warfare-aerial/pack.yaml` and `packs/warfare-starwars/pack.yaml`
-
-- `AssetSwapRequest.VanillaMapping` — optional field passed from `UnitDefinition.VanillaMapping` so `AssetSwapSystem` can narrow entity targeting to the correct ECS archetype during live RenderMesh swap
-- `AssetSwapSystem` improvements — expanded entity query and swap logic using `VanillaMapping` for precision targeting
-- `ModPlatform` status message now surfaces first error detail for faster in-game debugging
-- `Plugin.cs` wires `HudIndicator` to receive pack counts on every load/reload via `OnHudCountsChanged`
-
-## [0.10.0] - 2026-03-14
-
-### Security
-
-- **SixLabors.ImageSharp 3.0.2 → 3.1.11** — patches 7 CVEs in PackCompiler: 3 high severity (OOB write CVE-2024-41132, Use After Free CVE-2024-41133, CVE-2024-41134) and 4 medium severity (memory allocation, data leakage, infinite loop issues); supersedes Dependabot PR #24
-
-### Added
-
-- **LOD Calculation Tests** (`LODCalculationTests.cs`) — polycount targets, LOD ratios, and screen threshold math
-- **VFX Pool Logic Tests** (`VFXPoolLogicTests.cs`) — pool lifecycle, faction coloring, and impact positioning (215 tests)
-- **Phase 3A/3B LOD test expansions** — raw GLB path reference assertions and distinct asset path per-unit checks
-- **MCP server `cwd` config** — `src/Tools/DinoforgeMcp` CWD set so `python -m dinoforge_mcp.server` resolves correctly
-
-### Fixed
-
-- **UI panel alpha flicker** — `DebugPanel.Show()` and `ModMenuPanel.Show()` set `_animT = 1f` so `AnimatePanel()` doesn't reset alpha to ~0 on the next frame
-- **`example-balance` pack ID** — `pack.yaml` `id:` aligned with directory name; fixed `ContentLoaderIntegrationTests` failures
-- **`RegisterItems<T>` deserialization** — narrowed `catch {}` scope to list-parse only; registration failures no longer swallowed silently
-- **Integration test resilience** — `PackLoadingTests` and `StatTests` skip gracefully when game is unavailable
-
-### Added
-
-- **LOD Calculation Tests** — `LODCalculationTests.cs` covering polycount targets, LOD ratios, and screen threshold math
-- **VFX Pool Logic Tests** — `VFXPoolLogicTests.cs` covering pool lifecycle, faction coloring, and impact positioning
-- **Phase 3A/3B LOD test expansions** — additional assertions for raw GLB path references and distinct asset paths per unit
-- **Integration test resilience** — `PackLoadingTests` and `StatTests` now skip gracefully when game is unavailable
-
-### Changed
-
-- Lock files synced across all 17 projects (CRLF normalization + dependency updates)
-- `ThemeColorPalette` refactored to resolve naming conflicts; minor fixes in `CompatibilityChecker`, `PackManifest`, `Registry`, `BalanceCalculator`, `PackCompiler`, and `DumpTools`
-- Runtime UI whitespace formatting applied to `DebugPanel.cs` and `ModMenuPanel.cs`
-- Unity AssetBundles and prefab GUIDs synchronized after Unity project rebuild
-
-## [0.9.1] - 2026-03-14
-
-### Added
-
-- **Unity AssetBundles** — 75 colored primitive placeholder bundles (StandaloneWindows64) for all 50 warfare-starwars visual_asset keys; Republic units are white+blue, CIS units are grey, special units (Jedi Knight, General Grievous) have distinct colors
-- **unity-assetbundle-builder project** — headless Unity 2021.3.45f1 editor project with `BuildAll.Run` for reproducible bundle generation; keys match YAML `visual_asset` fields exactly so `ContentLoader.RegisterAssetSwaps()` auto-wires them on `LoadPack()`
-- **Phase 7 AssetBundle coverage** — all 14 `Phase7VisualAssetIntegrationTests` pass; 941 total unit tests, 0 failing
-
-## [0.9.0] - 2026-03-13
-
-### Added
-
-- **AssetSwapRegistry** — unified asset swapping system wired into ContentLoader after unit/building registration
-- **Bridge Client + UI diagnostics** — integrated bridge communication layer with in-game diagnostic overlays
-- **PackStatInjector** — wire pack unit stats to vanilla ECS entities via `vanilla_mapping` configuration
-- **Comprehensive VitePress documentation expansion** — complete site depth with architecture guides, asset pipeline workflows, and integration documentation
-- **File organization** — systematic kebab-case renaming of documentation files and archive materials for improved navigation
-
-### Fixed
-
-- **YAML deserialization forward-compatibility** — YamlDotNet deserializer now ignores unmatched properties, allowing optional fields in YAML definitions without breaking load
-- Multiple CI and integration test resolutions
-- Code formatting and linting standardizations across bridge and test suites
-- Registry_StarWarsPack_LoadsAndUnitsHaveVisualAsset test failure due to extra weapon fields
-
-### Changed
-
-- Documentation file structure reorganized to kebab-case conventions for consistency
-- SDK services staged and consolidated for v0.9+ integration work
-
-### Tests
-
-- All integration tests passing; BridgeRoundTripTests added for bridge smoke testing
-
-## [0.8.0] - 2026-03-13
-
-### Added
-
-- `warfare-airforce` content pack — 8 aerial units (4 Western Coalition + 4 Eastern Bloc: fighter jets, attack helicopters, strategic bombers, drones), 3 shared airbase buildings (airstrip, radar tower, AA battery), 8 weapons, 2 aerial doctrines, and 2 wave templates; depends on `warfare-modern`
-- Aviation content clarification: Star Wars aerial units (V-19 Torrent Starfighter, Tri-Fighter) confirmed embedded in `warfare-starwars` under `vanilla_mapping: aerial_fighter`; `warfare-airforce` provides the modern-era equivalent
-- Pack header comments added to `warfare-starwars/pack.yaml` documenting aerial unit locations
-- `BridgeRoundTripTests` — end-to-end bridge smoke test (499 lines, integration tests project)
-
-### Fixed
-
-- Bridge resource query returning 0 — corrected component path and entity filter
-- `VFXIntegrationTests` nullable reference warnings (CS8602/CS8603) — added `!` null-forgiving operators on `_poolManager` usages
-- CI: `ResourceReaderTests.cs` formatting standardised to pass pre-commit hooks
-- CI: CodeQL build now runs `restore` before build step; `gh-pages` deploy has `contents:write` permission
-- CI: CodeQL build now passes `/p:BuildProjectReferences=true` to fix domain DLL ordering
-
-### Tests
-
-- 916 unit tests passing
-
-## [0.7.1] - 2026-03-14
-
-### Added
-
-- `UnitDefinition.VisualAsset` (`visual_asset:` YAML alias) — Addressables key for 3D prefab, deserialized from unit YAML and stored in registry
-- `BuildingDefinition.VisualAsset` (`visual_asset:` YAML alias) — same for buildings
-- `Phase7VisualAssetIntegrationTests` — 14 tests validating the full YAML → ContentLoader → Registry → Addressables key resolution chain for all 28 units and 22 buildings
-
-### Tests
-
-- 916 tests passing (14 new Phase 7 integration tests)
-
-## [0.7.0] - 2026-03-13
-
-### Added
-
-- **Aviation system — faction-aware targeting**: `AerialTargetingSystem` now queries only `Components.Enemy`-tagged entities; aerial units no longer attack friendly units
-- **Aviation system — anti-air building wiring**: `AerialBuildingMapper` attaches `AntiAirComponent` to buildings with `defense_tags: [AntiAir]` at startup sweep via `AerialSpawnSystem`
-- `BuildingDefinition` extended with `DefenseTags` (`List<string>`) and `AntiAir` (`BuildingAntiAirProperties`) for YAML deserialization
-- `AerialSpawnSystem.Initialize(RegistryManager)` called from `ModPlatform.LoadPacks()` to wire building registry
-- **Phase 5 building expansion**: 12 new buildings (6 Republic + 6 CIS) with `visual_asset` keys, prefabs, and `v1_1_0_buildings_expansion` pipeline section
-- **Phase 5 unit pipeline section**: `v1_2_0_units_phase5` with 8 units (rep_jedi_knight, rep_clone_commando, rep_clone_sniper, rep_clone_wall_guard, cis_b1_squad, cis_medical_droid, cis_magnaguard, cis_tri_fighter)
-- `AviationStarWarsTests.cs` — 24 tests: aerial unit YAML config, anti-air building config, faction aerial counts, asset pipeline section validation
-- `warfare-modern` content pack: 24 units, 20 buildings, 9 weapons, 4 doctrines, 10 waves (Western Coalition vs Eastern Bloc)
-- Sketchfab sourcing manifests for all 12 Phase 5 expansion buildings
-- VitePress docs sidebar reorganized into 8 sections; all 37 docs linked
-
-### Fixed
-
-- Star Wars manifest updated to canonical unit/building IDs (`rep_clone_trooper`, `cis_b1_droid`, etc.); aerial and anti-air units wired into faction lists
-- Legacy `clone-trooper.yaml` removed (superseded by `republic_units.yaml`)
-- All pending packages.lock.json files committed (fixes CI `--locked-mode` restore failure)
-
-### Tests
-
-- 903 unit tests passing (24 new aviation+SW tests)
-
-## [0.6.0] - 2026-03-13
-
-### Added
-
-- Star Wars Clone Wars content pack (`warfare-starwars`) — 28 units (Republic + CIS factions) and 22 buildings with full YAML definitions
-- Full asset pipeline end-to-end: import → validate → optimize → generate → build, driven by `asset_pipeline.yaml`
-- 38+ Addressables catalog entries (buildings + units) each with 3-level LOD (100% / 60% / 30% polycount)
-- Phase 3A/3B/4 LOD configuration and validation tests — 38 new tests (845 → 903 total passing)
-- `visual_asset` Addressables key injected for all 28 Star Wars units and 22 buildings via YAML definition update (Phase 5)
-- 28 unit prefab files generated for Republic and CIS factions
-- `AssetConfig` computed path properties: `ImportedPath`, `OptimizedPath`, `PrefabsPath`
-- `warfare-guerrilla` asymmetric warfare content pack (Guerrilla faction)
-- 19 Star Wars assets normalized and stylized via Blender 4.5 LTS headless pipeline (3-level LOD decimation, faction palette application)
-- 100% unit and building visual asset coverage for Star Wars pack
-
-### Fixed
-
-- Asset pipeline `asset_pipeline.yaml` section ordering so Phase 4 building tests pass correctly
-- Duplicate `visual_asset` fields removed from republic_units.yaml and cis_units.yaml (de-duplication pass)
-- Phase 4 building test counts relaxed to `BeGreaterThanOrEqualTo` to accommodate expanded building roster (22 buildings)
-
-### Tests
-
-- 903 unit tests passing (up from ~845)
-
 ## [0.5.0] - 2026-03-11
 
 ### Added
@@ -937,4 +923,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.3.0]: https://github.com/KooshaPari/Dino/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/KooshaPari/Dino/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/KooshaPari/Dino/releases/tag/v0.1.0
-

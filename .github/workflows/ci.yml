@@ -44,7 +44,8 @@ jobs:
             src/Domains/Economy/DINOForge.Domains.Economy.csproj \
             src/Domains/Scenario/DINOForge.Domains.Scenario.csproj \
             src/Domains/UI/DINOForge.Domains.UI.csproj \
-            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj; do
+            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj \
+            src/Runtime/DINOForge.Runtime.csproj; do
             dotnet build "$p" -c Release --no-restore --verbosity minimal || exit 1
           done
 

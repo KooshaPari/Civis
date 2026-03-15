@@ -205,7 +205,7 @@
     <Compile Remove="UI\ModMenuPanel.cs" />
     <Compile Remove="UI\UiBuilder.cs" />
     <Compile Remove="UI\UiDiagnostics.cs" />
-    <Compile Remove="UI\UiActionTrace.cs" />
+    <!-- UiActionTrace: pure .NET (no Unity deps) — keep compiled in CI for test coverage -->
     <Compile Remove="UI\DebugPanel.cs" />
     <Compile Remove="UI\DFCanvas.cs" />
     <Compile Remove="UI\Assets\UiAssets.cs" />

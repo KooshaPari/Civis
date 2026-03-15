@@ -211,30 +211,30 @@ namespace DINOForge.Runtime.Bridge
 
             // Bundles built from Unity prefabs store a GameObject hierarchy, not a bare Mesh/Material.
             // Fall back to loading the prefab and extracting its mesh and material.
+            // Prefer SkinnedMeshRenderer (animated characters) so mesh+material always come from
+            // the same component — avoids mismatches when both SMR and static MF/MR exist.
             if (replacementMesh == null && replacementMat == null)
             {
                 GameObject? prefab = bundle.LoadAsset<GameObject>(assetName);
                 if (prefab != null)
                 {
-                    MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>();
-                    if (mf != null)
-                        replacementMesh = mf.sharedMesh;
-
-                    MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>();
-                    if (mr != null && mr.sharedMaterials.Length > 0)
-                        replacementMat = mr.sharedMaterials[0];
-
-                    // Also check SkinnedMeshRenderer (animated characters)
-                    if (replacementMesh == null || replacementMat == null)
+                    SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>();
+                    if (smr != null && smr.sharedMesh != null)
                     {
-                        SkinnedMeshRenderer? smr =
-                            prefab.GetComponentInChildren<SkinnedMeshRenderer>();
-                        if (smr != null)
-                        {
-                            if (replacementMesh == null) replacementMesh = smr.sharedMesh;
-                            if (replacementMat == null && smr.sharedMaterials.Length > 0)
-                                replacementMat = smr.sharedMaterials[0];
-                        }
+                        replacementMesh = smr.sharedMesh;
+                        if (smr.sharedMaterials.Length > 0)
+                            replacementMat = smr.sharedMaterials[0];
+                    }
+                    else
+                    {
+                        // Static mesh fallback — extract from the same object to stay consistent.
+                        MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>();
+                        if (mf != null)
+                            replacementMesh = mf.sharedMesh;
+
+                        MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>();
+                        if (mr != null && mr.sharedMaterials.Length > 0)
+                            replacementMat = mr.sharedMaterials[0];
                     }
 
                     if (replacementMesh != null || replacementMat != null)

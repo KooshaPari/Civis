@@ -799,6 +799,13 @@ entries:
     faction: republic
     phase: v1_2_0_bundle_realign
 
+  - key: sw-rep-arf-trooper
+    address: units/ARF_Trooper_Republic
+    path: prefabs/ARF_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
   - key: sw-rep-command-center
     address: buildings/Command_Center_Republic
     path: prefabs/Command_Center_Republic.prefab
@@ -864,7 +871,7 @@ entries:
 
 metadata:
   generated_at: 2026-03-15T07:30:00Z
-  total_entries: 70
-  total_units: 38
+  total_entries: 71
+  total_units: 39
   total_buildings: 30
   total_lod_variants: 156

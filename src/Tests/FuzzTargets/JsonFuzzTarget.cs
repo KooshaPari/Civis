@@ -18,7 +18,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// Core fuzz action: parse arbitrary bytes as JSON.
         /// </summary>
-        internal static void FuzzAction(ReadOnlySpan<byte> data)
+        public static void FuzzAction(ReadOnlySpan<byte> data)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz LibFuzzer entry point. Invoke from a standalone harness program.
         /// </summary>
-        internal static void RunLibFuzzer()
+        public static void RunLibFuzzer(string[] args)
         {
             Fuzzer.LibFuzzer.Run(FuzzAction);
         }
@@ -48,7 +48,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz out-of-process entry point for AFL++.
         /// </summary>
-        internal static void RunAfl()
+        public static void RunAfl(string[] args)
         {
             Fuzzer.OutOfProcess.Run(stream =>
             {

@@ -43,6 +43,6 @@
 
   <!-- MinVer: git-tag-based versioning for all projects -->
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="5.*" PrivateAssets="All" Condition="'$(DisableMinVer)' != 'true'" />
+    <PackageReference Include="MinVer" Version="7.*" PrivateAssets="All" Condition="'$(DisableMinVer)' != 'true'" />
   </ItemGroup>
 </Project>

@@ -45,6 +45,8 @@
                     <StackPanel Spacing="8">
                         <TextBlock Text="Packs Loaded" Style="{StaticResource DFSecondaryText}" />
                         <TextBlock
+                            x:Name="DashLoadedCount"
+                            AutomationProperties.AutomationId="DashLoadedCount"
                             Text="{x:Bind ViewModel.LoadedCount, Mode=OneWay}"
                             FontSize="32"
                             FontWeight="Bold"
@@ -57,6 +59,8 @@
                     <StackPanel Spacing="8">
                         <TextBlock Text="Load Errors" Style="{StaticResource DFSecondaryText}" />
                         <TextBlock
+                            x:Name="DashErrorCount"
+                            AutomationProperties.AutomationId="DashErrorCount"
                             Text="{x:Bind ViewModel.ErrorCount, Mode=OneWay}"
                             FontSize="32"
                             FontWeight="Bold"
@@ -82,6 +86,8 @@
                 <StackPanel Spacing="8">
                     <TextBlock Text="Status" Style="{StaticResource DFSectionHeader}" />
                     <TextBlock
+                        x:Name="DashStatusText"
+                        AutomationProperties.AutomationId="DashStatusText"
                         Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                         Style="{StaticResource DFBodyText}" />
                 </StackPanel>
@@ -89,6 +95,8 @@
 
             <!-- Refresh button -->
             <Button
+                x:Name="DashRefreshButton"
+                AutomationProperties.AutomationId="DashRefreshButton"
                 Content="Refresh Packs"
                 Style="{StaticResource DFAccentButton}"
                 Command="{x:Bind ViewModel.RefreshCommand}"

@@ -1,5 +1,7 @@
 #nullable enable
+using System.Threading;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
 using FluentAssertions;
 using Xunit;
 
@@ -15,22 +17,22 @@ public sealed class CompanionPackToggleTests(CompanionFixture fixture)
     [Fact]
     public void TogglePack_FlipsEnabledState()
     {
+        // Navigate to Pack List first so the toggle is visible
+        fixture.GoToPackList();
+
         // Find the first pack toggle button (AutomationId pattern: "PackToggle_{packId}")
-        AutomationElement? firstToggle = fixture.MainWindow!
-            .FindFirstDescendant(cf => cf.ByAutomationId("PackToggle_example-balance"));
+        AutomationElement? firstToggle = fixture.WaitForElement("PackToggle_example-balance");
 
         firstToggle.Should().NotBeNull(
             "example-balance pack should have a toggle button in the UI");
 
         ToggleButton toggle = firstToggle!.AsToggleButton();
-        bool stateBefore = toggle.IsChecked ?? false;
+        ToggleState stateBefore = toggle.ToggleState;
 
         toggle.Toggle();
+        Thread.Sleep(300);
 
-        // Allow UI to react
-        System.Threading.Thread.Sleep(300);
-
-        bool stateAfter = toggle.IsChecked ?? false;
+        ToggleState stateAfter = toggle.ToggleState;
         stateAfter.Should().NotBe(stateBefore, "toggling should flip the pack's enabled state");
     }
 }

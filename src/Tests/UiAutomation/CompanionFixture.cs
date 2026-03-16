@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
+using FluentAssertions;
 using Xunit;
 
 namespace DINOForge.Tests.UiAutomation;
@@ -23,10 +24,10 @@ namespace DINOForge.Tests.UiAutomation;
 /// </summary>
 public sealed class CompanionFixture : IAsyncLifetime
 {
-    private const string MainWindowAutomationId = "MainWindow";
-    private const int WindowTimeoutMs = 15_000;
+    private const int WindowTimeoutMs  = 15_000;
+    private const int NavWaitMs        = 400;
 
-    private Application? _app;
+    private Application?   _app;
     private UIA3Automation? _automation;
 
     public Window? MainWindow { get; private set; }
@@ -46,6 +47,9 @@ public sealed class CompanionFixture : IAsyncLifetime
         MainWindow = _app.GetMainWindow(_automation, TimeSpan.FromMilliseconds(WindowTimeoutMs));
         MainWindow.Should().NotBeNull("the companion main window must appear within the timeout");
 
+        // Allow the default page (Dashboard) to fully load
+        Thread.Sleep(600);
+
         return Task.CompletedTask;
     }
 
@@ -57,8 +61,49 @@ public sealed class CompanionFixture : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    // FluentAssertions extension shim (FlaUI objects aren't null-checked by FA by default)
-    private static void Should() { }
+    // ── Navigation helpers ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Clicks a NavigationView item by its AutomationId and waits for the page to render.
+    /// </summary>
+    public void NavigateTo(string navAutomationId)
+    {
+        AutomationElement? item = MainWindow!
+            .FindFirstDescendant(cf => cf.ByAutomationId(navAutomationId));
+
+        item.Should().NotBeNull($"navigation item '{navAutomationId}' must be present");
+        item!.Click();
+        Thread.Sleep(NavWaitMs);
+    }
+
+    /// <summary>Navigates to the Dashboard page.</summary>
+    public void GoToDashboard()  => NavigateTo("NavDashboard");
+
+    /// <summary>Navigates to the Pack List page.</summary>
+    public void GoToPackList()   => NavigateTo("NavPackList");
+
+    /// <summary>Navigates to the Debug Panel page.</summary>
+    public void GoToDebugPanel() => NavigateTo("NavDebugPanel");
+
+    /// <summary>Navigates to the Settings page.</summary>
+    public void GoToSettings()   => NavigateTo("NavSettings");
+
+    /// <summary>
+    /// Finds an element by AutomationId, retrying for up to <paramref name="timeoutMs"/> ms.
+    /// Useful for elements that appear after async data loads.
+    /// </summary>
+    public AutomationElement? WaitForElement(string automationId, int timeoutMs = 3000)
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < timeoutMs)
+        {
+            AutomationElement? el = MainWindow!
+                .FindFirstDescendant(cf => cf.ByAutomationId(automationId));
+            if (el != null) return el;
+            Thread.Sleep(100);
+        }
+        return null;
+    }
 }
 
 [CollectionDefinition(UiAutomationCollection.Name)]

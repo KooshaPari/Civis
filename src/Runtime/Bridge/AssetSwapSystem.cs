@@ -69,6 +69,7 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private EntityQuery _renderMeshProbeQuery;
         private bool _probeQueryCreated;
+        private bool _loggedWaitingForEntities;
 
         /// <summary>
         /// Subdirectory under BepInEx root where patched bundles are written.
@@ -103,14 +104,35 @@ namespace DINOForge.Runtime.Bridge
             {
                 EntityQuery? probeQuery = DINOForge.Runtime.Bridge.EntityQueries.GetRenderMeshEntities(EntityManager);
                 if (probeQuery == null)
-                    return; // RenderMesh type not loaded yet
+                {
+                    WriteDebug("AssetSwapSystem: Unity.Rendering.RenderMesh type not resolved — " +
+                               "Hybrid Renderer assembly not loaded yet, will retry next frame");
+                    return;
+                }
 
                 _renderMeshProbeQuery = probeQuery.Value;
                 _probeQueryCreated = true;
+                WriteDebug($"AssetSwapSystem: probe query created — " +
+                           $"initial RenderMesh entity count (IncludePrefab): " +
+                           $"{_renderMeshProbeQuery.CalculateEntityCount()} | " +
+                           $"pending swaps: {pending.Count} | " +
+                           $"registry total: {AssetSwapRegistry.Count}");
             }
 
-            if (_renderMeshProbeQuery.CalculateEntityCount() == 0)
+            int renderMeshCount = _renderMeshProbeQuery.CalculateEntityCount();
+            if (renderMeshCount == 0)
+            {
+                // Log once so the debug file shows we're waiting, not silently spinning.
+                if (!_loggedWaitingForEntities)
+                {
+                    _loggedWaitingForEntities = true;
+                    WriteDebug("AssetSwapSystem: waiting for RenderMesh entities — " +
+                               "probe query returned 0 (will retry each frame until entities spawn)");
+                }
                 return;
+            }
+
+            _loggedWaitingForEntities = false; // reset so we log again if entities disappear
 
             WriteDebug($"AssetSwapSystem: RenderMesh entities present — " +
                        $"attempting live swap for {pending.Count} request(s)");
@@ -345,8 +367,14 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
+            // IncludePrefab is required: unit/building entities in DINO are prefab entities.
+            // Without this flag the query matches 0 entities even when thousands exist.
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents });
+                new EntityQueryDesc
+                {
+                    All = queryComponents,
+                    Options = EntityQueryOptions.IncludePrefab
+                });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             MethodInfo? getShared = typeof(EntityManager).GetMethod(

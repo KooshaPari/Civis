@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
 - **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
 
+### Fixed
+
+- **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false; `SkinnedMeshRenderer` now preferred over static renderers to keep mesh+material paired from the same component
+- **AssetSwapSystem load timing** — bundle disk patches now happen in `OnCreate` (immediately at load, no ECS dependency); live `RenderMesh` entity swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` rather than after an arbitrary 600-frame delay (~10s); `ARF Trooper` now uses distinct `sw-rep-arf-trooper` visual asset instead of sharing `sw-rep-arc-trooper` with `ARC Trooper`
+- **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
+
 ### Changed
 
 - **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112` with `latestMajor` rollForward; all CI workflows updated to install `11.0.x`

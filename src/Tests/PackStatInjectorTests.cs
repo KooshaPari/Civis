@@ -8,6 +8,7 @@
 // src/Tests/Integration/.
 
 using System.Collections.Generic;
+using DINOForge.Runtime.Bridge;
 using DINOForge.SDK;
 using DINOForge.SDK.Models;
 using FluentAssertions;

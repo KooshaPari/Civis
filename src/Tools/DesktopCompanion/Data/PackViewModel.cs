@@ -42,6 +42,9 @@ namespace DINOForge.DesktopCompanion.Data
         /// <summary>Error count as string for TextBlock binding.</summary>
         public string ErrorCountText => ErrorCount.ToString();
 
+        /// <summary>AutomationId for the pack's enable/disable toggle (UIA test handle).</summary>
+        public string PackToggleId => $"PackToggle_{Id}";
+
         /// <summary>Load order as string for TextBlock binding.</summary>
         public string LoadOrderText => LoadOrder.ToString();
 

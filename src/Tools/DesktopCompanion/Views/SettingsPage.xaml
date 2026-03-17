@@ -26,6 +26,7 @@
                         TextWrapping="WrapWholeWords" />
                     <TextBox
                         x:Name="PacksDirBox"
+                        AutomationProperties.AutomationId="PacksDirBox"
                         Text="{x:Bind ViewModel.PacksDirectory, Mode=TwoWay}"
                         PlaceholderText="e.g. C:\DINOForge\packs"
                         Header="Packs Directory" />
@@ -42,6 +43,7 @@
                         TextWrapping="WrapWholeWords" />
                     <TextBox
                         x:Name="GameDirBox"
+                        AutomationProperties.AutomationId="GamePathInput"
                         Text="{x:Bind ViewModel.GameDirectory, Mode=TwoWay}"
                         PlaceholderText="e.g. G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option"
                         Header="Game Directory" />
@@ -58,6 +60,7 @@
                         TextWrapping="WrapWholeWords" />
                     <Slider
                         x:Name="IntervalSlider"
+                        AutomationProperties.AutomationId="IntervalSlider"
                         Minimum="0"
                         Maximum="10000"
                         StepFrequency="500"
@@ -75,11 +78,15 @@
             <!-- Save -->
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <Button
+                    x:Name="SaveButton"
+                    AutomationProperties.AutomationId="SaveButton"
                     Content="Save Settings"
                     Style="{StaticResource DFAccentButton}"
                     Command="{x:Bind ViewModel.SaveCommand}"
                     IsEnabled="{x:Bind ViewModel.IsNotSaving, Mode=OneWay}" />
                 <TextBlock
+                    x:Name="SaveStatusText"
+                    AutomationProperties.AutomationId="SaveStatusText"
                     Text="{x:Bind ViewModel.SaveStatus, Mode=OneWay}"
                     Style="{StaticResource DFSecondaryText}"
                     VerticalAlignment="Center" />

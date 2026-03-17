@@ -32,6 +32,8 @@
         <!-- Refresh -->
         <Button
             Grid.Row="2"
+            x:Name="DebugRefreshButton"
+            AutomationProperties.AutomationId="DebugRefreshButton"
             Content="Refresh"
             Style="{StaticResource DFAccentButton}"
             Command="{x:Bind ViewModel.RefreshCommand}"
@@ -39,7 +41,10 @@
 
         <!-- Sections -->
         <ScrollViewer Grid.Row="3">
-            <ItemsControl ItemsSource="{x:Bind ViewModel.Sections, Mode=OneWay}">
+            <ItemsControl
+                x:Name="DebugSectionsControl"
+                AutomationProperties.AutomationId="DebugSectionsControl"
+                ItemsSource="{x:Bind ViewModel.Sections, Mode=OneWay}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="data:DebugSectionViewModel">
                         <Expander

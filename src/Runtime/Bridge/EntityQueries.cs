@@ -258,6 +258,28 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Get an EntityQuery for all entities that carry a Unity.Rendering.RenderMesh
+        /// shared component. Used by <see cref="AssetSwapSystem"/> to detect when the
+        /// game's presentation layer has populated the ECS world with renderable geometry.
+        /// Returns null if the RenderMesh type cannot be resolved (renderer not loaded yet).
+        /// </summary>
+        public static EntityQuery? GetRenderMeshEntities(EntityManager em)
+        {
+            ComponentType? renderMeshType = ResolveComponentType("Unity.Rendering.RenderMesh");
+            if (renderMeshType == null)
+                return null;
+
+            // IncludePrefab is mandatory: DINO stores renderable units as ECS prefab entities.
+            // Without it the query always returns 0 and the swap system never fires.
+            return em.CreateEntityQuery(
+                new EntityQueryDesc
+                {
+                    All = new[] { renderMeshType.Value },
+                    Options = EntityQueryOptions.IncludePrefab
+                });
+        }
+
+        /// <summary>
         /// Clear the component type cache. Useful if assemblies are loaded/unloaded at runtime.
         /// </summary>
         public static void ClearCache()

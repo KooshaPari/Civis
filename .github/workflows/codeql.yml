@@ -33,10 +33,12 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
-          config-file: .github/codeql/codeql-config.yml
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+
+      - name: Build
+        run: dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

@@ -7,16 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false
+- **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
+
 ### Changed
 
 - **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112` with `latestMajor` rollForward; all CI workflows updated to install `11.0.x`
+- **Desktop Companion preview stack** — DesktopCompanion moved from Windows App SDK `2.0.0-experimental6` to `2.0.0-preview1`, `Microsoft.Extensions.Hosting`/`DependencyInjection` moved to `10.0.5`, `Newtonsoft.Json` moved to `13.0.4`, `MainWindow` restored to the navigation shell, and WinUI view-model observable members now use partial-property generation to remove `MVVMTK0045` WinRT/AOT warnings
 
 ### Fixed
 
-- **Desktop Companion startup crash** — `Icon="Code"` is not a valid WinUI 3 Symbol enum value; changed to `Icon="Repair"`; added `Program.cs` with `DISABLE_XAML_GENERATED_MAIN` proper WinUI 3 unpackaged entry point; removed `BoolToVisibilityConverter` from bool-typed `IsOpen`/`IsEnabled` bindings causing `InvalidCastException`
 - **Release workflow build order** — explicit ordered pre-build of SDK/Bridge/Domains/Installer before CI solution build; prevents CS0006 "metadata file not found" when Tests compiles before its dependencies
-- **CompatibilityChecker tests** — updated framework version ranges to `>=99.0.0` for incompatibility tests (MinVer now sets SDK version from git tags, so old `>=1.0.0` is satisfied); `AllVersionsCompatible` updated from `>=0.1.0 <1.0.0` to `>=0.1.0`
-- **AssetSwapRegistry concurrent test** — capture `countBefore` to handle pre-existing items from other parallel tests
 
 - **CI .NET version** — all workflows now install .NET 8 + 9 + 10 to match `global.json` SDK 10.0.201; restores global.json to 10.0.201 (latestMajor) which was reverted incorrectly in prior commits
 

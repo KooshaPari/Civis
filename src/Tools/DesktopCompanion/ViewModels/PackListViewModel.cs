@@ -21,16 +21,16 @@ namespace DINOForge.DesktopCompanion.ViewModels
         private string _packsDirectory = "";
 
         [ObservableProperty]
-        private ObservableCollection<PackViewModel> _packs = new ObservableCollection<PackViewModel>();
+        public partial ObservableCollection<PackViewModel> Packs { get; set; } = new ObservableCollection<PackViewModel>();
 
         [ObservableProperty]
-        private bool _isLoading;
+        public partial bool IsLoading { get; set; }
 
         [ObservableProperty]
-        private string _statusMessage = "";
+        public partial string StatusMessage { get; set; } = "";
 
         [ObservableProperty]
-        private PackViewModel? _selectedPack;
+        public partial PackViewModel? SelectedPack { get; set; }
 
         /// <summary>Initializes a new instance of <see cref="PackListViewModel"/>.</summary>
         public PackListViewModel(

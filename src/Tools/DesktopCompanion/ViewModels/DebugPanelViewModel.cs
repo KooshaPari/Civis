@@ -18,11 +18,11 @@ namespace DINOForge.DesktopCompanion.ViewModels
         private readonly AppConfigService _configService;
 
         [ObservableProperty]
-        private ObservableCollection<DebugSectionViewModel> _sections =
+        public partial ObservableCollection<DebugSectionViewModel> Sections { get; set; } =
             new ObservableCollection<DebugSectionViewModel>();
 
         [ObservableProperty]
-        private bool _isLoading;
+        public partial bool IsLoading { get; set; }
 
         /// <summary>Initializes a new instance of <see cref="DebugPanelViewModel"/>.</summary>
         public DebugPanelViewModel(IPackDataService packDataService, AppConfigService configService)

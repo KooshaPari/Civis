@@ -10,9 +10,10 @@
     <WindowsPackageType>None</WindowsPackageType>
     <SelfContained>false</SelfContained>
     <ImplicitUsings>disable</ImplicitUsings>
-    <!-- Disable XAML-generated Main so Program.cs provides the entry point + bootstrap -->
+    <LangVersion>preview</LangVersion>
+    <!-- Disable auto-generated Main -->
     <DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <!-- Suppress MinVer on Windows/MSYS2 -->
+    <!-- Suppress MinVer -->
     <DisableMinVer Condition="'$(OS)' == 'Windows_NT' and '$(MSYSTEM)' != ''">true</DisableMinVer>
     <DisableMinVer Condition="'$(DisableMinVer)' == ''">true</DisableMinVer>
     <NuGetAudit>false</NuGetAudit>
@@ -31,4 +32,3 @@
     <ProjectReference Include="../../SDK/DINOForge.SDK.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 </Project>
-

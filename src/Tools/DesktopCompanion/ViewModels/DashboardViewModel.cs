@@ -15,16 +15,16 @@ namespace DINOForge.DesktopCompanion.ViewModels
         private readonly AppConfigService _configService;
 
         [ObservableProperty]
-        private int _loadedCount;
+        public partial int LoadedCount { get; set; }
 
         [ObservableProperty]
-        private int _errorCount;
+        public partial int ErrorCount { get; set; }
 
         [ObservableProperty]
-        private string _statusMessage = "Not loaded";
+        public partial string StatusMessage { get; set; } = "Not loaded";
 
         [ObservableProperty]
-        private bool _isLoading;
+        public partial bool IsLoading { get; set; }
 
         /// <summary>True when not loading — used to enable the Refresh button.</summary>
         public bool IsNotLoading => !IsLoading;
@@ -32,10 +32,10 @@ namespace DINOForge.DesktopCompanion.ViewModels
         partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsNotLoading));
 
         [ObservableProperty]
-        private bool _hasErrors;
+        public partial bool HasErrors { get; set; }
 
         [ObservableProperty]
-        private string _packsDirectory = "";
+        public partial string PacksDirectory { get; set; } = "";
 
         /// <summary>Initializes a new instance of <see cref="DashboardViewModel"/>.</summary>
         public DashboardViewModel(IPackDataService packDataService, AppConfigService configService)

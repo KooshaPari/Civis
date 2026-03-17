@@ -269,14 +269,8 @@ namespace DINOForge.Runtime.Bridge
             if (renderMeshType == null)
                 return null;
 
-            // IncludePrefab is mandatory: DINO stores renderable units as ECS prefab entities.
-            // Without it the query always returns 0 and the swap system never fires.
             return em.CreateEntityQuery(
-                new EntityQueryDesc
-                {
-                    All = new[] { renderMeshType.Value },
-                    Options = EntityQueryOptions.IncludePrefab
-                });
+                new EntityQueryDesc { All = new[] { renderMeshType.Value } });
         }
 
         /// <summary>

@@ -30,7 +30,7 @@ jobs:
           dotnet-version: 11.0.x
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e0b5b6c6d7c48db0a3f6a2613d6b2d98b2d5b9e # v3
+        uses: github/codeql-action/init@v3
         with:
           languages: csharp
           config-file: .github/codeql/codeql-config.yml
@@ -39,6 +39,6 @@ jobs:
         run: dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@e0b5b6c6d7c48db0a3f6a2613d6b2d98b2d5b9e # v3
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:csharp"

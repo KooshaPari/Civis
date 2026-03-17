@@ -25,7 +25,7 @@ jobs:
             11.0.x
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
       - name: Check formatting
-        run: dotnet format src/DINOForge.CI.sln --verify-no-changes --verbosity diagnostic
+        run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --verbosity diagnostic

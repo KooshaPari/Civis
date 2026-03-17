@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Merged
+
+- **Consolidated local branches** — merged 10 local branches into main: `fix/asset-swap-clean`, `fix/asset-swap-prefab-extraction`, `fix/asset-swap-load-time`, `fix/companion-startup-crash`, `fix/companion-packlist-crash`, `fix/companion-configureawait`, `fix/packlist-crash-observable`, `fix/restore-net11-companion`, `chore/sync-local-main-state`, `codex/desktopcompanion-runtime-upgrade`
+
 ### Added
 
 - **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active

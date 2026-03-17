@@ -1,12 +1,7 @@
 # CodeQL configuration for DINOForge
 # Excludes Runtime from analysis (requires Unity, not available in CI)
 
-paths:
-  - src
-  - packs
-
 paths-ignore:
   - src/Runtime/**
-  - src/Tests/**
-  - '**/TestResults*/**'
+  - src/Tests/**/TestResults*/
 

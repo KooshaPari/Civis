@@ -124,9 +124,15 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
-        /// Applies a single asset swap: patches the vanilla bundle on disk and,
-        /// if the mod bundle contains a Unity Mesh or Material, attempts a live
-        /// RenderMesh swap on matched ECS entities.
+        /// Applies a single asset swap.
+        ///
+        /// Phase 1 (disk bundle patch) is best-effort: the Addressables catalog maps
+        /// scene/prefab addresses, not individual unit asset addresses, so catalog
+        /// lookup will silently skip rather than abort when no entry is found.
+        ///
+        /// Phase 2 (live RenderMesh entity swap) is always attempted regardless of
+        /// whether Phase 1 succeeded, because it is the primary mechanism for
+        /// visible in-game changes.
         /// </summary>
         private bool ApplySwap(AssetSwapRequest request, string patchDir, AssetService assetService)
         {
@@ -138,54 +144,44 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
-            // Extract the replacement asset raw bytes from the mod bundle.
-            byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
-            if (modAssetBytes == null || modAssetBytes.Length == 0)
-            {
-                WriteDebug(
-                    $"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}'");
-                return false;
-            }
-
-            // Find which vanilla bundle contains the addressed asset via Addressables catalog.
+            // --- Phase 1: disk bundle patch (optional; skipped when catalog has no entry) ---
+            bool patchResult = false;
             IReadOnlyDictionary<string, string> catalog = assetService.ReadCatalog();
-            if (!catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
-                || string.IsNullOrEmpty(vanillaBundleRelPath))
+            if (catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
+                && !string.IsNullOrEmpty(vanillaBundleRelPath))
             {
-                WriteDebug($"ApplySwap: address '{request.AssetAddress}' not found in catalog");
-                return false;
-            }
+                string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
+                    vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
 
-            string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
-                vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
-
-            if (!File.Exists(vanillaBundlePath))
-            {
-                WriteDebug($"ApplySwap: vanilla bundle not found: {vanillaBundlePath}");
-                return false;
-            }
-
-            // Build output path in the patched bundles directory.
-            string patchedFileName = Path.GetFileName(vanillaBundlePath);
-            string outputPath = Path.Combine(patchDir, patchedFileName);
-
-            bool patchResult = assetService.ReplaceAsset(
-                vanillaBundlePath,
-                request.AssetAddress,
-                modAssetBytes,
-                outputPath);
-
-            if (!patchResult)
-            {
-                WriteDebug($"ApplySwap: bundle patch failed for '{request.AssetAddress}' — " +
-                           "attempting in-memory entity swap only");
+                if (File.Exists(vanillaBundlePath))
+                {
+                    byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
+                    if (modAssetBytes != null && modAssetBytes.Length > 0)
+                    {
+                        string patchedFileName = Path.GetFileName(vanillaBundlePath);
+                        string outputPath = Path.Combine(patchDir, patchedFileName);
+                        patchResult = assetService.ReplaceAsset(
+                            vanillaBundlePath, request.AssetAddress, modAssetBytes, outputPath);
+                        WriteDebug(patchResult
+                            ? $"ApplySwap: patched bundle written to '{outputPath}'"
+                            : $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                    }
+                    else
+                    {
+                        WriteDebug($"ApplySwap: Phase 1 skipped — could not extract '{request.AssetName}' from mod bundle");
+                    }
+                }
+                else
+                {
+                    WriteDebug($"ApplySwap: Phase 1 skipped — vanilla bundle not found: {vanillaBundlePath}");
+                }
             }
             else
             {
-                WriteDebug($"ApplySwap: patched bundle written to '{outputPath}'");
+                WriteDebug($"ApplySwap: Phase 1 skipped — address '{request.AssetAddress}' not in catalog (normal for unit/building swaps)");
             }
 
-            // Best-effort live RenderMesh swap on ECS entities.
+            // --- Phase 2: live RenderMesh entity swap (always attempted) ---
             bool entitySwapResult = TrySwapRenderMeshFromBundle(
                 modBundleFullPath, request.AssetName, request.VanillaMapping);
             WriteDebug($"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
@@ -211,9 +207,27 @@ namespace DINOForge.Runtime.Bridge
 
             // Bundles built from Unity prefabs store a GameObject hierarchy, not a bare Mesh/Material.
             // Fall back to loading the prefab and extracting its mesh and material.
+            // The assetName (pack key e.g. "sw-clone-trooper-republic") may not match the internal
+            // asset name (e.g. "sw-rep-clone-trooper") so also try loading all assets in the bundle.
             if (replacementMesh == null && replacementMat == null)
             {
                 GameObject? prefab = bundle.LoadAsset<GameObject>(assetName);
+
+                // Name mismatch fallback: load all assets and find the first usable one.
+                if (prefab == null)
+                {
+                    UnityEngine.Object[] allObjs = bundle.LoadAllAssets();
+                    foreach (UnityEngine.Object obj in allObjs)
+                    {
+                        if (replacementMesh == null && obj is Mesh m) { replacementMesh = m; }
+                        else if (replacementMat == null && obj is Material mat) { replacementMat = mat; }
+                        else if (prefab == null && obj is GameObject go) { prefab = go; }
+                        if (replacementMesh != null && replacementMat != null) break;
+                    }
+                    if (prefab != null && replacementMesh == null && replacementMat == null)
+                        WriteDebug($"TrySwapRenderMeshFromBundle: name mismatch — loaded all assets, using first prefab");
+                }
+
                 if (prefab != null)
                 {
                     MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>();
@@ -238,7 +252,7 @@ namespace DINOForge.Runtime.Bridge
                     }
 
                     if (replacementMesh != null || replacementMat != null)
-                        WriteDebug($"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
+                        WriteDebug($"TrySwapRenderMeshFromBundle: extracted from prefab '{prefab.name}'");
                 }
             }
 
@@ -289,8 +303,13 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
+            // DINO stores all entities as ECS Prefab entities — IncludePrefab is mandatory.
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents });
+                new EntityQueryDesc
+                {
+                    All = queryComponents,
+                    Options = EntityQueryOptions.IncludePrefab
+                });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             MethodInfo? getShared = typeof(EntityManager).GetMethod(

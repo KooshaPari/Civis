@@ -195,10 +195,10 @@ public sealed class InstallerService
         Directory.CreateDirectory(pluginsDir);
         log.Report("Ensured BepInEx/plugins/ directory exists.");
 
-        // Step 3 — Copy DINOForge runtime binaries
+        // Step 3 — Copy DINOForge runtime binaries (required — abort if not next to installer)
         string baseDir = AppContext.BaseDirectory;
-        CopyIfExists(Path.Combine(baseDir, "DINOForge.Runtime.dll"), Path.Combine(pluginsDir, "DINOForge.Runtime.dll"), log);
-        CopyIfExists(Path.Combine(baseDir, "DINOForge.SDK.dll"), Path.Combine(pluginsDir, "DINOForge.SDK.dll"), log);
+        CopyRequired(Path.Combine(baseDir, "DINOForge.Runtime.dll"), Path.Combine(pluginsDir, "DINOForge.Runtime.dll"), log);
+        CopyRequired(Path.Combine(baseDir, "DINOForge.SDK.dll"), Path.Combine(pluginsDir, "DINOForge.SDK.dll"), log);
 
         // Write version sidecar so future runs can detect the installed version
         string versionFile = Path.Combine(pluginsDir, "dinoforge_version.txt");
@@ -318,7 +318,32 @@ public sealed class InstallerService
     }
 
     /// <summary>
+    /// Copies a required file, throwing <see cref="FileNotFoundException"/> when the source
+    /// is absent. Use for core DLLs that must be present for install/repair to succeed.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">
+    /// Thrown when <paramref name="src"/> does not exist next to the installer.
+    /// The message includes actionable guidance for the user.
+    /// </exception>
+    private static void CopyRequired(string src, string dst, IProgress<string> log)
+    {
+        if (!File.Exists(src))
+        {
+            string fileName = Path.GetFileName(src);
+            string message =
+                $"{fileName} was not found next to the installer executable. " +
+                $"Re-download the full installer package — the DLL must be in the same folder as this .exe.";
+            log.Report($"  ERROR: {message}");
+            throw new FileNotFoundException(message, src);
+        }
+
+        File.Copy(src, dst, overwrite: true);
+        log.Report($"Copied {Path.GetFileName(src)}.");
+    }
+
+    /// <summary>
     /// Copies a file if it exists, logging the action.
+    /// Use for optional components (packs, dev extras) where absence is acceptable.
     /// </summary>
     private static void CopyIfExists(string src, string dst, IProgress<string> log)
     {

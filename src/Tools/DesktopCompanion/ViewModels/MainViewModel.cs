@@ -8,7 +8,7 @@ namespace DINOForge.DesktopCompanion.ViewModels
     public sealed partial class MainViewModel : ObservableObject
     {
         [ObservableProperty]
-        private string _selectedPageTag = "Dashboard";
+        public partial string SelectedPageTag { get; set; } = "Dashboard";
 
         /// <summary>Display title shown in the window title bar.</summary>
         public string WindowTitle => "DINOForge Desktop Companion";

@@ -1,0 +1,81 @@
+name: Game Launch / E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 05:00 UTC (after ui-automation.yml at 04:00)
+    - cron: "0 5 * * 1"
+
+permissions: {}
+
+# Requires a self-hosted runner tagged: [self-hosted, windows, dino-installed]
+# The runner must have:
+#   - DINO installed (set DINO_GAME_PATH in runner env or repo secrets)
+#   - BepInEx + DINOForge plugin installed
+#   - DINO_BRIDGE_PORT set (default 7474)
+
+jobs:
+  game-launch-e2e:
+    name: Game Launch E2E
+    runs-on: [self-hosted, windows, dino-installed]
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7
+        with:
+          dotnet-version: 11.0.x
+
+      - name: Build bridge client
+        run: |
+          dotnet build src/Bridge/Client/DINOForge.Bridge.Client.csproj `
+            --configuration Release
+
+      - name: Build game launch tests
+        run: |
+          dotnet restore src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj
+          dotnet build src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj `
+            --configuration Release --no-restore
+
+      - name: Install DINOForge plugin
+        # Copy built Runtime plugin to BepInEx plugins dir alongside the game
+        run: |
+          dotnet build src/Runtime/DINOForge.Runtime.csproj --configuration Release
+          Copy-Item `
+            "src/Runtime/bin/Release/netstandard2.1/DINOForge.Runtime.dll" `
+            "$env:DINO_BEPINEX_PATH\plugins\" -Force
+
+      - name: Run game launch tests
+        env:
+          DINO_GAME_PATH: ${{ secrets.DINO_GAME_PATH }}
+          DINO_BEPINEX_PATH: ${{ secrets.DINO_BEPINEX_PATH }}
+          DINO_BRIDGE_PORT: "7474"
+        run: |
+          dotnet test src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj `
+            --configuration Release `
+            --no-build `
+            --filter "Category=GameLaunch" `
+            --logger "trx;LogFileName=game-launch-results.trx" `
+            --results-directory ./test-results `
+            -- xunit.methodDisplay=classAndMethod
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        if: always()
+        with:
+          name: game-launch-results
+          path: ./test-results/*.trx
+          retention-days: 14
+
+      - name: Upload in-game UI test results (from BepInEx log)
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        if: always()
+        with:
+          name: overlay-ui-results
+          path: "${{ secrets.DINO_BEPINEX_PATH }}/logs/dinoforge_ui_test_results.json"
+          retention-days: 14

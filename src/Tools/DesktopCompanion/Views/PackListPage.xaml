@@ -37,6 +37,8 @@
                 VerticalAlignment="Center" />
             <Button
                 Grid.Column="1"
+                x:Name="PackReloadButton"
+                AutomationProperties.AutomationId="PackReloadButton"
                 Content="Reload"
                 Style="{StaticResource DFAccentButton}"
                 Command="{x:Bind ViewModel.ReloadCommand}" />
@@ -70,6 +72,7 @@
                             <!-- Enable toggle — IsOn TwoWay so the toggle actually writes back -->
                             <ToggleSwitch
                                 Grid.Column="0"
+                                AutomationProperties.AutomationId="{x:Bind PackToggleId}"
                                 IsOn="{x:Bind Enabled, Mode=TwoWay}"
                                 OnContent=""
                                 OffContent=""

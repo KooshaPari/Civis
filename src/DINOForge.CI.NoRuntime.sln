@@ -7,9 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DINOForge.SDK", "SDK\DINOFo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DINOForge.Tools.DumpTools", "Tools\DumpTools\DINOForge.Tools.DumpTools.csproj", "{C3D4E5F6-A7B8-9012-CDEF-123456789012}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DINOForge.Runtime", "Runtime\DINOForge.Runtime.csproj", "{E7F8A9B0-C1D2-3456-RUNT-000000000001}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DINOForge.Tests", "Tests\DINOForge.Tests.csproj", "{D4E5F6A7-B8C9-0123-DEFA-234567890123}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domains", "Domains", "{0E5E249A-34B4-42CE-9CEB-0ACD11CD86C7}"
 EndProject

@@ -14,19 +14,19 @@ namespace DINOForge.DesktopCompanion.ViewModels
         private readonly AppConfigService _configService;
 
         [ObservableProperty]
-        private string _packsDirectory = "";
+        public partial string PacksDirectory { get; set; } = "";
 
         [ObservableProperty]
-        private string _gameDirectory = "";
+        public partial string GameDirectory { get; set; } = "";
 
         [ObservableProperty]
-        private int _reloadIntervalMs = 2000;
+        public partial int ReloadIntervalMs { get; set; } = 2000;
 
         [ObservableProperty]
-        private string _saveStatus = "";
+        public partial string SaveStatus { get; set; } = "";
 
         [ObservableProperty]
-        private bool _isSaving;
+        public partial bool IsSaving { get; set; }
 
         /// <summary>True when not saving — used to enable the Save button.</summary>
         public bool IsNotSaving => !IsSaving;

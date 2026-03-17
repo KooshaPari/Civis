@@ -109,6 +109,14 @@ public partial class ProgressPageViewModel : ObservableObject
             HasError = true;
             ErrorMessage = "The installation was cancelled by the user.";
         }
+        catch (FileNotFoundException ex)
+        {
+            Phase = InstallPhase.Error;
+            StatusText = "Installation failed — installer package incomplete.";
+            HasError = true;
+            ErrorMessage = ex.Message;
+            LogLines.Add($"ERROR: {ex.Message}");
+        }
         catch (Exception ex)
         {
             Phase = InstallPhase.Error;
@@ -165,6 +173,14 @@ public partial class ProgressPageViewModel : ObservableObject
             StatusText = "Repair was cancelled.";
             HasError = true;
             ErrorMessage = "The repair was cancelled by the user.";
+        }
+        catch (FileNotFoundException ex)
+        {
+            Phase = InstallPhase.Error;
+            StatusText = "Repair failed — installer package incomplete.";
+            HasError = true;
+            ErrorMessage = ex.Message;
+            LogLines.Add($"ERROR: {ex.Message}");
         }
         catch (IOException ex)
         {

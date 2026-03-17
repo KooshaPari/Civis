@@ -1,0 +1,68 @@
+name: UI Automation (Desktop Companion)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 04:00 UTC
+    - cron: "0 4 * * 1"
+
+permissions: {}
+
+jobs:
+  companion-ui-automation:
+    name: Companion UI Automation (FlaUI)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7
+        with:
+          dotnet-version: 11.0.x
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - name: Restore & build DesktopCompanion
+        run: |
+          dotnet restore src/Tools/DesktopCompanion/DesktopCompanion.csproj
+          dotnet build src/Tools/DesktopCompanion/DesktopCompanion.csproj `
+            --configuration Release --no-restore
+
+      - name: Restore & build UI Automation tests
+        run: |
+          dotnet restore src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj
+          dotnet build src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj `
+            --configuration Release --no-restore
+
+      - name: Run UI Automation tests
+        env:
+          COMPANION_EXE: ${{ github.workspace }}\src\Tools\DesktopCompanion\bin\Release\net11.0-windows10.0.26100.0\DINOForge.DesktopCompanion.exe
+        run: |
+          dotnet test src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj `
+            --configuration Release `
+            --no-build `
+            --filter "Category=UiAutomation" `
+            --logger "trx;LogFileName=ui-automation-results.trx" `
+            --results-directory ./test-results
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        if: always()
+        with:
+          name: ui-automation-results
+          path: ./test-results/*.trx
+          retention-days: 14
+
+      - name: Publish test report
+        uses: dorny/test-reporter@d61b558e8df85cb60d09ca3e5b09653b4477cea7
+        if: always()
+        with:
+          name: UI Automation Tests
+          path: ./test-results/*.trx
+          reporter: dotnet-trx

@@ -31,10 +31,10 @@ jobs:
             11.0.x
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
       - name: Build
-        run: dotnet build src/DINOForge.CI.sln --configuration Release --no-restore /p:BuildProjectReferences=true
+        run: dotnet build src/DINOForge.CI.NoRuntime.sln --configuration Release --no-restore /p:BuildProjectReferences=true
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@820e3160e279568db735cee8ed8f8e77a6da7818 # v3
@@ -69,12 +69,12 @@ jobs:
             11.0.x
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
       - name: Run vulnerability scan
         run: |
           # dotnet list package --vulnerable requires a project/solution path
-          dotnet list src/DINOForge.CI.sln package --vulnerable --include-transitive 2>&1 | tee audit-output.txt
+          dotnet list src/DINOForge.CI.NoRuntime.sln package --vulnerable --include-transitive 2>&1 | tee audit-output.txt
           # Fail if any critical/high vulnerabilities are found
           if grep -qi "has the following vulnerable packages" audit-output.txt; then
             echo "::warning::Vulnerable packages detected. Review the output above."

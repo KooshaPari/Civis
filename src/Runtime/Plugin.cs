@@ -9,6 +9,7 @@ using DINOForge.SDK;
 using HarmonyLib;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace DINOForge.Runtime
@@ -34,7 +35,14 @@ namespace DINOForge.Runtime
         /// The persistent GameObject that survives scene changes.
         /// All UI and runtime components live here, NOT on the BepInEx-managed gameObject.
         /// </summary>
-        internal static GameObject? PersistentRoot { get; private set; }
+        internal static GameObject? PersistentRoot;
+
+        // Captured at Awake for SceneManager resurrection callback
+        private static ManualLogSource? _resurrectionLog;
+        private static ConfigFile? _resurrectionConfig;
+        private static bool _resurrectionDump;
+        private static string _resurrectionDumpPath = "";
+
 
         private void Awake()
         {
@@ -102,8 +110,88 @@ namespace DINOForge.Runtime
                 Log.LogError($"[Plugin] RuntimeDriver setup failed: {ex.Message}");
             }
 
+            // Capture state for static resurrection callback
+            _resurrectionLog = Logger;
+            _resurrectionConfig = Config;
+            _resurrectionDump = dumpOnStartup.Value;
+            _resurrectionDumpPath = dumpOutputPath.Value;
+
+            // Register static SceneManager callbacks — survives all scene transitions and
+            // GameObject destruction. Recreates DINOForge_Root if DINO's loader destroys it.
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+
+            Log.LogInfo("[Plugin] SceneManager resurrection hooks registered.");
+
             WriteDebug("Awake completed");
             Log.LogInfo("DINOForge Runtime loaded successfully.");
+        }
+
+        /// <summary>
+        /// SceneManager.sceneLoaded callback — fires after every scene load.
+        /// Recreates DINOForge_Root if DINO's InitialGameLoader destroyed it.
+        /// This is a static event registration that survives all GameObject destruction.
+        /// </summary>
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            WriteDebug($"[Plugin] OnSceneLoaded: '{scene.name}' — PersistentRoot={(PersistentRoot == null ? "null" : "alive")}");
+            TryResurrect(scene.name, "sceneLoaded");
+        }
+
+        /// <summary>
+        /// SceneManager.activeSceneChanged callback — fires after the active scene switches.
+        /// This fires AFTER the destroy sweep that kills DINOForge_Root, so resurrection here
+        /// creates a new root that survives into the new scene.
+        /// </summary>
+        private static void OnActiveSceneChanged(Scene prev, Scene next)
+        {
+            WriteDebug($"[Plugin] OnActiveSceneChanged: '{prev.name}' → '{next.name}' — PersistentRoot={(PersistentRoot == null ? "null" : "alive")}");
+            TryResurrect(next.name, "activeSceneChanged");
+        }
+
+        private static void OnSceneUnloaded(Scene scene)
+        {
+            WriteDebug($"[Plugin] OnSceneUnloaded: '{scene.name}' — PersistentRoot={(PersistentRoot == null ? "null" : "alive")}");
+            TryResurrect(scene.name, "sceneUnloaded");
+        }
+
+        internal static void TryResurrect(string sceneName, string trigger)
+        {
+            if (PersistentRoot != null) return;
+
+            WriteDebug($"[Plugin] PersistentRoot null via {trigger} on '{sceneName}' — resurrecting...");
+            try
+            {
+                // Try to attach RuntimeDriver to DINO's main camera — DINO never destroys its own camera
+                Camera? cam = Camera.main ?? (Camera.allCameras.Length > 0 ? Camera.allCameras[0] : null);
+                GameObject host;
+                if (cam != null)
+                {
+                    host = cam.gameObject;
+                    WriteDebug($"[Plugin] Attaching to existing camera '{host.name}'");
+                }
+                else
+                {
+                    // Fallback: create our own object
+                    host = new GameObject("DINOForge_Root");
+                    host.hideFlags = HideFlags.HideAndDontSave;
+                    UnityEngine.Object.DontDestroyOnLoad(host);
+                    WriteDebug($"[Plugin] No camera found, using new GameObject");
+                }
+                PersistentRoot = host;
+
+                RuntimeDriver driver = host.AddComponent<RuntimeDriver>();
+                driver.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
+                WriteDebug($"[Plugin] Resurrection complete via {trigger} on '{sceneName}' host='{host.name}'.");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[Plugin] Resurrection FAILED via {trigger}: {ex.Message}");
+            }
         }
 
         private static void WriteDebug(string msg)
@@ -285,6 +373,31 @@ namespace DINOForge.Runtime
             {
                 _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex.Message}");
             }
+
+            // ── Wire KeyInputSystem ECS callbacks ───────────────────────────────────
+            // KeyInputSystem lives in the ECS world and survives scene transitions.
+            // It calls these lambdas when F9/F10 are pressed, even after DINOForge_Root
+            // has been resurrected (the lambdas capture `this` — the current driver).
+            Bridge.KeyInputSystem.OnF9Pressed = () =>
+            {
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+                    else _debugOverlay?.Toggle();
+                }
+                catch { }
+            };
+            Bridge.KeyInputSystem.OnF10Pressed = () =>
+            {
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                    else _modMenuHost?.Toggle();
+                }
+                catch { }
+            };
 
             // ── Step 2: Attempt UGUI canvas setup ───────────────────────────────────
             // DFCanvas.Initialize() only stores the logger; the actual canvas hierarchy
@@ -511,35 +624,41 @@ namespace DINOForge.Runtime
 
         private void Update()
         {
+            // Wrap entire Update in try/catch — a logger exception (e.g. BepInEx log writer
+            // failure) must NOT propagate out of Update() or Unity will silently disable this
+            // MonoBehaviour forever, killing F9/F10 and all ECS polling.
+            try
+            {
             if (!_initialized) return;
 
             // Debug: log every ~5 seconds to confirm Update is running
             if (Time.frameCount % 300 == 0)
             {
-                _log.LogInfo($"[RuntimeDriver] Update running frame {Time.frameCount}");
+                try { _log.LogInfo($"[RuntimeDriver] Update running frame {Time.frameCount}"); } catch { }
+                WriteDebug($"[RuntimeDriver] Update heartbeat frame {Time.frameCount}");
             }
 
-            // ── F9/F10 key handling — always runs regardless of UI layer ─────────
-            // These handlers are intentionally on RuntimeDriver so they work even if
-            // DFCanvas or the fallback menu host fails to initialise.
+            // F9/F10 — direct input polling, always works as long as this MonoBehaviour is alive
             if (Input.GetKeyDown(KeyCode.F9))
             {
-                _log.LogInfo("[RuntimeDriver] F9 pressed! _uguiReady=" + _uguiReady);
-                // Prefer UGUI DebugPanel when available; fall back to IMGUI overlay
-                if (_uguiReady && _dfCanvas != null)
-                    _dfCanvas.ToggleDebug();
-                else
-                    _debugOverlay?.Toggle();
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F9 pressed");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+                    else _debugOverlay?.Toggle();
+                }
+                catch { }
             }
 
             if (Input.GetKeyDown(KeyCode.F10))
             {
-                _log.LogInfo("[RuntimeDriver] F10 pressed! _uguiReady=" + _uguiReady);
-                // Prefer the UGUI panel when available; fall back to the active menu host
-                if (_uguiReady && _dfCanvas != null)
-                    _dfCanvas.ToggleModMenu();
-                else
-                    _modMenuHost?.Toggle();
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F10 pressed");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                    else _modMenuHost?.Toggle();
+                }
+                catch { }
             }
 
             // ── Check whether DFCanvas.Start() has run yet ───────────────────────
@@ -598,6 +717,12 @@ namespace DINOForge.Runtime
             {
                 // World not ready yet, will retry next poll
             }
+
+            } // end outer try
+            catch (Exception updateEx)
+            {
+                WriteDebug($"[RuntimeDriver] Update() exception (component kept alive): {updateEx.Message}");
+            }
         }
 
         /// <summary>
@@ -607,6 +732,17 @@ namespace DINOForge.Runtime
         private void OnWorldReady(World ecsWorld)
         {
             _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
+
+            // Register KeyInputSystem — handles F9/F10 via ECS (survives scene transitions)
+            try
+            {
+                ecsWorld.GetOrCreateSystem<Bridge.KeyInputSystem>();
+                _log.LogInfo("[RuntimeDriver] KeyInputSystem registered in default world.");
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[RuntimeDriver] KeyInputSystem registration failed: {ex.Message}");
+            }
 
             // Register DumpSystem if configured
             if (_dumpOnStartup)
@@ -681,19 +817,37 @@ namespace DINOForge.Runtime
             }
         }
 
-        private void OnDestroy()
+        private static void WriteDebug(string msg)
         {
-            // This should NOT normally fire since we use HideAndDontSave.
-            // If it does, log it clearly.
-            _log?.LogWarning("[RuntimeDriver] OnDestroy called - persistent root was destroyed!");
-
             try
             {
-                _modPlatform?.Shutdown();
+                string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.Now}] {msg}\n");
+            }
+            catch { }
+        }
+
+        private void OnDestroy()
+        {
+            // DINO destroys all GameObjects during InitialGameLoader even with HideAndDontSave.
+            // Immediate resurrection: create a new root and RuntimeDriver right here in OnDestroy.
+            // This is safe — Unity allows new GameObjects to be created during OnDestroy callbacks.
+            WriteDebug("[RuntimeDriver] OnDestroy — recreating DINOForge_Root immediately.");
+            try
+            {
+                Plugin.PersistentRoot = null;
+                GameObject root = new GameObject("DINOForge_Root");
+                root.hideFlags = HideFlags.HideAndDontSave;
+                UnityEngine.Object.DontDestroyOnLoad(root);
+                Plugin.PersistentRoot = root;
+
+                RuntimeDriver driver = root.AddComponent<RuntimeDriver>();
+                driver.Initialize(_log, _config, _dumpOnStartup, _dumpOutputPath);
+                WriteDebug("[RuntimeDriver] OnDestroy resurrection complete — new root created.");
             }
             catch (Exception ex)
             {
-                _log?.LogWarning($"[RuntimeDriver] ModPlatform shutdown error: {ex.Message}");
+                WriteDebug($"[RuntimeDriver] OnDestroy resurrection FAILED: {ex.Message}");
             }
         }
     }

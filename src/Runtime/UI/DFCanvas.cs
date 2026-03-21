@@ -66,16 +66,32 @@ namespace DINOForge.Runtime.UI
         public void Initialize(ManualLogSource log)
         {
             _log = log;
-            _log.LogInfo("[DFCanvas] Component added — canvas hierarchy will build in Start().");
-        }
-
-        private void Start()
-        {
+            // Build canvas immediately in Initialize() since Start() never fires in DINO
+            // (DINO replaces the MonoBehaviour player loop — Update/Start/OnGUI never run).
+            // Awake/OnEnable DO fire (called synchronously from AddComponent).
             try
             {
                 BuildCanvas();
                 _ready = true;
-                _log?.LogInfo("[DFCanvas] UGUI canvas hierarchy built successfully.");
+                _log?.LogInfo("[DFCanvas] UGUI canvas hierarchy built successfully in Initialize().");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[DFCanvas] Canvas build failed in Initialize(): {ex.Message}");
+                OnInitFailed?.Invoke();
+            }
+        }
+
+        private void Start()
+        {
+            // Start() never fires in DINO — canvas is built in Initialize() instead.
+            // This is kept as a fallback in case Unity environment changes.
+            if (_ready) return;
+            try
+            {
+                BuildCanvas();
+                _ready = true;
+                _log?.LogInfo("[DFCanvas] UGUI canvas hierarchy built in Start() (fallback).");
             }
             catch (Exception ex)
             {

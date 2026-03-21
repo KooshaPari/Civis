@@ -28,6 +28,16 @@ namespace DINOForge.Runtime.UI
     public class NativeMenuInjector : MonoBehaviour
     {
         // ------------------------------------------------------------------ //
+        // Background-thread scan trigger
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Called by the background watcher thread every ~5 seconds to re-scan for menu buttons.
+        /// Set by RuntimeDriver.Initialize() after the injector is added.
+        /// </summary>
+        public static System.Action? OnScanNeeded;
+
+        // ------------------------------------------------------------------ //
         // Well-known canvas names to check (case-insensitive prefix/substring)
         // ------------------------------------------------------------------ //
         private static readonly string[] CanvasCandidateNames =
@@ -145,7 +155,7 @@ namespace DINOForge.Runtime.UI
         /// a sibling "Mods" button next to it.  Safe to call multiple times; idempotent
         /// once <c>_injected</c> is true.
         /// </summary>
-        private void TryInjectMenuButton()
+        internal void TryInjectMenuButton()
         {
             _injectionAttemptCount++;
             long attemptId = _injectionAttemptCount;
@@ -163,9 +173,12 @@ namespace DINOForge.Runtime.UI
 
                 Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}: Scan started — found {allCanvases.Length} canvases total");
+                WriteDebug($"[{_sessionId}] Attempt#{attemptId}: Scan started — {allCanvases.Length} canvases");
+                WriteDebug($"[{_sessionId}] Attempt#{attemptId}: All canvases dump:");
+                foreach (Canvas c in allCanvases)
+                    WriteDebug($"[{_sessionId}]   Canvas '{c.name}' active={c.gameObject.activeInHierarchy}");
 
                 int activeCount = 0;
-                int matchCount = 0;
 
                 foreach (Canvas canvas in allCanvases)
                 {
@@ -177,15 +190,9 @@ namespace DINOForge.Runtime.UI
                     }
                     activeCount++;
 
-                    // Check if canvas name matches our candidates
-                    if (!IsCanvasNameMatch(canvas.name))
-                    {
-                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': name DOES NOT MATCH candidates (skipped)");
-                        continue;
-                    }
-                    matchCount++;
-
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': NAME MATCHED ✓ searching for Settings/Options button...");
+                    // Search all active canvases regardless of name — the DINO menu
+                    // canvas name may vary; we rely on finding the Settings/Options button.
+                    WriteDebug($"[{_sessionId}] Attempt#{attemptId} Canvas '{canvas.name}': searching for buttons...");
 
                     Button? settingsButton = FindSettingsButton(canvas);
                     if (settingsButton == null)
@@ -205,7 +212,7 @@ namespace DINOForge.Runtime.UI
                     }
                 }
 
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} SCAN COMPLETE: {allCanvases.Length} total, {activeCount} active, {matchCount} name-matched, 0 Settings buttons found. Will retry in {RescanInterval}s.");
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} SCAN COMPLETE: {allCanvases.Length} total, {activeCount} active searched, 0 Settings buttons found. Will retry in {RescanInterval}s.");
             }
             catch (Exception ex)
             {
@@ -236,7 +243,14 @@ namespace DINOForge.Runtime.UI
                     return options;
                 }
 
-                LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas");
+                // Log all buttons found for diagnostics
+                Button[] allButtons = canvas.GetComponentsInChildren<Button>(includeInactive: false);
+                LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas. Dumping all {allButtons.Length} active buttons:");
+                foreach (Button b in allButtons)
+                {
+                    string label = b.GetComponentInChildren<UnityEngine.UI.Text>()?.text ?? "(no text)";
+                    LogInfo($"[NativeMenuInjector]       Button '{b.name}' label='{label}'");
+                }
                 return null;
             }
             catch (Exception ex)
@@ -596,6 +610,16 @@ namespace DINOForge.Runtime.UI
         {
             if (_log != null)
                 _log.LogWarning(message);
+        }
+
+        private static void WriteDebug(string msg)
+        {
+            try
+            {
+                string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.Now}] [NativeMenuInjector] {msg}\n");
+            }
+            catch { }
         }
     }
 }

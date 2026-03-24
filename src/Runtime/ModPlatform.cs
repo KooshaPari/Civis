@@ -569,6 +569,25 @@ namespace DINOForge.Runtime
 
                     // Tell StatModifierSystem to re-process
                     StatModifierSystem.Reapply();
+
+                    // If any changed files are bundle assets, schedule a full swap reset so
+                    // the new bundle bytes are picked up on the next game/save load (without
+                    // requiring a full game restart).
+                    bool bundleChanged = false;
+                    foreach (string changedFile in result.ChangedFiles)
+                    {
+                        if (changedFile.IndexOf("assets/bundles", StringComparison.OrdinalIgnoreCase) >= 0
+                            || changedFile.IndexOf(@"assets\bundles", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            bundleChanged = true;
+                            break;
+                        }
+                    }
+                    if (bundleChanged)
+                    {
+                        AssetSwapSystem.ScheduleReset();
+                        _log.LogInfo("[ModPlatform] Bundle change detected — asset swap reset scheduled for next load.");
+                    }
                 }
 
                 // Update UI with current state

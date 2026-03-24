@@ -5,6 +5,34 @@ All notable changes to DINOForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-03-20
+
+### Changed
+
+- **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112`
+
+### Added
+
+- **CLI `--format json`** — all 13 commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; errors suppress ANSI markup when JSON mode active; `ui-expect` sets exit code 1 on assertion failure in JSON mode
+- **Desktop Companion UI — Complete** — DashboardViewModel, PackListViewModel, SettingsViewModel, DebugViewModel + XAML pages; Dashboard shows pack count + load status; Pack List supports enable/disable toggle with service persistence; Settings page loads/saves game path + backup location; Debug panel queries entity count from Bridge
+- **Asset Swap Phase 2 timing fixes** — bundle disk patches now happen in `OnCreate` (immediate); live `RenderMesh` swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` instead of arbitrary 600-frame delay
+- **warfare-starwars visual_asset alignment** — updated 14 unit + 9 building `visual_asset` fields to match actual bundle file names (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`)
+
+### Fixed
+
+- **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading `GameObject` from bundle and extracting via `MeshFilter`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; fixes all warfare-starwars bundles built from prefabs
+- **Desktop Companion startup crash** — invalid WinUI 3 Symbol enum values and type coercion issues in x:Bind converters fixed; `NavigationView` settings footer de-duped; `PropertyChanged` bindings use correct `ConfigureAwait(true)` context
+- **Desktop Companion Pack List binding crashes** — added `HasErrors` computed property to `PackViewModel`; `int` fields now use string properties for TextBlock binding; `INotifyPropertyChanged` implementation via `ObservableObject`
+- **CI build order** — explicit pre-build of SDK/Bridge/Domains/Installer prevents metadata file not found errors on net11.0 parallel test compilation
+- **AssetSwapRegistry concurrent tests** — Guid-prefixed addresses + filter isolation eliminates flaky count mismatches in parallel test runs
+- **Release workflow** — `workflow_dispatch` checkout uses `main` branch; tag is used only for release naming/upload target
+
+### Known Regressions (Blocking; fixes in progress)
+
+- **F9/F10 key input broken** (RT-003, RT-004) — Win32 watcher hook fires but `KeyInputSystem.OnInput` not reached; `RuntimeDriver.OnDestroy` fires unexpectedly at frame ~6s (see RT-005)
+- **RuntimeDriver.OnDestroy fires early** (RT-005, NATIVE-001/003) — Root GameObject with `HideAndDontSave` destroyed at frame ~6s instead of persisting ≥ 600 frames; blocks native "Mods" button injection + F9/F10 hotkey survival
+- **UGUI overlay visibility** (OVL-006) — HudStrip `AlphaBase` suppression fix merged; awaits verification in live game
+
 ## [Unreleased]
 ### Merged
 
@@ -14,12 +42,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
 - **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
+- **`/prove-features` slash command** — autonomous video proof generation for feature validation; records gameplay, adds text annotations, generates neural TTS voiceover, saves proof video to `/proof-videos/`
+- **Neural TTS voiceover in proof videos** — edge-tts integration (Microsoft Aria neural voice, en-US); auto-generates narration script from feature metadata
+- **Targeted game window capture** — gdigrab offset-based window recording; captures game window without borders, supports multi-monitor setups via explicit offset targeting
+- **ADR-006: Duplicate Instance Bypass** — Harmony prefix on `Awake()` detects/suppresses BepInEx plugin duplicates before initialization
+- **ADR-007: Neural TTS for Proof Videos** — Design pattern for autonomous AI-generated voiceovers in video proof workflows
+- **Project status tracking** — Master project tracking documents: `/docs/PROJECT_STATUS.md` (milestones, ADRs, issues), `/docs/milestones/MILESTONE-M5-example-packs.md` (M5 progress), `/docs/plans/PLAN-agent-tooling-evolution.md` (M9 roadmap)
 
 ### Fixed
 
+- **RuntimeDriver resurrection timing** — RuntimeDriver `TryResurrect()` now completes in <30ms (previously hung indefinitely); fixed via proper coroutine completion detection and timeout handling
+- **PlayerLoop DINOForgeUpdate re-injection** — PlayerLoop system injection via Harmony postfix on `SetPlayerLoop()` now correctly reinstalls `DINOForgeUpdate` when game reloads; ensures mod update system runs every frame across scene changes
+- **TryResurrect HideAndDontSave root** — RuntimeDriver.TryResurrect no longer attaches to camera GameObjects; creates standalone HideAndDontSave root object for resurrection; prevents camera transform poisoning
 - **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false; `SkinnedMeshRenderer` now preferred over static renderers to keep mesh+material paired from the same component
 - **AssetSwapSystem load timing** — bundle disk patches now happen in `OnCreate` (immediately at load, no ECS dependency); live `RenderMesh` entity swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` rather than after an arbitrary 600-frame delay (~10s); `ARF Trooper` now uses distinct `sw-rep-arf-trooper` visual asset instead of sharing `sw-rep-arc-trooper` with `ARC Trooper`
 - **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
+- **launch-game.md workflow** — documents direct EXE launch to bypass Steam mutex; game launches cleanly without mod path conflicts
 
 ### Changed
 

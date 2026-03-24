@@ -9,6 +9,38 @@
 - **Language**: C# (.NET), YAML/JSON schemas, CLI tooling
 - **Mod Loader**: BepInEx + custom ECS plugin loader (`BepInEx/ecs_plugins/`)
 
+## Agent Operational Rules (MANDATORY)
+
+### Claude (Orchestrator) Constraints
+The top-level Claude instance is ONLY allowed to:
+- Read and write documentation files
+- Spawn Haiku subagents for ALL other work
+
+**Everything else MUST be delegated to subagents (model: haiku):**
+- All Bash/shell commands
+- All file reads beyond the first 3 files per task
+- All file reads of files > 500 lines
+- All code edits and writes
+- All builds, deployments, test runs
+- All git operations
+- All log analysis
+- All game launch/kill operations
+
+### Tooling Evolution Rule
+Continuously reduce custom workflows to single optimal CLI/MCP calls:
+- When a multi-step workflow is identified, create/update a `.claude/commands/` skill or MCP tool to collapse it into one call
+- Prefer updating existing slash commands over creating new ones
+- After completing any workflow, evaluate whether it should become a permanent command
+- Agent plugins, skills, CLI tools, and MCP server MUST be kept up to date to reflect the shortest possible path to any common operation
+
+### Game Launch Protocol (via subagent)
+Always use this sequence — never assume a launch succeeded:
+1. Kill all existing instances: `Stop-Process -Name 'Diplomacy is Not an Option' -Force -ErrorAction SilentlyContinue`
+2. Wait 3 seconds and verify no processes remain
+3. Launch: `Start-Process -FilePath '<exe>' -WorkingDirectory '<gamedir>'`
+4. Wait 5 seconds, then check `MainWindowTitle` — if "Fatal error" or contains "another instance", launch FAILED
+5. Only proceed if MainWindowTitle is empty/game (not an error dialog)
+
 ## Build Commands
 
 ```bash
@@ -290,3 +322,132 @@ Agents changing asset workflows MUST update:
 3. `CLAUDE.md` (this section) — Governance changes
 4. Inline XML docs in PackCompiler services
 5. Test cases documenting new behavior
+
+---
+
+## Game Automation & Testing
+
+### Game Install Path
+
+```
+G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\
+  Diplomacy is Not an Option.exe   ← launch directly (not via Steam) for 2nd instance
+  BepInEx\
+    plugins\DINOForge.Runtime.dll  ← deployed by: dotnet build -p:DeployToGame=true
+    dinoforge_packs\               ← deployed packs (auto-copied on build)
+    dinoforge_debug.log            ← DINOForge Runtime log (read for swap/entity info)
+    LogOutput.log                  ← BepInEx log (scene changes, plugin load errors)
+```
+
+### MCP Bridge (game automation)
+
+The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 13 tools:
+
+| Tool | Purpose |
+|------|---------|
+| `game_launch` | Launch game exe + wait for bridge |
+| `game_status` | Running state, entity count, loaded packs |
+| `game_query_entities` | Query ECS entities by component type |
+| `game_get_stat` | Read a stat value on an entity |
+| `game_apply_override` | Apply a stat override |
+| `game_reload_packs` | Hot-reload packs without restarting |
+| `game_dump_state` | Trigger entity dump to file |
+| `game_screenshot` | Capture game window screenshot |
+| `game_verify_mod` | Verify mod is loaded and active |
+| `game_wait_for_world` | Wait until ECS world is ready |
+| `game_ui_automation` | Automate game UI interactions |
+| `game_launch_test` | Launch TEST instance (second concurrent DINO for testing) |
+
+**Build MCP server before use**: `dotnet build src/Tools/McpServer/DINOForge.Tools.McpServer.csproj -c Release`
+
+### Agent Slash Commands for Game Work
+
+| Command | Role |
+|---------|------|
+| `/launch-game` | Launch 2nd game instance for testing |
+| `/test-swap` | Full loop: build → deploy → launch → verify swaps |
+| `/check-game` | Read debug log, report swap/entity status |
+| `/game-test` | Automated test suite via MCP bridge |
+| `/entity-dump` | Parse ECS entity dump, analyze archetype counts |
+| `/pack-deploy` | Validate + build + deploy pack + DLL |
+| `/asset-create` | GLB/FBX → normalize → stylize → bundle → register |
+
+### Critical ECS Facts (DO NOT FORGET)
+
+- **ALL DINO entities are ECS Prefab entities** — every `EntityQuery` MUST use `EntityQueryOptions.IncludePrefab` or it returns 0 results
+- `World.Systems` returns `NoAllocReadOnlyCollection` — index access only, no IEnumerable cast
+- `MonoBehaviour.Update()` never runs — use `SystemBase.OnUpdate()`
+- Asset swap Phase 2 (live entity swap) is the primary visual mechanism — Phase 1 (catalog disk patch) is optional/best-effort
+- The Addressables catalog uses custom address keys, NOT Unity asset paths, for unit prefabs
+
+### Deploying Fixes
+
+```bash
+# Build + deploy DLL + packs
+dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true
+
+# Then restart game (or launch 2nd instance):
+start "" "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe"
+
+# Check results after ~12s (600-frame delay):
+tail -50 "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_debug.log"
+```
+
+### Test Instance (Second Concurrent Game)
+
+Unity's native mutex (in UnityPlayer.dll) prevents launching a second instance from the same directory. To support concurrent test instances:
+
+- **Test instance path**: `G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST\`
+- **How to launch**: `Start-Process -FilePath '<TEST_DIR>\Diplomacy is Not an Option.exe' -WorkingDirectory '<TEST_DIR>'`
+- **MCP tool**: `game_launch_test` — launches test instance via MCP server
+- **Path config**: `.dino_test_instance_path` in repo root
+- Both instances are completely independent; each has its own BepInEx installation
+
+To deploy DINOForge to the test instance:
+```bash
+dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
+```
+
+### AgilePlus PM Dashboard
+
+**AgilePlus** (kooshapari/agileplus) is the spec-driven development engine used for DINOForge project management.
+
+- **Repo**: `C:\Users\koosh\agileplus`
+- **Launch**: `cd C:\Users\koosh\agileplus && bun run dev` (or `npm run dev`)
+- **Purpose**: User stories, sprint tracking, spec management, roadmap visualization
+- **Integration**: Specs in `docs/specs/` map to AgilePlus stories
+
+---
+
+## Asset Bundle Creation
+
+### Unity Version Requirement
+
+Asset bundles for DINO **must be built with Unity 2021.3.45f2**. Bundles from other versions will fail to load silently at runtime.
+
+### Bundle → Pack Registration Flow
+
+```
+1. source.glb/fbx
+2. → blender normalize_asset.py → normalized.glb (polycount reduction, material cleanup)
+3. → blender stylize_asset.py → stylized.glb (faction palette applied)
+4. → Unity 2021.3: import stylized.glb, build AssetBundle → <asset-id> (no extension)
+5. → packs/<pack-id>/assets/bundles/<asset-id>   (bundle file)
+6. → unit/building YAML: visual_asset: <asset-id>
+7. → dotnet build -p:DeployToGame=true
+```
+
+### Bundle Naming Convention
+
+- Bundle filename = `visual_asset` key = Addressable key used by AssetSwapRegistry
+- Example: `sw-rep-clone-trooper` for file `packs/warfare-starwars/assets/bundles/sw-rep-clone-trooper`
+- The asset name **inside** the bundle is the Unity prefab name (e.g. `sw-rep-clone-trooper.prefab`)
+- AssetSwapSystem uses `bundle.LoadAllAssets()` fallback to handle name mismatches
+
+### Faction Palettes (hardcoded in `AssetctlPipeline.BuildFactionPalette`)
+
+| Faction | Primary | Secondary | Roughness | Metallic |
+|---------|---------|-----------|-----------|---------|
+| republic | `#F5F5F5` | `#1A3A6B` | 0.3 | 0.1 |
+| cis | `#C8A87A` | `#5C3D1E` | 0.7 | 0.2 |
+| neutral | `#888888` | — | 0.5 | 0.0 |

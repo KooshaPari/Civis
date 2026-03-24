@@ -18,6 +18,28 @@ graph TD
     style E fill:#1a1a2e,stroke:#2b9348,color:#fff
 ```
 
+## Runtime Execution Flow
+
+The runtime bootstrap follows a precise sequence to initialize the mod platform:
+
+```mermaid
+graph TD
+    Start["BepInEx Initializes<br/>Plugin.OnEnable"] --> Step1["Plugin.cs forwards<br/>Unity callbacks to RuntimeDriver"]
+    Step1 --> Step2["RuntimeDriver.Update<br/>Frame 0: Detect ECS World"]
+    Step2 --> Step3["RuntimeDriver.OnDestroy<br/>called at frame ~1"]
+    Step3 --> Step4["ModPlatform.Initialize<br/>Create root + load SDK"]
+    Step4 --> Step5["Root marked: HideAndDontSave<br/>+ DontDestroyOnLoad"]
+    Step5 --> Step6["RuntimeDriver resurrected in OnDestroy<br/>via DontDestroyOnLoad marker"]
+    Step6 --> Step7["ModPlatform.OnWorldReady<br/>Load packs, enable HMR, start UI"]
+    Step7 --> Step8["F9/F10 overlays active<br/>across scene reloads"]
+
+    style Start fill:#e94560,stroke:#fff,color:#fff
+    style Step3 fill:#ff6b6b,stroke:#fff,color:#fff
+    style Step5 fill:#2b9348,stroke:#fff,color:#fff
+    style Step6 fill:#0f3460,stroke:#fff,color:#fff
+    style Step8 fill:#533483,stroke:#fff,color:#fff
+```
+
 ## Three Products
 
 ### Product A — Runtime / Hook Layer
@@ -129,6 +151,36 @@ DINOForge/
   manifests/             # Ownership map, extension points
 ```
 
+## The Two-Boot Cycle
+
+A critical runtime pattern ensures the mod platform survives scene reloads and maintains persistent state.
+
+### Why It Exists
+
+DINO's game flow causes the Doorstop pre-loader to initialize **twice** per playthrough:
+1. **Boot 1**: Game launcher → load BepInEx → load Runtime plugin
+2. **Intermediate**: Scene loads, ECS world initializes
+3. **Boot 2**: Scene transition (or new game → continue) → Doorstop re-runs → must NOT double-initialize
+
+### Mechanism: HideAndDontSave + DontDestroyOnLoad
+
+The root GameObject persists across scene reloads via:
+
+1. **HideAndDontSave flag** — Mark runtime root as not player-saveable
+2. **DontDestroyOnLoad marker** — Persist from Boot 1 → Boot 2
+3. **RuntimeDriver.OnDestroy resurrection** — If root destroyed by accident, create new one from marker
+4. **ModPlatform singleton pattern** — Only one instance ever exists; subsequent boots detect via static reference
+
+### Why Harmony Patches Failed
+
+Earlier versions used Harmony patches to manipulate the lifecycle. This backfired because:
+- **LazyPatch** intercepted object creation with custom logic
+- **DeltaTimeResurrectionPatch** fought with the natural DontDestroyOnLoad flow
+- Patch state leaked across scene boundaries
+- Framework beat the patches; patches beat DontDestroyOnLoad
+
+**Resolution** (commit df3b55e): Removed all patches, trusted the native HideAndDontSave + DontDestroyOnLoad mechanism.
+
 ## Reference Models
 
 DINOForge draws from the best modding ecosystems:
@@ -140,3 +192,17 @@ DINOForge draws from the best modding ecosystems:
 | Satisfactory/BepInEx | Mod loaders, plugin bootstrap |
 | Minecraft Bedrock | Pack schemas, folder conventions |
 | UEFN/Roblox | End-to-end creation pipeline concept |
+
+## Products
+
+### Product A: Desktop Companion (WinUI 3)
+
+A standalone Windows desktop GUI that mirrors the in-game F9/F10 overlays. Allows pack configuration and debugging without launching the game.
+
+- **UI Framework**: WinUI 3 + Mica background
+- **Shell**: NavigationView with pack list and debug panel tabs
+- **State Parity**: Reads/writes `disabled_packs.json` shared with game runtime
+- **Use Case**: Configure packs, test pack compatibility, debug issues before launching game
+- **Status**: In Progress (M9)
+
+See ADR-011 for detailed design.

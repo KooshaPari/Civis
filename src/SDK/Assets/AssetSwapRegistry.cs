@@ -131,6 +131,20 @@ namespace DINOForge.SDK.Assets
         }
 
         /// <summary>
+        /// Marks all registered swaps as not applied so they will be re-processed.
+        /// Call this after a hot-reload that may have changed bundle files, so the
+        /// next <see cref="AssetSwapSystem"/> update re-patches and re-swaps everything.
+        /// </summary>
+        public static void ResetApplied()
+        {
+            lock (_lock)
+            {
+                foreach (AssetSwapRequest req in _requests.Values)
+                    req.Applied = false;
+            }
+        }
+
+        /// <summary>
         /// Clears all registered swaps. Intended for test teardown only.
         /// </summary>
         internal static void Clear()

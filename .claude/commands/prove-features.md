@@ -17,6 +17,46 @@ captions, highlight overlays, color-coded labels — then open the finished vide
 
 ## Requirements
 
+### Capture — OBS Game Capture (preferred) or ffmpeg gdigrab (fallback)
+
+**Preferred: OBS headless with Game Capture source**
+
+OBS Game Capture uses process-level D3D11 hooking — captures the game directly regardless of window focus or z-order. NVENC hardware encoding eliminates CPU overhead. Scene collection pre-configured at `%APPDATA%\obs-studio\basic\scenes\DINOForge.json`.
+
+Setup (one-time):
+```powershell
+# Scene collection file already created at:
+# C:\Users\<user>\AppData\Roaming\obs-studio\basic\scenes\DINOForge.json
+# Profile config already created at:
+# C:\Users\<user>\AppData\Roaming\obs-studio\basic\profiles\DINOForge\basic.ini
+
+# Launch OBS headless with DINOForge profile
+$obsExe = "C:\Program Files\obs-studio\bin\64bit\obs64.exe"
+$outFile = "$env:TEMP\dinoforge_obs_raw.mp4"
+
+# Start OBS with scene/profile loaded (will output to $env:TEMP via basic.ini config)
+Start-Process -FilePath $obsExe `
+  -ArgumentList "--profile", "DINOForge", "--collection", "DINOForge", "--scene", "DINOForge Capture" `
+  -WindowStyle Hidden
+Start-Sleep -Seconds 3
+
+# Manual: Press Ctrl+R in OBS window to start recording (or use OBS WebSocket plugin via mcp-server)
+# Record for ~28 seconds
+# Stop: Kill OBS process or press Ctrl+R again
+
+# After shutdown, verify output at $env:TEMP\dinoforge_obs_raw*.mp4
+```
+
+**Fallback: ffmpeg gdigrab by window title**
+
+If OBS is not available or configured, fall back to ffmpeg gdigrab with window title capture:
+```powershell
+# Captures Diplomacy window only (screen-based but window-specific)
+ffmpeg -f gdigrab -framerate 30 -i "title=Diplomacy is Not an Option" -t 28 -vcodec libx264 -preset ultrafast "$outFile"
+```
+
+---
+
 ### ffmpeg
 Located at `C:\program files\imagemagick-7.1.0-q16-hdri\ffmpeg.exe`
 

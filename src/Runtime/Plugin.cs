@@ -252,6 +252,14 @@ namespace DINOForge.Runtime
                         try { TryResurrect("(Watcher)", "Watcher"); } catch { }
                     }
 
+                    // Screenshot-on-demand: check every ~10 iterations (500ms).
+                    // ScreenCapture.CaptureScreenshot() in Unity 2021.3 sets an internal flag
+                    // that is processed at the next render frame — safe to call from any thread.
+                    if (loopCount % 10 == 0)
+                    {
+                        try { CheckScreenshotRequest("[Watcher]"); } catch { }
+                    }
+
                     // NOTE: NativeMenuInjector scanning is NOT done from this watcher thread —
                     // Resources.FindObjectsOfTypeAll<Canvas>() can deadlock when called from
                     // a background thread during Unity's asset-loading phase.
@@ -455,6 +463,10 @@ namespace DINOForge.Runtime
                     WriteDebug("[CameraPreCull] NeedsResurrection detected, triggering TryResurrect");
                     TryResurrect("(CameraPreCull)", "CameraPreCull");
                 }
+
+                // Screenshot-on-demand: check trigger file every ~10 frames
+                if (_cameraPreCullCount % 10 == 0)
+                    CheckScreenshotRequest("[CameraPreCull]");
             }
             catch { }
         }
@@ -640,6 +652,10 @@ namespace DINOForge.Runtime
             {
                 _playerLoopUpdateCount++;
 
+                // First-tick diagnostic
+                if (_playerLoopUpdateCount == 1)
+                    WriteDebug("[PlayerLoop] FIRST TICK — PlayerLoop is firing!");
+
                 // Check for F9 key press
                 if (Input.GetKeyDown(KeyCode.F9))
                 {
@@ -665,6 +681,12 @@ namespace DINOForge.Runtime
                 // Also run the world scan every frame via PlayerLoop (mirrors OnBeforeRenderWorldScan)
                 OnBeforeRenderWorldScan();
 
+                // Screenshot-on-demand: check trigger file every ~10 frames from PlayerLoop
+                if (_playerLoopUpdateCount % 10 == 0)
+                {
+                    CheckScreenshotRequest("[PlayerLoop]");
+                }
+
                 // Heartbeat every 600 calls (~10 seconds at 60 FPS)
                 if (_playerLoopUpdateCount % 600 == 0)
                 {
@@ -680,6 +702,37 @@ namespace DINOForge.Runtime
                 }
                 catch { }
             }
+        }
+
+        private static string? _screenshotPendingPath = null;
+
+        private static void CheckScreenshotRequest(string context)
+        {
+            try
+            {
+                string bepRoot  = BepInEx.Paths.BepInExRootPath;
+                string reqFile  = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
+                string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
+
+                if (_screenshotPendingPath != null)
+                {
+                    // Previous ScreenCapture.CaptureScreenshot was called — write done file
+                    System.IO.File.WriteAllText(doneFile, _screenshotPendingPath);
+                    WriteDebug($"{context} Screenshot done: {_screenshotPendingPath}");
+                    _screenshotPendingPath = null;
+                }
+                else if (System.IO.File.Exists(reqFile))
+                {
+                    string path = System.IO.File.ReadAllText(reqFile).Trim();
+                    System.IO.File.Delete(reqFile);
+                    if (string.IsNullOrEmpty(path))
+                        path = System.IO.Path.Combine(bepRoot, "screenshot.png");
+                    WriteDebug($"{context} Screenshot requested: {path}");
+                    ScreenCapture.CaptureScreenshot(path);
+                    _screenshotPendingPath = path;
+                }
+            }
+            catch { }
         }
 
         private static bool _playerLoopHarmonyPatched = false;
@@ -882,6 +935,10 @@ namespace DINOForge.Runtime
                     WriteDebug("[DinoSysGroup] NeedsResurrection detected, triggering TryResurrect");
                     TryResurrect("(DinoSysGroup)", "DinoSysGroup");
                 }
+
+                // Screenshot-on-demand
+                if (_dinoSystemGroupCallCount % 10 == 0)
+                    CheckScreenshotRequest("[DinoSysGroup]");
             }
             catch { }
             finally

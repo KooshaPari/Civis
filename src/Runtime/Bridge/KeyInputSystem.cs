@@ -31,6 +31,10 @@ namespace DINOForge.Runtime.Bridge
         private static int _playerLoopTickCount = 0;
         private static bool _harmonyPatched = false;
 
+        // Screenshot-on-demand: external process writes trigger file, we capture and write done file.
+        private static readonly string _screenshotRequestFile = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_request.txt");
+        private static readonly string _screenshotDoneFile    = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_done.txt");
+
         protected override void OnCreate()
         {
             WriteDebug("KeyInputSystem.OnCreate");
@@ -82,6 +86,7 @@ namespace DINOForge.Runtime.Bridge
                     WriteDebug("F10 pressed");
                     OnF10Pressed?.Invoke();
                 }
+
             }
             catch { }
         }
@@ -210,6 +215,31 @@ namespace DINOForge.Runtime.Bridge
                     WriteDebug("Resurrection triggered from PlayerLoopTick");
                     Plugin.TryResurrect("(PlayerLoopTick)", "PlayerLoopTick");
                 }
+
+                // Screenshot-on-demand: check trigger file ~10x/sec
+                if (_playerLoopTickCount % 6 == 0)
+                {
+                    try
+                    {
+                        if (_pendingScreenshotDone != null)
+                        {
+                            System.IO.File.WriteAllText(_screenshotDoneFile, _pendingScreenshotDone);
+                            WriteDebug($"Screenshot done: {_pendingScreenshotDone}");
+                            _pendingScreenshotDone = null;
+                        }
+                        else if (System.IO.File.Exists(_screenshotRequestFile))
+                        {
+                            string screenshotPath = System.IO.File.ReadAllText(_screenshotRequestFile).Trim();
+                            System.IO.File.Delete(_screenshotRequestFile);
+                            if (string.IsNullOrEmpty(screenshotPath))
+                                screenshotPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshot.png");
+                            WriteDebug($"Screenshot requested: {screenshotPath}");
+                            ScreenCapture.CaptureScreenshot(screenshotPath);
+                            _pendingScreenshotDone = screenshotPath;
+                        }
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
@@ -220,6 +250,8 @@ namespace DINOForge.Runtime.Bridge
                 catch { }
             }
         }
+
+        private static string? _pendingScreenshotDone = null;
 
         private struct DINOForgeKeyLoop { }
 

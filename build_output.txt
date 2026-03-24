@@ -1,85 +1,21 @@
-  DINOForge.Bridge.Protocol -> C:\Users\koosh\Dino\src\Bridge\Protocol\bin\Debug\netstandard2.0\DINOForge.Bridge.Protocol.dll
-  DINOForge.SDK -> C:\Users\koosh\Dino\src\SDK\bin\Debug\netstandard2.0\DINOForge.SDK.dll
-  DINOForge.Templates -> C:\Users\koosh\Dino\src\Templates\bin\Debug\net8.0\DINOForge.Templates.dll
-  DINOForge.Tools.DumpTools -> C:\Users\koosh\Dino\src\Tools\DumpTools\bin\Debug\net8.0\DINOForge.Tools.DumpTools.dll
-  DINOForge.Tools.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\bin\Debug\net8.0\DINOForge.Tools.Installer.dll
-  DINOForge.Domains.UI -> C:\Users\koosh\Dino\src\Domains\UI\bin\Debug\netstandard2.0\DINOForge.Domains.UI.dll
-  DINOForge.Domains.Warfare -> C:\Users\koosh\Dino\src\Domains\Warfare\bin\Debug\netstandard2.0\DINOForge.Domains.Warfare.dll
-  DINOForge.Domains.Economy -> C:\Users\koosh\Dino\src\Domains\Economy\bin\Debug\netstandard2.0\DINOForge.Domains.Economy.dll
-  DINOForge.Bridge.Client -> C:\Users\koosh\Dino\src\Bridge\Client\bin\Debug\net8.0\DINOForge.Bridge.Client.dll
-  DINOForge.Domains.Scenario -> C:\Users\koosh\Dino\src\Domains\Scenario\bin\Debug\netstandard2.0\DINOForge.Domains.Scenario.dll
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs(923,21): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs(478,99): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Bridge\KeyInputSystem.cs(59,43): warning CS8604: Possible null reference argument for parameter 'log' in 'void RuntimeDriver.Initialize(ManualLogSource log, ConfigFile config, bool dumpOnStartup, string dumpOutputPath)'. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Bridge\KeyInputSystem.cs(59,67): warning CS8604: Possible null reference argument for parameter 'config' in 'void RuntimeDriver.Initialize(ManualLogSource log, ConfigFile config, bool dumpOnStartup, string dumpOutputPath)'. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
   DINOForge.Runtime -> G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\plugins\DINOForge.Runtime.dll
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(89,17): error CS1003: Syntax error, ')' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(87,70): error CS1073: Unexpected token ';' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(87,82): error CS1056: Unexpected character '\' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(88,55): error CS1003: Syntax error, ',' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(91,14): error CS1003: Syntax error, ',' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(99,26): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(99,26): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(131,10): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(226,9): error CS1003: Syntax error, ')' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,45): error CS1073: Unexpected token ';' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,83): error CS1056: Unexpected character '\' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,98): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(229,6): error CS1002: ; expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(231,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(295,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(354,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(398,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(446,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(505,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(525,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(557,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(563,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(579,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(591,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(614,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(621,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(635,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(648,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1002: ; expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
   Deployed packs to G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_packs
-  DINOForge.Tests.Integration -> C:\Users\koosh\Dino\src\Tests\Integration\bin\Debug\net8.0\DINOForge.Tests.Integration.dll
-  DINOForge.Tools.McpServer -> C:\Users\koosh\Dino\src\Tools\McpServer\bin\Debug\net8.0\DINOForge.Tools.McpServer.dll
-  DINOForge.Tests -> C:\Users\koosh\Dino\src\Tests\bin\Debug\net8.0\DINOForge.Tests.dll
-  DINOForge.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\GUI\bin\Debug\net8.0-windows\DINOForge.Installer.dll
 
-Build FAILED.
+Build succeeded.
 
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(89,17): error CS1003: Syntax error, ')' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(87,70): error CS1073: Unexpected token ';' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(87,82): error CS1056: Unexpected character '\' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(88,55): error CS1003: Syntax error, ',' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(91,14): error CS1003: Syntax error, ',' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(99,26): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(99,26): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(131,10): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(226,9): error CS1003: Syntax error, ')' expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,45): error CS1073: Unexpected token ';' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,83): error CS1056: Unexpected character '\' [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(183,98): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(229,6): error CS1002: ; expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(231,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(295,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(354,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(398,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(446,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(505,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(525,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(557,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(563,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(579,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(591,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(614,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(621,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(635,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(648,5): error CS0106: The modifier 'private' is not valid for this item [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1513: } expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1026: ) expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-C:\Users\koosh\Dino\src\Tools\Cli\Commands\AssetctlCommand.cs(665,6): error CS1002: ; expected [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
-    0 Warning(s)
-    31 Error(s)
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs(923,21): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs(478,99): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Bridge\KeyInputSystem.cs(59,43): warning CS8604: Possible null reference argument for parameter 'log' in 'void RuntimeDriver.Initialize(ManualLogSource log, ConfigFile config, bool dumpOnStartup, string dumpOutputPath)'. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+C:\Users\koosh\Dino\src\Runtime\Bridge\KeyInputSystem.cs(59,67): warning CS8604: Possible null reference argument for parameter 'config' in 'void RuntimeDriver.Initialize(ManualLogSource log, ConfigFile config, bool dumpOnStartup, string dumpOutputPath)'. [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+    4 Warning(s)
+    0 Error(s)
 
-Time Elapsed 00:00:06.85
+Time Elapsed 00:00:03.40

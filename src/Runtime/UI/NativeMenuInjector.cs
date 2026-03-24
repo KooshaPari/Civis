@@ -68,6 +68,9 @@ namespace DINOForge.Runtime.UI
         private int _injectionAttemptCount;
         private long _buttonClickCount;
 
+        // ── ISSUE-044: InitialGameLoader auto-advance (skips splash screen) ──────
+        private bool _anyKeyPatchApplied;
+
         // ------------------------------------------------------------------ //
         // Public wiring surface
         // ------------------------------------------------------------------ //
@@ -110,6 +113,14 @@ namespace DINOForge.Runtime.UI
 
         private void Update()
         {
+            // Screenshot-on-demand: check trigger file every ~20 frames (~3x/sec at 60fps)
+            _screenshotCheckFrames++;
+            if (_screenshotCheckFrames >= 20)
+            {
+                _screenshotCheckFrames = 0;
+                CheckScreenshotRequest();
+            }
+
             // If we have already injected and the button is still alive, nothing to do.
             if (_injected && _injectedButton != null) return;
 
@@ -125,6 +136,37 @@ namespace DINOForge.Runtime.UI
 
             _rescanTimer = 0f;
             TryInjectMenuButton();
+        }
+
+        private int _screenshotCheckFrames;
+        private string? _pendingScreenshotPath;
+
+        private void CheckScreenshotRequest()
+        {
+            try
+            {
+                string bepRoot = BepInEx.Paths.BepInExRootPath;
+                string reqFile  = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
+                string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
+
+                if (_pendingScreenshotPath != null)
+                {
+                    System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath);
+                    WriteDebug($"[Screenshot] done: {_pendingScreenshotPath}");
+                    _pendingScreenshotPath = null;
+                }
+                else if (System.IO.File.Exists(reqFile))
+                {
+                    string path = System.IO.File.ReadAllText(reqFile).Trim();
+                    System.IO.File.Delete(reqFile);
+                    if (string.IsNullOrEmpty(path))
+                        path = System.IO.Path.Combine(bepRoot, "screenshot.png");
+                    WriteDebug($"[Screenshot] requested: {path}");
+                    ScreenCapture.CaptureScreenshot(path);
+                    _pendingScreenshotPath = path;
+                }
+            }
+            catch { }
         }
 
         private void OnDestroy()
@@ -209,6 +251,31 @@ namespace DINOForge.Runtime.UI
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
                         return;
+                    }
+                }
+
+                // ── ISSUE-044 InitialGameLoader auto-advance ─────────────────────
+                // If the game is stuck on InitialGameLoader waiting for Input.anyKey,
+                // skip to scene 1 (main menu). We call LoadScene and immediately return —
+                // OnActiveSceneChanged will fire when the scene is ready and trigger re-scan.
+                if (attemptId >= 2 && !_anyKeyPatchApplied)
+                {
+                    bool hasInitialLoader = false;
+                    foreach (Canvas c in allCanvases)
+                    {
+                        if (c.name != null && c.name.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0 && c.gameObject.activeInHierarchy)
+                        {
+                            hasInitialLoader = true;
+                            break;
+                        }
+                    }
+                    if (hasInitialLoader)
+                    {
+                        _anyKeyPatchApplied = true;  // prevent re-triggering
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} — InitialGameLoader stuck. Loading scene 1 to skip splash screen.");
+                        WriteDebug($"[{_sessionId}] InitialGameLoader auto-advance: SceneManager.LoadScene(1)");
+                        SceneManager.LoadScene(1);
+                        return;  // IMPORTANT: return immediately; OnActiveSceneChanged will re-trigger scan
                     }
                 }
 

@@ -14,12 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
 - **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
+- **`/prove-features` slash command** — autonomous video proof generation for feature validation; records gameplay, adds text annotations, generates neural TTS voiceover, saves proof video to `/proof-videos/`
+- **Neural TTS voiceover in proof videos** — edge-tts integration (Microsoft Aria neural voice, en-US); auto-generates narration script from feature metadata
+- **Targeted game window capture** — gdigrab offset-based window recording; captures game window without borders, supports multi-monitor setups via explicit offset targeting
+- **ADR-006: Duplicate Instance Bypass** — Harmony prefix on `Awake()` detects/suppresses BepInEx plugin duplicates before initialization
+- **ADR-007: Neural TTS for Proof Videos** — Design pattern for autonomous AI-generated voiceovers in video proof workflows
+- **Project status tracking** — Master project tracking documents: `/docs/PROJECT_STATUS.md` (milestones, ADRs, issues), `/docs/milestones/MILESTONE-M5-example-packs.md` (M5 progress), `/docs/plans/PLAN-agent-tooling-evolution.md` (M9 roadmap)
 
 ### Fixed
 
+- **RuntimeDriver resurrection timing** — RuntimeDriver `TryResurrect()` now completes in <30ms (previously hung indefinitely); fixed via proper coroutine completion detection and timeout handling
+- **PlayerLoop DINOForgeUpdate re-injection** — PlayerLoop system injection via Harmony postfix on `SetPlayerLoop()` now correctly reinstalls `DINOForgeUpdate` when game reloads; ensures mod update system runs every frame across scene changes
+- **TryResurrect HideAndDontSave root** — RuntimeDriver.TryResurrect no longer attaches to camera GameObjects; creates standalone HideAndDontSave root object for resurrection; prevents camera transform poisoning
 - **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false; `SkinnedMeshRenderer` now preferred over static renderers to keep mesh+material paired from the same component
 - **AssetSwapSystem load timing** — bundle disk patches now happen in `OnCreate` (immediately at load, no ECS dependency); live `RenderMesh` entity swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` rather than after an arbitrary 600-frame delay (~10s); `ARF Trooper` now uses distinct `sw-rep-arf-trooper` visual asset instead of sharing `sw-rep-arc-trooper` with `ARC Trooper`
 - **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
+- **launch-game.md workflow** — documents direct EXE launch to bypass Steam mutex; game launches cleanly without mod path conflicts
 
 ### Changed
 

@@ -12,7 +12,23 @@ Kill any existing game instance, then launch fresh for testing.
 `boot.config` has `single-instance=0` (was `single-instance=` which Unity treated as truthy).
 Unity's native single-instance check is now permanently disabled. No mutex bypass needed.
 
+**Note**: Steam may restore `boot.config` during game updates. The steps below verify and re-apply the fix if needed.
+
 ## Steps
+
+### 0. Verify boot.config fix (auto-repair)
+```powershell
+$bootConfigPath = "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option_Data\boot.config"
+$bootContent = Get-Content $bootConfigPath -Raw
+if ($bootContent -notmatch "single-instance\s*=\s*0") {
+    Write-Host "boot.config needs repair (Steam update restored it). Fixing..."
+    $bootContent = $bootContent -replace "single-instance\s*=.*", "single-instance=0"
+    Set-Content $bootConfigPath -Value $bootContent -Force
+    Write-Host "boot.config fixed. Continuing..."
+} else {
+    Write-Host "boot.config OK (single-instance=0 present)"
+}
+```
 
 ### 1. Kill existing processes
 ```powershell

@@ -16,17 +16,24 @@ Unity's native single-instance check is now permanently disabled. No mutex bypas
 
 ## Steps
 
-### 0. Verify boot.config fix (auto-repair)
+### 0. Verify boot.config fix (auto-repair — both installs)
 ```powershell
-$bootConfigPath = "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option_Data\boot.config"
-$bootContent = Get-Content $bootConfigPath -Raw
-if ($bootContent -notmatch "single-instance\s*=\s*0") {
-    Write-Host "boot.config needs repair (Steam update restored it). Fixing..."
-    $bootContent = $bootContent -replace "single-instance\s*=.*", "single-instance=0"
-    Set-Content $bootConfigPath -Value $bootContent -Force
-    Write-Host "boot.config fixed. Continuing..."
-} else {
-    Write-Host "boot.config OK (single-instance=0 present)"
+# Fix both the main install and the _TEST install
+$bootConfigPaths = @(
+    "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option_Data\boot.config",
+    "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST\Diplomacy is Not an Option_Data\boot.config"
+)
+foreach ($bootConfigPath in $bootConfigPaths) {
+    if (-not (Test-Path $bootConfigPath)) { continue }
+    $bootContent = Get-Content $bootConfigPath -Raw
+    if ($bootContent -notmatch "single-instance\s*=\s*0") {
+        Write-Host "Fixing: $bootConfigPath"
+        $bootContent = $bootContent -replace "single-instance\s*=.*", "single-instance=0"
+        Set-Content $bootConfigPath -Value $bootContent -Force
+        Write-Host "Fixed."
+    } else {
+        Write-Host "OK: $bootConfigPath"
+    }
 }
 ```
 

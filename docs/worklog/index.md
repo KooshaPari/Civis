@@ -1,5 +1,22 @@
 # DINOForge Worklog
 
+## 2026-03-20 - Runtime Integration Regression Fix
+
+**[Detailed worklog](./2026-03-20.md)**
+
+Investigated and fixed F9/F10 overlay regression caused by Harmony patch interference with the two-boot cycle. Root cause: Harmony patches (LazyPatch + DeltaTimeResurrectionPatch) were destroying the runtime root despite HideAndDontSave + DontDestroyOnLoad flags. Solution: Removed all Harmony patches, restored pure native persistence mechanism (commit df3b55e).
+
+**Documentation updates**:
+- Enhanced M8 roadmap section with root cause and fix details
+- Added "Runtime Execution Flow" diagram to architecture.md
+- Added "The Two-Boot Cycle" section explaining persistence mechanism
+- Added Desktop Companion (WinUI 3, M9) to products section
+- Updated CLAUDE.md with agent governance rules and tooling evolution guidance
+
+**Next**: In-game validation of F9/F10 stability across scene transitions.
+
+---
+
 ## 2026-03-09 - Project Inception
 
 ### Research Phase

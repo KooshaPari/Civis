@@ -1,7 +1,8 @@
 # DINOForge — QA Matrix
 
-> **Last updated**: 2026-03-15
-> **Status legend**: ✅ exists · 🆕 new (this doc) · ⚠️ partial
+> **Last updated**: 2026-03-20
+> **Status legend**: ✅ PASS · ❌ FAIL · ⚠️ PARTIAL · 🔄 IN_PROGRESS · 🆕 new
+> **v0.11.0**: .NET 11 migration, Desktop Companion, Asset Swap timing fixes, CLI JSON output
 
 ---
 
@@ -116,6 +117,70 @@
 | PERF-003 | Bridge round-trip P99 < 50 ms | perf | **new** `BridgeLatencyTests.cs` | P99 < 50 ms | 🆕 |
 | PERF-004 | AssetSwapSystem phase 1 completes before frame 5 | perf | **new** `AssetSwapLatencyTests.cs` | Patch exists by frame 5 mock | 🆕 |
 
+### P1 — Runtime: BepInEx Plugin & Bridge (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| RT-001 | BepInEx plugin loads without exception | unit | `RuntimeBootstrapTests.cs` | Plugin `Awake()` completes, no unhandled | ✅ |
+| RT-002 | HideAndDontSave root survives DINO two-boot cycle | integration | `RuntimePersistenceTests.cs` | Root GameObject exists after 2 game restarts | ⚠️ PARTIAL |
+| RT-003 | F9 keypress toggles debug overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → overlay toggle | ❌ FAIL |
+| RT-004 | F10 keypress toggles mod menu overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → menu toggle | ❌ FAIL |
+| RT-005 | RuntimeDriver.Update survives ≥ 600 frames | integration | `RuntimeDriverTests.cs` | `OnDestroy` not called within 600 frames; root persists | ❌ FAIL |
+
+### P1 — Asset Swap System (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| AST-007 | Phase 1: bundle patched to `BepInEx/dinoforge_swap/` before frame 5 | integration | `AssetSwapPhase1Tests.cs` | Patched bundle file exists by frame 5 | ✅ |
+| AST-008 | Phase 2: RenderMesh swapped on live entity after phase 1 | integration | `AssetSwapPhase2Tests.cs` | `QueryUnits()[0].MeshId` matches swapped mesh | ✅ |
+| AST-009 | Prefab mesh extraction (MeshFilter/SkinnedMeshRenderer fallback) | unit | `MeshExtractionTests.cs` | `TrySwapRenderMeshFromBundle` handles prefab + mesh fallback | ✅ |
+| AST-010 | `visual_asset` alignment (warfare-starwars bundle names match unit def) | integration | `VisualAssetAlignmentTests.cs` | All 28 units resolve bundles successfully | ✅ |
+
+### P1 — CLI Tools (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| CLI-001 | All 9 commands support `--format json` | cli-integration | `CliFormatTests.cs` | `status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `verify` all emit JSON | ✅ |
+| CLI-002 | JSON output parses and has required fields | unit | `CommandOutputTests.cs` | `CommandOutput.WriteJson()` produces valid JSON | ✅ |
+| CLI-003 | Errors suppress ANSI markup when `--format json` active | unit | `CommandOutputTests.cs` | No `[Red]` or `[/]` in JSON error messages | ✅ |
+| CLI-004 | `ui tree` command returns XAML node tree | cli-integration | `CliUiTreeTests.cs` | Hierarchical JSON with node names, IDs, enabled states | ✅ |
+| CLI-005 | `ui click` targets button by AutomationId and fires click | cli-integration | `CliUiClickTests.cs` | Button event handler invoked | 🔄 IN_PROGRESS |
+| CLI-006 | `ui wait` polls for text and times out after 30s | cli-integration | `CliUiWaitTests.cs` | Text found within timeout OR exit code 124 on timeout | 🔄 IN_PROGRESS |
+| CLI-007 | `ui expect` sets exit code 1 if assertion fails (JSON mode) | cli-integration | `CliUiExpectTests.cs` | `--format json --expect "text" "not found"` → exit 1 | 🔄 IN_PROGRESS |
+
+### P1 — MCP Server Tools (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| MCP-001 | `game_launch` tool starts game exe, awaits bridge ping | mcp | `GameLaunchMcpTests.cs` | Game process alive, bridge responds | ✅ |
+| MCP-002 | `game_status` returns entity count, loaded packs | mcp | `GameStatusMcpTests.cs` | JSON with `entityCount`, `packs[]` | ✅ |
+| MCP-003 | `game_query_entities` filters by component type | mcp | `GameQueryMcpTests.cs` | Returns only entities with requested component | ✅ |
+| MCP-004 | `game_get_stat` reads stat on entity | mcp | `GameGetStatMcpTests.cs` | Returns numeric stat value | ✅ |
+| MCP-005 | `game_apply_override` persists after reload | mcp | `GameApplyOverrideMcpTests.cs` | Stat value persists after `ReloadPacks()` | ✅ |
+| MCP-006 | `game_reload_packs` hot-reloads within 5s | mcp | `GameReloadPacksMcpTests.cs` | Pack version increments within 5s | ✅ |
+| MCP-007 | `game_dump_state` triggers entity dump export | mcp | `GameDumpStateMcpTests.cs` | JSON file written to BepInEx logs | ✅ |
+| MCP-008 | `game_screenshot` captures game window | mcp | `GameScreenshotMcpTests.cs` | PNG file created, dimensions match window | ✅ |
+| MCP-009 | `game_verify_mod` checks DINOForge loaded | mcp | `GameVerifyModMcpTests.cs` | Returns `{"verified": true}` if bridge responds | ✅ |
+| MCP-010 | `game_wait_for_world` polls until ECS ready | mcp | `GameWaitForWorldMcpTests.cs` | Returns when `CalculateEntityCount() > 0` | ✅ |
+| MCP-011 | `game_ui_automation` drives in-game UI | mcp | `GameUiAutomationMcpTests.cs` | Click/toggle/screenshot work in-game | 🔄 IN_PROGRESS |
+
+### P1 — Hot Reload (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| HOT-001 | File watcher detects pack YAML change | integration | `HotReloadWatcherTests.cs` | `FileChanged` event fires within 1s | ✅ |
+| HOT-002 | Bundle change detection (checksum mismatch) | integration | `HotReloadBundleTests.cs` | Checksum mismatch triggers reload | ✅ |
+| HOT-003 | Invalid YAML keeps old pack, logs error | integration | `HotReloadErrorTests.cs` | Old pack still active, error file written | ✅ |
+| HOT-004 | Reload fires OnAfterPackReload event | integration | `HotReloadEventTests.cs` | Event handler invoked with pack ID + version | ✅ |
+
+### P1 — Native Menu Injection (v0.11.0)
+
+| ID | Scenario | Type | File | Pass Criteria | Status |
+|----|----------|------|------|---------------|--------|
+| NATIVE-001 | "Mods" button injected between Options and Credits | integration | `NativeMenuInjectionTests.cs` | Button exists in main menu, clickable, AutomationId="ModsButton" | ❌ FAIL |
+| NATIVE-002 | "Mods" button click opens overlay (F10 equivalent) | integration | `NativeMenuInjectionTests.cs` | Button click sets `ModMenuOverlay.IsVisible=true`; equals F10 behavior | ❌ FAIL |
+| NATIVE-003 | Menu injection survives scene reload + RuntimeDriver persistence | integration | `NativeMenuInjectionTests.cs` | "Mods" button still present after 2+ scene changes; RuntimeDriver.OnDestroy not fired | ❌ FAIL |
+
 ### P1 — UI: Desktop Companion (ViewModel unit)
 
 | ID | Scenario | Type | File | Pass Criteria | Status |
@@ -125,6 +190,9 @@
 | COMP-003 | Error pack shows error badge state | unit | `CompanionTests/ViewModelTests.cs` | `HasErrors=true` | ✅ |
 | COMP-004 | Status text correct when no errors | unit | `CompanionTests/ViewModelTests.cs` | `"All N pack(s) loaded OK"` | ✅ |
 | COMP-005 | Disabled pack service persists across restart | unit | `CompanionTests/DisabledPacksServiceTests.cs` | Pack IDs survive round-trip | ✅ |
+| COMP-006 | Dashboard shows pack count + status summary | unit | `CompanionTests/DashboardViewModelTests.cs` | Title text includes pack count | ✅ |
+| COMP-007 | Settings page loads game path from registry | unit | `CompanionTests/SettingsViewModelTests.cs` | Initial path matches saved value | ✅ |
+| COMP-008 | Debug panel queries entity count from Bridge | unit | `CompanionTests/DebugViewModelTests.cs` | Calls `GameClient.GetStatusAsync()` on load | ✅ |
 
 ### P1 — UI Automation: Desktop Companion (FlaUI — ui-automation.yml, Windows)
 
@@ -249,13 +317,26 @@ filter: dotnet test --filter "Category=GameLaunch"
 
 ---
 
-## Coverage Targets
+## Coverage Targets (v0.11.0)
 
-| Layer | Current | Target | Gap |
-|-------|---------|--------|-----|
-| SDK (unit) | ~65% | 80% | INT-006, fuzz targets |
-| Bridge Protocol | ~70% | 85% | BRG latency tests |
-| Asset Swap | ~55% | 75% | GL-003/004, AST-006 |
-| Overlay UI logic | 0% | 60% | OVL-001…008 (game-launch) |
-| Desktop Companion UI | ~45% | 70% | COMP-UI-001…006 (FlaUI) |
-| E2E / Game Launch | 0% | — (not in coverage gate) | GL-001…008 |
+| Layer | Current | Target | Status | Gap |
+|-------|---------|--------|--------|-----|
+| SDK (unit) | ~65% | 80% | ✅ | INT-006, fuzz targets |
+| Bridge Protocol | ~70% | 85% | ✅ | BRG latency tests |
+| Asset Swap | ~75% | 85% | ✅ | AST-007/008 added |
+| Runtime / BepInEx | 0% | 60% | ❌ | RT-001…005 (F9/F10 blocking) |
+| CLI Tools | ~50% | 80% | 🔄 | CLI-005/006/007 in progress |
+| MCP Server | ~60% | 85% | 🔄 | MCP-011 in progress |
+| Hot Reload | ~70% | 85% | ✅ | HOT-001…004 added |
+| Native Menu | 0% | 100% | ❌ | NATIVE-001…003 (RuntimeDriver blocker) |
+| Overlay UI logic | ~30% | 70% | ⚠️ | OVL-001…008, depends on RT-003/004 |
+| Desktop Companion UI | ~60% | 80% | ✅ | COMP-001…008 all added |
+| E2E / Game Launch | ~40% | 80% | 🔄 | GL-001…008 in progress |
+
+## v0.11.0 Known Issues (Blocking Tests)
+
+| Issue | Impact | Test(s) | Fix Status |
+|-------|--------|---------|------------|
+| **F9/F10 key input broken** | Win32 watcher → KeyInputSystem path fails; keys not reaching SystemBase | RT-003, RT-004, OVL-001/002, NATIVE-002 | 🔄 IN_PROGRESS (RuntimeDriver.OnDestroy fires at frame ~6s) |
+| **RuntimeDriver.OnDestroy early** | Root GameObject destroyed unexpectedly at frame ~6s, HideAndDontSave not persisting | RT-005, NATIVE-001, NATIVE-003 | 🔄 IN_PROGRESS (under investigation) |
+| **UGUI overlay alpha visible** | HudStrip AlphaBase not suppressing overlay until user F10 press | OVL-006 | ⚠️ PARTIAL (fix merged, needs verification) |

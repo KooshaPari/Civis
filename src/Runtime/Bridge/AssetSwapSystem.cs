@@ -75,6 +75,20 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private const string PatchedBundlesDir = "dinoforge_patched_bundles";
 
+        /// <summary>
+        /// When true, <see cref="OnUpdate"/> will flush all cached bundles and reset swap state
+        /// on the next tick, then clear this flag. Set via <see cref="ScheduleReset"/>.
+        /// volatile so the HMR thread write is visible to the ECS main thread immediately.
+        /// </summary>
+        private static volatile bool _resetPending;
+
+        /// <summary>
+        /// Schedules a bundle cache flush + full swap reset on the next <see cref="OnUpdate"/> tick.
+        /// Call this after a hot-reload that has changed bundle files so that the next game/save
+        /// load picks up the new bundles without requiring a full game restart.
+        /// </summary>
+        public static void ScheduleReset() => _resetPending = true;
+
         /// <inheritdoc/>
         protected override void OnCreate()
         {
@@ -88,6 +102,27 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc/>
         protected override void OnUpdate()
         {
+            // HMR reset: flush bundle cache + reset swap state so changed bundles are re-loaded
+            // on the next game/save load (within the same session, no restart required).
+            if (_resetPending)
+            {
+                _resetPending = false;
+                foreach (AssetBundle bundle in _loadedBundles.Values)
+                {
+                    try { bundle.Unload(false); } catch { }
+                }
+                _loadedBundles.Clear();
+                _patchedAddresses.Clear();
+                AssetSwapRegistry.ResetApplied();
+                // Re-create probe query on next tick since RenderMesh state may have changed.
+                if (_probeQueryCreated)
+                {
+                    _renderMeshProbeQuery.Dispose();
+                    _probeQueryCreated = false;
+                }
+                WriteDebug("AssetSwapSystem: HMR reset complete — bundles flushed, swaps re-queued");
+            }
+
             IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
             if (pending.Count == 0)
                 return;
@@ -269,9 +304,24 @@ namespace DINOForge.Runtime.Bridge
             // Fall back to loading the prefab and extracting its mesh and material.
             // Prefer SkinnedMeshRenderer (animated characters) so mesh+material always come from
             // the same component — avoids mismatches when both SMR and static MF/MR exist.
+            //
+            // Name-mismatch guard: pack keys often differ from internal bundle asset names
+            // (e.g. pack key "sw-clone-trooper-republic" vs internal "sw-rep-clone-trooper").
+            // If the named load fails we fall back to LoadAllAssets<GameObject>() and pick the
+            // first result — single-prefab bundles always have exactly one root object.
             if (replacementMesh == null && replacementMat == null)
             {
                 GameObject? prefab = bundle.LoadAsset<GameObject>(assetName);
+                if (prefab == null)
+                {
+                    GameObject[] allGos = bundle.LoadAllAssets<GameObject>();
+                    if (allGos.Length > 0)
+                    {
+                        prefab = allGos[0];
+                        WriteDebug($"TrySwapRenderMeshFromBundle: named load '{assetName}' missed; " +
+                                   $"using first bundle asset '{prefab.name}'");
+                    }
+                }
                 if (prefab != null)
                 {
                     SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>();
@@ -345,8 +395,14 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
+            // IncludePrefab is mandatory: ALL DINO entities are stored as ECS Prefab entities.
+            // Without this flag EntityQueryDesc silently returns 0 for every unit and building.
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents });
+                new EntityQueryDesc
+                {
+                    All = queryComponents,
+                    Options = EntityQueryOptions.IncludePrefab,
+                });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             MethodInfo? getShared = typeof(EntityManager).GetMethod(

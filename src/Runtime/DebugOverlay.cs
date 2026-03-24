@@ -50,6 +50,8 @@ namespace DINOForge.Runtime
         // NOTE: F9 handling has been moved to RuntimeDriver.Update() so that the
         // shortcut always fires regardless of which UI layer is active.
 
+        private int _onGuiCallCount;
+
         private void Update()
         {
             // No key handling here — RuntimeDriver.Update() owns F9/F10.
@@ -57,6 +59,39 @@ namespace DINOForge.Runtime
 
         private void OnGUI()
         {
+            // Heartbeat: confirm OnGUI fires in DINO's rendering pipeline
+            _onGuiCallCount++;
+            if (_onGuiCallCount == 1 || _onGuiCallCount % 600 == 0)
+            {
+                Plugin.WriteDebug($"[DebugOverlay] OnGUI #{_onGuiCallCount} (Event={Event.current?.type})");
+            }
+
+            // Handle F9/F10 via IMGUI Event.current — fires even when MonoBehaviour.Update() is suppressed by DINO.
+            // This is the primary key-input path since PlayerLoop.Update never fires in DINO's ECS game loop.
+            if (Event.current != null && Event.current.type == EventType.KeyDown)
+            {
+                if (Event.current.keyCode == KeyCode.F9)
+                {
+                    Event.current.Use();
+                    try
+                    {
+                        Plugin.WriteDebug("[DebugOverlay] F9 pressed (OnGUI event)");
+                        Bridge.KeyInputSystem.OnF9Pressed?.Invoke();
+                    }
+                    catch { }
+                }
+                else if (Event.current.keyCode == KeyCode.F10)
+                {
+                    Event.current.Use();
+                    try
+                    {
+                        Plugin.WriteDebug("[DebugOverlay] F10 pressed (OnGUI event)");
+                        Bridge.KeyInputSystem.OnF10Pressed?.Invoke();
+                    }
+                    catch { }
+                }
+            }
+
             if (!_visible) return;
 
             string header = BuildHeader();

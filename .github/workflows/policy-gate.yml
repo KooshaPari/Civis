@@ -28,7 +28,8 @@ jobs:
       - name: Check CHANGELOG.md updated
         run: |
           # Skip for dependabot PRs (automated dependency bumps)
-          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
+          # Use event.pull_request.user.login (stable across reruns) not github.actor
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
             echo "CHANGELOG.md: skipped (dependabot PR)"
             exit 0
           fi

@@ -186,16 +186,16 @@ tasks:
     cmds:
       - process-compose logs -f
 
-  # -- CLIProxyAPIPlus (local fork) --
+  # -- cliproxyapi++ (local fork) --
 
   cliproxy:build:
-    desc: "Build CLIProxyAPIPlus binary from source"
+    desc: "Build cliproxyapi++ binary from source"
     cmds:
       - |
         if [ -d ../cliproxyapi-plusplus ]; then
           cd ../cliproxyapi-plusplus && go build -o cli-proxy-api-plus ./cmd/server
-        elif [ -d ../CLIProxyAPIPlus-fork ]; then
-          cd ../CLIProxyAPIPlus-fork && go build -o cli-proxy-api-plus ./cmd/server
+        elif [ -d ../cliproxyapi++-fork ]; then
+          cd ../cliproxyapi++-fork && go build -o cli-proxy-api-plus ./cmd/server
         else
           echo "CLIProxy source not found; using system binary"
         fi

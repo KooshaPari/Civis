@@ -43,8 +43,14 @@ jobs:
           fi
 
           # 2) Prevent merge commits in PR branch diff range.
-          git fetch origin "$BASE_REF" --depth=1 || true
-          MERGES=$(git rev-list --merges "origin/$BASE_REF..HEAD" || true)
+          if ! git fetch origin "$BASE_REF" --depth=1; then
+            echo "ERROR: failed to fetch base ref $BASE_REF."
+            exit 1
+          fi
+          if ! MERGES=$(git rev-list --merges "origin/$BASE_REF..HEAD"); then
+            echo "ERROR: failed to compute merge-commit range for base ref '$BASE_REF'."
+            exit 1
+          fi
           if [[ -n "$MERGES" ]]; then
             echo "ERROR: merge commits detected in PR diff range:"
             echo "$MERGES"

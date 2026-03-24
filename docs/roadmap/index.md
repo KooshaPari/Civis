@@ -134,7 +134,7 @@ PowerShell/Bash installer, Universe Bible system, pack generator.
 
 ### M8 — Runtime Integration :construction:
 
-**Status**: In Progress
+**Status**: In Progress (Active Regression Fix)
 
 ModPlatform orchestrator wiring SDK to Bridge to UI to HMR.
 
@@ -142,13 +142,17 @@ ModPlatform orchestrator wiring SDK to Bridge to UI to HMR.
 - Lifecycle phases: Initialize -> OnWorldReady -> LoadPacks -> StartHotReload -> Shutdown
 - Plugin.cs stays thin (bootstrap only, forwards Unity callbacks)
 - ECS bridge with component mapping, stat modifiers, entity queries, override applicator
-- Remaining work: end-to-end in-game validation with live DINO instance
+- **Critical Fix (2026-03-20)**: F9/F10 overlay regression — root destroyed at frame ~6s due to Harmony patch interference with two-boot cycle
+  - Root cause: LazyPatch + DeltaTimeResurrectionPatch destroying root GameObject despite HideAndDontSave flag
+  - Solution: Remove all Harmony patches, restore pure HideAndDontSave + DontDestroyOnLoad mechanism (df3b55e approach)
+  - Impact: Overlay now persists across scene loads; ModPlatform lifecycle unaffected
+- Remaining work: end-to-end in-game validation with live DINO instance; confirm F9/F10 stability
 
 ---
 
-### M9 — Desktop Companion :clock3:
+### M9 — Desktop Companion :hourglass:
 
-**Status**: Planned
+**Status**: In Progress
 
 WinUI 3 / WindowsAppSDK 1.6 desktop GUI that mirrors F9/F10 in-game panels for out-of-game evaluation.
 
@@ -191,13 +195,15 @@ Fill test gaps and resolve build-excluded incomplete code items.
 
 ---
 
-## Current Stats
+## Current Stats (v0.11.0)
 
-- **17 projects** in the solution
-- **80+ tests passing** (unit + integration)
+- **18 projects** in the solution (added Desktop Companion prep)
+- **80+ tests passing** (unit + integration, target 130+)
 - **17 schemas** covering all content types
-- **9 example packs** demonstrating all mod categories
-- **4 domain plugins**: Warfare, Economy, Scenario, UI
+- **6 example packs** demonstrating all mod categories (Modern, Star Wars, Guerrilla, Economy, Scenario, Balance)
+- **4 domain plugins**: Warfare (done), Economy, Scenario, UI
+- **13 MCP tools** for Claude Code integration
+- **11 CLI commands** via `dinoforge` CLI
 
 ---
 

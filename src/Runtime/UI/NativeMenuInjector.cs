@@ -28,6 +28,16 @@ namespace DINOForge.Runtime.UI
     public class NativeMenuInjector : MonoBehaviour
     {
         // ------------------------------------------------------------------ //
+        // Background-thread scan trigger
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Called by the background watcher thread every ~5 seconds to re-scan for menu buttons.
+        /// Set by RuntimeDriver.Initialize() after the injector is added.
+        /// </summary>
+        public static System.Action? OnScanNeeded;
+
+        // ------------------------------------------------------------------ //
         // Well-known canvas names to check (case-insensitive prefix/substring)
         // ------------------------------------------------------------------ //
         private static readonly string[] CanvasCandidateNames =
@@ -57,6 +67,9 @@ namespace DINOForge.Runtime.UI
         private readonly string _sessionId = System.Guid.NewGuid().ToString().Substring(0, 8);
         private int _injectionAttemptCount;
         private long _buttonClickCount;
+
+        // ── ISSUE-044: InitialGameLoader auto-advance (skips splash screen) ──────
+        private bool _anyKeyPatchApplied;
 
         // ------------------------------------------------------------------ //
         // Public wiring surface
@@ -100,6 +113,14 @@ namespace DINOForge.Runtime.UI
 
         private void Update()
         {
+            // Screenshot-on-demand: check trigger file every ~20 frames (~3x/sec at 60fps)
+            _screenshotCheckFrames++;
+            if (_screenshotCheckFrames >= 20)
+            {
+                _screenshotCheckFrames = 0;
+                CheckScreenshotRequest();
+            }
+
             // If we have already injected and the button is still alive, nothing to do.
             if (_injected && _injectedButton != null) return;
 
@@ -115,6 +136,37 @@ namespace DINOForge.Runtime.UI
 
             _rescanTimer = 0f;
             TryInjectMenuButton();
+        }
+
+        private int _screenshotCheckFrames;
+        private string? _pendingScreenshotPath;
+
+        private void CheckScreenshotRequest()
+        {
+            try
+            {
+                string bepRoot = BepInEx.Paths.BepInExRootPath;
+                string reqFile  = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
+                string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
+
+                if (_pendingScreenshotPath != null)
+                {
+                    System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath);
+                    WriteDebug($"[Screenshot] done: {_pendingScreenshotPath}");
+                    _pendingScreenshotPath = null;
+                }
+                else if (System.IO.File.Exists(reqFile))
+                {
+                    string path = System.IO.File.ReadAllText(reqFile).Trim();
+                    System.IO.File.Delete(reqFile);
+                    if (string.IsNullOrEmpty(path))
+                        path = System.IO.Path.Combine(bepRoot, "screenshot.png");
+                    WriteDebug($"[Screenshot] requested: {path}");
+                    ScreenCapture.CaptureScreenshot(path);
+                    _pendingScreenshotPath = path;
+                }
+            }
+            catch { }
         }
 
         private void OnDestroy()
@@ -145,7 +197,7 @@ namespace DINOForge.Runtime.UI
         /// a sibling "Mods" button next to it.  Safe to call multiple times; idempotent
         /// once <c>_injected</c> is true.
         /// </summary>
-        private void TryInjectMenuButton()
+        internal void TryInjectMenuButton()
         {
             _injectionAttemptCount++;
             long attemptId = _injectionAttemptCount;
@@ -163,9 +215,12 @@ namespace DINOForge.Runtime.UI
 
                 Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}: Scan started — found {allCanvases.Length} canvases total");
+                WriteDebug($"[{_sessionId}] Attempt#{attemptId}: Scan started — {allCanvases.Length} canvases");
+                WriteDebug($"[{_sessionId}] Attempt#{attemptId}: All canvases dump:");
+                foreach (Canvas c in allCanvases)
+                    WriteDebug($"[{_sessionId}]   Canvas '{c.name}' active={c.gameObject.activeInHierarchy}");
 
                 int activeCount = 0;
-                int matchCount = 0;
 
                 foreach (Canvas canvas in allCanvases)
                 {
@@ -177,15 +232,9 @@ namespace DINOForge.Runtime.UI
                     }
                     activeCount++;
 
-                    // Check if canvas name matches our candidates
-                    if (!IsCanvasNameMatch(canvas.name))
-                    {
-                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': name DOES NOT MATCH candidates (skipped)");
-                        continue;
-                    }
-                    matchCount++;
-
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': NAME MATCHED ✓ searching for Settings/Options button...");
+                    // Search all active canvases regardless of name — the DINO menu
+                    // canvas name may vary; we rely on finding the Settings/Options button.
+                    WriteDebug($"[{_sessionId}] Attempt#{attemptId} Canvas '{canvas.name}': searching for buttons...");
 
                     Button? settingsButton = FindSettingsButton(canvas);
                     if (settingsButton == null)
@@ -201,11 +250,38 @@ namespace DINOForge.Runtime.UI
                     if (_injected)
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                        // Auto-checkpoint screenshot: capture main menu state right now (main thread, safe)
+                        TakeAutoCheckpointScreenshot("cp1_mods_injected");
                         return;
                     }
                 }
 
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} SCAN COMPLETE: {allCanvases.Length} total, {activeCount} active, {matchCount} name-matched, 0 Settings buttons found. Will retry in {RescanInterval}s.");
+                // ── ISSUE-044 InitialGameLoader auto-advance ─────────────────────
+                // If the game is stuck on InitialGameLoader waiting for Input.anyKey,
+                // skip to scene 1 (main menu). We call LoadScene and immediately return —
+                // OnActiveSceneChanged will fire when the scene is ready and trigger re-scan.
+                if (attemptId >= 2 && !_anyKeyPatchApplied)
+                {
+                    bool hasInitialLoader = false;
+                    foreach (Canvas c in allCanvases)
+                    {
+                        if (c.name != null && c.name.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0 && c.gameObject.activeInHierarchy)
+                        {
+                            hasInitialLoader = true;
+                            break;
+                        }
+                    }
+                    if (hasInitialLoader)
+                    {
+                        _anyKeyPatchApplied = true;  // prevent re-triggering
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} — InitialGameLoader stuck. Loading scene 1 to skip splash screen.");
+                        WriteDebug($"[{_sessionId}] InitialGameLoader auto-advance: SceneManager.LoadScene(1)");
+                        SceneManager.LoadScene(1);
+                        return;  // IMPORTANT: return immediately; OnActiveSceneChanged will re-trigger scan
+                    }
+                }
+
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} SCAN COMPLETE: {allCanvases.Length} total, {activeCount} active searched, 0 Settings buttons found. Will retry in {RescanInterval}s.");
             }
             catch (Exception ex)
             {
@@ -236,7 +312,14 @@ namespace DINOForge.Runtime.UI
                     return options;
                 }
 
-                LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas");
+                // Log all buttons found for diagnostics
+                Button[] allButtons = canvas.GetComponentsInChildren<Button>(includeInactive: false);
+                LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas. Dumping all {allButtons.Length} active buttons:");
+                foreach (Button b in allButtons)
+                {
+                    string label = b.GetComponentInChildren<UnityEngine.UI.Text>()?.text ?? "(no text)";
+                    LogInfo($"[NativeMenuInjector]       Button '{b.name}' label='{label}'");
+                }
                 return null;
             }
             catch (Exception ex)
@@ -596,6 +679,36 @@ namespace DINOForge.Runtime.UI
         {
             if (_log != null)
                 _log.LogWarning(message);
+        }
+
+        /// <summary>
+        /// Auto-checkpoint screenshot: take a screenshot right now (main-thread-safe).
+        /// Saves to BepInEx root as a PNG with the given name suffix.
+        /// </summary>
+        private static void TakeAutoCheckpointScreenshot(string name)
+        {
+            try
+            {
+                string bepRoot = BepInEx.Paths.BepInExRootPath;
+                string path = System.IO.Path.Combine(bepRoot, name + ".png");
+                WriteDebug($"[Screenshot] Auto-checkpoint: capturing {path}");
+                ScreenCapture.CaptureScreenshot(path);
+                WriteDebug($"[Screenshot] Auto-checkpoint: CaptureScreenshot called for {path}");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[Screenshot] Auto-checkpoint FAILED: {ex.Message}");
+            }
+        }
+
+        private static void WriteDebug(string msg)
+        {
+            try
+            {
+                string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.Now}] [NativeMenuInjector] {msg}\n");
+            }
+            catch { }
         }
     }
 }

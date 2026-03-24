@@ -55,6 +55,14 @@ export default withMermaid(
           ],
         },
         {
+          text: 'Specifications',
+          items: [
+            { text: 'Overview', link: '/specs/' },
+            { text: 'User Specification', link: '/specs/user-spec' },
+            { text: 'Technical Specification', link: '/specs/technical-spec' },
+          ],
+        },
+        {
           text: 'API Reference',
           items: [
             { text: 'Registry API', link: '/api/registry' },

@@ -11,7 +11,15 @@ This guide walks you through setting up DINOForge for development or mod authori
 
 ## Install BepInEx and DINOForge
 
-DINOForge runs on a **modified BepInEx 5** build with Unity ECS support. Standard BepInEx from GitHub will not work.
+DINOForge requires the **modified BepInEx 5 with Unity ECS support** from Nexus Mods. Standard BepInEx from GitHub will **not** work — this game requires a custom-forked `winhttp.dll` (Doorstop) that enables loading multiple assemblies from the `ecs_plugins/` directory, which is how Unity ECS plugins are bootstrapped. The fork was created by devopsdinosaur specifically for this game.
+
+### One required boot.config fix
+
+After installing BepInEx, edit `<GameRoot>/Diplomacy is Not an Option_Data/boot.config` and ensure it contains:
+```
+single-instance=0
+```
+This disables Unity's native single-instance enforcement (the empty `single-instance=` value it ships with causes "Another instance is running" fatal errors on relaunch).
 
 ### Option A: Automated Installer (Recommended for Users)
 
@@ -21,35 +29,33 @@ DINOForge includes a GUI installer that handles BepInEx and DINOForge setup auto
 2. Run `DINOForge.Installer.exe`
 3. Select your DINO game installation directory
 4. The installer will:
-   - Download and extract the modified BepInEx 5
+   - Download and install the modified BepInEx 5 (ECS fork) from Nexus Mods
+   - Apply the `boot.config` fix
    - Install DINOForge Runtime and example packs
    - Verify the installation
 5. Launch the game and verify mods load (F10 to open mod menu)
 
 ### Option B: Manual Installation (For Developers)
 
-If you prefer manual setup or the installer doesn't work for you:
-
-1. Download **BepInEx 5 with Unity ECS Support** from [Nexus Mods](https://www.nexusmods.com/diplomacyisnotanoption/mods/1)
+1. Download **BepInEx 5 with Unity ECS Support** from [Nexus Mods](https://www.nexusmods.com/diplomacyisnotanoption/mods/1) (version `5.4.23.2-ecs`)
 2. Extract into your DINO game directory (where the `.exe` lives)
-3. Verify the folder structure:
+3. Apply the boot.config fix (see above)
+4. Verify the folder structure:
 
 ```
 GameRoot/
-  winhttp.dll              # Modified Doorstop pre-loader
+  winhttp.dll              # Modified Doorstop (ECS multi-assembly fork)
   doorstop_config.ini
+  Diplomacy is Not an Option_Data/
+    boot.config            # Must contain: single-instance=0
   BepInEx/
-    plugins/               # Standard plugins (empty for DINO)
-    ecs_plugins/           # WHERE DINO MODS GO
-    config/                # Configuration files
+    ecs_plugins/           # DINOForge.Runtime.dll goes here
+    plugins/               # Standard mono plugins (unused by DINOForge)
+    config/
 ```
 
-::: warning
-Standard BepInEx does **not** work with DINO. The game uses full Unity ECS (DOTS) with Burst compilation, which requires a modified Doorstop pre-loader fork.
-:::
-
-4. Launch the game once to let BepInEx initialize, then close it.
-5. Copy the built `DINOForge.Runtime.dll` to `BepInEx/ecs_plugins/`
+5. Launch the game once to let BepInEx initialize, then close it.
+6. Copy the built `DINOForge.Runtime.dll` to `BepInEx/ecs_plugins/`
 
 ## Clone and Build
 

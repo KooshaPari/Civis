@@ -1,0 +1,190 @@
+================================================================================
+PLANNING DOCUMENT SUMMARY: Duplicate Instance Detection & Bypass
+Date: 2026-03-24 | Status: Complete
+================================================================================
+
+THREE PLANNING DOCUMENTS CREATED
+================================
+
+1. ADR-013: ARCHITECTURAL DECISION RECORD
+   File: docs/adr/ADR-013-duplicate-instance-detection-bypass.md
+   Size: 8.9 KB | 230 lines | Status: Proposed
+
+   Content:
+   - Win32 mutex problem explanation
+   - Current failures and limitations of Stop-Process approach
+   - 9 key investigation questions
+   - 5 decision options evaluated (P/Invoke, Steam flags, exe copy, kill Steam, sleep)
+   - Recommended hybrid approach (Option 1+5 with fallback to Option 3)
+   - Implementation strategy overview
+   - Consequences and long-term impacts
+   - External resource links
+
+2. ISSUE-042: GITHUB-STYLE ISSUE TRACKER
+   File: docs/issues/ISSUE-042-duplicate-instance-fatal-error.md
+   Size: 7.0 KB | 180 lines | Status: Reported | Priority: High
+
+   Content:
+   - Problem description (repeated launches fail with "another instance" error)
+   - Environment details (Windows 11 Pro, BepInEx 5.4.23.5, Steam)
+   - Reproduction steps (exact PowerShell commands)
+   - Root cause analysis (Win32 mutex semantics, async kernel cleanup)
+   - 5 acceptance criteria for "fixed"
+   - 5-phase implementation plan
+   - Effort estimate: 4-6 hours
+   - Related issues and cross-references
+
+3. SPEC-DUPLICATE-INSTANCE-BYPASS: TECHNICAL SPECIFICATION
+   File: docs/specs/SPEC-duplicate-instance-bypass.md
+   Size: 17 KB | 462 lines | Status: Draft
+
+   Content:
+   - Goals (5), Constraints, Architecture diagram
+   - 3 component specifications:
+     * Get-GameMutexInfo() - discover mutex
+     * Release-GameMutex() - release via P/Invoke
+     * Invoke-LaunchGame() - 5-phase orchestrator
+   - Complete pseudocode for each function
+   - Win32 P/Invoke code patterns (ready for implementation)
+   - Error handling matrix (7 scenarios)
+   - Testing strategy (PowerShell unit + C# integration tests)
+   - Phase rollout (Investigation → Implementation → Testing → Docs → Release)
+   - 7 acceptance criteria (testable)
+   - External references
+
+KEY FINDINGS
+============
+
+PROBLEM:
+  When launching DINO via launch-game command or test harness repeatedly,
+  game fails with "Another instance is already running" fatal error.
+  Blocks dev iteration, automated testing, CI/CD pipelines.
+
+ROOT CAUSE:
+  Win32 named mutexes (Global\Valve_SteamMutex_4199_*) created by Steam/DINO
+  at game startup. Kernel doesn't immediately release mutex after process kill,
+  preventing new instance from acquiring it.
+
+SOLUTION:
+  Hybrid 3-tier approach with graceful fallback:
+
+  Tier 1: P/Invoke mutex release (primary, fast)
+    • Enumerate and find DINO mutex
+    • Call OpenMutex() + ReleaseMutex()
+    • Direct kernel cleanup, most reliable if it works
+
+  Tier 2: Extended sleep (fallback, proven)
+    • Wait 10-15 seconds instead of 3
+    • Allow natural kernel cleanup
+    • Guaranteed to work, just slower
+
+  Tier 3: Copy exe workaround (last resort)
+    • Copy game exe to temp file
+    • Launch copy (may bypass mutex checks)
+
+EFFORT: 4-6 hours total
+  Investigation:   1-2 hours (identify mutex, PoC P/Invoke)
+  Implementation:  1 hour    (code 3 PowerShell functions)
+  Testing:         1-2 hours (unit + integration + manual)
+  Documentation:   30 mins   (update launch-game.md, docs)
+  Release:         15 mins   (final commit)
+
+RISK: LOW
+  - Win32 APIs are stable and industry-standard
+  - Multiple fallbacks ensure robustness
+  - No impact to game logic or production
+  - Pure dev/testing infrastructure improvement
+
+DOCUMENT STRUCTURE
+===================
+
+ADR-013 (WHY)
+├─ Explains architectural context
+├─ Evaluates decision options
+├─ Recommends hybrid approach
+└─ References ISSUE-042 and SPEC
+
+ISSUE-042 (WHAT & ACCEPTANCE)
+├─ Describes problem in detail
+├─ Sets acceptance criteria
+├─ Plans 5 implementation phases
+└─ References ADR-013 and SPEC
+
+SPEC (HOW)
+├─ Provides implementation details
+├─ Contains pseudocode and P/Invoke patterns
+├─ Defines testing strategy
+└─ References ADR-013 and ISSUE-042
+
+All three documents cross-reference each other and form a complete planning
+package suitable for architectural review, project management, and development.
+
+NEXT STEPS
+==========
+
+Phase 1: INVESTIGATION (1-2 hours)
+  1. Download Sysinternals Handle.exe
+  2. Launch DINO game
+  3. Identify actual mutex name
+  4. Test PowerShell P/Invoke PoC
+  5. Measure mutex persistence time
+  6. Document findings
+
+Phase 2: IMPLEMENTATION (1 hour)
+  1. Create src/Tools/Cli/launch-game-helpers.ps1
+  2. Implement Get-GameMutexInfo()
+  3. Implement Release-GameMutex()
+  4. Implement Invoke-LaunchGame()
+  5. Integrate into .claude/commands/launch-game.md
+
+Phase 3: TESTING (1-2 hours)
+  1. Write PowerShell unit tests
+  2. Write C# integration tests
+  3. Manual test: 5 consecutive launches
+  4. Verify game runs normally
+
+Phase 4: DOCUMENTATION (30 minutes)
+  1. Update .claude/commands/launch-game.md
+  2. Create docs/troubleshooting.md section
+  3. Update CLAUDE.md
+
+Phase 5: RELEASE (15 minutes)
+  1. Final comprehensive testing
+  2. Commit to main
+  3. Close ISSUE-042
+
+FILES TO CREATE/MODIFY
+======================
+
+Will be created:
+  • src/Tools/Cli/launch-game-helpers.ps1 (PowerShell utilities)
+  • src/Tests/LauncherIntegrationTests.cs (C# tests)
+
+Will be updated:
+  • .claude/commands/launch-game.md
+  • CLAUDE.md
+  • docs/troubleshooting.md (new section)
+
+Ready for review:
+  • docs/adr/ADR-013-*
+  • docs/issues/ISSUE-042-*
+  • docs/specs/SPEC-duplicate-instance-bypass.md
+
+VALIDATION
+==========
+
+All documents:
+✓ Follow DINOForge standards and conventions
+✓ Are properly formatted (markdown)
+✓ Are in correct directory structure
+✓ Include cross-references
+✓ Contain no sensitive information
+✓ Are ready for team review
+✓ Align with agent governance in CLAUDE.md
+✓ Follow "wrap, don't handroll" principle
+
+TOTAL LINES WRITTEN: 872 lines across 3 documents
+TIME TO CREATE: ~30 minutes (planning documentation only)
+READY FOR IMPLEMENTATION: Yes
+
+================================================================================

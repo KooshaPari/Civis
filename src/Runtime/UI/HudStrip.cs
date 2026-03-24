@@ -41,9 +41,9 @@ namespace DINOForge.Runtime.UI
         private const float ToastDuration = 3f;
         private const float ToastFadeTime = 0.4f;
 
-        // Hover fade
+        // Hover fade — strip is fully hidden when idle, fades in on hover
         private bool _hovered;
-        private const float AlphaBase = 0.6f;
+        private const float AlphaBase = 0f;
         private const float AlphaHover = 1.0f;
         private const float FadeSpeed = 6f;
 
@@ -65,7 +65,7 @@ namespace DINOForge.Runtime.UI
             UiBuilder.AnchorTopRight(stripGo.GetComponent<RectTransform>(), new Vector2(200f, 32f), new Vector2(-8f, -8f));
 
             _stripGroup = UiBuilder.EnsureCanvasGroup(stripGo);
-            _stripGroup.alpha = AlphaBase;
+            _stripGroup.alpha = 0f; // hidden by default; fades in on hover
 
             // Horizontal layout
             UiBuilder.AddHorizontalLayout(stripGo, 6f, new RectOffset(8, 8, 4, 4));

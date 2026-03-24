@@ -105,6 +105,11 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          # Skip for dependabot PRs (titles are auto-generated)
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            echo "Conventional commit title: skipped (dependabot PR)"
+            exit 0
+          fi
           # Verify PR title follows conventional commits
           if ! printf '%s\n' "$PR_TITLE" | grep -qE "^(feat|fix|docs|test|perf|refactor|chore|ci|build|style|revert)(\(.+\))?!?: .+"; then
             echo "::error::PR title must follow conventional commits format: type(scope): description"

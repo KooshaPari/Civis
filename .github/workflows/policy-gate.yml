@@ -27,8 +27,14 @@ jobs:
 
       - name: Check CHANGELOG.md updated
         run: |
-          # Skip for docs-only or CI-only PRs
-          NON_DOCS=$(git diff --name-only origin/main...HEAD | grep -cv "^docs/\|^\.github/\|^\.claude/" || true)
+          # Skip for dependabot PRs (automated dependency bumps)
+          # Use event.pull_request.user.login (stable across reruns) not github.actor
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            echo "CHANGELOG.md: skipped (dependabot PR)"
+            exit 0
+          fi
+          # Skip for docs-only, CI-only, or lock-file-only PRs
+          NON_DOCS=$(git diff --name-only origin/main...HEAD | grep -cv "^docs/\|^\.github/\|^\.claude/\|packages\.lock\.json$" || true)
           if [ "$NON_DOCS" -gt 0 ]; then
             if ! git diff --name-only origin/main...HEAD | grep -q "CHANGELOG.md"; then
               echo "::error::CHANGELOG.md was not updated. All non-docs changes must be documented."

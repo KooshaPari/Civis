@@ -41,6 +41,13 @@ public static class Program
             "invoke-method" => await HandleInvokeMethodCommand(args.Skip(1).ToArray()),
             "ui-tree" => await HandleUiTreeCommand(args.Skip(1).FirstOrDefault()),
             "demo" => await HandleDemoCommand(),
+            // JSON-output bridge commands (used by Python MCP server)
+            "get-stat" => await HandleGetStatCommand(args.Skip(1).ToArray()),
+            "apply-override" => await HandleApplyOverrideCommand(args.Skip(1).ToArray()),
+            "get-component-map" => await HandleGetComponentMapCommand(args.Skip(1).FirstOrDefault()),
+            "reload-packs" => await HandleReloadPacksCommand(args.Skip(1).FirstOrDefault()),
+            "verify-mod" => await HandleVerifyModCommand(args.Skip(1).FirstOrDefault()),
+            "dump-state" => await HandleDumpStateJsonCommand(args.Skip(1).FirstOrDefault()),
             "--help" or "-h" => ShowHelpAndReturn(0),
             _ => ShowHelpAndReturn(1)
         };
@@ -70,6 +77,14 @@ public static class Program
         AnsiConsole.MarkupLine("  ui-tree [selector]  - Snapshot the live Unity UI hierarchy (Playwright-style DOM)");
         AnsiConsole.MarkupLine("  demo             - Full end-to-end demo: menu → mods → F9/F10 → save → gameplay");
         AnsiConsole.MarkupLine("  --help, -h       - Show this help");
+        AnsiConsole.MarkupLine("");
+        AnsiConsole.MarkupLine("[grey]JSON-output commands (for MCP/scripting):[/]");
+        AnsiConsole.MarkupLine("  get-stat <sdk_path> [idx]          - Read stat value by SDK path (JSON)");
+        AnsiConsole.MarkupLine("  apply-override <sdk_path> <value> [mode] [filter] - Apply stat override (JSON)");
+        AnsiConsole.MarkupLine("  get-component-map [sdk_path]       - SDK-to-ECS component mappings (JSON)");
+        AnsiConsole.MarkupLine("  reload-packs [path]                - Reload content packs from disk (JSON)");
+        AnsiConsole.MarkupLine("  verify-mod <pack_path>             - End-to-end mod verification (JSON)");
+        AnsiConsole.MarkupLine("  dump-state [category]              - ECS state snapshot as JSON");
     }
 
     private static int ShowHelpAndReturn(int code)
@@ -664,6 +679,178 @@ public static class Program
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]✗ Demo failed:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+    }
+
+    // ── JSON-output commands (consumed by Python MCP server) ──────────────────
+
+    private static async Task<int> HandleGetStatCommand(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = "Usage: get-stat <sdk_path> [entity_index]" }));
+            return 1;
+        }
+        string sdkPath = args[0];
+        int? entityIndex = args.Length > 1 && int.TryParse(args[1], out int idx) ? idx : (int?)null;
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            StatResult result = await client.GetStatAsync(sdkPath, entityIndex);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sdkPath = result.SdkPath,
+                value = result.Value,
+                entityCount = result.EntityCount,
+                values = result.Values,
+                componentType = result.ComponentType,
+                fieldName = result.FieldName
+            }));
+            client.Disconnect();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message, sdkPath }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleApplyOverrideCommand(string[] args)
+    {
+        if (args.Length < 2 || !float.TryParse(args[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float value))
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = "Usage: apply-override <sdk_path> <value> [mode] [filter]" }));
+            return 1;
+        }
+        string sdkPath = args[0];
+        string? mode = args.Length > 2 ? args[2] : null;
+        string? filter = args.Length > 3 ? args[3] : null;
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            OverrideResult result = await client.ApplyOverrideAsync(sdkPath, value, mode, filter);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                success = result.Success,
+                modifiedCount = result.ModifiedCount,
+                sdkPath = result.SdkPath,
+                message = result.Message
+            }));
+            client.Disconnect();
+            return result.Success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = ex.Message, sdkPath }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleGetComponentMapCommand(string? sdkPathFilter)
+    {
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            ComponentMapResult result = await client.GetComponentMapAsync(sdkPathFilter);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                mappings = result.Mappings.Select(m => new
+                {
+                    sdkPath = m.SdkPath,
+                    ecsType = m.EcsType,
+                    fieldName = m.FieldName,
+                    resolved = m.Resolved,
+                    description = m.Description
+                })
+            }));
+            client.Disconnect();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleReloadPacksCommand(string? path)
+    {
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            ReloadResult result = await client.ReloadPacksAsync(path);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                success = result.Success,
+                loadedPacks = result.LoadedPacks,
+                errors = result.Errors
+            }));
+            client.Disconnect();
+            return result.Success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = ex.Message }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleVerifyModCommand(string? packPath)
+    {
+        if (string.IsNullOrEmpty(packPath))
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = "Usage: verify-mod <pack_path>" }));
+            return 1;
+        }
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            VerifyResult result = await client.VerifyModAsync(packPath);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                packId = result.PackId,
+                loaded = result.Loaded,
+                statChanges = result.StatChanges,
+                errors = result.Errors,
+                entityCount = result.EntityCount
+            }));
+            client.Disconnect();
+            return result.Loaded ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { loaded = false, error = ex.Message, packPath }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleDumpStateJsonCommand(string? category)
+    {
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            CatalogSnapshot result = await client.DumpStateAsync(category);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                units = result.Units.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
+                buildings = result.Buildings.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
+                projectiles = result.Projectiles.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
+                other = result.Other.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category })
+            }));
+            client.Disconnect();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
             return 1;
         }
     }

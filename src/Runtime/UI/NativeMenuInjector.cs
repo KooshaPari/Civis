@@ -250,6 +250,8 @@ namespace DINOForge.Runtime.UI
                     if (_injected)
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                        // Auto-checkpoint screenshot: capture main menu state right now (main thread, safe)
+                        TakeAutoCheckpointScreenshot("cp1_mods_injected");
                         return;
                     }
                 }
@@ -677,6 +679,26 @@ namespace DINOForge.Runtime.UI
         {
             if (_log != null)
                 _log.LogWarning(message);
+        }
+
+        /// <summary>
+        /// Auto-checkpoint screenshot: take a screenshot right now (main-thread-safe).
+        /// Saves to BepInEx root as a PNG with the given name suffix.
+        /// </summary>
+        private static void TakeAutoCheckpointScreenshot(string name)
+        {
+            try
+            {
+                string bepRoot = BepInEx.Paths.BepInExRootPath;
+                string path = System.IO.Path.Combine(bepRoot, name + ".png");
+                WriteDebug($"[Screenshot] Auto-checkpoint: capturing {path}");
+                ScreenCapture.CaptureScreenshot(path);
+                WriteDebug($"[Screenshot] Auto-checkpoint: CaptureScreenshot called for {path}");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[Screenshot] Auto-checkpoint FAILED: {ex.Message}");
+            }
         }
 
         private static void WriteDebug(string msg)

@@ -739,6 +739,8 @@ namespace DINOForge.Runtime
         private static bool _dinoSystemGroupHarmonyPatched = false;
         private static int _dinoSystemGroupCallCount = 0;
         private static bool _inDinoSystemGroupUpdate = false;
+        private static string? _pendingAutoScreenshot = null;
+        private static int _pendingAutoScreenshotDelay = 0;
 
         private static void PatchPlayerLoopRejection()
         {
@@ -922,11 +924,30 @@ namespace DINOForge.Runtime
                 {
                     WriteDebug("[DinoSysGroup] F9 pressed");
                     Bridge.KeyInputSystem.OnF9Pressed?.Invoke();
+                    // Schedule auto-checkpoint screenshot on next frame (overlay needs 1 frame to render)
+                    _pendingAutoScreenshot = "cp2_f9_overlay";
+                    _pendingAutoScreenshotDelay = 3;
                 }
                 if (Input.GetKeyDown(KeyCode.F10))
                 {
                     WriteDebug("[DinoSysGroup] F10 pressed");
                     Bridge.KeyInputSystem.OnF10Pressed?.Invoke();
+                    // Schedule auto-checkpoint screenshot on next frame
+                    _pendingAutoScreenshot = "cp3_f10_menu";
+                    _pendingAutoScreenshotDelay = 3;
+                }
+
+                // Auto-checkpoint screenshot: take delayed screenshot after F9/F10
+                if (_pendingAutoScreenshot != null && _pendingAutoScreenshotDelay > 0)
+                {
+                    _pendingAutoScreenshotDelay--;
+                    if (_pendingAutoScreenshotDelay == 0)
+                    {
+                        string path = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, _pendingAutoScreenshot + ".png");
+                        WriteDebug($"[DinoSysGroup] Auto-checkpoint screenshot: {path}");
+                        ScreenCapture.CaptureScreenshot(path);
+                        _pendingAutoScreenshot = null;
+                    }
                 }
 
                 // Resurrection check

@@ -78,18 +78,18 @@ dotnet format src/DINOForge.CI.sln
 If you want to test mods in-game:
 
 1. Install [Diplomacy is Not an Option](https://store.steampowered.com/app/1302580/Diplomacy_is_Not_an_Option/) from Steam
-2. Install **BepInEx 5.4.23.5** from [GitHub Releases](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) (`BepInEx_win_x64_5.4.23.5.zip`)
+2. Install the **modified BepInEx 5 with ECS support** from [Nexus Mods](https://www.nexusmods.com/diplomacyisnotanoption/mods/1) (v5.4.23.2-ecs — custom Doorstop fork required for `ecs_plugins/` multi-assembly loading)
 3. Extract to your game root directory
 4. Set `single-instance=0` in `Diplomacy is Not an Option_Data/boot.config`
 5. Verify the structure:
    ```
    DINO/
-     winhttp.dll
+     winhttp.dll            (modified Doorstop — ECS fork)
      doorstop_config.ini
      Diplomacy is Not an Option_Data/
        boot.config          (must contain: single-instance=0)
      BepInEx/
-       plugins/             (where DINOForge.Runtime.dll goes)
+       ecs_plugins/         (where DINOForge.Runtime.dll goes)
        config/
    ```
 5. Update `Directory.Build.props` with your DINO installation path if needed

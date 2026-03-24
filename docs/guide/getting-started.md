@@ -11,11 +11,7 @@ This guide walks you through setting up DINOForge for development or mod authori
 
 ## Install BepInEx and DINOForge
 
-DINOForge requires **BepInEx 5.4.23.x** (standard GitHub release). The Nexus Mods mod #1 packages the same BepInEx 5.4.23.5 binary for easy installation — it is not a custom fork and contains no patches to Doorstop or BepInEx itself.
-
-::: tip
-`winhttp.dll` (Unity Doorstop v3.0.0.4) is stock and unmodified. `DINOForge.Runtime.dll` loads from `BepInEx/plugins/` — the standard BepInEx plugin directory. No special Doorstop fork is required.
-:::
+DINOForge requires the **modified BepInEx 5 with Unity ECS support** from Nexus Mods. Standard BepInEx from GitHub will **not** work — this game requires a custom-forked `winhttp.dll` (Doorstop) that enables loading multiple assemblies from the `ecs_plugins/` directory, which is how Unity ECS plugins are bootstrapped. The fork was created by devopsdinosaur specifically for this game.
 
 ### One required boot.config fix
 
@@ -33,7 +29,7 @@ DINOForge includes a GUI installer that handles BepInEx and DINOForge setup auto
 2. Run `DINOForge.Installer.exe`
 3. Select your DINO game installation directory
 4. The installer will:
-   - Download and install BepInEx 5.4.23.5 from GitHub
+   - Download and install the modified BepInEx 5 (ECS fork) from Nexus Mods
    - Apply the `boot.config` fix
    - Install DINOForge Runtime and example packs
    - Verify the installation
@@ -41,24 +37,25 @@ DINOForge includes a GUI installer that handles BepInEx and DINOForge setup auto
 
 ### Option B: Manual Installation (For Developers)
 
-1. Download **BepInEx 5.4.23.5** from [GitHub Releases](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) — the `BepInEx_win_x64_5.4.23.5.zip`
+1. Download **BepInEx 5 with Unity ECS Support** from [Nexus Mods](https://www.nexusmods.com/diplomacyisnotanoption/mods/1) (version `5.4.23.2-ecs`)
 2. Extract into your DINO game directory (where the `.exe` lives)
 3. Apply the boot.config fix (see above)
 4. Verify the folder structure:
 
 ```
 GameRoot/
-  winhttp.dll              # Unity Doorstop v3 (stock BepInEx 5.4.23.5)
+  winhttp.dll              # Modified Doorstop (ECS multi-assembly fork)
   doorstop_config.ini
   Diplomacy is Not an Option_Data/
     boot.config            # Must contain: single-instance=0
   BepInEx/
-    plugins/               # DINOForge.Runtime.dll goes here
+    ecs_plugins/           # DINOForge.Runtime.dll goes here
+    plugins/               # Standard mono plugins (unused by DINOForge)
     config/
 ```
 
 5. Launch the game once to let BepInEx initialize, then close it.
-6. Copy the built `DINOForge.Runtime.dll` to `BepInEx/plugins/`
+6. Copy the built `DINOForge.Runtime.dll` to `BepInEx/ecs_plugins/`
 
 ## Clone and Build
 
@@ -119,10 +116,10 @@ DINOForge/
 
 ## Load a Pack
 
-Once built, the Runtime DLL goes into `BepInEx/plugins/`:
+Once built, the Runtime DLL goes into `BepInEx/ecs_plugins/`:
 
 ```
-BepInEx/plugins/DINOForge.Runtime.dll
+BepInEx/ecs_plugins/DINOForge.Runtime.dll
 ```
 
 Content packs live in a `packs/` directory relative to the game root. The runtime discovers and loads them at boot.

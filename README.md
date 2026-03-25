@@ -1,33 +1,24 @@
 # civ
 
-CIV is a deterministic simulation and policy-driven architecture workspace.
+Deterministic simulation and policy-driven architecture workspace.
 
-## What This Repository Includes
+## Repository Structure
 
-- Core Rust workspace and crates
-- Governance and specification docs
-- VitePress documentation site
-- CI workflows for quality and docs/pages deployment
+- `src/` core implementation
+- `docs/` VitePress docs and specification corpus
+- `docs/wiki/` concept and architecture knowledge
+- `docs/development-guide/` contributor and implementation guides
+- `docs/document-index/` generated documentation index entrypoint
+- `docs/api/` API and contract documentation
+- `docs/roadmap/` planning and sequencing artifacts
 
-## Quick Start
+## Development
 
-1. Install Rust toolchain and Node.js.
-2. Run `cargo test`.
-3. Run `task quality`.
-4. Build docs with `npm run docs:build`.
+- `cargo test` run Rust tests
+- `task quality` run local quality gate
+- `cd docs && npm run docs:build` build documentation site
 
-## Documentation
+## Documentation Workflow
 
-- Root specs: `PRD.md`, `ADR.md`, `FUNCTIONAL_REQUIREMENTS.md`, `PLAN.md`, `USER_JOURNEYS.md`
-- Reference trackers: `docs/reference/`
-- Guides and checklists: `docs/guides/`, `docs/checklists/`
-
-## CI/CD
-
-- `.github/workflows/quality.yml`
-- `.github/workflows/docs-site.yml`
-- `.github/workflows/pages.yml`
-
-## Governance
-
-This repo follows spec-first, deterministic, fail-loud practices.
+- `cd docs && npm run docs:index` regenerate `docs/.generated/doc-index.json`
+- `cd docs && npm run docs:dev` preview docs locally

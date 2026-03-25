@@ -23,4 +23,12 @@
     <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
   </ItemGroup>
 
+  <!-- Copy bare-cua-native.exe to output if available (optional, for screenshot capture) -->
+  <Target Name="CopyBareCuaNative" AfterTargets="Build">
+    <ItemGroup>
+      <BareCuaBinary Include="bare-cua-native.exe" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BareCuaBinary)" DestinationFolder="$(OutputPath)" ContinueOnError="true" />
+  </Target>
+
 </Project>

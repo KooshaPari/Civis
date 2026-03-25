@@ -93,7 +93,7 @@ When adding preflight checks, startup logic, or error handling, follow this stan
 
 ## Planner agents: no code in docs or plans
 
-**Planner agents** (e.g. PM, Analyst, Architect, SM, TEA, UX Designer, Tech Writer, BMad Master) must **never write code**, especially in documentation and plans. Their job is to **equip others**—engineer agents or humans—to create code or act on docs. Write specs, acceptance criteria, architecture decisions, and clear handoffs; do not write implementation. Avoid stuffing docs or plans with code where it is not directly relevant; prefer references, file paths, or brief pseudocode when necessary.
+**Planner agents** (e.g. PM, Analyst, Architect, SM, TEA, UX Designer, Tech Writer) must **never write code**, especially in documentation and plans. Their job is to **equip others**—engineer agents or humans—to create code or act on docs. Write specs, acceptance criteria, architecture decisions, and clear handoffs; do not write implementation. Avoid stuffing docs or plans with code where it is not directly relevant; prefer references, file paths, or brief pseudocode when necessary.
 
 ---
 
@@ -180,31 +180,12 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 ---
 
-# BMAD Method - Claude Code Instructions
+AgilePlus Governance
 
-## Activating Agents
-
-BMAD agents are installed as slash commands in `.claude/commands/bmad/`.
-
-### How to Use
-
-1. **Type Slash Command**: Start with `/` to see available commands
-2. **Select Agent**: Type `/bmad-{agent-name}` (e.g., `/bmad-dev`)
-3. **Execute**: Press Enter to activate that agent persona
-
-### Examples
-
-```
-/bmad:bmm:agents:dev - Activate development agent
-/bmad:bmm:agents:architect - Activate architect agent
-/bmad:bmm:workflows:dev-story - Execute dev-story workflow
-```
-
-### Notes
-
-- Commands are autocompleted when you type `/`
-- Agent remains active for the conversation
-- Start a new conversation to switch agents
+- This repo uses AgilePlus for spec-driven development
+- Feature specs live in `agileplus-specs/` (AgilePlus native format)
+- Spec docs (PRD.md, ADR.md, FUNCTIONAL_REQUIREMENTS.md, PLAN.md) are maintained at repo root
+- See the AgilePlus documentation for governance workflows
 
 ---
 

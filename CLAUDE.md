@@ -420,6 +420,8 @@ The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 
 | `/test-swap` | Full loop: build → deploy → launch → verify swaps |
 | `/check-game` | Read debug log, report swap/entity status |
 | `/game-test` | Automated test suite via MCP bridge |
+| `/game-test-task <task>` | TITAN-inspired coverage-driven automated game test |
+| `/game-coverage` | Show coverage memory statistics |
 | `/entity-dump` | Parse ECS entity dump, analyze archetype counts |
 | `/pack-deploy` | Validate + build + deploy pack + DLL |
 | `/asset-create` | GLB/FBX → normalize → stylize → bundle → register |

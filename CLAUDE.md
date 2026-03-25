@@ -67,6 +67,28 @@ Wrap calls via subagents as:
 powershell -c "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('$path','OnlyErrorDialogs','SendToRecycleBin')"
 ```
 
+## File Governance (MANDATORY)
+
+### Desktop Contamination Prevention (MANDATORY)
+NEVER write files to `C:\Users\koosh\Desktop\` or any user Desktop path.
+The Desktop is a shared, user-visible surface — agents must not pollute it.
+
+ALL agent output files MUST go to designated repo directories:
+- Scripts (PS1, CMD, SH): `scripts/game/` or `scripts/game/desktop/` (for captures/automation)
+- Screenshots/PNGs:        `docs/screenshots/` or `docs/screenshots/desktop/`
+- Logs/TXT reports:        `docs/sessions/` or `docs/sessions/desktop/`
+- Research markdown:       `docs/sessions/`
+- Temp capture output:     use `$env:TEMP\DINOForge\` (already used by MCP server)
+
+If a script currently writes to Desktop, update its output path to one of the above.
+The MCP `game_screenshot` tool already writes to `$env:TEMP\DINOForge\` — use it.
+
+### Script Lifecycle
+Any temporary script created for a task MUST be:
+1. Written to `scripts/game/` or `docs/scripts/` (not Desktop, not root)
+2. Deleted (via Recycle Bin per File Deletion Protocol) when the task is complete
+3. Never left as permanent artifacts unless promoted to a named slash command in `.claude/commands/`
+
 ## Build Commands
 
 ```bash

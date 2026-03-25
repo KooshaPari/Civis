@@ -98,6 +98,14 @@
         "resolved": "3.0.4",
         "contentHash": "NqYy5UIucwKwdkpamFTi8lr53hD+V8qQmbHzztQj1v4Pq1G4TjNlpkUWOhktTLBqBm4aPRaAkpFgB+3TDEuomw=="
       },
+      "AssimpNet": {
+        "type": "Transitive",
+        "resolved": "4.1.0",
+        "contentHash": "z/4Tmf3Q2r1+vN6o/szArEZvPsdYNRYiS0L/yArybQd7n7KCiS9L4lRZhwwlHJb/edECM+Jky0XisVspr5aQWQ==",
+        "dependencies": {
+          "NETStandard.Library": "1.6.1"
+        }
+      },
       "dnlib": {
         "type": "Transitive",
         "resolved": "3.6.0",
@@ -185,6 +193,21 @@
         "resolved": "2.2.0",
         "contentHash": "biITWpwnMR7HUp43lAGU97DWq/4LfyXqqhuOK0Z4IuRP97KjQMOe/GKq3wE1KY21gNrc7OPO9HbAtQUvMKTImA=="
       },
+      "SixLabors.ImageSharp": {
+        "type": "Transitive",
+        "resolved": "3.1.11",
+        "contentHash": "JfPLyigLthuE50yi6tMt7Amrenr/fA31t2CvJyhy/kQmfulIBAqo5T/YFUSRHtuYPXRSaUHygFeh6Qd933EoSw=="
+      },
+      "Spectre.Console": {
+        "type": "Transitive",
+        "resolved": "0.54.0",
+        "contentHash": "StDXCFayfy0yB1xzUHT2tgEpV1/HFTiS4JgsAQS49EYTfMixSwwucaQs/bIOCwXjWwIQTMuxjUIxcB5XsJkFJA=="
+      },
+      "System.CommandLine": {
+        "type": "Transitive",
+        "resolved": "2.0.3",
+        "contentHash": "5nY9hlrGGFEmyecNUux58sohD2Q16U6jlFBYwH57b2IVUs+u7LfMFaHwOtw2tuIi8CUl6jKXw5s4FuIt9aLtug=="
+      },
       "System.Configuration.ConfigurationManager": {
         "type": "Transitive",
         "resolved": "4.4.0",
@@ -246,7 +269,7 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[1.0.0, )",
+          "DINOForge.Bridge.Protocol": "[0.3.0, )",
           "Newtonsoft.Json": "[13.*, )"
         }
       },
@@ -294,6 +317,19 @@
       },
       "dinoforge.tools.installer": {
         "type": "Project"
+      },
+      "dinoforge.tools.packcompiler": {
+        "type": "Project",
+        "dependencies": {
+          "AssimpNet": "[4.1.0, )",
+          "DINOForge.SDK": "[0.3.0, )",
+          "FluentAssertions": "[6.12.0, )",
+          "Microsoft.NET.Test.Sdk": "[17.9.0, )",
+          "SixLabors.ImageSharp": "[3.1.11, )",
+          "Spectre.Console": "[0.*, )",
+          "System.CommandLine": "[2.0.3, )",
+          "xunit": "[2.7.0, )"
+        }
       }
     }
   }

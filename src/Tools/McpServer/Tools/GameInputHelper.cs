@@ -61,8 +61,23 @@ internal static class GameInputHelper
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(IntPtr hWnd);
+
+    private const int SW_RESTORE = 9;
+
     /// <summary>
-    /// Sends a single key press (down + up).
+    /// Sends a single key press (down + up) to the game window.
+    /// Manages focus to ensure input goes to the game, not the foreground window.
     /// </summary>
     internal static bool SendKey(string keyName)
     {
@@ -111,8 +126,7 @@ internal static class GameInputHelper
                 }
             };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-            return result == inputs.Length;
+            return FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)))) == inputs.Length;
         }
         catch
         {
@@ -121,7 +135,8 @@ internal static class GameInputHelper
     }
 
     /// <summary>
-    /// Sends a mouse click at the specified screen coordinates.
+    /// Sends a mouse click at the specified screen coordinates to the game window.
+    /// Manages focus to ensure input goes to the game, not the foreground window.
     /// </summary>
     internal static bool SendMouseClick(int x, int y, string button)
     {
@@ -191,12 +206,60 @@ internal static class GameInputHelper
                 }
             };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-            return result == inputs.Length;
+            return FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)))) == inputs.Length;
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Finds the game window and temporarily brings it to foreground, executes the injection action,
+    /// then restores the previous foreground window.
+    /// Prevents SendInput from going to the wrong window (e.g., Claude Code terminal).
+    /// </summary>
+    private static uint FocusGameAndInject(Func<uint> injectAction)
+    {
+        IntPtr previousFocus = GetForegroundWindow();
+        IntPtr gameHwnd = FindGameWindow();
+
+        try
+        {
+            if (gameHwnd != IntPtr.Zero && gameHwnd != previousFocus)
+            {
+                SetForegroundWindow(gameHwnd);
+                System.Threading.Thread.Sleep(50); // Let focus settle
+            }
+
+            return injectAction();
+        }
+        finally
+        {
+            // Restore previous focus only if it's still a valid window
+            if (previousFocus != IntPtr.Zero && IsWindow(previousFocus) && previousFocus != gameHwnd)
+            {
+                System.Threading.Thread.Sleep(50); // Let input register
+                SetForegroundWindow(previousFocus);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds the game window by title "Diplomacy is Not an Option".
+    /// </summary>
+    private static IntPtr FindGameWindow()
+    {
+        try
+        {
+            var gameProcess = System.Diagnostics.Process.GetProcesses()
+                .FirstOrDefault(p => p.MainWindowTitle.Contains("Diplomacy is Not an Option"));
+
+            return gameProcess?.MainWindowHandle ?? IntPtr.Zero;
+        }
+        catch
+        {
+            return IntPtr.Zero;
         }
     }
 

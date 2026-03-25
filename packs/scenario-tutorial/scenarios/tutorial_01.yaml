@@ -1,0 +1,86 @@
+# Tutorial Scenario 01: Survive the First Wave
+# Learn basic defense mechanics with modest starting resources
+
+id: tutorial_survive_wave
+display_name: "Survive the First Wave"
+description: >
+  Your settlement faces its first enemy assault. Build basic defenses and train soldiers
+  to survive the incoming waves. This scenario teaches fundamental placement and unit management.
+
+difficulty: Easy
+objective_type: Survive
+wave_count: 3
+max_duration: 600
+
+starting_resources:
+  food: 300
+  wood: 250
+  stone: 150
+  iron: 50
+  gold: 25
+
+allowed_factions: []
+
+victory_conditions:
+  - condition_type: TimeSurvival
+    target_value: 600
+    description: "Survive for 10 minutes to prove your defensive capability."
+
+defeat_conditions:
+  - condition_type: CommandCenterDestroyed
+    description: "Your command center must not fall."
+  - condition_type: PopulationZero
+    description: "You lose if all your people perish."
+
+scripted_events:
+  - id: tutorial-wave1-start
+    trigger_type: OnWave
+    trigger_value: 1
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "First Wave Incoming!"
+          text: "Enemy forces are approaching. Build walls and train soldiers to defend your settlement. Wood creates palisades, stone creates stronger walls."
+
+  - id: tutorial-resources-turn-2
+    trigger_type: OnTime
+    trigger_value: 120
+    actions:
+      - action_type: GrantResources
+        parameters:
+          food: "150"
+          wood: "100"
+      - action_type: ShowMessage
+        parameters:
+          title: "Supply Delivery"
+          text: "Food and wood supplies have arrived. Use them to feed workers and expand your defenses."
+
+  - id: tutorial-wave2-hint
+    trigger_type: OnWave
+    trigger_value: 2
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Second Wave Approaching"
+          text: "A larger force is coming. Consider building towers for ranged defense to complement your melee soldiers."
+
+  - id: tutorial-stone-bonus
+    trigger_type: OnTime
+    trigger_value: 300
+    actions:
+      - action_type: GrantResources
+        parameters:
+          stone: "100"
+      - action_type: ShowMessage
+        parameters:
+          title: "Stone Shipment"
+          text: "Stone resources have been delivered. Upgrade your walls or build additional defensive structures."
+
+  - id: tutorial-final-wave
+    trigger_type: OnWave
+    trigger_value: 3
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Final Wave!"
+          text: "The enemy is making their last push. Hold your ground a bit longer to secure victory!"

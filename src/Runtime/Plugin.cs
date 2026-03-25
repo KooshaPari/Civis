@@ -1008,20 +1008,20 @@ namespace DINOForge.Runtime
         private ModPlatform? _modPlatform;
 
         // UGUI system (preferred). Null if UGUI setup failed.
-        private DFCanvas? _dfCanvas;
+        internal DFCanvas? _dfCanvas;
 
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
         // _debugOverlay is ALWAYS added (it owns the IMGUI F9 debug panel).
-        private IModMenuHost? _modMenuHost;
+        internal IModMenuHost? _modMenuHost;
         private IModSettingsHost? _modSettingsHost;
-        private DebugOverlayBehaviour? _debugOverlay;
+        internal DebugOverlayBehaviour? _debugOverlay;
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
 
         // _uguiReady: true once DFCanvas.Start() reports success via IsReady.
         // We check this each Update() because DFCanvas.Start() runs after Initialize().
-        private bool _uguiReady;
+        internal bool _uguiReady;
         // _uguiChecked: we only need to check DFCanvas readiness once after it has
         // had at least one frame to run its Start().
         private bool _uguiChecked;
@@ -1119,28 +1119,50 @@ namespace DINOForge.Runtime
 
             // ── Wire KeyInputSystem ECS callbacks ───────────────────────────────────
             // KeyInputSystem lives in the ECS world and survives scene transitions.
-            // It calls these lambdas when F9/F10 are pressed, even after DINOForge_Root
-            // has been resurrected (the lambdas capture `this` — the current driver).
-            Bridge.KeyInputSystem.OnF9Pressed = () =>
+            // We register global handlers that look up the current RuntimeDriver instance
+            // from Plugin.PersistentRoot, NOT by capturing `this`. This ensures that
+            // after resurrection, the NEW driver's handlers are used, not stale references
+            // to the old driver's destroyed fields.
+            if (Bridge.KeyInputSystem.OnF9Pressed == null)
             {
-                try
+                Bridge.KeyInputSystem.OnF9Pressed = () =>
                 {
-                    WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
-                    else _debugOverlay?.Toggle();
-                }
-                catch { }
-            };
-            Bridge.KeyInputSystem.OnF10Pressed = () =>
+                    try
+                    {
+                        WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                        // Lookup the CURRENT driver from the persistent root
+                        RuntimeDriver? currentDriver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
+                        if (currentDriver != null)
+                        {
+                            if (currentDriver._uguiReady && currentDriver._dfCanvas != null)
+                                currentDriver._dfCanvas.ToggleDebug();
+                            else
+                                currentDriver._debugOverlay?.Toggle();
+                        }
+                    }
+                    catch { }
+                };
+            }
+            if (Bridge.KeyInputSystem.OnF10Pressed == null)
             {
-                try
+                Bridge.KeyInputSystem.OnF10Pressed = () =>
                 {
-                    WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                    else _modMenuHost?.Toggle();
-                }
-                catch { }
-            };
+                    try
+                    {
+                        WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                        // Lookup the CURRENT driver from the persistent root
+                        RuntimeDriver? currentDriver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
+                        if (currentDriver != null)
+                        {
+                            if (currentDriver._uguiReady && currentDriver._dfCanvas != null)
+                                currentDriver._dfCanvas.ToggleModMenu();
+                            else
+                                currentDriver._modMenuHost?.Toggle();
+                        }
+                    }
+                    catch { }
+                };
+            }
 
             // ── Step 2: Attempt UGUI canvas setup ───────────────────────────────────
             // DFCanvas.Initialize() now builds the canvas immediately (not deferred to Start())

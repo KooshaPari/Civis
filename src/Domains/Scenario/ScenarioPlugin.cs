@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DINOForge.Domains.Scenario.Balance;
 using DINOForge.Domains.Scenario.Models;
+using DINOForge.Domains.Scenario.Registries;
 using DINOForge.Domains.Scenario.Scripting;
 using DINOForge.Domains.Scenario.Validation;
 using DINOForge.SDK.Registry;
@@ -10,10 +11,20 @@ namespace DINOForge.Domains.Scenario
 {
     /// <summary>
     /// Entry point for the Scenario domain plugin. Provides access to scenario subsystems:
-    /// scenario runner, validator, and difficulty scaler.
+    /// scenario registry, content loader, runner, validator, and difficulty scaler.
     /// </summary>
     public class ScenarioPlugin
     {
+        /// <summary>
+        /// Registry of all loaded scenario definitions.
+        /// </summary>
+        public ScenarioRegistry Scenarios { get; }
+
+        /// <summary>
+        /// Content loader for loading scenarios from pack directories.
+        /// </summary>
+        public ScenarioContentLoader ContentLoader { get; }
+
         /// <summary>
         /// Runner for evaluating scenario state, checking conditions, and firing scripted events.
         /// </summary>
@@ -39,6 +50,8 @@ namespace DINOForge.Domains.Scenario
         {
             _registries = registries ?? throw new ArgumentNullException(nameof(registries));
 
+            Scenarios = new ScenarioRegistry();
+            ContentLoader = new ScenarioContentLoader(Scenarios);
             Runner = new ScenarioRunner();
             Validator = new ScenarioValidator(registries);
             DifficultyScaler = new DifficultyScaler();

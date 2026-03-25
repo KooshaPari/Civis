@@ -1,0 +1,96 @@
+# Tutorial Scenario 02: Expand and Conquer
+# Master economy management and military production with escalating enemy waves
+
+id: tutorial_expand_conquer
+display_name: "Expand and Conquer"
+description: >
+  Build an empire from modest beginnings. Manage your economy to fund military production
+  while defending against escalating enemy waves. This scenario teaches resource gathering,
+  unit production scaling, and offensive strategy.
+
+difficulty: Normal
+objective_type: Attack
+wave_count: 5
+max_duration: 0
+
+starting_resources:
+  food: 400
+  wood: 350
+  stone: 200
+  iron: 100
+  gold: 50
+
+allowed_factions: []
+
+victory_conditions:
+  - condition_type: SurviveWaves
+    target_value: 5
+    description: "Survive and repel all 5 enemy waves to achieve victory."
+
+defeat_conditions:
+  - condition_type: CommandCenterDestroyed
+    description: "Your command center is your lifeline—protect it at all costs."
+  - condition_type: PopulationZero
+    description: "Total population loss results in defeat."
+
+scripted_events:
+  - id: intro-message
+    trigger_type: OnWave
+    trigger_value: 1
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Welcome, Expanding Civilization"
+          text: "You have solid starting resources. Build farms and gathering operations early to sustain your growing population and military. Balance economy with defense."
+
+  - id: early-resources-wave-2
+    trigger_type: OnWave
+    trigger_value: 2
+    actions:
+      - action_type: GrantResources
+        parameters:
+          food: "200"
+          wood: "150"
+          stone: "75"
+          iron: "25"
+      - action_type: ShowMessage
+        parameters:
+          title: "Trade Caravan Arrives"
+          text: "Merchants have delivered supplies. Invest in economic buildings like granaries and lumber mills to accelerate resource production."
+
+  - id: midgame-iron-bonus
+    trigger_type: OnWave
+    trigger_value: 3
+    actions:
+      - action_type: GrantResources
+        parameters:
+          iron: "75"
+          gold: "30"
+      - action_type: ShowMessage
+        parameters:
+          title: "Mining Operations Yield"
+          text: "Iron and gold deposits are being extracted. Use these precious metals to arm your soldiers with better weapons and fund advanced defensive structures."
+
+  - id: wave-4-pressure
+    trigger_type: OnWave
+    trigger_value: 4
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Enemy Aggression Intensifies"
+          text: "A much larger force approaches. Your defense and offense must both be strong now. Consider sending your army out to meet them or prepare concentrated defenses."
+
+  - id: final-wave-resources
+    trigger_type: OnWave
+    trigger_value: 5
+    actions:
+      - action_type: GrantResources
+        parameters:
+          food: "300"
+          wood: "200"
+          stone: "150"
+          iron: "50"
+      - action_type: ShowMessage
+        parameters:
+          title: "Final Push Begins"
+          text: "This is the last great assault. Your civilization has been bolstered with final supplies. Show them the strength of your empire!"

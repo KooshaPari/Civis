@@ -1,0 +1,20 @@
+id: scenario-tutorial
+name: Tutorial Scenario
+version: 0.1.0
+framework_version: ">=0.1.0"
+author: DINOForge Team
+type: scenario
+description: |
+  Two introductory tutorial scenarios teaching core DINO mechanics.
+
+  Scenarios included:
+  - Survive the First Wave: Learn basic defense mechanics with modest resources
+  - Expand and Conquer: Master economy and unit production with escalating challenges
+
+depends_on: []
+conflicts_with: []
+
+loads:
+  scenarios:
+    - scenarios/tutorial_01.yaml
+    - scenarios/tutorial_02.yaml

@@ -249,12 +249,12 @@ DINOForge WBS
 
 ## 8. Effort Summary
 
-| Milestone | Tasks | Done | % |
-|-----------|-------|------|---|
-| M8 Runtime Integration | 10 | 6 | 60% |
-| M9 Desktop Companion | 29 | 0 | 0% |
-| M10 Fuzzing | 20 | 2 | 10% |
-| M11 Test Coverage | 8 | 0 | 0% |
-| M11.5 Incomplete Code | 5 | 0 | 0% |
-| Docs/Planning | 7 | 4 | 57% |
-| **Total** | **79** | **12** | **15%** |
+| Milestone | Tasks | Done | Status |
+|-----------|-------|------|----|
+| M8 Runtime Integration | 10 | 6 | Partial |
+| M9 Desktop Companion | 29 | 0 | Not Started |
+| M10 Fuzzing | 20 | 2 | Started |
+| M11 Test Coverage | 8 | 0 | Not Started |
+| M11.5 Incomplete Code | 5 | 0 | Not Started |
+| Docs/Planning | 7 | 4 | Partial |
+| **Total** | **79** | **12** | In Progress |

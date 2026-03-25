@@ -61,31 +61,13 @@ jobs:
 
       # ---------------------------------------------------------------
       # Restore & build the CI solution (no game DLLs required)
+      # MSBuild will respect project reference dependencies automatically
       # ---------------------------------------------------------------
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln
 
-      # Build dependencies first to avoid CS0006 "metadata file not found" in Tests
-      - name: Build dependencies (ordered)
-        shell: pwsh
-        run: |
-          $projects = @(
-            "src/SDK/DINOForge.SDK.csproj",
-            "src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj",
-            "src/Bridge/Client/DINOForge.Bridge.Client.csproj",
-            "src/Domains/Warfare/DINOForge.Domains.Warfare.csproj",
-            "src/Domains/Economy/DINOForge.Domains.Economy.csproj",
-            "src/Domains/Scenario/DINOForge.Domains.Scenario.csproj",
-            "src/Domains/UI/DINOForge.Domains.UI.csproj",
-            "src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj"
-          )
-          foreach ($p in $projects) {
-            dotnet build $p -c Release --no-restore --verbosity minimal
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-
       - name: Build CI solution (Release)
-        run: dotnet build src/DINOForge.CI.sln -c Release --no-restore --verbosity minimal -m:1
+        run: dotnet build src/DINOForge.CI.sln -c Release --no-restore --verbosity minimal
 
       # ---------------------------------------------------------------
       # Run tests — must pass before packaging

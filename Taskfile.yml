@@ -1,114 +1,33 @@
 version: '3'
 
 tasks:
-  check:
+  lint:
+    desc: "Run linter with oxlint"
     cmds:
-      - cargo check
-  test:
-    cmds:
-      - cargo test
-  fmt:
-    cmds:
-      - cargo fmt --all
-  clippy:
-    cmds:
-      - cargo clippy --workspace --all-targets -- -D warnings
-  quality:
-    desc: "Full quality gate: fmt → check → test → clippy → spec:validate → docs:lint"
-    cmds:
-      - task: fmt
-      - task: check
-      - task: test
-      - task: clippy
-      - task: spec:validate
-      - task: docs:lint
+      - oxlint
 
-  spec:validate:
-    desc: "Verify all docs/specs/*.md exist and have required sections"
+  format:
+    desc: "Format with oxfmt"
     cmds:
-      - |
-        set -euo pipefail
-        SPEC_DIR="docs/specs"
-        if [[ ! -d "$SPEC_DIR" ]]; then
-          echo "ERROR: $SPEC_DIR not found"
-          exit 1
-        fi
-        REQUIRED_SECTIONS=("Summary" "CIV Sim Integration Notes")
-        FAILED=0
-        for spec in "$SPEC_DIR"/CIV-*.md; do
-          if [[ ! -f "$spec" ]]; then
-            echo "ERROR: Spec file $spec not found"
-            ((FAILED++))
-            continue
-          fi
-          for section in "${REQUIRED_SECTIONS[@]}"; do
-            if ! grep -q "^##.*$section" "$spec"; then
-              echo "ERROR: $spec missing '## $section' section"
-              ((FAILED++))
-            fi
-          done
-        done
-        if [[ $FAILED -gt 0 ]]; then
-          echo "FAIL: $FAILED spec validation errors"
-          exit 1
-        fi
-        echo "PASS: All specs validated"
-
-  spec:list:
-    desc: "List all spec files with status"
-    cmds:
-      - |
-        echo "CIV Specification Files:"
-        echo "========================"
-        ls -1 docs/specs/CIV-*.md 2>/dev/null | while read spec; do
-          status="CLOSED"
-          echo "$(basename "$spec" | sed 's/\.md//'): $status"
-        done
-
-  traceability:check:
-    desc: "Verify traceability matrix integrity"
-    cmds:
-      - bash scripts/traceability/check-traceability.sh
-
-  docs:lint:
-    desc: "Run markdownlint-cli2 on docs/"
-    cmds:
-      - markdownlint-cli2 'docs/**/*.md' || true
-
-  infra:up:
-    desc: "Start local civ process-compose infra"
-    cmds:
-      - process-compose -f process-compose.yaml up -d
-
-  infra:down:
-    desc: "Stop local civ process-compose infra"
-    cmds:
-      - process-compose -f process-compose.yaml down
-
-  docs:build:
-    desc: "Build VitePress documentation site"
-    cmds:
-      - npm run docs:build
+      - oxfmt --write .
 
   docs:dev:
-    desc: "Run VitePress development server"
+    desc: "Start VitePress dev server"
     cmds:
-      - npm run docs:dev
+      - bun run docs:dev
 
-  hooks:install:
-    desc: "Install hooks from hooks/ to .claude/hooks/"
+  docs:build:
+    desc: "Build VitePress documentation"
     cmds:
-      - |
-        set -euo pipefail
-        SRC_DIR="hooks"
-        DST_DIR=".claude/hooks"
-        mkdir -p "$DST_DIR"
-        for hook in "$SRC_DIR"/*.sh; do
-          if [[ -f "$hook" ]]; then
-            filename=$(basename "$hook")
-            cp "$hook" "$DST_DIR/$filename"
-            chmod +x "$DST_DIR/$filename"
-            echo "Installed $filename"
-          fi
-        done
-        echo "Hooks installed to $DST_DIR"
+      - bun run docs:build
+
+  install:
+    desc: "Install dependencies with bun"
+    cmds:
+      - bun install
+
+  quality:
+    desc: "Run quality checks (lint + docs build)"
+    cmds:
+      - task: lint
+      - task: docs:build

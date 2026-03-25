@@ -65,6 +65,12 @@ public sealed class GameInputTool
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(IntPtr hWnd);
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
@@ -187,7 +193,7 @@ public sealed class GameInputTool
                 }
             };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            uint result = FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT))));
 
             if (result == inputs.Length)
             {
@@ -289,7 +295,7 @@ public sealed class GameInputTool
                 }
             };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            uint result = FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT))));
 
             if (result == inputs.Length)
             {
@@ -351,7 +357,7 @@ public sealed class GameInputTool
                 }
             };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            uint result = FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT))));
 
             if (result == inputs.Length)
             {
@@ -373,6 +379,55 @@ public sealed class GameInputTool
         catch (Exception ex)
         {
             return GameClientHelper.ToJson(new { success = false, error = $"Mouse move error: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Finds the game window and temporarily brings it to foreground, executes the injection action,
+    /// then restores the previous foreground window.
+    /// Prevents SendInput from going to the wrong window (e.g., Claude Code terminal).
+    /// </summary>
+    private static uint FocusGameAndInject(Func<uint> injectAction)
+    {
+        IntPtr previousFocus = GetForegroundWindow();
+        IntPtr gameHwnd = FindGameWindow();
+
+        try
+        {
+            if (gameHwnd != IntPtr.Zero && gameHwnd != previousFocus)
+            {
+                SetForegroundWindow(gameHwnd);
+                System.Threading.Thread.Sleep(50); // Let focus settle
+            }
+
+            return injectAction();
+        }
+        finally
+        {
+            // Restore previous focus only if it's still a valid window
+            if (previousFocus != IntPtr.Zero && IsWindow(previousFocus) && previousFocus != gameHwnd)
+            {
+                System.Threading.Thread.Sleep(50); // Let input register
+                SetForegroundWindow(previousFocus);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds the game window by title "Diplomacy is Not an Option".
+    /// </summary>
+    private static IntPtr FindGameWindow()
+    {
+        try
+        {
+            var gameProcess = System.Diagnostics.Process.GetProcesses()
+                .FirstOrDefault(p => p.MainWindowTitle.Contains("Diplomacy is Not an Option"));
+
+            return gameProcess?.MainWindowHandle ?? IntPtr.Zero;
+        }
+        catch
+        {
+            return IntPtr.Zero;
         }
     }
 

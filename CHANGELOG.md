@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.12.0] — 2026-03-24
 
+### Fixed
+
+- **GameScreenshotTool DXGI adapter retry logic** — added black-frame detection and retry mechanism to `GameCaptureHelper.TryDxgiCaptureAsync()` when Parsec Virtual Display Adapter returns all-black frames; retries up to 3 times with 500ms delays before moving to next adapter; includes `IsFrameMostlyBlack()` helper that samples first 1000 pixels and returns true if >95% have RGB<10; when DXGI returns only black frames, automatically falls back to ScreenRecorderLib (Windows.Graphics.Capture) or ffmpeg (gdigrab)
+- **DXGI adapter enumeration** — now tries all enumerated graphics cards before failing; previously would attempt card 0 and give up; handles configurations where Parsec IDD is Card 0 with 1 display but game renders to Card 2 (NVIDIA)
+
 ### Added
 
 - **MCP server: 17 tools (5 new)** — expanded from 12 to 17 tools with AI automation layer: `game_screenshot` (ScreenRecorderLib refactor), `game_analyze_screen` (OmniParser UI detection), `game_input` (Win32 SendInput keyboard/mouse), `game_wait_and_screenshot` (visual change polling), `game_navigate_to` (UI state navigation via input sequences)

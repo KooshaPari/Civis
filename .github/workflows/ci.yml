@@ -52,6 +52,30 @@ jobs:
       - name: Build
         run: dotnet build src/DINOForge.CI.NoRuntime.sln --no-restore --configuration Release /p:BuildInParallel=false
 
-      # Note: Unit tests excluded - require Runtime which needs Unity (local build only)
+      - name: Test with coverage
+        run: |
+          dotnet test src/DINOForge.sln \
+            --no-build \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage/ \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx"
+        continue-on-error: true
 
-      # Unit tests skipped - require Runtime which needs Unity (run locally)
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./coverage/
+          files: ./coverage/**/coverage.cobertura.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: './coverage/**/*.trx'
+          check_name: 'Unit Test Results'
+        continue-on-error: true

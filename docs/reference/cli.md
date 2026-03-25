@@ -61,7 +61,7 @@ The MCP (Model Context Protocol) server enables Claude Code to interact with the
 dotnet run --project src/Tools/McpServer
 ```
 
-### Available Tools
+### Available Tools (17 Total)
 
 | Tool | Description |
 |------|-------------|
@@ -77,7 +77,11 @@ dotnet run --project src/Tools/McpServer
 | `GameDumpStateTool` | Dump full game state |
 | `GameScreenshotTool` | Capture game screenshot |
 | `GameVerifyModTool` | Verify a mod against game state |
-| `GameWaitForWorldTool` | Wait for ECS world availability |
+| `GameAnalyzeScreenTool` | Capture screenshot + detect UI elements via OmniParser (health bars, unit portraits, buttons, faction indicators) |
+| `GameInputTool` | Inject keyboard/mouse input to game without requiring focus (Win32 SendInput) |
+| `GameWaitAndScreenshotTool` | Poll for visual change then capture screenshot (configurable timeout/interval) |
+| `GameNavigateTool` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
+| `GameUIAutomationTool` | Automate game UI interactions (menus, dialogs, forms) |
 
 ---
 

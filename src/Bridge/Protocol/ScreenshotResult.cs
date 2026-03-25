@@ -23,5 +23,13 @@ namespace DINOForge.Bridge.Protocol
         /// <summary>Whether the screenshot was captured successfully.</summary>
         [JsonProperty("success")]
         public bool Success { get; set; }
+
+        /// <summary>Base64-encoded PNG image data (only populated if requested).</summary>
+        [JsonProperty("base64")]
+        public string? Base64 { get; set; }
+
+        /// <summary>Timestamp when the screenshot was captured (ISO 8601 format).</summary>
+        [JsonProperty("timestamp")]
+        public string? Timestamp { get; set; }
     }
 }

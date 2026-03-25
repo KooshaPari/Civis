@@ -34,6 +34,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UGUI overlay visibility** (OVL-006) — HudStrip `AlphaBase` suppression fix merged; awaits verification in live game
 
 ## [Unreleased]
+
+## [0.12.0] — 2026-03-24
+
+### Added
+
+- **MCP server: 17 tools (5 new)** — expanded from 12 to 17 tools with AI automation layer: `game_screenshot` (ScreenRecorderLib refactor), `game_analyze_screen` (OmniParser UI detection), `game_input` (Win32 SendInput keyboard/mouse), `game_wait_and_screenshot` (visual change polling), `game_navigate_to` (UI state navigation via input sequences)
+- **`game_screenshot` refactored** — uses ScreenRecorderLib 6.6.0 (Windows.Graphics.Capture API) for non-intrusive headless DirectX per-window capture without requiring window focus; ffmpeg gdigrab fallback for environments where ScreenRecorderLib unavailable; `returnBase64: true` parameter returns PNG as base64 string instead of file path
+- **`game_analyze_screen` MCP tool** — captures game screenshot and analyzes with OmniParser to detect UI elements (health bars, unit portraits, buttons, faction indicators); supports local Docker REST endpoint (`OMNIPARSER_ENDPOINT` env var) and Replicate cloud API (`OMNIPARSER_MODE=replicate`, `REPLICATE_API_KEY` env var); graceful degradation returns screenshot path with setup instructions if OmniParser unavailable
+- **`game_input` MCP tool** — Win32 SendInput keyboard/mouse automation without requiring window focus; `SendKey(keyName)` for keyboard input and `SendMouseClick(x, y, button)` for mouse clicks; enables Claude VLM to automate game UI workflows (screenshot → analyze → input → repeat)
+- **`game_wait_and_screenshot` MCP tool** — polls game window for visual changes, captures screenshot when condition met; byte-sampling change detection (samples every 1000th byte, 2% diff threshold); configurable timeout (default 30s) and poll interval (default 1000ms); returns before/after screenshots with change detection metadata
+- **`game_navigate_to` MCP tool** — navigates game to target UI state (`main_menu`, `gameplay`, `pause_menu`) via ESC/ENTER key sequences with screenshot-based state verification; file-size heuristics for state detection; configurable max attempts and delay between key presses
+- **`GameCaptureHelper` shared helper** — extracts non-intrusive headless GPU screenshot logic used by `game_screenshot`, `game_analyze_screen`, `game_wait_and_screenshot`; primary: ScreenRecorderLib 6.6.0 (Windows.Graphics.Capture API, per-window DirectX capture, no focus required); fallback: ffmpeg gdigrab desktop capture
+- **`GameInputHelper` shared helper** — extracts Win32 SendInput P/Invoke logic used by `game_input` and `game_navigate_to`; `SendKey(keyName)` and `SendMouseClick(x, y, button)` methods for keyboard/mouse injection
+- **OmniParser integration** — Microsoft OmniParser for game UI element detection; environment-variable configuration: `OMNIPARSER_ENDPOINT` (local Docker), `OMNIPARSER_MODE` (local|replicate), `REPLICATE_API_KEY` (cloud inference)
+- **Application.runInBackground=true** — Runtime plugin enables `UnityEngine.Application.runInBackground` in `Awake()` to support background rendering and input automation; allows game to process input and render frames when window unfocused
+
+### Changed
+
+- **MCP server VLM game automation** — `game_screenshot` + `game_input` + `game_analyze_screen` + `game_wait_and_screenshot` + `game_navigate_to` tools enable complete Claude vision model automation loop: screenshot → base64 → VLM analysis → game_input → screenshot; supports headless/background game execution without manual window interaction
+
+## [Unreleased (prior)]
 ### Merged
 
 - **Consolidated local branches** — merged 10 local branches into main: `fix/asset-swap-clean`, `fix/asset-swap-prefab-extraction`, `fix/asset-swap-load-time`, `fix/companion-startup-crash`, `fix/companion-packlist-crash`, `fix/companion-configureawait`, `fix/packlist-crash-observable`, `fix/restore-net11-companion`, `chore/sync-local-main-state`, `codex/desktopcompanion-runtime-upgrade`
@@ -48,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADR-006: Duplicate Instance Bypass** — Harmony prefix on `Awake()` detects/suppresses BepInEx plugin duplicates before initialization
 - **ADR-007: Neural TTS for Proof Videos** — Design pattern for autonomous AI-generated voiceovers in video proof workflows
 - **Project status tracking** — Master project tracking documents: `/docs/PROJECT_STATUS.md` (milestones, ADRs, issues), `/docs/milestones/MILESTONE-M5-example-packs.md` (M5 progress), `/docs/plans/PLAN-agent-tooling-evolution.md` (M9 roadmap)
+- **`game_input` MCP tool for VLM automation** — keyboard + mouse input automation without focus stealing; uses Win32 `SendInput` API to inject key presses and mouse movements directly into game engine; enables Claude's vision model (VLM) to automate game UI workflows (screenshot → analyze → input → repeat)
+- **Application.runInBackground=true** — Runtime plugin now enables `UnityEngine.Application.runInBackground` in `Awake()` to support background rendering and input automation; allows game to process input and render frames even when window is not focused
+- **game_screenshot returnBase64 parameter** — `GameScreenshotTool` now accepts `returnBase64: true` to return PNG as base64 string instead of file path; adds `Timestamp` field (ISO-8601) to `ScreenshotResult` for VLM frame tracking; enables vision model to directly analyze screenshot content without file I/O
+- **ScreenshotResult Base64 and Timestamp properties** — enhanced `Bridge/Protocol/ScreenshotResult.cs` with `Base64` (base64-encoded PNG) and `Timestamp` (ISO-8601 capture time) for VLM screenshot pipelines
+- **assetctl normalize enhancements** — `--blender-path` (custom Blender executable) and `--target-polycount` (target polygon count for decimation) options added to asset normalization workflow
+- **assetctl stylize enhancements** — `--faction` (faction color palette), `--dry-run` (preview output without persisting), and `--blender-path` (custom Blender executable) options added to asset stylization workflow
 
 ### Fixed
 
@@ -60,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **launch-game.md workflow** — documents direct EXE launch to bypass Steam mutex; game launches cleanly without mod path conflicts
 
 ### Changed
+
+- **MCP server VLM game automation** — integrated `game_screenshot` (returnBase64, Timestamp) + `game_input` (keyboard/mouse) tools enable complete Claude vision model (VLM) automation loop: screenshot → base64 → VLM analysis → game_input → screenshot; supports headless/background game execution without manual window interaction
+
+### Changed (prior)
 
 - **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112` with `latestMajor` rollForward; all CI workflows updated to install `11.0.x`
 

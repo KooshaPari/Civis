@@ -41,6 +41,32 @@ Always use this sequence — never assume a launch succeeded:
 4. Wait 5 seconds, then check `MainWindowTitle` — if "Fatal error" or contains "another instance", launch FAILED
 5. Only proceed if MainWindowTitle is empty/game (not an error dialog)
 
+### File Deletion Protocol (MANDATORY)
+NEVER use `rm`, `del`, `Remove-Item`, or any command that permanently deletes files.
+ALWAYS send files to the Windows Recycle Bin using:
+
+For files:
+```powershell
+Add-Type -AssemblyName Microsoft.VisualBasic
+[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+    '<absolute-path>',
+    [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+    [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+```
+
+For directories:
+```powershell
+[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+    '<absolute-path>',
+    [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+    [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+```
+
+Wrap calls via subagents as:
+```powershell
+powershell -c "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('$path','OnlyErrorDialogs','SendToRecycleBin')"
+```
+
 ## Build Commands
 
 ```bash
@@ -341,7 +367,7 @@ G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\
 
 ### MCP Bridge (game automation)
 
-The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 13 tools:
+The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 tools:
 
 | Tool | Purpose |
 |------|---------|
@@ -357,6 +383,10 @@ The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 13 
 | `game_wait_for_world` | Wait until ECS world is ready |
 | `game_ui_automation` | Automate game UI interactions |
 | `game_launch_test` | Launch TEST instance (second concurrent DINO for testing) |
+| `game_analyze_screen` | Capture screenshot + detect UI elements via OmniParser (health bars, unit portraits, buttons, faction indicators) |
+| `game_input` | Inject keyboard/mouse input to game without requiring focus (Win32 SendInput) |
+| `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |
+| `game_navigate_to` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
 
 **Build MCP server before use**: `dotnet build src/Tools/McpServer/DINOForge.Tools.McpServer.csproj -c Release`
 

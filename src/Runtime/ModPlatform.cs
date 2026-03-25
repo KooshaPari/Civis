@@ -713,9 +713,15 @@ namespace DINOForge.Runtime
             {
                 if (_hotReloadBridge != null)
                 {
-                    // Use hot reload bridge for full reload
+                    // Use hot reload bridge for registry updates
                     HotReloadResult result = _hotReloadBridge.TriggerReload();
                     _log.LogInfo($"[ModPlatform] UI-triggered reload: success={result.IsSuccess}");
+
+                    // Refresh UI pack list to show latest state from disk after hot reload
+                    if (result.IsSuccess)
+                    {
+                        LoadPacks();
+                    }
                 }
                 else
                 {
@@ -732,6 +738,7 @@ namespace DINOForge.Runtime
 
         /// <summary>
         /// Handles pack toggle events from the UI overlay.
+        /// Changes the enabled state and immediately reloads packs to apply the toggle.
         /// </summary>
         private void OnPackToggled(string packId, bool enabled)
         {
@@ -739,14 +746,27 @@ namespace DINOForge.Runtime
             if (enabled)
             {
                 _disabledPacks.Remove(packId);
-                _log.LogInfo($"[ModPlatform] Pack '{packId}' enabled - will load on next reload.");
+                _log.LogInfo($"[ModPlatform] Pack '{packId}' enabled");
             }
             else
             {
                 _disabledPacks.Add(packId);
-                _log.LogInfo($"[ModPlatform] Pack '{packId}' disabled - will be skipped on next reload.");
+                _log.LogInfo($"[ModPlatform] Pack '{packId}' disabled");
             }
             SaveDisabledPacks();
+
+            // Immediately apply the toggle by reloading packs
+            try
+            {
+                _log.LogInfo($"[ModPlatform] Reloading packs after toggle...");
+                LoadPacks();
+                _modMenuHost?.SetStatus($"Pack '{packId}' {(enabled ? "enabled" : "disabled")} and reloaded");
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"[ModPlatform] Failed to reload after toggle: {ex.Message}");
+                _modMenuHost?.SetStatus($"Reload after toggle failed: {ex.Message}", 1);
+            }
         }
 
         /// <summary>

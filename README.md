@@ -16,6 +16,7 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 - **Warfare Domain** — Faction archetypes (Order, Industrial Swarm, Asymmetric), doctrines, unit role validation, wave composition, balance calculation
 - **Star Wars Clone Wars Pack** — 28 units (Republic + CIS) and 10 buildings with visual assets, prefabs, and Addressables entries
 - **Dev Tooling** — PackCompiler CLI, DumpTools, in-game debug overlay, entity dumper
+- **MCP Server** — 17 game automation tools (screenshot capture, UI element detection, input injection, state navigation)
 - **Schema Validation** — 10 JSON schemas catch errors before runtime
 
 ## Milestone Status
@@ -196,6 +197,31 @@ sequenceDiagram
 | **Domains** | Game logic — factions, doctrines, combat, economy | netstandard2.0 |
 | **Tools** | CLI — pack compiler, dump analyzer, asset inspector | net8.0 |
 | **Tests** | xUnit + FluentAssertions | net8.0 |
+
+## MCP Server Tools
+
+The `dinoforge` MCP server provides 17 game automation and analysis tools for Claude Code integration:
+
+| Tool | Purpose |
+|------|---------|
+| `game_launch` | Launch game exe + wait for bridge |
+| `game_status` | Running state, entity count, loaded packs |
+| `game_query_entities` | Query ECS entities by component type |
+| `game_get_stat` | Read a stat value on an entity |
+| `game_apply_override` | Apply a stat override |
+| `game_reload_packs` | Hot-reload packs without restarting |
+| `game_dump_state` | Trigger entity dump to file |
+| `game_screenshot` | Capture game window screenshot |
+| `game_verify_mod` | Verify mod is loaded and active |
+| `game_wait_for_world` | Wait until ECS world is ready |
+| `game_ui_automation` | Automate game UI interactions |
+| `game_launch_test` | Launch TEST instance (second concurrent DINO for testing) |
+| `game_analyze_screen` | Capture screenshot + detect UI elements via OmniParser (health bars, unit portraits, buttons, faction indicators) |
+| `game_input` | Inject keyboard/mouse input to game without requiring focus (Win32 SendInput) |
+| `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |
+| `game_navigate_to` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
+
+**Build MCP server**: `dotnet build src/Tools/McpServer/DINOForge.Tools.McpServer.csproj -c Release`
 
 ## Project Structure
 

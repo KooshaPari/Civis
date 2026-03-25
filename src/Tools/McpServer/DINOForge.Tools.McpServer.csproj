@@ -6,11 +6,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>DINOForge.Tools.McpServer</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <!-- ScreenRecorderLib requires Platform=x64 explicitly (not AnyCPU) -->
+    <Platform>x64</Platform>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.*" />
+    <PackageReference Include="ScreenRecorderLib" Version="6.6.0" />
   </ItemGroup>
 
   <ItemGroup>

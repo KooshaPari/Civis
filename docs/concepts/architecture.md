@@ -139,7 +139,7 @@ DINOForge/
       UI/                #   UI domain (HUD injection, menus)
     Tools/
       Cli/               #   dinoforge CLI (11 commands)
-      McpServer/         #   MCP server for Claude Code (13 tools)
+      McpServer/         #   MCP server for Claude Code (17 tools)
       PackCompiler/      #   Pack compiler (validate, build)
       DumpTools/         #   Dump analysis (Spectre.Console)
       Installer/         #   BepInEx + DINOForge installer

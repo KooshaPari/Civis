@@ -87,6 +87,10 @@ namespace DINOForge.Runtime
             WriteDebug($"[Plugin] Awake: mainThreadId={_mainThreadId}");
             Log.LogInfo($"DINOForge Runtime v{PluginInfo.VERSION} loading...");
 
+            // Enable background rendering so the game continues to render frames
+            // even when the window is not focused. Required for external screenshot capture.
+            Application.runInBackground = true;
+
             // Config for debug features
             ConfigEntry<bool> dumpOnStartup = Config.Bind("Debug", "DumpOnStartup", true,
                 "Automatically dump entity/component data when the game loads");

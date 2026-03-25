@@ -31,5 +31,5 @@ features:
     details: Maps cleanly to DINO's full Unity ECS (DOTS) architecture. ECS-native modding over Harmony patches for performance.
   - icon: "\uD83E\uDD16"
     title: Agent Tooling
-    details: "MCP server with 13 game interaction tools for Claude Code. CLI with 11 commands. Hot reload. Full agent-driven development pipeline."
+    details: "MCP server with 17 game interaction tools for Claude Code. CLI with 11 commands. Hot reload. Full agent-driven development pipeline."
 ---

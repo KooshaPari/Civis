@@ -41,10 +41,14 @@ public static class Program
                 .WithTools<Tools.GameReloadPacksTool>()
                 .WithTools<Tools.GameDumpStateTool>()
                 .WithTools<Tools.GameScreenshotTool>()
+                .WithTools<Tools.GameAnalyzeScreenTool>()
+                .WithTools<Tools.GameInputTool>()
                 .WithTools<Tools.GameVerifyModTool>()
                 .WithTools<Tools.GameGetResourcesTool>()
                 .WithTools<Tools.GameGetComponentMapTool>()
-                .WithTools<Tools.GameUIAutomationTool>();
+                .WithTools<Tools.GameUIAutomationTool>()
+                .WithTools<Tools.GameWaitAndScreenshotTool>()
+                .WithTools<Tools.GameNavigateTool>();
             });
 
         await builder.Build().RunAsync().ConfigureAwait(false);

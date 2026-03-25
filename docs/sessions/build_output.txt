@@ -1,0 +1,42 @@
+
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Templates\DINOForge.Templates.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj]
+  DINOForge.SDK -> C:\Users\koosh\Dino\src\SDK\bin\Debug\netstandard2.0\DINOForge.SDK.dll
+  DINOForge.Tools.DumpTools -> C:\Users\koosh\Dino\src\Tools\DumpTools\bin\Debug\net11.0\DINOForge.Tools.DumpTools.dll
+  DINOForge.Tools.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\bin\Debug\net11.0\DINOForge.Tools.Installer.dll
+  DINOForge.Templates -> C:\Users\koosh\Dino\src\Templates\bin\Debug\net11.0\DINOForge.Templates.dll
+  DINOForge.Bridge.Protocol -> C:\Users\koosh\Dino\src\Bridge\Protocol\bin\Debug\netstandard2.0\DINOForge.Bridge.Protocol.dll
+  DINOForge.Runtime -> C:\Users\koosh\Dino\src\Runtime\bin\Debug\netstandard2.0\DINOForge.Runtime.dll
+  DINOForge.Domains.Scenario -> C:\Users\koosh\Dino\src\Domains\Scenario\bin\Debug\net11.0\DINOForge.Domains.Scenario.dll
+  DINOForge.Domains.Warfare -> C:\Users\koosh\Dino\src\Domains\Warfare\bin\Debug\netstandard2.0\DINOForge.Domains.Warfare.dll
+  DINOForge.Domains.UI -> C:\Users\koosh\Dino\src\Domains\UI\bin\Debug\netstandard2.0\DINOForge.Domains.UI.dll
+  DINOForge.Domains.Economy -> C:\Users\koosh\Dino\src\Domains\Economy\bin\Debug\net11.0\DINOForge.Domains.Economy.dll
+  DINOForge.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\GUI\bin\Debug\net11.0-windows\DINOForge.Installer.dll
+  DINOForge.Bridge.Client -> C:\Users\koosh\Dino\src\Bridge\Client\bin\Debug\net11.0\DINOForge.Bridge.Client.dll
+  DINOForge.Tools.Cli -> C:\Users\koosh\Dino\src\Tools\Cli\bin\Debug\net11.0\DINOForge.Tools.Cli.dll
+  DINOForge.Tests.Integration -> C:\Users\koosh\Dino\src\Tests\Integration\bin\Debug\net11.0\DINOForge.Tests.Integration.dll
+  DINOForge.Tools.McpServer -> C:\Users\koosh\Dino\src\Tools\McpServer\bin\x64\Debug\net11.0\DINOForge.Tools.McpServer.dll
+  DINOForge.Tests -> C:\Users\koosh\Dino\src\Tests\bin\Debug\net11.0\DINOForge.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:06.94

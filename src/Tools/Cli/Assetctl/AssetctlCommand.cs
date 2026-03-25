@@ -270,10 +270,23 @@ internal static class AssetctlCommand
             Description = "Output format: text | json"
         };
 
+        Option<string?> blenderPathOption = new("--blender-path")
+        {
+            Description = "Path to Blender executable (overrides env var and auto-detection)"
+        };
+
+        Option<int> targetPolycountOption = new("--target-polycount")
+        {
+            DefaultValueFactory = _ => 3000,
+            Description = "Target polycount for optimization (default: 3000)"
+        };
+
         Command command = new("normalize", "Normalize a candidate into working output.");
         command.Add(assetIdArg);
         command.Add(pipelineRootOption);
         command.Add(formatOption);
+        command.Add(blenderPathOption);
+        command.Add(targetPolycountOption);
 
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
@@ -281,9 +294,11 @@ internal static class AssetctlCommand
             string assetId = parseResult.GetRequiredValue(assetIdArg);
             string pipelineRoot = parseResult.GetValue(pipelineRootOption) ?? "assets-pipeline";
             string outputFormat = parseResult.GetValue(formatOption) ?? "text";
+            string? blenderPath = parseResult.GetValue(blenderPathOption);
+            int targetPolycount = parseResult.GetValue(targetPolycountOption);
 
             AssetctlPipeline pipeline = new();
-            AssetctlNormalizeResult result = pipeline.Normalize(assetId, pipelineRoot);
+            AssetctlNormalizeResult result = pipeline.Normalize(assetId, pipelineRoot, blenderPath, targetPolycount);
             if (!result.Success)
             {
                 WriteError("normalize", result.Message ?? "normalize failed", outputFormat);
@@ -384,11 +399,29 @@ internal static class AssetctlCommand
             Description = "Output format: text | json"
         };
 
+        Option<string?> factionOption = new("--faction")
+        {
+            Description = "Faction override: republic | cis | neutral"
+        };
+
+        Option<bool> dryRunOption = new("--dry-run")
+        {
+            Description = "Preview palette without running Blender"
+        };
+
+        Option<string?> blenderPathOption = new("--blender-path")
+        {
+            Description = "Path to Blender executable (overrides env var and auto-detection)"
+        };
+
         Command command = new("stylize", "Add stylization metadata and mark the asset as prototype-ready.");
         command.Add(assetIdArg);
         command.Add(profileOption);
         command.Add(pipelineRootOption);
         command.Add(formatOption);
+        command.Add(factionOption);
+        command.Add(dryRunOption);
+        command.Add(blenderPathOption);
 
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
@@ -397,9 +430,12 @@ internal static class AssetctlCommand
             string profile = parseResult.GetValue(profileOption) ?? "dinosw_lowpoly_v1";
             string pipelineRoot = parseResult.GetValue(pipelineRootOption) ?? "assets-pipeline";
             string outputFormat = parseResult.GetValue(formatOption) ?? "text";
+            string? faction = parseResult.GetValue(factionOption);
+            bool dryRun = parseResult.GetValue(dryRunOption);
+            string? blenderPath = parseResult.GetValue(blenderPathOption);
 
             AssetctlPipeline pipeline = new();
-            AssetctlStylizeResult result = pipeline.Stylize(assetId, profile, pipelineRoot);
+            AssetctlStylizeResult result = pipeline.Stylize(assetId, profile, pipelineRoot, faction, blenderPath, dryRun);
             if (!result.Success)
             {
                 WriteError("stylize", result.Message ?? "stylize failed", outputFormat);
@@ -410,6 +446,11 @@ internal static class AssetctlCommand
             {
                 AnsiConsole.MarkupLine("[green]✓[/] Asset stylized.");
                 AnsiConsole.MarkupLine($"  Profile: [bold]{Markup.Escape(result.Profile ?? string.Empty)}[/]");
+                if (!string.IsNullOrEmpty(result.DryRunPalette))
+                {
+                    AnsiConsole.MarkupLine($"  [dim]Palette (dry-run):[/]");
+                    AnsiConsole.MarkupLine($"  {Markup.Escape(result.DryRunPalette)}");
+                }
                 return;
             }
 

@@ -1,4 +1,4 @@
-use civ_engine::{step, WorldState, metrics, policy::{effective_consumption, PolicyInput}, Fixed};
+use civ_engine::{step, WorldState, metrics, Fixed};
 
 fn main() {
     let state = WorldState::default();

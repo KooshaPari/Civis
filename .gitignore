@@ -88,3 +88,10 @@ tmp_*.png
 packcompiler-out/
 publish/
 .claire/
+
+# Artifact directories
+nupkg/
+docs/sessions/WgcCapture/
+docs/sessions/DINOForgeCompanion/
+docs/screenshots/desktop/
+scripts/game/desktop/

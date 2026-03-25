@@ -55,7 +55,5 @@ loads:
     - buildings
   doctrines:
     - doctrines
-  wave_templates:
-    - waves
   stats:
     - stats

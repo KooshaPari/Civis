@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pack YAML deserialization errors** — removed unsupported content type references from pack.yaml files: `wave_templates` (unsupported), `economy_profiles` (not implemented), `trade_routes` (not implemented), `scenarios` (not implemented); affected packs: example-balance, warfare-modern, warfare-guerrilla, warfare-airforce, scenario-tutorial, economy-balanced; all packs now load with 0 errors in ContentLoader
+
 ## [0.12.0] — 2026-03-24
 
 ### Added

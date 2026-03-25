@@ -27,6 +27,4 @@ description: |
 depends_on: []
 conflicts_with: []
 
-loads:
-  scenarios:
-    - scenarios
+loads: {}

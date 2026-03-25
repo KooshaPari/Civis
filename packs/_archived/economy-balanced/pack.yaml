@@ -28,8 +28,4 @@ description: |
 depends_on: []
 conflicts_with: []
 
-loads:
-  economy_profiles:
-    - profiles
-  trade_routes:
-    - trade
+loads: {}

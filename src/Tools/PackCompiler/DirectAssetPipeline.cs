@@ -15,6 +15,12 @@ namespace DINOForge.Tools.PackCompiler
     /// </summary>
     public static class DirectAssetPipeline
     {
+        /// <summary>
+        /// Execute Phase 3A of the asset pipeline (import optimization for Clone Infantry assets).
+        /// Loads asset_pipeline.yaml, imports GLB/FBX models, applies optimization, and logs results.
+        /// </summary>
+        /// <param name="packPath">Path to the pack directory containing asset_pipeline.yaml</param>
+        /// <returns>Exit code: 0 on success, non-zero on failure</returns>
         public static async Task<int> RunPhase3A(string packPath)
         {
             var logPath = Path.Combine(packPath, "phase3a_execution.log");

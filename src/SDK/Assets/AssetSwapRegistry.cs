@@ -133,7 +133,7 @@ namespace DINOForge.SDK.Assets
         /// <summary>
         /// Marks all registered swaps as not applied so they will be re-processed.
         /// Call this after a hot-reload that may have changed bundle files, so the
-        /// next <see cref="AssetSwapSystem"/> update re-patches and re-swaps everything.
+        /// next AssetSwapSystem update re-patches and re-swaps everything.
         /// </summary>
         public static void ResetApplied()
         {

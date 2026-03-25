@@ -709,6 +709,7 @@ namespace DINOForge.Runtime
         }
 
         private static string? _screenshotPendingPath = null;
+        private static System.DateTime _screenshotRequestedAt = System.DateTime.MinValue;
 
         private static void CheckScreenshotRequest(string context)
         {
@@ -720,10 +721,19 @@ namespace DINOForge.Runtime
 
                 if (_screenshotPendingPath != null)
                 {
-                    // Previous ScreenCapture.CaptureScreenshot was called — write done file
-                    System.IO.File.WriteAllText(doneFile, _screenshotPendingPath);
-                    WriteDebug($"{context} Screenshot done: {_screenshotPendingPath}");
-                    _screenshotPendingPath = null;
+                    // Wait for Unity to write a FRESH screenshot file (written AFTER our request)
+                    var fi = new System.IO.FileInfo(_screenshotPendingPath);
+                    fi.Refresh();
+                    if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAt)
+                    {
+                        System.IO.File.WriteAllText(doneFile, _screenshotPendingPath);
+                        WriteDebug($"{context} Screenshot done (verified {fi.Length} bytes, written {fi.LastWriteTimeUtc:HH:mm:ss.fff}): {_screenshotPendingPath}");
+                        _screenshotPendingPath = null;
+                    }
+                    else
+                    {
+                        WriteDebug($"{context} Screenshot pending: {_screenshotPendingPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff}, requested={_screenshotRequestedAt:HH:mm:ss.fff})");
+                    }
                 }
                 else if (System.IO.File.Exists(reqFile))
                 {
@@ -731,7 +741,10 @@ namespace DINOForge.Runtime
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
-                    WriteDebug($"{context} Screenshot requested: {path}");
+                    // Delete stale file so we don't mistake old content for new screenshot
+                    try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { }
+                    _screenshotRequestedAt = System.DateTime.UtcNow;
+                    WriteDebug($"{context} Screenshot requested at {_screenshotRequestedAt:HH:mm:ss.fff}: {path}");
                     ScreenCapture.CaptureScreenshot(path);
                     _screenshotPendingPath = path;
                 }

@@ -2,37 +2,155 @@
 using System.Diagnostics;
 using ScreenCapture.NET;
 using ScreenRecorderLib;
+using BareCua;
 
 namespace DINOForge.Tools.McpServer.Tools;
 
 /// <summary>
 /// Shared screenshot capture logic used by multiple MCP tools.
-/// Primary: ScreenCapture.NET DXGI Desktop Duplication — works for exclusive DX11 fullscreen.
-/// Secondary: ScreenRecorderLib (Windows.Graphics.Capture) — per-window capture.
-/// Fallback: ffmpeg gdigrab — GDI desktop capture (fails for exclusive fullscreen).
+/// Primary: bare-cua-native (optional fast path using JSON-RPC).
+/// Secondary: Unity ScreenCapture.CaptureScreenshot() via file-signal — works on Parsec/virtual displays.
+/// Tertiary: ScreenCapture.NET DXGI Desktop Duplication — works for exclusive DX11 fullscreen on physical displays.
+/// Quaternary: ScreenRecorderLib (Windows.Graphics.Capture) — per-window capture fallback.
+/// Last resort: ffmpeg gdigrab — GDI desktop capture (fails for exclusive fullscreen/Parsec).
 /// </summary>
 internal static class GameCaptureHelper
 {
     private const string GameWindowTitle = "Diplomacy is Not an Option";
+
+    private static readonly string BepInExRoot =
+        Path.Combine(
+            "G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option",
+            "BepInEx");
+
+    private static readonly string ScreenshotRequestFile =
+        Path.Combine(BepInExRoot, "dinoforge_screenshot_request.txt");
+
+    private static readonly string ScreenshotDoneFile =
+        Path.Combine(BepInExRoot, "dinoforge_screenshot_done.txt");
 
     /// <summary>
     /// Captures the game window to a PNG file. Returns the output path on success, null on failure.
     /// </summary>
     internal static async Task<string?> CaptureAsync(string outputPath, CancellationToken ct = default)
     {
-        // Primary: DXGI Desktop Duplication — works for exclusive DX11 fullscreen
+        // Primary: bare-cua-native (optional, fast native capture)
+        if (await TryBareCuaAsync(outputPath, ct).ConfigureAwait(false))
+            return outputPath;
+
+        // Secondary: Unity ScreenCapture.CaptureScreenshot() via file-signal
+        // Works for exclusive fullscreen on Parsec/virtual displays — reads directly from GPU backbuffer.
+        if (await TryUnityScreenCaptureAsync(outputPath, ct).ConfigureAwait(false))
+            return outputPath;
+
+        // Tertiary: DXGI Desktop Duplication (works for exclusive DX11 on physical displays)
         if (await TryDxgiCaptureAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
-        // Secondary: Windows.Graphics.Capture via ScreenRecorderLib
+        // Quaternary: Windows.Graphics.Capture via ScreenRecorderLib
         if (await TryScreenRecorderLibAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
-        // Fallback: ffmpeg gdigrab (GDI desktop composite — fails for exclusive fullscreen)
+        // Last resort: ffmpeg gdigrab
         if (await TryFfmpegGdigrabAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
         return null;
+    }
+
+    /// <summary>
+    /// Attempts to use bare-cua-native.exe for screenshot capture (optional fallback).
+    /// Looks for binary at: BARE_CUA_NATIVE env var, same directory as this DLL, or hardcoded path.
+    /// </summary>
+    private static async Task<bool> TryBareCuaAsync(string outputPath, CancellationToken ct)
+    {
+        try
+        {
+            string? nativePath = FindBareCuaNative();
+            if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
+                return false;
+
+            // Start the native process
+            await using var computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+
+            // Capture screenshot by window title
+            byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
+            if (pngBytes.Length == 0)
+                return false;
+
+            // Write to output path
+            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+        }
+        catch
+        {
+            // bare-cua not available or startup failed; fall through to next method
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Finds bare-cua-native.exe by checking:
+    /// 1. BARE_CUA_NATIVE environment variable
+    /// 2. Same directory as this DLL
+    /// 3. Hardcoded path C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe
+    /// </summary>
+    private static string? FindBareCuaNative()
+    {
+        string[] candidatePaths =
+        [
+            Environment.GetEnvironmentVariable("BARE_CUA_NATIVE") ?? string.Empty,
+            Path.Combine(AppContext.BaseDirectory, "bare-cua-native.exe"),
+            "C:\\Users\\koosh\\bare-cua\\target\\release\\bare-cua-native.exe"
+        ];
+
+        return candidatePaths.FirstOrDefault(p => !string.IsNullOrEmpty(p) && File.Exists(p));
+    }
+
+    /// <summary>
+    /// Triggers Unity's ScreenCapture.CaptureScreenshot() by writing a request file.
+    /// KeyInputSystem polls for this file ~10x/sec and calls ScreenCapture, then writes done file.
+    /// This is the only method that works on Parsec virtual displays.
+    /// </summary>
+    private static async Task<bool> TryUnityScreenCaptureAsync(string outputPath, CancellationToken ct)
+    {
+        try
+        {
+            if (!Directory.Exists(BepInExRoot))
+                return false;
+
+            // Clean up any stale done file from previous capture
+            if (File.Exists(ScreenshotDoneFile))
+                File.Delete(ScreenshotDoneFile);
+
+            // Write request file with desired output path
+            await File.WriteAllTextAsync(ScreenshotRequestFile, outputPath, ct).ConfigureAwait(false);
+
+            // Wait for done file to appear (up to 10 seconds)
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            try
+            {
+                while (!timeoutCts.Token.IsCancellationRequested)
+                {
+                    if (File.Exists(ScreenshotDoneFile))
+                    {
+                        File.Delete(ScreenshotDoneFile);
+                        // Give Unity one more frame to flush the file
+                        await Task.Delay(200, ct).ConfigureAwait(false);
+                        return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+                    }
+                    await Task.Delay(100, timeoutCts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) { }
+
+            // Clean up request file if game didn't respond
+            try { File.Delete(ScreenshotRequestFile); } catch { }
+            return false;
+        }
+        catch { return false; }
     }
 
     private static async Task<bool> TryDxgiCaptureAsync(string outputPath, CancellationToken ct)
@@ -47,7 +165,6 @@ internal static class GameCaptureHelper
                     var cards = service.GetGraphicsCards().ToList();
                     if (cards.Count == 0) return false;
 
-                    // Try all graphics cards to find the active display
                     foreach (var card in cards)
                     {
                         try
@@ -55,62 +172,34 @@ internal static class GameCaptureHelper
                             var displays = service.GetDisplays(card).ToList();
                             if (displays.Count == 0) continue;
 
-                            // Use the first (primary) display
                             using var screenCapture = service.GetScreenCapture(displays[0]);
                             var zone = screenCapture.RegisterCaptureZone(
                                 0, 0,
                                 screenCapture.Display.Width,
                                 screenCapture.Display.Height);
 
-                            // Retry logic: some adapters (e.g., Parsec IDD) may return black frames initially
-                            // Try up to 3 times with small delays to get a non-black frame
-                            const int maxRetries = 3;
-                            const int retryDelayMs = 500;
+                            screenCapture.CaptureScreen();
 
-                            for (int attempt = 0; attempt < maxRetries; attempt++)
+                            using (zone.Lock())
                             {
-                                // Capture frame — blocks up to ~500ms waiting for next frame
-                                using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                                screenCapture.CaptureScreen();
+                                if (zone.RawBuffer.Length == 0) continue;
 
-                                using (zone.Lock())
+                                // Check if frame is mostly black (Parsec IDD or inactive adapter)
+                                var raw = zone.RawBuffer.ToArray();
+                                int nonBlack = 0;
+                                for (int p = 0; p < Math.Min(raw.Length - 3, 4000); p += 4)
                                 {
-                                    if (zone.RawBuffer.Length == 0)
-                                    {
-                                        if (attempt < maxRetries - 1)
-                                        {
-                                            System.Threading.Thread.Sleep(retryDelayMs);
-                                            continue;
-                                        }
-                                        break;
-                                    }
-
-                                    // Check if frame is mostly black (game may not be ready yet)
-                                    if (IsFrameMostlyBlack(zone.RawBuffer.ToArray()))
-                                    {
-                                        if (attempt < maxRetries - 1)
-                                        {
-                                            System.Threading.Thread.Sleep(retryDelayMs);
-                                            continue;
-                                        }
-                                        // Last attempt was also black; skip to next card
-                                        break;
-                                    }
-
-                                    // Frame is valid (has content); save and return success
-                                    int width = screenCapture.Display.Width;
-                                    int height = screenCapture.Display.Height;
-                                    byte[] rawPixels = zone.RawBuffer.ToArray();
-
-                                    SaveBgra32AsPng(rawPixels, width, height, outputPath);
-
-                                    if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000)
-                                        return true;
-
-                                    // File was created but is too small; try next card
-                                    break;
+                                    if (raw[p] > 10 || raw[p + 1] > 10 || raw[p + 2] > 10) nonBlack++;
                                 }
+                                if (nonBlack < 10) continue; // Skip black frames
+
+                                int width = screenCapture.Display.Width;
+                                int height = screenCapture.Display.Height;
+                                SaveBgra32AsPng(raw, width, height, outputPath);
                             }
+
+                            if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000)
+                                return true;
                         }
                         catch { continue; }
                     }
@@ -120,37 +209,6 @@ internal static class GameCaptureHelper
             }, ct).ConfigureAwait(false);
         }
         catch { return false; }
-    }
-
-    /// <summary>
-    /// Checks if a BGRA32 frame buffer is mostly black (indicates adapter not rendering yet).
-    /// Samples first 1000 pixels; if > 95% have RGB values &lt; 10, considers it "black".
-    /// </summary>
-    private static bool IsFrameMostlyBlack(byte[] bgra32)
-    {
-        if (bgra32.Length < 4000) return true; // Not enough data
-
-        int sampleCount = 0;
-        int blackPixels = 0;
-        const int sampleSize = 1000;
-
-        for (int i = 0; i < Math.Min(bgra32.Length, sampleSize * 4); i += 4)
-        {
-            byte b = bgra32[i];
-            byte g = bgra32[i + 1];
-            byte r = bgra32[i + 2];
-            // Ignore alpha (bgra32[i + 3])
-
-            if (r < 10 && g < 10 && b < 10)
-                blackPixels++;
-
-            sampleCount++;
-        }
-
-        if (sampleCount == 0) return true;
-
-        double blackRatio = (double)blackPixels / sampleCount;
-        return blackRatio > 0.95; // > 95% black = mostly black
     }
 
     /// <summary>

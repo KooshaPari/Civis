@@ -2,7 +2,7 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
-use hecs::{World, Bundle};
+use hecs::World;
 use rand::SeedableRng;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -214,7 +214,7 @@ impl Simulation {
                 building_type: BuildingType::Farm,
                 hp: Fixed::from_num(200),
                 max_hp: Fixed::from_num(200),
-                position: Position { x: i as i32 - 2, y: 1 },
+                position: Position { x: i - 2, y: 1 },
             };
             let _ = world.spawn((farm,));
         }
@@ -225,7 +225,7 @@ impl Simulation {
                 unit_type: UnitType::Soldier,
                 strength: Fixed::from_num(10),
                 morale: Fixed::from_num(1),
-                position: Position { x: i as i32, y: 0 },
+                position: Position { x: i, y: 0 },
                 faction_id: 0,  // Player faction
             };
             let _ = world.spawn((soldier,));

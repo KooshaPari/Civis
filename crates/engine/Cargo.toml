@@ -1,7 +1,10 @@
 [package]
 name = "civ-engine"
+description = "Deterministic simulation engine with ECS architecture and fixed-point arithmetic"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [dependencies]
 # Random number generation with seeding

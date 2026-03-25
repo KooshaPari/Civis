@@ -1,6 +1,6 @@
 # Conversation Tasks (Full Extraction)
 
-Source conversation: `/Users/kooshapari/Downloads/ChatGPT_Conversation_2026-02-21.md`
+Source conversation: `$HOME/Downloads/ChatGPT_Conversation_2026-02-21.md`
 
 ## A) User-Prompt Tasks (from all `### **You**` blocks)
 

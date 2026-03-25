@@ -9,6 +9,7 @@
     "preview": "bunx vitepress preview"
   },
   "devDependencies": {
+    "@phenotype/docs": "file:../vendor/phenodocs/packages/docs",
     "vitepress": "^1.6.0",
     "vue": "^3.5.0"
   },

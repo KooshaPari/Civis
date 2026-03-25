@@ -34,3 +34,4 @@
 .llmignore
 worktrees/
 worktrees/
+vendor/phenodocs/node_modules/

@@ -1,6 +1,6 @@
 # thegent Unified Multi-Tenant Server — process-compose
 #
-# Optimized: MCP + CLIProxyAPIPlus bundled in a single process tree.
+# Optimized: MCP + cliproxyapi++ bundled in a single process tree.
 # Replaces isolated mcp/proxy/workers with a single 'thegent serve' daemon.
 #
 # Usage:
@@ -149,4 +149,3 @@ processes:
       initial_delay_seconds: 5
       period_seconds: 10
     log_location: .process-compose/logs/serena.log
-

@@ -178,7 +178,7 @@ copilot -p \
    8. Reference: CIV-0001, CIV-0107, CIV-0100." \
   --yolo \
   --model gpt-5-mini \
-  --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &
+  --add-dir $HOME/temp-PRODVERCEL/485/kush/civ &
 ```
 
 **Dependencies:**
@@ -623,7 +623,7 @@ copilot -p \
    - https://docs.rs/rand_chacha/ (for RNG if needed, which it isn't here)" \
   --yolo \
   --model gpt-5-mini \
-  --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &
+  --add-dir $HOME/temp-PRODVERCEL/485/kush/civ &
 ```
 
 ### Monitoring L3 Agents

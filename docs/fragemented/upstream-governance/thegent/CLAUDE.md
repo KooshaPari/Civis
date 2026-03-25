@@ -398,7 +398,7 @@ Prefer native services over Docker for local dev. Prefer local, OSS, and free to
 
 # Plugin Ecosystem Awareness
 
-BMAD, OpenSpec, GSD plugins may be available as slash commands. Check `/` for documentation workflows. If BMAD agents installed (`.claude/commands/bmad/`), activate via slash commands. Start new conversation to switch agent personas.
+BMAD, AgilePlus, GSD plugins may be available as slash commands. Check `/` for documentation workflows. If BMAD agents installed (`.claude/commands/bmad/`), activate via slash commands. Start new conversation to switch agent personas.
 
 ---
 

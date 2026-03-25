@@ -1,7 +1,10 @@
 [package]
 name = "civ-server"
+description = "Server application for the CivLab deterministic simulation engine"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [dependencies]
-civ-engine = { path = "../engine" }
+civ-engine = { path = "../engine", version = "0.1.0" }

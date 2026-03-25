@@ -29,7 +29,14 @@ jobs:
         with:
           languages: ${{ matrix.language }}
       - name: Build
-        run: cargo build --release 2>/dev/null || cargo build 2>/dev/null || true
+        run: |
+          if ! cargo build --release; then
+            echo "Release build failed; attempting debug build fallback."
+            if ! cargo build; then
+              echo "ERROR: cargo build failed for all configurations."
+              exit 1
+            fi
+          fi
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:

@@ -45,8 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **HMR (Hot Module Reload) signal watcher** — new background thread monitors `DINOForge_HotReload` signal file in BepInEx root; when detected, triggers soft reload via `ModPlatform.LoadPacks()` + `ToggleModMenu()` without full game restart
+- **hot-reload.ps1 script** — new convenience script for building Runtime DLL, deploying via MSBuild, and signaling game to soft-reload; supports `-Watch` mode for continuous builds on `src/**/*.cs` changes
+
 ### Fixed
 
+- **Mods button text inheritance** — NativeMenuInjector now enforces "Mods" text on all Text/TMPro text components after cloning Settings button (previously inherited "Options" label from source)
+- **warfare-aerial pack schema errors** — buildings/airfield_buildings.yaml: fixed `building_class` → `building_type`, restructured production format (unit+time → id: multiplier); doctrines/aerial_doctrines.yaml: fixed `faction_id` → `faction_archetype`, replaced complex `bonuses` array with flat `modifiers` object to match canonical schemas
 - Fixed test project `TargetFramework` from invalid `net11.0` to `net8.0` across Bridge.Client, Economy, Scenario, Installer projects
 - Excluded FlaUI-dependent UiAutomation tests and Runtime-dependent VanillaCatalog/UiActionTrace tests from CI build (these require external dependencies not present in test project)
 - All 1222 unit tests now pass (was 0 due to build failure)

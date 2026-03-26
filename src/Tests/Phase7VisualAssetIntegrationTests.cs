@@ -86,7 +86,7 @@ namespace DINOForge.Tests
 
         // ── UnitDefinition deserialization ─────────────────────────────────────
 
-        [Fact(Skip = "Phase 7 asset pipeline not yet complete. Requires all units to have visual_asset fields registered in addressables.yaml")]
+        [Fact]
         public void Units_RepublicUnits_DeserializeVisualAsset()
         {
             var units = LoadUnits(Path.Combine(PackRoot, "units/republic_units.yaml"));
@@ -96,7 +96,7 @@ namespace DINOForge.Tests
                     $"Republic unit '{u.Id}' must have a visual_asset field"));
         }
 
-        [Fact(Skip = "Phase 7 asset pipeline not yet complete. Requires all units to have visual_asset fields registered in addressables.yaml")]
+        [Fact]
         public void Units_CisUnits_DeserializeVisualAsset()
         {
             var units = LoadUnits(Path.Combine(PackRoot, "units/cis_units.yaml"));
@@ -145,7 +145,7 @@ namespace DINOForge.Tests
                 $"all Republic unit visual_asset keys must exist in addressables.yaml, missing: {string.Join(", ", missing)}");
         }
 
-        [Fact(Skip = "Phase 7 asset pipeline not yet complete. Requires all visual_asset keys in addressables.yaml")]
+        [Fact]
         public void Chain_CisUnits_AllVisualAssetsResolveInCatalog()
         {
             var keys = LoadCatalogKeys();
@@ -190,7 +190,7 @@ namespace DINOForge.Tests
                 $"all CIS building visual_asset keys must exist in addressables.yaml, missing: {string.Join(", ", missing)}");
         }
 
-        [Fact(Skip = "Phase 7 asset pipeline not yet complete. Requires comprehensive visual_asset registration")]
+        [Fact]
         public void Chain_AllDefinitions_TotalVisualAssetCoverage()
         {
             var keys = LoadCatalogKeys();

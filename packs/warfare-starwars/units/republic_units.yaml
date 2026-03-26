@@ -1,4 +1,5 @@
 - id: rep_clone_militia
+  visual_asset: sw-clone-militia
   display_name: Clone Militia
   description: Phase I clone troopers with basic training and standard-issue carbines.
   unit_class: MilitiaLight
@@ -123,6 +124,7 @@
       gold: 18
       population: 1
 - id: rep_barc_speeder
+  visual_asset: sw-barc-speeder
   display_name: BARC Speeder
   description: Fast reconnaissance and attack speeder bike used for flanking and pursuit.
   unit_class: FastVehicle
@@ -216,6 +218,7 @@
       gold: 20
       population: 1
 - id: rep_arf_trooper
+  visual_asset: sw-rep-arf-trooper
   display_name: ARF Trooper
   description: Advanced Recon Force trooper trained for reconnaissance and forward
     observation.
@@ -278,6 +281,7 @@
       gold: 45
       population: 2
 - id: rep_jedi_knight
+  visual_asset: sw-jedi-knight
   display_name: Jedi Knight
   description: Jedi commander wielding a lightsaber and the Force. Inspires troops
     and devastates in melee.
@@ -310,6 +314,7 @@
       gold: 100
       population: 3
 - id: rep_clone_wall_guard
+  visual_asset: sw-clone-wall-guard
   display_name: Clone Wall Guard
   description: Garrison clone trooper specialized in fortification defense with heavy
     repeating blasters.
@@ -341,6 +346,7 @@
       gold: 15
       population: 1
 - id: rep_clone_sniper
+  visual_asset: sw-rep-clone-sniper
   display_name: Clone Sniper
   description: Elite long-range clone sniper providing overwatch and high-value target
     elimination.
@@ -371,6 +377,7 @@
       gold: 35
       population: 1
 - id: rep_clone_commando
+  visual_asset: sw-clone-commando
   display_name: Clone Commando
   description: Republic Commando squad, elite special forces with versatile DC-17m
     weapon system.
@@ -402,6 +409,7 @@
       gold: 55
       population: 2
 - id: rep_v19_torrent
+  visual_asset: sw-v19-torrent
   display_name: V-19 Torrent Starfighter
   description: Advanced Republic starfighter with dual laser cannons and ion missiles.
     Provides air superiority and strike capability.

@@ -30,6 +30,7 @@
       population: 1
   visual_asset: sw-cis-b1-battle-droid
 - id: cis_b1_squad
+  visual_asset: sw-b1-squad
   display_name: B1 Squad
   description: Coordinated B1 squad with marginally better tactics via improved droid
     brains.
@@ -156,6 +157,7 @@
       population: 1
   visual_asset: sw-cis-stap
 - id: cis_aat_crew
+  visual_asset: sw-cis-aat
   display_name: AAT Crew
   description: Armored Assault Tank providing heavy fire support and siege capability.
   unit_class: MainBattleVehicle
@@ -186,6 +188,7 @@
       gold: 35
       population: 3
 - id: cis_medical_droid
+  visual_asset: sw-cis-medical-droid
   display_name: Medical Droid
   description: Repurposed medical unit providing repair functions to damaged battle
     droids.
@@ -216,6 +219,7 @@
       gold: 8
       population: 1
 - id: cis_probe_droid
+  visual_asset: sw-cis-probe-droid
   display_name: Probe Droid
   description: DRK-1 probe droid used for reconnaissance with extended sensor range.
   unit_class: Recon
@@ -277,6 +281,7 @@
       population: 1
   visual_asset: sw-bx-commando-droid
 - id: cis_general_grievous
+  visual_asset: sw-general-grievous
   display_name: General Grievous
   description: Supreme Commander of the Droid Army. A devastating melee combatant
     wielding four lightsabers.
@@ -405,6 +410,7 @@
       gold: 40
       population: 2
 - id: cis_tri_fighter
+  visual_asset: sw-tri-fighter
   display_name: Tri-Fighter
   description: Automated droid starfighter with three-pronged design and rapid-fire
     plasma cannons. Multiple units form deadly swarms.

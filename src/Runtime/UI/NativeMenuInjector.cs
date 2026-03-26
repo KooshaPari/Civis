@@ -113,6 +113,9 @@ namespace DINOForge.Runtime.UI
 
         private void Update()
         {
+            // Tick delayed auto-checkpoint screenshot
+            TickAutoCheckpoint();
+
             // Screenshot-on-demand: check trigger file every ~20 frames (~3x/sec at 60fps)
             _screenshotCheckFrames++;
             if (_screenshotCheckFrames >= 20)
@@ -140,6 +143,7 @@ namespace DINOForge.Runtime.UI
 
         private int _screenshotCheckFrames;
         private string? _pendingScreenshotPath;
+        private System.DateTime _screenshotRequestedAtUtc = System.DateTime.MinValue;
 
         private void CheckScreenshotRequest()
         {
@@ -151,9 +155,19 @@ namespace DINOForge.Runtime.UI
 
                 if (_pendingScreenshotPath != null)
                 {
-                    System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath);
-                    WriteDebug($"[Screenshot] done: {_pendingScreenshotPath}");
-                    _pendingScreenshotPath = null;
+                    // Wait for Unity to actually write the file before signaling done
+                    var fi = new System.IO.FileInfo(_pendingScreenshotPath);
+                    fi.Refresh();
+                    if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAtUtc)
+                    {
+                        System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath);
+                        WriteDebug($"[Screenshot] done (verified {fi.Length} bytes): {_pendingScreenshotPath}");
+                        _pendingScreenshotPath = null;
+                    }
+                    else
+                    {
+                        WriteDebug($"[Screenshot] pending, file not ready: {_pendingScreenshotPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff})");
+                    }
                 }
                 else if (System.IO.File.Exists(reqFile))
                 {
@@ -161,7 +175,10 @@ namespace DINOForge.Runtime.UI
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
-                    WriteDebug($"[Screenshot] requested: {path}");
+                    // Delete stale file so we can detect when Unity writes the new one
+                    try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { }
+                    _screenshotRequestedAtUtc = System.DateTime.UtcNow;
+                    WriteDebug($"[Screenshot] requested (Update/main thread) at {_screenshotRequestedAtUtc:HH:mm:ss.fff}: {path}");
                     ScreenCapture.CaptureScreenshot(path);
                     _pendingScreenshotPath = path;
                 }
@@ -250,8 +267,8 @@ namespace DINOForge.Runtime.UI
                     if (_injected)
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
-                        // Auto-checkpoint screenshot: capture main menu state right now (main thread, safe)
-                        TakeAutoCheckpointScreenshot("cp1_mods_injected");
+                        // Auto-checkpoint screenshot: schedule 180 frames later (Update-based, may not fire)
+                        TakeAutoCheckpointScreenshot("cp1_mods_injected", 180);
                         return;
                     }
                 }
@@ -681,23 +698,48 @@ namespace DINOForge.Runtime.UI
                 _log.LogWarning(message);
         }
 
+        private int _pendingAutoCheckpointFrames = -1;
+        private string? _pendingAutoCheckpointPath = null;
+
         /// <summary>
-        /// Auto-checkpoint screenshot: take a screenshot right now (main-thread-safe).
+        /// Schedule an auto-checkpoint screenshot N frames from now (main-thread-safe).
         /// Saves to BepInEx root as a PNG with the given name suffix.
+        /// Delayed to allow the render loop to settle after UI changes.
         /// </summary>
-        private static void TakeAutoCheckpointScreenshot(string name)
+        private void TakeAutoCheckpointScreenshot(string name, int delayFrames = 120)
         {
             try
             {
                 string bepRoot = BepInEx.Paths.BepInExRootPath;
                 string path = System.IO.Path.Combine(bepRoot, name + ".png");
-                WriteDebug($"[Screenshot] Auto-checkpoint: capturing {path}");
-                ScreenCapture.CaptureScreenshot(path);
-                WriteDebug($"[Screenshot] Auto-checkpoint: CaptureScreenshot called for {path}");
+                WriteDebug($"[Screenshot] Auto-checkpoint: scheduled in {delayFrames} frames: {path}");
+                _pendingAutoCheckpointPath = path;
+                _pendingAutoCheckpointFrames = delayFrames;
             }
             catch (Exception ex)
             {
-                WriteDebug($"[Screenshot] Auto-checkpoint FAILED: {ex.Message}");
+                WriteDebug($"[Screenshot] Auto-checkpoint schedule FAILED: {ex.Message}");
+            }
+        }
+
+        private void TickAutoCheckpoint()
+        {
+            if (_pendingAutoCheckpointFrames < 0 || _pendingAutoCheckpointPath == null) return;
+            _pendingAutoCheckpointFrames--;
+            if (_pendingAutoCheckpointFrames == 0)
+            {
+                try
+                {
+                    WriteDebug($"[Screenshot] Auto-checkpoint: capturing now: {_pendingAutoCheckpointPath}");
+                    ScreenCapture.CaptureScreenshot(_pendingAutoCheckpointPath);
+                    WriteDebug($"[Screenshot] Auto-checkpoint: CaptureScreenshot called: {_pendingAutoCheckpointPath}");
+                }
+                catch (Exception ex)
+                {
+                    WriteDebug($"[Screenshot] Auto-checkpoint capture FAILED: {ex.Message}");
+                }
+                _pendingAutoCheckpointPath = null;
+                _pendingAutoCheckpointFrames = -1;
             }
         }
 

@@ -256,12 +256,53 @@ namespace DINOForge.Runtime
                         try { TryResurrect("(Watcher)", "Watcher"); } catch { }
                     }
 
-                    // Screenshot-on-demand: check every ~10 iterations (500ms).
-                    // ScreenCapture.CaptureScreenshot() in Unity 2021.3 sets an internal flag
-                    // that is processed at the next render frame — safe to call from any thread.
-                    if (loopCount % 10 == 0)
+                    // Screenshot-on-demand via Win32 PrintWindow (works from background thread)
+                    // Fallback for when Unity's main thread is frozen during loading screen.
+                    // Only triggers if CheckScreenshotRequest has not already handled it (i.e., _screenshotPendingPath is null).
+                    if (loopCount % 4 == 0 && _screenshotPendingPath == null) // Check ~5x/sec (every 200ms at 50ms sleep)
                     {
-                        try { CheckScreenshotRequest("[Watcher]"); } catch { }
+                        try
+                        {
+                            string reqFile = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_request.txt");
+                            string doneFile = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_done.txt");
+                            if (System.IO.File.Exists(reqFile))
+                            {
+                                string screenshotPath;
+                                using (var fs = System.IO.File.Open(reqFile, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
+                                using (var sr = new System.IO.StreamReader(fs))
+                                    screenshotPath = sr.ReadToEnd().Trim();
+                                if (string.IsNullOrEmpty(screenshotPath))
+                                    screenshotPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshot.png");
+
+                                // Find game window
+                                IntPtr hwnd = IntPtr.Zero;
+                                var gp = System.Diagnostics.Process.GetCurrentProcess();
+                                if (gp != null) hwnd = gp.MainWindowHandle;
+
+                                if (hwnd == IntPtr.Zero)
+                                {
+                                    WriteDebug($"[Watcher] PrintWindow: could not find game window HWND");
+                                }
+                                else
+                                {
+                                    try { if (System.IO.File.Exists(screenshotPath)) System.IO.File.Delete(screenshotPath); } catch { }
+                                    System.IO.File.Delete(reqFile);
+                                    WriteDebug($"[Watcher] PrintWindow screenshot: {screenshotPath} (HWND=0x{hwnd.ToInt64():X})");
+                                    bool success = CaptureWindowPrintWindow(hwnd, screenshotPath);
+                                    if (success)
+                                    {
+                                        long sz = new System.IO.FileInfo(screenshotPath).Length;
+                                        WriteDebug($"[Watcher] PrintWindow OK: {sz} bytes");
+                                        System.IO.File.WriteAllText(doneFile, screenshotPath);
+                                    }
+                                    else
+                                    {
+                                        WriteDebug($"[Watcher] PrintWindow FAILED");
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
                     }
 
                     // NOTE: NativeMenuInjector scanning is NOT done from this watcher thread —
@@ -282,6 +323,37 @@ namespace DINOForge.Runtime
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
+
+        // Win32 PrintWindow declarations for screenshot capture from background thread
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetDesktopWindow();
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetWindowDC(IntPtr hWnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern bool BitBlt(IntPtr hObject, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hObjectSource, int nXSrc, int nYSrc, uint dwRop);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int nWidth, int nHeight);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern bool DeleteDC(IntPtr hDC);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct RECT { public int Left, Top, Right, Bottom; }
 
         /// <summary>
         /// Non-blocking debug log writer using Monitor.TryEnter with 100ms timeout.
@@ -308,6 +380,166 @@ namespace DINOForge.Runtime
             catch { }
         }
 
+        /// <summary>
+        /// Win32 PrintWindow-based screenshot capture. Works from any thread (including background threads).
+        /// Saves the captured window as a BMP file (which can be converted to PNG by external tools if needed).
+        /// </summary>
+        /// <returns>True if screenshot was successfully captured and saved; false otherwise.</returns>
+        private static bool CaptureWindowPrintWindow(IntPtr hwnd, string outputPath)
+        {
+            try
+            {
+                if (!GetWindowRect(hwnd, out RECT rect)) return false;
+                int width  = rect.Right  - rect.Left;
+                int height = rect.Bottom - rect.Top;
+                if (width <= 0 || height <= 0) return false;
+
+                // Use screen DC (desktop) - this NEVER hangs even if game render thread is frozen
+                // BitBlt from screen captures whatever pixels are on screen at the window position
+                IntPtr hdcScreen = GetDC(IntPtr.Zero); // NULL = screen/desktop DC
+                if (hdcScreen == IntPtr.Zero) return false;
+                try
+                {
+                    IntPtr hdcMem = CreateCompatibleDC(hdcScreen);
+                    IntPtr hBitmap = CreateCompatibleBitmap(hdcScreen, width, height);
+                    IntPtr hOld    = SelectObject(hdcMem, hBitmap);
+
+                    // BitBlt from screen at the window's absolute position
+                    const uint SRCCOPY = 0x00CC0020;
+                    bool ok = BitBlt(hdcMem, 0, 0, width, height, hdcScreen, rect.Left, rect.Top, SRCCOPY);
+
+                    SelectObject(hdcMem, hOld);
+
+                    if (ok)
+                    {
+                        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath) ?? ".");
+                        ok = SaveBitmapToBmp(hBitmap, width, height, outputPath);
+                    }
+
+                    DeleteObject(hBitmap);
+                    DeleteDC(hdcMem);
+                    return ok && System.IO.File.Exists(outputPath) && new System.IO.FileInfo(outputPath).Length > 1000;
+                }
+                finally
+                {
+                    ReleaseDC(IntPtr.Zero, hdcScreen);
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[Capture] Exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        // GDI DIB header and file I/O for BMP saving
+        [System.Runtime.InteropServices.DllImport("gdi32.dll", SetLastError = true)]
+        private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines, byte[] lpvBits, ref BITMAPINFO lpbi, uint usage);
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct BITMAPFILEHEADER
+        {
+            public ushort bfType;
+            public uint bfSize;
+            public ushort bfReserved1;
+            public ushort bfReserved2;
+            public uint bfOffBits;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct BITMAPINFO
+        {
+            public uint biSize;
+            public int biWidth;
+            public int biHeight;
+            public ushort biPlanes;
+            public ushort biBitCount;
+            public uint biCompression;
+            public uint biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public uint biClrUsed;
+            public uint biClrImportant;
+        }
+
+        /// <summary>
+        /// Save a GDI HBITMAP to a BMP file.
+        /// </summary>
+        private static bool SaveBitmapToBmp(IntPtr hBitmap, int width, int height, string filePath)
+        {
+            try
+            {
+                // Create a device context to extract bitmap bits
+                IntPtr hdcScreen = GetDC(IntPtr.Zero);
+                if (hdcScreen == IntPtr.Zero) return false;
+
+                try
+                {
+                    // Prepare BITMAPINFO
+                    BITMAPINFO bmpInfo = new BITMAPINFO();
+                    bmpInfo.biSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(typeof(BITMAPINFO));
+                    bmpInfo.biWidth = width;
+                    bmpInfo.biHeight = height;
+                    bmpInfo.biPlanes = 1;
+                    bmpInfo.biBitCount = 24; // 24-bit RGB
+                    bmpInfo.biCompression = 0; // BI_RGB
+
+                    // Calculate bitmap size (3 bytes per pixel, padded to 4-byte boundary)
+                    int scanLineWidth = ((width * 3 + 3) / 4) * 4;
+                    int bitmapDataSize = scanLineWidth * height;
+
+                    byte[] bitmapData = new byte[bitmapDataSize];
+
+                    // Get bitmap bits
+                    int result = GetDIBits(hdcScreen, hBitmap, 0, (uint)height, bitmapData, ref bmpInfo, 0);
+                    if (result == 0) return false;
+
+                    // Write BMP file
+                    using (System.IO.FileStream fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+                    {
+                        // Write file header
+                        BITMAPFILEHEADER fileHeader = new BITMAPFILEHEADER();
+                        fileHeader.bfType = 0x4D42; // 'BM'
+                        fileHeader.bfOffBits = (uint)(14 + bmpInfo.biSize); // Offset to pixel data
+                        fileHeader.bfSize = (uint)(fileHeader.bfOffBits + bitmapDataSize);
+
+                        byte[] fileHeaderBytes = new byte[14];
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(fileHeader.bfType), 0, fileHeaderBytes, 0, 2);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(fileHeader.bfSize), 0, fileHeaderBytes, 2, 4);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(fileHeader.bfOffBits), 0, fileHeaderBytes, 10, 4);
+                        fs.Write(fileHeaderBytes, 0, 14);
+
+                        // Write info header
+                        byte[] infoHeaderBytes = new byte[bmpInfo.biSize];
+                        System.Runtime.InteropServices.Marshal.StructureToPtr(bmpInfo, System.Runtime.InteropServices.Marshal.AllocHGlobal((int)bmpInfo.biSize), false);
+                        System.Runtime.InteropServices.Marshal.Copy(System.Runtime.InteropServices.Marshal.AllocHGlobal((int)bmpInfo.biSize), infoHeaderBytes, 0, (int)bmpInfo.biSize);
+                        // Simpler approach: manually write biSize, biWidth, biHeight
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(bmpInfo.biSize), 0, infoHeaderBytes, 0, 4);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(bmpInfo.biWidth), 0, infoHeaderBytes, 4, 4);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(bmpInfo.biHeight), 0, infoHeaderBytes, 8, 4);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(bmpInfo.biPlanes), 0, infoHeaderBytes, 12, 2);
+                        System.Buffer.BlockCopy(System.BitConverter.GetBytes(bmpInfo.biBitCount), 0, infoHeaderBytes, 14, 2);
+                        fs.Write(infoHeaderBytes, 0, (int)bmpInfo.biSize);
+
+                        // Write pixel data
+                        fs.Write(bitmapData, 0, bitmapData.Length);
+                    }
+
+                    return true;
+                }
+                finally
+                {
+                    ReleaseDC(IntPtr.Zero, hdcScreen);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hWnd);
 
         /// <summary>
         /// Per-frame callback (via Application.onBeforeRender) that scans for new ECS worlds
@@ -709,7 +941,7 @@ namespace DINOForge.Runtime
         }
 
         private static string? _screenshotPendingPath = null;
-        private static System.DateTime _screenshotRequestedAt = System.DateTime.MinValue;
+        private static int _screenshotWaitFrames = 0;
 
         private static void CheckScreenshotRequest(string context)
         {
@@ -721,18 +953,33 @@ namespace DINOForge.Runtime
 
                 if (_screenshotPendingPath != null)
                 {
-                    // Wait for Unity to write a FRESH screenshot file (written AFTER our request)
+                    // Wait at least 60 render frames for Unity to write the screenshot
+                    _screenshotWaitFrames++;
+                    if (_screenshotWaitFrames < 60)
+                    {
+                        WriteDebug($"{context} Screenshot pending frame {_screenshotWaitFrames}/60: {_screenshotPendingPath}");
+                        return;
+                    }
+                    // Now check if file exists with real content
                     var fi = new System.IO.FileInfo(_screenshotPendingPath);
                     fi.Refresh();
-                    if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAt)
+                    if (fi.Exists && fi.Length > 1000)
                     {
                         System.IO.File.WriteAllText(doneFile, _screenshotPendingPath);
-                        WriteDebug($"{context} Screenshot done (verified {fi.Length} bytes, written {fi.LastWriteTimeUtc:HH:mm:ss.fff}): {_screenshotPendingPath}");
+                        WriteDebug($"{context} Screenshot done ({fi.Length} bytes): {_screenshotPendingPath}");
                         _screenshotPendingPath = null;
+                        _screenshotWaitFrames = 0;
                     }
                     else
                     {
-                        WriteDebug($"{context} Screenshot pending: {_screenshotPendingPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff}, requested={_screenshotRequestedAt:HH:mm:ss.fff})");
+                        WriteDebug($"{context} Screenshot still pending (exists={fi.Exists}, size={fi.Length}): {_screenshotPendingPath}");
+                        // Keep waiting up to 300 total frames
+                        if (_screenshotWaitFrames > 300)
+                        {
+                            WriteDebug($"{context} Screenshot GAVE UP after 300 frames");
+                            _screenshotPendingPath = null;
+                            _screenshotWaitFrames = 0;
+                        }
                     }
                 }
                 else if (System.IO.File.Exists(reqFile))
@@ -741,12 +988,12 @@ namespace DINOForge.Runtime
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
-                    // Delete stale file so we don't mistake old content for new screenshot
+                    // Delete stale file so we can detect the new one
                     try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { }
-                    _screenshotRequestedAt = System.DateTime.UtcNow;
-                    WriteDebug($"{context} Screenshot requested at {_screenshotRequestedAt:HH:mm:ss.fff}: {path}");
+                    WriteDebug($"{context} Screenshot requested: {path}");
                     ScreenCapture.CaptureScreenshot(path);
                     _screenshotPendingPath = path;
+                    _screenshotWaitFrames = 0;
                 }
             }
             catch { }

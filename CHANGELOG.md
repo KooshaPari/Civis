@@ -33,7 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Screenshot capture from background Watcher thread now uses `BitBlt` from screen DC instead of `PrintWindow(PW_RENDERFULLCONTENT)` which hung indefinitely when the game render thread was frozen
+- Proof-of-feature capture script (`scripts/game/capture_proof_v6.ps1`) reduced main-menu wait from 300s to 30s (main menu loads in ~5s after injection)
+
 ### Added
+- Proof-of-feature screenshots captured to `docs/proof-of-features/`: `cp1_mainmenu.png`, `cp2_f9_overlay.png`, `cp3_f10_menu.png`
+
+### Added (Previous)
 
 - **M5 Example Packs Complete — warfare-starwars and warfare-modern** — Both flagship example packs now fully populated with complete YAML definitions; warfare-starwars adds 2 republic doctrines (elite_discipline, jedi_leadership) and 2 CIS doctrines (mechanized_attrition, rolling_thunder) plus 4 escalating Clone Wars waves (droid probe, infantry assault, armor assault, final assault); warfare-modern created from scratch with complete faction definitions (Western Alliance order archetype vs Classic Enemy asymmetric archetype), 12 units per faction (rifleman, squad, special forces, gunner, mortar, scout, APC, MBT, artillery, commander, operator/infiltrator), 4 balanced doctrines (combined_arms, human_wave, fortified_defense, asymmetric_tactics), and 4 progressive campaign waves (scout probe, infantry assault, armor support, final assault); all units properly typed with UnitStats, weapon references, vanilla_mapping, defense/behavior tags, and asymmetric cost/stat profiles reflecting faction archetypes
 - **bare-cua-native integration in MCP tools** — integrated bare-cua JSON-RPC native binary as optional fast-path screenshot and input backend for game automation; `GameCaptureHelper` now tries bare-cua first (finds binary via `BARE_CUA_NATIVE` env var, executable directory, or `C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe`), falling back to Unity ScreenCapture/DXGI/ScreenRecorderLib/ffmpeg; `GameInputTool.SendKeyInput` tries bare-cua for key injection before Win32 SendInput; BareCua.cs binding file copied to McpServer project; reduces screenshot latency and improves input reliability on exclusive fullscreen displays

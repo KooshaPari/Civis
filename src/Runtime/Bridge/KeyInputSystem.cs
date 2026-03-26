@@ -216,16 +216,33 @@ namespace DINOForge.Runtime.Bridge
                     Plugin.TryResurrect("(PlayerLoopTick)", "PlayerLoopTick");
                 }
 
-                // Screenshot-on-demand: check trigger file ~10x/sec
+                // Screenshot-on-demand: check trigger file ~10x/sec (MAIN THREAD ONLY — safe for ScreenCapture)
                 if (_playerLoopTickCount % 6 == 0)
                 {
                     try
                     {
                         if (_pendingScreenshotDone != null)
                         {
-                            System.IO.File.WriteAllText(_screenshotDoneFile, _pendingScreenshotDone);
-                            WriteDebug($"Screenshot done: {_pendingScreenshotDone}");
-                            _pendingScreenshotDone = null;
+                            // Wait at least 60 ticks for Unity to write the screenshot
+                            _screenshotWaitTicks++;
+                            if (_screenshotWaitTicks >= 60)
+                            {
+                                var fi = new System.IO.FileInfo(_pendingScreenshotDone);
+                                fi.Refresh();
+                                if (fi.Exists && fi.Length > 1000)
+                                {
+                                    System.IO.File.WriteAllText(_screenshotDoneFile, _pendingScreenshotDone);
+                                    WriteDebug($"Screenshot done ({fi.Length} bytes): {_pendingScreenshotDone}");
+                                    _pendingScreenshotDone = null;
+                                    _screenshotWaitTicks = 0;
+                                }
+                                else if (_screenshotWaitTicks > 300)
+                                {
+                                    WriteDebug($"Screenshot GAVE UP: {_pendingScreenshotDone}");
+                                    _pendingScreenshotDone = null;
+                                    _screenshotWaitTicks = 0;
+                                }
+                            }
                         }
                         else if (System.IO.File.Exists(_screenshotRequestFile))
                         {
@@ -233,9 +250,11 @@ namespace DINOForge.Runtime.Bridge
                             System.IO.File.Delete(_screenshotRequestFile);
                             if (string.IsNullOrEmpty(screenshotPath))
                                 screenshotPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshot.png");
-                            WriteDebug($"Screenshot requested: {screenshotPath}");
+                            try { if (System.IO.File.Exists(screenshotPath)) System.IO.File.Delete(screenshotPath); } catch { }
+                            WriteDebug($"Screenshot requested (PlayerLoop): {screenshotPath}");
                             ScreenCapture.CaptureScreenshot(screenshotPath);
                             _pendingScreenshotDone = screenshotPath;
+                            _screenshotWaitTicks = 0;
                         }
                     }
                     catch { }
@@ -252,6 +271,7 @@ namespace DINOForge.Runtime.Bridge
         }
 
         private static string? _pendingScreenshotDone = null;
+        private static int _screenshotWaitTicks = 0;
 
         private struct DINOForgeKeyLoop { }
 

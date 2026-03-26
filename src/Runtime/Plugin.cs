@@ -381,6 +381,24 @@ namespace DINOForge.Runtime
                 catch { }
             };
 
+            // ── Wire HMR pack reload callback (can be invoked from background thread) ──
+            Bridge.KeyInputSystem.OnPackReloadRequested = () =>
+            {
+                try
+                {
+                    WriteDebug("[RuntimeDriver] Pack reload requested (via OnPackReloadRequested)");
+                    if (_modPlatform != null)
+                    {
+                        _modPlatform.LoadPacks();
+                        _log?.LogInfo("[RuntimeDriver] Packs reloaded via HMR.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] Pack reload failed: {ex.Message}");
+                }
+            };
+
             // ── Step 2: Attempt UGUI canvas setup ───────────────────────────────────
             // DFCanvas.Initialize() only stores the logger; the actual canvas hierarchy
             // is built in DFCanvas.Start() which Unity calls on the NEXT frame.
@@ -682,23 +700,6 @@ namespace DINOForge.Runtime
             try
             {
             if (!_initialized) return;
-
-            // HMR (Hot Module Reload) signal check — reload packs + UI without restarting game
-            if (_hotReloadQueued)
-            {
-                _hotReloadQueued = false;
-                try
-                {
-                    if (_log != null) _log.LogInfo("[RuntimeDriver] HMR reload triggered...");
-                    _modPlatform?.LoadPacks();
-                    if (_dfCanvas != null) _dfCanvas.ToggleModMenu(); // Soft-reload UI
-                    if (_log != null) _log.LogInfo("[RuntimeDriver] HMR reload complete.");
-                }
-                catch (Exception ex)
-                {
-                    if (_log != null) _log.LogWarning($"[RuntimeDriver] HMR reload failed: {ex.Message}");
-                }
-            }
 
             // Debug: log heartbeat every 1 sec for first 10 heartbeats, then every 10 sec
             bool earlyHeartbeat = Time.frameCount <= 600 && Time.frameCount % 60 == 0;

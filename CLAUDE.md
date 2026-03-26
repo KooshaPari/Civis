@@ -393,7 +393,7 @@ The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 
 
 | Tool | Purpose |
 |------|---------|
-| `game_launch` | Launch game exe + wait for bridge |
+| `game_launch` | Launch game exe + wait for bridge (optional `hidden=True` for invisible desktop) |
 | `game_status` | Running state, entity count, loaded packs |
 | `game_query_entities` | Query ECS entities by component type |
 | `game_get_stat` | Read a stat value on an entity |
@@ -404,7 +404,7 @@ The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 
 | `game_verify_mod` | Verify mod is loaded and active |
 | `game_wait_for_world` | Wait until ECS world is ready |
 | `game_ui_automation` | Automate game UI interactions |
-| `game_launch_test` | Launch TEST instance (second concurrent DINO for testing) |
+| `game_launch_test` | Launch TEST instance (optional `hidden=True` for invisible desktop) |
 | `game_analyze_screen` | Capture screenshot + detect UI elements via OmniParser (health bars, unit portraits, buttons, faction indicators) |
 | `game_input` | Inject keyboard/mouse input to game without requiring focus (Win32 SendInput) |
 | `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |

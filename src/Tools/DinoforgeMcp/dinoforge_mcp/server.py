@@ -95,6 +95,46 @@ def _run_pack_compiler(*args: str, timeout: int = 60) -> dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+async def _launch_hidden(exe_path: str, desktop_name: str = "DINOForge_Agent") -> dict:
+    """Launch game on a hidden Win32 desktop using CreateDesktop."""
+    ps_script = r"""
+param($ExePath, $DesktopName)
+Add-Type -AssemblyName System.Drawing
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32Desktop {
+    [DllImport("user32.dll")] public static extern IntPtr CreateDesktop(string lpszDesktop, IntPtr lpszDevice, IntPtr pDevmode, int dwFlags, uint dwDesiredAccess, IntPtr lpsa);
+    [DllImport("user32.dll")] public static extern bool CloseDesktop(IntPtr hDesktop);
+    [DllImport("kernel32.dll")] public static extern bool CreateProcess(string lpAppName, string lpCmdLine, IntPtr lpPA, IntPtr lpTA, bool bInherit, uint dwFlags, IntPtr lpEnv, string lpCurDir, ref STARTUPINFO lpSI, out PROCESS_INFORMATION lpPI);
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)] public struct STARTUPINFO { public int cb; public string lpReserved; public string lpDesktop; public string lpTitle; public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags; public short wShowWindow, cbReserved2; public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError; }
+    [StructLayout(LayoutKind.Sequential)] public struct PROCESS_INFORMATION { public IntPtr hProcess, hThread; public int dwProcessId, dwThreadId; }
+}
+"@
+$desktop = [Win32Desktop]::CreateDesktop($DesktopName, [IntPtr]::Zero, [IntPtr]::Zero, 0, 0x01FF, [IntPtr]::Zero)
+if ($desktop -eq [IntPtr]::Zero) { Write-Output "ERROR: CreateDesktop failed"; exit 1 }
+$si = New-Object Win32Desktop+STARTUPINFO
+$si.cb = [System.Runtime.InteropServices.Marshal]::SizeOf($si)
+$si.lpDesktop = $DesktopName
+$si.dwFlags = 0x00000001
+$si.wShowWindow = 0
+$pi = New-Object Win32Desktop+PROCESS_INFORMATION
+$exeDir = Split-Path $ExePath -Parent
+$ok = [Win32Desktop]::CreateProcess($ExePath, $null, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x00000010, [IntPtr]::Zero, $exeDir, [ref]$si, [ref]$pi)
+if ($ok) { Write-Output "PID:$($pi.dwProcessId)" } else { Write-Output "ERROR: CreateProcess failed" }
+"""
+    result = await asyncio.to_thread(
+        subprocess.run,
+        ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script, "-ExePath", exe_path, "-DesktopName", desktop_name],
+        capture_output=True, text=True, timeout=30
+    )
+    stdout = result.stdout.strip()
+    if stdout.startswith("PID:"):
+        pid = int(stdout[4:])
+        return {"success": True, "pid": pid, "desktop": desktop_name, "hidden": True}
+    return {"success": False, "error": stdout or result.stderr}
+
+
 # ---------------------------------------------------------------------------
 # FastMCP server
 # ---------------------------------------------------------------------------
@@ -222,14 +262,19 @@ async def game_catalog(ctx: Context, category: str | None = None) -> dict:
 
 
 @mcp.tool()
-async def game_launch(ctx: Context) -> dict:
+async def game_launch(ctx: Context, hidden: bool = False) -> dict:
     """
     Launch Diplomacy is Not an Option directly (bypasses Steam — safe to run
     alongside an existing session for testing).
+
+    Args:
+        hidden: If True, launch on an invisible Win32 desktop (CreateDesktop).
     """
     if not GAME_EXE.exists():
         return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
     try:
+        if hidden:
+            return await _launch_hidden(str(GAME_EXE), "DINOForge_Agent")
         subprocess.Popen([str(GAME_EXE)], cwd=str(GAME_DIR))
         return {"success": True, "message": f"Launched: {GAME_EXE}. Use game_wait_world to wait for ECS world."}
     except Exception as e:
@@ -237,17 +282,22 @@ async def game_launch(ctx: Context) -> dict:
 
 
 @mcp.tool()
-async def game_launch_test(ctx: Context) -> dict:
+async def game_launch_test(ctx: Context, hidden: bool = False) -> dict:
     """
     Launch the TEST instance of DINO (second concurrent instance for testing).
     Uses G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option_TEST\\.
     Kill existing test instances first if needed.
+
+    Args:
+        hidden: If True, launch on an invisible Win32 desktop (CreateDesktop).
     """
     test_dir = r"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
     test_exe = Path(test_dir) / "Diplomacy is Not an Option.exe"
     if not test_exe.exists():
         return {"success": False, "error": f"Test game exe not found: {test_exe}"}
     try:
+        if hidden:
+            return await _launch_hidden(str(test_exe), "DINOForge_Agent_Test")
         subprocess.Popen([str(test_exe)], cwd=test_dir)
         return {"success": True, "message": f"Launched TEST instance: {test_exe}. Use game_wait_world to wait for ECS world."}
     except Exception as e:

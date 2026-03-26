@@ -206,7 +206,7 @@
 
 # 8. Scout - ARF Trooper
 - id: rep_arf_trooper
-  visual_asset: sw-rep-arc-trooper
+  visual_asset: sw-rep-arf-trooper
   display_name: ARF Trooper
   description: Advanced Recon Force trooper trained for reconnaissance and forward observation.
   unit_class: Recon

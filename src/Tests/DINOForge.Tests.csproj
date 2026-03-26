@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net11.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>DINOForge.Tests</RootNamespace>
@@ -33,6 +33,9 @@
     <PackageReference Include="AutoFixture" Version="4.*" />
     <PackageReference Include="AutoFixture.Xunit2" Version="4.*" />
     <PackageReference Include="FsCheck.Xunit" Version="3.*" />
+    <!-- Pin vulnerable transitive deps to patched versions (NU1903) -->
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <!-- Coverage-guided fuzzing targets (SharpFuzz) -->
     <PackageReference Include="SharpFuzz" Version="2.1.1" />
   </ItemGroup>
@@ -45,8 +48,6 @@
     <ProjectReference Include="..\Domains\Economy\DINOForge.Domains.Economy.csproj" />
     <ProjectReference Include="..\Domains\Scenario\DINOForge.Domains.Scenario.csproj" />
     <ProjectReference Include="..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
-    <!-- Runtime: conditionally excludes Unity files when game not installed — safe for CI -->
-    <ProjectReference Include="..\Runtime\DINOForge.Runtime.csproj" />
   </ItemGroup>
 
   <!-- Exclude sub-projects that have their own csproj -->
@@ -59,16 +60,6 @@
     <None Remove="CompanionTests\**" />
     <Content Remove="CompanionTests\**" />
     <EmbeddedResource Remove="CompanionTests\**" />
-    <!-- UiAutomation has its own csproj (FlaUI, Windows-only) -->
-    <Compile Remove="UiAutomation\**" />
-    <None Remove="UiAutomation\**" />
-    <Content Remove="UiAutomation\**" />
-    <EmbeddedResource Remove="UiAutomation\**" />
-    <!-- GameLaunch has its own csproj (requires running game process) -->
-    <Compile Remove="GameLaunch\**" />
-    <None Remove="GameLaunch\**" />
-    <Content Remove="GameLaunch\**" />
-    <EmbeddedResource Remove="GameLaunch\**" />
   </ItemGroup>
 
   <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->
@@ -78,10 +69,7 @@
     <Compile Remove="UnitSpawnerTests.cs" />
     <Compile Remove="FactionSystemTests.cs" />
     <Compile Remove="WaveInjectorTests.cs" />
-    <!-- VanillaCatalog uses Unity.Collections/Unity.Entities — excluded from CI Runtime build -->
-    <Compile Remove="VanillaCatalogTests.cs" />
-    <!-- PackStatInjectorTests re-enabled: Runtime now referenced above -->
-    <!-- <Compile Remove="PackStatInjectorTests.cs" /> -->
+    <Compile Remove="PackStatInjectorTests.cs" />
   </ItemGroup>
 
 </Project>

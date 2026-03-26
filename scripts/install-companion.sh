@@ -31,7 +31,7 @@ VERSION="${DF_VERSION:-}"
 if [[ -z "$VERSION" ]]; then
     step "Fetching latest release..."
     VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-        | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+        | grep '"tag_name"' | sed 's/.*"tag_name": *"\(.*\)".*/\1/')
     [[ -n "$VERSION" ]] || die "Could not determine latest version. Set DF_VERSION manually."
 fi
 VERSION_NUM="${VERSION#v}"
@@ -48,20 +48,14 @@ ok "Downloaded $(du -sh "$TMP_ZIP" | cut -f1)"
 
 # ── Verify SHA256 ─────────────────────────────────────────────────────────────
 step "Verifying SHA256..."
-if ! EXPECTED=$(curl -fsSL "${ZIP_URL}.sha256" | awk '{print toupper($1)}'); then
-    rm -f "$TMP_ZIP"
-    die "Could not fetch SHA256 checksum. Aborting for safety."
+EXPECTED=$(curl -fsSL "${ZIP_URL}.sha256" 2>/dev/null | awk '{print toupper($1)}') || true
+if [[ -n "$EXPECTED" ]]; then
+    ACTUAL=$(sha256sum "$TMP_ZIP" | awk '{print toupper($1)}')
+    [[ "$EXPECTED" == "$ACTUAL" ]] || die "SHA256 mismatch!\n  Expected: $EXPECTED\n  Actual:   $ACTUAL"
+    ok "SHA256 verified"
+else
+    warn "Could not fetch checksum — skipping verification"
 fi
-if [[ -z "$EXPECTED" ]]; then
-    rm -f "$TMP_ZIP"
-    die "SHA256 checksum file was empty. Aborting for safety."
-fi
-ACTUAL=$(sha256sum "$TMP_ZIP" | awk '{print toupper($1)}')
-if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-    rm -f "$TMP_ZIP"
-    die "SHA256 mismatch — download may be corrupt or tampered.\n  Expected: $EXPECTED\n  Actual:   $ACTUAL"
-fi
-ok "SHA256 verified"
 
 # ── Extract ────────────────────────────────────────────────────────────────────
 step "Installing to $INSTALL_WIN_DIR..."

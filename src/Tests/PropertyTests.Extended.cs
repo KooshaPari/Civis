@@ -172,12 +172,13 @@ namespace DINOForge.Tests
         [Trait("Category", "Property")]
         public void ConcurrentRegister_NeverLosesRegistrations()
         {
+            // Clear state
+            typeof(AssetSwapRegistry)
+                .GetMethod("Clear", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+                ?.Invoke(null, null);
+
             const int threadCount = 20;
             const int registrationsPerThread = 5;
-
-            // Use unique prefix so other concurrent test classes don't collide with our addresses
-            string prefix = $"prop-concurrent/{System.Guid.NewGuid():N}";
-
             CountdownEvent countdown = new CountdownEvent(threadCount);
             Thread[] threads = new Thread[threadCount];
 
@@ -190,7 +191,7 @@ namespace DINOForge.Tests
                     countdown.Wait(); // all threads start simultaneously
                     for (int i = 0; i < registrationsPerThread; i++)
                     {
-                        string addr = $"{prefix}/thread-{threadIndex}-asset-{i}";
+                        string addr = $"thread-{threadIndex}-asset-{i}";
                         AssetSwapRegistry.Register(new AssetSwapRequest(addr, "/fake/path.bundle", addr));
                     }
                 });
@@ -200,10 +201,8 @@ namespace DINOForge.Tests
             foreach (Thread thread in threads)
                 thread.Join();
 
-            // Assert using address-based check to tolerate other parallel test classes adding items
-            System.Collections.Generic.IEnumerable<AssetSwapRequest> ourItems =
-                AssetSwapRegistry.GetPending().Where(r => r.AssetAddress.StartsWith(prefix));
-            ourItems.Should().HaveCount(threadCount * registrationsPerThread);
+            // Each thread registers registrationsPerThread unique addresses => total unique = threadCount * registrationsPerThread
+            AssetSwapRegistry.Count.Should().Be(threadCount * registrationsPerThread);
         }
 
         /// <summary>

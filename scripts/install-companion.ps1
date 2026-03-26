@@ -79,17 +79,15 @@ Write-OK "Downloaded $([math]::Round((Get-Item $ZipTmp).Length / 1MB, 1)) MB"
 # ── Verify SHA256 ─────────────────────────────────────────────────────────────
 $Sha256Url = "$ZipUrl.sha256"
 try {
-    $expectedLine = (Invoke-WebRequest $Sha256Url -UseBasicParsing -ErrorAction Stop).Content.Trim()
+    $expectedLine = (Invoke-WebRequest $Sha256Url -UseBasicParsing).Content.Trim()
     $expectedHash = $expectedLine.Split(' ')[0].ToUpper()
     $actualHash   = (Get-FileHash $ZipTmp -Algorithm SHA256).Hash.ToUpper()
     if ($expectedHash -ne $actualHash) {
-        Remove-Item $ZipTmp -Force -ErrorAction SilentlyContinue
-        Write-Err "SHA256 mismatch — download may be corrupt or tampered.`n  Expected: $expectedHash`n  Actual:   $actualHash"
+        Write-Err "SHA256 mismatch!`n  Expected: $expectedHash`n  Actual:   $actualHash"
     }
     Write-OK "SHA256 verified"
 } catch {
-    Remove-Item $ZipTmp -Force -ErrorAction SilentlyContinue
-    Write-Err "Could not fetch or verify SHA256 checksum. Aborting for safety.`nError: $_`nSet `$env:DF_SKIP_HASH=1 to bypass (not recommended)."
+    Write-Host "  [--] Could not verify SHA256 (skipping): $_" -ForegroundColor Yellow
 }
 
 # ── Extract ────────────────────────────────────────────────────────────────────

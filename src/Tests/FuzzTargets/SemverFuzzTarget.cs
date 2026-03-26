@@ -51,7 +51,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz LibFuzzer entry point.
         /// </summary>
-        internal static void RunLibFuzzer()
+        internal static void RunLibFuzzer(string[] args)
         {
             Fuzzer.LibFuzzer.Run(FuzzAction);
         }
@@ -59,7 +59,7 @@ namespace DINOForge.Tests.FuzzTargets
         /// <summary>
         /// SharpFuzz out-of-process entry point for AFL++.
         /// </summary>
-        internal static void RunAfl()
+        internal static void RunAfl(string[] args)
         {
             Fuzzer.OutOfProcess.Run(stream =>
             {

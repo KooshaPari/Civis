@@ -168,8 +168,12 @@ namespace DINOForge.Runtime.Bridge
             byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
             if (modAssetBytes == null || modAssetBytes.Length == 0)
             {
-                WriteDebug(
-                    $"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}'");
+                // Only log extraction failure once per address to reduce noise.
+                if (_reportedFailures.Add($"extract:{request.AssetAddress}"))
+                {
+                    WriteDebug(
+                        $"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}'");
+                }
                 return false;
             }
 
@@ -178,7 +182,11 @@ namespace DINOForge.Runtime.Bridge
             if (!catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
                 || string.IsNullOrEmpty(vanillaBundleRelPath))
             {
-                WriteDebug($"ApplySwap: address '{request.AssetAddress}' not found in catalog");
+                // Only log catalog lookup failure once per address to reduce noise.
+                if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
+                {
+                    WriteDebug($"ApplySwap: address '{request.AssetAddress}' not found in catalog");
+                }
                 return false;
             }
 

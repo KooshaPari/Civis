@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CLI `--format json`** — `status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map` commands now accept `--format json` for machine-readable output; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
+- **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
 - **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
 
 ### Changed

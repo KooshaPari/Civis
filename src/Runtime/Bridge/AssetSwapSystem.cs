@@ -54,6 +54,12 @@ namespace DINOForge.Runtime.Bridge
         private readonly Dictionary<string, AssetBundle> _loadedBundles =
             new Dictionary<string, AssetBundle>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Tracks asset addresses that have already had their first failure logged.
+        /// Subsequent failures for the same address are logged at Debug level to reduce noise.
+        /// </summary>
+        private readonly HashSet<string> _reportedFailures = new HashSet<string>(StringComparer.Ordinal);
+
         private int _frameCount;
 
         private static volatile bool _resetPending;
@@ -86,6 +92,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 _resetPending = false;
                 _frameCount = 0;
+                _reportedFailures.Clear();
                 WriteDebug("AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
@@ -121,13 +128,20 @@ namespace DINOForge.Runtime.Bridge
                     else
                     {
                         failed++;
-                        WriteDebug($"AssetSwapSystem: swap failed — address='{request.AssetAddress}'");
+                        // Only log failure once per address; subsequent failures logged at debug level to reduce noise.
+                        if (_reportedFailures.Add(request.AssetAddress))
+                        {
+                            WriteDebug($"AssetSwapSystem: swap failed — address='{request.AssetAddress}'");
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     failed++;
-                    WriteDebug($"AssetSwapSystem: swap exception for '{request.AssetAddress}': {ex.Message}");
+                    if (_reportedFailures.Add(request.AssetAddress))
+                    {
+                        WriteDebug($"AssetSwapSystem: swap exception for '{request.AssetAddress}': {ex.Message}");
+                    }
                 }
             }
 

@@ -27,6 +27,9 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>Called when F10 is pressed (set by RuntimeDriver if alive).</summary>
         public static System.Action? OnF10Pressed;
 
+        /// <summary>Called when pack reload is requested (set by RuntimeDriver if alive). Can be invoked from background thread.</summary>
+        public static System.Action? OnPackReloadRequested;
+
         private bool _overlayEnsured;
         private int _updateFrame;
 

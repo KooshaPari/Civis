@@ -49,11 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **HMR (Hot Module Reload) signal watcher** — new background thread monitors `DINOForge_HotReload` signal file in BepInEx root; when detected, triggers soft reload via `ModPlatform.LoadPacks()` + `ToggleModMenu()` without full game restart
 - **hot-reload.ps1 script** — new convenience script for building Runtime DLL, deploying via MSBuild, and signaling game to soft-reload; supports `-Watch` mode for continuous builds on `src/**/*.cs` changes
+- **Hidden desktop launch** — `game_launch(hidden=True)` via Win32 `CreateDesktop` creates isolated headless desktop for background game execution without visual presence; enables unattended test automation and screenshot capture
+- **FastMCP Python server consolidation** — C# McpServer removed; replaced with lightweight Python MCP server (src/Tools/DinoforgeMcp/) with 13+ tools (game_launch, game_status, game_query_entities, game_screenshot, game_input, game_hot_reload, game_verify_screenshot, etc.); reduces build complexity and improves maintainability
+- **game_verify_screenshot VLM judge** — `game_verify_screenshot` MCP tool validates screenshot content using Claude Haiku vision model; analyzes game state (UI elements, entity counts, visual indicators) and returns structured validation result with confidence scores
+- **game_hot_reload MCP tool** — triggers DINOForge hot reload via signal file; bridges MCP interface to HMR watcher without full game restart
+- **E2E test suite with VLM judge** — `src/Tests/e2e/` integration tests use screenshot capture + Claude vision model validation to verify game state changes; enables autonomous feature validation without manual UI interaction
+- **bare-cua-native as primary screenshot/input backend** — `bare-cua-native.exe` (C++ Win32 window capture utility) now serves as primary backend for `game_screenshot` and `game_input` tools; replaces earlier gdigrab/SendInput implementation; enables cross-window, multi-monitor capture without focus stealing
 
 ### Fixed
 
 - **Mods button text inheritance** — NativeMenuInjector now enforces "Mods" text on all Text/TMPro text components after cloning Settings button (previously inherited "Options" label from source)
 - **warfare-aerial pack schema errors** — buildings/airfield_buildings.yaml: fixed `building_class` → `building_type`, restructured production format (unit+time → id: multiplier); doctrines/aerial_doctrines.yaml: fixed `faction_id` → `faction_archetype`, replaced complex `bonuses` array with flat `modifiers` object to match canonical schemas
+- **MCP server logs corrupting JSON-RPC stdout** — Python MCP server now redirects all logging to stderr; JSON-RPC messages flow cleanly on stdout without log pollution; enables reliable MCP client parsing
+- **AssetSwapSystem.ScheduleReset() missing method** — added `ScheduleReset()` method to `AssetSwapSystem` for explicit swap state reset; prevents stale asset references across reloads
+- **Asset swap failure log spam** — `AssetSwapSystem` now debounces failure logs using exponential backoff; reduces console spam during bundle load failures without losing diagnostic signal
 - Fixed test project `TargetFramework` from invalid `net11.0` to `net8.0` across Bridge.Client, Economy, Scenario, Installer projects
 - Excluded FlaUI-dependent UiAutomation tests and Runtime-dependent VanillaCatalog/UiActionTrace tests from CI build (these require external dependencies not present in test project)
 - All 1222 unit tests now pass (was 0 due to build failure)

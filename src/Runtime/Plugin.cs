@@ -252,13 +252,11 @@ namespace DINOForge.Runtime
         private bool _dumpOnStartup;
         private string _dumpOutputPath = "";
 
-        /// <summary>Flag set by HMR watcher thread when DINOForge_HotReload signal file is detected.</summary>
-        private static volatile bool _hotReloadQueued = false;
 
         private ModPlatform? _modPlatform;
 
         // UGUI system (preferred). Null if UGUI setup failed.
-        private DFCanvas? _dfCanvas;
+        internal DFCanvas? _dfCanvas;
 
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
@@ -271,10 +269,10 @@ namespace DINOForge.Runtime
 
         // _uguiReady: true once DFCanvas.Start() reports success via IsReady.
         // We check this each Update() because DFCanvas.Start() runs after Initialize().
-        private bool _uguiReady;
+        internal bool _uguiReady;
         // _uguiChecked: we only need to check DFCanvas readiness once after it has
         // had at least one frame to run its Start().
-        private bool _uguiChecked;
+        internal bool _uguiChecked;
 
         private bool _worldFound;
         private bool _initialized;
@@ -457,7 +455,13 @@ namespace DINOForge.Runtime
 
         /// <summary>
         /// Starts a background thread that monitors for the DINOForge_HotReload signal file.
-        /// When the file is detected, soft reloads the UI and packs without restarting the game.
+        /// When the file is detected, invokes reload directly from the background thread.
+        ///
+        /// CRITICAL: MonoBehaviour.Update() NEVER fires in DINO (scene transitions destroy it).
+        /// We invoke reload methods directly from this background thread, using the same pattern
+        /// as F9/F10 which work via KeyInputSystem callbacks from background thread input polling.
+        ///
+        /// Direct thread calls work in Mono 2021.3 on DontDestroyOnLoad objects.
         /// </summary>
         private void StartHmrWatcher()
         {
@@ -472,8 +476,40 @@ namespace DINOForge.Runtime
                         if (System.IO.File.Exists(signalPath))
                         {
                             try { System.IO.File.Delete(signalPath); } catch { }
-                            _hotReloadQueued = true;
-                            _log?.LogInfo("[RuntimeDriver] HMR signal detected — queuing soft reload...");
+
+                            // Direct invocation from background thread — works in Mono 2021.3
+                            // Same pattern as F9/F10 key polling (no Update() required)
+                            _log?.LogInfo("[RuntimeDriver] HMR: Signal detected, reloading packs...");
+
+                            try
+                            {
+                                // Invoke pack reload via KeyInputSystem callback (works from background thread)
+                                Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
+                            }
+                            catch (System.Exception ex)
+                            {
+                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload invocation failed: {ex.Message}");
+                            }
+
+                            // Re-initialize UGUI if it exists
+                            try
+                            {
+                                RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
+                                if (driver != null)
+                                {
+                                    // Reset UGUI state flags so on-next-Update it rebuilds
+                                    driver._uguiReady = false;
+                                    driver._uguiChecked = false;
+                                    driver._dfCanvas = null;
+                                    _log?.LogInfo("[RuntimeDriver] HMR: UGUI state reset for rebuild.");
+                                }
+                            }
+                            catch (System.Exception ex)
+                            {
+                                _log?.LogWarning($"[RuntimeDriver] HMR: UGUI reset failed: {ex.Message}");
+                            }
+
+                            _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");
                         }
                     }
                 }

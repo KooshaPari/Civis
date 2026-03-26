@@ -56,6 +56,11 @@ namespace DINOForge.Runtime.Bridge
 
         private int _frameCount;
 
+        private static volatile bool _resetPending;
+
+        /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
+        public static void ScheduleReset() => _resetPending = true;
+
         /// <summary>
         /// Minimum frames to wait before applying swaps.
         /// Must wait for entities to be fully initialized with render data.
@@ -77,6 +82,13 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc/>
         protected override void OnUpdate()
         {
+            if (_resetPending)
+            {
+                _resetPending = false;
+                _frameCount = 0;
+                WriteDebug("AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
+            }
+
             _frameCount++;
 
             if (_frameCount < MinFrameDelay)

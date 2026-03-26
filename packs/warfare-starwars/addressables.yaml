@@ -869,9 +869,65 @@ entries:
     faction: cis
     phase: v1_2_0_bundle_realign
 
+  - key: sw-cis-b1-squad
+    address: units/sw-cis-b1-squad
+    path: prefabs/sw-cis-b1-squad.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 9000
+      - level: 1
+        polycount: 5400
+      - level: 2
+        polycount: 2700
+
+  - key: sw-cis-aat
+    address: vehicles/sw-cis-aat
+    path: prefabs/sw-cis-aat.prefab
+    type: vehicle
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 16000
+      - level: 1
+        polycount: 9600
+      - level: 2
+        polycount: 4800
+
+  - key: sw-cis-medical-droid
+    address: units/sw-cis-medical-droid
+    path: prefabs/sw-cis-medical-droid.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 8500
+      - level: 1
+        polycount: 5100
+      - level: 2
+        polycount: 2550
+
+  - key: sw-cis-probe-droid
+    address: units/sw-cis-probe-droid
+    path: prefabs/sw-cis-probe-droid.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 7000
+      - level: 1
+        polycount: 4200
+      - level: 2
+        polycount: 2100
+
 metadata:
-  generated_at: 2026-03-15T07:30:00Z
-  total_entries: 71
-  total_units: 39
+  generated_at: 2026-03-25T00:00:00Z
+  total_entries: 75
+  total_units: 43
   total_buildings: 30
-  total_lod_variants: 156
+  total_lod_variants: 168

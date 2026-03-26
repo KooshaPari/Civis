@@ -38,7 +38,7 @@
 - [ ] Implement LOD reduction workflow for Clone Trooper
 - [ ] Create LOD0 (full) → LOD1 (60%) → LOD2 (30%)
 - [ ] Test LOD switching in scene (no pop-in)
-- [ ] Establish time budget: < 3ms per level transition
+- [ ] Establish time budget: &lt; 3ms per level transition
 
 **Days 6-7: Material Setup**
 - [ ] Create faction color materials

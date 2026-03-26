@@ -276,7 +276,7 @@ All colors are emissive (glow) at 1.5-2.5x intensity.
 - [ ] Kill units — see death effects (ascending vs explosive)
 - [ ] Destroy buildings — see dust clouds
 - [ ] Large explosions from AT-TE/AAT weapons
-- [ ] All effects have correct faction colors (HSV hue > 70° separation)
+- [ ] All effects have correct faction colors (HSV hue &gt; 70° separation)
 - [ ] No missing mesh errors in log
 - [ ] Debug log shows pool allocation (if using binary prefabs) or descriptor creation (if fallback)
 
@@ -320,10 +320,10 @@ grep "\[VFXPoolManager\]" ~/.bepinex/dinoforge_debug.log | tail -20
 ### Issue: Fallback factory creates prefabs but they're invisible
 
 **Solution**:
-1. Check emission rate > 0 in descriptor
+1. Check emission rate &gt; 0 in descriptor
 2. Verify material has emissive color set (not black)
 3. Check camera is positioned to see particles
-4. Verify max particles > 0
+4. Verify max particles &gt; 0
 
 ### Issue: VFX not showing up during gameplay
 

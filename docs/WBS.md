@@ -87,7 +87,7 @@ DINOForge WBS
 | ID | Task | Status |
 |----|------|--------|
 | 2.4.1 | `DashboardViewModel` : ObservableObject — summary stats | Pending |
-| 2.4.2 | `PackListViewModel` : ObservableObject — ObservableCollection<PackViewModel>, toggle | Pending |
+| 2.4.2 | `PackListViewModel` : ObservableObject — ObservableCollection&lt;PackViewModel&gt;, toggle | Pending |
 | 2.4.3 | `DebugPanelViewModel` : ObservableObject — 5 sections, collapsible | Pending |
 | 2.4.4 | `SettingsViewModel` : ObservableObject — packs directory, game path | Pending |
 | 2.4.5 | `MainViewModel` — navigation state, tab selection | Pending |

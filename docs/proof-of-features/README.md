@@ -22,7 +22,7 @@ The native game main menu has been successfully modified to include a "Mods" but
 **Evidence**:
 - GDI screenshot captured after injection confirmation marker in BepInEx log
 - Button visually present and clickable in main menu scene
-- Injection completed in < 10 seconds from game launch
+- Injection completed in &lt; 10 seconds from game launch
 
 ---
 

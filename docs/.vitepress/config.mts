@@ -15,6 +15,7 @@ export default withMermaid(
     cleanUrls: true,
     appearance: 'dark',
     ignoreDeadLinks: true,
+    srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**'],
 
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],

@@ -124,8 +124,8 @@ dotnet run --project src/Tools/PackCompiler -- assets validate warfare-starwars
 | Issue | Root Cause | Workaround | Status |
 |-------|-----------|-----------|--------|
 | Visual asset name mismatches | Bundle naming didn't match definition IDs | Manual audit + rename in definitions | ✅ Fixed |
-| Prefab extraction failures | Direct `LoadAsset<Mesh>` returns null for prefab-built bundles | Fallback to `GameObject` + `MeshFilter`/`MeshRenderer` extraction | ✅ Fixed |
-| Asset swap timing | Arbitrary 600-frame delay too aggressive | Swap on first frame where entity count > 0 | ✅ Fixed |
+| Prefab extraction failures | Direct `LoadAsset&lt;Mesh&gt;` returns null for prefab-built bundles | Fallback to `GameObject` + `MeshFilter`/`MeshRenderer` extraction | ✅ Fixed |
+| Asset swap timing | Arbitrary 600-frame delay too aggressive | Swap on first frame where entity count &gt; 0 | ✅ Fixed |
 | Duplicate asset IDs | ARF Trooper shared `sw-rep-arc-trooper` with ARC Trooper | Assign distinct `sw-rep-arf-trooper` asset ID | ✅ Fixed |
 
 ---
@@ -259,7 +259,7 @@ All M5 packs MUST include:
 - **Unit tests** for asset import/optimize/generate services
 - **Integration tests** for full pipeline (download → build)
 - **Regression tests** for known assets (v0.6.0 models, v0.7.0 critical)
-- **Performance tests** (import < 5s/model, full pipeline < 5min for 25 models)
+- **Performance tests** (import &lt; 5s/model, full pipeline &lt; 5min for 25 models)
 - **Schema validation tests** (asset_pipeline.yaml)
 - **Pack validation** (manifest completeness, definition references, conflict detection)
 - **Gameplay tests** (asset swaps work in-game, balance doesn't break)
@@ -285,7 +285,7 @@ M5 agents MUST maintain:
 - [ ] All 3 packs have valid `pack.yaml` manifest
 - [ ] All asset_pipeline.yaml files conform to schema
 - [ ] All visual_asset IDs in definitions match bundle addresses
-- [ ] Asset import pipeline < 5min for all packs combined
+- [ ] Asset import pipeline &lt; 5min for all packs combined
 - [ ] All assets render correctly in-game with correct faction colors
 - [ ] No texture/material corruption
 - [ ] Unit balance tests pass (no 0-damage units, no 99999 HP outliers)

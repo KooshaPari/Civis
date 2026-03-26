@@ -429,10 +429,10 @@ private static void StartResurrectionWatcher()
 
 This is exactly why CLAUDE.md says:
 > **ALWAYS prefer** (in order):
-> 1. Direct use of an existing library/tool as-is
-> 2. Thin wrapper / adapter around an existing library
-> 3. Composition of multiple existing libraries
-> 4. Modified fork of an existing library (last resort before handroll)
+&gt; 1. Direct use of an existing library/tool as-is
+&gt; 2. Thin wrapper / adapter around an existing library
+&gt; 3. Composition of multiple existing libraries
+&gt; 4. Modified fork of an existing library (last resort before handroll)
 >
 > **ONLY handroll when** no existing solution covers the need OR wrapping would be more complex than a simple implementation
 

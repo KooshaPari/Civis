@@ -43,7 +43,7 @@ Status:        ✓ ALL PASS
 #### Category 3: Projectile VFX (2 tests)
 - ✓ Republic projectile impact spawns correct VFX with faction color (#4488FF)
 - ✓ CIS projectile impact spawns correct VFX with faction color (#FF4400)
-- ✓ HSV hue difference > 70° (colorblind accessible)
+- ✓ HSV hue difference &gt; 70° (colorblind accessible)
 
 #### Category 4: Unit Death VFX (2 tests)
 - ✓ Republic unit death: disintegration effect (blue, ascending)
@@ -54,9 +54,9 @@ Status:        ✓ ALL PASS
 - ✓ Particle count scales by building size (0.8x / 1.0x / 1.2x)
 
 #### Category 6: Audio Sync Validation (1 test)
-- ✓ VFX spawn latency < 16ms (1 frame @ 60 FPS)
+- ✓ VFX spawn latency &lt; 16ms (1 frame @ 60 FPS)
 - ✓ Single spawn: ~5ms average
-- ✓ Stress test (10x concurrent): all < 8ms
+- ✓ Stress test (10x concurrent): all &lt; 8ms
 
 #### Integration Smoke Tests (3 tests)
 - ✓ Full VFX lifecycle: 10 frames, 35 total VFX events
@@ -74,16 +74,16 @@ Status:        ✓ ALL PASS
 - **Long-play stability**: No memory leaks detected
 
 ### Rendering Performance
-- **Max particles on-screen**: < 1500 (stress test)
+- **Max particles on-screen**: &lt; 1500 (stress test)
 - **Target framerate**: 60 FPS (maintained)
-- **Shader cost**: < 3ms per frame
+- **Shader cost**: &lt; 3ms per frame
 - **Draw calls**: Optimized via GPU instancing
 
 ### Audio Sync
-- **Spawn latency**: < 16ms (100% of samples)
+- **Spawn latency**: &lt; 16ms (100% of samples)
 - **Average latency**: ~5ms (well below budget)
 - **95th percentile**: ~7ms (comfortable margin)
-- **Stress test (10x)**: All samples < 8ms
+- **Stress test (10x)**: All samples &lt; 8ms
 
 ---
 
@@ -133,7 +133,7 @@ Integration Assertions:  30+
 ### Faction-Aware VFX
 - ✓ Republic (#4488FF bright blue) detection & color application
 - ✓ CIS (#FF4400 rust orange) detection & color application
-- ✓ HSV hue difference validation (199° > 70° requirement)
+- ✓ HSV hue difference validation (199° &gt; 70° requirement)
 - ✓ Colorblind accessibility verified
 
 ### Pool Management
@@ -156,8 +156,8 @@ Integration Assertions:  30+
 - ✓ Concurrent event processing (30+ events in stress test)
 
 ### Audio Synchronization
-- ✓ Single spawn < 16ms latency
-- ✓ Stress test (10x) all samples < 8ms
+- ✓ Single spawn &lt; 16ms latency
+- ✓ Stress test (10x) all samples &lt; 8ms
 - ✓ 95th percentile well within budget
 - ✓ Zero allocation stalls (consistent performance)
 
@@ -186,7 +186,7 @@ A comprehensive checklist is provided in `GAMEPLAYVALIDATION.md` covering:
 - Performance maintenance at distance
 
 ### Audio Sync
-- Impact sound timing (< 16ms)
+- Impact sound timing (&lt; 16ms)
 - Death animation sync
 - No lip-sync issues
 
@@ -256,10 +256,10 @@ CHANGELOG.md
 | Unit death explosion | ✓ PASS | Test 8: CIS effect, chaotic |
 | Building destruction | ✓ PASS | Test 9: dust cloud, correct position |
 | Building size scaling | ✓ PASS | Test 10: 0.8x / 1.0x / 1.2x |
-| Audio sync < 16ms | ✓ PASS | Test 11: max 8ms, avg 5ms |
-| Faction colors distinct | ✓ PASS | HSV hue difference 199° > 70° |
+| Audio sync &lt; 16ms | ✓ PASS | Test 11: max 8ms, avg 5ms |
+| Faction colors distinct | ✓ PASS | HSV hue difference 199° &gt; 70° |
 | Memory stability | ✓ PASS | Zero allocations during play |
-| Performance under stress | ✓ PASS | < 1500 particles, > 50 FPS |
+| Performance under stress | ✓ PASS | &lt; 1500 particles, &gt; 50 FPS |
 | All 23 tests pass | ✓ PASS | 100% success rate |
 
 ---
@@ -403,8 +403,8 @@ dotnet test src/Tests/DINOForge.Tests.csproj --filter "VFXIntegrationTests" --ve
 | Pool Capacity | 48 instances | ✓ |
 | LOD Tiers | 3 (FULL/MEDIUM/CULLED) | ✓ |
 | Faction Colors | 2 (#4488FF, #FF4400) | ✓ |
-| Audio Latency | < 16ms (avg 5ms) | ✓ |
-| Peak Particles | < 1500 on-screen | ✓ |
+| Audio Latency | &lt; 16ms (avg 5ms) | ✓ |
+| Peak Particles | &lt; 1500 on-screen | ✓ |
 | Memory Leaks | 0 | ✓ |
 | Documentation | 1000+ LOC | ✓ |
 

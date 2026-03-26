@@ -50,7 +50,7 @@ DINO's scene loader destroys all non-essential `MonoBehaviour` objects at frame 
 
 ### Why `Resources.FindObjectsOfTypeAll` is banned from background threads
 
-Calling `Resources.FindObjectsOfTypeAll<Canvas>()` from a background thread deadlocks during Unity's asset-loading phase (`InitialGameLoader` scene). This is a Unity internal lock conflict and cannot be worked around without blocking the game indefinitely.
+Calling `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` from a background thread deadlocks during Unity's asset-loading phase (`InitialGameLoader` scene). This is a Unity internal lock conflict and cannot be worked around without blocking the game indefinitely.
 
 ---
 

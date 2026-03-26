@@ -256,7 +256,7 @@ Total Tests: 108
 Passing: 108 (after path resolution fixes)
 Failing: 0
 Skipped: 0
-Duration: < 2 seconds
+Duration: < 2 secondslt; 2 secondslt; 2 seconds
 
 Fixtures:
 - Phase4_Configuration_Exists ✓

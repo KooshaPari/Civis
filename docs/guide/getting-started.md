@@ -15,7 +15,7 @@ DINOForge requires the **modified BepInEx 5 with Unity ECS support** from Nexus 
 
 ### One required boot.config fix
 
-After installing BepInEx, edit `<GameRoot>/Diplomacy is Not an Option_Data/boot.config` and ensure it contains:
+After installing BepInEx, edit `&lt;GameRoot&gt;/Diplomacy is Not an Option_Data/boot.config` and ensure it contains:
 ```
 single-instance=0
 ```

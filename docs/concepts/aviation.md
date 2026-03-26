@@ -442,8 +442,8 @@ When validating units with aerial properties:
 
 1. **If `behavior_tags` contains `Aerial`**:
    - `aerial` block must exist and be non-empty
-   - `cruise_altitude` must be > 0
-   - `ascend_speed` and `descend_speed` must be > 0
+   - `cruise_altitude` must be &gt; 0
+   - `ascend_speed` and `descend_speed` must be &gt; 0
 
 2. **If `aerial` block exists**:
    - All numeric fields must be positive
@@ -482,7 +482,7 @@ When validating units with aerial properties:
 ### "Unit Won't Fly"
 - Check `behavior_tags` includes `Aerial`
 - Check `aerial` block exists
-- Check `cruise_altitude > 0`
+- Check `cruise_altitude &gt; 0`
 
 ### "Aerial Unit Can't Hit Air Targets"
 - Check both units have `anti_air: true`

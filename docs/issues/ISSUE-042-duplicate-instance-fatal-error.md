@@ -76,7 +76,7 @@ See ADR-013 for full technical analysis.
 The `launch-game` command is considered **fixed** when:
 
 1. **Reliability**: Launching `launch-game.ps1` twice in succession (with 5-second gap) succeeds both times without "another instance" error
-2. **Speed**: Total time from `launch-game` invocation to "Awake completed" in logs is < 15 seconds (including any necessary waits)
+2. **Speed**: Total time from `launch-game` invocation to "Awake completed" in logs is &lt; 15 seconds (including any necessary waits)
 3. **Automation-safe**: The fix works when called from a PowerShell script without user intervention
 4. **No side effects**: Game runs normally after launch; no crashes, missing features, or gameplay issues
 5. **Documentation**: Solution documented in `CLAUDE.md` or new `launch-game.md` version

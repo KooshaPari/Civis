@@ -213,7 +213,7 @@ Before writing code, conduct:
 ### If Option 1 Doesn't Work (Kernel Ownership)
 
 - Must fall back to Option 5 (sleep) or Option 3 (copy exe)
-- Sleep adds latency to test workflows (acceptable if < 15 seconds)
+- Sleep adds latency to test workflows (acceptable if &lt; 15 seconds)
 - Copy-exe approach is fragile but functional as last resort
 
 ### Long-Term

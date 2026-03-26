@@ -37,7 +37,7 @@ Bootstrap plugin, version detection, logging, ECS introspection, debug overlay.
 Pack manifest format, registry system, schema validation, override model, dependency resolver.
 
 - Pack manifest model with YAML loader (YamlDotNet)
-- Generic `Registry<T>` system with priority layers and conflict detection
+- Generic `Registry&lt;T&gt;` system with priority layers and conflict detection
 - Schema validation pipeline (NJsonSchema)
 - Content override model with 4-layer priority (BaseGame -> Framework -> DomainPlugin -> Pack)
 - Dependency resolver with cycle detection

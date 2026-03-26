@@ -86,7 +86,7 @@ Overrides replace existing entries at the pack's priority level.
 
 ## Implementation
 
-The SDK provides a generic `Registry<T>` class:
+The SDK provides a generic `Registry&lt;T&gt;` class:
 
 ```csharp
 public class Registry<T> where T : IRegistryEntry

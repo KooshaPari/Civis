@@ -100,7 +100,7 @@ v0.7.0 + v0.8.0: import → validate → optimize → generate
 | Generate | 200ms | 1,000ms |
 | **Total** | **755ms** | **3.8s** |
 
-✓ **Target achieved**: < 5min for 9 models = ~0.76s/model × 9 = 6.8s ✓
+✓ **Target achieved**: &lt; 5min for 9 models = ~0.76s/model × 9 = 6.8s ✓
 
 ---
 

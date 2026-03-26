@@ -1,17 +1,17 @@
-# Confederacy of Independent Systems Units - Industrial Swarm Archetype
-# Cheap droids, low individual stats, mass production
-
-# 1. Militia - B1 Battle Droid
 - id: cis_b1_battle_droid
   display_name: B1 Battle Droid
-  description: "Roger roger. Basic battle droid, cheap and expendable. Weak individually but dangerous in masses."
+  description: Roger roger. Basic battle droid, cheap and expendable. Weak individually
+    but dangerous in masses.
   unit_class: MilitiaLight
   faction_id: cis
   tier: 1
   weapon: e5_blaster
   vanilla_mapping: militia
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [Swarm]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - Swarm
   stats:
     hp: 40.0
     damage: 9.0
@@ -29,19 +29,21 @@
       gold: 3
       population: 1
   visual_asset: sw-cis-b1-battle-droid
-
-# 2. Line Infantry - B1 Squad
 - id: cis_b1_squad
-  visual_asset: sw-b1-squad
   display_name: B1 Squad
-  description: Coordinated B1 squad with marginally better tactics via improved droid brains.
+  description: Coordinated B1 squad with marginally better tactics via improved droid
+    brains.
   unit_class: CoreLineInfantry
   faction_id: cis
   tier: 1
   weapon: e5_blaster
   vanilla_mapping: line_infantry
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [Swarm, AdvanceFire]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - Swarm
+  - AdvanceFire
   stats:
     hp: 50.0
     damage: 9.0
@@ -58,18 +60,21 @@
       iron: 12
       gold: 5
       population: 1
-
-# 3. Heavy Infantry - B2 Super Battle Droid
 - id: cis_b2_super_battle_droid
   display_name: B2 Super Battle Droid
-  description: Heavily armored battle droid with integrated wrist blasters. Tougher but more expensive.
+  description: Heavily armored battle droid with integrated wrist blasters. Tougher
+    but more expensive.
   unit_class: HeavyInfantry
   faction_id: cis
   tier: 2
   weapon: wrist_blaster
   vanilla_mapping: heavy_infantry
-  defense_tags: [HeavyArmor, Mechanical]
-  behavior_tags: [AdvanceFire, Swarm]
+  defense_tags:
+  - HeavyArmor
+  - Mechanical
+  behavior_tags:
+  - AdvanceFire
+  - Swarm
   stats:
     hp: 160.0
     damage: 14.0
@@ -87,18 +92,20 @@
       gold: 15
       population: 1
   visual_asset: sw-cis-b2-super-droid
-
-# 4. Ranged Infantry - Sniper Droid
 - id: cis_sniper_droid
   display_name: Sniper Droid
-  description: Modified B1 unit with enhanced optics and sniper-class blaster for long-range engagement.
+  description: Modified B1 unit with enhanced optics and sniper-class blaster for
+    long-range engagement.
   unit_class: Skirmisher
   faction_id: cis
   tier: 2
   weapon: e5s_sniper
   vanilla_mapping: ranged_infantry
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [Kite]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - Kite
   stats:
     hp: 35.0
     damage: 30.0
@@ -116,18 +123,21 @@
       gold: 10
       population: 1
   visual_asset: sw-cis-sniper-droid
-
-# 5. Cavalry - STAP Pilot
 - id: cis_stap_pilot
   display_name: STAP Pilot
-  description: Single Trooper Aerial Platform, fast repulsorlift vehicle for flanking and harassment.
+  description: Single Trooper Aerial Platform, fast repulsorlift vehicle for flanking
+    and harassment.
   unit_class: FastVehicle
   faction_id: cis
   tier: 1
   weapon: stap_blaster
   vanilla_mapping: cavalry
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [Charge, Kite]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - Charge
+  - Kite
   stats:
     hp: 80.0
     damage: 10.0
@@ -145,8 +155,6 @@
       gold: 8
       population: 1
   visual_asset: sw-cis-stap
-
-# 6. Siege - AAT Crew
 - id: cis_aat_crew
   display_name: AAT Crew
   description: Armored Assault Tank providing heavy fire support and siege capability.
@@ -155,8 +163,12 @@
   tier: 2
   weapon: aat_cannon
   vanilla_mapping: siege
-  defense_tags: [HeavyArmor, Mechanical]
-  behavior_tags: [SiegePriority, AntiStructure]
+  defense_tags:
+  - HeavyArmor
+  - Mechanical
+  behavior_tags:
+  - SiegePriority
+  - AntiStructure
   stats:
     hp: 350.0
     damage: 55.0
@@ -173,20 +185,20 @@
       iron: 70
       gold: 35
       population: 3
-  visual_asset: sw-aat-walker
-
-# 7. Support - Medical Droid
 - id: cis_medical_droid
-  visual_asset: sw-medical-droid
   display_name: Medical Droid
-  description: Repurposed medical unit providing repair functions to damaged battle droids.
+  description: Repurposed medical unit providing repair functions to damaged battle
+    droids.
   unit_class: SupportEngineer
   faction_id: cis
   tier: 1
   weapon: e5_blaster
   vanilla_mapping: support
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [HoldLine]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - HoldLine
   stats:
     hp: 50.0
     damage: 5.0
@@ -203,8 +215,6 @@
       iron: 10
       gold: 8
       population: 1
-
-# 8. Scout - Probe Droid
 - id: cis_probe_droid
   display_name: Probe Droid
   description: DRK-1 probe droid used for reconnaissance with extended sensor range.
@@ -213,8 +223,11 @@
   tier: 1
   weapon: e5_blaster
   vanilla_mapping: scout
-  defense_tags: [Unarmored, Mechanical]
-  behavior_tags: [Kite]
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - Kite
   stats:
     hp: 30.0
     damage: 6.0
@@ -231,19 +244,21 @@
       iron: 8
       gold: 5
       population: 1
-  visual_asset: sw-probe-droid
-
-# 9. Elite - BX Commando Droid
 - id: cis_bx_commando_droid
   display_name: BX Commando Droid
-  description: Advanced commando droid with superior agility, combat programming, and vibrosword capability.
+  description: Advanced commando droid with superior agility, combat programming,
+    and vibrosword capability.
   unit_class: EliteLineInfantry
   faction_id: cis
   tier: 3
   weapon: e5_blaster
   vanilla_mapping: elite
-  defense_tags: [InfantryArmor, Mechanical]
-  behavior_tags: [Charge, AdvanceFire]
+  defense_tags:
+  - InfantryArmor
+  - Mechanical
+  behavior_tags:
+  - Charge
+  - AdvanceFire
   stats:
     hp: 120.0
     damage: 14.0
@@ -261,18 +276,22 @@
       gold: 25
       population: 1
   visual_asset: sw-bx-commando-droid
-
-# 10. Hero - General Grievous
 - id: cis_general_grievous
   display_name: General Grievous
-  description: Supreme Commander of the Droid Army. A devastating melee combatant wielding four lightsabers.
+  description: Supreme Commander of the Droid Army. A devastating melee combatant
+    wielding four lightsabers.
   unit_class: HeroCommander
   faction_id: cis
   tier: 3
   weapon: grievous_lightsabers
   vanilla_mapping: hero
-  defense_tags: [HeavyArmor, Mechanical, Heroic]
-  behavior_tags: [Charge, MoralePressure]
+  defense_tags:
+  - HeavyArmor
+  - Mechanical
+  - Heroic
+  behavior_tags:
+  - Charge
+  - MoralePressure
   stats:
     hp: 350.0
     damage: 60.0
@@ -289,19 +308,21 @@
       iron: 50
       gold: 120
       population: 3
-  visual_asset: sw-general-grievous
-
-# 11. Wall Defender - Droideka
 - id: cis_droideka
   display_name: Droideka
-  description: Destroyer droid with personal deflector shield and twin rapid-fire blasters. Devastating in defense.
+  description: Destroyer droid with personal deflector shield and twin rapid-fire
+    blasters. Devastating in defense.
   unit_class: StaticMG
   faction_id: cis
   tier: 3
   weapon: droideka_blasters
   vanilla_mapping: wall_defender
-  defense_tags: [Shielded, Mechanical]
-  behavior_tags: [HoldLine, AntiMass]
+  defense_tags:
+  - Shielded
+  - Mechanical
+  behavior_tags:
+  - HoldLine
+  - AntiMass
   stats:
     hp: 100.0
     damage: 12.0
@@ -319,18 +340,21 @@
       gold: 30
       population: 2
   visual_asset: sw-cis-droideka
-
-# 12. Skirmisher - DSD1 Dwarf Spider Droid
 - id: cis_dwarf_spider_droid
   display_name: DSD1 Dwarf Spider Droid
-  description: Small walking tank with a powerful central cannon for medium-range fire support.
+  description: Small walking tank with a powerful central cannon for medium-range
+    fire support.
   unit_class: StaticAT
   faction_id: cis
   tier: 2
   weapon: dwarf_spider_cannon
   vanilla_mapping: skirmisher
-  defense_tags: [HeavyArmor, Mechanical]
-  behavior_tags: [AdvanceFire, AntiArmor]
+  defense_tags:
+  - HeavyArmor
+  - Mechanical
+  behavior_tags:
+  - AdvanceFire
+  - AntiArmor
   stats:
     hp: 180.0
     damage: 35.0
@@ -348,19 +372,22 @@
       gold: 20
       population: 2
   visual_asset: sw-cis-spider-droid
-
-# 13. Special - MagnaGuard
 - id: cis_magnaguard
   visual_asset: sw-cis-magna-guard
   display_name: IG-100 MagnaGuard
-  description: Elite bodyguard droids wielding electrostaffs. Grievous's personal guard and anti-Jedi specialists.
+  description: Elite bodyguard droids wielding electrostaffs. Grievous's personal
+    guard and anti-Jedi specialists.
   unit_class: ShieldedElite
   faction_id: cis
   tier: 3
   weapon: electrostaff
   vanilla_mapping: special
-  defense_tags: [HeavyArmor, Mechanical]
-  behavior_tags: [Charge, AntiArmor]
+  defense_tags:
+  - HeavyArmor
+  - Mechanical
+  behavior_tags:
+  - Charge
+  - AntiArmor
   stats:
     hp: 200.0
     damage: 30.0
@@ -377,19 +404,22 @@
       iron: 50
       gold: 40
       population: 2
-
-# 14. Aerial Fighter - Tri-Fighter
 - id: cis_tri_fighter
-  visual_asset: sw-tri-fighter
   display_name: Tri-Fighter
-  description: Automated droid starfighter with three-pronged design and rapid-fire plasma cannons. Multiple units form deadly swarms.
+  description: Automated droid starfighter with three-pronged design and rapid-fire
+    plasma cannons. Multiple units form deadly swarms.
   unit_class: AirstrikeProxy
   faction_id: cis
   tier: 2
   weapon: tri_fighter_plasma_cannons
   vanilla_mapping: aerial_fighter
-  defense_tags: [Mechanical, Aerial]
-  behavior_tags: [Aerial, AdvanceFire, Kite]
+  defense_tags:
+  - Mechanical
+  - Aerial
+  behavior_tags:
+  - Aerial
+  - AdvanceFire
+  - Kite
   stats:
     hp: 110.0
     damage: 14.0

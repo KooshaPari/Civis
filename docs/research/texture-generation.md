@@ -77,7 +77,7 @@ The recoloring process uses HSL (Hue, Saturation, Lightness) color space convers
    - Convert back to RGB
 4. **Save as PNG** with lossless compression
 
-**Lightness threshold rationale**: Pixels with L < 0.5 are treated as accent/shadow areas (mapped to faction accent color), while L ≥ 0.5 are treated as body/highlight areas (mapped to faction body color). This preserves material definition and surface detail while shifting the overall color scheme.
+**Lightness threshold rationale**: Pixels with L &lt; 0.5 are treated as accent/shadow areas (mapped to faction accent color), while L ≥ 0.5 are treated as body/highlight areas (mapped to faction body color). This preserves material definition and surface detail while shifting the overall color scheme.
 
 ### Batch Processing
 

@@ -66,13 +66,13 @@ dotnet run --project src/Tools/PackCompiler -- pipeline import packs/warfare-sta
 
 ### 3. Performance Benchmarking
 **Effort**: Medium
-**Target**: 9 models < 5 min total
+**Target**: 9 models &lt; 5 min total
 **Metrics to track**:
-- Import: < 0.5s per model (parsing GLB/FBX)
-- Validation: < 0.1s per model (checking polycount/scale)
-- Optimization: < 1.0s per model (LOD generation via decimation)
-- Generation: < 0.5s per model (prefab + addressables)
-- **Total**: < 18s per model, ~2.7 min for 9 models
+- Import: &lt; 0.5s per model (parsing GLB/FBX)
+- Validation: &lt; 0.1s per model (checking polycount/scale)
+- Optimization: &lt; 1.0s per model (LOD generation via decimation)
+- Generation: &lt; 0.5s per model (prefab + addressables)
+- **Total**: &lt; 18s per model, ~2.7 min for 9 models
 
 **Implementation**:
 ```csharp
@@ -165,12 +165,12 @@ AnsiConsole.MarkupLine($"Average time per asset: {totalMs / count}ms");
 ## Success Criteria
 
 Week 4 is complete when:
-1. ✓ Real models imported successfully (no hangs, < 1s per model)
+1. ✓ Real models imported successfully (no hangs, &lt; 1s per model)
 2. ✓ All 9 v0.7.0 models processed through full pipeline
 3. ✓ Prefab files generated with valid YAML (verifiable by schema)
 4. ✓ Addressables catalog generated with unique GUIDs
 5. ✓ Definition updates auto-injected correctly
-6. ✓ Performance < 5 min for 9 models (target: 2-3 min)
+6. ✓ Performance &lt; 5 min for 9 models (target: 2-3 min)
 7. ✓ Visual quality verified (LODs, materials, rigging)
 
 ---

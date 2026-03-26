@@ -103,7 +103,7 @@
    - Verify LOD0/LOD1/LOD2 generate for all 9
    - Confirm polycount percentages match config (100%, 60%, 30%)
    - Check no vertex seam breaks, UV islands preserved
-   - Performance: < 10 sec per model
+   - Performance: &lt; 10 sec per model
 
 3. **Test Generate Stage** (5 hours)
    - `assets generate packs/warfare-starwars --phase v0.7.0`
@@ -114,7 +114,7 @@
 
 4. **Test Build (Full Pipeline)** (5 hours)
    - `assets build packs/warfare-starwars --phase v0.7.0`
-   - End-to-end test: raw GLB → .prefab in < 5 min
+   - End-to-end test: raw GLB → .prefab in &lt; 5 min
    - Verify Addressables catalog created
    - Check all outputs present and valid
    - Generate build report (JSON + HTML)
@@ -164,8 +164,8 @@
    - Profile import/optimize/generate stages
    - Optimize hot paths (mesh decimation)
    - Improve LOD generation algorithm if needed
-   - Ensure full pipeline < 5 min for 9 models
-   - Target: < 30 sec per model
+   - Ensure full pipeline &lt; 5 min for 9 models
+   - Target: &lt; 30 sec per model
 
 3. **Documentation** (4 hours)
    - Create ASSET_PIPELINE_CLI.md (command reference)
@@ -309,7 +309,7 @@ Add to `src/Tools/PackCompiler/PackCompiler.csproj`:
 **v0.7.0** (End of Week 3):
 - [x] 9 models configured in asset_pipeline.yaml
 - [ ] Asset pipeline infrastructure complete
-- [ ] Full pipeline runs in < 5 minutes
+- [ ] Full pipeline runs in &lt; 5 minutes
 - [ ] 5 prefabs generated without errors
 - [ ] Addressables catalog created (10 entries)
 - [ ] Game definitions auto-updated

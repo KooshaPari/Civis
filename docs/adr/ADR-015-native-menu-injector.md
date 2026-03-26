@@ -24,7 +24,7 @@ Any scan for UI elements that runs before the player advances past the splash sc
 
 `SceneManager.activeSceneChanged` fires on the Unity main thread, immediately after a scene transition completes. This gives two guarantees that alternative mechanisms cannot provide:
 
-- **Thread safety**: All UGUI object traversal (`Resources.FindObjectsOfTypeAll<Canvas>()`, `GetComponentsInChildren<Button>()`) is safe only on the main thread. Calling these APIs from any other thread during asset loading causes a deadlock inside Unity's native object manager.
+- **Thread safety**: All UGUI object traversal (`Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()`, `GetComponentsInChildren&lt;Button&gt;()`) is safe only on the main thread. Calling these APIs from any other thread during asset loading causes a deadlock inside Unity's native object manager.
 - **Timeliness**: The callback fires as soon as the incoming scene is fully loaded, so newly instantiated UI objects are already present in the hierarchy.
 
 Additional scans are performed on a `RescanInterval = 2f` second timer inside `Update()` to handle cases where the menu canvas becomes active after the scene-changed event (e.g., delayed activation by DINO's own initialisation scripts).
@@ -34,7 +34,7 @@ Additional scans are performed on a `RescanInterval = 2f` second timer inside `U
 An earlier design polled for canvases from the `DINOForge-KeyInputWatcher` background thread at 50 ms intervals. This caused a deadlock during asset loading:
 
 - Unity's asset-loading subsystem holds an internal lock while deserialising bundles.
-- `Resources.FindObjectsOfTypeAll<Canvas>()` attempts to acquire the same lock from the background thread.
+- `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` attempts to acquire the same lock from the background thread.
 - With the main thread blocked in asset I/O, neither thread can proceed.
 
 The deadlock manifested as a hard freeze (no crash, no log output) lasting until the OS killed the process. The fix was to move all `Resources.FindObjectsOfTypeAll` calls exclusively onto the main thread and to rely on `SceneManager.activeSceneChanged` (plus `Update()` polling) instead of background-thread scheduling. The watcher thread comment in `Plugin.cs` documents this explicitly:
@@ -67,7 +67,7 @@ Cloning the native "Settings" or "Options" button and re-labelling it "Mods" is 
 
 1. Subscribes to `SceneManager.activeSceneChanged` in `Awake()`.
 2. On each scene change and on a 2-second `Update()` timer, calls `TryInjectMenuButton()` on the main thread.
-3. `TryInjectMenuButton()` enumerates all active `Canvas` objects via `Resources.FindObjectsOfTypeAll<Canvas>()`, searches each for a button labelled "Settings" or "Options", and — if found — clones that button, relabels it "Mods", wires its `onClick` to `IModMenuHost.Toggle()`, and isolates its UGUI navigation graph (`Navigation.Mode.None`) so it does not interfere with DINO's controller/keyboard navigation.
+3. `TryInjectMenuButton()` enumerates all active `Canvas` objects via `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()`, searches each for a button labelled "Settings" or "Options", and — if found — clones that button, relabels it "Mods", wires its `onClick` to `IModMenuHost.Toggle()`, and isolates its UGUI navigation graph (`Navigation.Mode.None`) so it does not interfere with DINO's controller/keyboard navigation.
 4. Once injection succeeds, `Update()` does nothing until the injected button is destroyed (e.g., on scene unload), at which point the cycle restarts automatically.
 5. A `static Action? OnScanNeeded` delegate is provided as an external trigger for test harnesses or future tooling that need to force a re-scan from a known main-thread context.
 
@@ -91,7 +91,7 @@ Cloning the native "Settings" or "Options" button and re-labelling it "Mods" is 
 - **Canvas name independence**: The injector cannot rely on fixed canvas names because DINO may change them across game versions. It instead searches all active canvases for a "Settings" or "Options" button text, which is more fragile than a stable identifier but more resilient to canvas renames.
 - **UGUI-only**: The approach is specific to Unity's UGUI system. If DINO ever migrates to UI Toolkit, the injector will need to be replaced.
 - **No EventSystem focus transfer**: The injected button deliberately does not steal EventSystem focus (`currentSelectedGameObject`) to avoid triggering DINO's native navigation handlers unexpectedly. This means keyboard/gamepad navigation does not auto-select the Mods button.
-- **Scan cost**: `Resources.FindObjectsOfTypeAll<Canvas>()` traverses all loaded Unity objects. In a scene with many objects this has a small GC allocation cost. The 2-second scan interval keeps this negligible.
+- **Scan cost**: `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` traverses all loaded Unity objects. In a scene with many objects this has a small GC allocation cost. The 2-second scan interval keeps this negligible.
 - **Persistent root required**: `NativeMenuInjector` relies on the `DINOForge_Root` persistent GameObject surviving scene transitions. If that object is destroyed, the injector is lost and no resurrection path currently exists for the injector specifically (resurrection targets `RuntimeDriver`).
 
 ---
@@ -100,7 +100,7 @@ Cloning the native "Settings" or "Options" button and re-labelling it "Mods" is 
 
 - **File**: `src/Runtime/UI/NativeMenuInjector.cs`
 - **Namespace**: `DINOForge.Runtime.UI`
-- **Wired by**: `RuntimeDriver.Initialize()` via `PersistentRoot.AddComponent<NativeMenuInjector>()`
+- **Wired by**: `RuntimeDriver.Initialize()` via `PersistentRoot.AddComponent&lt;NativeMenuInjector&gt;()`
 - **Canvas candidates list** (`CanvasCandidateNames`): kept for reference diagnostics; actual filtering uses the Settings/Options button text, not canvas names.
 - **Button cloning**: delegated to `NativeUiHelper.CloneButton()` and `NativeUiHelper.PositionAfterSibling()`.
 - **Visual sync**: `SyncButtonVisualStyle()` mirrors transition type, color block, sprite state, animation triggers, and `UnityEngine.UI.Text` properties from source to clone.

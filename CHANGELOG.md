@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **VitePress documentation site** — GitHub Pages deployment configured; site builds successfully with Mermaid diagram support, local search, dark mode, and auto-generated navigation from config; accessible at https://kooshapari.github.io/Dino/
+- **CI/CD for docs** — GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically builds and deploys VitePress site on push to `main` branch; uses Node.js 20, npm ci, and actions/deploy-pages
+
 ### Fixed
 
+- **VitePress Vue template parsing errors** — fixed Vue parser errors in 57 markdown files by escaping C# generic types (`<Type>`, `<Type<T>>`), comparison operators (`< value`, `> value`), and unescaped angle brackets outside code blocks; excluded `/archive`, `/research`, `/sessions`, `/worklog` directories from VitePress srcExclude to prevent parsing errors in research documents
 - **AssetSwapSystem repeated failure logging** — added `HashSet<string>` debouncing to track reported failures; extraction failures (`could not extract`), catalog lookup failures (`address not found`), and swap failures now log only once per asset address to reduce debug log noise (hundreds of identical lines per session when placeholder stubs are present)
+- **warfare-starwars visual_asset placeholder removal** — removed `visual_asset` references from 14 units (militia, barc speeder, jedi knight, wall guard, sniper, commando, v19 torrent in republic; b1 squad, aat crew, medical droid, probe droid, general grievous, tri-fighter in CIS) that lacked corresponding bundle files in `assets/bundles/`; AssetSwapSystem was silently failing to register these units, now they render with vanilla models as fallback instead of logging swap failures every frame
 
 ## [0.11.0] — 2026-03-20
 

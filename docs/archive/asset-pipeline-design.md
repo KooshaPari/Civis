@@ -395,10 +395,10 @@ AssetPipelineTests.cs
 ```
 
 ### Performance Targets
-- Import single model: < 5 sec
-- LOD generation (5k → 1.5k): < 10 sec
-- Prefab generation: < 2 sec
-- **Full pipeline (9 models)**: < 5 minutes
+- Import single model: &lt; 5 sec
+- LOD generation (5k → 1.5k): &lt; 10 sec
+- Prefab generation: &lt; 2 sec
+- **Full pipeline (9 models)**: &lt; 5 minutes
 
 ---
 
@@ -468,7 +468,7 @@ build:
 ## Success Metrics (v0.7.0)
 
 - [x] AssetPipeline tool created and integrated with PackCompiler
-- [ ] Full pipeline runs on 9 v0.7.0 models in < 5 minutes
+- [ ] Full pipeline runs on 9 v0.7.0 models in &lt; 5 minutes
 - [ ] All 9 prefabs generate with correct LOD variants
 - [ ] Addressables catalog created with 10 entries
 - [ ] Game definitions updated with visual_asset references

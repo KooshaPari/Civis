@@ -28,8 +28,8 @@ public class MyModSystem : SystemBaseSimulation
 ```
 
 Key patterns from existing DINO mods:
-- `ComponentDataFromEntity<T>` for entity data access
-- `GetSingletonEntity<T>()` / `GetSingleton<T>()` for singletons
+- `ComponentDataFromEntity&lt;T&gt;` for entity data access
+- `GetSingletonEntity&lt;T&gt;()` / `GetSingleton&lt;T&gt;()` for singletons
 - `[UpdateAfter]` and `[UpdateInGroup]` attributes for system ordering
 
 ## Game Namespaces

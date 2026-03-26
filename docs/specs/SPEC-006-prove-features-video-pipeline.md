@@ -580,7 +580,7 @@ Accept: AriaNeural (default), GuyNeural, JennyNeural, SaraNeural, etc.
 - [ ] Filter string validation (pre-encode syntax check)
 - [ ] H.264 encode + faststart
 - [ ] Audio mux (AAC @ 44100Hz)
-- [ ] Output validation (file exists, size > 10MB)
+- [ ] Output validation (file exists, size &gt; 10MB)
 - [ ] Player launch (`Start-Process $outFile`)
 - [ ] Error handling (graceful failures, actionable messages)
 - [ ] Logging (all steps to dinoforge_debug.log)

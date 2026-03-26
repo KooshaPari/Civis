@@ -249,7 +249,7 @@ If resurrection fails (exception), `_resurrectionAttempts` is not reset. After 3
 
 ### Observability
 
-Every execution path writes to `<BepInEx root>/dinoforge_debug.log` via `Plugin.WriteDebug()` or `KeyInputSystem.WriteDebug()`. Log entries include a timestamp, class name, and message. Heartbeat entries are written at the first call and every 600 subsequent calls per path:
+Every execution path writes to `&lt;BepInEx root&gt;/dinoforge_debug.log` via `Plugin.WriteDebug()` or `KeyInputSystem.WriteDebug()`. Log entries include a timestamp, class name, and message. Heartbeat entries are written at the first call and every 600 subsequent calls per path:
 
 ```
 [2026-03-24 12:00:00.000] [KeyInputSystem] OnUpdate frame=1 PersistentRoot=alive

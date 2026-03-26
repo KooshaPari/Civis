@@ -813,7 +813,7 @@ dotnet reportgenerator -reports:"coverage.opencover.xml" -targetdir:"coverage_re
 
 #### 5.3 Performance Testing
 
-**Benchmark**: Download 20 models in < 10 minutes
+**Benchmark**: Download 20 models in &lt; 10 minutes
 
 ```csharp
 [Benchmark]

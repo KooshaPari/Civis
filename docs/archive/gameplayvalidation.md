@@ -15,7 +15,7 @@ The VFX system integration tests validate all core functionality end-to-end:
 - **23/23 tests PASS** (100% success rate)
 - **11+ test scenarios** across 6 functional categories
 - **All critical paths validated**: pool lifecycle, LOD culling, faction-specific VFX, audio sync
-- **Performance constraints verified**: < 1500 particles on-screen during stress, < 16ms spawn latency
+- **Performance constraints verified**: &lt; 1500 particles on-screen during stress, &lt; 16ms spawn latency
 - **Ready for manual gameplay validation** in DINO client
 
 ---
@@ -46,8 +46,8 @@ The VFX system integration tests validate all core functionality end-to-end:
 - Result: **PASS** - All assertions validated
 
 ✓ **Test 6**: ProjectileVFXSystem spawns BlasterImpact_CIS on CIS impact (faction detection)
-- Expected: CIS prefab, CIS color (#FF4400), HSV hue difference > 70°
-- Result: **PASS** - Faction detection works, color distinction > 180° hue
+- Expected: CIS prefab, CIS color (#FF4400), HSV hue difference &gt; 70°
+- Result: **PASS** - Faction detection works, color distinction &gt; 180° hue
 
 ### Category 4: Unit Death VFX (2/2 PASS)
 ✓ **Test 7**: UnitDeathVFXSystem spawns UnitDeathVFX_Rep (disintegration) for Republic
@@ -68,12 +68,12 @@ The VFX system integration tests validate all core functionality end-to-end:
 - Result: **PASS** - All building sizes scale particles correctly
 
 ### Category 6: Audio Sync Validation (1/1 PASS)
-✓ **Test 11**: VFX spawn latency < 16ms (< 1 frame @ 60 FPS)
-- Expected: Single spawn < 16ms, stress test (10x) all < 16ms, 95th percentile < 16ms
+✓ **Test 11**: VFX spawn latency &lt; 16ms (&lt; 1 frame @ 60 FPS)
+- Expected: Single spawn &lt; 16ms, stress test (10x) all &lt; 16ms, 95th percentile &lt; 16ms
 - Result: **PASS** - All latency checks validated
   - Average latency: ~5ms (well below budget)
-  - Max latency: 8ms (< 16ms budget)
-  - 95th percentile: 7ms (< 16ms)
+  - Max latency: 8ms (&lt; 16ms budget)
+  - 95th percentile: 7ms (&lt; 16ms)
 
 ### Integration Smoke Tests (3/3 PASS)
 ✓ **Test 12**: Full VFX lifecycle - all systems integrate end-to-end
@@ -96,11 +96,11 @@ The VFX system integration tests validate all core functionality end-to-end:
 ### Rendering Performance
 - **Max Particles On-Screen**: 1,500 (stress test: 10 concurrent impacts + deaths + building)
 - **Target Framerate**: 60 FPS maintained
-- **Particle Shader Cost**: < 3ms per frame (heavy combat)
+- **Particle Shader Cost**: &lt; 3ms per frame (heavy combat)
 - **Draw Calls**: Optimized via GPU instancing + material property blocks
 
 ### Audio Latency
-- **Spawn Latency**: < 16ms (100% of samples)
+- **Spawn Latency**: &lt; 16ms (100% of samples)
 - **Buffer**: Average ~5ms (well below 16ms cap for sync)
 - **Sync Window**: ±8ms acceptable for audio-visual sync (±120Hz jitter)
 
@@ -120,10 +120,10 @@ The VFX system integration tests validate all core functionality end-to-end:
   - Perceptual: Warm, industrial, mechanical
 
 ### Color Distinction
-- **Hue Difference**: 199° (> 70° threshold for colorblind accessibility)
+- **Hue Difference**: 199° (&gt; 70° threshold for colorblind accessibility)
 - **Saturation Difference**: 27%
 - **Brightness Difference**: 0% (both at max value)
-- **Perceptual Distance (CIE LAB)**: ~140 units (> 50 for distinct colors)
+- **Perceptual Distance (CIE LAB)**: ~140 units (&gt; 50 for distinct colors)
 - **Colorblind Safe**: ✓ Protanopia, Deuteranopia, Tritanopia all distinguish
 
 ---
@@ -167,7 +167,7 @@ This checklist should be completed in DINO with warfare-starwars mod enabled.
 - [ ] **CIS Blasters**: Orange impact particles spawn on hit (color #FF4400)
 - [ ] **Lightsaber Impacts**: Yellow/white glow on melee hits
 - [ ] **Impact Position**: VFX spawn at exact impact point (no offset)
-- [ ] **Impact Timing**: < 50ms after projectile arrives (sync with sound)
+- [ ] **Impact Timing**: &lt; 50ms after projectile arrives (sync with sound)
 - [ ] **Particle Cleanup**: Old particles fade cleanly (no pop-in artifacts)
 
 #### Unit Death Effects
@@ -190,9 +190,9 @@ This checklist should be completed in DINO with warfare-starwars mod enabled.
 #### Frame Rate (Target: 60 FPS consistent)
 - [ ] **Light Combat**: 3-5 units, occasional impacts → 60 FPS
 - [ ] **Medium Combat**: 20 units, frequent impacts → 60 FPS
-- [ ] **Heavy Combat**: 50+ units, many concurrent effects → > 50 FPS
+- [ ] **Heavy Combat**: 50+ units, many concurrent effects → &gt; 50 FPS
 - [ ] **Stress Test**: All 11 prefab types active → no FPS drop
-- [ ] **No Hitches**: Frame time stable, no frame skips > 10ms
+- [ ] **No Hitches**: Frame time stable, no frame skips &gt; 10ms
 
 #### Memory Usage
 - [ ] **Baseline Memory**: Stable between scenes
@@ -264,7 +264,7 @@ Run for 5-10 minutes with max units spawned. Record observations:
 - **Result**: _____________
 
 #### Scenario 3: Heavy Combat (50+ units)
-- **Expected**: > 50 FPS, far units culled, near impacts visible
+- **Expected**: &gt; 50 FPS, far units culled, near impacts visible
 - **Result**: _____________
 
 #### Scenario 4: Long Play (30 min continuous)
@@ -282,7 +282,7 @@ Run for 5-10 minutes with max units spawned. Record observations:
 - ✓ Faction color variants
 - ✓ LOD culling system
 - ✓ Pool-based rendering
-- ✓ Audio sync < 16ms
+- ✓ Audio sync &lt; 16ms
 
 ### Optional Features (P1/P2, Future Releases)
 - Hero unit special effects (Jedi Force powers)

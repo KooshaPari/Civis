@@ -24,22 +24,22 @@ The design philosophy mirrors Docker: declarative `Sandboxfile.yaml` describes t
 
 ### 2.1 Windows Sandbox (WSB) File Format
 
-A `.wsb` file is standard XML with `<Configuration>` root. It is fully programmatically generatable — no GUI required.
+A `.wsb` file is standard XML with `&lt;Configuration&gt;` root. It is fully programmatically generatable — no GUI required.
 
 **All supported configuration elements** (Windows 10 build 18342+, fully documented Windows 11 24H2):
 
 | XML Element | Values | Default | Notes |
 |---|---|---|---|
-| `<MemoryInMB>` | integer | 4096 | OS enforces minimum 2048 MB |
+| `&lt;MemoryInMB&gt;` | integer | 4096 | OS enforces minimum 2048 MB |
 | `<vGPU>` | Enable / Disable / Default | Default (= Enabled on non-ARM64) | Shares host GPU via WDDM GPU-V |
-| `<Networking>` | Enable / Disable / Default | Default (= Enabled) | NAT via Hyper-V Default Switch |
-| `<AudioInput>` | Enable / Disable / Default | Default (= Enabled) | Shares host mic |
-| `<VideoInput>` | Enable / Disable / Default | Default (= Disabled) | Shares host webcam |
-| `<ProtectedClient>` | Enable / Disable / Default | Default (= Disabled) | AppContainer on RDP session |
-| `<PrinterRedirection>` | Enable / Disable / Default | Default (= Disabled) | Share host printers |
-| `<ClipboardRedirection>` | Enable / Disable / Default | Default (= Enabled) | Bidirectional clipboard |
-| `<MappedFolders>` | array of `<MappedFolder>` | none | HostFolder must already exist |
-| `<LogonCommand>/<Command>` | string | none | Runs after logon, as WDAGUtilityAccount |
+| `&lt;Networking&gt;` | Enable / Disable / Default | Default (= Enabled) | NAT via Hyper-V Default Switch |
+| `&lt;AudioInput&gt;` | Enable / Disable / Default | Default (= Enabled) | Shares host mic |
+| `&lt;VideoInput&gt;` | Enable / Disable / Default | Default (= Disabled) | Shares host webcam |
+| `&lt;ProtectedClient&gt;` | Enable / Disable / Default | Default (= Disabled) | AppContainer on RDP session |
+| `&lt;PrinterRedirection&gt;` | Enable / Disable / Default | Default (= Disabled) | Share host printers |
+| `&lt;ClipboardRedirection&gt;` | Enable / Disable / Default | Default (= Enabled) | Bidirectional clipboard |
+| `&lt;MappedFolders&gt;` | array of `&lt;MappedFolder&gt;` | none | HostFolder must already exist |
+| `&lt;LogonCommand&gt;/&lt;Command&gt;` | string | none | Runs after logon, as WDAGUtilityAccount |
 
 **Is it "dockerfile-like"?** Partially. A `.wsb` file specifies the _environment_ (resources, mounts, startup command) but does not express _build steps_ or _layered images_. Our `Sandboxfile.yaml` format (Section 4) adds that layer on top.
 
@@ -116,7 +116,7 @@ This is confirmed by the fact that CVE-2022-22715 was a vulnerability specifical
    - bare-cua-native runs as a TCP listener inside the sandbox
 
 2. **Shared mapped folder file-drop** (fallback, works with `networking=Disable`)
-   - Use a read-write `<MappedFolder>` as a shared message queue
+   - Use a read-write `&lt;MappedFolder&gt;` as a shared message queue
    - Python host writes `cmd_<id>.json` to shared dir
    - Agent inside sandbox polls for new files, executes command, writes `res_<id>.json`
    - Simple, reliable, ~0.5s latency per command

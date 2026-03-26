@@ -714,7 +714,7 @@ For each candidate model found:
 1. Run full asset pipeline: `dotnet run -- assets build packs/warfare-starwars`
 2. Verify all unit definitions load in ECS runtime
 3. Run integration tests: `dotnet test src/Tests/AssetPipelineTests.cs`
-4. Performance check: import < 5s/model, full pipeline < 5min
+4. Performance check: import &lt; 5s/model, full pipeline &lt; 5min
 
 ---
 

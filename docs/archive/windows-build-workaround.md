@@ -179,7 +179,7 @@ dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj
 
 ## Production Path Forward
 
-1. **Immediate** (< 5 min): Push to GitHub, use Actions workflow
+1. **Immediate** (&lt; 5 min): Push to GitHub, use Actions workflow
 2. **Short-term** (1-2 hours):
    - Acquire 9 real Star Wars 3D models
    - Let GitHub Actions build + optimize assets

@@ -106,15 +106,15 @@
 | INT-004 | Hot reload on invalid YAML keeps old state | integration | `HotReloadTests.cs` | Old pack still loaded, error logged | ✅ |
 | INT-005 | PackCompiler CLI `validate` exits 0 for valid packs | cli-integration | `validate-packs.yml` | Exit code 0 | ✅ |
 | INT-006 | PackCompiler CLI `validate` exits non-zero for invalid pack | cli-integration | **new** `PackCompilerCliTests.cs` | Exit code ≠ 0, message contains path | 🆕 |
-| INT-007 | Bridge latency < 50ms (FakeBridge, 1000 req) | perf | **new** `BridgeLatencyTests.cs` | P99 < 50 ms | 🆕 |
+| INT-007 | Bridge latency &lt; 50ms (FakeBridge, 1000 req) | perf | **new** `BridgeLatencyTests.cs` | P99 &lt; 50 ms | 🆕 |
 
 ### P1 — Performance (benchmarks.yml)
 
 | ID | Scenario | Type | File | Pass Criteria | Status |
 |----|----------|------|------|---------------|--------|
-| PERF-001 | Asset import < 5s/model | perf | `PerformanceBenchmarkTests.cs` | P99 < 5 000 ms | ✅ |
-| PERF-002 | Full 9-model pipeline < 5 min | perf | `PerformanceBenchmarkTests.cs` | Total < 300 s | ✅ |
-| PERF-003 | Bridge round-trip P99 < 50 ms | perf | **new** `BridgeLatencyTests.cs` | P99 < 50 ms | 🆕 |
+| PERF-001 | Asset import &lt; 5s/model | perf | `PerformanceBenchmarkTests.cs` | P99 &lt; 5 000 ms | ✅ |
+| PERF-002 | Full 9-model pipeline &lt; 5 min | perf | `PerformanceBenchmarkTests.cs` | Total &lt; 300 s | ✅ |
+| PERF-003 | Bridge round-trip P99 &lt; 50 ms | perf | **new** `BridgeLatencyTests.cs` | P99 &lt; 50 ms | 🆕 |
 | PERF-004 | AssetSwapSystem phase 1 completes before frame 5 | perf | **new** `AssetSwapLatencyTests.cs` | Patch exists by frame 5 mock | 🆕 |
 
 ### P1 — Runtime: BepInEx Plugin & Bridge (v0.11.0)
@@ -161,7 +161,7 @@
 | MCP-007 | `game_dump_state` triggers entity dump export | mcp | `GameDumpStateMcpTests.cs` | JSON file written to BepInEx logs | ✅ |
 | MCP-008 | `game_screenshot` captures game window | mcp | `GameScreenshotMcpTests.cs` | PNG file created, dimensions match window | ✅ |
 | MCP-009 | `game_verify_mod` checks DINOForge loaded | mcp | `GameVerifyModMcpTests.cs` | Returns `{"verified": true}` if bridge responds | ✅ |
-| MCP-010 | `game_wait_for_world` polls until ECS ready | mcp | `GameWaitForWorldMcpTests.cs` | Returns when `CalculateEntityCount() > 0` | ✅ |
+| MCP-010 | `game_wait_for_world` polls until ECS ready | mcp | `GameWaitForWorldMcpTests.cs` | Returns when `CalculateEntityCount() &gt; 0` | ✅ |
 | MCP-011 | `game_ui_automation` drives in-game UI | mcp | `GameUiAutomationMcpTests.cs` | Click/toggle/screenshot work in-game | 🔄 IN_PROGRESS |
 
 ### P1 — Hot Reload (v0.11.0)

@@ -212,7 +212,7 @@ Added to CLAUDE.md:
 - [ ] Test import stage on 9 models
 - [ ] Test optimize stage (LOD generation)
 - [ ] Test generate stage (prefab creation)
-- [ ] Test build stage (full pipeline < 5 min)
+- [ ] Test build stage (full pipeline &lt; 5 min)
 - [ ] Verify Addressables catalog
 - [ ] Test definition auto-updates
 - [ ] Create 20+ integration tests
@@ -257,7 +257,7 @@ Added to CLAUDE.md:
 **v0.7.0 Complete When**:
 - ✅ 9 models configured (done)
 - ✅ Pipeline infrastructure complete
-- ✅ Full pipeline < 5 minutes
+- ✅ Full pipeline &lt; 5 minutes
 - ✅ 5 prefabs generated
 - ✅ Addressables catalog correct
 - ✅ Definitions auto-updated

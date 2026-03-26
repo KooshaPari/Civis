@@ -272,9 +272,9 @@ Custom asset processors can be registered via DI in PackCompiler:
 
 ```csharp
 // In PackCompiler/Program.cs
-services.AddAssetProcessor<CustomLightsaberGlowProcessor>();
-services.AddAssetValidator<StarWarsColorValidator>();
-services.AddAssetExporter<CustomFormatExporter>();
+services.AddAssetProcessor&lt;CustomLightsaberGlowProcessor&gt;();
+services.AddAssetValidator&lt;StarWarsColorValidator&gt;();
+services.AddAssetExporter&lt;CustomFormatExporter&gt;();
 ```
 
 ### Testing Requirements
@@ -421,10 +421,10 @@ Skills:
 
 - [x] All 9 models downloaded and verified
 - [ ] `asset_pipeline.yaml` defines all 9 models
-- [ ] `dotnet run -- assets import` completes in < 5 sec per model
+- [ ] `dotnet run -- assets import` completes in &lt; 5 sec per model
 - [ ] `dotnet run -- assets optimize` generates valid LOD variants
 - [ ] `dotnet run -- assets generate` creates 9 prefabs
-- [ ] `dotnet run -- assets build` completes full pipeline in < 5 min
+- [ ] `dotnet run -- assets build` completes full pipeline in &lt; 5 min
 - [ ] Addressables catalog has 10 entries
 - [ ] Game definitions auto-updated with visual_asset refs
 - [ ] 40+ unit tests for all stages

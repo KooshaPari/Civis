@@ -47,7 +47,7 @@ Card 2: [Unknown]
   ✗ No displays enumerated
 ```
 
-**Black pixel ratio**: 100% (all samples had RGB < 10)
+**Black pixel ratio**: 100% (all samples had RGB &lt; 10)
 
 ---
 
@@ -74,8 +74,8 @@ This is **not a bug in GameScreenshotTool**. It's expected behavior: DXGI Deskto
 
 Added `IsFrameMostlyBlack()` helper method:
 - Samples first 1000 pixels (4-byte BGRA32 each)
-- Counts pixels with RGB < 10 (near-black threshold)
-- Returns `true` if > 95% are black
+- Counts pixels with RGB &lt; 10 (near-black threshold)
+- Returns `true` if &gt; 95% are black
 
 ```csharp
 static bool IsFrameMostlyBlack(byte[] bgra32)

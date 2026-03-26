@@ -363,7 +363,7 @@ pwsh -NoProfile -Command "& {
 
 ### Phase 4: Screenshot Capture ✓
 - GetDC() succeeds (valid device context)
-- GetWindowRect() returns valid dimensions (width > 0, height > 0)
+- GetWindowRect() returns valid dimensions (width &gt; 0, height &gt; 0)
 - BitBlt() copies pixels without error
 - Bitmap is saved to PNG file successfully
 
@@ -409,7 +409,7 @@ pwsh -NoProfile -Command "& {
   - Desktop API calls in MCP launcher
   - Runtime bridge gains desktop management APIs
   - Zero user focus interference
-  - Implementation < 100 lines of code
+  - Implementation &lt; 100 lines of code
 
 - **If FAILURE**:
   - User account/credential management in launcher

@@ -298,7 +298,7 @@ private void Update()
 **Why CanvasGroup.alpha:**
 - Hides panel without destroying UI hierarchy
 - Cheaper than SetActive() (no OnEnable/OnDisable callbacks)
-- Blocks raycasts automatically when alpha < 0.5f
+- Blocks raycasts automatically when alpha &lt; 0.5f
 - Smooth fade transitions feel polished
 
 #### 2. No Automatic Panel Opening

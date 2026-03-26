@@ -30,7 +30,7 @@ DINOForge is developed entirely through vibecoding (agent-driven development wit
 
 - No existing solution covers the need (e.g. DINO-specific ECS glue code)
 - Wrapping would be more complex than a simple implementation
-- The scope is tiny and self-contained (< 50 lines)
+- The scope is tiny and self-contained (&lt; 50 lines)
 - The component is inherently game-specific (runtime hook layer)
 
 ### Concrete Dependency Preferences

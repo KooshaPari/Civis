@@ -48,9 +48,9 @@ ECS component layouts may change between game versions. The following components
 | `Components.Unit` | (tag) | `>=1.0` | **Optimal** | Zero-sized tag marking entities as units. Verified present on all units. |
 | `Components.ArmorData` | `type` | `>=1.0` | **Optimal** | ArmorType enum. Confirmed layout stable across patches. |
 | `Components.AttackCooldown` | `value` | `>=1.0` | **Stable** | Cooldown timer. Also carries fixedProjectileSpeed field. |
-| `Components.ProjectileDataBase` | (blob ref) | `>=1.0` | **Optimal** | `BlobAssetReference<ProjectileData>`. Immutable, verified on projectile entities. |
+| `Components.ProjectileDataBase` | (blob ref) | `>=1.0` | **Optimal** | `BlobAssetReference&lt;ProjectileData&gt;`. Immutable, verified on projectile entities. |
 | `Components.BuildingBase` | (core) | `>=1.0` | **Optimal** | Present on all buildings. Core building data container. |
-| `Components.Enemy` | (faction marker) | `>=1.0` | **Stable** | Enemy faction marker (`BlobAssetReference<EnemyBaseData>`). Player units lack this tag. |
+| `Components.Enemy` | (faction marker) | `>=1.0` | **Stable** | Enemy faction marker (`BlobAssetReference&lt;EnemyBaseData&gt;`). Player units lack this tag. |
 
 ## Upgrading Between Versions
 

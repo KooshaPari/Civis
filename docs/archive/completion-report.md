@@ -154,7 +154,7 @@ All commands support `--format json` for machine-readable output.
 
 Fixed 3 compilation errors:
 1. **SketchfabClient.cs:174** — Added missing `SketchfabSearchResponse` type
-2. **AssetDownloader.cs:595** — Fixed `IndexOf` calls on `IReadOnlyList` (converted to `List<T>`)
+2. **AssetDownloader.cs:595** — Fixed `IndexOf` calls on `IReadOnlyList` (converted to `List&lt;T&gt;`)
 3. **AssetctlPipeline.cs:480** — Fixed double `??` operator (replaced with ternary)
 
 ```

@@ -196,7 +196,7 @@ Assets will be acquired in **three tiers**, with fallback escalation:
 
 **Evaluation criteria for each result:**
 - ✅ License is CC0 or CC-BY (check in model details)
-- ✅ Polycount < 2× target budget (decimation acceptable via Blender Decimate modifier)
+- ✅ Polycount &lt; 2× target budget (decimation acceptable via Blender Decimate modifier)
 - ✅ Silhouette matches Clone Wars aesthetic (not realistic, not grimdark)
 - ✅ No humanoid rigging required (static meshes only)
 - ✅ Texture maps or solid colors (not relying on complex materials)
@@ -275,7 +275,7 @@ For each **CRITICAL** asset, scout agents should:
 
 3. **Week 3: Source Confirmation**
    - For top 1 candidate: download full source (FBX + textures)
-   - Create GitHub issue: `[Asset] <Asset Name> — Top 1 Candidate Selected`
+   - Create GitHub issue: `[Asset] &lt;Asset Name&gt; — Top 1 Candidate Selected`
    - Link to Sketchfab page, author, license info
    - Attach screenshot of Blender preview (before/after decimation)
    - Note any special cleanup steps (rig removal, material merging, etc.)
@@ -614,7 +614,7 @@ curl -X GET "https://api.sketchfab.com/v3/search?query=clone+trooper+low+poly&li
 **Automation Idea:**
 Create a `.yml` job in GitHub Actions:
 1. Run weekly Sketchfab sweeps for CRITICAL assets
-2. Parse JSON response, filter by polycount (< 2000 tris estimate)
+2. Parse JSON response, filter by polycount (&lt; 2000 tris estimate)
 3. Generate markdown report with top 5 per asset
 4. Post as GitHub issue comment (notify team)
 

@@ -191,7 +191,7 @@ Items are visible (background color shows) but pack names are not.
 2. **Font is null**
    - Check: font=Arial in log
    - If font=null, text won't render
-   - Solution: Verify Resources.GetBuiltinResource<Font>("Arial.ttf") works
+   - Solution: Verify Resources.GetBuiltinResource&lt;Font&gt;("Arial.ttf") works
 
 3. **Text component disabled**
    - Check: gameObject.activeSelf

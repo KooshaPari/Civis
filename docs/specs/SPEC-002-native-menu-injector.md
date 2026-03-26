@@ -33,7 +33,7 @@ The injector is a `MonoBehaviour` attached to the `DINOForge_Root` persistent `G
 
 | ID | Requirement |
 |----|-------------|
-| N-01 | All `Resources.FindObjectsOfTypeAll<Canvas>()` calls shall execute only on the Unity main thread. |
+| N-01 | All `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` calls shall execute only on the Unity main thread. |
 | N-02 | The injector shall never throw an unhandled exception. All injection paths are wrapped in `try/catch`. |
 | N-03 | The periodic re-scan interval shall be no less than 1 second to limit per-frame GC allocation. |
 | N-04 | The injected button shall not acquire EventSystem keyboard/gamepad focus automatically. |
@@ -84,7 +84,7 @@ TryInjectMenuButton()
 
 DINO does not expose a stable API surface for its menus. The injector uses a canvas-agnostic strategy:
 
-1. Call `Resources.FindObjectsOfTypeAll<Canvas>()` to enumerate every loaded `Canvas` object, including inactive ones.
+1. Call `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` to enumerate every loaded `Canvas` object, including inactive ones.
 2. Filter to canvases where `canvas.gameObject.activeInHierarchy == true`.
 3. For each active canvas, search for a button whose `UnityEngine.UI.Text` child contains the text "Settings" (primary) or "Options" (fallback).
 4. The first canvas that yields a matching button is used as the injection target.
@@ -162,7 +162,7 @@ This ensures the Mods button matches the game's visual skin without requiring an
 
 | Constraint | Detail |
 |------------|--------|
-| Main-thread only | `Resources.FindObjectsOfTypeAll<Canvas>()` deadlocks if called from a background thread during asset loading. All scans must run on the Unity main thread. |
+| Main-thread only | `Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()` deadlocks if called from a background thread during asset loading. All scans must run on the Unity main thread. |
 | Splash screen gate | Player must click through `InitialGameLoader` before the main menu is visible. Scans before this point return no results and retry silently. |
 | UGUI dependency | Approach is specific to Unity UGUI. A future DINO migration to UI Toolkit would require a full rewrite of the injector. |
 | No keyboard/gamepad auto-focus | The Mods button does not take EventSystem focus automatically to avoid interfering with DINO's native menu navigation. |

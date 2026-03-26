@@ -19,7 +19,9 @@ public class CatalogTests
     public CatalogTests(GameFixture fixture) => _fixture = fixture;
 
     /// <summary>Verifies that the catalog has unit entries.</summary>
-    [Fact]
+    [Fact(Skip = "Catalog tests require the game to be running and fully initialized. " +
+                 "Requires GameAvailable=true and VanillaCatalog.IsBuilt=true. " +
+                 "Run manually with a live game instance.")]
     public async Task Catalog_HasUnits()
     {
         if (!_fixture.GameAvailable)
@@ -31,7 +33,9 @@ public class CatalogTests
     }
 
     /// <summary>Verifies that the catalog has building entries.</summary>
-    [Fact]
+    [Fact(Skip = "Catalog tests require the game to be running and fully initialized. " +
+                 "Requires GameAvailable=true and VanillaCatalog.IsBuilt=true. " +
+                 "Run manually with a live game instance.")]
     public async Task Catalog_HasBuildings()
     {
         if (!_fixture.GameAvailable)
@@ -43,7 +47,9 @@ public class CatalogTests
     }
 
     /// <summary>Verifies that the catalog has projectile entries.</summary>
-    [Fact]
+    [Fact(Skip = "Catalog tests require the game to be running and fully initialized. " +
+                 "Requires GameAvailable=true and VanillaCatalog.IsBuilt=true. " +
+                 "Run manually with a live game instance.")]
     public async Task Catalog_HasProjectiles()
     {
         if (!_fixture.GameAvailable)

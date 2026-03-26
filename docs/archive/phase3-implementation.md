@@ -363,7 +363,7 @@ if (quota != null)
 
 - **Target Framework**: net8.0 (async/await, nullable reference types)
 - **Dependencies**:
-  - `Microsoft.Extensions.Logging` (for ILogger<T>)
+  - `Microsoft.Extensions.Logging` (for ILogger&lt;T&gt;)
   - `System.Net.Http` (HttpClient)
   - `System.Text.Json` (JSON serialization)
 - **Thread Safety**: Fully thread-safe via SemaphoreSlim locking

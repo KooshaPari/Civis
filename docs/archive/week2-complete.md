@@ -107,7 +107,7 @@ dotnet run --project src/Tools/PackCompiler -- pipeline build packs/warfare-star
 2. **Prefab Generation** (serialize OptimizedAsset to .prefab YAML)
 3. **Addressables Catalog** (generate groups + metadata)
 4. **Definition Auto-Update** (inject references into game definitions)
-5. **Performance Benchmarking** (target: 9 models < 5min pipeline)
+5. **Performance Benchmarking** (target: 9 models &lt; 5min pipeline)
 6. **E2E Testing** (real Star Wars models v0.7.0 + v0.8.0)
 
 ---

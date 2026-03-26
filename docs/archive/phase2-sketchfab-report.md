@@ -174,7 +174,7 @@ From SketchFabApi.Net:
 ### Files Modified in Phase 2
 
 1. **src/Tools/Cli/DINOForge.Tools.Cli.csproj**
-   - Line 25: Already contains `<PackageReference Include="SketchFabApi.Net" Version="1.0.4" />`
+   - Line 25: Already contains `&lt;PackageReference Include="SketchFabApi.Net" Version="1.0.4" /&gt;`
    - Status: No changes needed (already correct)
 
 2. **CHANGELOG.md**

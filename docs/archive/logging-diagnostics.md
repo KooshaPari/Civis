@@ -61,12 +61,12 @@ The file includes **extensive logging throughout injection process**:
    - Logs initialization message immediately
 
 2. **DFCanvas wiring** (src/Runtime/UI/DFCanvas.cs line 124):
-   - ModMenuPanel = menuGo.AddComponent<ModMenuPanel>()
+   - ModMenuPanel = menuGo.AddComponent&lt;ModMenuPanel&gt;()
    - ModMenuPanel.Initialize(_log) - passes logger
    - ModMenuPanel.Build(canvasRoot) - uses _log internally
 
 3. **RuntimeDriver wiring** (Plugin.cs line 254):
-   - DFCanvas = gameObject.AddComponent<DFCanvas>()
+   - DFCanvas = gameObject.AddComponent&lt;DFCanvas&gt;()
    - DFCanvas.Initialize(_log) - passes logger to DFCanvas
 
 ### SetPacks() Logging Implementation
@@ -129,7 +129,7 @@ For each button click, logs:
 
 ### RuntimeDriver Wiring
 **Plugin.cs lines 301-312** (Initialize method):
-- AddComponent<UiEventInterceptor>()
+- AddComponent&lt;UiEventInterceptor&gt;()
 - interceptor.SetLogger(_log)
 - Logs successful addition
 

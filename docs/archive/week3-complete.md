@@ -361,7 +361,7 @@ All 7 tests pass. Build succeeds with 0 errors.
 
 1. **Real Asset Testing** — Run pipeline on actual Star Wars GLB/FBX models
 2. **Definition Updates** — Test definition injection with real units.yaml
-3. **Performance Benchmarking** — Optimize for 9 models < 5min total
+3. **Performance Benchmarking** — Optimize for 9 models &lt; 5min total
 4. **Visual Quality Assurance** — Verify LOD transitions look good
 5. **Addressables Runtime** — Test catalog loading in Unity
 6. **Documentation** — Update CLI reference with output examples

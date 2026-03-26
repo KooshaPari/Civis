@@ -305,7 +305,7 @@ Assertions (per size):
 
 ### Category 6: Audio Sync Validation (1 test)
 
-**Test 6.1: VFX Spawn Latency < 16ms**
+**Test 6.1: VFX Spawn Latency &lt; 16ms**
 ```
 Name: AudioSync_VFXSpawnLatency_MaintainsSubFrameBudget
 Type: Performance Test (Latency Measurement)
@@ -531,14 +531,14 @@ Models:
 - [ ] CIS blaster impacts spawn orange particles (#FF4400)
 - [ ] Lightsaber impacts render correctly
 - [ ] Impact position accuracy (no offset)
-- [ ] Impact timing (< 50ms after projectile)
+- [ ] Impact timing (&lt; 50ms after projectile)
 - [ ] Particle fade/cleanup (no pop-in artifacts)
 
 ### Unit Death Effects
 - [ ] Republic units: blue ascending disintegration
 - [ ] CIS units: orange explosive burst
 - [ ] Hero units: enhanced visual effects
-- [ ] Death audio sync (< 16ms)
+- [ ] Death audio sync (&lt; 16ms)
 - [ ] No screen shake excessive movement
 - [ ] Corpse/ragdoll not interfered with
 
@@ -552,9 +552,9 @@ Models:
 ### Performance Testing
 - [ ] Light combat (3-5 units): 60 FPS stable
 - [ ] Medium combat (20 units): 60 FPS stable
-- [ ] Heavy combat (50+ units): > 50 FPS
+- [ ] Heavy combat (50+ units): &gt; 50 FPS
 - [ ] Stress test (all 11 prefabs): no FPS drop
-- [ ] Frame time stable (no > 10ms spikes)
+- [ ] Frame time stable (no &gt; 10ms spikes)
 
 ### LOD & Culling
 - [ ] 100m away: full particles
@@ -587,11 +587,11 @@ Models:
 
 ✓ **All 23 unit tests PASS** (100% coverage)
 ✓ **All 3 integration tests PASS** (end-to-end validation)
-✓ **Performance targets met** (< 1500 particles, < 16ms latency)
-✓ **Faction colors distinct** (HSV hue > 70° difference)
+✓ **Performance targets met** (&lt; 1500 particles, &lt; 16ms latency)
+✓ **Faction colors distinct** (HSV hue &gt; 70° difference)
 ✓ **Pool lifecycle verified** (48 instances, recycling works)
 ✓ **LOD culling validated** (distance-based, performance-safe)
-✓ **Audio sync achieved** (< 16ms latency requirement)
+✓ **Audio sync achieved** (&lt; 16ms latency requirement)
 ✓ **Zero memory leaks** (pool recycling, no allocations)
 ✓ **Comprehensive documentation** (gameplayvalidation.md complete)
 

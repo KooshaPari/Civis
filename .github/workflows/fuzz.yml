@@ -14,17 +14,17 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '11.0.x'
+          dotnet-version: '8.x'
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.sln
 
       - name: Build
-        run: dotnet build src/DINOForge.CI.NoRuntime.sln --no-restore --configuration Release
+        run: dotnet build src/DINOForge.CI.sln --no-restore --configuration Release
 
       - name: Run property tests
         run: |
-          dotnet test src/DINOForge.CI.NoRuntime.sln \
+          dotnet test src/DINOForge.CI.sln \
             --no-build \
             --filter "Category=Property" \
             --configuration Release \
@@ -47,17 +47,17 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '11.0.x'
+          dotnet-version: '8.x'
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.sln
 
       - name: Build
-        run: dotnet build src/DINOForge.CI.NoRuntime.sln --no-restore --configuration Release
+        run: dotnet build src/DINOForge.CI.sln --no-restore --configuration Release
 
       - name: Run fuzz smoke tests
         run: |
-          dotnet test src/DINOForge.CI.NoRuntime.sln \
+          dotnet test src/DINOForge.CI.sln \
             --no-build \
             --filter "Category=Fuzz" \
             --configuration Release \

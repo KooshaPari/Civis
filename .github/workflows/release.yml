@@ -27,16 +27,16 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          # For workflow_dispatch retro-runs, always build from main (old tag code may not compile)
-          # inputs.tag is only used for version/name/release-upload target, not for checkout
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+          # For workflow_dispatch retro-runs, check out the specific tag's commit
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
-      # Install all SDKs: net8.0 (Installer, CLI, Tests) + net9.0 (PackCompiler) + net10.0 (global.json)
-      - name: Setup .NET 8 + 9 + 10
+      # Install both SDKs: net8.0 targets (Installer, CLI, Tests) + net9.0 (PackCompiler)
+      - name: Setup .NET 8 + 9
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
-            11.0.x
+            8.0.x
+            9.0.x
 
       # ---------------------------------------------------------------
       # Extract version metadata from the tag
@@ -61,7 +61,6 @@ jobs:
 
       # ---------------------------------------------------------------
       # Restore & build the CI solution (no game DLLs required)
-      # MSBuild will respect project reference dependencies automatically
       # ---------------------------------------------------------------
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln
@@ -457,8 +456,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          name: DINOForge ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: DINOForge ${{ github.ref_name }}
           body_path: release-notes.md
           prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
           draft: false

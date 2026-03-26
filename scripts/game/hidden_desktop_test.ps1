@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
 Validates whether Unity D3D11 games render correctly on Win32 hidden desktops.
@@ -46,6 +46,11 @@ Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Output: $outputPath" -ForegroundCol
 # ============================================================================
 # P/Invoke Definitions
 # ============================================================================
+
+# Load required assemblies
+Add-Type -AssemblyName System.Drawing
+# Load required assemblies
+Add-Type -AssemblyName System.Drawing
 
 Add-Type -TypeDefinition @"
 using System;
@@ -153,10 +158,10 @@ public class Win32Process {
 
 public class Win32Window {
     [DllImport("user32.dll", CharSet=CharSet.Auto, SetLastError=true)]
-    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+    public static extern IntPtr FindWindow(IntPtr lpClassName, string lpWindowName);
 
     [DllImport("user32.dll", CharSet=CharSet.Auto, SetLastError=true)]
-    public static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string className, string windowTitle);
+    public static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, IntPtr className, string windowTitle);
 
     [DllImport("user32.dll", SetLastError=true)]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);

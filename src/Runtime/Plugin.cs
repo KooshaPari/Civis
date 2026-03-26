@@ -653,14 +653,14 @@ namespace DINOForge.Runtime
                 _hotReloadQueued = false;
                 try
                 {
-                    _log?.LogInfo("[RuntimeDriver] HMR reload triggered...");
+                    if (_log != null) _log.LogInfo("[RuntimeDriver] HMR reload triggered...");
                     _modPlatform?.LoadPacks();
                     if (_dfCanvas != null) _dfCanvas.ToggleModMenu(); // Soft-reload UI
-                    _log?.LogInfo("[RuntimeDriver] HMR reload complete.");
+                    if (_log != null) _log.LogInfo("[RuntimeDriver] HMR reload complete.");
                 }
                 catch (Exception ex)
                 {
-                    _log?.LogWarning($"[RuntimeDriver] HMR reload failed: {ex.Message}");
+                    if (_log != null) _log.LogWarning($"[RuntimeDriver] HMR reload failed: {ex.Message}");
                 }
             }
 

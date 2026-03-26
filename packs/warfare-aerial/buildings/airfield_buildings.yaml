@@ -6,238 +6,129 @@
 - id: aviary
   display_name: Aviary
   description: Basic aerial unit training structure. Can produce tier 1 flying units.
-  building_class: Production
-  faction_id: lords_troops
-  tier: 1
-  vanilla_building_name: null
-  production:
-    unit: aerial_recon_scout
-    time: 30
-  stats:
-    hp: 500.0
-    armor: 5.0
-    range: 0.0
-    size: 3x3
+  building_type: Production
   cost:
     food: 0
     wood: 150
     stone: 50
     iron: 20
     gold: 30
-  defense_tags: [Structure, Building]
-  behavior_tags: [Production]
-  workers: 5
+  health: 500
+  production:
+    aerial_recon_scout: 1
 
 - id: wyvern_roost
   display_name: Wyvern Roost
   description: Beast lair for training wyverns and harpies. Unlocks tier 2 aerial units.
-  building_class: Production
-  faction_id: lords_troops
-  tier: 2
-  vanilla_building_name: null
-  production:
-    unit: aerial_wyvern_scout
-    time: 45
-  stats:
-    hp: 800.0
-    armor: 8.0
-    range: 0.0
-    size: 4x4
+  building_type: Production
   cost:
     food: 0
     wood: 250
     stone: 100
     iron: 50
     gold: 60
-  defense_tags: [Structure, Building]
-  behavior_tags: [Production]
-  workers: 8
+  health: 800
+  production:
+    aerial_wyvern_scout: 1
 
 # Tier 2 - Defense Tower
 
 - id: ballista_tower
   display_name: Ballista Tower
   description: Anti-air defensive tower. Excellent vs flying units, poor vs ground.
-  building_class: Defense
-  faction_id: lords_troops
-  tier: 2
-  vanilla_building_name: null
-  stats:
-    hp: 600.0
-    armor: 10.0
-    range: 25.0
-    size: 2x2
-  attack:
-    damage: 25.0
-    fire_rate: 1.5
-    accuracy: 0.8
+  building_type: Defense
   cost:
     food: 0
     wood: 100
     stone: 150
     iron: 40
     gold: 25
-  defense_tags: [Structure, Defense, AntiAir]
-  behavior_tags: [Defense, AntiAir]
+  health: 600
 
 # Tier 3 - Advanced Airfield
 
 - id: phoenix_nest
   display_name: Phoenix Nest
   description: Magical aviary for phoenixes. Unlocks tier 3 elite aerial units.
-  building_class: Production
-  faction_id: lords_troops
-  tier: 3
-  vanilla_building_name: null
-  production:
-    unit: aerial_phoenix_hatchling
-    time: 60
-  stats:
-    hp: 1200.0
-    armor: 12.0
-    range: 0.0
-    size: 5x5
+  building_type: Production
   cost:
     food: 0
     wood: 400
     stone: 200
     iron: 100
     gold: 150
-  defense_tags: [Structure, Building]
-  behavior_tags: [Production]
-  workers: 12
-  # Special: Phoenix units respawn
+  health: 1200
+  production:
+    aerial_phoenix_hatchling: 1
 
 - id: dragon_cave
   display_name: Dragon Cave
   description: Lair for dragon whelps. Produces devastating heavy aerial attackers.
-  building_class: Production
-  faction_id: lords_troops
-  tier: 3
-  vanilla_building_name: null
-  production:
-    unit: aerial_dragon_whelp
-    time: 90
-  stats:
-    hp: 1500.0
-    armor: 15.0
-    range: 0.0
-    size: 6x6
+  building_type: Production
   cost:
     food: 0
     wood: 500
     stone: 300
     iron: 150
     gold: 200
-  defense_tags: [Structure, Building, FireImmune]
-  behavior_tags: [Production]
-  workers: 15
-  # Special: Dragon units have siege capability
+  health: 1500
+  production:
+    aerial_dragon_whelp: 1
 
 # Tier 4 - Ultimate Air Fortress
 
 - id: cloud_citadel
   display_name: Cloud Citadel
   description: Legendary floating fortress. Produces roc patrols and serves as air superiority base.
-  building_class: Production
-  faction_id: lords_troops
-  tier: 4
-  vanilla_building_name: null
-  production:
-    unit: aerial_roc_patrol
-    time: 120
-  stats:
-    hp: 2500.0
-    armor: 20.0
-    range: 0.0
-    size: 8x8
+  building_type: Production
   cost:
     food: 0
     wood: 800
     stone: 500
     iron: 300
     gold: 400
-  defense_tags: [Structure, Building, Fortified]
-  behavior_tags: [Production, Command]
-  workers: 25
-  # Special: Provides aura bonus to nearby aerial units
+  health: 2500
+  production:
+    aerial_roc_patrol: 1
 
 # Faction-specific buildings
 
 - id: thunder_cannon
   display_name: Thunder Cannon
   description: Mage-crafted anti-air artillery. Devastating vs flying units.
-  building_class: Defense
-  faction_id: sarranga
-  tier: 3
-  vanilla_building_name: null
-  stats:
-    hp: 700.0
-    armor: 8.0
-    range: 35.0
-    size: 3x3
-  attack:
-    damage: 40.0
-    fire_rate: 1.0
-    accuracy: 0.85
+  building_type: Defense
   cost:
     food: 0
     wood: 150
     stone: 200
     iron: 80
     gold: 100
-  defense_tags: [Structure, Defense, AntiAir]
-  behavior_tags: [Defense, AntiAir]
-  # Special: Chain lightning effect
+  health: 700
 
 - id: boneyard
   display_name: Undead Boneyard
   description: Necromantic aerial infrastructure. Summons wraiths and spectral forces.
-  building_class: Production
-  faction_id: undead
-  tier: 3
-  vanilla_building_name: null
-  production:
-    unit: aerial_skeleton_wraith
-    time: 50
-  stats:
-    hp: 900.0
-    armor: 6.0
-    range: 0.0
-    size: 4x4
+  building_type: Production
   cost:
     food: 0
     wood: 0
     stone: 100
     iron: 60
     gold: 120
-  defense_tags: [Structure, Building, Undead]
-  behavior_tags: [Production]
-  workers: 10
-  # Special: Produces undead - doesn't need food
+  health: 900
+  production:
+    aerial_skeleton_wraith: 1
 
 - id: hive_cluster
   display_name: Hive Cluster
   description: Bug aerial production. Generates massive bee swarms.
-  building_class: Production
-  faction_id: bugs
-  tier: 2
-  vanilla_building_name: null
-  production:
-    unit: aerial_swarm_bees
-    time: 20
-  stats:
-    hp: 600.0
-    armor: 4.0
-    range: 0.0
-    size: 3x3
+  building_type: Production
   cost:
     food: 50
     wood: 0
     stone: 0
     iron: 30
     gold: 40
-  defense_tags: [Structure, Building, Biological]
-  behavior_tags: [Production]
-  workers: 8
-  # Special: Very fast production, low cost
+  health: 600
+  production:
+    aerial_swarm_bees: 1

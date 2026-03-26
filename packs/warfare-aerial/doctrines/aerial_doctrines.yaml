@@ -4,75 +4,47 @@
 - id: sky_dominance
   display_name: Sky Dominance
   description: Aerial units gain +20% damage, +10% speed. Ground units defend better vs air.
-  doctrine_class: Offensive
-  faction_id: lords_troops
-  bonuses:
-    - target: aerial
-      stat: damage
-      multiplier: 1.2
-    - target: aerial
-      stat: speed
-      multiplier: 1.1
-    - target: defense_tag:AntiAir
-      stat: damage
-      multiplier: 1.15
+  faction_archetype: order
+  modifiers:
+    aerial_damage_multiplier: 1.2
+    aerial_speed_multiplier: 1.1
+    defense_tag_antiair_bonus: 1.15
 
 - id: cloud_strike
   display_name: Cloud Strike
   description: Aerial units gain +30% damage when attacking from altitude >20. Surprise bonus.
-  doctrine_class: Tactical
-  faction_id: lords_troops
-  bonuses:
-    - target: aerial
-      stat: damage
-      multiplier: 1.3
-      condition: altitude_gt: 20
+  faction_archetype: order
+  modifiers:
+    aerial_damage_altitude_multiplier: 1.3
 
 - id: aerial_superiority
   display_name: Aerial Superiority
   description: Air-to-air combat bonus. Aerial units +25% vs other aerial units.
-  doctrine_class: Defensive
-  faction_id: lords_troops
-  bonuses:
-    - target: aerial
-      stat: damage
-      multiplier: 1.25
-      condition: target_tag: Aerial
+  faction_archetype: order
+  modifiers:
+    aerial_vs_aerial_damage_multiplier: 1.25
 
 # Faction-specific doctrines
 
 - id: swarm_formation
   display_name: Swarm Formation
   description: Bug aerial units attack faster when in groups. Bee swarms become deadlier.
-  doctrine_class: Offensive
-  faction_id: bugs
-  bonuses:
-    - target: aerial_swarm_bees
-      stat: fire_rate
-      multiplier: 1.5
-    - target: aerial_swarm_bees
-      stat: damage
-      multiplier: 1.2
+  faction_archetype: industrial_swarm
+  modifiers:
+    swarm_fire_rate_multiplier: 1.5
+    swarm_damage_multiplier: 1.2
 
 - id: undead_plague
   display_name: Undead Plague
   description: Wraiths spread fear. Enemy units near wraiths have -20% morale.
-  doctrine_class: Tactical
-  faction_id: undead
-  bonuses:
-    - target: aerial_skeleton_wraith
-      stat: morale_damage
-      multiplier: 2.0
+  faction_archetype: asymmetric
+  modifiers:
+    wraith_morale_damage_multiplier: 2.0
 
 - id: elemental_fury
   display_name: Elemental Fury
   description: Phoenix and cloud giants gain +30% damage and fire immunity.
-  doctrine_class: Offensive
-  faction_id: sarranga
-  bonuses:
-    - target: aerial_phoenix_hatchling
-      stat: damage
-      multiplier: 1.3
-    - target: aerial_cloud_giant
-      stat: damage
-      multiplier: 1.3
+  faction_archetype: order
+  modifiers:
+    phoenix_damage_multiplier: 1.3
+    cloud_giant_damage_multiplier: 1.3

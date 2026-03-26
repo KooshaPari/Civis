@@ -396,6 +396,24 @@ namespace DINOForge.Runtime.UI
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1 OK: Clone successful: '{modsButton.name}'");
                 SyncButtonVisualStyle(modsButton, settingsButton, attemptId);
 
+                // STEP 1.5: Enforce text — cloned button inherits source text ("Options"), must override
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1.5: Enforcing 'Mods' text on all text components...");
+                foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+                {
+                    legacyText.text = "Mods";
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set Text '{legacyText.name}' to 'Mods'");
+                }
+                // TMPro via reflection to avoid hard compile dependency
+                System.Type? tmpType = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+                if (tmpType != null)
+                {
+                    foreach (Component c in modsButton.GetComponentsInChildren(tmpType, true))
+                    {
+                        tmpType.GetProperty("text")?.SetValue(c, "Mods");
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set TMP_Text '{c.name}' to 'Mods'");
+                    }
+                }
+
                 // Position adjacent to Settings button
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2: Positioning Mods button after Settings button...");
                 RectTransform modsRect = modsButton.GetComponent<RectTransform>();

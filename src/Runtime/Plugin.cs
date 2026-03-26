@@ -252,6 +252,9 @@ namespace DINOForge.Runtime
         private bool _dumpOnStartup;
         private string _dumpOutputPath = "";
 
+        /// <summary>Flag set by HMR watcher thread when DINOForge_HotReload signal file is detected.</summary>
+        private static volatile bool _hotReloadQueued = false;
+
         private ModPlatform? _modPlatform;
 
         // UGUI system (preferred). Null if UGUI setup failed.
@@ -441,10 +444,41 @@ namespace DINOForge.Runtime
             // NativeMenuInjector idempotency and click routing in production runtime.
             _log.LogInfo("[RuntimeDriver] UiEventInterceptor disabled for native menu stability.");
 
-            // ── Step 4: Log key handler registration ────────────────────────────────
+            // ── Step 4: Start HMR (Hot Module Reload) signal watcher ─────────────
+            // Watches for DINOForge_HotReload signal file in BepInEx root
+            // When detected, triggers soft UI + pack reload without full game restart
+            StartHmrWatcher();
+
+            // ── Step 5: Log key handler registration ────────────────────────────────
             WriteDebug($"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
+        }
+
+        /// <summary>
+        /// Starts a background thread that monitors for the DINOForge_HotReload signal file.
+        /// When the file is detected, soft reloads the UI and packs without restarting the game.
+        /// </summary>
+        private void StartHmrWatcher()
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    string signalPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "DINOForge_HotReload");
+                    while (true)
+                    {
+                        System.Threading.Thread.Sleep(2000);
+                        if (System.IO.File.Exists(signalPath))
+                        {
+                            try { System.IO.File.Delete(signalPath); } catch { }
+                            _hotReloadQueued = true;
+                            _log?.LogInfo("[RuntimeDriver] HMR signal detected — queuing soft reload...");
+                        }
+                    }
+                }
+                catch { }
+            });
         }
 
         private void CleanupUiInterceptors()
@@ -612,6 +646,23 @@ namespace DINOForge.Runtime
             try
             {
             if (!_initialized) return;
+
+            // HMR (Hot Module Reload) signal check — reload packs + UI without restarting game
+            if (_hotReloadQueued)
+            {
+                _hotReloadQueued = false;
+                try
+                {
+                    _log?.LogInfo("[RuntimeDriver] HMR reload triggered...");
+                    _modPlatform?.LoadPacks();
+                    if (_dfCanvas != null) _dfCanvas.ToggleModMenu(); // Soft-reload UI
+                    _log?.LogInfo("[RuntimeDriver] HMR reload complete.");
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] HMR reload failed: {ex.Message}");
+                }
+            }
 
             // Debug: log heartbeat every 1 sec for first 10 heartbeats, then every 10 sec
             bool earlyHeartbeat = Time.frameCount <= 600 && Time.frameCount % 60 == 0;

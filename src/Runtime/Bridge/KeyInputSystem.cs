@@ -1,9 +1,6 @@
 #nullable enable
-using System;
 using Unity.Entities;
 using UnityEngine;
-using UnityEngine.LowLevel;
-using HarmonyLib;
 using DINOForge.Runtime;
 
 namespace DINOForge.Runtime.Bridge
@@ -12,12 +9,16 @@ namespace DINOForge.Runtime.Bridge
     /// ECS system that handles F9/F10 key input and owns the IMGUI overlay.
     /// ECS systems survive DINO's scene transitions (unlike MonoBehaviours).
     ///
-    /// Uses a Harmony postfix on PlayerLoop.SetPlayerLoop to re-inject our
-    /// DINOForgeKeyLoop entry every time DINO rebuilds the player loop.
-    /// This ensures F9/F10 work regardless of DINO's boot cycle.
+    /// Placed in SimulationSystemGroup with [AlwaysUpdateSystem] so it ticks
+    /// even at the main menu before game entities load. Without SimulationSystemGroup,
+    /// InitializationSystemGroup may not be created/ticked by DINO's ECS setup.
+    ///
+    /// IMGUI strategy: attach DebugOverlayBehaviour to DINO's own main camera
+    /// (which DINO keeps alive across transitions). We piggyback on their camera
+    /// rather than creating our own GameObject that DINO will destroy.
     /// </summary>
     [AlwaysUpdateSystem]
-    [UpdateInGroup(typeof(InitializationSystemGroup))]
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class KeyInputSystem : SystemBase
     {
         /// <summary>Called when F9 is pressed (set by RuntimeDriver if alive).</summary>
@@ -26,23 +27,20 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>Called when F10 is pressed (set by RuntimeDriver if alive).</summary>
         public static System.Action? OnF10Pressed;
 
+        private bool _overlayEnsured;
         private int _updateFrame;
-
-        private static int _playerLoopTickCount = 0;
-        private static bool _harmonyPatched = false;
-
-        // Screenshot-on-demand: external process writes trigger file, we capture and write done file.
-        private static readonly string _screenshotRequestFile = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_request.txt");
-        private static readonly string _screenshotDoneFile    = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_screenshot_done.txt");
 
         protected override void OnCreate()
         {
             WriteDebug("KeyInputSystem.OnCreate");
-            // Patch PlayerLoop.SetPlayerLoop with Harmony so we re-inject after every
-            // time DINO rebuilds its player loop (happens during world tear-down/creation).
-            PatchPlayerLoopSetPlayerLoop();
-            // Also inject immediately in case the loop is already set.
-            InjectIntoPlayerLoop();
+            Enabled = true;
+            WriteDebug($"KeyInputSystem.OnCreate complete, Enabled={Enabled}");
+        }
+
+        protected override void OnDestroy()
+        {
+            WriteDebug("KeyInputSystem.OnDestroy called");
+            base.OnDestroy();
         }
 
         protected override void OnUpdate()
@@ -52,228 +50,78 @@ namespace DINOForge.Runtime.Bridge
                 _updateFrame++;
                 // Log every frame for first 5 frames, then every 600
                 if (_updateFrame <= 5 || _updateFrame % 600 == 0)
-                    WriteDebug($"OnUpdate frame={_updateFrame} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
+                    WriteDebug($"[KeyInputSystem.OnUpdate] frame={_updateFrame} enabled={Enabled} overlayEnsured={_overlayEnsured} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
 
-                // Resurrect PersistentRoot if needed (runs on main thread — safe to call Unity APIs)
-                if (Plugin.NeedsResurrection && Plugin.PersistentRoot == null)
+                // PlayerLoop drain injection has been removed in this version.
+
+                // If PersistentRoot was destroyed by DINO, resurrect it via ECS
+                Plugin.TryResurrect("(ECS tick)", "KeyInputSystem");
+
+                // Consume any pending F9/F10 toggles (for future compatibility)
+                if (Plugin.PendingF9Toggle)
                 {
-                    WriteDebug("Resurrection triggered from KeyInputSystem (main thread)");
-                    Plugin.NeedsResurrection = false;
-                    try
-                    {
-                        GameObject root = new GameObject("DINOForge_Root");
-                        root.hideFlags = HideFlags.HideAndDontSave;
-                        UnityEngine.Object.DontDestroyOnLoad(root);
-                        Plugin.PersistentRoot = root;
-                        RuntimeDriver driver = root.AddComponent<RuntimeDriver>();
-                        driver.Initialize(Plugin.ResurrectionLog, Plugin.ResurrectionConfig, Plugin.ResurrectionDump, Plugin.ResurrectionDumpPath);
-                        WriteDebug("Resurrection complete — new root created from KeyInputSystem");
-                    }
-                    catch (Exception ex)
-                    {
-                        WriteDebug($"Resurrection FAILED in KeyInputSystem: {ex.Message}");
-                    }
+                    Plugin.PendingF9Toggle = false;
+                    WriteDebug("Consumed PendingF9Toggle");
+                }
+                if (Plugin.PendingF10Toggle)
+                {
+                    Plugin.PendingF10Toggle = false;
+                    WriteDebug("Consumed PendingF10Toggle");
                 }
 
-                if (Input.GetKeyDown(KeyCode.F9))
+                // Ensure overlay component is attached to a surviving GameObject
+                if (!_overlayEnsured)
+                    EnsureOverlay();
+
+                // Poll Unity Input for F9/F10
+                bool f9  = Input.GetKeyDown(KeyCode.F9);
+                bool f10 = Input.GetKeyDown(KeyCode.F10);
+
+                if (f9)
                 {
                     WriteDebug("F9 pressed");
-                    OnF9Pressed?.Invoke();
+                    if (OnF9Pressed != null)
+                        OnF9Pressed.Invoke();
+                    else
+                        DebugOverlayBehaviour.Instance?.Toggle();
                 }
 
-                if (Input.GetKeyDown(KeyCode.F10))
+                if (f10)
                 {
                     WriteDebug("F10 pressed");
                     OnF10Pressed?.Invoke();
                 }
-
             }
-            catch { }
+            catch (System.Exception ex)
+            {
+                WriteDebug($"KeyInputSystem.OnUpdate EXCEPTION: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
-
-        private static void PatchPlayerLoopSetPlayerLoop()
+        private void EnsureOverlay()
         {
-            if (_harmonyPatched) return;
-            try
+            if (DebugOverlayBehaviour.Instance != null)
             {
-                var harmony = new Harmony("dinoforge.keyinput.playerloop");
-                var original = typeof(PlayerLoop).GetMethod(
-                    nameof(PlayerLoop.SetPlayerLoop),
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (original == null)
-                {
-                    WriteDebug("KeyInputSystem: PlayerLoop.SetPlayerLoop method not found via reflection");
-                    return;
-                }
-                var postfix = typeof(KeyInputSystem).GetMethod(
-                    nameof(SetPlayerLoopPostfix),
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                harmony.Patch(original, postfix: new HarmonyMethod(postfix));
-                _harmonyPatched = true;
-                WriteDebug("KeyInputSystem: Harmony postfix on PlayerLoop.SetPlayerLoop applied");
+                _overlayEnsured = true;
+                return;
             }
-            catch (Exception ex)
+
+            // Try to piggyback on DINO's main camera — DINO keeps it alive
+            Camera? cam = Camera.main;
+            if (cam == null)
             {
-                WriteDebug($"KeyInputSystem: Harmony patch failed: {ex.GetType().Name}: {ex.Message}");
+                // Camera not ready yet — try all cameras
+                Camera[] cams = Camera.allCameras;
+                if (cams.Length > 0) cam = cams[0];
+            }
+
+            if (cam != null)
+            {
+                cam.gameObject.AddComponent<DebugOverlayBehaviour>();
+                _overlayEnsured = true;
+                WriteDebug($"EnsureOverlay: attached DebugOverlayBehaviour to camera '{cam.name}'");
             }
         }
-
-        // Postfix called after every PlayerLoop.SetPlayerLoop — re-injects our entry.
-        private static void SetPlayerLoopPostfix() => InjectIntoPlayerLoop();
-
-        private static volatile bool _injectingNow = false;
-
-        private static void InjectIntoPlayerLoop()
-        {
-            // Reentrancy guard: our own SetPlayerLoop call would re-trigger the Harmony postfix
-            if (_injectingNow) return;
-            _injectingNow = true;
-            try
-            {
-                var loop = PlayerLoop.GetCurrentPlayerLoop();
-                var rootSubsystems = new System.Collections.Generic.List<PlayerLoopSystem>(loop.subSystemList ?? System.Array.Empty<PlayerLoopSystem>());
-
-                // Find the Update subsystem
-                int updateIdx = -1;
-                for (int i = 0; i < rootSubsystems.Count; i++)
-                {
-                    if (rootSubsystems[i].type == typeof(UnityEngine.PlayerLoop.Update))
-                    {
-                        updateIdx = i;
-                        break;
-                    }
-                }
-
-                if (updateIdx < 0)
-                {
-                    WriteDebug($"KeyInputSystem: WARNING - Update subsystem not found. Root subsystems: {rootSubsystems.Count}");
-                    // Fallback: inject directly into root
-                    var entry = new PlayerLoopSystem { type = typeof(DINOForgeKeyLoop), updateDelegate = PlayerLoopTick };
-                    rootSubsystems.Add(entry);
-                    loop.subSystemList = rootSubsystems.ToArray();
-                    PlayerLoop.SetPlayerLoop(loop);
-                    WriteDebug("KeyInputSystem: PlayerLoop injection into ROOT (fallback) successful");
-                    return;
-                }
-
-                var updateSystem = rootSubsystems[updateIdx];
-                var updateSubsystems = new System.Collections.Generic.List<PlayerLoopSystem>(updateSystem.subSystemList ?? System.Array.Empty<PlayerLoopSystem>());
-
-                // Remove any existing DINOForgeKeyLoop entries (avoid duplicates on re-inject)
-                updateSubsystems.RemoveAll(s => s.type == typeof(DINOForgeKeyLoop));
-
-                // Append our entry
-                updateSubsystems.Add(new PlayerLoopSystem { type = typeof(DINOForgeKeyLoop), updateDelegate = PlayerLoopTick });
-                updateSystem.subSystemList = updateSubsystems.ToArray();
-                rootSubsystems[updateIdx] = updateSystem;
-
-                loop.subSystemList = rootSubsystems.ToArray();
-                PlayerLoop.SetPlayerLoop(loop);
-
-                WriteDebug($"KeyInputSystem: PlayerLoop injection successful (Update has {updateSubsystems.Count} subsystems)");
-            }
-            catch (Exception ex)
-            {
-                WriteDebug($"KeyInputSystem: PlayerLoop injection failed: {ex.GetType().Name}: {ex.Message}");
-            }
-            finally
-            {
-                _injectingNow = false;
-            }
-        }
-
-        private static void PlayerLoopTick()
-        {
-            try
-            {
-                _playerLoopTickCount++;
-
-                // Heartbeat: first tick + every 600 ticks (~10s at 60fps)
-                if (_playerLoopTickCount == 1 || _playerLoopTickCount % 600 == 0)
-                {
-                    WriteDebug($"[KeyInputSystem] PlayerLoop tick #{_playerLoopTickCount}");
-                }
-
-                // Check F9
-                if (Input.GetKeyDown(KeyCode.F9))
-                {
-                    WriteDebug("F9 pressed (from PlayerLoop)");
-                    OnF9Pressed?.Invoke();
-                }
-
-                // Check F10
-                if (Input.GetKeyDown(KeyCode.F10))
-                {
-                    WriteDebug("F10 pressed (from PlayerLoop)");
-                    OnF10Pressed?.Invoke();
-                }
-
-                // Check resurrection
-                if (Plugin.NeedsResurrection && Plugin.PersistentRoot == null)
-                {
-                    WriteDebug("Resurrection triggered from PlayerLoopTick");
-                    Plugin.TryResurrect("(PlayerLoopTick)", "PlayerLoopTick");
-                }
-
-                // Screenshot-on-demand: check trigger file ~10x/sec (MAIN THREAD ONLY — safe for ScreenCapture)
-                if (_playerLoopTickCount % 6 == 0)
-                {
-                    try
-                    {
-                        if (_pendingScreenshotDone != null)
-                        {
-                            // Wait at least 60 ticks for Unity to write the screenshot
-                            _screenshotWaitTicks++;
-                            if (_screenshotWaitTicks >= 60)
-                            {
-                                var fi = new System.IO.FileInfo(_pendingScreenshotDone);
-                                fi.Refresh();
-                                if (fi.Exists && fi.Length > 1000)
-                                {
-                                    System.IO.File.WriteAllText(_screenshotDoneFile, _pendingScreenshotDone);
-                                    WriteDebug($"Screenshot done ({fi.Length} bytes): {_pendingScreenshotDone}");
-                                    _pendingScreenshotDone = null;
-                                    _screenshotWaitTicks = 0;
-                                }
-                                else if (_screenshotWaitTicks > 300)
-                                {
-                                    WriteDebug($"Screenshot GAVE UP: {_pendingScreenshotDone}");
-                                    _pendingScreenshotDone = null;
-                                    _screenshotWaitTicks = 0;
-                                }
-                            }
-                        }
-                        else if (System.IO.File.Exists(_screenshotRequestFile))
-                        {
-                            string screenshotPath = System.IO.File.ReadAllText(_screenshotRequestFile).Trim();
-                            System.IO.File.Delete(_screenshotRequestFile);
-                            if (string.IsNullOrEmpty(screenshotPath))
-                                screenshotPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshot.png");
-                            try { if (System.IO.File.Exists(screenshotPath)) System.IO.File.Delete(screenshotPath); } catch { }
-                            WriteDebug($"Screenshot requested (PlayerLoop): {screenshotPath}");
-                            ScreenCapture.CaptureScreenshot(screenshotPath);
-                            _pendingScreenshotDone = screenshotPath;
-                            _screenshotWaitTicks = 0;
-                        }
-                    }
-                    catch { }
-                }
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    WriteDebug($"PlayerLoopTick exception: {ex.Message}\n{ex.StackTrace}");
-                }
-                catch { }
-            }
-        }
-
-        private static string? _pendingScreenshotDone = null;
-        private static int _screenshotWaitTicks = 0;
-
-        private struct DINOForgeKeyLoop { }
 
         private static void WriteDebug(string msg)
         {

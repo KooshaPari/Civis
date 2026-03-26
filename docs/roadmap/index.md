@@ -56,7 +56,7 @@ Pack compiler CLI, validator CLI, test harness, diff tools, diagnostics.
 - PackCompiler CLI (validate, build, assets commands)
 - DumpTools CLI with Spectre.Console interactive terminal UI
 - `dinoforge` CLI with 11 commands (status, query, override, reload, watch, dump, resources, screenshot, verify, component-map, etc.)
-- MCP Server with 17 game interaction tools for Claude Code integration
+- MCP Server with 13 game interaction tools for Claude Code integration
 
 ---
 
@@ -202,7 +202,7 @@ Fill test gaps and resolve build-excluded incomplete code items.
 - **17 schemas** covering all content types
 - **6 example packs** demonstrating all mod categories (Modern, Star Wars, Guerrilla, Economy, Scenario, Balance)
 - **4 domain plugins**: Warfare (done), Economy, Scenario, UI
-- **17 MCP tools** for Claude Code integration
+- **13 MCP tools** for Claude Code integration
 - **11 CLI commands** via `dinoforge` CLI
 
 ---

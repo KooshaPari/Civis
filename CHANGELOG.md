@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Regressions (Blocking; fixes in progress)
 
+- **F9/F10 key input broken** (RT-003, RT-004) — Win32 watcher hook fires but `KeyInputSystem.OnInput` not reached; `RuntimeDriver.OnDestroy` fires unexpectedly at frame ~6s (see RT-005)
+- **RuntimeDriver.OnDestroy fires early** (RT-005, NATIVE-001/003) — Root GameObject with `HideAndDontSave` destroyed at frame ~6s instead of persisting ≥ 600 frames; blocks native "Mods" button injection + F9/F10 hotkey survival
 - **UGUI overlay visibility** (OVL-006) — HudStrip `AlphaBase` suppression fix merged; awaits verification in live game
 
 ## [Unreleased]

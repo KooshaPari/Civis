@@ -13,6 +13,14 @@ captions, highlight overlays, color-coded labels — then open the finished vide
 6. Post-processes with ffmpeg: animated callout boxes, labels, caption bar, audio mix
 7. Opens finished demo video in default player (H.264 baseline, compatible everywhere)
 
+## Implementation
+
+The production script is at `scripts/game/prove-features-video.ps1`. Run it directly:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/game/prove-features-video.ps1
+```
+This implements the full SPEC-006 pipeline: game launch → bootstrap detection → TTS generation → gdigrab recording → F9/F10 injection → ffmpeg post-processing → H.264 output → auto-open.
+
 ---
 
 ## Requirements

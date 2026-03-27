@@ -16,7 +16,7 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 - **Warfare Domain** — Faction archetypes (Order, Industrial Swarm, Asymmetric), doctrines, unit role validation, wave composition, balance calculation
 - **Star Wars Clone Wars Pack** — 28 units (Republic + CIS) and 10 buildings with visual assets, prefabs, and Addressables entries
 - **Dev Tooling** — PackCompiler CLI, DumpTools, in-game debug overlay, entity dumper
-- **MCP Server** — 17 game automation tools (screenshot capture, UI element detection, input injection, state navigation)
+- **MCP Server** — game automation and analysis tools (screenshot capture, UI automation, input injection, state and catalog queries)
 - **Schema Validation** — 10 JSON schemas catch errors before runtime
 
 ## Milestone Status
@@ -200,7 +200,7 @@ sequenceDiagram
 
 ## MCP Server Tools
 
-The `dinoforge` MCP server provides 17 game automation and analysis tools for Claude Code integration:
+The `dinoforge` MCP server provides a core set of game automation and analysis tools for Claude Code integration (39+ tools total in server runtime):
 
 | Tool | Purpose |
 |------|---------|
@@ -252,6 +252,14 @@ In Claude Code, use URL transport configuration:
 
 `.claude/mcp-servers.json` is already checked in with this URL transport. Copy it to your
 user-level `~/.claude/mcp-servers.json` (or the local equivalent in `%APPDATA%`) and restart CC.
+
+For unattended harness startup, have CC/session hooks run:
+
+```powershell
+.\scripts\start-mcp.ps1 -Action start -Detached
+```
+
+before MCP tool calls. Set `DINOFORGE_MCP_WATCH=1` (or pass `-Watch`) if you want `hot-reload.ps1 -Watch` to run automatically.
 
 ## Project Structure
 

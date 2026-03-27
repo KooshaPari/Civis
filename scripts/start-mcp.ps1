@@ -18,7 +18,6 @@ Environment variables:
   DINOFORGE_PYTHON: Optional path to python executable (default: python in PATH)
 
 Endpoints:
-Endpoints:
   JSON-RPC: http://127.0.0.1:8765/messages
   SSE: http://127.0.0.1:8765/sse
   HMR: POST http://127.0.0.1:8765/hmr (trigger pack reload notification)
@@ -36,6 +35,10 @@ param(
     [switch]$Detached,
     [switch]$Watch
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$HealthProbeUrl = "http://$McpHost`:$Port/health"
+$effectiveWatch = $Watch -or ($env:DINOFORGE_MCP_WATCH -in @("1", "true", "True", "TRUE", "on", "ON"))
 
 function Get-ScriptState {
     param([string]$PidFile, [string]$ExpectedName)
@@ -82,6 +85,29 @@ function Wait-ForTcpPort {
     return $false
 }
 
+function Test-HttpHealth {
+    param([string]$Url)
+    try {
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec 1 -Method GET -ErrorAction Stop
+        return $response.StatusCode -eq 200
+    }
+    catch {
+        return $false
+    }
+}
+
+function Wait-ForHttpHealth {
+    param([string]$Url, [int]$TimeoutSeconds = 20)
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-HttpHealth -Url $Url) {
+            return $true
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    return $false
+}
+
 function Start-ProcessDetached {
     param(
         [string]$FilePath,
@@ -91,7 +117,7 @@ function Start-ProcessDetached {
         [string]$LogFile
     )
 
-    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -WorkingDirectory $WorkingDirectory -PassThru -NoNewWindow -WindowStyle Hidden -RedirectStandardOutput $LogFile -RedirectStandardError $LogFile
+    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -WorkingDirectory $WorkingDirectory -PassThru -WindowStyle Hidden -RedirectStandardOutput $LogFile -RedirectStandardError $LogFile
     $process.Id | Set-Content -Path $PidFile
     Write-Host "[MCP] Started detached process PID=$($process.Id)" -ForegroundColor Cyan
     return $process
@@ -112,7 +138,8 @@ function Start-WatcherDetached {
         return $existing
     }
 
-    $watcher = Start-Process -FilePath "pwsh" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $watcherScript, "-Watch") -PassThru -NoNewWindow -WindowStyle Hidden
+    $watcherLogFile = Join-Path $runtimeStateDir "mcp-hot-reload-watcher.log"
+    $watcher = Start-Process -FilePath (Get-Command pwsh).Source -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $watcherScript, "-Watch") -PassThru -WindowStyle Hidden -RedirectStandardOutput $watcherLogFile -RedirectStandardError $watcherLogFile
     $watcher.Id | Set-Content -Path $PidFile
     Write-Host "[MCP] Started hot-reload watcher PID=$($watcher.Id)" -ForegroundColor Cyan
     return $watcher
@@ -150,18 +177,28 @@ New-Item -ItemType Directory -Path $runtimeStateDir -Force | Out-Null
 
 if ($Action -eq "status") {
     $proc = Get-ScriptState -PidFile $mcpPidFile -ExpectedName "python|pwsh"
+    $listener = Wait-ForTcpPort -ServerHost $McpHost -Port $Port -TimeoutSeconds 1
+    $health = Test-HttpHealth -Url $HealthProbeUrl
+
     if ($proc) {
         Write-Host "[MCP] Status: running" -ForegroundColor Green
         Write-Host "  PID: $($proc.Id)"
         Write-Host "  Name: $($proc.ProcessName)"
     }
+    elseif ($listener -and $health) {
+        Write-Host "[MCP] Status: running (untracked process)" -ForegroundColor Yellow
+    }
+    elseif ($listener) {
+        Write-Host "[MCP] Status: port in use, health failed" -ForegroundColor Yellow
+    }
     else {
         Write-Host "[MCP] Status: stopped" -ForegroundColor Yellow
     }
 
-    $listener = Wait-ForTcpPort -ServerHost $McpHost -Port $Port -TimeoutSeconds 1
     $listenerColor = if ($listener) { "Green" } else { "Yellow" }
+    $healthColor = if ($health) { "Green" } else { "Yellow" }
     Write-Host "  Port ${McpHost}:${Port} listener: $([string]$listener)" -ForegroundColor $listenerColor
+    Write-Host "  Health /health: $([string]$health)" -ForegroundColor $healthColor
     exit
 }
 
@@ -187,15 +224,29 @@ if ($Action -in @("stop", "restart")) {
 # Idempotent check: exit if already running on port
 $portListener = Wait-ForTcpPort -ServerHost $McpHost -Port $Port -TimeoutSeconds 1
 if ($portListener) {
-    Write-Host "[MCP] Server already running on ${McpHost}:${Port}" -ForegroundColor Green
-    exit 0
+    if (Test-HttpHealth -Url $HealthProbeUrl) {
+        Write-Host "[MCP] Server already running on ${McpHost}:${Port} with active /health" -ForegroundColor Green
+        exit 0
+    }
+
+    if (Get-ScriptState -PidFile $mcpPidFile -ExpectedName "python|pwsh") {
+        Write-Host "[MCP] Port ${McpHost}:${Port} open and PID file appears owned, but /health is not responding yet. Retry startup in 2s..." -ForegroundColor Yellow
+        Start-Sleep 2
+        if (Test-HttpHealth -Url $HealthProbeUrl) {
+            Write-Host "[MCP] Health is online after warmup; MCP is ready." -ForegroundColor Green
+            exit 0
+        }
+    }
+
+    Write-Host "[MCP] Port ${McpHost}:${Port} is already open but does not look like MCP health endpoint. Abort to avoid overriding active service." -ForegroundColor Red
+    exit 1
 }
 
 $current = Get-ScriptState -PidFile $mcpPidFile -ExpectedName "python|pwsh"
 if ($Action -eq "start") {
     if ($current) {
         Write-Host "[MCP] Already running (PID=$($current.Id)). Use -Action restart or -Action stop." -ForegroundColor Yellow
-        if ($Watch -and -not (Get-ScriptState -PidFile $watcherPidFile -ExpectedName "pwsh")) {
+        if ($effectiveWatch -and -not (Get-ScriptState -PidFile $watcherPidFile -ExpectedName "pwsh")) {
             Start-WatcherDetached -RepoRoot $repoRoot -PidFile $watcherPidFile | Out-Null
         }
         exit 0
@@ -227,17 +278,23 @@ if ($Detached) {
         Write-Host "[MCP] Warning: port did not open within timeout. Check log: $mcpLogFile" -ForegroundColor Yellow
         exit 1
     }
+    if (-not (Wait-ForHttpHealth -Url $HealthProbeUrl -TimeoutSeconds 15)) {
+        Write-Host "[MCP] Warning: MCP process started but /health probe did not respond within timeout. Check log: $mcpLogFile" -ForegroundColor Yellow
+        exit 1
+    }
 
     Write-Host "[MCP] PID file: $mcpPidFile" -ForegroundColor Cyan
     Write-Host "[MCP] Log file: $mcpLogFile" -ForegroundColor Cyan
-    Write-Host "[MCP] URL: http://$McpHost`:$Port/messages" -ForegroundColor Cyan
-    if ($Watch) {
+    Write-Host "[MCP] JSON-RPC endpoint: http://$McpHost`:$Port/messages" -ForegroundColor Cyan
+    Write-Host "[MCP] SSE endpoint: http://$McpHost`:$Port/sse" -ForegroundColor Cyan
+    Write-Host "[MCP] Health endpoint: $HealthProbeUrl" -ForegroundColor Cyan
+    if ($effectiveWatch) {
         Start-WatcherDetached -RepoRoot $repoRoot -PidFile $watcherPidFile | Out-Null
     }
     exit 0
 }
 
-if ($Watch) {
+if ($Watch -or $effectiveWatch) {
     Write-Host "[MCP] WARNING: -Watch requires -Detached when combined with foreground MCP start." -ForegroundColor Yellow
     Write-Host "[MCP] Re-run with -Detached -Watch to keep both processes alive." -ForegroundColor Yellow
 }

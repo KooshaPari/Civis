@@ -135,7 +135,7 @@ DINOForge/
       UI/                #   UI/UX domain plugin (HUD injection, menu management)
     Tools/
       Cli/               #   dinoforge CLI (status, query, override, reload, watch, etc.)
-      McpServer/         #   MCP server for Claude Code integration (13 game tools)
+      DinoforgeMcp/      #   FastMCP server for Claude Code integration (HTTP/SSE + stdio)
       PackCompiler/      #   Pack compiler: validate, build, package packs
       DumpTools/         #   Entity/component dump analysis (Spectre.Console)
       Installer/         #   PowerShell/Bash installer for BepInEx + DINOForge
@@ -389,7 +389,7 @@ G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\
 
 ### MCP Bridge (game automation)
 
-The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 tools:
+The `dinoforge` MCP server (registered in MCP transport config) exposes:
 
 | Tool | Purpose |
 |------|---------|
@@ -410,7 +410,12 @@ The `dinoforge` MCP server (registered in `~/.claude/settings.json`) exposes 17 
 | `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |
 | `game_navigate_to` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
 
-**Build MCP server before use**: `dotnet build src/Tools/McpServer/DINOForge.Tools.McpServer.csproj -c Release`
+The runtime includes additional asset, catalog, logging, and pack-management tools beyond this excerpt (full tool surface is maintained in `src/Tools/DinoforgeMcp/dinoforge_mcp/server.py`).
+
+MCP runs from the FastMCP Python server in HTTP mode on `http://127.0.0.1:8765` and is managed by
+`scripts/start-mcp.ps1`.
+
+**Runbook**: `.\scripts\start-mcp.ps1 -Action start -Detached` (or add it to your CC start/prompt hooks).
 
 ### Agent Slash Commands for Game Work
 

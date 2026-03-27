@@ -14,7 +14,7 @@ Manage the long-lived DINOForge MCP harness used by CC game automation.
 
 Runs `./scripts/start-mcp.ps1` in managed mode and prints the current lifecycle state.
 
-- `-watch`: starts companion `scripts/game/hot-reload.ps1 -Watch` so runtime reloads notify MCP automatically.
+- `--watch`: starts companion `scripts/game/hot-reload.ps1 -Watch` so runtime reloads notify MCP automatically.
 - `stop`: stop running MCP + watcher.
 - `status`: show PID + listener state.
 

@@ -4,59 +4,28 @@ FastMCP 3.0 server for DINOForge game automation.
 
 ## Features
 
-### Tools (21)
+### Tools (39+)
 
-**Game State (3)**
-- `game_status` - Check if game is running
-- `game_resources` - Get resources (gold, wood, food)
-- `game_packs` - Get loaded mod packs
+`server.py` exports nearly 40 FastMCP tools covering:
 
-**Entity Management (2)**
-- `query_entities` - Query ECS entities by component
-- `spawn_unit` - Spawn unit at position
+- Game launch/state/input
+- Screenshot + screen analysis
+- ECS/entity query and stat tooling
+- Mod pack and asset tooling
+- Catalog/debug utilities
+- Runtime reload and HMR signaling
 
-**UI Automation (5)**
-- `ui_tree` - Capture UI hierarchy
-- `ui_query` - Query UI elements
-- `ui_click` - Click UI element
-- `ui_wait` - Wait for UI state
-- `ui_expect` - Assert UI condition
+### Resources
 
-**Mod Operations (2)**
-- `apply_override` - Apply stat override
-- `reload_packs` - Hot reload mods
+- `game://status`
+- `game://resources`
+- `game://packs`
+- `game://ui-tree`
+- `game://entities`
 
-**Screenshots (1)**
-- `take_screenshot` - Capture game screenshot
+### Prompts
 
-**Asset Pipeline (5)**
-- `asset_list` - List pack assets
-- `asset_validate` - Validate assets
-- `asset_import` - Import assets
-- `asset_optimize` - Optimize/generate LOD
-- `asset_build` - Full pipeline build
-
-**Pack Operations (2)**
-- `pack_validate` - Validate pack YAML
-- `pack_build` - Build pack
-
-**Debug (3)**
-- `dump_world` - Dump world state
-- `dump_entities` - Dump entities
-- `component_map` - Get ECS mapping
-
-### Resources (5)
-- `game://status` - Game status
-- `game://resources` - Resources
-- `game://packs` - Packs
-- `game://ui-tree` - UI hierarchy
-- `game://entities` - Entities
-
-### Prompts (4)
-- `debug_prompt` - Debug workflow
-- `testing_prompt` - UI testing workflow
-- `modding_prompt` - Mod development
-- `asset_pipeline_prompt` - Asset pipeline
+Debug/testing prompts are registered directly in the MCP runtime and kept in sync with tool surfaces.
 
 ## FastMCP 3.0 Features
 
@@ -103,6 +72,13 @@ For quick local startup from the repo, use the managed launcher:
 ```
 
 Add `-Watch` for companion hot-reload signaling.
+Set `DINOFORGE_MCP_WATCH=1` if you'd rather keep watcher enabled automatically.
+
+If you want MCP to stay resident across tool sessions, install a managed launcher:
+
+- **Windows**: use `scripts/services/windows/register-mcp-task.ps1 -Install`
+- **Linux**: use `scripts/services/systemd/dinoforge-mcp.service`
+- **macOS**: use `scripts/services/launchd/com.dinoforge.mcp.plist`
 
 ## Usage
 
@@ -113,8 +89,8 @@ python -m dinoforge_mcp.server --http --port 8765 --host 127.0.0.1
 # Run with default foreground settings
 python -m dinoforge_mcp.server --http
 
-# Or use the included config
-cp .claude/mcp-servers.json ~/.claude/settings.json
+# Or use the included MCP transport config as a separate file
+cp .claude/mcp-servers.json ~/.claude/mcp-servers.json
 ``` 
 
 ## Architecture

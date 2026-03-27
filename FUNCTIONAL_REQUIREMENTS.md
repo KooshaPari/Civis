@@ -355,3 +355,35 @@
 - [ ] Role enforcement verified by integration tests covering all three role tiers
 **Traces to**: E3.7
 **Status**: Planned
+
+---
+
+## FR-METRICS: Simulation Metrics
+
+### FR-METRICS-001: Metrics Struct
+**Priority**: SHALL
+**Description**: The `Metrics` struct SHALL define four f64 fields: `waste_joules` (10% of consumption), `surplus_joules` (energy budget minus consumption, floored at 0), `tyranny_index` (consumption / (budget+1), capped at 1.0), `legitimacy_index` (1.0 - tyranny_index, floored at 0).
+**Acceptance Criteria**:
+- [ ] `compute(1000.0, 500.0)` returns `waste_joules=50.0`, `surplus_joules=500.0`
+- [ ] When `consumption >= budget`, `tyranny_index > 0.9` and `legitimacy_index < 0.1`
+- [ ] All fields are `f64`; struct is `Debug`, `Clone`, `Copy`, `Default`
+**Traces to:** E5 (Research Sandbox / Policy Analysis)
+**Code:** `crates/engine/src/metrics.rs`
+
+### FR-METRICS-002: Metrics Computation
+**Priority**: SHALL
+**Description**: The `compute(energy_budget_joules: f64, consumption_joules: f64) -> Metrics` function SHALL compute all four metrics in constant time O(1) using only arithmetic operations with no I/O or allocations.
+**Acceptance Criteria**:
+- [ ] Function has no side effects; identical inputs always produce identical outputs
+- [ ] Function is callable from the ECS tick loop without performance regression (P99 < 1 µs)
+**Traces to:** FR-CORE-003 (Deterministic Transition Phase)
+**Code:** `crates/engine/src/metrics.rs`
+
+### FR-METRICS-003: Fixed-Point Determinism for Metrics
+**Priority**: SHALL
+**Description**: Tyranny and legitimacy indices SHALL be computed using the fixed-point `Fixed` type (i64 scaled by 10^6) when deterministic cross-platform reproduction is required; float variants are provided for research export only.
+**Acceptance Criteria**:
+- [ ] Fixed-point and float results agree to within 6 decimal places for identical inputs
+- [ ] Replay verification uses fixed-point metrics exclusively
+**Traces to:** FR-REPLAY-002 (Bit-Identical Determinism Verification)
+**Code:** `crates/engine/src/lib.rs` — `Fixed` type

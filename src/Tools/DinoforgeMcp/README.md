@@ -73,33 +73,49 @@ FastMCP 3.0 server for DINOForge game automation.
 pip install fastmcp pydantic
 ```
 
+## FastMCP Runtime (HTTP/SSE)
+
+The server defaults to HTTP/SSE when `--http --port 8765 --host 127.0.0.1` is supplied. This is the recommended
+mode for live-reload and long-lived MCP clients because the process stays running while game DLLs are rebuilt.
+
+```bash
+python -m dinoforge_mcp.server --http --port 8765 --host 127.0.0.1
+```
+
 ## Claude Code Integration
 
-Add to your Claude Code settings:
+Recommended CC config (URL transport):
 
 ```json
 {
   "mcpServers": {
     "dinoforge": {
-      "command": "python",
-      "args": ["-m", "dinoforge_mcp.server"],
-      "env": {
-        "DINOFORGE_CLI_PATH": "src/Tools/Cli"
-      }
+      "url": "http://127.0.0.1:8765"
     }
   }
 }
 ```
 
+For quick local startup from the repo, use the managed launcher:
+
+```powershell
+./scripts/start-mcp.ps1 -Detached
+```
+
+Add `-Watch` for companion hot-reload signaling.
+
 ## Usage
 
 ```bash
 # Run standalone
-python -m dinoforge_mcp.server
+python -m dinoforge_mcp.server --http --port 8765 --host 127.0.0.1
+
+# Run with default foreground settings
+python -m dinoforge_mcp.server --http
 
 # Or use the included config
 cp .claude/mcp-servers.json ~/.claude/settings.json
-```
+``` 
 
 ## Architecture
 

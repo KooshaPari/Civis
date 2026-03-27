@@ -29,6 +29,8 @@ from typing import Any
 from dotenv import load_dotenv
 from fastmcp import FastMCP, Context
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
+from starlette.requests import Request
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG if os.getenv("DINOFORGE_MCP_DEBUG") else logging.WARNING)
@@ -637,6 +639,16 @@ async def debug_log_resource() -> str:
 async def catalog_resource() -> str:
     result = await catalog_bundles(None)  # type: ignore[arg-type]
     return json.dumps(result, indent=2)
+
+
+# ===========================================================================
+# HEALTH CHECK ENDPOINT
+# ===========================================================================
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request):
+    """Health check endpoint for service monitoring and startup verification."""
+    return JSONResponse({"status": "ok", "server": "dinoforge-mcp", "version": "0.13.0"})
 
 
 # ===========================================================================

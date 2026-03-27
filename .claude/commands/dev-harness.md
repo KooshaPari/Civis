@@ -1,0 +1,47 @@
+---
+description: Start and manage the DINOForge development harness (MCP + optional HMR watcher).
+---
+
+# dev-harness
+
+Manage the long-lived DINOForge MCP harness used by CC game automation.
+
+**Usage**: `/dev-harness [--watch]`
+
+**Arguments**: $ARGUMENTS
+
+## What This Does
+
+Runs `./scripts/start-mcp.ps1` in managed mode and prints the current lifecycle state.
+
+- `-watch`: starts companion `scripts/game/hot-reload.ps1 -Watch` so runtime reloads notify MCP automatically.
+- `stop`: stop running MCP + watcher.
+- `status`: show PID + listener state.
+
+## Default Actions
+
+1. If MCP is not running:
+   - start it with `./scripts/start-mcp.ps1 -Detached`
+   - start hot-reload watcher if `--watch` is supplied
+2. If MCP is already running:
+   - print PID and endpoint details
+3. Verify port listener is active and report URL:
+   - `http://127.0.0.1:8765/messages`
+
+## Usage Examples
+
+```powershell
+# Start MCP only
+/dev-harness
+
+# Start MCP + hot-reload companion
+/dev-harness --watch
+
+# Check status
+./scripts/start-mcp.ps1 -Action status
+
+# Stop
+./scripts/start-mcp.ps1 -Action stop
+```
+
+If MCP is not running, CC automation calling HTTP tools will fail until this command is executed once in the session.

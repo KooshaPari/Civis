@@ -221,7 +221,37 @@ The `dinoforge` MCP server provides 17 game automation and analysis tools for Cl
 | `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |
 | `game_navigate_to` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
 
-**Build MCP server**: `dotnet build src/Tools/McpServer/DINOForge.Tools.McpServer.csproj -c Release`
+## MCP Runtime Mode (Recommended)
+
+The MCP server runs in persistent HTTP mode on `http://127.0.0.1:8765` and is the active default for CC.
+
+Quick start:
+
+```powershell
+# Start MCP once in the background (plus optional hot-reload watcher)
+./scripts/start-mcp.ps1 -Detached -Watch
+
+# Check health/status
+./scripts/start-mcp.ps1 -Action status
+
+# Stop cleanly
+./scripts/start-mcp.ps1 -Action stop
+```
+
+In Claude Code, use URL transport configuration:
+
+```json
+{
+  "mcpServers": {
+    "dinoforge": {
+      "url": "http://127.0.0.1:8765"
+    }
+  }
+}
+```
+
+`.claude/mcp-servers.json` is already checked in with this URL transport. Copy it to your
+user-level `~/.claude/mcp-servers.json` (or the local equivalent in `%APPDATA%`) and restart CC.
 
 ## Project Structure
 

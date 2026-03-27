@@ -2,21 +2,26 @@
 
 MCP should stay running in HTTP mode for persistent CC sessions and HMR workflows.
 
+## Canonical launchers
+
+- Windows: `scripts/start-mcp.ps1`
+- Linux/macOS: `scripts/start-mcp.sh`
+
+The service-manager files below should only wrap those launchers. That keeps host, port, health-check, PID-file, and working-directory logic in one place per platform.
+
 ## Windows (Task Scheduler, no extra dependencies)
 
-Run:
+Install the per-user scheduled task:
 
 ```powershell
 pwsh -File scripts/services/windows/register-mcp-task.ps1 -Action Install
 ```
 
-That creates a per-user scheduled task `DINOForge MCP` that runs `pwsh.exe` with a command equivalent to:
+That creates `DINOForge MCP` and runs:
 
 ```text
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<repo>\scripts\start-mcp.ps1" -Action start -Detached
+pwsh.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <repo>\scripts\start-mcp.ps1 -Action start -Detached
 ```
-
-`<repo>` is expanded to your checked-out repository root at install time.
 
 Task commands:
 
@@ -27,42 +32,30 @@ pwsh -File scripts/services/windows/register-mcp-task.ps1 -Action Stop
 pwsh -File scripts/services/windows/register-mcp-task.ps1 -Action Uninstall
 ```
 
-Enable watcher mode automatically by setting:
-
-```powershell
-$env:DINOFORGE_MCP_WATCH="1"
-```
-
-before running with `-Action Install` or when using `-Watch`.
-
-You can pass `-Watch` on install/startup:
-
-```powershell
-pwsh -File scripts/services/windows/register-mcp-task.ps1 -Action Install -Watch
-```
+Enable watcher mode automatically by setting `DINOFORGE_MCP_WATCH=1` before install, or pass `-Watch` during install.
 
 ## Linux (systemd user service)
 
-1. Copy `systemd/dinoforge-mcp.service` to `~/.config/systemd/user/dinoforge-mcp.service`.
-2. Edit `ExecStart`/`EnvironmentFile` paths if your repo or repo path differs.
+1. Replace `__REPO_ROOT__` in `scripts/services/systemd/dinoforge-mcp.service` with the absolute repo path.
+2. Copy the rendered file to `~/.config/systemd/user/dinoforge-mcp.service`.
 3. Enable and start:
 
 ```bash
+repo_root="$(pwd)"
+sed "s|__REPO_ROOT__|$repo_root|g" scripts/services/systemd/dinoforge-mcp.service > ~/.config/systemd/user/dinoforge-mcp.service
 systemctl --user daemon-reload
 systemctl --user enable --now dinoforge-mcp.service
 ```
 
-The `--user` unit files are used for per-user services; make sure `~/.config/systemd/user` exists and Python can reach your game files from that account.
-If the session is not active, enable lingering for the user (`loginctl enable-linger $USER`) before relying on auto-start.
-
 ## macOS (launchd)
 
-1. Copy `launchd/com.dinoforge.mcp.plist` to `~/Library/LaunchAgents/com.dinoforge.mcp.plist`.
-2. Set `EnvironmentVariables` and `ProgramArguments` for your repo path.
-3. Load:
+1. Replace `__REPO_ROOT__` in `scripts/services/launchd/com.dinoforge.mcp.plist` with the absolute repo path.
+2. Copy the rendered file to `~/Library/LaunchAgents/com.dinoforge.mcp.plist`.
+3. Load it:
 
 ```bash
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.dinoforge.mcp.plist
+repo_root="$(pwd)"
+sed "s|__REPO_ROOT__|$repo_root|g" scripts/services/launchd/com.dinoforge.mcp.plist > ~/Library/LaunchAgents/com.dinoforge.mcp.plist
+launchctl unload ~/Library/LaunchAgents/com.dinoforge.mcp.plist 2>/dev/null || true
+launchctl load -w ~/Library/LaunchAgents/com.dinoforge.mcp.plist
 ```
-
-Tip: On older macOS where `bootstrap` is unavailable, use `launchctl load -w` instead.

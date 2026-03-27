@@ -174,8 +174,20 @@ async def game_wait_world(ctx: Context, timeout_seconds: int = 60) -> dict:
 
 
 @mcp.tool()
+async def game_wait_for_world(ctx: Context, timeout_seconds: int = 60) -> dict:
+    """Wait until the ECS game world is ready (up to timeout_seconds). Alias for game_wait_world."""
+    return _run_game_cli("wait-world", timeout=timeout_seconds + 5)
+
+
+@mcp.tool()
 async def game_resources(ctx: Context) -> dict:
     """Get current in-game resources (gold, wood, food, etc.)."""
+    return _run_game_cli("resources")
+
+
+@mcp.tool()
+async def game_get_resources(ctx: Context) -> dict:
+    """Get current in-game resources (gold, wood, food, etc.). Alias for game_resources."""
     return _run_game_cli("resources")
 
 
@@ -492,6 +504,100 @@ async def game_dump_state(ctx: Context, category: str | None = None) -> dict:
     return _run_game_cli(*args)
 
 
+@mcp.tool()
+async def game_input(
+    ctx: Context,
+    key: str | None = None,
+    mouse_x: int | None = None,
+    mouse_y: int | None = None,
+    click: bool = False,
+) -> dict:
+    """
+    Inject keyboard or mouse input to the game without requiring window focus (Win32 SendInput).
+
+    Args:
+        key: Virtual key name (e.g. 'F1', 'Space', 'Escape').
+        mouse_x: Mouse X coordinate (screen absolute).
+        mouse_y: Mouse Y coordinate (screen absolute).
+        click: If True, send a left mouse click at (mouse_x, mouse_y).
+    """
+    args = ["input"]
+    if key:
+        args += ["--key", key]
+    if mouse_x is not None:
+        args += ["--x", str(mouse_x)]
+    if mouse_y is not None:
+        args += ["--y", str(mouse_y)]
+    if click:
+        args.append("--click")
+    return _run_game_cli(*args)
+
+
+@mcp.tool()
+async def game_ui_automation(ctx: Context, action: str, target: str | None = None) -> dict:
+    """
+    Automate game UI interactions (click, hover, type, screenshot).
+
+    Args:
+        action: Action to perform: 'click', 'hover', 'type', 'snapshot'.
+        target: Target button/element name or selector.
+    """
+    args = ["ui-automation", action]
+    if target:
+        args.append(target)
+    return _run_game_cli(*args)
+
+
+@mcp.tool()
+async def game_analyze_screen(ctx: Context, screenshot_path: str | None = None) -> dict:
+    """
+    Capture a screenshot and detect UI elements via OmniParser (health bars, unit portraits,
+    buttons, faction indicators).
+
+    Args:
+        screenshot_path: Optional path to existing screenshot (takes new one if omitted).
+    """
+    args = ["analyze-screen"]
+    if screenshot_path:
+        args += ["--input", screenshot_path]
+    return _run_game_cli(*args)
+
+
+@mcp.tool()
+async def game_wait_and_screenshot(
+    ctx: Context,
+    timeout_seconds: int = 30,
+    interval_seconds: float = 1.0,
+    change_threshold: float = 0.05,
+) -> dict:
+    """
+    Poll for a visual change in the game window, then capture a screenshot.
+
+    Args:
+        timeout_seconds: Max time to wait for visual change.
+        interval_seconds: How often to check for change (seconds).
+        change_threshold: Minimum pixel-change fraction to count as a change (0.0–1.0).
+    """
+    args = [
+        "wait-and-screenshot",
+        "--timeout", str(timeout_seconds),
+        "--interval", str(interval_seconds),
+        "--threshold", str(change_threshold),
+    ]
+    return _run_game_cli(*args)
+
+
+@mcp.tool()
+async def game_navigate_to(ctx: Context, state: str) -> dict:
+    """
+    Navigate to a game state via input sequences.
+
+    Args:
+        state: Target state — 'main_menu', 'gameplay', or 'pause_menu'.
+    """
+    return _run_game_cli("navigate-to", state)
+
+
 # ===========================================================================
 # ADDRESSABLES CATALOG TOOLS  (direct JSON inspection — no CLI needed)
 # ===========================================================================
@@ -654,6 +760,18 @@ async def health_check(request: Request):
 # ===========================================================================
 # HMR (HOT MODULE RELOAD) ENDPOINT
 # ===========================================================================
+
+@mcp.custom_route("/hmr", methods=["POST"])
+async def hmr_route(request: Request):
+    """
+    HTTP endpoint for hot-module-reload notifications.
+    Called by scripts/game/hot-reload.ps1 after deploying a new Runtime DLL.
+    Clears internal caches and signals pack change watchers.
+    """
+    _reload_event.set()
+    _reload_event.clear()
+    return JSONResponse({"success": True, "message": "HMR event triggered — pack caches cleared"})
+
 
 @mcp.tool()
 async def notify_hmr(ctx: Context) -> dict:

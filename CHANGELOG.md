@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MCP tool aliases** — added canonical CLAUDE.md tool names as aliases: `game_wait_for_world`, `game_get_resources`, `game_input`, `game_ui_automation`, `game_analyze_screen`, `game_wait_and_screenshot`, `game_navigate_to`; all route to the same underlying CLI commands as their existing equivalents
+- **`/hmr` HTTP endpoint** — `POST http://127.0.0.1:8765/hmr` triggers hot-reload event; `scripts/game/hot-reload.ps1` now correctly POSTs to this route after deploying a new Runtime DLL
+
 - **VitePress documentation site** — GitHub Pages deployment configured; site builds successfully with Mermaid diagram support, local search, dark mode, and auto-generated navigation from config; accessible at https://kooshapari.github.io/Dino/
 - **CI/CD for docs** — GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically builds and deploys VitePress site on push to `main` branch; uses Node.js 20, npm ci, and actions/deploy-pages
 - `scripts/game/prove-features-video.ps1` — full SPEC-006 video pipeline: autonomous game launch, bootstrap detection, neural TTS (edge-tts/SAPI fallback), gdigrab recording, F9/F10 key injection, ffmpeg drawtext callout annotations, H.264/AAC output, auto-open

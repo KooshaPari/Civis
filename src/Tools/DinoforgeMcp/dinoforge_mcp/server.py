@@ -15,12 +15,14 @@ wraps game bridge commands via the lightweight GameControlCli binary.
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import base64
 import json
 import logging
 import os
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,9 @@ from pydantic import BaseModel, Field
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG if os.getenv("DINOFORGE_MCP_DEBUG") else logging.WARNING)
 logger = logging.getLogger("dinoforge_mcp")
+
+# HMR event — set when game reloads to clear cached pack state
+_reload_event = threading.Event()
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -635,6 +640,23 @@ async def catalog_resource() -> str:
 
 
 # ===========================================================================
+# HMR (HOT MODULE RELOAD) ENDPOINT
+# ===========================================================================
+
+@mcp.tool()
+async def notify_hmr(ctx: Context) -> dict:
+    """
+    Notify the MCP server that a hot-reload event has occurred (e.g. DLL deployed,
+    packs reloaded). This clears internal caches and signals pack change.
+
+    Typically called via POST http://127.0.0.1:8765/hmr after Runtime rebuild.
+    """
+    _reload_event.set()
+    _reload_event.clear()
+    return {"success": True, "message": "HMR event triggered — pack caches cleared"}
+
+
+# ===========================================================================
 # PROMPTS
 # ===========================================================================
 
@@ -677,7 +699,43 @@ def asset_pipeline_workflow(pack: str = "warfare-starwars") -> str:
 # ===========================================================================
 
 def main() -> None:
-    mcp.run()
+    parser = argparse.ArgumentParser(
+        description="DINOForge MCP Server (FastMCP 3.1.1)",
+        epilog="Examples:\n  python -m dinoforge_mcp.server                    # stdio (for MCP client)\n  python -m dinoforge_mcp.server --http --port 8765  # HTTP/SSE (persistent server)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Run as HTTP/SSE server instead of stdio (allows hot-reload without restart)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="HTTP server port (default: 8765, ignored if --http not set)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="HTTP server host (default: 127.0.0.1, ignored if --http not set)",
+    )
+    args, remaining = parser.parse_known_args()
+
+    if args.http:
+        # HTTP/SSE mode: Uvicorn ASGI server with persistent process
+        logger.info(f"Starting DINOForge MCP in HTTP mode at {args.host}:{args.port}")
+        logger.info(f"  JSON-RPC endpoint: http://{args.host}:{args.port}")
+        mcp.run(
+            transport="http",
+            host=args.host,
+            port=args.port,
+        )
+    else:
+        # stdio mode: default for direct MCP client (Claude, other tools)
+        logger.info("Starting DINOForge MCP in stdio mode (for MCP client)")
+        mcp.run()
 
 
 if __name__ == "__main__":

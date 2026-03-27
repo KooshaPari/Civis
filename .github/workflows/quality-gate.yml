@@ -6,4 +6,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run quality checks
-        run: ./scripts/quality-gate.sh verify
+        run: ./scripts/quality/quality-gate.sh

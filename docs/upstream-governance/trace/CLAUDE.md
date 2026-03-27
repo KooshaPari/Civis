@@ -180,31 +180,13 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 ---
 
-# BMAD Method - Claude Code Instructions
+# AgilePlus Spec Tracking
 
-## Activating Agents
+Use AgilePlus for spec tracking: `cd /Users/kooshapari/CodeProjects/Phenotype/repos/AgilePlus && agileplus <command>`
 
-BMAD agents are installed as slash commands in `.claude/commands/bmad/`.
+- Start a new conversation to switch agent personas
 
-### How to Use
 
-1. **Type Slash Command**: Start with `/` to see available commands
-2. **Select Agent**: Type `/bmad-{agent-name}` (e.g., `/bmad-dev`)
-3. **Execute**: Press Enter to activate that agent persona
-
-### Examples
-
-```
-/bmad:bmm:agents:dev - Activate development agent
-/bmad:bmm:agents:architect - Activate architect agent
-/bmad:bmm:workflows:dev-story - Execute dev-story workflow
-```
-
-### Notes
-
-- Commands are autocompleted when you type `/`
-- Agent remains active for the conversation
-- Start a new conversation to switch agents
 
 ---
 

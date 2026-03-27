@@ -99,7 +99,6 @@ docs/
 
 **Native services over Docker; local OSS/free only:** Prefer **native** service runs (e.g. `make install-native`, process-compose) over Docker for dev. Use Docker only when native is not feasible. **Strictly prefer local, OSS, and free**—do not recommend paid online services when local or free alternatives exist; prefer self-hosted, open-source, or free-tier options.
 
-**See also:** For context management, delegation table, dev environment, and package manager instructions see `CLAUDE.md` (or `claude.md`). For IDE-specific agent activation see `.bmad/docs/` (e.g. `claude-code-instructions.md`, `gemini-instructions.md`, `cursor-instructions.md`).
 
 ## Maintenance
 
@@ -333,31 +332,13 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 ---
 
-# BMAD Method - Claude Code Instructions
+# AgilePlus Spec Tracking
 
-## Activating Agents
+Use AgilePlus for spec tracking: `cd /Users/kooshapari/CodeProjects/Phenotype/repos/AgilePlus && agileplus <command>`
 
-BMAD agents are installed as slash commands in `.claude/commands/bmad/`.
+- Start a new conversation to switch agent personas
 
-### How to Use
 
-1. **Type Slash Command**: Start with `/` to see available commands
-2. **Select Agent**: Type `/bmad-{agent-name}` (e.g., `/bmad-dev`)
-3. **Execute**: Press Enter to activate that agent persona
-
-### Examples
-
-```
-/bmad:bmm:agents:dev - Activate development agent
-/bmad:bmm:agents:architect - Activate architect agent
-/bmad:bmm:workflows:dev-story - Execute dev-story workflow
-```
-
-### Notes
-
-- Commands are autocompleted when you type `/`
-- Agent remains active for the conversation
-- Start a new conversation to switch agents
 
 ---
 

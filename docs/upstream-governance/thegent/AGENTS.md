@@ -579,12 +579,11 @@ When multiple agents or actors share a dev environment:
 
 # Plugin Ecosystem Awareness
 
-Documentation and workflow frameworks (BMAD, AgilePlus, GSD, etc.) may be available as plugins or slash commands.
+Use AgilePlus for spec tracking: `agileplus <command>`
 
 - Check available slash commands (`/`) for documentation workflows
 - These complement the auto-detection system -- invoke explicitly for deeper workflows
 - Auto-detection hooks handle common cases; plugins handle advanced scenarios
-- If BMAD agents are installed (`.claude/commands/bmad/`), they can be activated via slash commands for specialized agent personas
 - Start a new conversation to switch agent personas
 
 ---

@@ -93,7 +93,6 @@ docs/
 
 **Native services over Docker; local OSS/free only:** Prefer **native** service runs (e.g. `make install-native`, process-compose) over Docker for dev. Use Docker only when native is not feasible. **Strictly prefer local, OSS, and free**—do not recommend paid online services when local or free alternatives exist; prefer self-hosted, open-source, or free-tier options.
 
-**See also:** For context management, delegation table, dev environment, and package manager instructions see `CLAUDE.md` (or `claude.md`). For IDE-specific agent activation see `.bmad/docs/` (e.g. `claude-code-instructions.md`, `gemini-instructions.md`, `cursor-instructions.md`).
 
 ## Maintenance
 

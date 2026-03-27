@@ -5,6 +5,7 @@ description: Start and manage the DINOForge development harness (MCP + optional 
 # dev-harness
 
 Manage the long-lived DINOForge MCP harness used by CC game automation.
+CC session hooks attempt automatic startup; this command is for manual control and status.
 
 **Usage**: `/dev-harness [--watch]`
 
@@ -44,4 +45,4 @@ Runs `./scripts/start-mcp.ps1` in managed mode and prints the current lifecycle 
 ./scripts/start-mcp.ps1 -Action stop
 ```
 
-If MCP is not running, CC automation calling HTTP tools will fail until this command is executed once in the session.
+CC hooks attempt automatic MCP startup; use `/dev-harness` only when you want explicit control (force start, status, stop, restart, watcher mode).

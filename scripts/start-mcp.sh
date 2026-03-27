@@ -2,6 +2,7 @@
 set -euo pipefail
 
 action="start"
+foreground="0"
 port="${DINOFORGE_MCP_PORT:-8765}"
 host="${DINOFORGE_MCP_HOST:-127.0.0.1}"
 watch="${DINOFORGE_MCP_WATCH:-0}"
@@ -11,6 +12,10 @@ while [[ $# -gt 0 ]]; do
     --action)
       action="${2:?missing value for --action}"
       shift 2
+      ;;
+    --foreground)
+      foreground="1"
+      shift
       ;;
     --port)
       port="${2:?missing value for --port}"
@@ -139,6 +144,11 @@ echo "[MCP] Starting DINOForge MCP server (HTTP/SSE)..."
 echo "[MCP] Port: ${port}"
 echo "[MCP] Host: ${host}"
 echo "[MCP] Game dir: ${DINO_GAME_DIR}"
+
+if [[ "${foreground}" == "1" ]]; then
+  echo "$$" > "${mcp_pid_file}"
+  exec "${python_exe}" -m dinoforge_mcp.server --http --port "${port}" --host "${host}"
+fi
 
 "${python_exe}" -m dinoforge_mcp.server --http --port "${port}" --host "${host}" >>"${mcp_log_file}" 2>&1 &
 server_pid=$!

@@ -11,6 +11,7 @@
         <string>__REPO_ROOT__/scripts/start-mcp.sh</string>
         <string>--action</string>
         <string>start</string>
+        <string>--foreground</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>

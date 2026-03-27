@@ -12,9 +12,35 @@ $ErrorActionPreference = "Stop"
 $scriptsDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $startScript = Join-Path $scriptsDir "start-mcp.ps1"
 $pwshExe = (Get-Command pwsh).Source
-$actionArg = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -Action start -Detached' -f $startScript
+$taskUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+$taskActionArgs = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-WindowStyle', 'Hidden',
+    '-File', $startScript,
+    '-Action', 'start',
+    '-Detached'
+)
 if ($Watch) {
-    $actionArg += " -Watch"
+    $taskActionArgs += '-Watch'
+}
+
+function Quote-ArgList {
+    param([string[]]$Arguments)
+    return (($Arguments | ForEach-Object {
+        if ($_ -match '[\s"]') {
+            '"' + ($_ -replace '"', '\"') + '"'
+        }
+        else {
+            $_
+        }
+    }) -join ' ')
+}
+
+function Invoke-McpStop {
+    if (Test-Path $startScript) {
+        & $pwshExe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $startScript -Action stop | Out-String | Write-Host
+    }
 }
 
 function Get-McpTask {
@@ -24,16 +50,18 @@ function Get-McpTask {
 switch ($Action) {
     "Install" {
         $triggers = New-ScheduledTaskTrigger -AtLogOn
-        $action = New-ScheduledTaskAction -Execute $pwshExe -Argument $actionArg
-        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+        $action = New-ScheduledTaskAction -Execute $pwshExe -Argument (Quote-ArgList $taskActionArgs)
+        $principal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType InteractiveToken -RunLevel Limited
         $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Hours 0)
 
         Register-ScheduledTask -TaskName $TaskName -Trigger $triggers -Action $action -Principal $principal -Settings $settings -Description "DINOForge MCP HTTP/SSE harness" -Force | Out-Null
+        Invoke-McpStop
         Write-Host "Registered scheduled task: $TaskName"
         Start-ScheduledTask -TaskName $TaskName
     }
     "Uninstall" {
         if (Get-McpTask) {
+            Invoke-McpStop
             Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
             Write-Host "Uninstalled scheduled task: $TaskName"
@@ -46,6 +74,7 @@ switch ($Action) {
         Write-Host "Started scheduled task: $TaskName"
     }
     "Stop" {
+        Invoke-McpStop
         Stop-ScheduledTask -TaskName $TaskName
         Write-Host "Stopped scheduled task: $TaskName"
     }

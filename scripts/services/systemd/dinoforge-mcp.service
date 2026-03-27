@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=__REPO_ROOT__/src/Tools/DinoforgeMcp
-ExecStart=/usr/bin/env bash __REPO_ROOT__/scripts/start-mcp.sh --action start
+ExecStart=/usr/bin/env bash __REPO_ROOT__/scripts/start-mcp.sh --action start --foreground
 ExecStop=/usr/bin/env bash __REPO_ROOT__/scripts/start-mcp.sh --action stop
 Restart=on-failure
 RestartSec=2

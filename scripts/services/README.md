@@ -45,6 +45,14 @@ repo_root="$(pwd)"
 sed "s|__REPO_ROOT__|$repo_root|g" scripts/services/systemd/dinoforge-mcp.service > ~/.config/systemd/user/dinoforge-mcp.service
 systemctl --user daemon-reload
 systemctl --user enable --now dinoforge-mcp.service
+systemctl --user status dinoforge-mcp.service
+```
+
+Stop and remove:
+
+```bash
+systemctl --user disable --now dinoforge-mcp.service
+rm ~/.config/systemd/user/dinoforge-mcp.service
 ```
 
 ## macOS (launchd)
@@ -57,5 +65,12 @@ systemctl --user enable --now dinoforge-mcp.service
 repo_root="$(pwd)"
 sed "s|__REPO_ROOT__|$repo_root|g" scripts/services/launchd/com.dinoforge.mcp.plist > ~/Library/LaunchAgents/com.dinoforge.mcp.plist
 launchctl unload ~/Library/LaunchAgents/com.dinoforge.mcp.plist 2>/dev/null || true
-launchctl load -w ~/Library/LaunchAgents/com.dinoforge.mcp.plist
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.dinoforge.mcp.plist
+```
+
+Stop and remove:
+
+```bash
+launchctl bootout gui/$UID ~/Library/LaunchAgents/com.dinoforge.mcp.plist 2>/dev/null || true
+rm ~/Library/LaunchAgents/com.dinoforge.mcp.plist
 ```

@@ -1,5 +1,25 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-mcp.ps1 -Action start -Detached"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-mcp.ps1 -Action start -Detached"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

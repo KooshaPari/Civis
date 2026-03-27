@@ -415,7 +415,7 @@ The runtime includes additional asset, catalog, logging, and pack-management too
 MCP runs from the FastMCP Python server in HTTP mode on `http://127.0.0.1:8765` and is managed by
 `scripts/start-mcp.ps1`.
 
-**Runbook**: `.\scripts\start-mcp.ps1 -Action start -Detached` (or add it to your CC start/prompt hooks).
+The repo-tracked CC hook can keep MCP alive automatically across sessions using `./scripts/start-mcp.ps1 -Action start -Detached`.
 
 ### Agent Slash Commands for Game Work
 

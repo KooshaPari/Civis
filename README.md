@@ -253,7 +253,8 @@ In Claude Code, use URL transport configuration:
 `.claude/mcp-servers.json` is already checked in with this URL transport. Copy it to your
 user-level `~/.claude/mcp-servers.json` (or the local equivalent in `%APPDATA%`) and restart CC.
 
-For unattended harness startup, have CC/session hooks run:
+For unattended harness startup, use the repo-managed CC hook in `.claude/settings.json`; MCP starts automatically on session/prompt.
+You can still start it manually from CLI during debugging:
 
 ```powershell
 .\scripts\start-mcp.ps1 -Action start -Detached

@@ -659,10 +659,17 @@ namespace DINOForge.Runtime
 
                 _modPlatform.SetUI(_dfCanvas.ModMenuPanel, settingsHost);
 
-                // Wire the active UGUI menu host into NativeMenuInjector for the native Mods button
+                // Fix #30: route the native Mods button through ContextualModMenuHost so
+                // that when NativeMainMenuModMenu.CanUseNativeScreen becomes true (M11.5),
+                // the native menu takes over automatically without re-wiring.
+                // For now CanUseNativeScreen returns false, so overlay is still used.
                 if (_nativeMenuInjector != null)
                 {
-                    _nativeMenuInjector.SetModMenuHost(_dfCanvas.ModMenuPanel);
+                    NativeMainMenuModMenu nativeHost = new NativeMainMenuModMenu();
+                    ContextualModMenuHost contextualHost = new ContextualModMenuHost(
+                        _dfCanvas.ModMenuPanel, nativeHost);
+                    _nativeMenuInjector.SetModMenuHost(contextualHost);
+                    _log.LogInfo("[RuntimeDriver] NativeMenuInjector wired via ContextualModMenuHost (native stub active, overlay fallback).");
                 }
 
                 // Wire UGUI DebugPanel to ModPlatform so it displays platform status
@@ -683,6 +690,17 @@ namespace DINOForge.Runtime
                 }
 
                 _log.LogInfo("[RuntimeDriver] UGUI wired to ModPlatform via IModMenuHost.");
+
+                // Fix #31/#32: LoadPacks() may have run before the UI host was wired
+                // (ModPlatform.UpdateUI() returns early when _modMenuHost is null).
+                // Now that the host is registered, replay a LoadPacks() so ModMenuPanel
+                // receives the pack list and DebugPanel receives ModPlatform data.
+                // This is a no-op if packs have not been loaded yet.
+                if (_modPlatform.GetLoadedPackIds() != null)
+                {
+                    _log.LogInfo("[RuntimeDriver] Replaying LoadPacks() to populate UGUI panels after late wiring.");
+                    _modPlatform.LoadPacks();
+                }
             }
             catch (Exception ex)
             {

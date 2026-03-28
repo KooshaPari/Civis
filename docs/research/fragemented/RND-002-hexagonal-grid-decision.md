@@ -46,7 +46,7 @@ pub struct Hex {
 - **Coordinate system:** Axial coordinates. Cubic `z` coordinate is derived: `z = -x - y`.
 - **Integer-only core:** All coordinate math (neighbors, distance, range, ring, line) operates
   on `i32`. No floating-point contamination in simulation-critical paths.
-- **`Hash` implementation:** `Hex` implements `Hash`, enabling `HashMap<Hex, TileData>` storage.
+- **`Hash` implementation:** `Hex` implements `Hash`, enabling `HashMap \< Hex, TileData>` storage.
 - **`Ord` implementation:** `Hex` implements `Ord` (lexicographic on `(x, y)`), enabling
   `BTreeMap` and sorted iteration for determinism.
 - **Serde:** Available via `serde` feature flag. Serializes as `{ "x": i32, "y": i32 }`.
@@ -202,9 +202,9 @@ This is safe and expected.
 
 | Type | Description | Use Case |
 |------|-------------|----------|
-| `HexagonalMap<T>` | Dense hexagonal area storage | Fixed-size hex maps |
-| `RombusMap<T>` | Dense rhombus-shaped storage | Rectangular regions |
-| `HexModMap<T>` | HexMod-addressed storage | Wrapping/tiling maps |
+| `HexagonalMap\<T\>` | Dense hexagonal area storage | Fixed-size hex maps |
+| `RombusMap\<T\>` | Dense rhombus-shaped storage | Rectangular regions |
+| `HexModMap\<T\>` | HexMod-addressed storage | Wrapping/tiling maps |
 
 These use array-based indexing (faster than `HashMap`) for known map bounds. All integer-
 addressed.
@@ -275,7 +275,7 @@ None are competitive with `hexx` in feature completeness or maintenance.
    field-of-movement algorithms that use `hexx::Hex` for coordinate math but `i64` for cost
    accumulation. This is ~200 LOC total.
 4. **Use `HexLayout` only in the client renderer**, never in the simulation crate.
-5. **Use `HexagonalMap<T>` or `HashMap<Hex, T>`** for tile data storage, depending on whether
+5. **Use `HexagonalMap\<T\>` or `HashMap \< Hex, T>`** for tile data storage, depending on whether
    the map has fixed bounds.
 
 ---
@@ -529,7 +529,7 @@ mod determinism_tests {
    or strategic map view. If used, ensure the resolution conversion is deterministic (it
    should be, as it's purely integer math).
 
-4. **Performance of `HashMap<Hex, TileData>`:** For a 100x100 hex map (10k tiles), `HashMap`
+4. **Performance of `HashMap \< Hex, TileData>`:** For a 100x100 hex map (10k tiles), `HashMap`
    is fine. For larger maps (1M+ tiles), `HexagonalMap` (dense array) will be significantly
    faster. Profile and decide based on actual map sizes.
 

@@ -142,7 +142,7 @@ In the capitalist regime, market clearing uses simplified supply-demand price ad
 Price_g(t+1) = Price_g(t) × (1 + λ × (Demand_g(t) - Supply_g(t)) / Supply_g(t))
 
 where:
-  λ ∈ (0, 1] = price flexibility parameter (scenario-configured)
+  λ &isin; (0, 1] = price flexibility parameter (scenario-configured)
   ClearingVolume_g(t) = min(Demand_g(t), Supply_g(t))
   UnmetDemand_g(t)    = max(0, Demand_g(t) - Supply_g(t))
 ```
@@ -152,7 +152,7 @@ Rent extraction is modeled as a wedge:
 ```
 RentWaste_g(t) = RentRate_g × Price_g(t) × ClearingVolume_g(t)
 
-where RentRate_g ∈ [0, 1] = scenario-configured rent extraction fraction
+where RentRate_g &isin; [0, 1] = scenario-configured rent extraction fraction
 (housing, finance, monopoly channels configured independently)
 ```
 
@@ -181,10 +181,10 @@ GoodhartPressure(t) = SurveillanceIntensity(t)
                     × SurvivalDependence(t)
 
 where:
-  BaselineStrength(t)   ∈ [0, 1]  = fraction of essentials that are unconditional
-  CrossDomainCoupling(t) ∈ [0, 1] = whether quota compliance gates rights access
-  SurveillanceIntensity(t) ∈ [0,1] = measurement scope
-  ScalarizationIndex(t) ∈ [0, 1]  = how much the system collapses value to one score
+  BaselineStrength(t)   &isin; [0, 1]  = fraction of essentials that are unconditional
+  CrossDomainCoupling(t) &isin; [0, 1] = whether quota compliance gates rights access
+  SurveillanceIntensity(t) &isin; [0,1] = measurement scope
+  ScalarizationIndex(t) &isin; [0, 1]  = how much the system collapses value to one score
 ```
 
 ### Surplus and Waste Decomposition
@@ -235,7 +235,7 @@ All joule quantities are stored as `i64` in units of millijoules (mJ) to maintai
 
 ## State Model
 
-All Rust structs in this section use `#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]` unless otherwise noted. All collections over actor IDs use `BTreeMap<u64, _>` to guarantee deterministic iteration order.
+All Rust structs in this section use `#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]` unless otherwise noted. All collections over actor IDs use `BTreeMap \< u64, _>` to guarantee deterministic iteration order.
 
 ### EconomyState
 
@@ -1508,7 +1508,7 @@ fn energy_total(state: &EconomyState) -> i64 {
 
 **Trigger:** Allocation engine attempts to debit more from an actor's quota or monetary balance than is available.
 
-**Detection:** `double_entry::book_transfer()` checks balance before booking. If `actor.quota_balance_mj - debit < 0` for a Household actor, the transfer is rejected.
+**Detection:** `double_entry::book_transfer()` checks balance before booking. If `actor.quota_balance_mj - debit \< 0` for a Household actor, the transfer is rejected.
 
 **Mitigation:**
 - For quota: transaction fails; `audit_exposure_bps` increases by 500; `unmet_demand` is incremented for the good.
@@ -2657,7 +2657,7 @@ In the joule regime, all expenditure is denominated in millijoules of quota debi
 
 **Savings and investment split:** The household's residual after necessity consumption is divided between discretionary consumption and savings according to a propensity-to-consume parameter `mpc_bps` (marginal propensity to consume, default 7500 = 75%). The savings fraction accumulates in `claims_money_cents` for monetary regimes and in `carryover_mj` for joule regimes.
 
-**Welfare receipt:** Households with `claims_money_cents < poverty_threshold_cents` receive a welfare transfer of `max(0, poverty_threshold_cents - claims_money_cents)` from the state institution. This is booked as `TransferType::Subsidy`. The poverty threshold is a fiscal policy parameter defaulting to 50% of median household income, recomputed each tick.
+**Welfare receipt:** Households with `claims_money_cents \< poverty_threshold_cents` receive a welfare transfer of `max(0, poverty_threshold_cents - claims_money_cents)` from the state institution. This is booked as `TransferType::Subsidy`. The poverty threshold is a fiscal policy parameter defaulting to 50% of median household income, recomputed each tick.
 
 ### Household Rust Struct
 
@@ -2670,7 +2670,7 @@ In the joule regime, all expenditure is denominated in millijoules of quota debi
 pub struct Household {
     pub actor_id: u64,
 
-    /// Age in simulation ticks (weekly ticks; 52 ticks ≈ 1 year).
+    /// Age in simulation ticks (weekly ticks; 52 ticks &asymp; 1 year).
     pub age_ticks: u32,
 
     /// Skill level in basis points (0..=10000). Affects joule earning rate.
@@ -2793,7 +2793,7 @@ pub struct CapitalStock {
     pub net_capital_mj: i64,
 
     /// Depreciation rate in basis points per tick.
-    /// Default: 19 bps/tick ≈ 1%/year (52-tick year).
+    /// Default: 19 bps/tick &asymp; 1%/year (52-tick year).
     pub depreciation_rate_bps: u16,
 
     /// Reinvestment threshold: minimum profit margin before investment occurs.

@@ -40,7 +40,7 @@ This document defines the **agile+ phased execution plan** for CivLab from MVP t
 **Definition of Done (Sprint Completion):**
 - [ ] Tick loop passes determinism test (same seed → identical state)
 - [ ] Phase schedule verified (Command → Policy → Transition → Stochastic → Metrics → Broadcast)
-- [ ] Performance profiled (all phases < 14 ms total)
+- [ ] Performance profiled (all phases \< 14 ms total)
 - [ ] Code review passed
 - [ ] Acceptance tests all green
 
@@ -239,7 +239,7 @@ pub fn iter_entities<'a>(
 
 **Definition of Done:**
 - [ ] `crates/engine/src/ecs.rs` implemented
-- [ ] Query system passes benchmark (1M entities iterated in < 1 ms)
+- [ ] Query system passes benchmark (1M entities iterated in \< 1 ms)
 - [ ] Iteration order guaranteed sorted by entity ID (BTreeMap-backed)
 - [ ] Zero-copy (no allocations per query)
 - [ ] Clippy: zero warnings
@@ -504,7 +504,7 @@ done
 - [ ] `cargo test --all` passes (100%)
 - [ ] `cargo clippy --all -- -D warnings` passes
 - [ ] `cargo fmt` applied
-- [ ] Code review requested (≥ 1 approver)
+- [ ] Code review requested (&gt; 1 approver)
 - [ ] FR tag in commit message: `feat(module): FR-ID description`
 
 **Example commit:**
@@ -802,9 +802,9 @@ fn test_scenario_starting_settlement_100_ticks() {
 |---|---|---|
 | **Tests Pass** | ✓ all tests | Yes |
 | **Clippy** | ✓ zero warnings | Yes |
-| **Coverage** | ≥ 70% | Yes (MVP), 80% (v1) |
+| **Coverage** | &gt; 70% | Yes (MVP), 80% (v1) |
 | **Determinism** | ✓ replay test | Yes |
-| **Performance** | ≤ 16 ms/tick | Yes (v1) |
+| **Performance** | &lt; 16 ms/tick | Yes (v1) |
 | **Code Review** | ✓ approved | Yes |
 
 ---

@@ -165,7 +165,7 @@ Discovery probability:
 Pr⁡(new node)=σ(αI+βLangComp+γToolComp+δN)\\Pr(\\text{new node}) = \\sigma(\\alpha I + \\beta LangComp + \\gamma ToolComp + \\delta N)Pr(new node)=σ(αI+βLangComp+γToolComp+δN)
 Where NNN is population size.
 Knowledge diffuses via:
-Kr,t+1=Kr,t+ρ∑jwrj(Kj,t−Kr,t)+K\_{r,t+1} = K\_{r,t} + \\rho \\sum\_{j} w\_{rj}(K\_{j,t}-K\_{r,t})\_+Kr,t+1​=Kr,t​+ρj∑​wrj​(Kj,t​−Kr,t​)+​
+Kr,t+1=Kr,t+ρ&sum;jwrj(Kj,t−Kr,t)+K\_{r,t+1} = K\_{r,t} + \\rho \\sum\_{j} w\_{rj}(K\_{j,t}-K\_{r,t})\_+Kr,t+1​=Kr,t​+ρj&sum;​wrj​(Kj,t​−Kr,t​)+​
 This is your true tech tree replacement.
 
 I.7 Emergence of State Concepts

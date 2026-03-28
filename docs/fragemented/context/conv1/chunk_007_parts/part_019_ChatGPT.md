@@ -157,9 +157,9 @@ Increases survivalist norms
 
 7. Enforcement vs Tyranny Tradeoff
 Increasing enforcement reduces shadow flows:
-∂ShadowFlow∂Ei<0\\frac{\\partial \\text{ShadowFlow}}{\\partial E\_i} < 0∂Ei​∂ShadowFlow​<0
+&part;ShadowFlow&part;Ei<0\\frac{\\partial \\text{ShadowFlow}}{\\partial E\_i} < 0&part;Ei​&part;ShadowFlow​<0
 But increases tyranny:
-∂Ti∂Ei>0\\frac{\\partial T\_i}{\\partial E\_i} > 0∂Ei​∂Ti​​>0
+&part;Ti&part;Ei>0\\frac{\\partial T\_i}{\\partial E\_i} > 0&part;Ei​&part;Ti​​>0
 So AI policy agent must solve:
 Minimize shadow leakage
 Subject to tyranny < threshold
@@ -177,7 +177,7 @@ dissident networks may develop alternate institutions
 
 You can model:
 Positive spillover:
-InnovationBoost∝ShadowActivity\\text{InnovationBoost} \\propto \\text{ShadowActivity}InnovationBoost∝ShadowActivity
+InnovationBoost&prop;ShadowActivity\\text{InnovationBoost} \\propto \\text{ShadowActivity}InnovationBoost&prop;ShadowActivity
 until corruption threshold exceeded.
 Shadow can both help and harm.
 

@@ -357,7 +357,7 @@ CivLab uses a **flat-top hexagonal grid** with axial coordinates `(q, r)`. This 
 
 ```
 hex_width  = 64   // pixels at zoom level 2
-hex_height = hex_width * sqrt(3) / 2  ≈ 55.4 pixels
+hex_height = hex_width * sqrt(3) / 2  &asymp; 55.4 pixels
 
 pixel_x = hex_width * (q + r / 2)
 pixel_y = hex_height * r * (3/4) * (2/sqrt(3))
@@ -625,12 +625,12 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 ```
 
 **Delta indicator rules:**
-- `↑` green if delta > 0; `↓` red if delta < 0; `→` grey if delta == 0
+- `↑` green if delta > 0; `↓` red if delta \< 0; `→` grey if delta == 0
 - Warning `⚠` shown if:
   - Joules balance negative (energy shortage)
   - Food delta < -5% of stock per tick (famine risk)
   - CO₂ > 450ppm (climate event zone)
-  - Treasury < 0 (deficit)
+  - Treasury \< 0 (deficit)
 - Delta is a rolling 5-tick average (not instantaneous per-tick noise)
 
 **Data source:** `snapshot.metrics` from `sim.tick_broadcast`
@@ -646,7 +646,7 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 **Specification:**
 - **Size:** 200×150px (fixed), rendered in bottom-right corner
 - **Renderer:** Separate Pixi.js `PIXI.RenderTexture`, re-rendered every 5 ticks
-- **Scale:** Maps entire world to 200×150px; each minimap pixel ≈ multiple world tiles
+- **Scale:** Maps entire world to 200×150px; each minimap pixel &asymp; multiple world tiles
 - **Viewport indicator:** White rectangle outline showing current viewport area; draggable
 - **Click-to-pan:** Click anywhere on minimap → smooth camera transition to that world position (300ms)
 
@@ -656,7 +656,7 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 - Army positions: small colored triangles per army
 
 **Alert visualization:**
-- Critical alerts (stability < 20, energy shortage, war started): red pulsing ring on minimap
+- Critical alerts (stability \< 20, energy shortage, war started): red pulsing ring on minimap
 - Warning alerts (supply low, drought, insurgency): yellow static dot
 - Info alerts: no minimap indicator (only in Alert Feed)
 
@@ -701,11 +701,11 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 Width: 320px. Scrollable if content overflows.
 ```
 
-**GDP sparkline:** `<canvas>` element (50px tall, 280px wide) rendered via Recharts `<SparkLine>`. 50-tick rolling window. Y-axis auto-scales to data range.
+**GDP sparkline:** `\<canvas\>` element (50px tall, 280px wide) rendered via Recharts `\<SparkLine\>`. 50-tick rolling window. Y-axis auto-scales to data range.
 
 **Stability meter:** Horizontal progress bar. Color transitions: green (70-100) → yellow (40-70) → orange (20-40) → red (0-20). Threshold line at 10 (collapse threshold from game design).
 
-**Happiness histogram:** Recharts `<BarChart>` with 5 buckets. Updated every 10 ticks (not per-tick; histogram computation is O(population)).
+**Happiness histogram:** Recharts `\<BarChart\>` with 5 buckets. Updated every 10 ticks (not per-tick; histogram computation is O(population)).
 
 **Update frequency:**
 - GDP sparkline: appends new point every tick (sparkline auto-scrolls)
@@ -824,7 +824,7 @@ Height: 200px (collapsible to 44px single-line summary). Overflowing content scr
 | Social | 👥 | `#CC79A7` | Migration, ideology shift, insurgency |
 | Diplomacy | 📜 | `#009E73` | Treaty offers, war declarations |
 | Research | 🔬 | `#F0E442` | Tech breakthroughs, research progress |
-| Critical | ⚠ | `#D55E00` blink | Stability < 20, collapse imminent |
+| Critical | ⚠ | `#D55E00` blink | Stability \< 20, collapse imminent |
 
 **Interaction:**
 - Click `[→ Map]`: smooth camera pan to event location, highlight affected unit/district
@@ -927,7 +927,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 - Legend rendered in bottom-left corner of overlay
 
 **Trade route arrows:**
-- SVG arrows overlaid on the Pixi.js canvas via an absolutely-positioned `<svg>` element
+- SVG arrows overlaid on the Pixi.js canvas via an absolutely-positioned `\<svg\>` element
 - Arrow thickness proportional to trade volume (cubic bezier paths)
 - Color: `#E69F00` for active; `#56B4E9` for proposed; `#D55E00` for embargoed
 - Animated: dashed stroke-dashoffset animation shows flow direction
@@ -957,7 +957,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 - Color encodes supply status:
   - `#009E73` (green): supply >= 75%
   - `#E69F00` (yellow): supply 25-75%
-  - `#D55E00` (red): supply < 25% or severed
+  - `#D55E00` (red): supply \< 25% or severed
 - Dashed line if supply route is contested
 
 **Territory control borders:**
@@ -1075,7 +1075,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 
 **Nation flag badge:** 16×16px. Rendered as `PIXI.Sprite` overlay on unit sprite. One flag atlas per scenario loaded at start.
 
-**Health bar:** Rendered as `PIXI.Graphics` thin rectangle (32px wide × 3px tall) below unit sprite. Color: green if HP > 60%, yellow if 30-60%, red if < 30%.
+**Health bar:** Rendered as `PIXI.Graphics` thin rectangle (32px wide × 3px tall) below unit sprite. Color: green if HP > 60%, yellow if 30-60%, red if \< 30%.
 
 **Supply bar:** Same dimensions as health bar, 2px below health bar. Color: `#56B4E9` (blue). Only shown for military units.
 
@@ -1239,7 +1239,7 @@ The level-of-detail system governs what is rendered at each zoom factor (continu
 | 6.5 – 8.0 | Citizen dots appear (4×4px per citizen cluster), building detail textures |
 | > 8.0 | Individual citizen portrait icons (zoom 3 mode) |
 
-**LOD transitions are smooth:** Each LOD layer has opacity that ramps linearly between the zoom factor thresholds (±0.5 zoom factor crossfade range).
+**LOD transitions are smooth:** Each LOD layer has opacity that ramps linearly between the zoom factor thresholds (&plusmn;0.5 zoom factor crossfade range).
 
 **Pixi.js implementation:**
 
@@ -1334,7 +1334,7 @@ function clampedLerp(fromAlpha: number, toAlpha: number, z: number, zStart: numb
 |-----|--------|-------|
 | `Ctrl+S` | Quick save (.civreplay download) | Serializes event log |
 | `Ctrl+Z` | Undo last action (sandbox mode only) | Not available in real-time mode |
-| `Ctrl+Shift+C` | Open cheats console (sandbox only) | `cheat: <command>` |
+| `Ctrl+Shift+C` | Open cheats console (sandbox only) | `cheat: \<command\>` |
 | `Shift+T` | Toggle light/dark theme | |
 
 **Formation Hotkeys (when multiple units selected):**
@@ -1432,7 +1432,7 @@ Research Mode is a separate UI layer activated by `?mode=research` URL parameter
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Chart library:** Recharts `<LineChart>` with responsive container. Each chart is independently configurable.
+**Chart library:** Recharts `\<LineChart\>` with responsive container. Each chart is independently configurable.
 
 **Chart configuration modal:**
 
@@ -1577,7 +1577,7 @@ carbon_budget,ai_difficulty,seed,ticks_to_victory,final_stability,final_gdp,fina
 │   20 ┤  ·   ·  ··                 0       250     500    750  1000      │
 │    0 ┼──────────────── Happiness                                        │
 │       0  20  40  60  80  100                                            │
-│    Autocracy                      Blue: mean  Band: ±1 std              │
+│    Autocracy                      Blue: mean  Band: &plusmn;1 std              │
 │                                                                          │
 │ SELECTED CITIZEN CLUSTERS        TOP BELIEF THEMES (by count)           │
 │ ● Cluster A: 342 (autocrat, poor)  1. "King is corrupt"      (34%)      │
@@ -1589,7 +1589,7 @@ carbon_budget,ai_difficulty,seed,ticks_to_victory,final_stability,final_gdp,fina
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Scatter plot:** D3.js `<svg>` scatter with `circle` elements per citizen. Radius 3px. Color by class. Hover shows citizen ID and stats.
+**Scatter plot:** D3.js `\<svg\>` scatter with `circle` elements per citizen. Radius 3px. Color by class. Hover shows citizen ID and stats.
 
 **Animation:** "Animate Over Time" plays scatter plot as 1-tick-per-frame animation from run start to current tick.
 
@@ -2015,7 +2015,7 @@ fn hex_to_world(q: i32, r: i32, hex_size: f32) -> Vec2 {
 | FR-CIV-RTS-012 | Turn-Based vs Real-Time | Speed controls in Top Bar (Section 4.1); hotkeys `Space` pause, `1×`/`2×`/`5×`/`MAX` | Turn-based mode: speed set to 0; Space advances one tick per press |
 | FR-CIV-RTS-013 | Unit Experience & Leveling | Unit Panel: XP bar, Level badge (Section 6.1); Level star badges on unit sprite; Alert Feed "LEVEL UP" | XP bar shown in Unit Panel; star badge visible on sprite at level 3+ |
 | FR-CIV-RTS-014 | Faction AI Behavior | Alert Feed AI actions; Relations Panel faction state updates; Military Overlay enemy positions | AI actions surface as events in Alert Feed; enemy moves visible through fog via scouted positions |
-| FR-CIV-RTS-015 | Client-Side Prediction & Replay Correction | Smooth unit movement interpolation (frame-rate independent); snap correction < 100ms | Unit positions extrapolated per-frame; server authoritative state corrects if drift > 1 hex |
+| FR-CIV-RTS-015 | Client-Side Prediction & Replay Correction | Smooth unit movement interpolation (frame-rate independent); snap correction \< 100ms | Unit positions extrapolated per-frame; server authoritative state corrects if drift > 1 hex |
 
 ### 12.2 FR-CIV-GEO-* Mapping
 
@@ -2163,7 +2163,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] All 5 primary resources displayed: Joules, Food, Materials, Treasury, Population
 - [ ] CO₂ ppm displayed with color threshold (> 450ppm = orange, > 550ppm = red)
 - [ ] Delta indicators use rolling 5-tick average (not instantaneous)
-- [ ] Warning badge appears for: negative Joules balance, food delta < -5%/tick, CO₂ > 450ppm, treasury < 0
+- [ ] Warning badge appears for: negative Joules balance, food delta < -5%/tick, CO₂ > 450ppm, treasury \< 0
 - [ ] Joules display uses SI prefix scaling: TJ, PJ (not raw integer)
 - [ ] Counter animation: when value changes, digit rolls from old to new (100ms)
 
@@ -2183,7 +2183,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 
 - [ ] Unit sprites load from `units_atlas_01.png` / `units_atlas_02.png`
 - [ ] Faction tint applied via PIXI `tint` property (not separate sprite)
-- [ ] Health bar renders below unit: green > 60%, yellow 30-60%, red < 30%
+- [ ] Health bar renders below unit: green > 60%, yellow 30-60%, red \< 30%
 - [ ] Supply bar renders below health bar (military units only)
 - [ ] Level badge: star icon in sprite corner for units level >= 3
 - [ ] Selected unit: pulsing `#E69F00` ring at 1Hz
@@ -2196,7 +2196,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] Scouted-but-not-visible hexes: desaturated + 70% dim (fogAlpha = 0.5)
 - [ ] Visible hexes: no overlay (fogAlpha = 0.0)
 - [ ] Fog updates each tick within the same animation frame as snapshot render
-- [ ] Fog texture update cost < 5ms for 50,000 hex map
+- [ ] Fog texture update cost \< 5ms for 50,000 hex map
 - [ ] Historical fog shows "?" stale marker on units last seen > 10 ticks ago
 
 ### E.6 Overlays
@@ -2217,7 +2217,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] `[→ Map]` link: camera smoothly pans to alert location (400ms transition)
 - [ ] Actionable alerts (treaty offers): Accept/Reject buttons issue `sim.command`
 - [ ] Feed virtualized: > 500 alerts in feed has no visible scroll performance degradation
-- [ ] Critical alerts (stability < 20) use `aria-live="assertive"` announcement
+- [ ] Critical alerts (stability \< 20) use `aria-live="assertive"` announcement
 - [ ] Tab key cycles through critical alerts (panning camera to each)
 
 ### E.8 Research Tree

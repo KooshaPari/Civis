@@ -47,9 +47,9 @@ Flows are multi-commodity (energy, food, key inputs), but MVP can start with ene
 2) Sanctions as network interdiction
 2.1 Target’s deliverable resources
 Given a set of interdicted edges I⊆EI \\subseteq \\mathcal{E}I⊆E, target jjj’s deliverable energy is:
-E~j(I)=max⁡f∑inflowjs.t.0≤fe≤ce⋅1(e∉I)⋅(1−de)\\tilde{E}\_j(I) = \\max\_{f} \\sum \\text{inflow}\_j
+E~j(I)=max⁡f&sum;inflowjs.t.0&lt;fe&lt;ce⋅1(e&notin;I)⋅(1−de)\\tilde{E}\_j(I) = \\max\_{f} \\sum \\text{inflow}\_j
 \\quad \\text{s.t.}\\quad
-0\\le f\_e \\le c\_e \\cdot \\mathbf{1}(e\\notin I)\\cdot(1-d\_e)E~j​(I)=fmax​∑inflowj​s.t.0≤fe​≤ce​⋅1(e∈/I)⋅(1−de​)
+0\\le f\_e \\le c\_e \\cdot \\mathbf{1}(e\\notin I)\\cdot(1-d\_e)E~j​(I)=fmax​&sum;inflowj​s.t.0&lt;fe​&lt;ce​⋅1(e&isin;/I)⋅(1−de​)
 Target scarcity increases with shortfall:
 ΔjE(I)=max⁡(0,Ejdem−E~j(I)Ejdem)\\Delta^E\_j(I)=\\max\\left(0,\\frac{E^{dem}\_j-\\tilde{E}\_j(I)}{E^{dem}\_j}\\right)ΔjE​(I)=max(0,Ejdem​Ejdem​−E~j​(I)​)
 Your goal is to choose III to maximize ΔjE\\Delta^E\_jΔjE​ (or some proxy of target capability loss).
@@ -71,9 +71,9 @@ remain effective under leakage and substitution
 
 Define sanction plan decision variables:
 
-xe∈{0,1}x\_e \\in \\{0,1\\}xe​∈{0,1}: interdict edge eee
+xe&isin;{0,1}x\_e \\in \\{0,1\\}xe​&isin;{0,1}: interdict edge eee
 
-budget constraint: ∑ekexe≤K\\sum\_e k\_e x\_e \\le K∑e​ke​xe​≤K
+budget constraint: &sum;ekexe&lt;K\\sum\_e k\_e x\_e \\le K&sum;e​ke​xe​&lt;K
 
 Leakage/adversary model:
 
@@ -87,13 +87,13 @@ ae(x)=1−xe⋅(1−ℓe)⋅(1−υe)a\_e(x) =
 (If xe=1x\_e=1xe​=1, access is reduced; leakage and shadow interference restore some access.)
 Then capacities become ce⋅ae(x)c\_e \\cdot a\_e(x)ce​⋅ae​(x).
 Robust objective (minimax)
-max⁡xmin⁡υ∈V[ΔjE(x,υ)−λ∑i∈CBi(x,υ)]\\max\_{x} \\min\_{\\upsilon \\in \\mathcal{V}} 
+max⁡xmin⁡υ&isin;V[ΔjE(x,υ)−λ&sum;i&isin;CBi(x,υ)]\\max\_{x} \\min\_{\\upsilon \\in \\mathcal{V}} 
 \\Big[
 \\Delta^E\_j(x,\\upsilon)
 - \\lambda \\sum\_{i\\in \\mathcal{C}} B\_i(x,\\upsilon)
-\\Big]xmax​υ∈Vmin​[ΔjE​(x,υ)−λi∈C∑​Bi​(x,υ)]
+\\Big]xmax​υ&isin;Vmin​[ΔjE​(x,υ)−λi&isin;C&sum;​Bi​(x,υ)]
 Subject to:
-∑ekexe≤K\\sum\_e k\_e x\_e \\le Ke∑​ke​xe​≤K
+&sum;ekexe&lt;K\\sum\_e k\_e x\_e \\le Ke&sum;​ke​xe​&lt;K
 Interpretation:
 
 choose interdictions that remain effective even when the shadow network tries to defeat them.
@@ -103,7 +103,7 @@ You can also use CVaR instead of worst-case if you want probabilistic robustness
 4) Coalition formation game (who actually joins?)
 Sanctions are only as good as participation.
 Let coalition set C\\mathcal{C}C be the members who join.
-Each potential member iii chooses join Ji∈{0,1}J\_i \\in \\{0,1\\}Ji​∈{0,1}.
+Each potential member iii chooses join Ji&isin;{0,1}J\_i \\in \\{0,1\\}Ji​&isin;{0,1}.
 Payoff for joining:
 Uijoin=AvoidedThreati−BlowbackCosti−RetaliationRiski+SidePaymentsiU\_i^{join} = \\text{AvoidedThreat}\_i - \\text{BlowbackCost}\_i - \\text{RetaliationRisk}\_i + \\text{SidePayments}\_iUijoin​=AvoidedThreati​−BlowbackCosti​−RetaliationRiski​+SidePaymentsi​
 Where:
@@ -117,7 +117,7 @@ RetaliationRisk includes counter-sanctions or military risk
 SidePayments are compensation (aid, energy shipments, trade concessions)
 
 Member joins if:
-Uijoin≥0U\_i^{join} \\ge 0Uijoin​≥0
+Uijoin&gt;0U\_i^{join} \\ge 0Uijoin​&gt;0
 This creates a coordination problem:
 
 members will join only if enough others join (sanctions effective)
@@ -128,11 +128,11 @@ So coalition formation is a threshold public goods game.
 
 5) Designing coalition incentives (side-payments)
 This is where diplomacy becomes a real resource system.
-Let coalition leader LLL allocate transfers si≥0s\_i \\ge 0si​≥0 to members.
+Let coalition leader LLL allocate transfers si&gt;0s\_i \\ge 0si​&gt;0 to members.
 Constraint:
-∑i≠Lsi≤Sbudget\\sum\_{i\\neq L} s\_i \\le S\_{budget}i=L∑​si​≤Sbudget​
+&sum;i&ne;Lsi&lt;Sbudget\\sum\_{i\\neq L} s\_i \\le S\_{budget}i=L&sum;​si​&lt;Sbudget​
 Member participation condition becomes:
-AvoidedThreati−BlowbackCosti−RetaliationRiski+si≥0\\text{AvoidedThreat}\_i - \\text{BlowbackCost}\_i - \\text{RetaliationRisk}\_i + s\_i \\ge 0AvoidedThreati​−BlowbackCosti​−RetaliationRiski​+si​≥0
+AvoidedThreati−BlowbackCosti−RetaliationRiski+si&gt;0\\text{AvoidedThreat}\_i - \\text{BlowbackCost}\_i - \\text{RetaliationRisk}\_i + s\_i \\ge 0AvoidedThreati​−BlowbackCosti​−RetaliationRiski​+si​&gt;0
 Coalition leader’s problem:
 
 choose sis\_isi​ to maximize coalition size/strength at minimum cost

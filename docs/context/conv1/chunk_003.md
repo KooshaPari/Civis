@@ -1,4 +1,4 @@
-### **You**
+### You
 
 Yep. Here are the best OSS bases / inspirations for what you’re building, plus exactly what to steal from each and how to map it into your Rust-engine + UI plan.
 1) ABM frameworks (best “simulation engine” inspiration)
@@ -24,7 +24,7 @@ How to map into CivLab (Rust)
 
 Engine.step() ~ Mesa Model.step()
 
-Vec<Agent> + staged phases (labor → production → allocation → consumption → update health/stress)
+Vec\<Agent\> + staged phases (labor → production → allocation → consumption → update health/stress)
 
 Metrics module = DataCollector clone
 
@@ -133,13 +133,13 @@ Say 1, 2, or 3.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We do (1) Mesa-inspired engine architecture mapping, because it’s the highest leverage: it locks in a clean core that you can drive from any UI (web dashboard now, Godot later). Then your UI is just a client.
 Here’s the concrete architecture you can implement in Rust without getting cute.
@@ -181,7 +181,7 @@ Agent state
 Keep it compact (arrays-of-structs is fine for 20k; later switch to struct-of-arrays for perf).
 
 \`\`\`
-Ruststruct Agent {  id: u32,  age\_w: u16,  health: f32,         // 0..1  skill: f32,          // 0..1  social: f32,         // 0..1  stress: f32,         // 0..1  claims\_money: f64,   // $ or abstract money  claims\_energy: f64,  // joule quota balance  housing\_sec: f32,    // 0..1  food\_sec: f32,       // 0..1  discretionary: f32,  // accumulated D (creative/decadence realized)  employed: bool,  employer\_id: Option<u32>,}
+Ruststruct Agent {  id: u32,  age\_w: u16,  health: f32,         // 0..1  skill: f32,          // 0..1  social: f32,         // 0..1  stress: f32,         // 0..1  claims\_money: f64,   // $ or abstract money  claims\_energy: f64,  // joule quota balance  housing\_sec: f32,    // 0..1  food\_sec: f32,       // 0..1  discretionary: f32,  // accumulated D (creative/decadence realized)  employed: bool,  employer\_id: Option\<u32\>,}
 \`\`\`
 
 World state
@@ -291,7 +291,7 @@ H) “Gamification hooks” from day 1
 You want the UI to feel like a game even before 3D exists:
 Add Win/Lose evaluators as simple functions on metrics:
 
-win if median discretionary DDD > X and waste/output < Y and tyranny < Z
+win if median discretionary DDD > X and waste/output \< Y and tyranny \< Z
 
 lose if revolt risk > threshold (later) or health collapse
 
@@ -337,13 +337,13 @@ Want that in Rust-first (single crate scaffold) or full workspace layout from th
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 No code keep planning and writing
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Got it. Planning/writing only.
 Here’s the non-code master plan for a Mesa-inspired simulation architecture, but adapted to your 3-regime + hybrid goals, tyranny concerns, and “gameified UI” requirement.
@@ -629,13 +629,13 @@ Pick 1–4 and I’ll write it as a clean doc you can drop into your repo.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Let's do it your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We’re going to do the Metric Specification Document.
 Because if you don’t lock down what “waste,” “surplus,” “sustain cost,” and “tyranny” mean, the rest of the system turns into vibes.
@@ -676,13 +676,13 @@ Independent of ideology
 Define per-agent sustain condition:
 An agent is sustainably maintained if:
 
-Health ≥ H\_min(age)
+Health &gt; H\_min(age)
 
-Food security ≥ F\_min
+Food security &gt; F\_min
 
-Housing security ≥ S\_min
+Housing security &gt; S\_min
 
-Healthcare access ≥ HC\_min
+Healthcare access &gt; HC\_min
 
 These thresholds are configurable per scenario.
 
@@ -852,7 +852,7 @@ R&D investment
 7. Tyranny Metrics
 From earlier formal definition.
 7.1 System Tyranny
-T\_system(t) ∈ [0,1]
+T\_system(t) &isin; [0,1]
 Depends on:
 
 Measurement intensity
@@ -992,13 +992,13 @@ Pick one.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Move to next
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We move to:
 EXPERIMENT PROTOCOL & MONTE CARLO STUDY DESIGN
@@ -1313,13 +1313,13 @@ Choose.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We do the Scenario Catalog next, because it’s the thing you can actually run on day 1, and it forces the policy DSL + metrics + experiment harness to converge into something coherent.
 CIVLAB – SCENARIO CATALOG
@@ -1662,13 +1662,13 @@ Say “go” and I’ll write it.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Go
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Perfect. Now we design the Policy God Mode UI Specification — this is what turns CivLab from a research tool into something people will actually use and understand.
 No code. Pure product + interaction + system design.
@@ -2094,13 +2094,13 @@ Pick direction.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Hour choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 CITIZEN MODE DESIGN
@@ -2509,13 +2509,13 @@ Pick the direction.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 HYBRID CONSTITUTIONAL BLUEPRINT
@@ -2757,7 +2757,7 @@ Cross-authority checks
 
 7. Governance Quality Dependency
 The hybrid works only above certain governance thresholds.
-If governance < X:
+If governance \< X:
 
 corruption leakage rises
 
@@ -2883,13 +2883,13 @@ Your move.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 GOVERNANCE DRIFT & INSTITUTIONAL EVOLUTION MODEL
@@ -3255,13 +3255,13 @@ Your move.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 IDEOLOGY EVOLUTION & POLITICAL PREFERENCE DYNAMICS
@@ -3542,13 +3542,13 @@ Your move.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 MULTI-REGION, TRADE & MIGRATION LAYER
@@ -3909,13 +3909,13 @@ Your choice.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We go with:
 FORMAL STABILITY & ATTRACTOR ANALYSIS FRAMEWORK
@@ -3980,7 +3980,7 @@ Where PPP = policy parameters.
 
 2. Attractors
 An attractor is a region in state space where:
-Xt+1≈XtX\_{t+1} \\approx X\_tXt+1​≈Xt​
+Xt+1&asymp;XtX\_{t+1} \\approx X\_tXt+1​&asymp;Xt​
 Examples:
 
 Stable hybrid equilibrium
@@ -4193,13 +4193,13 @@ Your move.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice perhaps all 4
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Yeah — you can do all 4, but you can’t treat them as equal at once or you’ll ship nothing. The right move is a stacked roadmap where each layer becomes usable before the next, and each layer reuses the same experiment harness + metrics.
 Here’s the “all 4” plan, sequenced so it converges.
@@ -4256,7 +4256,7 @@ Autopilot mode (risky, for research): changes policies on schedule
 
 MVP feature set
 
-Objective function: maximize median discretionary life, minimize waste, keep tyranny < threshold, keep revolt risk < threshold
+Objective function: maximize median discretionary life, minimize waste, keep tyranny \< threshold, keep revolt risk \< threshold
 
 Budget constraints: baseline spending, energy cap, tax ceilings
 
@@ -4414,13 +4414,13 @@ If you want the next planning doc, I’d write Climate & Resource Depletion Spec
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Do it
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Absolutely — here’s the Climate & Resource Depletion Dynamics Specification for CivLab.
 This is a full planning document — no code — that defines the variables, processes, feedback loops, and experimental hooks you need to simulate climate and resource dynamics in a way that interacts meaningfully with your economic, political, and governance layers.
@@ -4456,7 +4456,7 @@ This is for macro-level forcing.
 2. New Core State Variables
 Global / Regional
 These variables are added per region:
-VariableRangeMeaningAtmosphericForcing (AF)0–∞Cumulative forcing proxy driving damageClimateDamage (CD)0–1Fraction of productivity/health lost to climate effectsEnergySupplyCapacity (ESC)0–∞Max deliverable energy per weekResourceDepletionFactor (RDF)0–1Decline in accessible natural resourcesDisasterFrequency (DF)0–1Likelihood of shock each tick
+VariableRangeMeaningAtmosphericForcing (AF)0–&infin;Cumulative forcing proxy driving damageClimateDamage (CD)0–1Fraction of productivity/health lost to climate effectsEnergySupplyCapacity (ESC)0–&infin;Max deliverable energy per weekResourceDepletionFactor (RDF)0–1Decline in accessible natural resourcesDisasterFrequency (DF)0–1Likelihood of shock each tick
 These feed into scarcity, governance, and lived experience.
 
 3. Energy & Emissions Dynamics
@@ -4476,7 +4476,7 @@ CodeOutput(t) → EnergyUsed + EmissionsGenerated
 Emissions accumulate into AtmosphericForcing:
 
 \`\`\`
-CodeAF(t+1) = AF(t) + ∑ EmissionsGenerated(t) - NaturalSink(t)
+CodeAF(t+1) = AF(t) + &sum; EmissionsGenerated(t) - NaturalSink(t)
 \`\`\`
 
 Natural sink is a slowly decaying factor:
@@ -4485,7 +4485,7 @@ Natural sink is a slowly decaying factor:
 CodeNaturalSink(t) = k\_sink × AF(t)
 \`\`\`
 
-(where k\_sink < 1)
+(where k\_sink \< 1)
 
 4. Climate Damage Function (CDF)
 Climate damage affects:
@@ -4823,13 +4823,13 @@ Just tell me the number.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We’ll do (4) Policy levers for adaptation investment next — because that’s where climate stops being a doom overlay and becomes an actual control problem that differentiates regimes. It also plugs directly into God Mode sliders and the AI policy agent later.
 CLIMATE LAYER – POLICY LEVERS & ADAPTATION INVESTMENT SPEC
@@ -5105,13 +5105,13 @@ Climate Dashboard UI Spec (how to visualize forcing, damage, scarcity, shocks, t
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Do it
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Good. Now we make the climate layer visible.
 Because if players can’t see forcing, depletion, and scarcity building, they won’t understand why tyranny spikes or why discretionary life shrinks.
@@ -5436,13 +5436,13 @@ Your move.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Proceed
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Good.
 Now we move into the most dangerous and most powerful layer:
@@ -5532,9 +5532,9 @@ Maximize median discretionary life
 
 Minimize waste ratio
 
-Keep tyranny index < threshold
+Keep tyranny index \< threshold
 
-Keep revolt risk < threshold
+Keep revolt risk \< threshold
 
 Maintain sustain efficiency
 
@@ -5588,11 +5588,11 @@ Xt+1=F(Xt,Pt)X\_{t+1} = F(X\_t, P\_t)Xt+1​=F(Xt​,Pt​)
 AI adjusts PtP\_tPt​ to maintain XtX\_tXt​ in a safe region.
 Safe region defined as:
 
-Tyranny < T\_max
+Tyranny \< T\_max
 
-Inequality < I\_max
+Inequality \< I\_max
 
-Scarcity < S\_max
+Scarcity \< S\_max
 
 GovernanceQuality > G\_min
 
@@ -5784,7 +5784,7 @@ Which direction do you want to push?
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Take a look a cities skylines worldbox and diplomacy is not an option, as well as more populad ones like civ 7, how can we use them for intuitive design and robust and comprehensive features? Deep politics, governance, sub governance /public private competiton, war / defense mechanics. Deep economics?
 

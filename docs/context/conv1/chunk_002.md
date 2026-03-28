@@ -1,4 +1,4 @@
-### **You**
+### You
 
 Here are real open-source games and simulation frameworks you can use either as inspiration, code reuse, or platform integration when building your societal/economic simulation with gamification/UI:
 
@@ -66,7 +66,7 @@ If you want, I can map specific modules/architecture from one of these framework
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Sure
 

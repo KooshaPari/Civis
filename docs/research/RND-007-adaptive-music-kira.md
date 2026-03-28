@@ -24,8 +24,8 @@ This document specifies the adaptive music system for CivLab, spanning the Bevy 
 
 | Struct | Role | Key Methods |
 |--------|------|-------------|
-| `AudioManager<DefaultBackend>` | Top-level controller. Owns the audio thread. | `::new(settings)`, `.play(sound_data)`, `.add_sub_track(settings)`, `.add_clock(settings)` |
-| `StaticSoundData` | Pre-loaded audio buffer (entire file in memory). Appropriate for music tracks <60s or looping stems. | `::from_file(path)`, `.with_settings(settings)` |
+| `AudioManager\<DefaultBackend\>` | Top-level controller. Owns the audio thread. | `::new(settings)`, `.play(sound_data)`, `.add_sub_track(settings)`, `.add_clock(settings)` |
+| `StaticSoundData` | Pre-loaded audio buffer (entire file in memory). Appropriate for music tracks \< 60s or looping stems. | `::from_file(path)`, `.with_settings(settings)` |
 | `StreamingSoundData` | Streaming from disk. Appropriate for long ambient tracks. | `::from_file(path)` |
 | `TrackHandle` | Sub-mixer channel. Controls volume, panning, effects for all sounds routed to it. | `.set_volume(value, tween)`, `.set_panning(value, tween)`, `.play(sound_data)` |
 | `ClockHandle` | Musical timing source. Ticks at configurable BPM. Events can be scheduled on clock ticks. | `::new(settings)`, `.set_speed(bpm, tween)` |
@@ -333,8 +333,8 @@ class WebMusicManager {
 3. Music layers loop seamlessly with no audible gap at loop boundary.
 4. Volume automation responds to game-state changes within 1 frame (16ms) of state change detection.
 5. Web client handles browser autoplay policy: music starts only after first user interaction.
-6. Total music asset size < 20MB (8 tracks * ~2.5MB OGG each).
-7. CPU usage for audio mixing < 2% on reference hardware (M1 Mac, Chrome 120+).
+6. Total music asset size \< 20MB (8 tracks * ~2.5MB OGG each).
+7. CPU usage for audio mixing \< 2% on reference hardware (M1 Mac, Chrome 120+).
 
 ---
 

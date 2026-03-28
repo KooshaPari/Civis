@@ -307,7 +307,7 @@ Source spec: `docs/models/civ-sim/DATA_MODEL_DB_SPEC.md`
 |---|---|---|---|---|---|
 | `metrics.snapshot.v1` | Per-tick summary of all civilizations' key indicators. | `tick: u64`, `civs: [{civ_id, gdp_mc, joule_balance_kj, pop, temp_c, capture_score}]` | engine/metrics | DB, UI, AI | every tick |
 | `metrics.threshold.warning.v1` | A derived metric has crossed a warning threshold (50–75 % of critical). | `metric: string`, `civ_id: uuid \| null`, `value: f32`, `warning_threshold: f32`, `tick: u64` | engine/metrics | UI, DB | on-condition |
-| `metrics.threshold.critical.v1` | A derived metric has crossed the critical threshold (≥ 75 % of max). | `metric: string`, `civ_id: uuid \| null`, `value: f32`, `critical_threshold: f32`, `tick: u64` | engine/metrics | ALL | on-condition |
+| `metrics.threshold.critical.v1` | A derived metric has crossed the critical threshold (&gt; 75 % of max). | `metric: string`, `civ_id: uuid \| null`, `value: f32`, `critical_threshold: f32`, `tick: u64` | engine/metrics | ALL | on-condition |
 
 **Example — `metrics.snapshot.v1` payload (abbreviated):**
 ```json

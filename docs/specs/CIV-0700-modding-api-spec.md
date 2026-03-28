@@ -354,7 +354,7 @@ Violations are not silently ignored. A permission violation causes:
 3. After 5 permission violations in a single tick, the mod is flagged `ModStatus::Suspended` and receives no further callbacks for that tick.
 4. The suspension is lifted at the start of the next tick.
 
-Repeated suspension across 10 consecutive ticks promotes the mod to `ModStatus::Faulted`, which requires explicit operator intervention to clear (`sim mod reset-fault <mod_id>`).
+Repeated suspension across 10 consecutive ticks promotes the mod to `ModStatus::Faulted`, which requires explicit operator intervention to clear (`sim mod reset-fault \<mod_id\>`).
 
 ---
 
@@ -1178,7 +1178,7 @@ pub const SCALE: i64 = 1_000_000;
 /// Uses the host's fixed_mul() for guaranteed bit-exact results.
 #[inline]
 pub fn fp_mul(a: i64, b: i64) -> i64 {
-    unsafe { host_fns::fixed_mul(a, b, 20) }  // 2^20 ≈ 1_000_000
+    unsafe { host_fns::fixed_mul(a, b, 20) }  // 2^20 &asymp; 1_000_000
 }
 
 /// Divide two fixed-point values: (a * SCALE) / b.
@@ -1476,7 +1476,7 @@ Unloading is deferred to the next tick boundary (same as swap). At unload:
 |---|---|---|
 | `Active` | Receives tick callbacks | None |
 | `Degraded` | Receives tick callbacks (with logged warnings) | None (self-recovers if timeouts stop) |
-| `Faulted` | No callbacks | `sim mod reset-fault <mod_id>` |
+| `Faulted` | No callbacks | `sim mod reset-fault \<mod_id\>` |
 | `Unloading` | No callbacks | None |
 
 ---

@@ -1454,7 +1454,7 @@ pub fn ideology_from_json(s: &str) -> Result<[f64; 8], DbError> {
 
 **Boolean ↔ INTEGER:** `true` = 1, `false` = 0. SQLite has no native BOOLEAN type.
 
-**Vec<TippingPoint> ↔ JSON TEXT:** Serialized as JSON array of snake_case strings via serde.
+**Vec\<TippingPoint\> ↔ JSON TEXT:** Serialized as JSON array of snake_case strings via serde.
 
 **serde_json::Value ↔ TEXT:** Stored as compact JSON string. Parsed on read.
 
@@ -1681,11 +1681,11 @@ pub async fn prune_world_state_rows(
 
 **CSV export:**
 
-One `.csv` file per table. Column names match SQL column names exactly. Produced by `civ export csv --run-id <UUID> --output-dir <path>`.
+One `.csv` file per table. Column names match SQL column names exactly. Produced by `civ export csv --run-id \<UUID\> --output-dir \<path\>`.
 
 **Parquet export (via arrow2):**
 
-One `.parquet` file per table. Schema mirrors SQL schema. Column types: Int64 for all INTEGER columns, Utf8 for TEXT, Binary for BLOB. Compression: ZSTD level 4. Row group size: 65536. Produced by `civ export parquet --run-id <UUID> --output-dir <path>`.
+One `.parquet` file per table. Schema mirrors SQL schema. Column types: Int64 for all INTEGER columns, Utf8 for TEXT, Binary for BLOB. Compression: ZSTD level 4. Row group size: 65536. Produced by `civ export parquet --run-id \<UUID\> --output-dir \<path\>`.
 
 Parquet files are the recommended format for research analysis in Python (pandas/polars) or DuckDB:
 
@@ -1710,7 +1710,7 @@ result = conn.execute("""
 
 **.civreplay export:**
 
-The `.civreplay` file is produced continuously during simulation (see Section 1.6). It can also be produced post-hoc from the SQLite event log via `civ export civreplay --run-id <UUID> --output <path>`.
+The `.civreplay` file is produced continuously during simulation (see Section 1.6). It can also be produced post-hoc from the SQLite event log via `civ export civreplay --run-id \<UUID\> --output \<path\>`.
 
 ---
 
@@ -3116,15 +3116,15 @@ pub async fn load_fixture(pool: &SqlitePool, fixture_name: &str) {
 |--------|-----------|-------------|------------------------|---------------------|
 | Simulation Run | `runs` | `SimRun` | — (metadata only) | Header |
 | State Snapshot | `snapshots` | `Snapshot` | `WorldSnap` / `WorldDelta` | Per-frame |
-| Simulation Event | `events` | `SimEvent` | `Vec<SimEvent>` in `World.event_log` | Every event |
-| Nation | `nations` | `NationState` | `BTreeMap<NationId, NationState>` | Via events |
-| City | `cities` | `CityState` | `BTreeMap<CityId, CityState>` | Via events |
-| Citizen | `citizens` | `CitizenRecord` | `BTreeMap<CitizenId, CitizenRecord>` | Via events (sampled) |
+| Simulation Event | `events` | `SimEvent` | `Vec\<SimEvent\>` in `World.event_log` | Every event |
+| Nation | `nations` | `NationState` | `BTreeMap \< NationId, NationState>` | Via events |
+| City | `cities` | `CityState` | `BTreeMap \< CityId, CityState>` | Via events |
+| Citizen | `citizens` | `CitizenRecord` | `BTreeMap \< CitizenId, CitizenRecord>` | Via events (sampled) |
 | Ledger Transfer | `ledger_transfers` | `LedgerTransfer` | `LedgerState.transfers` | Via events |
 | Market Clearing | `markets` | `MarketClearing` | `BTreeMap<(Good, CityId), MarketClearing>` | Via events |
 | Climate | `climate_state` | `ClimateStateRow` / `ClimateState` | `World.climate` | Via events |
-| Institution | `institutions` | `InstitutionState` | `BTreeMap<InstId, InstitutionState>` | Via events |
-| War | `wars` | `WarRecord` | `BTreeMap<WarId, WarRecord>` | Via events |
+| Institution | `institutions` | `InstitutionState` | `BTreeMap \< InstId, InstitutionState>` | Via events |
+| War | `wars` | `WarRecord` | `BTreeMap \< WarId, WarRecord>` | Via events |
 | Research Run | `research_runs` | `ResearchRun` | — (metadata) | Header |
 | Replay Event | `replay_events` | `ReplayEvent` | — (archive) | Primary |
 | Metric | `metrics_timeseries` | `MetricRow` | — (derived) | No |

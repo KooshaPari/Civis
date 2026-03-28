@@ -82,7 +82,7 @@ rg "delegate|subprocess|invoke" --type py
 
 ### File Size & Modularity Constraints
 
-**Hard constraint: All modules ≤500 lines (target ≤350)**
+**Hard constraint: All modules &lt;500 lines (target &lt;350)**
 
 - Check line count before adding features
 - If file approaches 350+ lines → decompose immediately
@@ -128,7 +128,7 @@ rg "delegate|subprocess|invoke" --type py
 - **Tool design**: Place business logic in `services/`; orchestrate only in tools
 - **Adapters**: Go through `infrastructure/`; never bypass
 - **Tests**: Run via `uv run pytest`; use FastMCP client In-Memory for unit tests
-- **File size (critical)**: All modules ≤500 lines; target ≤350 lines
+- **File size (critical)**: All modules &lt;500 lines; target &lt;350 lines
 
 ## Recommended Agent Behaviors
 

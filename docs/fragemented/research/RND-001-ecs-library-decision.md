@@ -58,14 +58,14 @@ no resources, no sorted iteration).
   archetype, and within an archetype, iteration follows insertion order. But archetype order
   itself depends on the order components were first combined, which can vary across runs if
   systems race or if entity construction order differs.
-- **Solution:** Since Bevy 0.15, `QueryIter` supports `.sort_by::<Entity>(...)` and
+- **Solution:** Since Bevy 0.15, `QueryIter` supports `.sort_by::\<Entity\>(...)` and
   `.sort_by_key::<Entity, _>(...)` via `QuerySortedIter`. This sorts entities by `Entity` ID
   (or any component) before iteration, providing deterministic order.
 - **Performance cost of sorting:** O(n log n) per query per frame, where n is the number of
   matching entities. For 100k entities this is ~1.7M comparisons -- roughly 50-100us on modern
   hardware. Acceptable for a tick-based simulation (not a 60fps renderer).
 - **Alternative:** If sorted iteration is too expensive for hot-path queries, maintain a
-  side-channel `Vec<Entity>` sorted once on insert, and iterate that instead. But for CivLab's
+  side-channel `Vec\<Entity\>` sorted once on insert, and iterate that instead. But for CivLab's
   tick-based model, sorting per tick is fine.
 
 **Parallel system scheduling:**
@@ -131,7 +131,7 @@ no resources, no sorted iteration).
   be stored externally and threaded through manually.
 - **No sorted iteration API:** Must collect into `Vec<(Entity, &Component)>` and sort
   manually. No built-in `sort_by_key`.
-- **No change detection:** Bevy's `Changed<T>` and `Added<T>` query filters are essential
+- **No change detection:** Bevy's `Changed\<T\>` and `Added\<T\>` query filters are essential
   for efficient simulation (e.g., only recalculate food for citizens whose hunger component
   changed). `hecs` has no equivalent.
 - **Solo maintainer risk:** While active, the bus factor is 1.
@@ -174,7 +174,7 @@ CivLab requires bit-for-bit determinism for:
 
 | Threat | Mitigation |
 |--------|------------|
-| Query iteration order varies | Use `.sort_by_key::<Entity>(Entity::index)` on all simulation queries |
+| Query iteration order varies | Use `.sort_by_key::\<Entity\>(Entity::index)` on all simulation queries |
 | Parallel system execution | Run simulation schedule single-threaded with explicit ordering |
 | HashMap iteration order | Use `BTreeMap` or sorted `Vec` for all simulation-critical maps |
 | Entity allocation order | Entities are allocated sequentially (monotonic index); deterministic if spawn order is fixed |
@@ -392,8 +392,8 @@ mod determinism_tests {
    <1ms per sorted query). If too slow, consider maintaining pre-sorted entity lists as a
    `Resource` that gets incrementally updated on spawn/despawn.
 
-3. **Change detection + sorted iteration interaction:** Bevy's `Changed<T>` filter narrows
-   the query set before iteration. Verify that sorted iteration over `Changed<T>` results
+3. **Change detection + sorted iteration interaction:** Bevy's `Changed\<T\>` filter narrows
+   the query set before iteration. Verify that sorted iteration over `Changed\<T\>` results
    is also deterministic (it should be, since `Changed` is archetype-scoped and sort
    operates on the filtered set).
 

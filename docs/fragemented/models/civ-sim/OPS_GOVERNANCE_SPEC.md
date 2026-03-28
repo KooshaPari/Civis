@@ -101,7 +101,7 @@ The following rules are referenced throughout this document. Each quality gate m
 |---|---|---|
 | D1 | Pure Functions | All tick-advancing systems are pure functions of (World, Tick, Seed). No hidden state. |
 | D2 | No System Time | `std::time::SystemTime`, `std::time::Instant`, and all wall-clock reads are forbidden in sim code. |
-| D3 | No Float Comparison | Floating-point equality or ordering in game logic is forbidden. All rates use `FixedI32<U16>`; all energy/GDP use `i64` newtypes. |
+| D3 | No Float Comparison | Floating-point equality or ordering in game logic is forbidden. All rates use `FixedI32\<U16\>`; all energy/GDP use `i64` newtypes. |
 | D4 | No Global Mutable State | No `static mut`, no `OnceLock` that mutates after initialization, no thread-local state in sim code. |
 | D5 | Deterministic Ordering | ECS system ordering is declared explicit and total. No reliance on hash map iteration order in output-affecting code. |
 | D6 | Seeded RNG Only | Only `ChaCha20Rng` seeded from the scenario config is permitted. No `rand::thread_rng()` or OS entropy sources in sim code. |
@@ -1316,7 +1316,7 @@ impl SimulationGuardrails {
 | Entity count exceeded | Entity count over `max_entity_count` | P1 |
 | WASM sandbox escape | wasmtime host-call policy violation | P0 |
 | Tick count limit reached | `current_tick >= max_tick_count` | P2 expected termination |
-| Manual operator trigger | `civlab-cli freeze <run-id>` | P1 |
+| Manual operator trigger | `civlab-cli freeze \< run-id>` | P1 |
 | Critical metric threshold | Any metric with `critical_high` breach for 5 consecutive ticks | P1 |
 
 #### 6.3.2 Freeze Mode Behavior
@@ -2131,7 +2131,7 @@ When `cargo audit` reports a yanked or advisory-flagged crate:
 | RUSTSEC with CVSS >= 9.0 (Critical) | 4 hours | Immediate patching; freeze deploy pipeline until resolved |
 | RUSTSEC with CVSS 7.0-8.9 (High) | 24 hours | PR within 24 hours; deploy within 48 hours |
 | RUSTSEC with CVSS 4.0-6.9 (Medium) | 7 days | PR within 7 days |
-| RUSTSEC with CVSS < 4.0 (Low) | 30 days | Track and patch in next scheduled maintenance |
+| RUSTSEC with CVSS \< 4.0 (Low) | 30 days | Track and patch in next scheduled maintenance |
 | Yanked crate (no advisory) | 14 days | Replace with non-yanked version |
 
 The on-call engineer is paged for Critical advisories. High advisories create a GitHub issue assigned to the Security Guild. Medium and Low create GitHub issues labeled `security` and `dependency`.

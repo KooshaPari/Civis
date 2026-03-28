@@ -1494,7 +1494,7 @@ Emitted when a citizen's social class changes (upward or downward mobility).
 
 ### 8.5 `citizen.happiness_updated.v1`
 
-Emitted when a citizen's happiness score changes by more than the configured threshold (default: ±0.05).
+Emitted when a citizen's happiness score changes by more than the configured threshold (default: &plusmn;0.05).
 
 **Payload JSON Schema:**
 ```json
@@ -1770,7 +1770,7 @@ Emitted when a city or nation cannot meet its energy demand. Triggers cascade ef
 
 ### 9.4 `economy.price_spike.v1`
 
-Emitted when a good's price in a city changes by more than the configured spike threshold (default: ±20% in one tick).
+Emitted when a good's price in a city changes by more than the configured spike threshold (default: &plusmn;20% in one tick).
 
 **Payload JSON Schema:**
 ```json
@@ -2148,7 +2148,7 @@ Emitted on each simulation year tick when sea level changes measurably.
 
 ### 11.1 `institution.legitimacy_changed.v1`
 
-Emitted when an institution's legitimacy score changes by more than the configured threshold (default: ±0.05).
+Emitted when an institution's legitimacy score changes by more than the configured threshold (default: &plusmn;0.05).
 
 **Payload JSON Schema:**
 ```json
@@ -3287,7 +3287,7 @@ Targets are specified for:
 - CPU: 8-core x86-64 (AMD Ryzen 9 5900X or equivalent)
 - RAM: 16 GB
 - Storage: NVMe SSD (sequential write >= 2 GB/s)
-- Network: localhost or < 1 ms RTT LAN
+- Network: localhost or \< 1 ms RTT LAN
 
 ### 17.4 Monitoring Metrics
 

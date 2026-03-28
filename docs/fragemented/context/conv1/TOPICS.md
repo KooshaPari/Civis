@@ -4,7 +4,7 @@
 - chunk_001.md — Core joule premise: universal energy unit replacing currency, citizen lifecycle, retirement pool
 - chunk_001.md — Item acquisition, commoditization, financialization of energy output
 - chunk_001.md — Government subsidy mechanics, "right to live" thresholds, energy debt
-- chunk_003.md — Formal simulation engine design: Engine.step(), Vec<Agent>, staged phases (labor → production → allocation → consumption → update)
+- chunk_003.md — Formal simulation engine design: Engine.step(), Vec\<Agent\>, staged phases (labor → production → allocation → consumption → update)
 - chunk_005.md — City-scale economy design pattern: households, firms, budget panels, resource flows
 
 ## Conservation Laws & Invariants

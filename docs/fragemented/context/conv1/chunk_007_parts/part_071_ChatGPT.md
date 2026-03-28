@@ -27,7 +27,7 @@ once entered, the probability of leaving is arbitrarily small (or zero in the si
 the system’s drift points inward
 
 A necessity result typically shows:
-Pr⁡(τA<∞)=1\\Pr(\\tau\_{\\mathcal{A}} < \\infty) = 1Pr(τA​<∞)=1
+Pr⁡(τA<&infin;)=1\\Pr(\\tau\_{\\mathcal{A}} < \\infty) = 1Pr(τA​<&infin;)=1
 i.e., with probability 1, you hit A\\mathcal{A}A eventually, under repeated mild shocks.
 We’ll use two tools:
 
@@ -58,15 +58,15 @@ There exist recurring scarcity shocks ξt\\xi\_tξt​ such that StS\_tSt​ exc
 
 When StS\_tSt​ is high, the planner/state has an incentive to ration and enforce compliance, so coupled allocation induces score-based denial for a nontrivial fraction of the population:
 
-Pr⁡(EssentialsDenied∣St>S\\\*)≥p0>0\\Pr(\\text{EssentialsDenied} \\mid S\_t>S^\\\*) \\ge p\_0 > 0Pr(EssentialsDenied∣St​>S\\\*)≥p0​>0
+Pr⁡(EssentialsDenied∣St>S\\\*)&gt;p0>0\\Pr(\\text{EssentialsDenied} \\mid S\_t>S^\\\*) \\ge p\_0 > 0Pr(EssentialsDenied∣St​>S\\\*)&gt;p0​>0
 
 Denial events decrease legitimacy and increase unrest pressure, which induces increased enforcement EtE\_tEt​ (state reaction), which increases TtT\_tTt​.
 
 Then if Coupt=1Coup\_t=1Coupt​=1 (coupling allowed), the process almost surely enters an authoritarian stability basin Aauth\\mathcal{A}\_{auth}Aauth​ where:
-Tt≥T\\\*,Lt≤L\\\*T\_t \\ge T^\\\*,\\quad L\_t \\le L^\\\*Tt​≥T\\\*,Lt​≤L\\\*
+Tt&gt;T\\\*,Lt&lt;L\\\*T\_t \\ge T^\\\*,\\quad L\_t \\le L^\\\*Tt​&gt;T\\\*,Lt​&lt;L\\\*
 and enforcement becomes self-sustaining.
 Formally:
-Pr⁡(τAauth<∞)=1\\Pr(\\tau\_{\\mathcal{A}\_{auth}} < \\infty)=1Pr(τAauth​​<∞)=1
+Pr⁡(τAauth<&infin;)=1\\Pr(\\tau\_{\\mathcal{A}\_{auth}} < \\infty)=1Pr(τAauth​​<&infin;)=1
 Interpretation:
 If survival is made contingent on metric compliance, then in any world with recurring scarcity, the system inevitably finds a stable equilibrium where coercion is high—because the mechanism creates a control lever that is too “effective” under stress.
 Why it’s “necessary”:
@@ -77,8 +77,8 @@ Here we formalize that unbounded rent extraction creates an almost-sure drift in
 Let inequality evolve:
 It+1=It+γ1RentSharet−γ2RedistributiontI\_{t+1} = I\_t + \\gamma\_1 \\text{RentShare}\_t - \\gamma\_2 \\text{Redistribution}\_tIt+1​=It​+γ1​RentSharet​−γ2​Redistributiont​
 Let rent share be increasing in itself due to compounding asset ownership and capture:
-RentSharet≥r0+r1Itwith r1>0\\text{RentShare}\_t \\ge r\_0 + r\_1 I\_t
-\\quad \\text{with } r\_1>0RentSharet​≥r0​+r1​It​with r1​>0
+RentSharet&gt;r0+r1Itwith r1>0\\text{RentShare}\_t \\ge r\_0 + r\_1 I\_t
+\\quad \\text{with } r\_1>0RentSharet​&gt;r0​+r1​It​with r1​>0
 (This is “wealth begets rent.”)
 Let governance integrity decay with inequality/capture pressure:
 Gt+1=Gt−ϕ(It)+(small repair)G\_{t+1} = G\_t - \\phi(I\_t) + \\text{(small repair)}Gt+1​=Gt​−ϕ(It​)+(small repair)
@@ -89,13 +89,13 @@ Assume:
 
 Rent extraction has positive feedback (asset accumulation increases rent share): r1>0r\_1>0r1​>0.
 
-Redistribution is bounded above by political feasibility: γ2Redistributiont≤dˉ\\gamma\_2 \\text{Redistribution}\_t \\le \\bar{d}γ2​Redistributiont​≤dˉ.
+Redistribution is bounded above by political feasibility: γ2Redistributiont&lt;dˉ\\gamma\_2 \\text{Redistribution}\_t \\le \\bar{d}γ2​Redistributiont​&lt;dˉ.
 
 Governance repair is bounded: integrity cannot be instantly restored.
 
 Then if there is no structural anti-rent cap limiting RentSharet\\text{RentShare}\_tRentSharet​ (no LVT/antitrust/boring finance), inequality ItI\_tIt​ diverges toward a high level and governance GtG\_tGt​ decays below any fixed threshold, implying eventual entry into a captured/oligarchic basin Aolig\\mathcal{A}\_{olig}Aolig​.
 Formally, for sufficiently long horizons:
-Pr⁡(τAolig<∞)=1\\Pr(\\tau\_{\\mathcal{A}\_{olig}}<\\infty)=1Pr(τAolig​​<∞)=1
+Pr⁡(τAolig<&infin;)=1\\Pr(\\tau\_{\\mathcal{A}\_{olig}}<\\infty)=1Pr(τAolig​​<&infin;)=1
 Interpretation:
 If rent compounds and political redistribution is bounded, then inequality rises until it captures institutions. Without anti-rent structure, “good governance” is not an equilibrium; it’s a transient.
 
@@ -103,7 +103,7 @@ If rent compounds and political redistribution is bounded, then inequality rises
 Let financial fragility FtF\_tFt​ evolve:
 Ft+1=Ft+η1CreditGrowtht+η2St−η3BufferstF\_{t+1} = F\_t + \\eta\_1 \\text{CreditGrowth}\_t + \\eta\_2 S\_t - \\eta\_3 \\text{Buffers}\_tFt+1​=Ft​+η1​CreditGrowtht​+η2​St​−η3​Bufferst​
 If leverage is unbounded, credit growth can scale with optimism and collateral:
-CreditGrowtht≥c0+c1Ft(boom)\\text{CreditGrowth}\_t \\ge c\_0 + c\_1 F\_t^{(boom)} CreditGrowtht​≥c0​+c1​Ft(boom)​
+CreditGrowtht&gt;c0+c1Ft(boom)\\text{CreditGrowth}\_t \\ge c\_0 + c\_1 F\_t^{(boom)} CreditGrowtht​&gt;c0​+c1​Ft(boom)​
 or more simply: there exists a positive-probability path where credit growth is persistently high.
 Crises occur when Ft>F\\\*F\_t>F^\\\*Ft​>F\\\*, and crises reduce output, legitimacy, and governance.
 
@@ -117,7 +117,7 @@ Credit growth is not structurally bounded (no leverage cap, no LTV cap, no “bo
 Each crisis has a nonzero probability of causing a large legitimacy drop or governance degradation (political radicalization, capture).
 
 Then over infinite horizon, the probability of experiencing infinitely many crises is 1, and the probability that at least one crisis pushes the system into a collapse or authoritarian basin is 1:
-Pr⁡(τAcollapse∪Aauth<∞)=1\\Pr(\\tau\_{\\mathcal{A}\_{collapse}\\cup \\mathcal{A}\_{auth}}<\\infty)=1Pr(τAcollapse​∪Aauth​​<∞)=1
+Pr⁡(τAcollapse∪Aauth<&infin;)=1\\Pr(\\tau\_{\\mathcal{A}\_{collapse}\\cup \\mathcal{A}\_{auth}}<\\infty)=1Pr(τAcollapse​∪Aauth​​<&infin;)=1
 Interpretation:
 Unbounded finance is a repeated “lottery” of catastrophic drawdowns. Over infinite time, you eventually hit a catastrophic one.
 

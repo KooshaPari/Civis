@@ -2,7 +2,7 @@
 
 - Install: `pip install -e .[dev]` (requires Python 3.12+; use the repo `.python-version`).
 - Unit tests: `python -m pytest -xvs`.
-- Targeted test: `python -m pytest tests/<path>::<TestClass>::<test_name> -xvs`.
+- Targeted test: `python -m pytest tests/\<path\>::\<TestClass\>::\<test_name\> -xvs`.
 - Simulator suite: `python communication_simulator_test.py --verbose`.
 - Lint & format: `ruff check .`, `black --check .`, `isort --check-only .`.
 - Auto-fix style: `ruff check . --fix`, `black .`, `isort .`.
@@ -41,7 +41,7 @@ Use `/commands` → **Reload (R)** after editing. Commands reference the work pr
 
 # Git Workflow & Evidence
 
-- Branch naming: `feature/<slug>`, `fix/<slug>`, `chore/<slug>`.
+- Branch naming: `feature/\<slug\>`, `fix/\<slug\>`, `chore/\<slug\>`.
 - Keep commits atomic; prefer `feat:`, `fix:`, `test:`, `docs:`, `chore:`.
 - Mandatory proof before merge:
   - `python -m pytest -xvs`
@@ -57,7 +57,7 @@ Use `/release-checklist` before tagging, `/incident-postmortem` after outages, a
 - Network/tool execution is sandboxed; expand permissions via `.codex/permissions.local.toml`, `.claude/settings.local.json`, `.auggie/settings.local.json`.
 - When changing provider integrations or auth flows, run `/security-sweep` and coordinate with `docs/reports/` owners.
 - Logs rotate at 20 MB; use `logs/mcp_server.log` and `logs/mcp_activity.log` for debugging. Simulator tests require `LOG_LEVEL=DEBUG`.
-- Use `/housekeeping <scope>` (via `ops-concierge`) for simple chores so dev droids stay focused on feature work.
+- Use `/housekeeping \<scope\>` (via `ops-concierge`) for simple chores so dev droids stay focused on feature work.
 
 # Documentation & Prompts
 

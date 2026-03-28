@@ -16,26 +16,26 @@ In reality, sanctions fail most often because coalitions fracture, not because i
 We’ll model coalition cohesion as a dynamic system with a threshold reproduction number C0\\mathcal{C}\_0C0​ (coalition stability number), analogous to your capture and leakage thresholds.
 
 0) Objects and variables
-Coalition C\\mathcal{C}C sanctions target jjj. Members i∈Ci \\in \\mathcal{C}i∈C.
+Coalition C\\mathcal{C}C sanctions target jjj. Members i&isin;Ci \\in \\mathcal{C}i&isin;C.
 For each member iii, define:
 
-Bi,t≥0B\_{i,t} \\ge 0Bi,t​≥0: sanction blowback cost (trade loss, inflation, shortages, political pain)
+Bi,t&gt;0B\_{i,t} \\ge 0Bi,t​&gt;0: sanction blowback cost (trade loss, inflation, shortages, political pain)
 
-Li,t∈[0,1]L\_{i,t} \\in [0,1]Li,t​∈[0,1]: domestic legitimacy of the government
+Li,t&isin;[0,1]L\_{i,t} \\in [0,1]Li,t​&isin;[0,1]: domestic legitimacy of the government
 
-Fi,t∈[0,1]F\_{i,t} \\in [0,1]Fi,t​∈[0,1]: sanction fatigue (political exhaustion)
+Fi,t&isin;[0,1]F\_{i,t} \\in [0,1]Fi,t​&isin;[0,1]: sanction fatigue (political exhaustion)
 
-Di,t∈[0,1]D\_{i,t} \\in [0,1]Di,t​∈[0,1]: disinformation/propaganda pressure undermining support
+Di,t&isin;[0,1]D\_{i,t} \\in [0,1]Di,t​&isin;[0,1]: disinformation/propaganda pressure undermining support
 
-Si,t∈[0,1]S\_{i,t} \\in [0,1]Si,t​∈[0,1]: scarcity pressure in coalition member (may rise due to blowback)
+Si,t&isin;[0,1]S\_{i,t} \\in [0,1]Si,t​&isin;[0,1]: scarcity pressure in coalition member (may rise due to blowback)
 
-Gi,t∈[0,1]G\_{i,t} \\in [0,1]Gi,t​∈[0,1]: governance integrity (resists capture, improves messaging trust)
+Gi,t&isin;[0,1]G\_{i,t} \\in [0,1]Gi,t​&isin;[0,1]: governance integrity (resists capture, improves messaging trust)
 
-Hi,t∈[0,1]H\_{i,t} \\in [0,1]Hi,t​∈[0,1]: “commitment propensity” (culture/ideology alignment; slow-moving)
+Hi,t&isin;[0,1]H\_{i,t} \\in [0,1]Hi,t​&isin;[0,1]: “commitment propensity” (culture/ideology alignment; slow-moving)
 
-si,t≥0s\_{i,t} \\ge 0si,t​≥0: side-payments/compensation from leader (aid, energy shipments, subsidies)
+si,t&gt;0s\_{i,t} \\ge 0si,t​&gt;0: side-payments/compensation from leader (aid, energy shipments, subsidies)
 
-pi,t∈{0,1}p\_{i,t} \\in \\{0,1\\}pi,t​∈{0,1}: participation indicator (1 = stays in coalition, 0 = exits)
+pi,t&isin;{0,1}p\_{i,t} \\in \\{0,1\\}pi,t​&isin;{0,1}: participation indicator (1 = stays in coalition, 0 = exits)
 
 Coalition-level:
 
@@ -47,13 +47,13 @@ EffictEffic\_tEffict​: perceived effectiveness of sanctions (narrative + measu
 
 1) Participation decision rule (micro foundation)
 Member iii stays in coalition if perceived net payoff is nonnegative:
-Ui,tstay=Ai,t⏟avoided threat−Bi,t⏟blowback−Ri,t⏟retaliation risk−Φ(Fi,t,Di,t)⏟fatigue + narrative collapse+si,t⏟side-payments  ≥0U^{stay}\_{i,t} =
+Ui,tstay=Ai,t⏟avoided threat−Bi,t⏟blowback−Ri,t⏟retaliation risk−Φ(Fi,t,Di,t)⏟fatigue + narrative collapse+si,t⏟side-payments  &gt;0U^{stay}\_{i,t} =
 \\underbrace{A\_{i,t}}\_{\\text{avoided threat}}
 -\\underbrace{B\_{i,t}}\_{\\text{blowback}}
 -\\underbrace{R\_{i,t}}\_{\\text{retaliation risk}}
 -\\underbrace{\\Phi(F\_{i,t},D\_{i,t})}\_{\\text{fatigue + narrative collapse}}
 +\\underbrace{s\_{i,t}}\_{\\text{side-payments}}
-\\;\\ge 0Ui,tstay​=avoided threatAi,t​​​−blowbackBi,t​​​−retaliation riskRi,t​​​−fatigue + narrative collapseΦ(Fi,t​,Di,t​)​​+side-paymentssi,t​​​≥0
+\\;\\ge 0Ui,tstay​=avoided threatAi,t​​​−blowbackBi,t​​​−retaliation riskRi,t​​​−fatigue + narrative collapseΦ(Fi,t​,Di,t​)​​+side-paymentssi,t​​​&gt;0
 This is the decision kernel.
 But for stability analysis we need dynamics for Fi,tF\_{i,t}Fi,t​ and Di,tD\_{i,t}Di,t​.
 
@@ -132,8 +132,8 @@ Define “commitment support”:
 Then local stability indicator for each member:
 κi,t=Ψi,tΩi,t\\kappa\_{i,t} = \\frac{\\Psi\_{i,t}}{\\Omega\_{i,t}}κi,t​=Ωi,t​Ψi,t​​
 Coalition stability number:
-C0(t)=1∣C∣∑i∈Cκi,t\\mathcal{C}\_0(t) =
-\\frac{1}{|\\mathcal{C}|}\\sum\_{i\\in\\mathcal{C}} \\kappa\_{i,t}C0​(t)=∣C∣1​i∈C∑​κi,t​
+C0(t)=1∣C∣&sum;i&isin;Cκi,t\\mathcal{C}\_0(t) =
+\\frac{1}{|\\mathcal{C}|}\\sum\_{i\\in\\mathcal{C}} \\kappa\_{i,t}C0​(t)=∣C∣1​i&isin;C&sum;​κi,t​
 Interpretation:
 
 if C0<1\\mathcal{C}\_0 < 1C0​<1, average support dominates decay → coalition tends to hold

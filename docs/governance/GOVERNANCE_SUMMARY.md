@@ -63,11 +63,11 @@ Verify with: `task spec:validate` or `task spec:list`
 
 | Setting | Value | Scope |
 |---------|-------|-------|
-| **Test Coverage** | ≥ 80% | All code paths |
-| **Cyclomatic Complexity** | ≤ 10 per function | rust (cargo-clippy) |
-| **Cognitive Complexity** | ≤ 15 per function | rust (cargo-clippy) |
-| **Function Lines** | ≤ 60 max | rust |
-| **Code Duplication** | ≤ 8% | Across codebase |
+| **Test Coverage** | &gt; 80% | All code paths |
+| **Cyclomatic Complexity** | &lt; 10 per function | rust (cargo-clippy) |
+| **Cognitive Complexity** | &lt; 15 per function | rust (cargo-clippy) |
+| **Function Lines** | &lt; 60 max | rust |
+| **Code Duplication** | &lt; 8% | Across codebase |
 
 ### Quality Gates
 

@@ -295,8 +295,8 @@ Use these to operate on the **same running stack** without disrupting the user's
 | Tail logs (all) | `make dev-logs` |
 | Tail logs (one service) | `make dev-logs SERVICE=python-backend` |
 | Raw process list | `process-compose process list --port 18080` |
-| Stop one service | `process-compose process stop <name> --port 18080` |
-| Start one service | `process-compose process start <name> --port 18080` |
+| Stop one service | `process-compose process stop &lt;name&gt; --port 18080` |
+| Start one service | `process-compose process start &lt;name&gt; --port 18080` |
 
 All commands talk to the running process-compose instance via `--port 18080`. The user sees updates live in their TUI.
 
@@ -312,7 +312,7 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 - One log file per service under **`.process-compose/logs/`**. Logs are **ephemeral** (truncated on each `make dev` / `make dev-tui` start).
   - Examples: `.process-compose/logs/go-backend.log`, `.process-compose/logs/python-backend.log`, `.process-compose/logs/frontend.log`, `.process-compose/logs/caddy.log`
-- **Lifecycle markers:** Each app service log includes injected `[LIFECYCLE] START <service> <timestamp>` at start and `[LIFECYCLE] STOP <service> <timestamp> exit=<code>` on exit so restarts are obvious.
+- **Lifecycle markers:** Each app service log includes injected `[LIFECYCLE] START &lt;service&gt; &lt;timestamp&gt;` at start and `[LIFECYCLE] STOP &lt;service&gt; &lt;timestamp&gt; exit=&lt;code&gt;` on exit so restarts are obvious.
 - Prefer reading logs via `make dev-logs SERVICE=X` or the log files directly. Never attach to the user's TUI terminal.
 
 ## Package Manager
@@ -320,9 +320,9 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 **Always use `bun` instead of `npm` for all package management tasks.**
 
 - Install: `bun install` (not `npm install`)
-- Run scripts: `bun run <script>` (not `npm run <script>`)
-- Add dependencies: `bun add <package>` (not `npm install <package>`)
-- Dev dependencies: `bun add -d <package>` (not `npm install --save-dev <package>`)
+- Run scripts: `bun run &lt;script&gt;` (not `npm run &lt;script&gt;`)
+- Add dependencies: `bun add &lt;package&gt;` (not `npm install &lt;package&gt;`)
+- Dev dependencies: `bun add -d &lt;package&gt;` (not `npm install --save-dev &lt;package&gt;`)
 
 ## Native services over Docker; local OSS/free only
 
@@ -334,7 +334,7 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 # AgilePlus Spec Tracking
 
-Use AgilePlus for spec tracking: `cd /Users/kooshapari/CodeProjects/Phenotype/repos/AgilePlus && agileplus <command>`
+Use AgilePlus for spec tracking: `cd /Users/kooshapari/CodeProjects/Phenotype/repos/AgilePlus && agileplus &lt;command&gt;`
 
 - Start a new conversation to switch agent personas
 

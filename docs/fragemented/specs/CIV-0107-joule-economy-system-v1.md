@@ -35,7 +35,7 @@ Each citizen `i` maintains:
 
 ```
 EnergyLedger_i = {
-  lifetime_work_accumulated: J ≥ 0,  // total joules earned
+  lifetime_work_accumulated: J &gt; 0,  // total joules earned
   current_balance: J,                 // available joules this period
   discretionary_allocation: J,        // joules available for non-essential consumption
   baseline_fulfillment: bool,         // essentials met this tick?
@@ -256,7 +256,7 @@ For abundant goods: price near energy cost (minimal markup)
 
 ### Baseline Strength (Constitutional Anchor)
 
-**Baseline strength B ∈ [0,1]** defines:
+**Baseline strength B &isin; [0,1]** defines:
 
 ```
 B = ratio of unconditional rights to total output
@@ -272,7 +272,7 @@ High B (0.8):  Baseline covers essentials + moderate creative freedom
 
 ### Measurement Intensity (Surveillance)
 
-**Surveillance scope Σ ∈ [0,1]** controls:
+**Surveillance scope Σ &isin; [0,1]** controls:
 
 ```
 Σ = how much of citizen energy behavior is observed
@@ -305,15 +305,15 @@ ELSE (coupling forbidden):
 
 ### Enforcement & Audit
 
-**Audit rate A ∈ [0, 1]**: probability citizen is audited per tick.
+**Audit rate A &isin; [0, 1]**: probability citizen is audited per tick.
 
 ```
 Audit outcome:
   - Check quota claim vs actual consumption
   - If discrepancy > threshold: fine, warn, or escalate to enforcement
-  - Corruption leakage C ∈ [0,1]: fraction of fines diverted to official pockets
+  - Corruption leakage C &isin; [0,1]: fraction of fines diverted to official pockets
 
-Enforcement severity E ∈ [0,1]:
+Enforcement severity E &isin; [0,1]:
   - Low E: warning, education
   - High E: quota penalty, credit freeze, mobility restriction
 
@@ -376,7 +376,7 @@ Over time, measurement scope Σ expands via routine pressure:
 Citizens pressure themselves to work more hours to accumulate quota (discretionary access). Health / stress / creativity decline.
 
 **Prevention**:
-- Generous baseline B (≥0.5) → no survival pressure
+- Generous baseline B (&gt;0.5) → no survival pressure
 - Energy intensity factors capped at reasonable hourly effort
 - Mandatory vacation / rest periods (non-deductible from quota)
 - Psychological stress metric monitored; alerts if trending up
@@ -563,7 +563,7 @@ Indexes needed:
 
 The joule economy is **only compatible** with the hybrid constitutional blueprint if:
 
-1. **Baseline decoupling** (B ≥ 0.4): essentials unconditional
+1. **Baseline decoupling** (B &gt; 0.4): essentials unconditional
 2. **Coupling forbidden**: constitutional hard-cap on Σ, explicit ban on energy_score → rights
 3. **Sunset clauses**: energy measurement factors / surveillance scope reviewed 5-yearly
 4. **Transparency**: public dashboards show Σ, measurement waste, enforcement statistics
@@ -616,7 +616,7 @@ Vary B from 0.2 to 0.8. For each B:
 - Measure: tyranny, discretionary realization, waste, innovation, legitimacy stability
 - Result: Pareto frontier of B vs outcomes
 
-**Hypothesis**: B ≥ 0.5 prevents measurement tyranny without killing innovation.
+**Hypothesis**: B &gt; 0.5 prevents measurement tyranny without killing innovation.
 
 ### B) Measurement Scope Creep Dynamics
 

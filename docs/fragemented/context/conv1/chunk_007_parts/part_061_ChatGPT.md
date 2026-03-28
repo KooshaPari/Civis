@@ -26,7 +26,7 @@ Trade/energy corridor network G\\mathcal{G}G
 
 Let:
 
-xe∈{0,1}x\_e\\in\\{0,1\\}xe​∈{0,1}: interdiction on edge eee by coalition (formal sanctions)
+xe&isin;{0,1}x\_e\\in\\{0,1\\}xe​&isin;{0,1}: interdiction on edge eee by coalition (formal sanctions)
 
 KKK: coalition interdiction budget (enforcement effort, naval patrols, compliance)
 
@@ -48,10 +48,10 @@ LtL\_tLt​: legitimacy
 
 Define target’s shadow import capacity (leakage throughput):
 
-Λt≥0\\Lambda\_t \\ge 0Λt​≥0: total effective black/gray inflow (energy + critical inputs)
+Λt&gt;0\\Lambda\_t \\ge 0Λt​&gt;0: total effective black/gray inflow (energy + critical inputs)
 
 Sanctions “fail” operationally if:
-Λt≈Λreq\\Lambda\_t \\approx \\Lambda\_{req}Λt​≈Λreq​
+Λt&asymp;Λreq\\Lambda\_t \\approx \\Lambda\_{req}Λt​&asymp;Λreq​
 i.e., leakage restores enough throughput that scarcity remains below intended level.
 
 1) Leakage dynamics (macro logistic with suppression)
@@ -92,11 +92,11 @@ st(Λ)=β (Kt+ψEt) Gt (1−Selt) Λs\_t(\\Lambda)=\\beta \\,(K\_t + \\p
 This makes suppression proportional to current leakage volume.
 
 2) The leakage reproduction number L0\\mathcal{L}\_0L0​
-Linearize at small leakage Λ≈0\\Lambda\\approx 0Λ≈0.
+Linearize at small leakage Λ&asymp;0\\Lambda\\approx 0Λ&asymp;0.
 Then growth is approximately:
-gt(Λ)≈αHt(St+ηΔPt)(1+κSelt)g\_t(\\Lambda)\\approx \\alpha H\_t (S\_t + \\eta\\Delta P\_t)(1+\\kappa Sel\_t)gt​(Λ)≈αHt​(St​+ηΔPt​)(1+κSelt​)
+gt(Λ)&asymp;αHt(St+ηΔPt)(1+κSelt)g\_t(\\Lambda)\\approx \\alpha H\_t (S\_t + \\eta\\Delta P\_t)(1+\\kappa Sel\_t)gt​(Λ)&asymp;αHt​(St​+ηΔPt​)(1+κSelt​)
 and suppression is approximately:
-st(Λ)≈β(Kt+ψEt)Gt(1−Selt)Λs\_t(\\Lambda)\\approx \\beta (K\_t+\\psi E\_t)G\_t(1-Sel\_t)\\Lambdast​(Λ)≈β(Kt​+ψEt​)Gt​(1−Selt​)Λ
+st(Λ)&asymp;β(Kt+ψEt)Gt(1−Selt)Λs\_t(\\Lambda)\\approx \\beta (K\_t+\\psi E\_t)G\_t(1-Sel\_t)\\Lambdast​(Λ)&asymp;β(Kt​+ψEt​)Gt​(1−Selt​)Λ
 To define a threshold like an epidemic, we focus on whether leakage can grow from small perturbations. A standard way is to compare marginal growth vs marginal suppression at low Λ\\LambdaΛ.
 Define:
 L0(t)=αHt(St+ηΔPt)(1+κSelt)β(Kt+ψEt)Gt(1−Selt)\\mathcal{L}\_0(t)=
@@ -122,7 +122,7 @@ L0(t)=αHt(St+ηΔPt)(1+κSelt)β(Kt+ψEt)Gt(1−Selt)\\mathcal{L}\_0(t)=
 }L0​(t)=β(Kt​+ψEt​)Gt​(1−Selt​)αHt​(St​+ηΔPt​)(1+κSelt​)​
 Then:
 
-If L0(t)<1\\mathcal{L}\_0(t) < 1L0​(t)<1 uniformly for t≥t0t\\ge t\_0t≥t0​, leakage decays to a low steady level and sanctions remain effective (up to residual leakage).
+If L0(t)<1\\mathcal{L}\_0(t) < 1L0​(t)<1 uniformly for t&gt;t0t\\ge t\_0t&gt;t0​, leakage decays to a low steady level and sanctions remain effective (up to residual leakage).
 
 If L0(t)>1\\mathcal{L}\_0(t) > 1L0​(t)>1 for sustained periods, leakage grows toward a high-leakage equilibrium Λ\\\*\\Lambda^\\\*Λ\\\* close to Λmax\\Lambda\_{max}Λmax​, and sanctions effectiveness collapses (unless coalition escalates enforcement).
 
@@ -140,11 +140,11 @@ Tt+1↑ with Et,Lt+1↓ with EtT\_{t+1} \\uparrow \\text{ with } E\_t
 L\_{t+1} \\downarrow \\text{ with } E\_tTt+1​↑ with Et​,Lt+1​↓ with Et​
 If legitimacy falls too low, enforcement collapses due to revolt, fragmentation, or capture.
 So EtE\_tEt​ has an effective upper bound:
-Et≤E‾(Lt,Bt)E\_t \\le \\overline{E}(L\_t,B\_t)Et​≤E(Lt​,Bt​)
+Et&lt;E‾(Lt,Bt)E\_t \\le \\overline{E}(L\_t,B\_t)Et​&lt;E(Lt​,Bt​)
 where higher baseline BtB\_tBt​ increases tolerance for enforcement (people endure hardship better), but coupling is forbidden in the hybrid.
 4.2 Coalition interdiction is bounded by blowback and fatigue
 Coalition members also suffer cost from sanctions (trade loss, price shocks, political fatigue). So:
-Kt≤K‾(coalition blowback,domestic politics)K\_t \\le \\overline{K}(\\text{coalition blowback},\\text{domestic politics})Kt​≤K(coalition blowback,domestic politics)
+Kt&lt;K‾(coalition blowback,domestic politics)K\_t \\le \\overline{K}(\\text{coalition blowback},\\text{domestic politics})Kt​&lt;K(coalition blowback,domestic politics)
 This means even if L0>1\\mathcal{L}\_0>1L0​>1, the coalition may be unable to push it below 1 sustainably.
 
 5) Corruption/selectivity creates “elite bypass”

@@ -43,7 +43,7 @@ albedo α\\alphaα
 retention stability RatmR\_{atm}Ratm​ (magnetosphere + gravity + stellar wind)
 
 Temperature field baseline:
-T0∝(I(1−α)4σ)1/4⋅(1+Ggh)T\_0 \\propto \\left(\\frac{I(1-\\alpha)}{4\\sigma}\\right)^{1/4}\\cdot (1+G\_{gh})T0​∝(4σI(1−α)​)1/4⋅(1+Ggh​)
+T0&prop;(I(1−α)4σ)1/4⋅(1+Ggh)T\_0 \\propto \\left(\\frac{I(1-\\alpha)}{4\\sigma}\\right)^{1/4}\\cdot (1+G\_{gh})T0​&prop;(4σI(1−α)​)1/4⋅(1+Ggh​)
 Climate volatility index:
 Vclim=f(e,θ,ω,Patm,V∗)V\_{clim} = f(e,\\theta,\\omega, P\_{atm}, V\_\*)Vclim​=f(e,θ,ω,Patm​,V∗​)
 What it drives:
@@ -135,7 +135,7 @@ Each archetype yields a different “history generator.”
 The clean way to unify everything is as a hierarchical partially observable stochastic game with multi-scale state, plus a reaggregation operator.
 3.1 Global formulation
 Let the full world state at time ttt be:
-Xt=(P,  {Xr,t}r=1R,  {Yc,t}c=1C,  {xi,t}i∈It,  Gt,  Nt)\\mathcal{X}\_t = (P,\\; \\{X\_{r,t}\\}\_{r=1}^R,\\; \\{Y\_{c,t}\\}\_{c=1}^C,\\; \\{x\_{i,t}\\}\_{i\\in \\mathcal{I}\_t},\\; \\mathcal{G}\_t,\\; \\mathcal{N}\_t )Xt​=(P,{Xr,t​}r=1R​,{Yc,t​}c=1C​,{xi,t​}i∈It​​,Gt​,Nt​)
+Xt=(P,  {Xr,t}r=1R,  {Yc,t}c=1C,  {xi,t}i&isin;It,  Gt,  Nt)\\mathcal{X}\_t = (P,\\; \\{X\_{r,t}\\}\_{r=1}^R,\\; \\{Y\_{c,t}\\}\_{c=1}^C,\\; \\{x\_{i,t}\\}\_{i\\in \\mathcal{I}\_t},\\; \\mathcal{G}\_t,\\; \\mathcal{N}\_t )Xt​=(P,{Xr,t​}r=1R​,{Yc,t​}c=1C​,{xi,t​}i&isin;It​​,Gt​,Nt​)
 Where:
 
 PPP is the planet state (slow-moving)
@@ -165,7 +165,7 @@ a downscaling operator D\\mathcal{D}D that spawns micro/meso detail from macro d
 an aggregation operator A\\mathcal{A}A that conserves totals and pushes micro outcomes back into macro
 
 Constraint:
-Xr,t≈A({xi,t}i∈It,{Yc,t})X\_{r,t} \\approx \\mathcal{A}\\left(\\{x\_{i,t}\\}\_{i\\in\\mathcal{I}\_t},\\{Y\_{c,t}\\}\\right)Xr,t​≈A({xi,t​}i∈It​​,{Yc,t​})
+Xr,t&asymp;A({xi,t}i&isin;It,{Yc,t})X\_{r,t} \\approx \\mathcal{A}\\left(\\{x\_{i,t}\\}\_{i\\in\\mathcal{I}\_t},\\{Y\_{c,t}\\}\\right)Xr,t​&asymp;A({xi,t​}i&isin;It​​,{Yc,t​})
 and when zooming in:
 ({xi,t},{Yc,t})∼D(Xr,t,P,seed)(\\{x\_{i,t}\\},\\{Y\_{c,t}\\}) \\sim \\mathcal{D}(X\_{r,t}, P, \\text{seed})({xi,t​},{Yc,t​})∼D(Xr,t​,P,seed)
 This is the formal guarantee that your two zoom views are not “different games.”
@@ -184,7 +184,7 @@ policy drift
 
 3.4 International system as a repeated stochastic game
 Between regions:
-max⁡πiE[∑tδtUi,t]\\max\_{\\pi\_i} \\mathbb{E}\\left[\\sum\_t \\delta^t U\_{i,t}\\right]πi​max​E[t∑​δtUi,t​]
+max⁡πiE[&sum;tδtUi,t]\\max\_{\\pi\_i} \\mathbb{E}\\left[\\sum\_t \\delta^t U\_{i,t}\\right]πi​max​E[t&sum;​δtUi,t​]
 with actions including sanctions, alliances, war, corridor control, and aid.
 Resource flows are network-constrained max-flow under interdiction + leakage.
 3.5 Civilization progression as regime shifts

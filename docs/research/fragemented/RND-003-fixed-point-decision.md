@@ -12,7 +12,7 @@
 
 1. **`i64` with `SCALE = 1_000_000`** for large-magnitude values (energy in Joules, population
    resources, GDP) where `I32F32` would overflow.
-2. **`fixed` crate `I32F32`** (via `FixedI32<U32>` or more precisely `FixedI32<U16>` for
+2. **`fixed` crate `I32F32`** (via `FixedI32\<U32\>` or more precisely `FixedI32\<U16\>` for
    range) for ratio/rate values (growth rates, efficiency percentages, tax rates, happiness
    scores) where the values stay in a bounded range and operator ergonomics matter.
 3. **`cordic` crate** for trigonometric functions needed by the climate/solar angle subsystem,
@@ -57,27 +57,27 @@ CivLab's simulation must be bit-for-bit deterministic across:
 
 | Type | Bits | Signed | Fractional Bits | Integer Range | Fractional Precision |
 |------|------|--------|-----------------|---------------|---------------------|
-| `FixedI8<UX>` | 8 | Yes | 0-8 | Depends on X | Depends on X |
-| `FixedI16<UX>` | 16 | Yes | 0-16 | Depends on X | Depends on X |
-| `FixedI32<UX>` | 32 | Yes | 0-32 | Depends on X | Depends on X |
-| `FixedI64<UX>` | 64 | Yes | 0-64 | Depends on X | Depends on X |
-| `FixedI128<UX>` | 128 | Yes | 0-128 | Depends on X | Depends on X |
+| `FixedI8\<UX\>` | 8 | Yes | 0-8 | Depends on X | Depends on X |
+| `FixedI16\<UX\>` | 16 | Yes | 0-16 | Depends on X | Depends on X |
+| `FixedI32\<UX\>` | 32 | Yes | 0-32 | Depends on X | Depends on X |
+| `FixedI64\<UX\>` | 64 | Yes | 0-64 | Depends on X | Depends on X |
+| `FixedI128\<UX\>` | 128 | Yes | 0-128 | Depends on X | Depends on X |
 | `FixedU*` variants | * | No | * | * | * |
 
 **Key configurations for CivLab:**
 
 | Type Alias | Type | Integer Bits | Frac Bits | Integer Range | Precision |
 |-----------|------|-------------|-----------|---------------|-----------|
-| `I32F32` | Not a real type -- `FixedI32<U32>` has 0 integer bits! | 0 | 32 | -0.5..0.5 | ~2.3e-10 |
-| `FixedI32<U16>` | 32-bit | 16 | 16 | -32768..32767 | ~1.5e-5 |
-| `FixedI32<U8>` | 32-bit | 24 | 8 | -8388608..8388607 | ~0.004 |
-| `FixedI64<U32>` | 64-bit | 32 | 32 | -2^31..2^31-1 | ~2.3e-10 |
+| `I32F32` | Not a real type -- `FixedI32\<U32\>` has 0 integer bits! | 0 | 32 | -0.5..0.5 | ~2.3e-10 |
+| `FixedI32\<U16\>` | 32-bit | 16 | 16 | -32768..32767 | ~1.5e-5 |
+| `FixedI32\<U8\>` | 32-bit | 24 | 8 | -8388608..8388607 | ~0.004 |
+| `FixedI64\<U32\>` | 64-bit | 32 | 32 | -2^31..2^31-1 | ~2.3e-10 |
 
 **IMPORTANT CORRECTION:** The notation "I32F32" commonly refers to a 64-bit type with 32
-integer bits and 32 fractional bits -- i.e., `FixedI64<U32>`. A `FixedI32<U32>` has zero
+integer bits and 32 fractional bits -- i.e., `FixedI64\<U32\>`. A `FixedI32\<U32\>` has zero
 integer bits (range -0.5 to 0.5), which is useless for most purposes. CivLab should use:
-- `FixedI64<U32>` for "I32F32" semantics (32 int + 32 frac, 64 bits total)
-- `FixedI32<U16>` for "I16F16" semantics (16 int + 16 frac, 32 bits total)
+- `FixedI64\<U32\>` for "I32F32" semantics (32 int + 32 frac, 64 bits total)
+- `FixedI32\<U16\>` for "I16F16" semantics (16 int + 16 frac, 32 bits total)
 
 #### 2.2 Overflow Analysis
 
@@ -87,13 +87,13 @@ Total energy = 100,000 x 10^12 = 10^17 Joules.
 
 | Type | Max Value | Overflows? |
 |------|-----------|------------|
-| `FixedI32<U16>` (I16F16) | 32,767 | YES -- overflows at 32k |
-| `FixedI64<U32>` (I32F32) | ~2.15 x 10^9 | YES -- overflows at 2.1 billion |
+| `FixedI32\<U16\>` (I16F16) | 32,767 | YES -- overflows at 32k |
+| `FixedI64\<U32\>` (I32F32) | ~2.15 x 10^9 | YES -- overflows at 2.1 billion |
 | `i64 x SCALE(10^6)` | ~9.2 x 10^12 | YES if SCALE=10^6, max representable = 9.2e12 |
 | `i64` (raw, no scale) | ~9.2 x 10^18 | NO -- 10^17 fits comfortably |
-| `FixedI128<U32>` | ~1.7 x 10^29 | NO -- but 128-bit math is slow |
+| `FixedI128\<U32\>` | ~1.7 x 10^29 | NO -- but 128-bit math is slow |
 
-**Finding:** For Joule-scale values, even `FixedI64<U32>` overflows. The only viable options
+**Finding:** For Joule-scale values, even `FixedI64\<U32\>` overflows. The only viable options
 are:
 1. **`i64` with reduced scale (SCALE=1000 or SCALE=100):** Max = 9.2e15 or 9.2e16 --
    sufficient for 10^17 with SCALE=100.
@@ -101,11 +101,11 @@ are:
    Most energy calculations don't need fractional Joules.
 3. **`i128`:** Overkill and slower on 32-bit / WASM targets.
 4. **Domain-specific units:** Store energy in kJ or MJ instead of J. 10^17 J = 10^14 kJ =
-   10^11 MJ. `FixedI64<U32>` handles 10^11 MJ fine (max ~2.1e9 with fraction... still tight).
+   10^11 MJ. `FixedI64\<U32\>` handles 10^11 MJ fine (max ~2.1e9 with fraction... still tight).
    10^11 MJ > 2.1e9. Still overflows.
 5. **`i64` with SCALE = 1_000 (milliJoules? No -- scale for sub-unit precision):**
    For energy: use raw `i64` Joules (no fractional precision needed).
-   For rates: use `FixedI32<U16>` or `FixedI64<U32>`.
+   For rates: use `FixedI32\<U16\>` or `FixedI64\<U32\>`.
 
 **Recommendation:** Energy values use plain `i64` (integer Joules or kiloJoules). No scaling
 needed because sub-Joule precision is unnecessary for a civilization simulation. Rates and
@@ -133,7 +133,7 @@ let cmp = a > b;        // true
 
 **Overflow behavior:**
 - Default operations (`+`, `-`, `*`, `/`) panic on overflow in debug, wrap in release.
-- `checked_*` variants return `Option<Self>`.
+- `checked_*` variants return `Option\<Self\>`.
 - `saturating_*` variants clamp to min/max.
 - `wrapping_*` variants explicitly wrap.
 - `strict_*` (renamed from `unwrapped_*` in v1.30) always panic on overflow.
@@ -208,8 +208,8 @@ let r = cordic::sqrt(Fix::from_num(2.0));  // square root
 #### 3.2 Precision
 
 CORDIC achieves precision proportional to the number of fractional bits:
-- With 16 fractional bits (`FixedI32<U16>`): ~4-5 decimal digits of precision
-- With 32 fractional bits (`FixedI64<U32>`): ~9-10 decimal digits of precision
+- With 16 fractional bits (`FixedI32\<U16\>`): ~4-5 decimal digits of precision
+- With 32 fractional bits (`FixedI64\<U32\>`): ~9-10 decimal digits of precision
 
 For climate angle calculations (solar altitude, latitude effects), 4-5 digits of precision
 is more than sufficient. The sun angle doesn't need sub-arcsecond precision for a civilization
@@ -280,7 +280,7 @@ fn div(a: Scaled, b: Scaled) -> Scaled { a * SCALE / b }
 | Type safety | Strong (distinct type) | None (just i64) | `fixed` |
 | Operator overloading | Yes (`+`, `-`, `*`, `/`) | No (function calls) | `fixed` |
 | Overflow detection | `checked_*` variants | Manual | `fixed` |
-| Range for energy | FixedI64<U32>: +-2.1e9 | i64: +-9.2e12 (SCALE=10^6) | Manual |
+| Range for energy | FixedI64\<U32\>: +-2.1e9 | i64: +-9.2e12 (SCALE=10^6) | Manual |
 | Trig functions | Via `cordic` | Must implement | `fixed` |
 | Serde | Built-in feature | Manual | `fixed` |
 | no_std | Yes | Yes | Tie |
@@ -288,7 +288,7 @@ fn div(a: Scaled, b: Scaled) -> Scaled { a * SCALE / b }
 | Dependencies | 1 crate | 0 crates | Manual |
 | Ergonomics | Excellent | Poor | `fixed` |
 | Precision control | Per-type (U8, U16, U32) | Per-constant (SCALE) | `fixed` |
-| Debuggability | `.to_num::<f64>()` for display | `raw / SCALE` | Tie |
+| Debuggability | `.to_num::\<f64\>()` for display | `raw / SCALE` | Tie |
 
 ---
 
@@ -326,16 +326,16 @@ pub struct MilliCredits(pub i64);
 
 | Value | Type | Range | Precision | Justification |
 |-------|------|-------|-----------|---------------|
-| Growth rate | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | Rates are small numbers (0.01-0.10 typical) |
-| Tax rate | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | 0.0-1.0 range |
-| Happiness | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | 0.0-100.0 range |
-| Efficiency | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | 0.0-1.0 multiplier |
-| Temperature | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | Kelvin (200-400 typical) |
-| Latitude/angle | `FixedI32<U16>` | -32768..32767 | ~1.5e-5 | Radians (-pi to pi) |
+| Growth rate | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | Rates are small numbers (0.01-0.10 typical) |
+| Tax rate | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | 0.0-1.0 range |
+| Happiness | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | 0.0-100.0 range |
+| Efficiency | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | 0.0-1.0 multiplier |
+| Temperature | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | Kelvin (200-400 typical) |
+| Latitude/angle | `FixedI32\<U16\>` | -32768..32767 | ~1.5e-5 | Radians (-pi to pi) |
 
 ### Domain 3: Trigonometric Computations
 
-**Use `cordic` crate with `FixedI32<U16>` inputs.**
+**Use `cordic` crate with `FixedI32\<U16\>` inputs.**
 
 Only needed for:
 - Solar angle calculation (climate system)
@@ -628,12 +628,12 @@ RULES FOR NUMERIC DOMAIN CROSSING:
 
 ## Open Questions Remaining
 
-1. **`FixedI32<U16>` vs `FixedI64<U32>` for Ratio:** The current recommendation uses
-   `FixedI32<U16>` for most rates. If any rate computation involves multiplication of two
+1. **`FixedI32\<U16\>` vs `FixedI64\<U32\>` for Ratio:** The current recommendation uses
+   `FixedI32\<U16\>` for most rates. If any rate computation involves multiplication of two
    rates (rate * rate), the intermediate product may lose significant precision with only
-   16 fractional bits. Profiling needed to determine if `FixedI64<U32>` is needed for any
-   hot paths. Preliminary recommendation: start with `FixedI32<U16>`, upgrade to
-   `FixedI64<U32>` only for domains where precision matters (e.g., compound interest over
+   16 fractional bits. Profiling needed to determine if `FixedI64\<U32\>` is needed for any
+   hot paths. Preliminary recommendation: start with `FixedI32\<U16\>`, upgrade to
+   `FixedI64\<U32\>` only for domains where precision matters (e.g., compound interest over
    many ticks).
 
 2. **Overflow handling policy:** The contract specifies `checked_*` operations that panic

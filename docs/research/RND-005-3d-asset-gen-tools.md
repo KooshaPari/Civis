@@ -112,7 +112,7 @@ Tripo3D is a newer entrant (2024-2025) that has rapidly improved quality, partic
 
 #### API Documentation
 
-**Authentication:** Bearer token via `Authorization: Bearer <token>` header.
+**Authentication:** Bearer token via `Authorization: Bearer \<token\>` header.
 
 **Endpoints:**
 ```

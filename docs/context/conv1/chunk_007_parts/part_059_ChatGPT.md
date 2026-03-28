@@ -20,25 +20,25 @@ Goal: derive conditions under which capture inevitably grows vs conditions under
 0) Reduced model objects
 For a region rrr (drop subscript), define:
 
-Gt∈[0,1]G\_t \\in [0,1]Gt​∈[0,1]: governance integrity (higher is better)
+Gt&isin;[0,1]G\_t \\in [0,1]Gt​&isin;[0,1]: governance integrity (higher is better)
 
-It∈[0,1]I\_t \\in [0,1]It​∈[0,1]: inequality/stratification (proxy for elite leverage)
+It&isin;[0,1]I\_t \\in [0,1]It​&isin;[0,1]: inequality/stratification (proxy for elite leverage)
 
-Rt∈[0,1]R\_t \\in [0,1]Rt​∈[0,1]: rent extraction intensity (structural extraction)
+Rt&isin;[0,1]R\_t \\in [0,1]Rt​&isin;[0,1]: rent extraction intensity (structural extraction)
 
-Ot∈[0,1]O\_t \\in [0,1]Ot​∈[0,1]: opacity (lack of transparency / auditability)
+Ot&isin;[0,1]O\_t \\in [0,1]Ot​&isin;[0,1]: opacity (lack of transparency / auditability)
 
-Wt∈[0,1]W\_t \\in [0,1]Wt​∈[0,1]: war/emergency intensity (procurement secrecy, emergency powers)
+Wt&isin;[0,1]W\_t \\in [0,1]Wt​&isin;[0,1]: war/emergency intensity (procurement secrecy, emergency powers)
 
-Et∈[0,1]E\_t \\in [0,1]Et​∈[0,1]: enforcement intensity
+Et&isin;[0,1]E\_t \\in [0,1]Et​&isin;[0,1]: enforcement intensity
 
-Selt∈[0,1]Sel\_t \\in [0,1]Selt​∈[0,1]: enforcement selectivity (0 = uniform rule of law, 1 = highly selective)
+Selt&isin;[0,1]Sel\_t \\in [0,1]Selt​&isin;[0,1]: enforcement selectivity (0 = uniform rule of law, 1 = highly selective)
 
-Lt∈[0,1]L\_t \\in [0,1]Lt​∈[0,1]: legitimacy
+Lt&isin;[0,1]L\_t \\in [0,1]Lt​&isin;[0,1]: legitimacy
 
 Let the shadow system have an aggregate “capture stock”:
 
-Ct∈[0,1]C\_t \\in [0,1]Ct​∈[0,1]: capture level (0 none, 1 fully captured)
+Ct&isin;[0,1]C\_t \\in [0,1]Ct​&isin;[0,1]: capture level (0 none, 1 fully captured)
 
 And a hidden influence network with adjacency matrix AAA (not fully observed by player).
 Let ρ(A)\\rho(A)ρ(A) denote the spectral radius (largest eigenvalue magnitude), which captures how “amplifying” the influence network is (high ρ\\rhoρ ⇒ influence spreads and compounds easily).
@@ -96,12 +96,12 @@ A tractable form:
 Exposure events are stochastic and more likely when transparency is higher and shadow activity is larger.
 
 3) The threshold condition (the core theorem)
-Define the net capture multiplier around small capture levels Ct≈0C\_t \\approx 0Ct​≈0.
+Define the net capture multiplier around small capture levels Ct&asymp;0C\_t \\approx 0Ct​&asymp;0.
 Linearize near C=0C=0C=0:
-Ct+1≈Ct+Γt−ΔtCtC\_{t+1} \\approx C\_t + \\Gamma\_t - \\Delta\_t C\_tCt+1​≈Ct​+Γt​−Δt​Ct​
-More precisely, because growth term is Γt(1−Ct)≈Γt\\Gamma\_t(1-C\_t)\\approx \\Gamma\_tΓt​(1−Ct​)≈Γt​ near 0, capture starts increasing if Γt\\Gamma\_tΓt​ is nontrivial and persists; but long-run behavior depends on whether the system admits a stable fixed point near 0.
+Ct+1&asymp;Ct+Γt−ΔtCtC\_{t+1} \\approx C\_t + \\Gamma\_t - \\Delta\_t C\_tCt+1​&asymp;Ct​+Γt​−Δt​Ct​
+More precisely, because growth term is Γt(1−Ct)&asymp;Γt\\Gamma\_t(1-C\_t)\\approx \\Gamma\_tΓt​(1−Ct​)&asymp;Γt​ near 0, capture starts increasing if Γt\\Gamma\_tΓt​ is nontrivial and persists; but long-run behavior depends on whether the system admits a stable fixed point near 0.
 A clearer stability criterion uses the expected drift:
-E[Ct+1−Ct∣Ct]≈E[Γt]−E[Δt]Ct\\mathbb{E}[C\_{t+1}-C\_t\\mid C\_t] \\approx \\mathbb{E}[\\Gamma\_t] - \\mathbb{E}[\\Delta\_t] C\_tE[Ct+1​−Ct​∣Ct​]≈E[Γt​]−E[Δt​]Ct​
+E[Ct+1−Ct∣Ct]&asymp;E[Γt]−E[Δt]Ct\\mathbb{E}[C\_{t+1}-C\_t\\mid C\_t] \\approx \\mathbb{E}[\\Gamma\_t] - \\mathbb{E}[\\Delta\_t] C\_tE[Ct+1​−Ct​∣Ct​]&asymp;E[Γt​]−E[Δt​]Ct​
 This implies:
 
 if E[Γt]\\mathbb{E}[\\Gamma\_t]E[Γt​] stays positive, capture rises from 0
@@ -150,7 +150,7 @@ If R0<1\\mathcal{R}\_0 < 1R0​<1, C=0C=0C=0 is locally stable: small capture de
 
 If R0>1\\mathcal{R}\_0 > 1R0​>1, C=0C=0C=0 is unstable: capture grows from small perturbations (supercritical regime).
 
-Under positive feedback parameters rC,oC,sC>0r\_C,o\_C,s\_C>0rC​,oC​,sC​>0, if R0>1\\mathcal{R}\_0 > 1R0​>1, the system admits a stable high-capture equilibrium C\\\*∈(0,1]C^\\\* \\in (0,1]C\\\*∈(0,1] (oligarchic/captured attractor), unless exposure grows fast enough to offset feedback (rare in practice).
+Under positive feedback parameters rC,oC,sC>0r\_C,o\_C,s\_C>0rC​,oC​,sC​>0, if R0>1\\mathcal{R}\_0 > 1R0​>1, the system admits a stable high-capture equilibrium C\\\*&isin;(0,1]C^\\\* \\in (0,1]C\\\*&isin;(0,1] (oligarchic/captured attractor), unless exposure grows fast enough to offset feedback (rare in practice).
 
 Interpretation (plain):
 There is a sharp threshold—like epidemic spread. If the “capture reproduction number” exceeds 1, capture becomes self-sustaining and tends to a high-capture state.
@@ -201,15 +201,15 @@ This explains “crisis authoritarianism + oligarchy” as a predictable phase s
 8) Hybrid constitutional implications (actionable constraints)
 To keep R0<1\\mathcal{R}\_0 < 1R0​<1 in the hybrid, you need constitutional minima/maxima:
 
-minimum transparency: Obase≤Omax⁡O^{base} \\le O\_{\\max}Obase≤Omax​
+minimum transparency: Obase&lt;Omax⁡O^{base} \\le O\_{\\max}Obase&lt;Omax​
 
-maximum emergency opacity: Wbase≤Wmax⁡W^{base} \\le W\_{\\max}Wbase≤Wmax​ with sunsets
+maximum emergency opacity: Wbase&lt;Wmax⁡W^{base} \\le W\_{\\max}Wbase&lt;Wmax​ with sunsets
 
-minimum governance integrity: G≥Gmin⁡G \\ge G\_{\\min}G≥Gmin​ supported by institutions
+minimum governance integrity: G&gt;Gmin⁡G \\ge G\_{\\min}G&gt;Gmin​ supported by institutions
 
-maximum selectivity: Selbase≤Selmax⁡Sel^{base} \\le Sel\_{\\max}Selbase≤Selmax​
+maximum selectivity: Selbase&lt;Selmax⁡Sel^{base} \\le Sel\_{\\max}Selbase&lt;Selmax​
 
-rent suppression floor: Rbase≤Rmax⁡R^{base} \\le R\_{\\max}Rbase≤Rmax​ (via LVT, antitrust, boring finance)
+rent suppression floor: Rbase&lt;Rmax⁡R^{base} \\le R\_{\\max}Rbase&lt;Rmax​ (via LVT, antitrust, boring finance)
 
 network deconcentration policies to reduce ρ(A)\\rho(A)ρ(A)
 

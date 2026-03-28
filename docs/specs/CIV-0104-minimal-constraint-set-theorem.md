@@ -53,7 +53,7 @@ The five constraints, informally:
 2. **Subsistence Floor** — essential-goods delivery to all cohorts is decoupled from compliance metrics and guaranteed above a minimum rate independent of scarcity magnitude.
 3. **Transparent Transfer Ledger** — all resource transfer and allocation decisions are logged to an append-only auditable record; opacity cannot exceed a structural ceiling (shadow capture threshold).
 4. **Adaptive Climate Response** — adaptation investment share of output is bounded below; repeated climate damage is not allowed to dominate total transfer capacity.
-5. **Coalition-Compatible External Strategy** — external strategy parameters are constrained to keep the coalition stability number C₀ < 1, preventing sanction coalition collapse driven by the regime's own actions.
+5. **Coalition-Compatible External Strategy** — external strategy parameters are constrained to keep the coalition stability number C₀ \< 1, preventing sanction coalition collapse driven by the regime's own actions.
 
 ---
 
@@ -68,12 +68,12 @@ xₜ = (Sₜ, Lₜ, Tₜ, Iₜ, Gₜ, Fₜ)
 ```
 
 Where:
-- **Sₜ ∈ [0, 1]**: normalized scarcity pressure
-- **Lₜ ∈ [0, 1]**: legitimacy
-- **Tₜ ∈ [0, 1]**: tyranny / enforcement intensity index
-- **Iₜ ∈ [0, 1]**: inequality / stratification (scaled Gini proxy)
-- **Gₜ ∈ [0, 1]**: governance integrity
-- **Fₜ ∈ [0, 1]**: financial fragility
+- **Sₜ &isin; [0, 1]**: normalized scarcity pressure
+- **Lₜ &isin; [0, 1]**: legitimacy
+- **Tₜ &isin; [0, 1]**: tyranny / enforcement intensity index
+- **Iₜ &isin; [0, 1]**: inequality / stratification (scaled Gini proxy)
+- **Gₜ &isin; [0, 1]**: governance integrity
+- **Fₜ &isin; [0, 1]**: financial fragility
 
 Policy controls (hybrid levers) are:
 ```
@@ -87,20 +87,20 @@ Where:
 - **Aₜ**: adaptation and resilience investment share
 - **τₜ**: redistribution / fiscal policy
 
-Shocks **ξₜ** are drawn from a bounded distribution: ‖ξₜ‖ ≤ ξₘₐₓ with probability 1.
+Shocks **ξₜ** are drawn from a bounded distribution: ‖ξₜ‖ &lt; ξₘₐₓ with probability 1.
 
 The **safe set** is:
 ```
-S = {x : S ≤ Sₘₐₓ, T ≤ Tₘₐₓ, L ≥ Lₘᵢₙ, G ≥ Gₘᵢₙ, F ≤ Fₘₐₓ, I ≤ Iₘₐₓ}
+S = {x : S &lt; Sₘₐₓ, T &lt; Tₘₐₓ, L &gt; Lₘᵢₙ, G &gt; Gₘᵢₙ, F &lt; Fₘₐₓ, I &lt; Iₘₐₓ}
 ```
 
-**Definition (Stability):** The system is *stable* if there exists a policy uₜ ∈ U such that for all x₀ ∈ S:
+**Definition (Stability):** The system is *stable* if there exists a policy uₜ &isin; U such that for all x₀ &isin; S:
 ```
-Pr(xₜ ∈ S  ∀t) ≥ 1 − δ
+Pr(xₜ &isin; S  ∀t) &gt; 1 − δ
 ```
 for a chosen δ > 0, provided shock magnitudes satisfy an admissible bound.
 
-**Legitimacy Recovery Threshold (λ_rec):** A named parameter. If Lₜ < λ_rec, the system is in the legitimacy danger zone: probability of recovering to Lₘᵢₙ within a finite window W_rec decays exponentially with the duration of sub-λ_rec persistence. λ_rec > Lₘᵢₙ by design; the gap (λ_rec − Lₘᵢₙ) defines the recovery buffer.
+**Legitimacy Recovery Threshold (λ_rec):** A named parameter. If Lₜ \< λ_rec, the system is in the legitimacy danger zone: probability of recovering to Lₘᵢₙ within a finite window W_rec decays exponentially with the duration of sub-λ_rec persistence. λ_rec > Lₘᵢₙ by design; the gap (λ_rec − Lₘᵢₙ) defines the recovery buffer.
 
 Default calibrated value: **λ_rec = 0.35** (on a 0–1 scale), **Lₘᵢₙ = 0.20**.
 
@@ -116,7 +116,7 @@ with scarcity shocks ξₜ recurring with nonzero probability (i.e., ∃ p₀ > 
 
 Define the five constraints C₁, ..., C₅ as predicates on simulation state (see Section 3). Then:
 
-**∀ i ∈ {1,...,5}: ¬Cᵢ(xₜ, uₜ) ⟹ Pr(τ_𝒜 < ∞) = 1**
+**∀ i &isin; {1,...,5}: ¬Cᵢ(xₜ, uₜ) ⟹ Pr(τ_𝒜 < &infin;) = 1**
 
 where 𝒜 is an absorbing attractor (authoritarian basin 𝒜_auth, oligarchic basin 𝒜_olig, or collapse basin 𝒜_collapse) and τ_𝒜 is the first passage time into 𝒜.
 
@@ -125,21 +125,21 @@ That is: removing any single constraint is sufficient to guarantee eventual syst
 **Conversely (sufficiency):**
 
 **C₁(xₜ, uₜ) ∧ C₂(xₜ, uₜ) ∧ C₃(xₜ, uₜ) ∧ C₄(xₜ, uₜ) ∧ C₅(xₜ, uₜ)**
-**⟹ ∃ uₜ ∈ U : Pr(xₜ ∈ S  ∀t) ≥ 1 − δ**
+**⟹ ∃ uₜ &isin; U : Pr(xₜ &isin; S  ∀t) &gt; 1 − δ**
 
 ### 2.3 Assumptions
 
-**A1 (Scarcity is bounded but recurrent):** Shocks satisfy ‖ξₜ‖ ≤ ξₘₐₓ < ∞ and Sₜ exceeds S* > 0 infinitely often with probability 1. The distribution of shocks is not IID but is stationary and ergodic.
+**A1 (Scarcity is bounded but recurrent):** Shocks satisfy ‖ξₜ‖ &lt; ξₘₐₓ < &infin; and Sₜ exceeds S* > 0 infinitely often with probability 1. The distribution of shocks is not IID but is stationary and ergodic.
 
 **A2 (Policy execution has finite lag):** Controls uₜ influence state at tick t+1, not t. There is no instantaneous correction; policy lag is exactly 1 tick.
 
-**A3 (Population cohorts react to perceived fairness and material security):** Legitimacy update satisfies the monotonicity: ∂Lₜ₊₁/∂EssentialsSuccess > 0 and ∂Lₜ₊₁/∂Tₜ < 0. Enforcement reduces legitimacy.
+**A3 (Population cohorts react to perceived fairness and material security):** Legitimacy update satisfies the monotonicity: &part;Lₜ₊₁/&part;EssentialsSuccess > 0 and &part;Lₜ₊₁/&part;Tₜ \< 0. Enforcement reduces legitimacy.
 
 **A4 (External sanctions/frictions remain probabilistic):** Coalition member exit probabilities are stochastic; C₀ is a time-varying expectation, not a fixed number.
 
 **A5 (Governance has structural decay under capture pressure):** Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, opacity) + ψ(oversight), with ϕ'(I) > 0 and ψ bounded above.
 
-**A6 (Absorbing basins are escape-proof under unconstrained dynamics):** Once Lₜ < Lₘᵢₙ persists for more than W_rec ticks, the probability of recovery below a fixed threshold decays exponentially. This models the empirical "legitimacy collapse ratchet."
+**A6 (Absorbing basins are escape-proof under unconstrained dynamics):** Once Lₜ \< Lₘᵢₙ persists for more than W_rec ticks, the probability of recovery below a fixed threshold decays exponentially. This models the empirical "legitimacy collapse ratchet."
 
 ---
 
@@ -152,16 +152,16 @@ That is: removing any single constraint is sufficient to guarantee eventual syst
 **Formal Predicate:**
 
 ```
-C₁(xₜ, uₜ) ≡ Eₜ ≤ E*(Lₜ, Gₜ, Selₜ)
+C₁(xₜ, uₜ) &equiv; Eₜ &lt; E*(Lₜ, Gₜ, Selₜ)
 ```
 
 Where the ceiling function is derived from the backfire condition. The enforcement backfire occurs when:
 ```
-∂Λₜ₊ₖ/∂Eₜ > 0  for some k ≥ 1
+&part;Λₜ₊ₖ/&part;Eₜ > 0  for some k &gt; 1
 ```
 This happens when:
 ```
-b₄ · ∂Φ(Eₜ, Selₜ)/∂Eₜ · (a₄/ψ_suppression) > 1
+b₄ · &part;Φ(Eₜ, Selₜ)/&part;Eₜ · (a₄/ψ_suppression) > 1
 ```
 
 A conservative computable ceiling in the sim is:
@@ -183,10 +183,10 @@ Where σ_L(L) = sigmoid(κ_L · (L − λ_rec)) is a legitimacy damping factor t
 /// Returns Ok(()) if enforcement is within the computable ceiling.
 /// Returns Err(ConstraintViolation::C1BoundedCoercion { ... }) if enforcement exceeds ceiling.
 pub fn check_bounded_coercion(
-    enforcement_intensity: Fixed64,    // Eₜ ∈ [0, 1]
-    legitimacy: Fixed64,               // Lₜ ∈ [0, 1]
-    governance_integrity: Fixed64,     // Gₜ ∈ [0, 1]
-    selectivity: Fixed64,              // Selₜ ∈ [0, 1]
+    enforcement_intensity: Fixed64,    // Eₜ &isin; [0, 1]
+    legitimacy: Fixed64,               // Lₜ &isin; [0, 1]
+    governance_integrity: Fixed64,     // Gₜ &isin; [0, 1]
+    selectivity: Fixed64,              // Selₜ &isin; [0, 1]
     params: &BoundedCoercionParams,
 ) -> ConstraintCheck;
 ```
@@ -202,9 +202,9 @@ Adversarial trajectory without C₁:
 6. Shadow network capacity grows: Hₜ₊₁ = Hₜ + ν · Λₜ
 7. State perceives more threat → Eₜ₊₂ increases further
 8. **Backfire cascade**: legitimacy crosses λ_rec; recovery window W_rec closes
-9. System enters 𝒜_auth where Tₜ ≥ T* and Lₜ ≤ L* permanently
+9. System enters 𝒜_auth where Tₜ &gt; T* and Lₜ &lt; L* permanently
 
-Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ ≥ Sel_min > 0 ⟹ Pr(τ_𝒜_auth < ∞) = 1.
+Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ &gt; Sel_min > 0 ⟹ Pr(τ_𝒜_auth < &infin;) = 1.
 
 ---
 
@@ -215,7 +215,7 @@ Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ ≥ Sel_min > 0 ⟹ Pr(τ_�
 **Formal Predicate:**
 
 ```
-C₂(xₜ, uₜ) ≡ EssentialsDelivery(cohort_c, t) ≥ B_min  ∀ cohort c
+C₂(xₜ, uₜ) &equiv; EssentialsDelivery(cohort_c, t) &gt; B_min  ∀ cohort c
               ∧ Coupling(t) = 0  (score cannot restrict essentials)
 ```
 
@@ -226,7 +226,7 @@ Where:
 
 The subsistence floor guarantees:
 ```
-EssentialsSuccess(Bₜ, Sₜ) ≥ e_bar(B_min, S_max)
+EssentialsSuccess(Bₜ, Sₜ) &gt; e_bar(B_min, S_max)
 ```
 Where e_bar is a computable lower bound such that even at maximum scarcity S_max, delivery remains above B_min.
 
@@ -255,7 +255,7 @@ pub fn check_subsistence_floor(
 
 Adversarial trajectory without C₂ (coupling allowed):
 1. Scarcity shock occurs: Sₜ > S*
-2. State has incentive to ration via compliance score: Pr(EssentialsDenied | Sₜ > S*) ≥ p₀ > 0
+2. State has incentive to ration via compliance score: Pr(EssentialsDenied | Sₜ > S*) &gt; p₀ > 0
 3. Denied citizens reduce compliance score feedback → more denial (self-reinforcing)
 4. Tyranny update includes survival-dependence term: Tₜ₊₁ = σ(α · SDₜ + ...)
 5. Citizens who comply get essentials; those who dissent face denial → coercive compliance equilibrium
@@ -263,25 +263,25 @@ Adversarial trajectory without C₂ (coupling allowed):
 7. State interpretation: unrest justifies more coupling → positive feedback
 8. System converges to 𝒜_auth where coercion is self-sustaining
 
-Formally: ¬C₂ ∧ Coupt = 1 ∧ recurrent scarcity ⟹ Pr(τ_𝒜_auth < ∞) = 1.
+Formally: ¬C₂ ∧ Coupt = 1 ∧ recurrent scarcity ⟹ Pr(τ_𝒜_auth < &infin;) = 1.
 
 ---
 
 ### C3: Transparent Transfer Ledger
 
-**Intuition:** All resource allocations, transfers, and fiscal operations must be logged to an append-only auditable ledger. Opacity above a structural ceiling O_max drives the shadow-capture reproduction number R₀ above 1, initiating self-sustaining oligarchic capture. The ledger is not just an audit tool — it is the structural mechanism that keeps R₀ < 1.
+**Intuition:** All resource allocations, transfers, and fiscal operations must be logged to an append-only auditable ledger. Opacity above a structural ceiling O_max drives the shadow-capture reproduction number R₀ above 1, initiating self-sustaining oligarchic capture. The ledger is not just an audit tool — it is the structural mechanism that keeps R₀ \< 1.
 
 **Formal Predicate:**
 
 ```
-C₃(xₜ, uₜ) ≡ Opacity(t) ≤ O_max
-              ∧ ∀ transfer event e in tick t: e ∈ LedgerLog(t)
+C₃(xₜ, uₜ) &equiv; Opacity(t) &lt; O_max
+              ∧ ∀ transfer event e in tick t: e &isin; LedgerLog(t)
 ```
 
 Where:
 - `Opacity(t)`: fraction of resource movements not recorded in the auditable ledger
 - `O_max`: maximum tolerable opacity; derived from the shadow-capture threshold formula
-- The capture reproduction number must satisfy R₀ < 1
+- The capture reproduction number must satisfy R₀ \< 1
 
 Recall R₀ from the Shadow-State Capture Threshold Theorem:
 ```
@@ -294,12 +294,12 @@ C₃ directly controls O^base. The constraint requires:
 O_max = sup{ O : R₀(O, G_min, Sel_base, ...) < 1 }
 ```
 
-In practice: if G ≥ G_min and Sel ≤ Sel_max (from C₁), then O_max ≈ 0.15 (15% opacity maximum).
+In practice: if G &gt; G_min and Sel &lt; Sel_max (from C₁), then O_max &asymp; 0.15 (15% opacity maximum).
 
 **Threshold Parameters:**
 - `O_max`: maximum opacity fraction; valid range [0.0, 0.20]; default 0.15
 - `ledger_completeness_floor`: minimum fraction of transfers that must be logged; valid range [0.85, 1.0]; default 0.92
-- `capture_r0_ceiling`: must be < 1.0; simulation enforces this derived bound
+- `capture_r0_ceiling`: must be \< 1.0; simulation enforces this derived bound
 
 **Rust Function Signature:**
 
@@ -309,7 +309,7 @@ In practice: if G ≥ G_min and Sel ≤ Sel_max (from C₁), then O_max ≈ 0.15
 /// Verifies opacity is below ceiling and capture reproduction number R₀ < 1.
 /// Also verifies ledger write completeness for the current tick.
 pub fn check_transparent_ledger(
-    opacity: Fixed64,                   // Oₜ ∈ [0, 1]
+    opacity: Fixed64,                   // Oₜ &isin; [0, 1]
     ledger_write_rate: Fixed64,         // fraction of transfers logged this tick
     governance_integrity: Fixed64,      // Gₜ (from C1 context)
     selectivity: Fixed64,               // Selₜ
@@ -331,7 +331,7 @@ Adversarial trajectory without C₃:
 8. Coalition-compatible constraint also weakens (C₅ coupling)
 9. System converges to captured oligarchic attractor 𝒜_olig
 
-Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < ∞) = 1.
+Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < &infin;) = 1.
 
 ---
 
@@ -342,8 +342,8 @@ Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < ∞) = 1.
 **Formal Predicate:**
 
 ```
-C₄(xₜ, uₜ) ≡ Aₜ ≥ A_min(Sₜ, ClimateDamage(t))
-              ∧ ClimateDamage(t) ≤ CD_max
+C₄(xₜ, uₜ) &equiv; Aₜ &gt; A_min(Sₜ, ClimateDamage(t))
+              ∧ ClimateDamage(t) &lt; CD_max
 ```
 
 Where:
@@ -357,7 +357,7 @@ Sₜ₊₁ = Sₜ + f_climate(DisasterFrequency, ClimateDamage, ResourceDepletio
          − g_adapt(Aₜ)
 ```
 
-C₄ ensures g_adapt(Aₜ) ≥ f_climate(·) in expectation, preventing monotone scarcity drift.
+C₄ ensures g_adapt(Aₜ) &gt; f_climate(·) in expectation, preventing monotone scarcity drift.
 
 **Threshold Parameters:**
 - `A_min_base`: minimum adaptation investment fraction at zero scarcity; valid range [0.02, 0.10]; default 0.04
@@ -373,9 +373,9 @@ C₄ ensures g_adapt(Aₜ) ≥ f_climate(·) in expectation, preventing monotone
 /// and that climate damage has not exceeded the infeasibility ceiling for C2.
 pub fn check_adaptive_climate_response(
     adaptation_investment: Fixed64,     // Aₜ as fraction of output
-    scarcity_pressure: Fixed64,         // Sₜ ∈ [0, 1]
-    climate_damage: Fixed64,            // CDₜ ∈ [0, 1]
-    disaster_frequency: Fixed64,        // DFₜ ∈ [0, 1]
+    scarcity_pressure: Fixed64,         // Sₜ &isin; [0, 1]
+    climate_damage: Fixed64,            // CDₜ &isin; [0, 1]
+    disaster_frequency: Fixed64,        // DFₜ &isin; [0, 1]
     params: &AdaptiveClimateParams,
 ) -> ConstraintCheck;
 ```
@@ -392,7 +392,7 @@ Adversarial trajectory without C₄:
 7. Without adaptation, each climate event removes productive capacity permanently
 8. **Trajectory type:** slow-burn collapse over 50–200 ticks, not sudden, which is why ablation is non-obvious
 
-Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ < λ_rec  ∀t > T_collapse) → 1.
+Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ \< λ_rec  ∀t > T_collapse) → 1.
 
 ---
 
@@ -403,13 +403,13 @@ Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ < λ_
 **Formal Predicate:**
 
 ```
-C₅(xₜ, uₜ) ≡ C₀(t) < 1
+C₅(xₜ, uₜ) &equiv; C₀(t) < 1
               ∧ L₀(t) < 1  (leakage reproduction number from CIV-0105)
 ```
 
 Where:
 ```
-C₀(t) = (1/|𝒞|) · Σᵢ∈𝒞 κᵢ,ₜ
+C₀(t) = (1/|𝒞|) · Σᵢ&isin;𝒞 κᵢ,ₜ
 
 κᵢ,ₜ = Ψᵢ,ₜ / Ωᵢ,ₜ
 
@@ -424,10 +424,10 @@ L₀(t) = [α · Hₜ · (Sₜ + η · ΔPₜ) · (1 + κ · Selₜ)]
 ```
 
 **Threshold Parameters:**
-- `C0_ceiling`: must be < 1.0; breach triggers C₅ violation
-- `L0_ceiling`: must be < 1.0; breach triggers C₅ violation (via CIV-0105)
+- `C0_ceiling`: must be \< 1.0; breach triggers C₅ violation
+- `L0_ceiling`: must be \< 1.0; breach triggers C₅ violation (via CIV-0105)
 - `coalition_min_members`: minimum coalition member count for meaningful C₀ computation; valid range [2, 10]; default 3
-- `shadow_spend_cap`: maximum shadow network facilitation that keeps L₀ < 1 at baseline governance; derived parameter
+- `shadow_spend_cap`: maximum shadow network facilitation that keeps L₀ \< 1 at baseline governance; derived parameter
 
 **Rust Function Signature:**
 
@@ -459,7 +459,7 @@ Adversarial trajectory without C₅:
 10. C₂ and C₄ are undermined by resource smuggling bypassing adaptation investment
 11. Long-run: both leakage and shadow capture compound together
 
-Formally: ¬C₅ ∧ shadow facilitation active ⟹ C₀ > 1 ⟹ coalition collapse ⟹ L₀ > 1 ⟹ Pr(τ_𝒜 < ∞) = 1.
+Formally: ¬C₅ ∧ shadow facilitation active ⟹ C₀ > 1 ⟹ coalition collapse ⟹ L₀ > 1 ⟹ Pr(τ_𝒜 < &infin;) = 1.
 
 ---
 
@@ -478,37 +478,37 @@ V(xₜ) = aS · Sₜ + aT · Tₜ + aI · Iₜ + aF · Fₜ
 ```
 Where (z)₊ = max(0, z).
 
-**Goal:** Show 𝔼[V(xₜ₊₁) | xₜ] ≤ V(xₜ) − ε for xₜ ∉ S under the five constraints.
+**Goal:** Show 𝔼[V(xₜ₊₁) | xₜ] &lt; V(xₜ) − ε for xₜ &notin; S under the five constraints.
 
 ### 4.3 Necessity Proof by Cases
 
 **Case ¬C₁ (Coercion unbounded):**
 
-Step 1 — Short-run direct effect: enforcement Eₜ > E*(L, G, Sel) reduces leakage marginally (∂Λₜ₊₁/∂Eₜ < 0 directly).
+Step 1 — Short-run direct effect: enforcement Eₜ > E*(L, G, Sel) reduces leakage marginally (&part;Λₜ₊₁/&part;Eₜ \< 0 directly).
 
-Step 2 — Indirect legitimacy effect dominates: legitimacy update contains −b₄ · Φ(Eₜ, Selₜ), so ∂Lₜ₊₁/∂Eₜ < 0.
+Step 2 — Indirect legitimacy effect dominates: legitimacy update contains −b₄ · Φ(Eₜ, Selₜ), so &part;Lₜ₊₁/&part;Eₜ \< 0.
 
-Step 3 — Unrest rises through legitimacy: ∂Rₜ₊₂/∂Eₜ > 0 (via L path).
+Step 3 — Unrest rises through legitimacy: &part;Rₜ₊₂/&part;Eₜ > 0 (via L path).
 
 Step 4 — State reaction function increases Eₜ₊₁ further (c₁ · Rₜ term).
 
 Step 5 — Shadow network grows from sustained leakage: Hₜ₊₁ = Hₜ + ν · Λₜ − δ_H · Hₜ > Hₜ when Λ is sustained.
 
-Step 6 — Beyond E*, the indirect path dominates the direct path. For Selₜ ≥ Sel_min > 0 and Gₜ ≤ G_mid, suppression coefficient G(1 − Sel) becomes small, and the enforcement expansion amplifies leakage long-run.
+Step 6 — Beyond E*, the indirect path dominates the direct path. For Selₜ &gt; Sel_min > 0 and Gₜ &lt; G_mid, suppression coefficient G(1 − Sel) becomes small, and the enforcement expansion amplifies leakage long-run.
 
 Step 7 — Borel–Cantelli: scarcity shocks push Sₜ > S* infinitely often. Each event triggers reaction Eₜ increase. Once Eₜ > E*, the probability of L crossing λ_rec in that episode is bounded away from zero. By Borel–Cantelli, legitimacy crosses λ_rec infinitely often, and eventually a crossing coincides with depleted shadow-network-capacity for recovery. **QED for ¬C₁.**
 
 **Case ¬C₂ (Coupling allowed):**
 
-Step 1 — Scarcity creates rationing incentive: Pr(EssentialsDenied | Sₜ > S*) ≥ p₀ > 0 by state optimization under coupling.
+Step 1 — Scarcity creates rationing incentive: Pr(EssentialsDenied | Sₜ > S*) &gt; p₀ > 0 by state optimization under coupling.
 
-Step 2 — Denial reduces legitimacy: Lₜ₊₁ < Lₜ for denied cohorts.
+Step 2 — Denial reduces legitimacy: Lₜ₊₁ \< Lₜ for denied cohorts.
 
 Step 3 — Tyranny increases (survival-dependence term α · SDₜ): Tₜ₊₁ > Tₜ.
 
 Step 4 — Monotone drift: once Coupt = 1, every scarcity shock creates net negative drift on L and positive drift on T.
 
-Step 5 — V(xₜ) is non-decreasing in expectation under recurrent shocks and coupling ⟹ Borel–Cantelli gives τ_𝒜_auth < ∞ a.s. **QED for ¬C₂.**
+Step 5 — V(xₜ) is non-decreasing in expectation under recurrent shocks and coupling ⟹ Borel–Cantelli gives τ_𝒜_auth < &infin; a.s. **QED for ¬C₂.**
 
 **Case ¬C₃ (Opacity unconstrained):**
 
@@ -518,9 +518,9 @@ Step 2 — Capture grows from small perturbations: Cₜ₊₁ > Cₜ for any C�
 
 Step 3 — Positive feedback: Rₜ = Rbase + r_C · Cₜ, Oₜ = Obase + o_C · Cₜ — capture fuels more capture.
 
-Step 4 — Governance decays: Gₜ₊₁ < Gₜ under rising capture, which raises R₀ further.
+Step 4 — Governance decays: Gₜ₊₁ \< Gₜ under rising capture, which raises R₀ further.
 
-Step 5 — No stable subcritical equilibrium once R₀ > 1 and r_C, o_C > 0: system converges to stable high-capture equilibrium C* ∈ (0,1]. **QED for ¬C₃.**
+Step 5 — No stable subcritical equilibrium once R₀ > 1 and r_C, o_C > 0: system converges to stable high-capture equilibrium C* &isin; (0,1]. **QED for ¬C₃.**
 
 **Case ¬C₄ (No adaptation floor):**
 
@@ -554,11 +554,11 @@ Step 6 — Shadow network gains structural capacity Hₜ that persists after cri
 
 When all five constraints hold simultaneously:
 
-- C₁ keeps Tₜ ≤ Tₘₐₓ (Theorem 1 from Formal Stability Conditions)
-- C₂ keeps EssentialsSuccess ≥ e_bar(B_min, S_max), which via Theorem 2 keeps Lₜ ≥ Lₘᵢₙ
-- C₃ keeps R₀ < 1, keeping Iₜ ≤ Iₘₐₓ via reduced capture (analogous to Theorem 3 anti-rent)
+- C₁ keeps Tₜ &lt; Tₘₐₓ (Theorem 1 from Formal Stability Conditions)
+- C₂ keeps EssentialsSuccess &gt; e_bar(B_min, S_max), which via Theorem 2 keeps Lₜ &gt; Lₘᵢₙ
+- C₃ keeps R₀ \< 1, keeping Iₜ &lt; Iₘₐₓ via reduced capture (analogous to Theorem 3 anti-rent)
 - C₄ keeps Sₜ bounded in expectation under adaptation investment
-- C₅ keeps external pressure bounded: L₀ < 1 prevents leakage from undermining C₂ and C₄
+- C₅ keeps external pressure bounded: L₀ \< 1 prevents leakage from undermining C₂ and C₄
 
 Combined: V(xₜ) has negative expected drift outside S, so by stochastic Lyapunov theory (Foster–Lyapunov criterion), the system is positive recurrent near S. **QED for sufficiency.**
 
@@ -569,7 +569,7 @@ Combined: V(xₜ) has negative expected drift outside S, so by stochastic Lyapun
 ### 5.1 Formal Definition
 
 **Definition (Stability):** At tick t, the system is *stable* if:
-1. Lₜ ≥ λ_rec (above legitimacy recovery threshold)
+1. Lₜ &gt; λ_rec (above legitimacy recovery threshold)
 2. All five constraint predicates return `ConstraintCheck::Ok`
 3. The system has not been in sub-λ_rec territory for more than W_rec consecutive ticks
 
@@ -819,7 +819,7 @@ Tick N
 |----------|------------------|----------|
 | **WARNING** | Constraint predicate narrowly violated; recovery still feasible | Emit `constraint.violated.v1` with WARNING level; log to `constraint_checks` table; continue tick |
 | **CRITICAL** | Constraint violated beyond soft boundary; recovery requires intervention | Emit event; apply automatic correction signal clamping the offending control to the legal range; continue tick with corrected controls |
-| **HALT** | Constraint violated at structural impossibility (e.g., coupling_enabled = true, or legitimacy < Lₘᵢₙ) | Emit event; roll back tick; mark run as ABLATION_MODE |
+| **HALT** | Constraint violated at structural impossibility (e.g., coupling_enabled = true, or legitimacy \< Lₘᵢₙ) | Emit event; roll back tick; mark run as ABLATION_MODE |
 
 **ABLATION_MODE:** If any HALT-level violation is detected, the run is flagged as an ablation scenario. This does not stop the simulation — ablation runs are scientifically valid and intended. The flag is included in all subsequent snapshots so clients can distinguish baseline runs from ablation runs.
 
@@ -1064,13 +1064,13 @@ Reference calibration trajectories in the scenario catalog:
 The theorem would be **falsified** if any of the following simulation outcomes were observed:
 
 **F1 — Single constraint sufficiency falsification:**
-A run with exactly one constraint removed (four remaining active) produces a stable run (L ≥ λ_rec, T ≤ Tₘₐₓ, G ≥ Gₘᵢₙ for all t > 500) under the standard recurrent scarcity schedule (S > 0.4 for ≥ 10 consecutive ticks in every 100-tick window). This would imply the removed constraint is not necessary.
+A run with exactly one constraint removed (four remaining active) produces a stable run (L &gt; λ_rec, T &lt; Tₘₐₓ, G &gt; Gₘᵢₙ for all t > 500) under the standard recurrent scarcity schedule (S > 0.4 for &gt; 10 consecutive ticks in every 100-tick window). This would imply the removed constraint is not necessary.
 
 **F2 — Strict minimality falsification:**
 A run with four constraints active and one removed is consistently stable, but a run with only three constraints active and two removed is also stable. This would imply the constraint set is not minimal — a proper subset of four might suffice.
 
 **F3 — Recovery impossibility falsification:**
-A run demonstrates recovery from Lₜ < λ_rec back to Lₜ > Lₘᵢₙ after more than W_rec = 50 ticks in the danger zone, with all five constraints active. This would require adjusting W_rec upward or revising the recovery window model.
+A run demonstrates recovery from Lₜ \< λ_rec back to Lₜ > Lₘᵢₙ after more than W_rec = 50 ticks in the danger zone, with all five constraints active. This would require adjusting W_rec upward or revising the recovery window model.
 
 **F4 — Sufficiency falsification:**
 A run with all five constraints active fails to remain in S (legitimacy collapses, governance collapses, or tyranny exceeds Tₘₐₓ) despite the admissible shock bound being satisfied. This would require either widening the constraint set or revising the shock-bound assumption A1.
@@ -1480,7 +1480,7 @@ Research clients can subscribe to the `stability.*` event stream to receive `sta
 **Status:** Open
 
 ### FR-CIV-0104-007: Baseline Stable Under Full Constraint Set
-**Spec:** BASELINE_HYBRID_STABLE scenario with all five constraints active maintains L ≥ λ_rec = 0.35 for 500 ticks under standard scarcity schedule.
+**Spec:** BASELINE_HYBRID_STABLE scenario with all five constraints active maintains L &gt; λ_rec = 0.35 for 500 ticks under standard scarcity schedule.
 **Test:** Run BASELINE_HYBRID_STABLE; assert no `stability.threshold_crossed.v1` events with direction = BELOW.
 **Status:** Open
 
@@ -1495,7 +1495,7 @@ Research clients can subscribe to the `stability.*` event stream to receive `sta
 **Status:** Open
 
 ### FR-CIV-0104-010: Recovery Window Tracking
-**Spec:** `ticks_below_recovery_threshold` increments when L < λ_rec and resets when L recovers above λ_rec.
+**Spec:** `ticks_below_recovery_threshold` increments when L \< λ_rec and resets when L recovers above λ_rec.
 **Test:** Drive L below λ_rec for 10 ticks then above; verify counter increments then resets.
 **Status:** Open
 
@@ -1538,10 +1538,10 @@ Throughout this section we use the following conventions:
 - **⊢** — provability / derivation
 - **¬** — negation
 - **⊥** — contradiction
-- **≡** — logical equivalence / definitional equality
+- **&equiv;** — logical equivalence / definitional equality
 - **a.s.** — almost surely (with probability 1)
 - **i.o.** — infinitely often
-- **τ_A** — first passage time to set A: τ_A = min{t ≥ 0 : xₜ ∈ A}
+- **τ_A** — first passage time to set A: τ_A = min{t &gt; 0 : xₜ &isin; A}
 - **B-C** — Borel–Cantelli lemma (both first and second)
 
 **Recall the state vector:**
@@ -1552,15 +1552,15 @@ xₜ = (Sₜ, Lₜ, Tₜ, Iₜ, Gₜ, Fₜ)
 
 The absorbing basins are:
 ```
-𝒜_auth   = {x : Tₜ ≥ T*, Lₜ ≤ L*}              (authoritarian basin)
-𝒜_olig   = {x : Iₜ ≥ I*, Gₜ ≤ G*, Cₜ ≥ C*}    (oligarchic basin)
+𝒜_auth   = {x : Tₜ &gt; T*, Lₜ &lt; L*}              (authoritarian basin)
+𝒜_olig   = {x : Iₜ &gt; I*, Gₜ &lt; G*, Cₜ &gt; C*}    (oligarchic basin)
 𝒜_collapse = {x : Lₜ < Lₘᵢₙ, Gₜ < Gₘᵢₙ}         (collapse basin)
 ```
 
-**Proposition (Absorbing Basin Escape Probability):** For each of the three basins 𝒜 above, once xₜ ∈ 𝒜 persists for W_rec consecutive ticks, the probability of escape satisfies:
+**Proposition (Absorbing Basin Escape Probability):** For each of the three basins 𝒜 above, once xₜ &isin; 𝒜 persists for W_rec consecutive ticks, the probability of escape satisfies:
 
 ```
-Pr(xₜ₊ₖ ∉ 𝒜 for some k ≤ W_rec | xₜ ∈ 𝒜) ≤ p_escape < 1/2
+Pr(xₜ₊ₖ &notin; 𝒜 for some k &lt; W_rec | xₜ &isin; 𝒜) &lt; p_escape < 1/2
 ```
 
 where p_escape is a computable constant depending on model parameters. This makes 𝒜 effectively absorbing on the time scales of interest. The proof uses the fact that restoration of legitimate governance from a fully-captured or collapsed state requires simultaneous increases in L, G, and the removal of existing institutional capture — each a low-probability event that requires coordinated exogenous intervention not available in the model.
@@ -1569,12 +1569,12 @@ where p_escape is a computable constant depending on model parameters. This make
 
 ### 15.2 Full Proof: Necessity of C₁ (Bounded Coercion)
 
-**Claim:** ∀ admissible policy sequences {uₜ}, ¬C₁(xₜ, uₜ) ∧ [Pr(Sₜ > S* i.o.) = 1] ∧ [Selₜ ≥ Sel_min > 0 eventually a.s.] ⊢ Pr(τ_𝒜_auth < ∞) = 1.
+**Claim:** ∀ admissible policy sequences {uₜ}, ¬C₁(xₜ, uₜ) ∧ [Pr(Sₜ > S* i.o.) = 1] ∧ [Selₜ &gt; Sel_min > 0 eventually a.s.] ⊢ Pr(τ_𝒜_auth < &infin;) = 1.
 
 **Proof by contradiction.** Assume for contradiction that ∃ admissible policy sequence {uₜ} and ∃ δ > 0 such that:
 
 ```
-Pr(τ_𝒜_auth = ∞) ≥ δ > 0
+Pr(τ_𝒜_auth = &infin;) &gt; δ > 0
 ```
 
 That is, there is a positive-probability event E on which the system never enters 𝒜_auth. We derive a contradiction.
@@ -1582,13 +1582,13 @@ That is, there is a positive-probability event E on which the system never enter
 **Step 1 — Recurrence of enforcement backfire events.** Since ¬C₁ holds, enforcement Eₜ is not bounded by E*(Lₜ, Gₜ, Selₜ). By Assumption A1, Sₜ > S* infinitely often with probability 1. The state reaction function (Section 3, C₁ ablation) satisfies:
 
 ```
-∀ Sₜ > S*: Pr(Eₜ₊₁ > E*(Lₜ, Gₜ, Selₜ)) ≥ p₁ > 0
+∀ Sₜ > S*: Pr(Eₜ₊₁ > E*(Lₜ, Gₜ, Selₜ)) &gt; p₁ > 0
 ```
 
 This holds because: (a) the reaction function is c₁Rₜ + c₂Λₜ − c₃Gₜ; (b) Sₜ > S* increases Rₜ and Λₜ; (c) no C₁ ceiling prevents Eₜ from crossing E*. Call this event A_t: "enforcement crosses backfire threshold at tick t." We have:
 
 ```
-∑ₜ Pr(A_t) = ∞
+&sum;ₜ Pr(A_t) = &infin;
 ```
 
 by the second Borel–Cantelli lemma (events A_t are not independent but have summable correlation; the argument uses the mixing property of the Markov chain outside 𝒜_auth), so A_t occurs infinitely often a.s.
@@ -1599,16 +1599,16 @@ by the second Borel–Cantelli lemma (events A_t are not independent but have su
 Lₜ₊₁ = Lₜ − b₄ · Φ(Eₜ, Selₜ) + β₁ · EssentialsSuccessₜ − β₂Tₜ − ...
 ```
 
-When Eₜ > E* and Selₜ ≥ Sel_min, the term −b₄ · Φ(Eₜ, Selₜ) dominates, giving:
+When Eₜ > E* and Selₜ &gt; Sel_min, the term −b₄ · Φ(Eₜ, Selₜ) dominates, giving:
 
 ```
-Lₜ₊₁ ≤ Lₜ − ε_L for some ε_L > 0
+Lₜ₊₁ &lt; Lₜ − ε_L for some ε_L > 0
 ```
 
 Therefore, for any episode of k consecutive A_t events:
 
 ```
-L_{t+k} ≤ Lₜ − k · ε_L
+L_{t+k} &lt; Lₜ − k · ε_L
 ```
 
 Since A_t occurs infinitely often and ε_L > 0, legitimacy eventually crosses λ_rec. Formally:
@@ -1617,10 +1617,10 @@ Since A_t occurs infinitely often and ε_L > 0, legitimacy eventually crosses λ
 ∃ k₀ : Pr(L_{t+k₀} < λ_rec | A_t i.o.) = 1
 ```
 
-**Step 3 — Recovery failure after W_rec ticks below λ_rec.** By the Recovery Window definition (Section 5.1), each time Lₜ < λ_rec:
+**Step 3 — Recovery failure after W_rec ticks below λ_rec.** By the Recovery Window definition (Section 5.1), each time Lₜ \< λ_rec:
 
 ```
-Pr(L recovers above λ_rec within W_rec ticks | Lₜ < λ_rec) ≤ 1 − ε_rec
+Pr(L recovers above λ_rec within W_rec ticks | Lₜ < λ_rec) &lt; 1 − ε_rec
 ```
 
 where ε_rec > 0 is bounded away from zero because: shadow network capacity Hₜ has grown (Step 4 below), recovery requires exogenous legitimacy injection not available in the model, and enforcement reaction function continues increasing Eₜ (worsening the backfire).
@@ -1633,25 +1633,25 @@ Hₜ₊₁ = Hₜ + ν · Λₜ − δ_H · Hₜ
 
 When sustained leakage Λₜ > δ_H · Hₜ / ν, shadow capacity grows monotonically. This raises future leakage L₀(t), making subsequent enforcement even less effective and further reducing the probability of legitimacy recovery.
 
-**Step 5 — Contradiction.** On event E (system never enters 𝒜_auth), legitimacy is bounded below by L*. But Steps 2–4 show that legitimacy crosses below L* in finite time with probability 1, which contradicts the existence of E with Pr(E) ≥ δ > 0. Therefore:
+**Step 5 — Contradiction.** On event E (system never enters 𝒜_auth), legitimacy is bounded below by L*. But Steps 2–4 show that legitimacy crosses below L* in finite time with probability 1, which contradicts the existence of E with Pr(E) &gt; δ > 0. Therefore:
 
 ```
-Pr(τ_𝒜_auth = ∞) = 0
-⊢ Pr(τ_𝒜_auth < ∞) = 1
+Pr(τ_𝒜_auth = &infin;) = 0
+⊢ Pr(τ_𝒜_auth < &infin;) = 1
 ```
 
 **QED.**
 
-**Quantitative bound — minimum N ticks to basin entry under C₁ ablation.** Let the initial legitimacy be L₀ ∈ [λ_rec + ε, 1] and let shock frequency be f_shock (fraction of ticks with S > S*). The expected number of ticks to first L < λ_rec satisfies:
+**Quantitative bound — minimum N ticks to basin entry under C₁ ablation.** Let the initial legitimacy be L₀ &isin; [λ_rec + ε, 1] and let shock frequency be f_shock (fraction of ticks with S > S*). The expected number of ticks to first L \< λ_rec satisfies:
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ ε / (f_shock · p₁ · ε_L)
+𝔼[τ_{L < λ_rec}] &lt; ε / (f_shock · p₁ · ε_L)
 ```
 
 For default parameters (f_shock = 0.2, p₁ = 0.6, ε_L = 0.04, ε = 0.17):
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ 0.17 / (0.2 · 0.6 · 0.04) ≈ 35 ticks
+𝔼[τ_{L < λ_rec}] &lt; 0.17 / (0.2 · 0.6 · 0.04) &asymp; 35 ticks
 ```
 
 This matches the ablation test horizon of 30–80 ticks specified in Section 8.
@@ -1660,14 +1660,14 @@ This matches the ablation test horizon of 30–80 ticks specified in Section 8.
 
 ### 15.3 Full Proof: Necessity of C₂ (Subsistence Floor / Coupling Lock)
 
-**Claim:** ¬C₂(xₜ, uₜ) ∧ [Coup_t = 1] ∧ [Pr(Sₜ > S* i.o.) = 1] ⊢ Pr(τ_𝒜_auth < ∞) = 1.
+**Claim:** ¬C₂(xₜ, uₜ) ∧ [Coup_t = 1] ∧ [Pr(Sₜ > S* i.o.) = 1] ⊢ Pr(τ_𝒜_auth < &infin;) = 1.
 
-**Proof by contradiction.** Assume ∃ policy {uₜ} with Pr(τ_𝒜_auth = ∞) ≥ δ > 0.
+**Proof by contradiction.** Assume ∃ policy {uₜ} with Pr(τ_𝒜_auth = &infin;) &gt; δ > 0.
 
 **Step 1 — Coupling creates structurally available coercion.** With Coup_t = 1, the state has the option to condition essentials delivery on compliance score. By rational optimization under scarcity (Sₜ > S*), the planner has an incentive to exercise this option:
 
 ```
-∀ Sₜ > S*: ∃ p₀ > 0 : Pr(EssentialsDenied_c | Sₜ > S*) ≥ p₀
+∀ Sₜ > S*: ∃ p₀ > 0 : Pr(EssentialsDenied_c | Sₜ > S*) &gt; p₀
 ```
 
 for at least one cohort c. This holds because coupling provides a strictly cheaper enforcement mechanism than explicit coercion: the state achieves compliance without deploying enforcement budget. Under resource constraint during scarcity, this mechanism is always preferred by a cost-minimizing planner.
@@ -1686,27 +1686,27 @@ When Coup_t = 1 and SD_t > 0, every tick with Sₜ > S* provides a direct positi
 ∀ cohort c experiencing denial: L_c,t+1 = L_c,t − b₁ · DenialRate_c,t + ...
 ```
 
-Since DenialRate_c,t ≥ p₀ > 0 during scarcity episodes (Step 1), and scarcity occurs infinitely often (Assumption A1), aggregate legitimacy receives infinitely many negative increments. By the first Borel–Cantelli argument on the sequence of denial episodes, aggregate legitimacy eventually falls below λ_rec with probability 1.
+Since DenialRate_c,t &gt; p₀ > 0 during scarcity episodes (Step 1), and scarcity occurs infinitely often (Assumption A1), aggregate legitimacy receives infinitely many negative increments. By the first Borel–Cantelli argument on the sequence of denial episodes, aggregate legitimacy eventually falls below λ_rec with probability 1.
 
 **Step 4 — Self-reinforcing coercive equilibrium.** Once Tₜ is elevated (Step 2) and legitimacy is below λ_rec (Step 3), the coercive compliance equilibrium is self-sustaining:
 - Compliant citizens receive essentials (positive reinforcement for compliance).
 - Non-compliant citizens are denied (negative reinforcement for dissent).
-- The ratio of compliant to non-compliant citizens with positive legitimacy reading stabilizes at a level that sustains Tₜ ≥ T* permanently.
+- The ratio of compliant to non-compliant citizens with positive legitimacy reading stabilizes at a level that sustains Tₜ &gt; T* permanently.
 
 This is an absorbing basin because restoring non-coercive equilibrium requires simultaneously: removing Coup_t (structural change), restoring legitimacy (requires time), and reducing enforcement (creates transition risk). No single-step deviation makes this profitable for the planner.
 
-**Step 5 — Contradiction.** The existence of δ > 0 with Pr(never entering 𝒜_auth) ≥ δ contradicts Step 3, which gives convergence to 𝒜_auth a.s. **QED.**
+**Step 5 — Contradiction.** The existence of δ > 0 with Pr(never entering 𝒜_auth) &gt; δ contradicts Step 3, which gives convergence to 𝒜_auth a.s. **QED.**
 
 **Quantitative bound.** Let f_shock = fraction of ticks with Sₜ > S*, p₀ = minimum denial probability under coupling, and ε_L = per-tick legitimacy loss from denial. The expected first crossing of λ_rec satisfies:
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ (λ_rec − L₀) / (f_shock · p₀ · ε_L)
+𝔼[τ_{L < λ_rec}] &lt; (λ_rec − L₀) / (f_shock · p₀ · ε_L)
 ```
 
 For defaults (f_shock = 0.2, p₀ = 0.4, ε_L = 0.05, L₀ = 0.55, λ_rec = 0.35):
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ 0.20 / (0.2 · 0.4 · 0.05) = 50 ticks
+𝔼[τ_{L < λ_rec}] &lt; 0.20 / (0.2 · 0.4 · 0.05) = 50 ticks
 ```
 
 This matches the ablation horizon of 20–50 ticks in Section 8.
@@ -1715,7 +1715,7 @@ This matches the ablation horizon of 20–50 ticks in Section 8.
 
 ### 15.4 Full Proof: Necessity of C₃ (Transparent Transfer Ledger)
 
-**Claim:** ¬C₃(xₜ, uₜ) ∧ [O_base > O_max] ⊢ R₀ > 1 ⊢ Pr(τ_𝒜_olig < ∞) = 1.
+**Claim:** ¬C₃(xₜ, uₜ) ∧ [O_base > O_max] ⊢ R₀ > 1 ⊢ Pr(τ_𝒜_olig < &infin;) = 1.
 
 **Proof by induction on capture growth epochs.**
 
@@ -1737,41 +1737,41 @@ Cₜ₊₁ = Cₜ + Γ(Cₜ)(1 − Cₜ) − Δ(Cₜ)Cₜ
 Since R₀(Cₜ) = Γ(Cₜ)/Δ(Cₜ) > 1, we have Γ(Cₜ) > Δ(Cₜ). For small Cₜ:
 
 ```
-𝔼[Cₜ₊₁ − Cₜ | Cₜ] ≈ Γ(Cₜ) − Δ(Cₜ)·Cₜ > 0
+𝔼[Cₜ₊₁ − Cₜ | Cₜ] &asymp; Γ(Cₜ) − Δ(Cₜ)·Cₜ > 0
 ```
 
 So Cₜ is increasing in expectation. As Cₜ increases, the endogenous feedback mechanism amplifies R₀:
 ```
-∂R₀/∂C = [∂Γ/∂C · Δ − Γ · ∂Δ/∂C] / Δ² > 0
+&part;R₀/&part;C = [&part;Γ/&part;C · Δ − Γ · &part;Δ/&part;C] / Δ² > 0
 ```
 
 This inequality holds because:
-- ∂Γ/∂C > 0 (higher capture increases rent Rₜ = R^base + r_C·Cₜ, opacity Oₜ = O^base + o_C·Cₜ, and selectivity Selₜ = Sel^base + s_C·Cₜ)
-- ∂Δ/∂C ≤ 0 (higher opacity and selectivity reduce the decay term)
+- &part;Γ/&part;C > 0 (higher capture increases rent Rₜ = R^base + r_C·Cₜ, opacity Oₜ = O^base + o_C·Cₜ, and selectivity Selₜ = Sel^base + s_C·Cₜ)
+- &part;Δ/&part;C &lt; 0 (higher opacity and selectivity reduce the decay term)
 
 Therefore R₀(Cₜ₊₁) > R₀(Cₜ) > 1, completing the inductive step.
 
-**Convergence to high-capture equilibrium:** By induction, R₀(Cₜ) > 1 for all t ≥ 0 when O_base > O_max, and Cₜ is increasing a.s. Since Cₜ ∈ [0, 1] is bounded, Cₜ → C* where C* is the unique stable fixed point of the capture equation with R₀(C*) > 1. The stable high-capture equilibrium satisfies:
+**Convergence to high-capture equilibrium:** By induction, R₀(Cₜ) > 1 for all t &gt; 0 when O_base > O_max, and Cₜ is increasing a.s. Since Cₜ &isin; [0, 1] is bounded, Cₜ → C* where C* is the unique stable fixed point of the capture equation with R₀(C*) > 1. The stable high-capture equilibrium satisfies:
 
 ```
 ∀ ε > 0: Pr(Cₜ > C* − ε eventually) = 1
 ```
 
-At C* ≫ 0, governance has decayed: Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, Oₜ) with ϕ increasing in capture. This drives Gₜ → 0, putting xₜ into 𝒜_olig. **QED.**
+At C* &gt;&gt; 0, governance has decayed: Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, Oₜ) with ϕ increasing in capture. This drives Gₜ → 0, putting xₜ into 𝒜_olig. **QED.**
 
 **Quantitative bound.** If R₀ > 1 initially, the time to reach C* > 0.5 (oligarchic stabilization) satisfies:
 
 ```
-𝔼[τ_{C > 0.5}] ≈ log(0.5 / C₀) / (R₀ − 1)
+𝔼[τ_{C > 0.5}] &asymp; log(0.5 / C₀) / (R₀ − 1)
 ```
 
-For R₀ = 1.2, C₀ = 0.01: 𝔼[τ] ≈ log(50) / 0.2 ≈ 20 ticks. For R₀ = 1.05, C₀ = 0.01: 𝔼[τ] ≈ log(50) / 0.05 ≈ 78 ticks. This matches the ablation horizon of 40–100 ticks.
+For R₀ = 1.2, C₀ = 0.01: 𝔼[τ] &asymp; log(50) / 0.2 &asymp; 20 ticks. For R₀ = 1.05, C₀ = 0.01: 𝔼[τ] &asymp; log(50) / 0.05 &asymp; 78 ticks. This matches the ablation horizon of 40–100 ticks.
 
 ---
 
 ### 15.5 Full Proof: Necessity of C₄ (Adaptive Climate Response)
 
-**Claim:** ¬C₄(xₜ, uₜ) ∧ [Recurring climate shocks with Pr(DF_t > 0 i.o.) = 1] ∧ [Aₜ = 0 allowed] ⊢ ∃ T_collapse < ∞ : Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1.
+**Claim:** ¬C₄(xₜ, uₜ) ∧ [Recurring climate shocks with Pr(DF_t > 0 i.o.) = 1] ∧ [Aₜ = 0 allowed] ⊢ ∃ T_collapse < &infin; : Pr(Lₜ \< λ_rec ∀ t > T_collapse) → 1.
 
 **Proof by monotone drift argument.**
 
@@ -1790,7 +1790,7 @@ CDₜ₊₁ = CDₜ + f_climate(DFₜ) > CDₜ  whenever DFₜ > 0
 Since DFₜ > 0 infinitely often (Assumption A1 applied to climate shocks), CDₜ is non-decreasing with positive increments infinitely often. By the law of large numbers:
 
 ```
-CDₜ → CD_max  a.s. as t → ∞
+CDₜ → CD_max  a.s. as t → &infin;
 ```
 
 **Step 2 — CD > CD_max makes C₂ infeasible.** CD_max is defined as the maximum climate damage under which the subsistence floor guarantee E_bar(B_min, S_max) can still be satisfied. At CDₜ > CD_max:
@@ -1816,13 +1816,13 @@ is a sufficient condition for legitimacy non-collapse. When CDₜ > CD_max, the 
 with a negative drift of magnitude at least ε_L > 0 per tick. Since CDₜ → CD_max monotonically (Step 1), there exists T_collapse such that for all t > T_collapse:
 
 ```
-𝔼[Lₜ₊₁ − Lₜ | t > T_collapse] ≤ −ε_L < 0
+𝔼[Lₜ₊₁ − Lₜ | t > T_collapse] &lt; −ε_L < 0
 ```
 
 **Step 4 — No recovery once legitimacy is below λ_rec.** Unlike the C₁ case, the C₄ ablation creates a structural impossibility of recovery: climate damage persists (it is not mean-reverting without adaptation investment), so the cause of subsistence floor infeasibility is permanent. Therefore:
 
 ```
-Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → ∞
+Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → &infin;
 ```
 
 **QED.**
@@ -1832,16 +1832,16 @@ Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → ∞
 **Quantitative bound.** Let ΔCD = average climate damage increment per tick = f_climate(𝔼[DF]). The time to CD > CD_max from initial CD₀ satisfies:
 
 ```
-T_collapse ≈ (CD_max − CD₀) / ΔCD
+T_collapse &asymp; (CD_max − CD₀) / ΔCD
 ```
 
-For CD_max = 0.25, CD₀ = 0.05, ΔCD = 0.03/tick: T_collapse ≈ 67 ticks (fast climate forcing). For ΔCD = 0.001/tick (standard forcing): T_collapse ≈ 200 ticks. Both are within the ablation horizon of 80–200 ticks.
+For CD_max = 0.25, CD₀ = 0.05, ΔCD = 0.03/tick: T_collapse &asymp; 67 ticks (fast climate forcing). For ΔCD = 0.001/tick (standard forcing): T_collapse &asymp; 200 ticks. Both are within the ablation horizon of 80–200 ticks.
 
 ---
 
 ### 15.6 Full Proof: Necessity of C₅ (Coalition-Compatible External Strategy)
 
-**Claim:** ¬C₅(xₜ, uₜ) ∧ [Shadow facilitation active at intensity > shadow_spend_cap] ⊢ C₀ > 1 ⊢ Coalition collapse a.s. ⊢ L₀ > 1 ⊢ Pr(τ_𝒜 < ∞) = 1.
+**Claim:** ¬C₅(xₜ, uₜ) ∧ [Shadow facilitation active at intensity > shadow_spend_cap] ⊢ C₀ > 1 ⊢ Coalition collapse a.s. ⊢ L₀ > 1 ⊢ Pr(τ_𝒜 < &infin;) = 1.
 
 **Proof by cascade argument.**
 
@@ -1860,7 +1860,7 @@ When ShadowSpend_t is elevated, Di,t grows, which increases fatigue Fi,t, which 
 As Ψi,t grows and dominates Ωi,t = α₅si,t + α₆Li,t + α₇Hi,t, the coalition stability number:
 
 ```
-C₀(t) = (1/|𝒞|) · Σᵢ∈𝒞 (Ψi,t / Ωi,t)
+C₀(t) = (1/|𝒞|) · Σᵢ&isin;𝒞 (Ψi,t / Ωi,t)
 ```
 
 crosses 1. This is guaranteed in finite time since shadow facilitation provides a steady positive flow into Di,t while Ωi,t has bounded support (side-payments si,t and legitimacy Li,t are bounded above).
@@ -1875,13 +1875,13 @@ crosses 1. This is guaranteed in finite time since shadow facilitation provides 
 Formally, let n_t = coalition member count. The exit rate satisfies:
 
 ```
-𝔼[n_{t+1} − n_t | C₀(t) > 1] ≤ −p_exit · n_t < 0
+𝔼[n_{t+1} − n_t | C₀(t) > 1] &lt; −p_exit · n_t < 0
 ```
 
 where p_exit > 0 is the per-member exit probability per tick when C₀ > 1. This gives geometric decay:
 
 ```
-𝔼[n_t] ≤ n₀ · (1 − p_exit)^t → 0
+𝔼[n_t] &lt; n₀ · (1 − p_exit)^t → 0
 ```
 
 so coalition collapses in finite time a.s. (geometric random variable has finite expectation).
@@ -1892,11 +1892,11 @@ so coalition collapses in finite time a.s. (geometric random variable has finite
 L₀(t) = [α · Hₜ · (Sₜ + η · ΔPₜ) · (1 + κ · Selₜ)] / [β · (K_t + ψ · Eₜ) · Gₜ · (1 − Selₜ)]
 ```
 
-With K_t ≈ K_min ≪ K_initial, L₀(t) > 1 with high probability when shadow network capacity Hₜ is elevated (from prior shadow facilitation).
+With K_t &asymp; K_min &lt;&lt; K_initial, L₀(t) > 1 with high probability when shadow network capacity Hₜ is elevated (from prior shadow facilitation).
 
 **Step 4 — L₀ > 1 drives leakage to undermining C₂ and C₄.** When L₀ > 1, leakage Λₜ grows toward Λ_max, which via shadow network feedback Hₜ₊₁ = Hₜ + ν·Λₜ − δ_H·Hₜ creates a permanent smuggling capacity. Resource imports via black market channels bypass adaptation investment requirements (C₄) and can be used to substitute for essential goods delivery (C₂), but they do so via channels that increase opacity and capture, undermining the remaining constraints.
 
-**Step 5 — Final contradiction via joint absorption.** The combined effect of L₀ > 1 (permanent leakage), degraded C₂ (essentials increasingly delivered via shadow channels with compliance strings), and degraded C₄ (adaptation investment bypassed by black market resources) eventually drives the system into 𝒜_auth or 𝒜_olig as established in proofs for ¬C₁ through ¬C₄. Since these absorbing basins are stable, τ_𝒜 < ∞ a.s. **QED.**
+**Step 5 — Final contradiction via joint absorption.** The combined effect of L₀ > 1 (permanent leakage), degraded C₂ (essentials increasingly delivered via shadow channels with compliance strings), and degraded C₄ (adaptation investment bypassed by black market resources) eventually drives the system into 𝒜_auth or 𝒜_olig as established in proofs for ¬C₁ through ¬C₄. Since these absorbing basins are stable, τ_𝒜 < &infin; a.s. **QED.**
 
 ---
 
@@ -2043,13 +2043,13 @@ impl StabilityMargin {
 The stability margin with respect to B_min measures how quickly the system drifts into 𝒜_auth if the floor is lowered. The legitimacy update includes β₁ · EssentialsSuccess(Bₜ, Sₜ). The partial derivative of the legitimacy drift with respect to B_min is:
 
 ```
-∂(𝔼[Lₜ₊₁ − Lₜ]) / ∂B_min = β₁ · ∂EssentialsSuccess / ∂B_min > 0
+&part;(𝔼[Lₜ₊₁ − Lₜ]) / &part;B_min = β₁ · &part;EssentialsSuccess / &part;B_min > 0
 ```
 
 At the default B_min = 0.92:
 
 ```
-∂EssentialsSuccess / ∂B_min ≈ 1.0 (flat near 0.92; threshold effect appears at B_min < 0.85)
+&part;EssentialsSuccess / &part;B_min &asymp; 1.0 (flat near 0.92; threshold effect appears at B_min < 0.85)
 ```
 
 **Phase diagram (B_min × Sₜ):** The stable region is:
@@ -2061,43 +2061,43 @@ At the default B_min = 0.92:
 The bifurcation curve in (B_min, S_max) space is approximately:
 
 ```
-B_min ≥ B_min^* = β₂·T_max + β₃·I_max + ... ) / (β₁ · ∂e_bar/∂B_min)
+B_min &gt; B_min^* = β₂·T_max + β₃·I_max + ... ) / (β₁ · &part;e_bar/&part;B_min)
 ```
 
-At default parameters, B_min^* ≈ 0.82. The system transitions from stable legitimacy dynamics to legitimacy collapse at B_min = 0.82. The safety distance at the default of 0.92 is approximately 0.10 (10 percentage points). **Sensitivity class: Low** (the curve is flat near 0.92).
+At default parameters, B_min^* &asymp; 0.82. The system transitions from stable legitimacy dynamics to legitimacy collapse at B_min = 0.82. The safety distance at the default of 0.92 is approximately 0.10 (10 percentage points). **Sensitivity class: Low** (the curve is flat near 0.92).
 
 **O_max (Opacity Ceiling)**
 
 The capture reproduction number R₀ is highly sensitive to O_max:
 
 ```
-∂R₀ / ∂O_base = [α·ρ(A)·(R^base + ωW^base)·(1−G+κSel^base) · β·G·(1−Sel^base)] / Δ(0)² > 0
+&part;R₀ / &part;O_base = [α·ρ(A)·(R^base + ωW^base)·(1−G+κSel^base) · β·G·(1−Sel^base)] / Δ(0)² > 0
 ```
 
 The bifurcation point is O_max^* = sup{O : R₀(O) < 1}, which at default G and Sel values is approximately 0.12–0.18. This range is narrow, making O_max a **High sensitivity** parameter. A 10% perturbation of O_max from 0.15 to 0.165 raises R₀ by approximately:
 
 ```
-ΔR₀ ≈ (∂R₀/∂O_base) · 0.015 ≈ 0.3 (from R₀ = 0.85 to R₀ = 1.15)
+ΔR₀ &asymp; (&part;R₀/&part;O_base) · 0.015 &asymp; 0.3 (from R₀ = 0.85 to R₀ = 1.15)
 ```
 
 This crosses the bifurcation. **Sensitivity class: Critical** (bifurcation within 20% of default).
 
 **A_min_base (Adaptation Floor)**
 
-The scarcity drift rate ∂𝔼[Sₜ₊₁ − Sₜ] is controlled by g_adapt(Aₜ) − f_climate(·). The net drift at Aₜ = A_min_base is:
+The scarcity drift rate &part;𝔼[Sₜ₊₁ − Sₜ] is controlled by g_adapt(Aₜ) − f_climate(·). The net drift at Aₜ = A_min_base is:
 
 ```
-∂𝔼[Sₜ₊₁ − Sₜ] / ∂A_min_base = −∂g_adapt/∂A < 0
+&part;𝔼[Sₜ₊₁ − Sₜ] / &part;A_min_base = −&part;g_adapt/&part;A < 0
 ```
 
-The bifurcation point is A_min^* = inf{A : g_adapt(A) ≥ f_climate(𝔼[DF])}. At standard climate forcing (𝔼[DF] = 0.3), A_min^* ≈ 0.02–0.03. The default of 0.04 provides a safety margin of approximately 0.01–0.02. **Sensitivity class: Medium** (2–4x factor between default and bifurcation).
+The bifurcation point is A_min^* = inf{A : g_adapt(A) &gt; f_climate(𝔼[DF])}. At standard climate forcing (𝔼[DF] = 0.3), A_min^* &asymp; 0.02–0.03. The default of 0.04 provides a safety margin of approximately 0.01–0.02. **Sensitivity class: Medium** (2–4x factor between default and bifurcation).
 
 **λ_rec (Recovery Threshold)**
 
 The recovery threshold determines the width of the danger zone. Raising λ_rec reduces the recovery buffer (λ_rec − Lₘᵢₙ) and increases the frequency of recovery window closures. The sensitivity is:
 
 ```
-∂Pr(recovery window closes) / ∂λ_rec > 0
+&part;Pr(recovery window closes) / &part;λ_rec > 0
 ```
 
 with a near-discontinuous jump at λ_rec = Lₘᵢₙ + ε for small ε. The system has binary behavior near the bifurcation: slightly above Lₘᵢₙ, the system recovers reliably; at λ_rec = Lₘᵢₙ + 0.05, recovery windows close frequently. **Sensitivity class: High.**
@@ -2110,7 +2110,7 @@ The C₀ ceiling is a hard threshold with discontinuous behavior. Below C₀ = 1
 ShadowSpend^* = sup{S : C₀(S) < 1}
 ```
 
-At default parameters, ShadowSpend^* ≈ 1.5× normal spending. **Sensitivity class: Very High** — any perturbation that drives ShadowSpend above the spend cap can trigger coalition collapse within 25–60 ticks.
+At default parameters, ShadowSpend^* &asymp; 1.5× normal spending. **Sensitivity class: Very High** — any perturbation that drives ShadowSpend above the spend cap can trigger coalition collapse within 25–60 ticks.
 
 ### 16.4 Calibration Procedure
 
@@ -2127,7 +2127,7 @@ Set the operational parameter at θᵢ = θᵢ^* + 20% of (θᵢ^* − θᵢ_min
 Run the calibrated parameters against the reference calibration trajectories (Section 9.3). Confirm that BASELINE_HYBRID_STABLE remains stable for 500 ticks and all five ablation scenarios produce expected signatures within their horizon bounds.
 
 **Step 5 — Monte Carlo robustness check:**
-Sweep each parameter ±20% from its calibrated value across 100 Monte Carlo shock sequences. The parameter is accepted if the mean time-to-danger-zone decreases by no more than 30% across the sweep.
+Sweep each parameter &plusmn;20% from its calibrated value across 100 Monte Carlo shock sequences. The parameter is accepted if the mean time-to-danger-zone decreases by no more than 30% across the sweep.
 
 ---
 
@@ -2141,8 +2141,8 @@ The five constraints are not independent: coupling between them means that simul
 
 For each pair (Cᵢ, Cⱼ), the violation interaction is classified as:
 
-- **Compound (↑↑):** Simultaneous violation of Cᵢ and Cⱼ produces faster or deeper basin entry than either alone. The joint time to collapse satisfies τ_joint < min(τᵢ, τⱼ).
-- **Independent (⊥):** Violations of Cᵢ and Cⱼ do not significantly accelerate each other. τ_joint ≈ min(τᵢ, τⱼ).
+- **Compound (↑↑):** Simultaneous violation of Cᵢ and Cⱼ produces faster or deeper basin entry than either alone. The joint time to collapse satisfies τ_joint \< min(τᵢ, τⱼ).
+- **Independent (⊥):** Violations of Cᵢ and Cⱼ do not significantly accelerate each other. τ_joint &asymp; min(τᵢ, τⱼ).
 - **Compensatory (↓):** Violation of Cᵢ temporarily delays collapse from ¬Cⱼ (paradoxical; rare).
 
 | | ¬C₁ | ¬C₂ | ¬C₃ | ¬C₄ | ¬C₅ |
@@ -2174,7 +2174,7 @@ Adversarial policy sequence:
 2. **Ticks 11–20:** State reaction increases enforcement to E = 0.70. No backfire ceiling → E crosses E*. Legitimacy begins declining (−0.03/tick).
 3. **Ticks 21–30:** Denied cohorts form resistance network. Unrest R rises. State further increases E and expands coupling to cover larger fraction of population.
 4. **Ticks 31–40:** L crosses λ_rec = 0.35. Recovery window opens (W_rec countdown begins). Denial rate now 40% of population.
-5. **Ticks 41–50:** No recovery mechanism available — both constraints violated. W_rec expires at tick 50. L < 0.25 (below Lₘᵢₙ).
+5. **Ticks 41–50:** No recovery mechanism available — both constraints violated. W_rec expires at tick 50. L \< 0.25 (below Lₘᵢₙ).
 
 Expected outcome: 𝒜_auth entry by tick 40, hard collapse by tick 55. **Approximately 2× faster than single-constraint ablations.**
 
@@ -2182,10 +2182,10 @@ Expected outcome: 𝒜_auth entry by tick 40, hard collapse by tick 55. **Approx
 
 Initial conditions:
 - L₀ = 0.60, CD₀ = 0.05, S₀ = 0.30, A₀ = 0.0 (no adaptation floor)
-- Coup_t = 0 initially; coupling enabled if EssentialsDelivery < B_min + 0.05
+- Coup_t = 0 initially; coupling enabled if EssentialsDelivery \< B_min + 0.05
 
 Adversarial policy sequence:
-1. **Ticks 1–50:** Adaptation investment held at zero. Climate damage accumulates: CD₅₀ ≈ 0.20.
+1. **Ticks 1–50:** Adaptation investment held at zero. Climate damage accumulates: CD₅₀ &asymp; 0.20.
 2. **Ticks 51–80:** CD exceeds CD_max = 0.25. Essential delivery rate falls below B_min for marginal cohorts. At this point, the planner faces a choice: maintain the floor by rationing other expenditures, or permit soft coupling.
 3. **Ticks 81–100:** Fiscal pressure from climate recovery forces trade-off. Coupling is activated (Coup_t = 1) to extend existing resources via compliance-based rationing.
 4. **Ticks 101–130:** With coupling active, COMP-A dynamics begin. Legitimacy falls rapidly. T rises.
@@ -2199,11 +2199,11 @@ Initial conditions:
 - C₀(0) = 0.90 (close to threshold), coalition has 5 members
 
 Adversarial policy sequence:
-1. **Ticks 1–15:** Capture grows (R₀ = 1.3 > 1 due to O₀ > O_max). Capture stock C₁₅ ≈ 0.25. Shadow spending increases.
+1. **Ticks 1–15:** Capture grows (R₀ = 1.3 > 1 due to O₀ > O_max). Capture stock C₁₅ &asymp; 0.25. Shadow spending increases.
 2. **Ticks 16–30:** Shadow spending drives D_i,t upward for 2 of 5 coalition members. C₀ crosses 1.0. First member exits (at tick 28).
 3. **Ticks 31–45:** Coalition interdiction K_t drops 20%. L₀ rises above 1.0. Leakage grows.
 4. **Ticks 46–60:** Two more members exit (cascade). K_t at 40% of initial. Remaining leakage allows continued rent extraction without external pressure.
-5. **Ticks 61–100:** Capture reaches C* ≈ 0.65. Governance G_t decays to 0.35. System enters 𝒜_olig.
+5. **Ticks 61–100:** Capture reaches C* &asymp; 0.65. Governance G_t decays to 0.35. System enters 𝒜_olig.
 
 Expected outcome: Full oligarchic capture by tick 90. The external isolation (¬C₅) prevents accountability mechanisms that would otherwise interrupt capture growth.
 
@@ -2215,7 +2215,7 @@ When recovering from a constraint violation under resource constraints (only one
 
 **Priority 2 — C₁ (Bounded Coercion):** Removing enforcement above E* stops the backfire cascade and allows legitimacy to begin recovering. Without C₁, even restored C₂ delivery may be undermined by continued enforcement-driven legitimacy reduction.
 
-**Priority 3 — C₃ (Transparent Ledger):** Restoring opacity below O_max drives R₀ below 1 and initiates capture decay. This has a slower effect (capture decays gradually once R₀ < 1) but is necessary to prevent long-run governance collapse.
+**Priority 3 — C₃ (Transparent Ledger):** Restoring opacity below O_max drives R₀ below 1 and initiates capture decay. This has a slower effect (capture decays gradually once R₀ \< 1) but is necessary to prevent long-run governance collapse.
 
 **Priority 4 — C₄ (Adaptive Climate):** Restoring adaptation investment stops further climate damage accumulation but has the slowest effect — climate damage already accumulated requires many ticks to reverse, and productive capacity is only gradually restored.
 
@@ -2393,7 +2393,7 @@ fn compute_acceleration(mask: u8, count: u8) -> Fixed64 {
 The five constraint thresholds defined in Section 3 use static calibrated values. However, the optimal threshold values depend on the current macro-economic environment:
 
 - During high scarcity (Sₜ large), the enforcement ceiling E*(L, G, Sel) should tighten because backfire occurs at lower absolute enforcement levels when legitimacy is already depressed.
-- During extended legitimacy danger zone episodes (Lₜ < λ_rec), the subsistence floor B_min should rise to accelerate recovery.
+- During extended legitimacy danger zone episodes (Lₜ \< λ_rec), the subsistence floor B_min should rise to accelerate recovery.
 - During rapid capture growth (R₀ approaching 1 from below), the opacity ceiling O_max should tighten proactively.
 
 This section formalizes an **adaptive threshold algorithm** that adjusts constraint thresholds as a function of the observed legitimacy trajectory and constraint margins.
@@ -2409,10 +2409,10 @@ This section formalizes an **adaptive threshold algorithm** that adjusts constra
 ```
 
 Where:
-- `α_adjust ∈ (0, α_max]`: adjustment rate, bounded to prevent oscillation.
+- `α_adjust &isin; (0, α_max]`: adjustment rate, bounded to prevent oscillation.
 - `f_adjust(·)`: feedback function that is positive when the system is drifting toward violation.
 - `direction(Cᵢ)`: +1 if tightening the threshold improves stability, −1 otherwise.
-- All adjustments are bounded: θᵢ,ₜ ∈ [θᵢ_min, θᵢ_max] where the bounds are the scenario configuration hard limits.
+- All adjustments are bounded: θᵢ,ₜ &isin; [θᵢ_min, θᵢ_max] where the bounds are the scenario configuration hard limits.
 
 **Specific rules:**
 
@@ -2444,7 +2444,7 @@ Raises the adaptation floor when climate damage is accelerating.
 
 A concern with adaptive thresholds is whether the adaptation mechanism itself introduces instabilities. We provide conditions under which the adaptive system is stable:
 
-**Proposition (Adaptive Stability):** Let the adjustment rate satisfy α_adjust ≤ α_max, where:
+**Proposition (Adaptive Stability):** Let the adjustment rate satisfy α_adjust &lt; α_max, where:
 
 ```
 α_max = (1/2) · min_margin / (max_drift · W_adapt)
@@ -3046,7 +3046,7 @@ mod extended_ablation_tests {
 
     /// ABL-C3-B: Opacity at floor (O = 0.15 + ε) — near-threshold test.
     /// Tests that at exactly O_max + 0.01 (marginally above ceiling), R₀ > 1 and capture grows.
-    /// Expected: R₀ ≈ 1.02–1.10 by tick 5, slow capture growth confirming necessity.
+    /// Expected: R₀ &asymp; 1.02–1.10 by tick 5, slow capture growth confirming necessity.
     #[test]
     fn test_abl_c3_b_near_threshold_opacity() {
         let state = CoreStabilityState {
@@ -3363,7 +3363,7 @@ Amartya Sen's capabilities approach (Sen 1999, "Development as Freedom") provide
 
 Douglas North (1990, "Institutions, Institutional Change and Economic Performance") identifies the transparency of rules and enforcement as a core determinant of institutional quality. The Shadow Capture Threshold Theorem operationalizes North's insight: opacity above a threshold (O_max) enables rent extraction to compound via the capture reproduction number R₀, preventing institutional quality from being an equilibrium outcome.
 
-Elinor Ostrom (1990, "Governing the Commons") provides the complementary insight: commons governance requires monitoring and sanctioning systems with auditability. The C₃ ledger requirement is formally equivalent to Ostrom's "monitoring" design principle for robust institutional arrangements. Ostrom's empirical finding — that commons survive when monitoring is cheap and transparent — maps to the R₀ < 1 condition: low opacity reduces capture growth faster than institutions can respond.
+Elinor Ostrom (1990, "Governing the Commons") provides the complementary insight: commons governance requires monitoring and sanctioning systems with auditability. The C₃ ledger requirement is formally equivalent to Ostrom's "monitoring" design principle for robust institutional arrangements. Ostrom's empirical finding — that commons survive when monitoring is cheap and transparent — maps to the R₀ \< 1 condition: low opacity reduces capture growth faster than institutions can respond.
 
 **C₄ (Adaptive Climate Response) → Environmental Economics and Resilience Theory**
 
@@ -3401,9 +3401,9 @@ The quantitative bounds derived in Sections 15.2–15.6 (expected ticks to basin
 
 The constraint checker (Section 6) is structurally a real-time model checker over the simulation state space. The `MinimalConstraintSet` trait specifies a set of temporal logic properties that must hold at every tick. Specifically:
 
-- C₁ enforces the safety property: `□(Eₜ ≤ E*(Lₜ, Gₜ, Selₜ))` (enforcement always within ceiling).
-- C₂ enforces: `□(∀ c: EssentialsDelivery(c, t) ≥ B_min ∧ ¬Coupling)`.
-- C₃ enforces: `□(Opacity(t) ≤ O_max ∧ ∀ transfer e: e ∈ LedgerLog)`.
+- C₁ enforces the safety property: `□(Eₜ &lt; E*(Lₜ, Gₜ, Selₜ))` (enforcement always within ceiling).
+- C₂ enforces: `□(∀ c: EssentialsDelivery(c, t) &gt; B_min ∧ ¬Coupling)`.
+- C₃ enforces: `□(Opacity(t) &lt; O_max ∧ ∀ transfer e: e &isin; LedgerLog)`.
 
 These are safety properties in linear temporal logic (LTL). The constraint checker is equivalent to monitoring for violations of these LTL formulas at runtime. This connection to model checking makes the simulation's constraint architecture formally verifiable: the `ConstraintCheck::Halt` return value corresponds to a model checking counterexample witness.
 
@@ -3412,7 +3412,7 @@ These are safety properties in linear temporal logic (LTL). The constraint check
 The Lyapunov function approach in Section 4.2 and the Foster–Lyapunov framework in Section 15 connect the simulation to the formal verification literature on stochastic dynamical systems. Kushner and Dupuis (2001, "Numerical Methods for Stochastic Control Problems in Continuous Time") and Meyn and Tweedie (2009, "Markov Chains and Stochastic Stability") provide the theoretical foundations:
 
 - **Foster–Lyapunov criterion (Theorem 11.0.1 in Meyn-Tweedie):** A Markov chain is positive recurrent if and only if there exists a Lyapunov function V such that the drift condition holds. The proofs in Section 15 verify the conditions of this criterion.
-- **Exponential ergodicity:** If the drift condition holds with V(x) → ∞ as ‖x‖ → ∞ and the chain is ψ-irreducible, it is geometrically ergodic. In the CivLab context, geometric ergodicity implies that the simulation's invariant distribution is approached exponentially fast from any initial condition in S.
+- **Exponential ergodicity:** If the drift condition holds with V(x) → &infin; as ‖x‖ → &infin; and the chain is ψ-irreducible, it is geometrically ergodic. In the CivLab context, geometric ergodicity implies that the simulation's invariant distribution is approached exponentially fast from any initial condition in S.
 
 **Difference from Existing Results**
 

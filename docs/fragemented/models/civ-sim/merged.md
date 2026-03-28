@@ -1498,7 +1498,7 @@ Emitted when a citizen's social class changes (upward or downward mobility).
 
 ### 8.5 `citizen.happiness_updated.v1`
 
-Emitted when a citizen's happiness score changes by more than the configured threshold (default: ±0.05).
+Emitted when a citizen's happiness score changes by more than the configured threshold (default: &plusmn;0.05).
 
 **Payload JSON Schema:**
 ```json
@@ -1774,7 +1774,7 @@ Emitted when a city or nation cannot meet its energy demand. Triggers cascade ef
 
 ### 9.4 `economy.price_spike.v1`
 
-Emitted when a good's price in a city changes by more than the configured spike threshold (default: ±20% in one tick).
+Emitted when a good's price in a city changes by more than the configured spike threshold (default: &plusmn;20% in one tick).
 
 **Payload JSON Schema:**
 ```json
@@ -2152,7 +2152,7 @@ Emitted on each simulation year tick when sea level changes measurably.
 
 ### 11.1 `institution.legitimacy_changed.v1`
 
-Emitted when an institution's legitimacy score changes by more than the configured threshold (default: ±0.05).
+Emitted when an institution's legitimacy score changes by more than the configured threshold (default: &plusmn;0.05).
 
 **Payload JSON Schema:**
 ```json
@@ -3291,7 +3291,7 @@ Targets are specified for:
 - CPU: 8-core x86-64 (AMD Ryzen 9 5900X or equivalent)
 - RAM: 16 GB
 - Storage: NVMe SSD (sequential write >= 2 GB/s)
-- Network: localhost or < 1 ms RTT LAN
+- Network: localhost or \< 1 ms RTT LAN
 
 ### 17.4 Monitoring Metrics
 
@@ -5186,7 +5186,7 @@ pub fn ideology_from_json(s: &str) -> Result<[f64; 8], DbError> {
 
 **Boolean ↔ INTEGER:** `true` = 1, `false` = 0. SQLite has no native BOOLEAN type.
 
-**Vec<TippingPoint> ↔ JSON TEXT:** Serialized as JSON array of snake_case strings via serde.
+**Vec\<TippingPoint\> ↔ JSON TEXT:** Serialized as JSON array of snake_case strings via serde.
 
 **serde_json::Value ↔ TEXT:** Stored as compact JSON string. Parsed on read.
 
@@ -5413,11 +5413,11 @@ pub async fn prune_world_state_rows(
 
 **CSV export:**
 
-One `.csv` file per table. Column names match SQL column names exactly. Produced by `civ export csv --run-id <UUID> --output-dir <path>`.
+One `.csv` file per table. Column names match SQL column names exactly. Produced by `civ export csv --run-id \<UUID\> --output-dir \<path\>`.
 
 **Parquet export (via arrow2):**
 
-One `.parquet` file per table. Schema mirrors SQL schema. Column types: Int64 for all INTEGER columns, Utf8 for TEXT, Binary for BLOB. Compression: ZSTD level 4. Row group size: 65536. Produced by `civ export parquet --run-id <UUID> --output-dir <path>`.
+One `.parquet` file per table. Schema mirrors SQL schema. Column types: Int64 for all INTEGER columns, Utf8 for TEXT, Binary for BLOB. Compression: ZSTD level 4. Row group size: 65536. Produced by `civ export parquet --run-id \<UUID\> --output-dir \<path\>`.
 
 Parquet files are the recommended format for research analysis in Python (pandas/polars) or DuckDB:
 
@@ -5442,7 +5442,7 @@ result = conn.execute("""
 
 **.civreplay export:**
 
-The `.civreplay` file is produced continuously during simulation (see Section 1.6). It can also be produced post-hoc from the SQLite event log via `civ export civreplay --run-id <UUID> --output <path>`.
+The `.civreplay` file is produced continuously during simulation (see Section 1.6). It can also be produced post-hoc from the SQLite event log via `civ export civreplay --run-id \<UUID\> --output \<path\>`.
 
 ---
 
@@ -6848,15 +6848,15 @@ pub async fn load_fixture(pool: &SqlitePool, fixture_name: &str) {
 |--------|-----------|-------------|------------------------|---------------------|
 | Simulation Run | `runs` | `SimRun` | — (metadata only) | Header |
 | State Snapshot | `snapshots` | `Snapshot` | `WorldSnap` / `WorldDelta` | Per-frame |
-| Simulation Event | `events` | `SimEvent` | `Vec<SimEvent>` in `World.event_log` | Every event |
-| Nation | `nations` | `NationState` | `BTreeMap<NationId, NationState>` | Via events |
-| City | `cities` | `CityState` | `BTreeMap<CityId, CityState>` | Via events |
-| Citizen | `citizens` | `CitizenRecord` | `BTreeMap<CitizenId, CitizenRecord>` | Via events (sampled) |
+| Simulation Event | `events` | `SimEvent` | `Vec\<SimEvent\>` in `World.event_log` | Every event |
+| Nation | `nations` | `NationState` | `BTreeMap \< NationId, NationState>` | Via events |
+| City | `cities` | `CityState` | `BTreeMap \< CityId, CityState>` | Via events |
+| Citizen | `citizens` | `CitizenRecord` | `BTreeMap \< CitizenId, CitizenRecord>` | Via events (sampled) |
 | Ledger Transfer | `ledger_transfers` | `LedgerTransfer` | `LedgerState.transfers` | Via events |
 | Market Clearing | `markets` | `MarketClearing` | `BTreeMap<(Good, CityId), MarketClearing>` | Via events |
 | Climate | `climate_state` | `ClimateStateRow` / `ClimateState` | `World.climate` | Via events |
-| Institution | `institutions` | `InstitutionState` | `BTreeMap<InstId, InstitutionState>` | Via events |
-| War | `wars` | `WarRecord` | `BTreeMap<WarId, WarRecord>` | Via events |
+| Institution | `institutions` | `InstitutionState` | `BTreeMap \< InstId, InstitutionState>` | Via events |
+| War | `wars` | `WarRecord` | `BTreeMap \< WarId, WarRecord>` | Via events |
 | Research Run | `research_runs` | `ResearchRun` | — (metadata) | Header |
 | Replay Event | `replay_events` | `ReplayEvent` | — (archive) | Primary |
 | Metric | `metrics_timeseries` | `MetricRow` | — (derived) | No |
@@ -7066,7 +7066,7 @@ The following rules are referenced throughout this document. Each quality gate m
 |---|---|---|
 | D1 | Pure Functions | All tick-advancing systems are pure functions of (World, Tick, Seed). No hidden state. |
 | D2 | No System Time | `std::time::SystemTime`, `std::time::Instant`, and all wall-clock reads are forbidden in sim code. |
-| D3 | No Float Comparison | Floating-point equality or ordering in game logic is forbidden. All rates use `FixedI32<U16>`; all energy/GDP use `i64` newtypes. |
+| D3 | No Float Comparison | Floating-point equality or ordering in game logic is forbidden. All rates use `FixedI32\<U16\>`; all energy/GDP use `i64` newtypes. |
 | D4 | No Global Mutable State | No `static mut`, no `OnceLock` that mutates after initialization, no thread-local state in sim code. |
 | D5 | Deterministic Ordering | ECS system ordering is declared explicit and total. No reliance on hash map iteration order in output-affecting code. |
 | D6 | Seeded RNG Only | Only `ChaCha20Rng` seeded from the scenario config is permitted. No `rand::thread_rng()` or OS entropy sources in sim code. |
@@ -8281,7 +8281,7 @@ impl SimulationGuardrails {
 | Entity count exceeded | Entity count over `max_entity_count` | P1 |
 | WASM sandbox escape | wasmtime host-call policy violation | P0 |
 | Tick count limit reached | `current_tick >= max_tick_count` | P2 expected termination |
-| Manual operator trigger | `civlab-cli freeze <run-id>` | P1 |
+| Manual operator trigger | `civlab-cli freeze \< run-id>` | P1 |
 | Critical metric threshold | Any metric with `critical_high` breach for 5 consecutive ticks | P1 |
 
 #### 6.3.2 Freeze Mode Behavior
@@ -9096,7 +9096,7 @@ When `cargo audit` reports a yanked or advisory-flagged crate:
 | RUSTSEC with CVSS >= 9.0 (Critical) | 4 hours | Immediate patching; freeze deploy pipeline until resolved |
 | RUSTSEC with CVSS 7.0-8.9 (High) | 24 hours | PR within 24 hours; deploy within 48 hours |
 | RUSTSEC with CVSS 4.0-6.9 (Medium) | 7 days | PR within 7 days |
-| RUSTSEC with CVSS < 4.0 (Low) | 30 days | Track and patch in next scheduled maintenance |
+| RUSTSEC with CVSS \< 4.0 (Low) | 30 days | Track and patch in next scheduled maintenance |
 | Yanked crate (no advisory) | 14 days | Replace with non-yanked version |
 
 The on-call engineer is paged for Critical advisories. High advisories create a GitHub issue assigned to the Security Guild. Medium and Low create GitHub issues labeled `security` and `dependency`.
@@ -9849,7 +9849,7 @@ The JTBD framework captures what users are trying to accomplish, at a level that
 | Job ID | Job Statement | Priority |
 |--------|---------------|----------|
 | RO-F1 | When proposing a new economic policy, I want to dispatch a CivLab scenario via a typed API call, receive a structured result payload, and parse the outcome metrics programmatically, so I can score the policy without human intervention. | Critical |
-| RO-F2 | When iterating on policy parameters, I want to run 100 scenario variants per hour with guaranteed ≤100ms/tick latency, so my policy search loop is fast enough to be practical. | Critical |
+| RO-F2 | When iterating on policy parameters, I want to run 100 scenario variants per hour with guaranteed &lt;100ms/tick latency, so my policy search loop is fast enough to be practical. | Critical |
 | RO-F3 | When a policy produces unexpected outcomes, I want to retrieve the full tick-level state trace for causal analysis, so I can identify which policy parameter caused which outcome. | High |
 | RO-F4 | When comparing two policy variants, I want to branch from a shared initial state, run both variants, and receive a structured diff of outcome metrics, so I can rank policies by objective function. | High |
 | RO-F5 | When deploying in production Parpour/Venture, I want the CivLab API contract to be versioned and stable, so my integration does not break when CivLab is updated. | High |
@@ -9885,7 +9885,7 @@ The JTBD framework captures what users are trying to accomplish, at a level that
 | PA-F5 | Side-by-side metric comparison | Regime diff view |
 | PA-F6 | WASM mod: Economic / Event types | civlab-sdk documentation |
 | RO-F1 | Programmatic scenario dispatch API | Structured result schema |
-| RO-F2 | Headless batch runner | Performance SLO (≤100ms/tick) |
+| RO-F2 | Headless batch runner | Performance SLO (&lt;100ms/tick) |
 | RO-F3 | Tick-level state trace API | Causal trace export |
 | RO-F4 | Branch API (headless) | Metric diff API |
 | RO-F5 | Versioned API contract | Changelog + deprecation policy |
@@ -9948,7 +9948,7 @@ The interface exists in two forms:
 | Constitution editor | Define governance type, election cycle, enforcement power, judicial independence | Validates against governance schema; invalid constitutions rejected at load time with error message |
 | Resource endowment configurator | Set initial Joule stocks, production capacity (kJ/tick), distribution infrastructure rating | All values typed as KiloJoules (i64); range validation; negative stocks rejected |
 | Climate profile selector | Set base temperature, precipitation, volatility, and initial climate shock schedule | Climate config validates against climate schema; out-of-range parameters rejected |
-| Citizen demographics editor | Set population size, age distribution, skill distribution, faction composition | Faction percentages must sum to 100%; population ≥ 1 |
+| Citizen demographics editor | Set population size, age distribution, skill distribution, faction composition | Faction percentages must sum to 100%; population &gt; 1 |
 | Diplomatic relations matrix | Set initial alliance, trade, and hostility values between simulated entities | Symmetric validation (if A is allied with B, B must be allied with A) |
 | Seed configurator | Set simulation seed (u64) or generate random seed | Seed displayed prominently; copied to clipboard on demand |
 | Scenario validation | Pre-flight check: validate all fields, surface errors with path and message | No scenario dispatched with validation errors; errors listed with TOML/JSON key paths |
@@ -9997,11 +9997,11 @@ The simulation runner is the core execution engine. It accepts a scenario defini
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| Tick latency (single simulation) | ≤ 100ms per tick | Measured at p99 on reference hardware |
-| Headless throughput | ≥ 600 ticks/minute per simulation instance | With all six domains active |
-| Batch sweep throughput | ≥ 10,000 tick-scenarios/hour | On 8-core reference machine |
-| Memory per simulation instance | ≤ 256MB | Full state in memory; no disk swapping |
-| State hash computation | ≤ 5ms per tick | BLAKE3 is fast; must not dominate tick budget |
+| Tick latency (single simulation) | &lt; 100ms per tick | Measured at p99 on reference hardware |
+| Headless throughput | &gt; 600 ticks/minute per simulation instance | With all six domains active |
+| Batch sweep throughput | &gt; 10,000 tick-scenarios/hour | On 8-core reference machine |
+| Memory per simulation instance | &lt; 256MB | Full state in memory; no disk swapping |
+| State hash computation | &lt; 5ms per tick | BLAKE3 is fast; must not dominate tick budget |
 
 #### Tick Budget Allocation (Target, 100ms)
 
@@ -10302,7 +10302,7 @@ crate-type = ["cdylib"]
 
 - **Registry URL:** registry.civlab.io
 - **Mod manifest:** name, version, type, required capabilities, BLAKE3 hash, author
-- **Installation:** `civlab mods install <type>/<name>@<version>`
+- **Installation:** `civlab mods install \<type\>/\<name\>@\<version\>`
 - **Revenue share:** Paid mods in marketplace split revenue 70/30 (author/platform)
 
 ---
@@ -10430,7 +10430,7 @@ The institutions subsystem models the governance layer: the structures through w
 | Effect | Target Domain | Mechanism |
 |--------|--------------|-----------|
 | Policy effectiveness → Joule distribution | Joule Economy | Effective institutions improve distribution efficiency |
-| Legitimacy collapse → insurgency threshold | Social/Insurgency | Legitimacy < 0.3 triggers insurgency escalation risk |
+| Legitimacy collapse → insurgency threshold | Social/Insurgency | Legitimacy \< 0.3 triggers insurgency escalation risk |
 | Elite capture → resource extraction | Joule Economy | Captured institutions extract surplus to elite, not public investment |
 | Institutional collapse → diplomatic vulnerability | War/Diplomacy | Weak institutions invite external aggression |
 
@@ -10585,13 +10585,13 @@ Determinism is the foundational technical constraint. It is not a feature to be 
 
 | Metric | Target | Measurement Method |
 |--------|--------|--------------------|
-| Tick latency (p99, single simulation) | ≤ 100ms | Benchmark suite (criterion) on reference hardware |
-| Headless throughput | ≥ 600 ticks/min/instance | Benchmark suite |
-| Batch sweep throughput | ≥ 10,000 tick-scenarios/hour | Integration benchmark |
-| State hash computation | ≤ 5ms per tick | Profiled separately |
-| Scenario load time | ≤ 100ms | End-to-end benchmark |
-| Replay seek (to any tick) | ≤ 200ms | Replay benchmark |
-| Memory per instance | ≤ 256MB | Memory profiler (Valgrind / heaptrack) |
+| Tick latency (p99, single simulation) | &lt; 100ms | Benchmark suite (criterion) on reference hardware |
+| Headless throughput | &gt; 600 ticks/min/instance | Benchmark suite |
+| Batch sweep throughput | &gt; 10,000 tick-scenarios/hour | Integration benchmark |
+| State hash computation | &lt; 5ms per tick | Profiled separately |
+| Scenario load time | &lt; 100ms | End-to-end benchmark |
+| Replay seek (to any tick) | &lt; 200ms | Replay benchmark |
+| Memory per instance | &lt; 256MB | Memory profiler (Valgrind / heaptrack) |
 
 **Reference hardware:** 8-core x86-64 Linux machine, 32GB RAM, NVMe SSD.
 
@@ -10626,7 +10626,7 @@ CivLab core engine is dual-licensed under **MIT / Apache-2.0** (user's choice). 
 
 | Requirement | Target | Notes |
 |-------------|--------|-------|
-| Web RTS UI color contrast | WCAG 2.1 AA | All metric gauges and state badges meet contrast ratio ≥ 4.5:1 |
+| Web RTS UI color contrast | WCAG 2.1 AA | All metric gauges and state badges meet contrast ratio &gt; 4.5:1 |
 | Keyboard navigation | Full keyboard coverage | All scenario authoring and replay inspector actions accessible via keyboard |
 | Screen reader compatibility | ARIA labels on all interactive elements | Metrics dashboard uses chart.js with aria-label per data point |
 | Colorblind mode | Deuteranopia + protanopia palettes | Metric charts offer colorblind-safe palette option |
@@ -10794,7 +10794,7 @@ The OSS core is a strategic asset, not a cost. It:
 | KPI | Definition | Target (12mo) | Target (24mo) | Measurement |
 |-----|------------|---------------|---------------|-------------|
 | Deterministic replay consistency | % of replay runs producing byte-identical output to original | 100% | 100% | CI test; automated nightly replay |
-| Tick latency p99 | 99th percentile tick latency (ms) | ≤ 100ms | ≤ 80ms | Criterion benchmark |
+| Tick latency p99 | 99th percentile tick latency (ms) | &lt; 100ms | &lt; 80ms | Criterion benchmark |
 | Scenarios executed/day | Total scenarios dispatched across all modes | 1,000/day | 10,000/day | Platform telemetry |
 | Explainability score | % of instability events with a structured causal trace | 80% | 95% | Test coverage of causal trace API |
 | Domain coverage | Fraction of planned domains at MVP coverage (6 total) | 6/6 | 6/6 (+ depth) | FR tracker |
@@ -10814,19 +10814,19 @@ The OSS core is a strategic asset, not a cost. It:
 
 | KPI | Definition | Target |
 |-----|------------|--------|
-| Time-to-first-run | Time from `cargo install civlab` to first scenario execution | ≤ 5 minutes |
-| Time-to-first-sweep | Time from first run to first batch sweep | ≤ 15 minutes |
-| Time-to-first-mod | Time from civlab-sdk installation to first working WASM mod | ≤ 60 minutes |
+| Time-to-first-run | Time from `cargo install civlab` to first scenario execution | &lt; 5 minutes |
+| Time-to-first-sweep | Time from first run to first batch sweep | &lt; 15 minutes |
+| Time-to-first-mod | Time from civlab-sdk installation to first working WASM mod | &lt; 60 minutes |
 | Scenario validation error clarity | % of users who self-resolve validation errors without docs | 80% |
-| CI build time | Total CI time per PR | ≤ 10 minutes |
+| CI build time | Total CI time per PR | &lt; 10 minutes |
 
 ### 10.5 Parpour/Venture Integration KPIs
 
 | KPI | Definition | Target |
 |-----|------------|--------|
 | Venture API uptime | % uptime of CivLab API serving Venture agents | 99.9% |
-| Venture scenario throughput | Scenarios/hour dispatched by Venture agents | ≥ 500/hour |
-| Venture result latency | p99 latency from scenario dispatch to result retrieval | ≤ 30 seconds |
+| Venture scenario throughput | Scenarios/hour dispatched by Venture agents | &gt; 500/hour |
+| Venture result latency | p99 latency from scenario dispatch to result retrieval | &lt; 30 seconds |
 | Venture determinism rate | % of Venture-dispatched scenarios with verified deterministic replay | 100% |
 
 ---
@@ -10861,7 +10861,7 @@ The OSS core is a strategic asset, not a cost. It:
 #### R-02: Performance Regression
 
 **Mitigation strategy:**
-- Criterion benchmark suite runs on every PR; performance regressions ≥ 5% relative to baseline trigger a review gate (not hard block, but requires explicit sign-off).
+- Criterion benchmark suite runs on every PR; performance regressions &gt; 5% relative to baseline trigger a review gate (not hard block, but requires explicit sign-off).
 - Tick budget allocation document (Section 5.3) defines per-domain budget. Any domain exceeding its budget triggers a profiling requirement.
 - Performance benchmarks are tracked in a time-series dashboard; trends are reviewed weekly.
 - Domain implementations use SIMD and cache-friendly data layouts where applicable.
@@ -10874,7 +10874,7 @@ The OSS core is a strategic asset, not a cost. It:
 - Schema validation provides clear, path-specific error messages. "Expected kJ value in range [0, i64::MAX] for field `energy.joule_stock`, got: -1000" — not "invalid config".
 - Template library: pre-built scenario templates cover common starting conditions (medieval agrarian, industrial transition, post-scarcity, resource-constrained).
 - Web authoring UI (Phase 4) provides guided workflow for common scenario patterns.
-- Researcher documentation: quick-start guide targets ≤ 30-minute time-to-first-sweep for a policy analyst with no prior CivLab experience.
+- Researcher documentation: quick-start guide targets &lt; 30-minute time-to-first-sweep for a policy analyst with no prior CivLab experience.
 - Community scenario registry provides example scenarios that users can inspect, fork, and modify.
 
 #### R-04: Competition Risk
@@ -10926,12 +10926,12 @@ The OSS core is a strategic asset, not a cost. It:
 
 | Phase | Timeline | Theme | Key Features | FR IDs | Success Criteria | Est. Complexity |
 |-------|----------|-------|-------------|--------|-----------------|-----------------|
-| Phase 0 | M0–M2 | Core tick loop | Rust crate, ChaCha20Rng seeding, BLAKE3 hash per tick, D1-D7 harness, CI replay gate, basic scenario TOML loader | CIV-0001–0010 | Replay test passes; tick loop runs at ≥ 10 ticks/ms; zero determinism violations in fuzz test | Medium |
+| Phase 0 | M0–M2 | Core tick loop | Rust crate, ChaCha20Rng seeding, BLAKE3 hash per tick, D1-D7 harness, CI replay gate, basic scenario TOML loader | CIV-0001–0010 | Replay test passes; tick loop runs at &gt; 10 ticks/ms; zero determinism violations in fuzz test | Medium |
 | Phase 1 | M2–M5 | Economy + Climate | Joule Economy (production/distribution/consumption/waste cycle, KiloJoule type), Climate System (baseline, drift, shocks, yield modifier), metrics API for both domains | CIV-0100, CIV-0102 | All Joule Economy metrics tracked; climate shock events trigger and resolve correctly; batch sweep runs 100 variants | High |
 | Phase 2 | M5–M9 | Institutions + Citizens + Social | Institutions (constitution, legitimacy, tyranny, elite capture), Citizens/Demography (population, age, factions, grievance), Social/Insurgency (escalation model, insurgent pool, counterinsurgency) | CIV-0103, CIV-0104, CIV-0106 | Legitimacy → insurgency pathway produces expected escalation; faction grievance model calibrated against reference scenarios | Very High |
 | Phase 3 | M9–M13 | War/Diplomacy + Mod Platform | War/Diplomacy (entity relations, military capacity, conflict escalation), WASM mod sandbox (four mod types, capability model, memory/CPU limits), civlab-sdk v0.1 | CIV-0105, CIV-0700 | Multi-entity diplomatic simulation runs correctly; first community mod published and validated | Very High |
-| Phase 4 | M13–M17 | Web client + Asset pipeline | Pixi.js v8 + React 19 Web RTS client, scenario authoring UI, metrics dashboard, replay inspector, SDXL asset generation pipeline | CIV-0300, CIV-0600 | Time-to-first-run ≤ 5min via Web UI; metrics dashboard displays all six domain metrics; replay seek latency ≤ 200ms | High |
-| Phase 5 | M17–M24 | 3D + AI/NPC + Parpour GA | Bevy 3D Desktop client (CIV-0400), AI NPC integration (CIV-0601), Parpour/Venture GA integration, cloud simulation credits platform | CIV-0400, CIV-0601 | Venture AI agents run 500+ scenarios/hour; Bevy client renders 10,000-citizen simulation at ≥ 30fps; cloud credits platform in production | Very High |
+| Phase 4 | M13–M17 | Web client + Asset pipeline | Pixi.js v8 + React 19 Web RTS client, scenario authoring UI, metrics dashboard, replay inspector, SDXL asset generation pipeline | CIV-0300, CIV-0600 | Time-to-first-run &lt; 5min via Web UI; metrics dashboard displays all six domain metrics; replay seek latency &lt; 200ms | High |
+| Phase 5 | M17–M24 | 3D + AI/NPC + Parpour GA | Bevy 3D Desktop client (CIV-0400), AI NPC integration (CIV-0601), Parpour/Venture GA integration, cloud simulation credits platform | CIV-0400, CIV-0601 | Venture AI agents run 500+ scenarios/hour; Bevy client renders 10,000-citizen simulation at &gt; 30fps; cloud credits platform in production | Very High |
 
 ### 12.2 Phase 0: Core Tick Loop (Months 0–2)
 
@@ -10945,11 +10945,11 @@ The OSS core is a strategic asset, not a cost. It:
 - CI replay test: two runs with same seed → byte-identical BLAKE3 hashes at every tick
 - Basic scenario TOML loader: seed, tick count, domain stubs
 - Basic CLI: `civlab run --scenario scenario.toml --ticks 1000`
-- Unit test coverage ≥ 90% for tick loop and hash logic
+- Unit test coverage &gt; 90% for tick loop and hash logic
 
 **Acceptance criteria:**
 - CI replay test passes on Linux x86-64, macOS ARM64, macOS x86-64, Windows x86-64
-- Tick loop runs at ≥ 10 ticks/ms with empty domain stubs (performance baseline)
+- Tick loop runs at &gt; 10 ticks/ms with empty domain stubs (performance baseline)
 - D1-D7 lints catch known violation examples in lint tests
 
 ### 12.3 Phase 1: Economy + Climate (Months 2–5)
@@ -10968,7 +10968,7 @@ The OSS core is a strategic asset, not a cost. It:
 **Acceptance criteria:**
 - All Joule Economy metrics tracked at every tick with correct accounting (production = consumption + waste + stock delta)
 - Climate shock events trigger at scheduled ticks, affect yield modifier correctly, and resolve after specified duration
-- Batch sweep runs 100 variants in < 60 seconds on reference hardware
+- Batch sweep runs 100 variants in \< 60 seconds on reference hardware
 - Zero determinism violations in 10,000-tick fuzz test with 100 random seeds
 
 ### 12.4 Phase 2: Institutions + Citizens + Social (Months 5–9)
@@ -10986,7 +10986,7 @@ The OSS core is a strategic asset, not a cost. It:
 
 **Acceptance criteria:**
 - Legitimacy → insurgency escalation pathway produces expected state machine transitions in reference scenarios
-- Causal trace API returns structured chain for ≥ 80% of instability events
+- Causal trace API returns structured chain for &gt; 80% of instability events
 - Faction grievance model: all five reference scenarios produce expected faction behavior within 5% metric tolerance
 - No regression in Phase 1 determinism or performance
 
@@ -11023,9 +11023,9 @@ The OSS core is a strategic asset, not a cost. It:
 - Kira 0.12 audio integration: ambient and event audio
 
 **Acceptance criteria:**
-- Time-to-first-run ≤ 5 minutes from browser load for new user
-- Metrics dashboard renders all six domain metrics for a running 10,000-citizen simulation at ≥ 30fps
-- Replay seek to any tick in 10,000-tick simulation in ≤ 200ms
+- Time-to-first-run &lt; 5 minutes from browser load for new user
+- Metrics dashboard renders all six domain metrics for a running 10,000-citizen simulation at &gt; 30fps
+- Replay seek to any tick in 10,000-tick simulation in &lt; 200ms
 - Scenario authoring UI validates scenario and displays path-specific error messages
 - WCAG 2.1 AA color contrast on all metric displays and state badges
 
@@ -11038,11 +11038,11 @@ The OSS core is a strategic asset, not a cost. It:
 - Venture adapter: scenario dispatch, result retrieval, branch API
 - API schema documentation published
 - Integration test suite: 50 automated tests covering Venture agent workflow
-- SLA definition: 99.9% uptime, ≤ 30-second scenario result latency
+- SLA definition: 99.9% uptime, &lt; 30-second scenario result latency
 - Changelog and deprecation policy published
 
 **Acceptance criteria:**
-- Venture AI agents run ≥ 500 scenarios/hour sustained
+- Venture AI agents run &gt; 500 scenarios/hour sustained
 - All dispatched scenarios verified deterministic (BLAKE3 hash match on replay)
 - Zero API contract breaking changes without versioned migration path
 
@@ -11088,7 +11088,7 @@ The Venture-CivLab API contract is governed by the following principles:
 
 | Principle | Description |
 |-----------|-------------|
-| **Versioned and stable** | API is semver-versioned; breaking changes require a new major version; prior version maintained for ≥ 6 months |
+| **Versioned and stable** | API is semver-versioned; breaking changes require a new major version; prior version maintained for &gt; 6 months |
 | **Typed and schema-validated** | All request/response payloads are schema-validated; schema published as OpenAPI 3.1 document |
 | **Determinism guaranteed** | Every scenario dispatched via Venture API includes a seed; result payload includes BLAKE3 final state hash; Venture can verify replay determinism |
 | **Idempotent dispatch** | Scenario dispatch is idempotent with client-provided idempotency key; duplicate dispatch with same key returns same result |
@@ -11127,7 +11127,7 @@ When Venture stores a scenario result for audit, regulatory, or reproducibility 
 | BLAKE3 hash at each tick (hashes.bin) | Optional | Full replay verification |
 | Result JSON | Yes | Structured outcome metrics |
 
-A Venture audit package contains all required components. Any third party with `civlab` installed can run `civlab verify --artifact <package>` to independently reproduce and verify the result.
+A Venture audit package contains all required components. Any third party with `civlab` installed can run `civlab verify --artifact \<package\>` to independently reproduce and verify the result.
 
 ### 13.5 Parpour Business Relationship
 
@@ -11148,7 +11148,7 @@ The CivLab-Parpour commercial relationship is structured as:
 |--------------|-------------------|---------|
 | Roadmap phase priorities | CivLab Product Lead | Annual planning; quarterly review; published in WORK_STREAM.md |
 | Feature scope within phase | CivLab Engineering Lead | Sprint planning; FR tracker update |
-| API breaking changes | CivLab Architecture Review | RFC required; ≥ 14-day community comment period |
+| API breaking changes | CivLab Architecture Review | RFC required; &gt; 14-day community comment period |
 | Scenario format changes | CivLab Architecture Review | RFC required; migration path required |
 | D1-D7 ruleset amendments | CivLab Engineering Lead + Community RFC | Unanimous team sign-off + RFC process |
 | Mod type additions | CivLab Product Lead | ADR required; civlab-sdk update |
@@ -11238,8 +11238,8 @@ All changes to civlab-core must pass the following gates before merge:
 |------|-------------|----------------|
 | CI replay test | Two runs with same seed → byte-identical BLAKE3 hashes | Block merge |
 | D1-D7 Clippy lints | No violations of D2, D3, D4, D5 rules | Block merge |
-| Performance regression | Tick latency ≥ 5% above baseline | Require engineering lead sign-off |
-| Test coverage | ≥ 90% unit test coverage for modified modules | Block merge |
+| Performance regression | Tick latency &gt; 5% above baseline | Require engineering lead sign-off |
+| Test coverage | &gt; 90% unit test coverage for modified modules | Block merge |
 | FR traceability | All new code references an FR ID | Block merge |
 | API schema validation | All API changes update OpenAPI schema | Block merge |
 | WASM build | WASM32 target builds without error | Block merge |
@@ -11524,8 +11524,8 @@ bitset-core = "0.1.0"
 **Version pin:** `0.4.0`
 
 **Rationale:**
-- **Zero-copy archetype queries:** Components are stored in contiguous typed arrays per archetype. Iterating `(Position, Inventory, Mood)` touches exactly the memory for those three component types, in order. No indirection through `Arc<Mutex<>>` or pointer chasing.
-- **No `Arc<Mutex<>>` in hot path:** `legion` worlds own component data directly. Parallel system dispatch uses safe Rust borrowing rules at compile time, not runtime locks. This is required by the determinism invariant (no non-deterministic lock ordering).
+- **Zero-copy archetype queries:** Components are stored in contiguous typed arrays per archetype. Iterating `(Position, Inventory, Mood)` touches exactly the memory for those three component types, in order. No indirection through `Arc \< Mutex<>>` or pointer chasing.
+- **No `Arc \< Mutex<>>` in hot path:** `legion` worlds own component data directly. Parallel system dispatch uses safe Rust borrowing rules at compile time, not runtime locks. This is required by the determinism invariant (no non-deterministic lock ordering).
 - **Cache-friendly:** Archetype layout ensures entities sharing the same component set are stored together. Iterating all Citizens touches citizen-only memory; no interleaving of unrelated component data.
 - **Pure Rust:** No C dependencies. Compiles cleanly on all tier-1 targets.
 - **Serialization support:** Components implement `serde::Serialize + Deserialize`. `legion` worlds can be serialized to canonical form for state hashing and snapshotting.
@@ -11535,7 +11535,7 @@ bitset-core = "0.1.0"
 | Alternative | Why Rejected |
 |---|---|
 | `bevy_ecs` (standalone) | Pulls in a large fraction of the Bevy dependency tree even when used headless. The `bevy_ecs` standalone crate is not officially supported as a standalone library — it is maintained as part of Bevy's monorepo and breakage is common when used outside that context. Heavier compile times. |
-| `specs` | Uses `Arc<Mutex<MaskedStorage<T>>>` for component storage. Every parallel system that reads components acquires a read lock. Under high parallelism (rayon scope with 8 threads), this creates lock contention on the component storage. Also uses dynamic dispatch for system scheduling, adding runtime overhead. |
+| `specs` | Uses `Arc \< Mutex \< MaskedStorage\<T\>>>` for component storage. Every parallel system that reads components acquires a read lock. Under high parallelism (rayon scope with 8 threads), this creates lock contention on the component storage. Also uses dynamic dispatch for system scheduling, adding runtime overhead. |
 | `hecs` | Solid alternative, but lacks first-class support for parallel world access patterns. Schedules are manual; no built-in concept of system phases. Would require significant bespoke scheduling code that `legion` provides out of the box. |
 | Custom entity model | Full control, but the correctness burden of a cache-friendly archetype layout is substantial. `legion` has been validated at scale; a custom solution would require the same level of validation. ADR-006 deferred this decision to the P0 prototype but `legion` was selected after benchmarking. |
 
@@ -12352,13 +12352,13 @@ pub fn run_demographics_phase(
 |---|---|---|
 | `<(&Position, &Inventory, &Mood)>::query()` | Sequential archetype scan, high cache hit rate on Citizen archetype | Production, Social |
 | `<(&Position, &BuildingRole, &mut Inventory)>::query()` | Reads Position + BuildingRole (immutable), writes Inventory | Production phase |
-| `<Entity, &Age, &Health>::query().filter(component::<Employment>())` | Filter by component presence, still contiguous | Demographics |
+| `<Entity, &Age, &Health>::query().filter(component::\<Employment\>())` | Filter by component presence, still contiguous | Demographics |
 | `<(&MarketKey, &mut OrderBook)>::query()` | Small archetype (few markets), excellent cache locality | Trade |
 | `<(&InstRole, &mut Treasury, &PolicyBundle)>::query()` | Very small archetype (few institutions), effectively L1-resident | Policy |
 
-**SoA layout note:** `legion` uses archetype-based SoA layout. All `Position` components for Citizen entities are stored in one contiguous `Vec<Position>`. All `Mood` components are in another contiguous `Vec<Mood>`. Iterating both simultaneously is a single strided pass over two cache lines per entity pair. This is the primary performance advantage over an `AoS` layout where `struct Citizen { pos, mood, health, ... }` would interleave hot and cold fields.
+**SoA layout note:** `legion` uses archetype-based SoA layout. All `Position` components for Citizen entities are stored in one contiguous `Vec\<Position\>`. All `Mood` components are in another contiguous `Vec\<Mood\>`. Iterating both simultaneously is a single strided pass over two cache lines per entity pair. This is the primary performance advantage over an `AoS` layout where `struct Citizen { pos, mood, health, ... }` would interleave hot and cold fields.
 
-**Cold data isolation:** Biography text, historical event logs, and birth-location metadata are stored outside the ECS in a `BTreeMap<EntityId, CitizenBiography>` in the engine resources. These are never accessed in hot-path phases. Keeping them out of the ECS prevents them from polluting archetype cache lines.
+**Cold data isolation:** Biography text, historical event logs, and birth-location metadata are stored outside the ECS in a `BTreeMap \< EntityId, CitizenBiography>` in the engine resources. These are never accessed in hot-path phases. Keeping them out of the ECS prevents them from polluting archetype cache lines.
 
 ---
 
@@ -12368,9 +12368,9 @@ pub fn run_demographics_phase(
 
 | Citizen Count | p50 Tick Time | p99 Tick Time | p999 Tick Time | Notes |
 |---|---|---|---|---|
-| 1,000 | ≤ 8 ms | ≤ 14 ms | ≤ 16 ms | Target for 60 FPS game clients |
-| 10,000 | ≤ 30 ms | ≤ 45 ms | ≤ 50 ms | Acceptable for research mode |
-| 100,000 | ≤ 150 ms | ≤ 180 ms | ≤ 200 ms | Research-only; tick rate dropped to 5/sec |
+| 1,000 | &lt; 8 ms | &lt; 14 ms | &lt; 16 ms | Target for 60 FPS game clients |
+| 10,000 | &lt; 30 ms | &lt; 45 ms | &lt; 50 ms | Acceptable for research mode |
+| 100,000 | &lt; 150 ms | &lt; 180 ms | &lt; 200 ms | Research-only; tick rate dropped to 5/sec |
 
 **Measurement methodology:**
 - `TICK_DURATION_HISTOGRAM` Prometheus metric records wall-clock time per tick using `std::time::Instant` (wall clock only, not simulation time).
@@ -12422,12 +12422,12 @@ Across 10,000 citizens, `rayon` dispatches this in parallel; with SIMD, per-citi
 
 ### 5.4 Memory Layout Strategy
 
-**Hot path (ECS archetype arrays):** Citizen components (Position, Inventory, Mood, Health, Age) stored in contiguous `Vec<T>` per component type within each archetype. A sequential scan of 1,000 Citizen Mood components touches exactly 6 KB (1000 × 6 bytes), fitting in L1 cache (typically 32 KB).
+**Hot path (ECS archetype arrays):** Citizen components (Position, Inventory, Mood, Health, Age) stored in contiguous `Vec\<T\>` per component type within each archetype. A sequential scan of 1,000 Citizen Mood components touches exactly 6 KB (1000 × 6 bytes), fitting in L1 cache (typically 32 KB).
 
 **Cold data (off-ECS storage):** The following are stored outside the ECS in engine resources, accessed only on specific events:
-- `BTreeMap<EntityId, CitizenBiography>` — name, birthplace, family history
-- `BTreeMap<EntityId, Vec<HistoricalEvent>>` — per-citizen event log
-- `BTreeMap<InstitutionId, PolicyHistory>` — past policy decisions
+- `BTreeMap \< EntityId, CitizenBiography>` — name, birthplace, family history
+- `BTreeMap \< EntityId, Vec\<HistoricalEvent\>>` — per-citizen event log
+- `BTreeMap \< InstitutionId, PolicyHistory>` — past policy decisions
 
 **Allocation strategy:** No per-tick heap allocations on hot paths. Entity deletion uses tombstone marking (set `alive = false` in `BitSet`) and deferred compaction every 100 ticks. Event vectors are pre-allocated with capacity `= expected_events_per_tick × 1.5` and reset each tick without deallocation.
 
@@ -12609,7 +12609,7 @@ for delta in &deltas {
 **Category:** Architecture discipline
 **Enforced by:** Type system (`&State` vs `&mut State` parameters)
 
-Each phase receives immutable access to prior-phase state and produces a list of mutations. Mutations are accumulated in a `Vec<Delta>` and applied sequentially after the phase completes:
+Each phase receives immutable access to prior-phase state and produces a list of mutations. Mutations are accumulated in a `Vec\<Delta\>` and applied sequentially after the phase completes:
 
 ```rust
 // Phase signature contract
@@ -12877,7 +12877,7 @@ pub async fn run_sim_bridge(
 }
 ```
 
-**Design note:** `Arc<BroadcastFrame>` is used because `broadcast::channel` clones the value for each receiver. Cloning an `Arc` is `O(1)` (atomic increment); cloning a `BroadcastFrame` (potentially 120 KB) for each of 100 clients would be `O(n × frame_size)`. With `Arc`, all clients share the same heap allocation.
+**Design note:** `Arc\<BroadcastFrame\>` is used because `broadcast::channel` clones the value for each receiver. Cloning an `Arc` is `O(1)` (atomic increment); cloning a `BroadcastFrame` (potentially 120 KB) for each of 100 clients would be `O(n × frame_size)`. With `Arc`, all clients share the same heap allocation.
 
 ### 7.4 Command Priority Queue
 
@@ -13353,33 +13353,33 @@ module-name = "civlab._civlab"
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
-| NFR-P-01 | p50 tick time (1k citizens) | ≤ 8 ms | `TICK_DURATION_HISTOGRAM` p50, scraped by Prometheus | CI bench regression: `criterion` baseline comparison on PR |
-| NFR-P-02 | p99 tick time (1k citizens) | ≤ 14 ms | `TICK_DURATION_HISTOGRAM` p99 | CI bench regression gate: fail PR if p99 increases > 10% |
-| NFR-P-03 | p999 tick time (1k citizens) | ≤ 16 ms | `TICK_DURATION_HISTOGRAM` p999 | Prometheus alert in production |
-| NFR-P-04 | p50 tick time (10k citizens) | ≤ 30 ms | Same histogram, different scenario | Separate `bench_10k_citizens` criterion benchmark |
-| NFR-P-05 | p50 tick time (100k citizens) | ≤ 150 ms | Same histogram, large scenario | Performance regression test in nightly CI only |
-| NFR-P-06 | Broadcast lag | p99 ≤ 10 ms from tick completion to last client delivery | `BROADCAST_LAG_HISTOGRAM` | Prometheus alert: `civlab_broadcast_lag_seconds{quantile="0.99"} > 0.010` |
-| NFR-P-07 | Snapshot serialization overhead | ≤ 1 ms per tick for 1k citizens | `TICK_PHASE_DURATION{phase="Snapshot"}` | Criterion benchmark `bench_snapshot_1k` |
-| NFR-P-08 | Memory footprint | ≤ 256 MB RSS for 10k citizens | `/proc/self/status` VmRSS in health endpoint | Nightly memory regression test |
+| NFR-P-01 | p50 tick time (1k citizens) | &lt; 8 ms | `TICK_DURATION_HISTOGRAM` p50, scraped by Prometheus | CI bench regression: `criterion` baseline comparison on PR |
+| NFR-P-02 | p99 tick time (1k citizens) | &lt; 14 ms | `TICK_DURATION_HISTOGRAM` p99 | CI bench regression gate: fail PR if p99 increases > 10% |
+| NFR-P-03 | p999 tick time (1k citizens) | &lt; 16 ms | `TICK_DURATION_HISTOGRAM` p999 | Prometheus alert in production |
+| NFR-P-04 | p50 tick time (10k citizens) | &lt; 30 ms | Same histogram, different scenario | Separate `bench_10k_citizens` criterion benchmark |
+| NFR-P-05 | p50 tick time (100k citizens) | &lt; 150 ms | Same histogram, large scenario | Performance regression test in nightly CI only |
+| NFR-P-06 | Broadcast lag | p99 &lt; 10 ms from tick completion to last client delivery | `BROADCAST_LAG_HISTOGRAM` | Prometheus alert: `civlab_broadcast_lag_seconds{quantile="0.99"} > 0.010` |
+| NFR-P-07 | Snapshot serialization overhead | &lt; 1 ms per tick for 1k citizens | `TICK_PHASE_DURATION{phase="Snapshot"}` | Criterion benchmark `bench_snapshot_1k` |
+| NFR-P-08 | Memory footprint | &lt; 256 MB RSS for 10k citizens | `/proc/self/status` VmRSS in health endpoint | Nightly memory regression test |
 
 ### 10.3 Scalability
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
-| NFR-S-01 | Max simultaneous WebSocket clients | ≥ 100 clients at 10 ticks/sec | Load test: 100 concurrent `tokio-tungstenite` clients | Load test in CI (`tests/load/100_clients.rs`) |
-| NFR-S-02 | Client connection overhead | ≤ 5 ms per client connection (handshake + initial snapshot) | WebSocket upgrade + handshake response latency percentile | Integration test with timer |
-| NFR-S-03 | Citizen count scaling | Tick time scales sub-linearly from 1k to 10k citizens | Ratio: `tick_time_10k / tick_time_1k ≤ 8` (expect ~5 with rayon) | Criterion comparison benchmark |
-| NFR-S-04 | Command throughput | ≥ 1,000 commands/sec accepted without tick delay | Stress test: flood `command_tx` at 1k/sec, verify tick time unchanged | Load test with command flood |
-| NFR-S-05 | Event log growth rate | ≤ 5 MB/minute at 1k citizens, 10 ticks/sec | Monitor `civlab_event_log_bytes_total` | Prometheus recording rule + alert |
-| NFR-S-06 | WebSocket frame size | ≤ 20 KB average binary frame for 1k citizen snapshot | `FRAME_SIZE_HISTOGRAM` | Unit test on `BinaryFrame::to_msgpack_bytes()` with reference snapshot |
+| NFR-S-01 | Max simultaneous WebSocket clients | &gt; 100 clients at 10 ticks/sec | Load test: 100 concurrent `tokio-tungstenite` clients | Load test in CI (`tests/load/100_clients.rs`) |
+| NFR-S-02 | Client connection overhead | &lt; 5 ms per client connection (handshake + initial snapshot) | WebSocket upgrade + handshake response latency percentile | Integration test with timer |
+| NFR-S-03 | Citizen count scaling | Tick time scales sub-linearly from 1k to 10k citizens | Ratio: `tick_time_10k / tick_time_1k &lt; 8` (expect ~5 with rayon) | Criterion comparison benchmark |
+| NFR-S-04 | Command throughput | &gt; 1,000 commands/sec accepted without tick delay | Stress test: flood `command_tx` at 1k/sec, verify tick time unchanged | Load test with command flood |
+| NFR-S-05 | Event log growth rate | &lt; 5 MB/minute at 1k citizens, 10 ticks/sec | Monitor `civlab_event_log_bytes_total` | Prometheus recording rule + alert |
+| NFR-S-06 | WebSocket frame size | &lt; 20 KB average binary frame for 1k citizen snapshot | `FRAME_SIZE_HISTOGRAM` | Unit test on `BinaryFrame::to_msgpack_bytes()` with reference snapshot |
 
 ### 10.4 Reliability — Crash Recovery
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
 | NFR-R-01 | Snapshot persistence interval | Snapshot written to PostgreSQL every 100 ticks | `civlab_snapshots_written_total` counter | Integration test: run 100 ticks, verify DB has 1 snapshot row |
-| NFR-R-02 | Recovery point objective (RPO) | On crash, resume from last persisted snapshot (≤ 100 ticks lost) | Kill server mid-run, restart, verify tick counter | Recovery integration test |
-| NFR-R-03 | Recovery time objective (RTO) | Server restart + state load ≤ 30 seconds | Time from process start to first tick broadcast | Health check endpoint `/health` transitions from `starting` to `ready` |
+| NFR-R-02 | Recovery point objective (RPO) | On crash, resume from last persisted snapshot (&lt; 100 ticks lost) | Kill server mid-run, restart, verify tick counter | Recovery integration test |
+| NFR-R-03 | Recovery time objective (RTO) | Server restart + state load &lt; 30 seconds | Time from process start to first tick broadcast | Health check endpoint `/health` transitions from `starting` to `ready` |
 | NFR-R-04 | Event log durability | Event log flushed to disk before acknowledgement | `fsync` on event log append (O_DSYNC) | Unit test: write event, kill process, verify log on restart |
 | NFR-R-05 | Client reconnect | Client can reconnect and receive current snapshot within 2 seconds | Integration test: disconnect client, reconnect, measure time to first snapshot | WebSocket reconnect test |
 | NFR-R-06 | Simulation panic isolation | Panic in one tick phase does not kill the server process | Inject panic via test endpoint, verify server continues | Integration test with panic injection |
@@ -13391,7 +13391,7 @@ module-name = "civlab._civlab"
 | NFR-O-01 | Prometheus metric coverage | 100% of tick phases have latency histograms | Count `HistogramVec` labels vs `PhaseId` enum variants | CI test: verify each `PhaseId` has a corresponding metric |
 | NFR-O-02 | Structured log completeness | Every error has structured fields: `tick`, `phase`, `entity_id`, `error` | Log schema validation in CI | `tracing` instrumentation review checklist |
 | NFR-O-03 | Trace propagation | Every WebSocket command is traceable from client receipt to tick application | `tracing::span` with `trace_id` propagated through command → phase | Manual trace inspection in Jaeger |
-| NFR-O-04 | Metrics cardinality | Total Prometheus time series count ≤ 10,000 | Prometheus cardinality API: `count({__name__=~".+"})` | Prometheus alert: `prometheus_tsdb_head_series > 10000` |
+| NFR-O-04 | Metrics cardinality | Total Prometheus time series count &lt; 10,000 | Prometheus cardinality API: `count({__name__=~".+"})` | Prometheus alert: `prometheus_tsdb_head_series > 10000` |
 | NFR-O-05 | Dashboard coverage | All NFR metrics visible in Grafana dashboard | Manual dashboard review | Dashboard JSON committed to repo at `ops/grafana/civ-sim.json` |
 | NFR-O-06 | Alert coverage | Each p99 latency target has a Prometheus alerting rule | Count alert rules vs NFR-P-* count | CI: validate `ops/prometheus/alerts.yml` with `promtool check rules` |
 
@@ -13934,7 +13934,7 @@ User double-clicks a hex tile or uses the "Zoom to City" button. System transiti
 User drags the timeline scrubber to a specific tick. System updates all views (hex map, metric charts, event log) to reflect state at that tick. Scrubbing is frame-synced: display updates within 200ms of scrubber position change.
 
 **Step 8: Inspect event log**
-The event log panel shows all events fired at the current tick and surrounding window (±5 ticks). Events include: policy changes, resource threshold crossings, institution stability changes, conflict onset, diplomatic events. Each event has a causal attribution field showing what triggered it.
+The event log panel shows all events fired at the current tick and surrounding window (&plusmn;5 ticks). Events include: policy changes, resource threshold crossings, institution stability changes, conflict onset, diplomatic events. Each event has a causal attribution field showing what triggered it.
 
 **Step 9: Annotate a moment**
 User right-clicks on the timeline at a specific tick and selects "Add Annotation". A text field appears. User enters commentary. Annotation marker appears on the timeline.
@@ -14305,7 +14305,7 @@ civlab mod new --type policy --name my_tax_policy
 Mod author implements the required trait in `src/lib.rs`. The SDK provides:
 - `PolicyMod::apply(&self, state: &SimState, tick: u64) -> PolicyEffect`
 - `EconomicMod::compute_production(&self, state: &SimState) -> ResourceDelta`
-- `EventMod::should_fire(&self, state: &SimState, rng: &mut EngineRng) -> Option<Event>`
+- `EventMod::should_fire(&self, state: &SimState, rng: &mut EngineRng) -> Option\<Event\>`
 
 **Step 3: Build**
 
@@ -14579,7 +14579,7 @@ App Root
 - Keyboard `Shift+[` / `Shift+]`: step backward/forward 1000 ticks.
 - Keyboard `Home` / `End`: jump to tick 0 or max tick.
 - Right-click on track: context menu with "Add Annotation", "Create Branch", "Copy Tick Hash".
-- Scroll wheel over scrubber: fine adjustment ±1 tick per scroll click.
+- Scroll wheel over scrubber: fine adjustment &plusmn;1 tick per scroll click.
 
 **Performance contract:** All view updates triggered by scrubber interaction must complete within 200ms. If data for a tick is not yet in the client cache, a skeleton loader appears immediately and is replaced when data loads. The scrubber handle moves immediately on drag; views may lag up to 200ms.
 
@@ -15277,11 +15277,11 @@ The hex map and timeline scrubber are rich visual components that require specia
 
 **Metric Charts Accessible Alternative:**
 - Each chart has a "Data Table" toggle rendering the time series as a scrollable table.
-- Chart SVGs include a `<title>` element with a human-readable description.
-- Example: `<title>Legitimacy metric over 10000 ticks: starts at 0.82, peaks at 0.91 at tick 2300, declines to 0.34 at tick 4200</title>`.
+- Chart SVGs include a `\<title\>` element with a human-readable description.
+- Example: `\<title\>Legitimacy metric over 10000 ticks: starts at 0.82, peaks at 0.91 at tick 2300, declines to 0.34 at tick 4200</title>`.
 
 **Event Log:**
-- Each event log entry is a list item (`<li>`) with full text description.
+- Each event log entry is a list item (`\<li\>`) with full text description.
 - Causal attribution is included in the text: "Legitimacy threshold breach at tick 4195, caused by tax_rate increase at tick 4000."
 
 **Run Status Changes:**
@@ -15441,7 +15441,7 @@ These tests can be performed by Maren (or a QA proxy) without access to engine i
 - Download the ZIP bundle.
 - Verify: ZIP contains PDF, JSON, CSV, and Parquet files.
 - Verify: JSON bundle contains `artifact_fingerprint` field (BLAKE3 hash).
-- Run `civlab verify <bundle.json>` on the JSON bundle.
+- Run `civlab verify \< bundle.json>` on the JSON bundle.
 - Verify: Output is "PASS".
 - Pass criterion: Export complete without UI blocking; bundle passes integrity check.
 

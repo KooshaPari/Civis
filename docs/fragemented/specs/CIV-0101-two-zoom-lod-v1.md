@@ -78,7 +78,7 @@ Real-time strategy (RTS) gameplay operates on a command interface overlaid on th
 - Analysis: `compute_welfare_distribution()`, `analyze_migration_drivers()`, `simulate_what_if_policy(policy_delta)`
 - Visualization: `export_citizen_genealogy()`, `plot_institution_lifecycle()`, `show_causal_graph(event_id)`
 
-**Data Size:** ~0.1 KB per citizen (10k citizens ≈ 1 MB); full export ~10 MB for complete city state
+**Data Size:** ~0.1 KB per citizen (10k citizens &asymp; 1 MB); full export ~10 MB for complete city state
 **Update Frequency:** On-demand (not real-time streaming)
 **Latency Requirement:** Query completion within 1 second; deep analysis within 10 seconds
 
@@ -119,10 +119,10 @@ Real-time strategy (RTS) gameplay operates on a command interface overlaid on th
 
 | Condition | Validation | Response |
 |-----------|-----------|----------|
-| Zoom level valid for command type | Unit move only valid at zoom ≥ 2 | Reject if zoom 1 and command = move_unit |
+| Zoom level valid for command type | Unit move only valid at zoom &gt; 2 | Reject if zoom 1 and command = move_unit |
 | Unit/structure/actor exists | Entity ID must exist in state | Error: "unit_id 999 not found" |
 | Player owns entity | Unit must belong to player faction | Error: "unauthorized: unit owned by faction_B" |
-| Command is feasible | Move distance ≤ unit range; build cost ≤ treasury | Error: "insufficient treasury (need 100, have 50)" |
+| Command is feasible | Move distance &lt; unit range; build cost &lt; treasury | Error: "insufficient treasury (need 100, have 50)" |
 | Map location valid | Hex within map bounds, passable for unit type | Error: "location (999, 999) out of bounds" |
 | Cooldown respected | Some commands have cooldown (e.g., diplomacy proposal every 10 ticks) | Warn: "diplomacy proposal on cooldown, 3 ticks remaining" |
 
@@ -217,8 +217,8 @@ Network latency (50-200 ms) makes RTS feel sluggish if client waits for server A
    - Client receives `authoritative_position`
 
 3. **Reconciliation:**
-   - **Delta < 1 hex:** Smooth transition over 50 ms (unit drifts to correct position)
-   - **Delta ≥ 1 hex:** Snap to authoritative position (visible but quick; indicates desync)
+   - **Delta \< 1 hex:** Smooth transition over 50 ms (unit drifts to correct position)
+   - **Delta &gt; 1 hex:** Snap to authoritative position (visible but quick; indicates desync)
    - **Delta > 5 hex:** Log warning and request full state resync (indicates serious issue)
 
 ### Determinism & Validation
@@ -232,9 +232,9 @@ Client prediction is **deterministic** given:
 
 | Scenario | Error Budget | Correction Strategy |
 |----------|--------------|-------------------|
-| WiFi low latency (50 ms) | ±1 hex | Smooth transition |
-| WiFi medium latency (100 ms) | ±2 hex | Smooth transition with slight desync |
-| Cellular high latency (200+ ms) | ±3 hex | Snap correction visible but acceptable |
+| WiFi low latency (50 ms) | &plusmn;1 hex | Smooth transition |
+| WiFi medium latency (100 ms) | &plusmn;2 hex | Smooth transition with slight desync |
+| Cellular high latency (200+ ms) | &plusmn;3 hex | Snap correction visible but acceptable |
 
 ## Command Queuing & Execution Phases
 
@@ -318,9 +318,9 @@ fn test_rts_command_replay_determinism() {
 | Command latency (ACK) | < 50 ms (p95) | Over WiFi; includes network roundtrip |
 | State update frequency (zoom 1) | 100 ms | Regional updates; lower frequency OK |
 | State update frequency (zoom 2) | 50 ms | Tactical updates; critical for responsiveness |
-| Tick rate (wall-clock) | ≥ 10 Hz | 100 ms per tick; maintains smoothness |
-| Concurrent players | ≥ 100 | Supported server load per instance |
-| Unit count per faction | ≤ 1000 | Practical limit before performance degrades |
+| Tick rate (wall-clock) | &gt; 10 Hz | 100 ms per tick; maintains smoothness |
+| Concurrent players | &gt; 100 | Supported server load per instance |
+| Unit count per faction | &lt; 1000 | Practical limit before performance degrades |
 | Memory footprint | < 500 MB | For medium scenario (5 regions, 50 districts) |
 
 ## Examples
@@ -338,7 +338,7 @@ fn test_rts_command_replay_determinism() {
 3. Server broadcasts: `state_update(unit_42: position=(102, 152))`
 4. Client receives update; compares to predicted (103, 151): delta=1 hex; smooth transition over 50 ms
 
-**Tick 5002-5004:** Unit continues movement, predictions drift ±1 hex each tick, server updates correct position
+**Tick 5002-5004:** Unit continues movement, predictions drift &plusmn;1 hex each tick, server updates correct position
 
 **Tick 5005:**
 1. Unit reaches destination (150, 200)
@@ -401,11 +401,11 @@ Macro aggregates are deterministic but may have bounded rounding errors. Errors 
 
 | Metric | Aggregation Method | Error Bound (p95) | Notes |
 |--------|-------------------|------------------|-------|
-| Population | Sum of district cohorts | ±0 (exact) | No rounding if integer counts |
-| Food stocks | Sum of district stocks | ±0.01 units | Fixed-point accumulation; negligible |
-| GDP | Sum of district production × price | ±1.0 units | Price aggregation may have ±0.5% error per price |
-| Gini (inequality) | Weighted average of district Ginis | ±0.02 (0.02 on [0,1] scale) | Aggregation of cohort distributions introduces approximation |
-| Legitimacy | Weighted average of institution legitimacy | ±0.01 | Different institutions have different weights |
+| Population | Sum of district cohorts | &plusmn;0 (exact) | No rounding if integer counts |
+| Food stocks | Sum of district stocks | &plusmn;0.01 units | Fixed-point accumulation; negligible |
+| GDP | Sum of district production × price | &plusmn;1.0 units | Price aggregation may have &plusmn;0.5% error per price |
+| Gini (inequality) | Weighted average of district Ginis | &plusmn;0.02 (0.02 on [0,1] scale) | Aggregation of cohort distributions introduces approximation |
+| Legitimacy | Weighted average of institution legitimacy | &plusmn;0.01 | Different institutions have different weights |
 
 Error bounds are verified in acceptance test:
 ```rust
@@ -531,7 +531,7 @@ The client determines the active LOD level using three inputs:
 
 1. **Camera zoom factor** — primary selector
 2. **Entity count in viewport** — adaptive fallback (high entity density → raise LOD level)
-3. **Client FPS** — performance-driven adaptation (FPS < 30 → raise LOD level by 1)
+3. **Client FPS** — performance-driven adaptation (FPS \< 30 → raise LOD level by 1)
 
 ### LOD Selection Algorithm
 
@@ -1586,7 +1586,7 @@ This section explicitly maps the CIV-0101 spec to FR-CIV-GEO-010 acceptance crit
 | Zoom level 1: {region_id, aggregated_population, aggregated_resources, military_unit_count, dominant_institution, diplomatic_status} | `L2RegionSnapshot` struct | Section 4.2 |
 | Zoom level 2: {district_id, population_cohorts, resource_stocks, structures, military_units, citizen_morale} | `L1DistrictSnapshot` struct | Section 4.2 |
 | Zoom level 3 (research mode): {citizen_id, job, welfare, ideology, location, stress_score} | `L0CitizenSnapshot` struct | Section 4.2 |
-| Data size: zoom 1 ~0.5 KB per region | L2 target < 0.5 KB per region | Section 4.2, Section 8.3 |
+| Data size: zoom 1 ~0.5 KB per region | L2 target \< 0.5 KB per region | Section 4.2, Section 8.3 |
 | Data size: zoom 2 ~2 KB per district | L1 target ~2 KB per district | Section 4.2, Section 8.3 |
 | Schema versioning: `lod_snapshots.schema_version` | Schema version in Section 3 | Section 3 |
 | Client rejects mismatched versions | Desync detection hash comparison | Section 7.3 |

@@ -88,7 +88,7 @@ These items integrate CIV with Venture control-plane. Depends on P0 completion.
 | **P1-4** | Cost Model: CIV Energy → Venture Spend Quotas | P0-2, P0-4, Venture P0-2 | TODO | CIV-Venture Finance |
 | | - Map energy conservation equation to budget model | | | |
 | | - Peak-shaving mechanics → spend velocity controls | | | |
-| | - Cost estimate validation (±5% accuracy) | | | |
+| | - Cost estimate validation (&plusmn;5% accuracy) | | | |
 
 **P1 Exit Gate:** CIV events flow through Venture event bus. Compliance can trace institutional changes and policy decisions.
 

@@ -20,7 +20,7 @@ One hegemon HHH
 
 One challenger CCC
 
-Other secondary states i∈Pi \\in \\mathcal{P}i∈P
+Other secondary states i&isin;Pi \\in \\mathcal{P}i&isin;P
 
 Define:
 
@@ -101,21 +101,21 @@ VI. Theorem Statement
 Theorem (Order Stability vs Fragmentation vs War)
 Assume:
 
-Coalition stability number C0<1\\mathcal{C}\_0 < 1C0​<1
+Coalition stability number C0 \< 1\\mathcal{C}\_0 \< 1C0​<1
 
-Leakage number L0<1\\mathcal{L}\_0 < 1L0​<1
+Leakage number L0 \< 1\\mathcal{L}\_0 \< 1L0​<1
 
-Capture reproduction number R0<1\\mathcal{R}\_0 < 1R0​<1
+Capture reproduction number R0 \< 1\\mathcal{R}\_0 \< 1R0​<1
 
-Financial fragility bounded FFIH≤FcritFFI\_H \\le F\_{crit}FFIH​≤Fcrit​
+Financial fragility bounded FFIH&lt;FcritFFI\_H \\le F\_{crit}FFIH​&lt;Fcrit​
 
 Power parity bounded away from unity:
 
-πt≤πcrit<1\\pi\_t \\le \\pi\_{crit} < 1πt​≤πcrit​<1
+πt&lt;πcrit \< 1\\pi\_t \\le \\pi\_{crit} < 1πt​&lt;πcrit​<1
 Then there exists a region in parameter space such that:
-TSt<TScrit⇒Pr⁡(system war)≤ϵTS\_t < TS\_{crit}
+TSt \< TScrit⇒Pr⁡(system war)&lt;ϵTS\_t \< TS\_{crit}
 \\Rightarrow
-\\Pr(\\text{system war}) \\le \\epsilonTSt​<TScrit​⇒Pr(system war)≤ϵ
+\\Pr(\\text{system war}) \\le \\epsilonTSt​<TScrit​⇒Pr(system war)&lt;ϵ
 and the global order remains stable (low fragmentation, low war).
 
 Conversely:
@@ -161,11 +161,11 @@ If any two of those fail together, order destabilizes.
 
 VIII. Order Fragmentation Basin
 If:
-πt≈1ANDC0>1ANDL0>1\\pi\_t \\approx 1
+πt&asymp;1ANDC0>1ANDL0>1\\pi\_t \\approx 1
 \\quad \\text{AND} \\quad
 \\mathcal{C}\_0 > 1
 \\quad \\text{AND} \\quad
-\\mathcal{L}\_0 > 1πt​≈1ANDC0​>1ANDL0​>1
+\\mathcal{L}\_0 > 1πt​&asymp;1ANDC0​>1ANDL0​>1
 But war aversion still high (e.g., aging demographics, high war cost),
 Then system transitions into:
 Bloc Fragmentation Basin
@@ -187,9 +187,9 @@ No hegemon.
 
 IX. System War Basin
 If:
-πt≈1ANDTSt≫TScrit\\pi\_t \\approx 1
+πt&asymp;1ANDTSt&gt;&gt;TScrit\\pi\_t \\approx 1
 \\quad \\text{AND} \\quad
-TS\_t \\gg TS\_{crit}πt​≈1ANDTSt​≫TScrit​
+TS\_t \\gg TS\_{crit}πt​&asymp;1ANDTSt​&gt;&gt;TScrit​
 Then:
 
 War probability spikes
@@ -203,17 +203,17 @@ War is modeled as a large shock to capital and power vector.
 X. Stability Inequalities (Design Targets)
 To maintain stable order, the hybrid hegemon must maintain:
 
-πt≤πcrit\\pi\_t \\le \\pi\_{crit}πt​≤πcrit​ via innovation and cohesion
+πt&lt;πcrit\\pi\_t \\le \\pi\_{crit}πt​&lt;πcrit​ via innovation and cohesion
 
-C0<1\\mathcal{C}\_0 < 1C0​<1 via compensation + legitimacy
+C0 \< 1\\mathcal{C}\_0 \< 1C0​<1 via compensation + legitimacy
 
-L0<1\\mathcal{L}\_0 < 1L0​<1 via governance integrity + targeted enforcement
+L0 \< 1\\mathcal{L}\_0 \< 1L0​<1 via governance integrity + targeted enforcement
 
-R0<1\\mathcal{R}\_0 < 1R0​<1 via anti-rent + transparency
+R0 \< 1\\mathcal{R}\_0 \< 1R0​<1 via anti-rent + transparency
 
-FFIH<FcritFFI\_H < F\_{crit}FFIH​<Fcrit​ via macroprudential discipline
+FFIH \< FcritFFI\_H \< F\_{crit}FFIH​<Fcrit​ via macroprudential discipline
 
-Sworld<ScritS\_{world} < S\_{crit}Sworld​<Scrit​ via adaptation + energy transition
+Sworld \< ScritS\_{world} < S\_{crit}Sworld​<Scrit​ via adaptation + energy transition
 
 This becomes a design dashboard.
 

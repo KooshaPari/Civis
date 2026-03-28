@@ -59,25 +59,25 @@ Coupling lock: essentials access cannot depend on metrics
 Coupr,t=0Coup\_{r,t} = 0Coupr,t​=0
 
 Surveillance ceiling:
-Σr,t≤Σmax⁡\\Sigma\_{r,t} \\le \\Sigma\_{\\max}Σr,t​≤Σmax​
+Σr,t&lt;Σmax⁡\\Sigma\_{r,t} \\le \\Sigma\_{\\max}Σr,t​&lt;Σmax​
 
 Baseline floor:
-Br,t≥Bmin⁡B\_{r,t} \\ge B\_{\\min}Br,t​≥Bmin​
+Br,t&gt;Bmin⁡B\_{r,t} \\ge B\_{\\min}Br,t​&gt;Bmin​
 
 Energy cap law: quota hoarding prevention
-qmax⁡≤qˉq\_{\\max} \\le \\bar{q}qmax​≤qˉ​
+qmax⁡&lt;qˉq\_{\\max} \\le \\bar{q}qmax​&lt;qˉ​
 
 Debt/finance leverage cap (if finance modeled)
 
 Soft constraints (violations allowed but penalized)
 
-Tyranny threshold T≤Tmax⁡T \\le T\_{\\max}T≤Tmax​
+Tyranny threshold T&lt;Tmax⁡T \\le T\_{\\max}T&lt;Tmax​
 
-Revolt risk ≤Rmax⁡\\le R\_{\\max}≤Rmax​
+Revolt risk &lt;Rmax⁡\\le R\_{\\max}&lt;Rmax​
 
-Inequality ≤Imax⁡\\le I\_{\\max}≤Imax​
+Inequality &lt;Imax⁡\\le I\_{\\max}&lt;Imax​
 
-Scarcity pressure ≤Smax⁡\\le S\_{\\max}≤Smax​
+Scarcity pressure &lt;Smax⁡\\le S\_{\\max}&lt;Smax​
 
 Soft constraints are handled via penalties.
 
@@ -85,7 +85,7 @@ Soft constraints are handled via penalties.
 You can handle multi-objective two ways:
 A) Weighted sum (simple)
 Minimize cost over horizon HHH:
-min⁡ut:t+H−1E[∑k=0H−1(wWWt+k−wDDt+k+wTϕ(Tt+k)+wSϕ(St+k)+wIϕ(It+k)+wRϕ(Riskt+k))]\\min\_{u\_{t:t+H-1}}
+min⁡ut:t+H−1E[&sum;k=0H−1(wWWt+k−wDDt+k+wTϕ(Tt+k)+wSϕ(St+k)+wIϕ(It+k)+wRϕ(Riskt+k))]\\min\_{u\_{t:t+H-1}}
 \\mathbb{E}\\left[
 \\sum\_{k=0}^{H-1}
 \\Big(
@@ -95,7 +95,7 @@ w\_W W\_{t+k} - w\_D D\_{t+k}
 + w\_I \\phi(I\_{t+k})
 + w\_R \\phi(Risk\_{t+k})
 \\Big)
-\\right]ut:t+H−1​min​E[k=0∑H−1​(wW​Wt+k​−wD​Dt+k​+wT​ϕ(Tt+k​)+wS​ϕ(St+k​)+wI​ϕ(It+k​)+wR​ϕ(Riskt+k​))]
+\\right]ut:t+H−1​min​E[k=0&sum;H−1​(wW​Wt+k​−wD​Dt+k​+wT​ϕ(Tt+k​)+wS​ϕ(St+k​)+wI​ϕ(It+k​)+wR​ϕ(Riskt+k​))]
 Where:
 
 WWW: waste ratio
@@ -113,7 +113,7 @@ Then minimize waste
 Then maximize discretionary life and innovation
 
 Formally:
-Minimize W subject to T≤Tmax⁡,  Risk≤Rmax⁡,  etc.\\text{Minimize } W \\text{ subject to } T\\le T\_{\\max}, \\; Risk\\le R\_{\\max}, \\; \\text{etc.}Minimize W subject to T≤Tmax​,Risk≤Rmax​,etc.
+Minimize W subject to T&lt;Tmax⁡,  Risk&lt;Rmax⁡,  etc.\\text{Minimize } W \\text{ subject to } T\\le T\_{\\max}, \\; Risk\\le R\_{\\max}, \\; \\text{etc.}Minimize W subject to T&lt;Tmax​,Risk&lt;Rmax​,etc.
 then optimize secondary objectives.
 This avoids the agent “sacrificing rights for efficiency.”
 
@@ -133,9 +133,9 @@ Repeat
 This handles nonlinearity and shocks.
 Robust MPC
 Because ξt\\xi\_tξt​ exists, use scenario sets:
-ξ∈Ξ={recession,pandemic,energy shock,war}\\xi \\in \\Xi = \\{\\text{recession},\\text{pandemic},\\text{energy shock},\\text{war}\\}ξ∈Ξ={recession,pandemic,energy shock,war}
+ξ&isin;Ξ={recession,pandemic,energy shock,war}\\xi \\in \\Xi = \\{\\text{recession},\\text{pandemic},\\text{energy shock},\\text{war}\\}ξ&isin;Ξ={recession,pandemic,energy shock,war}
 Solve:
-min⁡umax⁡ξ∈ΞJ(u,ξ)\\min\_{u} \\max\_{\\xi \\in \\Xi} J(u,\\xi)umin​ξ∈Ξmax​J(u,ξ)
+min⁡umax⁡ξ&isin;ΞJ(u,ξ)\\min\_{u} \\max\_{\\xi \\in \\Xi} J(u,\\xi)umin​ξ&isin;Ξmax​J(u,ξ)
 or minimize expected value with CVaR risk penalty:
 min⁡u  E[J]+λCVaRα(J)\\min\_u \\; \\mathbb{E}[J] + \\lambda \\text{CVaR}\_\\alpha(J)umin​E[J]+λCVaRα​(J)
 This makes policy conservative under catastrophe risk without becoming stagnation.
@@ -143,18 +143,18 @@ This makes policy conservative under catastrophe risk without becoming stagnatio
 1.6 System identification / sensitivity maps
 The AI needs gradients or local response surfaces.
 You compute (offline or online):
-∂E[T]∂B,∂E[W]∂LVT,∂E[S]∂a\\frac{\\partial \\mathbb{E}[T]}{\\partial B},\\quad
+&part;E[T]&part;B,&part;E[W]&part;LVT,&part;E[S]&part;a\\frac{\\partial \\mathbb{E}[T]}{\\partial B},\\quad
 \\frac{\\partial \\mathbb{E}[W]}{\\partial \\text{LVT}},\\quad
-\\frac{\\partial \\mathbb{E}[S]}{\\partial a}∂B∂E[T]​,∂LVT∂E[W]​,∂a∂E[S]​
+\\frac{\\partial \\mathbb{E}[S]}{\\partial a}&part;B&part;E[T]​,&part;LVT&part;E[W]​,&part;a&part;E[S]​
 using finite differences from Monte Carlo rollouts.
 This is what makes it “scientific.”
 
 1.7 Safe exploration
 The agent must not “learn by collapsing the state.”
 Use a safe set S\\mathcal{S}S in state space:
-S={X:T<Tmax⁡,S<Smax⁡,Risk<Rmax⁡}\\mathcal{S} = \\{X : T < T\_{\\max}, S < S\_{\\max}, Risk < R\_{\\max}\\}S={X:T<Tmax​,S<Smax​,Risk<Rmax​}
+S={X:T \< Tmax⁡,S \< Smax⁡,Risk \< Rmax⁡}\\mathcal{S} = \\{X : T \< T\_{\\max}, S \< S\_{\\max}, Risk \< R\_{\\max}\\}S={X:T \< Tmax​,S \< Smax​,Risk \< Rmax​}
 Only allow actions that keep predicted next state within S\\mathcal{S}S with high probability:
-Pr⁡(Xt+1∈S)≥1−δ\\Pr(X\_{t+1}\\in \\mathcal{S}) \\ge 1-\\deltaPr(Xt+1​∈S)≥1−δ
+Pr⁡(Xt+1&isin;S)&gt;1−δ\\Pr(X\_{t+1}\\in \\mathcal{S}) \\ge 1-\\deltaPr(Xt+1​&isin;S)&gt;1−δ
 
 1.8 Failure modes (explicitly modeled)
 You should detect and classify:
@@ -199,7 +199,7 @@ minimize W,T,I,Risk,pcollapseW, T, I, Risk, p\_{collapse}W,T,I,Risk,pcollapse​
 maximize D,M,gPD, M, g\_PD,M,gP​
 
 The Pareto set:
-P={s:∄s′ s.t. Z(s′)≺Z(s)}\\mathcal{P} = \\{s : \\nexists s' \\text{ s.t. } Z(s') \\prec Z(s)\\}P={s:∄s′ s.t. Z(s′)≺Z(s)}
+P={s:∄s′ s.t. Z(s′)&lt;Z(s)}\\mathcal{P} = \\{s : \\nexists s' \\text{ s.t. } Z(s') \\prec Z(s)\\}P={s:∄s′ s.t. Z(s′)&lt;Z(s)}
 You then visualize frontiers in 2D/3D slices:
 
 WWW vs DDD vs TTT
@@ -287,7 +287,7 @@ governance-collapse
 energy-shock
 
 Compute worst-case performance:
-Zworst(s)=max⁡ξ∈ΞZ(s,ξ)Z^{worst}(s) = \\max\_{\\xi\\in\\Xi} Z(s,\\xi)Zworst(s)=ξ∈Ξmax​Z(s,ξ)
+Zworst(s)=max⁡ξ&isin;ΞZ(s,ξ)Z^{worst}(s) = \\max\_{\\xi\\in\\Xi} Z(s,\\xi)Zworst(s)=ξ&isin;Ξmax​Z(s,ξ)
 or CVaR.
 Then compute robust Pareto frontiers.
 

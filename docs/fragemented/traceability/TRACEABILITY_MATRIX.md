@@ -22,7 +22,7 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 | FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | `crates/engine/src/integrity.rs` | `integrity::mismatch_event_emitted` | in_progress |
 | FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/world.rs` | `world::no_global_resources` | planned |
 | FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/grid.rs` | `grid::axial_roundtrip` | planned |
-| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32<U16>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/numerics.rs` | `numerics::no_float_in_state` | planned |
+| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/numerics.rs` | `numerics::no_float_in_state` | planned |
 
 ---
 

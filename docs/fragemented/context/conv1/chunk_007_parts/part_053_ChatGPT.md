@@ -42,7 +42,7 @@ This is a stochastic, controlled, piecewise nonlinear map.
 
 2. Fixed Points and Attractors
 An attractor AAA satisfies:
-lim⁡t→∞dist(Xt,A)=0\\lim\_{t \\to \\infty} \\text{dist}(\\mathcal{X}\_t, A) = 0t→∞lim​dist(Xt​,A)=0
+lim⁡t→&infin;dist(Xt,A)=0\\lim\_{t \\to \\infty} \\text{dist}(\\mathcal{X}\_t, A) = 0t→&infin;lim​dist(Xt​,A)=0
 You will empirically classify:
 A1. Stable Hybrid Equilibrium
 
@@ -94,7 +94,7 @@ Tyranny elasticity low due to cultural tolerance
 
 3. Jacobian Approximation (Local Stability)
 At equilibrium X∗X^\*X∗:
-J=∂F∂X∣X∗J = \\frac{\\partial \\mathcal{F}}{\\partial \\mathcal{X}} \\Big|\_{X^\*}J=∂X∂F​​X∗​
+J=&part;F&part;X∣X∗J = \\frac{\\partial \\mathcal{F}}{\\partial \\mathcal{X}} \\Big|\_{X^\*}J=&part;X&part;F​​X∗​
 Eigenvalues determine stability.
 If all eigenvalues ∣λi∣<1|\\lambda\_i| < 1∣λi​∣<1, fixed point stable.
 In practice:
@@ -166,9 +166,9 @@ This becomes publishable.
 6. Robust Control Stability
 With AI policy agent:
 Safe set:
-S={X:T<Tmax,S<Smax,Risk<Rmax}\\mathcal{S} = \\{X : T<T\_{max}, S<S\_{max}, Risk<R\_{max}\\}S={X:T<Tmax​,S<Smax​,Risk<Rmax​}
+S={X:T \< Tmax,S \< Smax,Risk \< Rmax}\\mathcal{S} = \\{X : T \< T\_{max}, S \< S\_{max}, Risk \< R\_{max}\\}S={X:T \< Tmax​,S \< Smax​,Risk \< Rmax​}
 We require:
-Pr⁡(Xt+1∈S)≥1−δ\\Pr(X\_{t+1}\\in \\mathcal{S}) \\ge 1-\\deltaPr(Xt+1​∈S)≥1−δ
+Pr⁡(Xt+1&isin;S)&gt;1−δ\\Pr(X\_{t+1}\\in \\mathcal{S}) \\ge 1-\\deltaPr(Xt+1​&isin;S)&gt;1−δ
 We analyze whether robust MPC can maintain system inside safe basin under shock set Ξ\\XiΞ.
 
 PART II
@@ -180,9 +180,9 @@ Instead of full ecology:
 Add a trait evolution diffusion equation:
 Let trait distribution f(g,t)f(g,t)f(g,t) over genome space.
 Replicator-mutator equation:
-∂f∂t=f(g,t)(F(g)−Fˉ)+μΔf\\frac{\\partial f}{\\partial t} =
+&part;f&part;t=f(g,t)(F(g)−Fˉ)+μΔf\\frac{\\partial f}{\\partial t} =
 f(g,t)\\left(F(g) - \\bar{F}\\right)
-+ \\mu \\Delta f∂t∂f​=f(g,t)(F(g)−Fˉ)+μΔf
++ \\mu \\Delta f&part;t&part;f​=f(g,t)(F(g)−Fˉ)+μΔf
 Where:
 
 F(g)F(g)F(g) = fitness under environment

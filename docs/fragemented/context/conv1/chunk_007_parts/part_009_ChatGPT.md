@@ -68,22 +68,22 @@ qqq: energy quota balance
 aaa: affiliations (factions/unions/party/rebel cell)
 
 Micro agents are weighted representatives. If micro agent weight is ωi\\omega\_iωi​, conservation requires:
-∑i∈instanced(r)ωi≈Nr,tcovered\\sum\_{i\\in \\text{instanced}(r)} \\omega\_i \\approx N\_{r,t}^{\\text{covered}}i∈instanced(r)∑​ωi​≈Nr,tcovered​
+&sum;i&isin;instanced(r)ωi&asymp;Nr,tcovered\\sum\_{i\\in \\text{instanced}(r)} \\omega\_i \\approx N\_{r,t}^{\\text{covered}}i&isin;instanced(r)&sum;​ωi​&asymp;Nr,tcovered​
 
 1.2 Production + energy + emissions (sectoral)
-Let sectors s∈{1..S}s\\in\\{1..S\\}s∈{1..S}. Use a CES or Cobb-Douglas with energy:
+Let sectors s&isin;{1..S}s\\in\\{1..S\\}s&isin;{1..S}. Use a CES or Cobb-Douglas with energy:
 yr,s,t=Ar,s,t  kr,s,tαs  ℓr,s,tβs  er,s,tγsy\_{r,s,t} = A\_{r,s,t}\\; k\_{r,s,t}^{\\alpha\_s}\\; \\ell\_{r,s,t}^{\\beta\_s}\\; e\_{r,s,t}^{\\gamma\_s}yr,s,t​=Ar,s,t​kr,s,tαs​​ℓr,s,tβs​​er,s,tγs​​
 Subject to:
-∑ser,s,t≤Er,tcap\\sum\_s e\_{r,s,t} \\le E^{cap}\_{r,t}s∑​er,s,t​≤Er,tcap​
+&sum;ser,s,t&lt;Er,tcap\\sum\_s e\_{r,s,t} \\le E^{cap}\_{r,t}s&sum;​er,s,t​&lt;Er,tcap​
 Energy intensity evolves with tech:
 EIr,s,t=er,s,tyr,s,t,EIr,s,t+1=EIr,s,t⋅(1−λs⋅ΔKr,tknow)\\text{EI}\_{r,s,t} = \\frac{e\_{r,s,t}}{y\_{r,s,t}},\\quad \\text{EI}\_{r,s,t+1}=\\text{EI}\_{r,s,t}\\cdot (1-\\lambda\_s \\cdot \\Delta K^{know}\_{r,t})EIr,s,t​=yr,s,t​er,s,t​​,EIr,s,t+1​=EIr,s,t​⋅(1−λs​⋅ΔKr,tknow​)
 Emissions:
-CO2r,t=∑ser,s,t⋅ϕr,t\\text{CO2}\_{r,t} = \\sum\_s e\_{r,s,t}\\cdot \\phi\_{r,t}CO2r,t​=s∑​er,s,t​⋅ϕr,t​
+CO2r,t=&sum;ser,s,t⋅ϕr,t\\text{CO2}\_{r,t} = \\sum\_s e\_{r,s,t}\\cdot \\phi\_{r,t}CO2r,t​=s&sum;​er,s,t​⋅ϕr,t​
 (ϕ\\phiϕ = emissions per joule; declines with renewables transition)
 
 1.3 Climate forcing → damage → disasters
 Global forcing proxy:
-Ft+1=Ft+∑rCO2r,t−κFtF\_{t+1} = F\_t + \\sum\_r \\text{CO2}\_{r,t} - \\kappa F\_tFt+1​=Ft​+r∑​CO2r,t​−κFt​
+Ft+1=Ft+&sum;rCO2r,t−κFtF\_{t+1} = F\_t + \\sum\_r \\text{CO2}\_{r,t} - \\kappa F\_tFt+1​=Ft​+r&sum;​CO2r,t​−κFt​
 Damage per region:
 Dr,t=σ(a(Ft−F0)−bAr,t)D\_{r,t}=\\sigma\\Big(a(F\_t-F\_0) - bA\_{r,t}\\Big)Dr,t​=σ(a(Ft​−F0​)−bAr,t​)
 
@@ -146,7 +146,7 @@ Key: tyranny is not “evilness,” it’s a control response to stress under in
 
 1.6 Ideology dynamics (multi-axis + social contagion)
 Represent ideology as a vector in Rd\\mathbb{R}^dRd (e.g., authority, market, equality, liberty, security, tradition…).
-Let θi,t∈Rd\\theta\_{i,t}\\in \\mathbb{R}^dθi,t​∈Rd. Update via:
+Let θi,t&isin;Rd\\theta\_{i,t}\\in \\mathbb{R}^dθi,t​&isin;Rd. Update via:
 
 personal gradient (outcomes)
 
@@ -157,23 +157,23 @@ media/influence nodes (shadow state)
 shock imprint
 
 A generic form:
-θi,t+1=(1−μ)θi,t+μ(θi,tself⏟experience+∑j∈N(i)Wijθj,t⏟social+∑mVimψm,t⏟media/elite+ξi,t⏟noise)\\theta\_{i,t+1}=
+θi,t+1=(1−μ)θi,t+μ(θi,tself⏟experience+&sum;j&isin;N(i)Wijθj,t⏟social+&sum;mVimψm,t⏟media/elite+ξi,t⏟noise)\\theta\_{i,t+1}=
 (1-\\mu)\\theta\_{i,t}
 +\\mu\\Big(
 \\underbrace{\\theta^{self}\_{i,t}}\_{\\text{experience}}
 +\\underbrace{\\sum\_{j\\in \\mathcal{N}(i)} W\_{ij}\\theta\_{j,t}}\_{\\text{social}}
 +\\underbrace{\\sum\_{m} V\_{im}\\psi\_{m,t}}\_{\\text{media/elite}}
 +\\underbrace{\\xi\_{i,t}}\_{\\text{noise}}
-\\Big)θi,t+1​=(1−μ)θi,t​+μ(experienceθi,tself​​​+socialj∈N(i)∑​Wij​θj,t​​​+media/elitem∑​Vim​ψm,t​​​+noiseξi,t​​​)
+\\Big)θi,t+1​=(1−μ)θi,t​+μ(experienceθi,tself​​​+socialj&isin;N(i)&sum;​Wij​θj,t​​​+media/elitem&sum;​Vim​ψm,t​​​+noiseξi,t​​​)
 Experience term can be:
-θi,tself=θi,t+∇θUi(security,status,fairness,freedom)\\theta^{self}\_{i,t}=\\theta\_{i,t} + \\nabla\_\\theta U\_i(\\text{security},\\text{status},\\text{fairness},\\text{freedom})θi,tself​=θi,t​+∇θ​Ui​(security,status,fairness,freedom)
+θi,tself=θi,t+&nabla;θUi(security,status,fairness,freedom)\\theta^{self}\_{i,t}=\\theta\_{i,t} + \\nabla\_\\theta U\_i(\\text{security},\\text{status},\\text{fairness},\\text{freedom})θi,tself​=θi,t​+&nabla;θ​Ui​(security,status,fairness,freedom)
 where utility depends on their lived outcomes (rent burden, unemployment, rights denial, enforcement encounters, etc.).
 
 1.7 Shadow state (hidden influence graph)
 Shadow nodes nnn have influence pn,tp\_{n,t}pn,t​, resources Rn,tR\_{n,t}Rn,t​, exposure risk εn,t\\varepsilon\_{n,t}εn,t​. Influence on an institution mmm:
 Pressn→m,t=pn,t⋅αnm⋅Susceptm,t\\text{Press}\_{n\\to m,t}=p\_{n,t}\\cdot \\alpha\_{nm}\\cdot \\text{Suscept}\_{m,t}Pressn→m,t​=pn,t​⋅αnm​⋅Susceptm,t​
 Capture probability:
-Pr⁡(capturem,t)=σ(∑nPressn→m,t−Oversightm,t)\\Pr(\\text{capture}\_{m,t})=\\sigma\\Big(\\sum\_n \\text{Press}\_{n\\to m,t} - \\text{Oversight}\_{m,t}\\Big)Pr(capturem,t​)=σ(n∑​Pressn→m,t​−Oversightm,t​)
+Pr⁡(capturem,t)=σ(&sum;nPressn→m,t−Oversightm,t)\\Pr(\\text{capture}\_{m,t})=\\sigma\\Big(\\sum\_n \\text{Press}\_{n\\to m,t} - \\text{Oversight}\_{m,t}\\Big)Pr(capturem,t​)=σ(n&sum;​Pressn→m,t​−Oversightm,t​)
 Capture feeds corruption leakage, selective enforcement, policy distortion.
 
 2) “4X features” integrated with your sim (not a Civ clone)

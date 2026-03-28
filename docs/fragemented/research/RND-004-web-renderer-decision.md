@@ -134,7 +134,7 @@ npm create pixi.js@latest --template framework-react
 
 Pixi.js v8 is written in TypeScript and ships with full type definitions. Specific TypeScript features:
 
-- **Generic Container typing** (v8.1.0+): `Container<Sprite>` enforces child types
+- **Generic Container typing** (v8.1.0+): `Container\<Sprite\>` enforces child types
 - **DTS bundles**: Single definition file with all exports under `PIXI` namespace
 - **Strict mode**: v8 is developed with `strict: true` in its own tsconfig; consumer projects using `strict: true` will not encounter type errors from Pixi's definitions
 
@@ -181,8 +181,8 @@ This avoids depending on a tilemap plugin for hex layout, while still allowing `
 Pixi.js (2D) and Babylon.js (3D) can coexist on the same page using two approaches:
 
 **Approach A: Separate Canvases (Recommended)**
-- Pixi renders to one `<canvas>` for 2D UI, minimaps, HUD
-- Babylon renders to another `<canvas>` for the 3D game world
+- Pixi renders to one `\<canvas\>` for 2D UI, minimaps, HUD
+- Babylon renders to another `\<canvas\>` for the 3D game world
 - CSS layering (`z-index`) composites them visually
 - Each renderer owns its own WebGL/WebGPU context independently
 - Simpler, avoids shared-state bugs

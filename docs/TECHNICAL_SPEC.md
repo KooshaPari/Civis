@@ -111,10 +111,10 @@ pub const SCALE: i64 = 1_000_000;
 
 | Value Type | Range | Precision |
 |------------|-------|-----------|
-| Energy (Joules) | ±9.2 × 10^15 | 1 μJ |
-| Resources | ±9.2 × 10^15 | 1 unit |
+| Energy (Joules) | &plusmn;9.2 × 10^15 | 1 μJ |
+| Resources | &plusmn;9.2 × 10^15 | 1 unit |
 | Percentages | 0-100% | 0.0001% |
-| Coordinates | ±2^31 | 1 unit |
+| Coordinates | &plusmn;2^31 | 1 unit |
 
 ---
 

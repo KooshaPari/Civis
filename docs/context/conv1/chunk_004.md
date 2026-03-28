@@ -1,4 +1,4 @@
-### **You**
+### You
 
 Yep—those games are basically a grab-bag of proven UI/UX patterns and “what players will tolerate” tricks. The move is don’t copy their internal simulation 1:1; copy their presentation layers, control surfaces, and abstraction boundaries, then build a sim architecture that can scale and stay honest.
 What to steal from each game
@@ -221,7 +221,7 @@ If you want, I’ll turn this into a “Design Patterns Matrix”: rows = system
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Yes
 

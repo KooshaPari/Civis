@@ -1,4 +1,4 @@
-### **You**
+### You
 
 Below is the Design Patterns Matrix you asked for: rows = systems you care about, columns = Cities: Skylines, WorldBox, Diplomacy Is Not an Option, Civ 7. For each cell you get:
 
@@ -244,13 +244,13 @@ Pick 1/2/3 (or say “all”), and I’ll write it.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We have prior convos about empire st War and cities skylines and I believe a few more games pull from what I wanted from those too using your tools to view past c9nvo
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Good — I’ve pulled what’s available.
 Here’s what we have from prior context:
@@ -618,13 +618,13 @@ Which one do you want to lock down first?
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Let's do it
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We’ll lock down the Two-Zoom LOD Simulation Specification.
 This is the most technically decisive piece. If you get this right, everything else (war, economics, politics, climate, AI agents) becomes scalable and coherent. If you get it wrong, the system either collapses under compute or becomes a toy abstraction.
@@ -1046,13 +1046,13 @@ Pick one and we push deeper.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 We lock down (1) Full War & Defense System Spec next, because it’s the hardest to integrate cleanly with economics, legitimacy, scarcity, and the two-zoom LOD architecture—and it’s exactly where “Empire at War” inspiration meets “Cities” causality.
 This is planning only—no code.
@@ -1532,7 +1532,7 @@ Because war only matters if the economy model makes “logistics” and “rent 
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 More lod scales deep world mechanics e.g. Social, health, other a LA plague Inc rebel Inc and other games, and more ideologies?
 

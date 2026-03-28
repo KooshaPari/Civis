@@ -579,7 +579,7 @@ When multiple agents or actors share a dev environment:
 
 # Plugin Ecosystem Awareness
 
-Use AgilePlus for spec tracking: `agileplus <command>`
+Use AgilePlus for spec tracking: `agileplus \<command\>`
 
 - Check available slash commands (`/`) for documentation workflows
 - These complement the auto-detection system -- invoke explicitly for deeper workflows
@@ -993,14 +993,14 @@ Idea/task prompts, quality green, and "next thing to do" are wired at multiple l
 | Command / Tool | Purpose |
 |----------------|---------|
 | `thegent orchestrate loop "prompt" "todo"` | Run Lifecycle loop (worker + checker) |
-| `thegent orchestrate loop-send <session_id> <prompt>` | Send next prompt to running loop (human/agent takeover) |
-| `thegent orchestrate loop-stop <session_id>` | Stop loop |
-| `thegent takeover <session>` | Attach to tmux session; human types next prompt |
+| `thegent orchestrate loop-send \<session_id\> \<prompt\>` | Send next prompt to running loop (human/agent takeover) |
+| `thegent orchestrate loop-stop \<session_id\>` | Stop loop |
+| `thegent takeover \<session\>` | Attach to tmux session; human types next prompt |
 | `thegent_loop_takeover` (MCP) | Agent injects prompt into running loop |
-| `--continuation <session_id>` | Resume from prior session (adds resumption appendix) |
+| `--continuation \<session_id\>` | Resume from prior session (adds resumption appendix) |
 | `--resume` (Codex/Claude) | Use when agent supports native resume |
 
-**Premature session end:** If Codex/Claude supports `--resume`, use it. Otherwise: `thegent run/bg --continuation <prior_session_id> "Task"` — builds context from prior stdout + resumption appendix.
+**Premature session end:** If Codex/Claude supports `--resume`, use it. Otherwise: `thegent run/bg --continuation \<prior_session_id\> "Task"` — builds context from prior stdout + resumption appendix.
 
 ### WBS Agent Coordination (Multi-Agent "Do All")
 
@@ -1018,9 +1018,9 @@ When the user says **"do all"** or assigns work to multiple agents:
 | Want to add... | Put it in... |
 |----------------|-------------|
 | New agent persona | `agents/<persona-name>.md` -- follows existing agent template |
-| New lifecycle hook | `hooks/<event>-<name>.sh` + register in `hooks/hook-config.yaml` |
-| New governance policy | `contracts/<policy>.json` + wire into `qa-policy-engine.sh` |
+| New lifecycle hook | `hooks/\<event\>-\<name\>.sh` + register in `hooks/hook-config.yaml` |
+| New governance policy | `contracts/\<policy\>.json` + wire into `qa-policy-engine.sh` |
 | New MCP tool | MCP server registration (FastMCP pattern) |
-| New CLI command | `commands/<command>/` + register in command dispatch |
+| New CLI command | `commands/\<command\>/` + register in command dispatch |
 | New quality gate | `hooks/qa-<gate-name>.sh` following existing `qa-*.sh` patterns |
-| Shared hook utility | `hooks/lib/<utility>.sh` -- sourced by hook scripts, never called directly |
+| Shared hook utility | `hooks/lib/\<utility\>.sh` -- sourced by hook scripts, never called directly |

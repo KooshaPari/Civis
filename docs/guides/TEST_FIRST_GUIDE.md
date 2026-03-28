@@ -663,7 +663,7 @@ jobs:
    - Good: `assert!(sim.snapshot().population > 0);` // checking observable behavior
 
 7. **Write non-deterministic tests**
-   - Bad: `assert!(rng.gen::<f32>() < 0.5);` // flaky
+   - Bad: `assert!(rng.gen::\<f32\>() < 0.5);` // flaky
    - Good: Seed RNG, verify behavior deterministically
 
 ---

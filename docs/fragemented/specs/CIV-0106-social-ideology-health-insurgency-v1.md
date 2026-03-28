@@ -68,7 +68,7 @@ All models are Tier-1 deterministic: fixed-point arithmetic (i64 scaled), BTreeM
 Cohesion is a bounded scalar field:
 
 ```
-C(r, t) ∈ [0, 1]   for region r at tick t
+C(r, t) &isin; [0, 1]   for region r at tick t
 ```
 
 Internally stored as `i64` in fixed-point Q16.16 (scale factor 65536). Values below 0 are clamped to 0; values above 65536 are clamped to 65536.
@@ -90,11 +90,11 @@ Per tick, cohesion decays from the following drivers:
 ```
 
 Where:
-- `stress(r, t)` — normalized material stress score ∈ [0, 1] (from energy/food/income shortfall)
-- `coercion(r, t)` — enforcement intensity from CIV-0105 ∈ [0, 1]
-- `capture(r, t)` — institutional capture score from CIV-0105 shadow module ∈ [0, 1]
-- `polarization(r, t)` — ideological polarization score ∈ [0, 1] (computed by ideology module)
-- `health_burden(r, t)` — normalized health burden ∈ [0, 1]
+- `stress(r, t)` — normalized material stress score &isin; [0, 1] (from energy/food/income shortfall)
+- `coercion(r, t)` — enforcement intensity from CIV-0105 &isin; [0, 1]
+- `capture(r, t)` — institutional capture score from CIV-0105 shadow module &isin; [0, 1]
+- `polarization(r, t)` — ideological polarization score &isin; [0, 1] (computed by ideology module)
+- `health_burden(r, t)` — normalized health burden &isin; [0, 1]
 
 Default coefficients (overridable via `PolicyBundle`):
 
@@ -141,7 +141,7 @@ C(r, t+1) = clamp(C(r, t) + ΔC_reinforce - ΔC_decay, 0.0, 1.0)
 Cohesion diffuses across adjacent regions via a spatial diffusion coefficient `κ_spatial`:
 
 ```
-C_diff(r, t) = κ_spatial · Σ_{r' ∈ neighbors(r)} (C(r', t) - C(r, t)) / |neighbors(r)|
+C_diff(r, t) = κ_spatial · Σ_{r' &isin; neighbors(r)} (C(r', t) - C(r, t)) / |neighbors(r)|
 ```
 
 Default `κ_spatial = 0.05`. Neighbors are defined by the region adjacency graph (BTreeMap-keyed, stable ordering). Diffusion is applied after decay/reinforcement.
@@ -151,7 +151,7 @@ Default `κ_spatial = 0.05`. Neighbors are defined by the region adjacency graph
 Polarization is not a primary field — it is derived from the variance of cohort-level cohesion within a region:
 
 ```
-polarization(r, t) = Var_{cohorts c ∈ r}(C(c, t))
+polarization(r, t) = Var_{cohorts c &isin; r}(C(c, t))
 ```
 
 Where variance is computed over cohort cohesion values, scaled such that maximum inter-cohort variance maps to polarization = 1.0.
@@ -170,7 +170,7 @@ Each node (actor or region) holds an ideology vector in R^6:
 v = [v_market, v_state, v_liberty, v_equality, v_security, v_tradition]
 ```
 
-All components are bounded ∈ [-1, 1]. Internally stored as i16 (scale: 32767 = 1.0). The full vector is stored in `IdeologyField`.
+All components are bounded &isin; [-1, 1]. Internally stored as i16 (scale: 32767 = 1.0). The full vector is stored in `IdeologyField`.
 
 Axes:
 - `v_market`: preference for market allocation vs. central planning (-1 = full central plan, +1 = full market)
@@ -187,7 +187,7 @@ The ideology module operates over a directed weighted graph `G = (V, E)`:
 - V: all ideological nodes (regions, cohorts, institutional actors, shadow networks)
 - E: directed edges `(source, target, weight, contact_rate)`
 
-Edge weight `w ∈ [0, 1]` encodes structural influence strength (e.g., media reach, social proximity, economic dependency). Contact rate `c ∈ [0, 1]` encodes frequency of interaction per tick. Both are stored as i16 fixed-point.
+Edge weight `w &isin; [0, 1]` encodes structural influence strength (e.g., media reach, social proximity, economic dependency). Contact rate `c &isin; [0, 1]` encodes frequency of interaction per tick. Both are stored as i16 fixed-point.
 
 The effective influence of edge `(s → t)` per tick:
 
@@ -208,7 +208,7 @@ And `max_distance = sqrt(6 · 4) = sqrt(24)` (maximum possible L2 distance over 
 Per tick, for each target node `t`, compute the weighted mean of incoming source vectors:
 
 ```
-Δv_t = η · Σ_{s: (s→t) ∈ E} influence(s, t) · (v_s - v_t)
+Δv_t = η · Σ_{s: (s→t) &isin; E} influence(s, t) · (v_s - v_t)
 ```
 
 Where `η` is the base diffusion rate (default: 0.04 per tick).
@@ -219,7 +219,7 @@ Apply information integrity damping:
 Δv_t_damped = Δv_t · (1 - integrity_damping(t))
 ```
 
-Where `integrity_damping(t) ∈ [0, 1]` is controlled by the information integrity intervention (default: 0.0, maximum damping: 0.80).
+Where `integrity_damping(t) &isin; [0, 1]` is controlled by the information integrity intervention (default: 0.0, maximum damping: 0.80).
 
 Update:
 
@@ -235,7 +235,7 @@ Propaganda is modeled as a synthetic source node with a fixed ideology vector `v
 Δv_target += propaganda_intensity · (v_prop - v_target)
 ```
 
-Where `propaganda_intensity ∈ [0, 1]` is set by the actor controlling the propaganda channel (state, shadow network, or foreign actor). Propaganda injections are bounded by `max_propaganda_shift = 0.12` per tick per axis to prevent instantaneous opinion flipping.
+Where `propaganda_intensity &isin; [0, 1]` is set by the actor controlling the propaganda channel (state, shadow network, or foreign actor). Propaganda injections are bounded by `max_propaganda_shift = 0.12` per tick per axis to prevent instantaneous opinion flipping.
 
 Propaganda events are emitted as `ideology.diffusion_stepped.v1` with `source_type = "propaganda"` flag.
 
@@ -244,10 +244,10 @@ Propaganda events are emitted as `ideology.diffusion_stepped.v1` with `source_ty
 Pairwise ideological distance used for coalition stability, insurgency alignment, and diplomatic coupling:
 
 ```
-d(v_a, v_b) = ||v_a - v_b||_2 / max_distance   ∈ [0, 1]
+d(v_a, v_b) = ||v_a - v_b||_2 / max_distance   &isin; [0, 1]
 ```
 
-Values > 0.7 indicate high ideological distance (potential for conflict or instability). Values < 0.2 indicate high alignment (coalition formation favorable).
+Values > 0.7 indicate high ideological distance (potential for conflict or instability). Values \< 0.2 indicate high alignment (coalition formation favorable).
 
 ### 2.6 Information Integrity Programs
 
@@ -304,7 +304,7 @@ Where:
 - `epidemic_shock` is zero except during declared shock events
 - `welfare_relief = β_welfare · welfare_coverage · (1 - burden)`
 
-Burden is bounded ∈ [0, 1]. Internally stored as i64 fixed-point Q16.16.
+Burden is bounded &isin; [0, 1]. Internally stored as i64 fixed-point Q16.16.
 
 ### 3.3 Welfare Coverage
 
@@ -333,7 +333,7 @@ Where:
 - `surge_multiplier = 0.60`
 - `degradation = conflict_intensity · 0.15 + coercion · 0.05`
 
-Surge capacity is bounded ∈ [0, 1].
+Surge capacity is bounded &isin; [0, 1].
 
 ### 3.5 Lag and Diffusion Parameters
 
@@ -397,7 +397,7 @@ attrition(r, t) = deterrence(r, t) · mobilization(r, t-1) · attrition_coeffici
 
 ### 4.3 Mobilization Threshold and Cell Formation
 
-When `mobilization(r, t) ≥ mobilization_threshold(r)`, a stochastic cell formation event fires:
+When `mobilization(r, t) &gt; mobilization_threshold(r)`, a stochastic cell formation event fires:
 
 ```
 p_cell = sigmoid((mobilization - threshold) / threshold_sensitivity)
@@ -432,7 +432,7 @@ Default coefficients:
 | `δ_harm`       | 0.20    |
 | `δ_amnesty`    | 0.12    |
 
-Legitimacy is bounded ∈ [0, 1].
+Legitimacy is bounded &isin; [0, 1].
 
 ### 4.5 Tyranny Index
 
@@ -474,7 +474,7 @@ Tyranny index feeds back into legitimacy decay and insurgency propensity. High t
 
 **Effect function:**
 ```
-W_floor(r, t) = new_floor      for t ≥ effective_tick
+W_floor(r, t) = new_floor      for t &gt; effective_tick
 welfare_coverage(r, t) = max(welfare_coverage(r, t), W_floor(r, t))
 ```
 
@@ -482,17 +482,17 @@ welfare_coverage(r, t) = max(welfare_coverage(r, t), W_floor(r, t))
 - Reduces `welfare_gap` → reduces health burden accumulation rate
 - Reduces `γ_welfare` contribution to insurgency propensity
 - Reinforces cohesion (β_welfare term)
-- Requires institutional delivery capacity ≥ new_floor to take full effect; excess floor above capacity is partially absorbed (leakage applies)
+- Requires institutional delivery capacity &gt; new_floor to take full effect; excess floor above capacity is partially absorbed (leakage applies)
 
 **Event emitted:** `health.welfare_updated.v1` with `intervention_id` field.
 
 ### 5.2 Information Integrity and Civic Education Programs
 
-**Lever:** `InformationIntegrityProgram { region_key, target_nodes: Vec<NodeId>, program_strength: f64, duration_ticks: u64 }`
+**Lever:** `InformationIntegrityProgram { region_key, target_nodes: Vec\<NodeId\>, program_strength: f64, duration_ticks: u64 }`
 
 **Effect function:**
 ```
-integrity_damping(node, t) += program_strength   for t ∈ [start, start + duration_ticks)
+integrity_damping(node, t) += program_strength   for t &isin; [start, start + duration_ticks)
 ideology_diffusion_rate(node, t) *= (1 - integrity_damping(node, t))
 ```
 
@@ -509,7 +509,7 @@ ideology_diffusion_rate(node, t) *= (1 - integrity_damping(node, t))
 
 **Effect function:**
 ```
-Q(r, t) = base_capacity + surge_investment · surge_multiplier   for t ∈ [start, start + duration_ticks)
+Q(r, t) = base_capacity + surge_investment · surge_multiplier   for t &isin; [start, start + duration_ticks)
 recovery_rate(r, t) = base_recovery · Q(r, t) · welfare_coverage(r, t)
 ```
 
@@ -526,7 +526,7 @@ recovery_rate(r, t) = base_recovery · Q(r, t) · welfare_coverage(r, t)
 
 **Effect function:**
 ```
-mobilization(r, t) -= amnesty_strength · mobilization(r, t)   for t ∈ [start, start + effective_ticks)
+mobilization(r, t) -= amnesty_strength · mobilization(r, t)   for t &isin; [start, start + effective_ticks)
 legitimacy(r, t) += δ_amnesty · amnesty_strength
 insurgency_risk(r, t) *= (1 - amnesty_strength · 0.30)
 ```
@@ -626,7 +626,7 @@ impl IdeologyVector {
         sum_sq.sqrt()
     }
 
-    /// Normalized similarity score ∈ [0, 1]; 1.0 = identical
+    /// Normalized similarity score &isin; [0, 1]; 1.0 = identical
     pub fn similarity(&self, other: &IdeologyVector) -> f64 {
         const MAX_DISTANCE: f64 = 4.899; // sqrt(24)
         1.0 - (self.l2_distance(other) / MAX_DISTANCE).clamp(0.0, 1.0)
@@ -1250,14 +1250,14 @@ legitimacy_decay_from_tyranny = δ_coerce · coercion_overreach(r, t)
 The inflection point occurs when the marginal compliance gain equals the marginal cohesion cost. Solving for the coercion level at which the net benefit is zero:
 
 ```
-ρ_coerce · (1 - capture) = α_coerce + δ_coerce · coercion · ∂legitimacy/∂coercion
+ρ_coerce · (1 - capture) = α_coerce + δ_coerce · coercion · &part;legitimacy/&part;coercion
 ```
 
-For default coefficients with `capture = 0` and `∂legitimacy/∂coercion = δ_coerce = 0.18`:
+For default coefficients with `capture = 0` and `&part;legitimacy/&part;coercion = δ_coerce = 0.18`:
 
 ```
 0.35 = 0.14 + 0.18 · coercion*
-coercion* = (0.35 - 0.14) / 0.18 ≈ 0.78 / tick
+coercion* = (0.35 - 0.14) / 0.18 &asymp; 0.78 / tick
 ```
 
 At `coercion > coercion*`, increasing coercion yields negative net effect on stability. This is the Coercion Inflection Point. Above it, the model predicts accelerating instability even with continued compliance surface improvements.
@@ -1288,7 +1288,7 @@ Where `scarcity_amplification` captures the dynamic that coercive control under 
 
 ### 11.1 Node Traversal Order
 
-The ideology diffusion step iterates over nodes in lexicographic order of `node_id`. This is enforced by storing all node maps as `BTreeMap<String, IdeologyField>` (never `HashMap`). The iteration order is guaranteed by the BTreeMap specification.
+The ideology diffusion step iterates over nodes in lexicographic order of `node_id`. This is enforced by storing all node maps as `BTreeMap \< String, IdeologyField>` (never `HashMap`). The iteration order is guaranteed by the BTreeMap specification.
 
 ```rust
 // CORRECT — deterministic
@@ -1303,7 +1303,7 @@ for (node_id, field) in fields.iter() { ... }  // BANNED
 
 Edges are stored as `BTreeMap<(String, String), IdeologyEdge>` keyed by `(source_id, target_id)`. Incoming edges for a target node are collected by scanning all edges matching `target_id` in a single ordered pass.
 
-Alternatively (for performance): adjacency list stored as `BTreeMap<String, Vec<IdeologyEdge>>` where `Vec<IdeologyEdge>` is sorted by `source_id` at insertion time. Sorting must be applied at any insert point to maintain the invariant.
+Alternatively (for performance): adjacency list stored as `BTreeMap \< String, Vec\<IdeologyEdge\>>` where `Vec\<IdeologyEdge\>` is sorted by `source_id` at insertion time. Sorting must be applied at any insert point to maintain the invariant.
 
 ### 11.3 Fixed-Step Integration
 
@@ -1331,19 +1331,19 @@ for (region_key, delta) in deltas.iter() {
 ### 12.1 Declared Invariants
 
 **I-SOC-1: Cohesion Boundedness**
-For all `(r, c, t)`: `cohesion(r, c, t) ∈ [0.0, 1.0]`. Enforced by `FpUnit::clamp()` after every update.
+For all `(r, c, t)`: `cohesion(r, c, t) &isin; [0.0, 1.0]`. Enforced by `FpUnit::clamp()` after every update.
 
 **I-SOC-2: Polarization Boundedness**
-For all `(r, t)`: `polarization(r, t) ∈ [0.0, 1.0]`. Derived from clamped inter-cohort variance.
+For all `(r, t)`: `polarization(r, t) &isin; [0.0, 1.0]`. Derived from clamped inter-cohort variance.
 
 **I-INS-1: Insurgency Risk Boundedness**
-For all `(r, t)`: `insurgency_risk(r, t) ∈ [0.0, 1.0]`. Clamped in propensity calculation.
+For all `(r, t)`: `insurgency_risk(r, t) &isin; [0.0, 1.0]`. Clamped in propensity calculation.
 
 **I-INS-2: Mobilization Score Boundedness**
-For all `(r, t)`: `mobilization_score(r, t) ∈ [0.0, 1.0]`. Amnesty campaigns clamp to zero from below; natural ceiling is 1.0.
+For all `(r, t)`: `mobilization_score(r, t) &isin; [0.0, 1.0]`. Amnesty campaigns clamp to zero from below; natural ceiling is 1.0.
 
 **I-IDE-1: Ideology Axis Boundedness**
-For all `(node, axis, t)`: `ideology_axis ∈ [-1.0, 1.0]`. Enforced by `IdeologyAxis::from_f64` clamp on every write.
+For all `(node, axis, t)`: `ideology_axis &isin; [-1.0, 1.0]`. Enforced by `IdeologyAxis::from_f64` clamp on every write.
 
 **I-IDE-2: Diffusion Stability**
 Ideology diffusion converges: if all propaganda and intervention inputs are held constant, the vector field converges to a fixed point. This follows from the similarity-weighted update (influence is zero when identical; the update is a contraction).
@@ -1352,16 +1352,16 @@ Ideology diffusion converges: if all propaganda and intervention inputs are held
 For all `(c, t)`: `Healthy + Strained + Disabled + Deceased = total_population(c)`. No simulation tick may change total population count (births/deaths require explicit lifecycle events from CIV-0103).
 
 **I-HLT-2: Health Burden Boundedness**
-For all `(c, t)`: `health_burden(c, t) ∈ [0.0, 1.0]`.
+For all `(c, t)`: `health_burden(c, t) &isin; [0.0, 1.0]`.
 
 **I-HLT-3: Welfare Coverage Floor**
-For all `(r, t)`: `welfare_coverage(r, t) ≥ welfare_floor_policy(r, t)` unless institutional capacity is insufficient (in which case a `welfare_floor_breach.v1` event is emitted and the deficit is logged).
+For all `(r, t)`: `welfare_coverage(r, t) &gt; welfare_floor_policy(r, t)` unless institutional capacity is insufficient (in which case a `welfare_floor_breach.v1` event is emitted and the deficit is logged).
 
 **I-LEG-1: Legitimacy Boundedness**
-For all `(r, t)`: `legitimacy(r, t) ∈ [0.0, 1.0]`.
+For all `(r, t)`: `legitimacy(r, t) &isin; [0.0, 1.0]`.
 
 **I-TYR-1: Tyranny Index Boundedness**
-For all `(r, t)`: `tyranny_index(r, t) ∈ [0.0, 1.0]` (logistic sigmoid guarantees this).
+For all `(r, t)`: `tyranny_index(r, t) &isin; [0.0, 1.0]` (logistic sigmoid guarantees this).
 
 ### 12.2 Property Tests
 
@@ -1435,7 +1435,7 @@ proptest! {
 ### FM-SOC-01: Cohesion Collapse
 **Trigger:** Simultaneous high coercion + high shadow capture + welfare gap > 0.5.
 **Behavior:** Cohesion decays below 0.15 within 30 ticks. Once polarization enters self-reinforcing regime, recovery requires a sustained welfare + legitimacy intervention combo.
-**Detection:** Alert when `cohesion < 0.15` for any region across 3 consecutive ticks.
+**Detection:** Alert when `cohesion \< 0.15` for any region across 3 consecutive ticks.
 **Not mitigated by:** Amnesty alone (does not address material drivers). Propaganda alone (information integrity intervention cannot substitute for material welfare delivery).
 
 ### FM-SOC-02: Echo Chamber Lock-In
@@ -1445,21 +1445,21 @@ proptest! {
 **Mitigation:** Cross-cluster information integrity programs (targeting edges between clusters). Civic education programs in high-polarization cohorts.
 
 ### FM-HLT-01: Health System Saturation
-**Trigger:** `surge_capacity < demand` for > 10 consecutive ticks with `health_burden > 0.75`.
+**Trigger:** `surge_capacity \< demand` for > 10 consecutive ticks with `health_burden > 0.75`.
 **Behavior:** Transition rate λ_DX (Disabled → Deceased) spikes. Irreversible population loss begins. Welfare floor enforcement becomes impossible to meet (delivery capacity collapse).
 **Detection:** Alert when `surge_capacity_deficit > 0.30` and `health_burden > 0.70`.
 **Mitigation requires:** Surge capacity intervention AND welfare floor adjustment simultaneously. Neither alone is sufficient once saturation threshold is crossed.
 
 ### FM-INS-01: Mobilization Cascade
-**Trigger:** `mobilization_score` exceeds threshold in ≥ 3 adjacent regions within 5 ticks.
+**Trigger:** `mobilization_score` exceeds threshold in &gt; 3 adjacent regions within 5 ticks.
 **Behavior:** Cell formation probability becomes near-certain in all three regions. Active cell count growth feeds `γ_cell` term in subsequent ticks, creating self-sustaining insurgency.
 **Detection:** Monitor cluster of threshold-crossing events within spatial and temporal window.
 **Mitigation:** De-escalation (amnesty) + immediate legitimacy interventions. Coercion escalation is counterproductive (above inflection point).
 
 ### FM-INS-02: Legitimacy Death Spiral
-**Trigger:** Legitimacy < 0.20 combined with coercion > 0.70.
+**Trigger:** Legitimacy \< 0.20 combined with coercion > 0.70.
 **Behavior:** Every coercion action increases tyranny index, which decays legitimacy further, which increases insurgency risk, which triggers more coercion. Model enters a positive feedback loop.
-**Detection:** Alert when `legitimacy < 0.25 AND coercion > 0.60` sustained for 5+ ticks.
+**Detection:** Alert when `legitimacy \< 0.25 AND coercion > 0.60` sustained for 5+ ticks.
 **Mitigation:** Requires simultaneous: reduce coercion to below inflection point, deploy welfare floor + surge capacity, initiate amnesty campaign.
 
 ### FM-IDE-01: Propaganda Saturation
@@ -2181,7 +2181,7 @@ Where `ideology_variance_within_faction` is the mean pairwise L2 distance betwee
 The effective policy pressure exerted by all factions in a region is a membership-weighted sum of faction preference vectors:
 
 ```
-PolicyPressure(axis, r, t) = Σ_{f ∈ factions} membership(f, r, t) · internal_cohesion(f, r, t) · preference(f, axis)
+PolicyPressure(axis, r, t) = Σ_{f &isin; factions} membership(f, r, t) · internal_cohesion(f, r, t) · preference(f, axis)
 ```
 
 Each axis of `PolicyPressure` is an i64 in Q16.16 fixed-point. The `total_magnitude` is:
@@ -2273,7 +2273,7 @@ When institutions include a democratic governance type (from CIV-0103), factions
 A coalition C is winning if:
 
 ```
-Σ_{f ∈ C} membership(f, r, t) ≥ coalition_threshold   (default: 0.50)
+Σ_{f &isin; C} membership(f, r, t) &gt; coalition_threshold   (default: 0.50)
 ```
 
 Among all winning coalitions, the MWC is the smallest by total membership exceeding the threshold. This is the coalition that minimizes internal heterogeneity (ideological distance between members).
@@ -2291,7 +2291,7 @@ Among all winning coalitions, the MWC is the smallest by total membership exceed
 The governing coalition's effective policy vector is the membership-weighted centroid of member faction preferences:
 
 ```
-coalition_policy(axis) = Σ_{f ∈ C} membership(f) · preference(f, axis) / Σ_{f ∈ C} membership(f)
+coalition_policy(axis) = Σ_{f &isin; C} membership(f) · preference(f, axis) / Σ_{f &isin; C} membership(f)
 ```
 
 This centroid becomes the `effective_policy_vector` that constrains the `policy.evaluate()` function in the Policy DSL.
@@ -2487,9 +2487,9 @@ The reversal path (R → A → E) represents de-escalation programs, welfare imp
 ### 17.2 State Definitions
 
 ```
-E(r, t)  — fraction of regional population that is civically engaged   ∈ [0, 1]
-A(r, t)  — fraction that is alienated (withdrawn, distrustful)         ∈ [0, 1]
-R(r, t)  — fraction that is rebellious (active opposition, mobilized)  ∈ [0, 1]
+E(r, t)  — fraction of regional population that is civically engaged   &isin; [0, 1]
+A(r, t)  — fraction that is alienated (withdrawn, distrustful)         &isin; [0, 1]
+R(r, t)  — fraction that is rebellious (active opposition, mobilized)  &isin; [0, 1]
 
 E + A + R = 1.0  at all times (population conservation)
 ```
@@ -2508,7 +2508,7 @@ Internally stored as i64 FP_SCALE fractions. Population counts derived by multip
            - α_service · service_delivery(r, t)
 ```
 
-Rate at which Engaged population moves to Alienated. Bounded ∈ [0, 0.15] per tick (biological ceiling: no more than 15% of engaged population can alienate in one tick).
+Rate at which Engaged population moves to Alienated. Bounded &isin; [0, 0.15] per tick (biological ceiling: no more than 15% of engaged population can alienate in one tick).
 
 ```
 λ_AR(r, t) = β_social · A(r, t) · contact_rate(r, t)
@@ -2517,7 +2517,7 @@ Rate at which Engaged population moves to Alienated. Bounded ∈ [0, 0.15] per t
            - β_legit  · legitimacy(r, t)
 ```
 
-Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term creates the SIR-analog: alienation spreads through social contact proportional to current alienated fraction (like infection spreading proportional to infected fraction). Bounded ∈ [0, 0.10] per tick.
+Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term creates the SIR-analog: alienation spreads through social contact proportional to current alienated fraction (like infection spreading proportional to infected fraction). Bounded &isin; [0, 0.10] per tick.
 
 **Reverse transitions (recovery):**
 
@@ -2528,7 +2528,7 @@ Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term c
            - γ_polar   · polarization(r, t)
 ```
 
-Rate at which Alienated population re-engages. Bounded ∈ [0, 0.12] per tick.
+Rate at which Alienated population re-engages. Bounded &isin; [0, 0.12] per tick.
 
 ```
 μ_RA(r, t) = δ_amnesty · amnesty_applied(r, t)
@@ -2536,7 +2536,7 @@ Rate at which Alienated population re-engages. Bounded ∈ [0, 0.12] per tick.
            + δ_legit    · legitimacy(r, t)        · 0.30
 ```
 
-Rate at which Rebellious population de-escalates to Alienated. Bounded ∈ [0, 0.06] per tick. Recovery from rebellion is deliberately slow: the `0.40` and `0.30` dampening factors reflect that welfare improvements do not immediately convert rebels.
+Rate at which Rebellious population de-escalates to Alienated. Bounded &isin; [0, 0.06] per tick. Recovery from rebellion is deliberately slow: the `0.40` and `0.30` dampening factors reflect that welfare improvements do not immediately convert rebels.
 
 ### 17.4 Discrete Update Rule
 
@@ -2567,13 +2567,13 @@ The basic reproduction number analog R₀ for civic rebellion is the expected nu
 R₀_civic(r, t) = (β_social · contact_rate(r, t) · A(r, t)) / μ_RA(r, t)
 ```
 
-When `R₀_civic > 1.0`, the Rebellious compartment is self-sustaining (rebellion grows without external input). When `R₀_civic < 1.0`, rebellion decays without intervention.
+When `R₀_civic > 1.0`, the Rebellious compartment is self-sustaining (rebellion grows without external input). When `R₀_civic \< 1.0`, rebellion decays without intervention.
 
 The R₀ threshold `R₀_civic = 1.0` is the **civic rebellion threshold**. The system monitors this per region per tick. Crossing from below to above emits `civic.rebellion_threshold_crossed.v1` (diagnostic event).
 
 Default regime analysis:
-- High welfare (`welfare_coverage = 0.80`), low polarization: `R₀_civic ≈ 0.4` (sub-critical, rebellion decays)
-- Low welfare (`welfare_coverage = 0.20`), high cells (`active_cell_count ≥ 3`): `R₀_civic ≈ 1.8` (super-critical, rebellion self-sustaining)
+- High welfare (`welfare_coverage = 0.80`), low polarization: `R₀_civic &asymp; 0.4` (sub-critical, rebellion decays)
+- Low welfare (`welfare_coverage = 0.20`), high cells (`active_cell_count &gt; 3`): `R₀_civic &asymp; 1.8` (super-critical, rebellion self-sustaining)
 - Amnesty campaign at max strength brings `μ_RA` up enough to suppress `R₀_civic` below 1.0 within 8–12 ticks
 
 ### 17.6 Spatial Spread
@@ -2582,7 +2582,7 @@ Contact rate `contact_rate(r, t)` is modulated by regional cohesion:
 
 ```
 contact_rate(r, t) = base_contact_rate · (1 - cohesion(r, t) · κ_cohesion_contact)
-                   + Σ_{r' ∈ neighbors(r)} κ_spatial_contact · A(r', t)
+                   + Σ_{r' &isin; neighbors(r)} κ_spatial_contact · A(r', t)
 ```
 
 Where:
@@ -2622,7 +2622,7 @@ pub struct CivicCompartments {
 }
 
 impl CivicCompartments {
-    /// Verify E + A + R = FP_SCALE (within rounding tolerance of ±2 units).
+    /// Verify E + A + R = FP_SCALE (within rounding tolerance of &plusmn;2 units).
     pub fn assert_conserved(&self) {
         let total = self.engaged.0 + self.alienated.0 + self.rebellious.0;
         assert!(
@@ -2816,7 +2816,7 @@ v_extended = [
 ]
 ```
 
-All components bounded ∈ [-1, 1], stored as i16 (Q0.15 fixed-point: 32767 = 1.0).
+All components bounded &isin; [-1, 1], stored as i16 (Q0.15 fixed-point: 32767 = 1.0).
 
 The extended vector is used for:
 - Faction centroid computation (Section 16.2)
@@ -2836,13 +2836,13 @@ d8(v_a, v_b) = ||v_a - v_b||_2
 Maximum possible distance over eight axes each spanning [-1, 1]:
 
 ```
-max_distance_8 = sqrt(8 · 4) = sqrt(32) ≈ 5.657
+max_distance_8 = sqrt(8 · 4) = sqrt(32) &asymp; 5.657
 ```
 
 Normalized distance:
 
 ```
-d8_norm(v_a, v_b) = d8(v_a, v_b) / 5.657   ∈ [0, 1]
+d8_norm(v_a, v_b) = d8(v_a, v_b) / 5.657   &isin; [0, 1]
 ```
 
 ```rust
@@ -2868,12 +2868,12 @@ impl ExtendedIdeologyVector {
         sum_sq.sqrt()
     }
 
-    /// Normalized similarity ∈ [0, 1]; 1.0 = identical.
+    /// Normalized similarity &isin; [0, 1]; 1.0 = identical.
     pub fn similarity(&self, other: &Self) -> f64 {
         1.0 - (self.l2_distance(other) / Self::MAX_DISTANCE).clamp(0.0, 1.0)
     }
 
-    /// Normalized distance ∈ [0, 1]; 1.0 = maximally distant.
+    /// Normalized distance &isin; [0, 1]; 1.0 = maximally distant.
     pub fn normalized_distance(&self, other: &Self) -> f64 {
         (self.l2_distance(other) / Self::MAX_DISTANCE).clamp(0.0, 1.0)
     }
@@ -2901,7 +2901,7 @@ impl ExtendedIdeologyVector {
 The same diffusion step from Section 2.3 applies to the extended vector in hidden network nodes. The extended diffusion iterates over all eight axes independently:
 
 ```
-Δv_t[i] = η_ext · Σ_{s: (s→t) ∈ E} influence(s, t) · (v_s[i] - v_t[i])
+Δv_t[i] = η_ext · Σ_{s: (s→t) &isin; E} influence(s, t) · (v_s[i] - v_t[i])
 ```
 
 Where `η_ext = 0.03` (slightly slower than the six-axis diffusion rate of 0.04, because hidden network actors have structural inertia).
@@ -2947,10 +2947,10 @@ When any node's ideology vector norm exceeds `radicalization_threshold = 0.80` (
 
 **Attractor stability analysis:**
 
-In the radicalization-active regime, the fixed points are the extremes of ideology space (each axis at ±1.0). The system converges to the nearest extreme. The rate of convergence is approximately:
+In the radicalization-active regime, the fixed points are the extremes of ideology space (each axis at &plusmn;1.0). The system converges to the nearest extreme. The rate of convergence is approximately:
 
 ```
-convergence_ticks ≈ 1 / (η_ext + radicalization_boost) ≈ 1/0.05 = 20 ticks
+convergence_ticks &asymp; 1 / (η_ext + radicalization_boost) &asymp; 1/0.05 = 20 ticks
 ```
 
 At default parameters, a node enters extreme radicalization within 20 ticks of continuous attractor activation.
@@ -2966,7 +2966,7 @@ effective_η(node, t) = η_base · (1 + media_control(actor, t) · media_amplify
 
 Where `media_amplify_coeff = 0.60`. High media control can nearly double the effective diffusion rate, rapidly shifting citizen ideology toward the media-controlling actor's ideology vector.
 
-The `information_integrity` parameter from Section 2.6 directly counters media amplification. At `integrity_damping = 0.80` (maximum), even full media control is reduced to `effective_η ≈ η_base · (1 + 0.60) · 0.20 = η_base · 0.32` — still above baseline but significantly dampened.
+The `information_integrity` parameter from Section 2.6 directly counters media amplification. At `integrity_damping = 0.80` (maximum), even full media control is reduced to `effective_η &asymp; η_base · (1 + 0.60) · 0.20 = η_base · 0.32` — still above baseline but significantly dampened.
 
 ```rust
 // crates/social/src/ideology/radicalization.rs
@@ -3210,7 +3210,7 @@ p_emergence(r, t) = epidemic_seed_rate
                   · environmental_exposure(r, t)
 ```
 
-Where `epidemic_seed_rate = 0.002` per tick per region (approximately one emergence event per 500 tick-regions). Sample from `ChaCha20Rng`: if `rng.gen::<f64>() < p_emergence`, trigger outbreak.
+Where `epidemic_seed_rate = 0.002` per tick per region (approximately one emergence event per 500 tick-regions). Sample from `ChaCha20Rng`: if `rng.gen::\<f64\>() < p_emergence`, trigger outbreak.
 
 **Cross-region transmission:**
 
@@ -3311,14 +3311,14 @@ The effectiveness curve is not linear: surge capacity reduces the `λ_DX` (Disab
 λ_DX_effective(r, t) = λ_DX_base · max(0, 1 - Q(r, t) · surge_effectiveness_curve(Q))
 ```
 
-Where `surge_effectiveness_curve(Q) = 1 - exp(-Q · 3.0)` — a saturating exponential. At `Q = 0.30` (base), effectiveness is `1 - exp(-0.9) ≈ 0.59`. At `Q = 0.85` (emergency max), effectiveness is `1 - exp(-2.55) ≈ 0.92`.
+Where `surge_effectiveness_curve(Q) = 1 - exp(-Q · 3.0)` — a saturating exponential. At `Q = 0.30` (base), effectiveness is `1 - exp(-0.9) &asymp; 0.59`. At `Q = 0.85` (emergency max), effectiveness is `1 - exp(-2.55) &asymp; 0.92`.
 
 ### 19.5 Long-Term Health Trajectory
 
 At the run level, each region accumulates a `health_trajectory_score` that summarizes long-term health trends:
 
 ```
-health_trajectory_score(r, t) = EMA(combined_burden(r, τ), τ ≤ t, window=24)
+health_trajectory_score(r, t) = EMA(combined_burden(r, τ), τ &lt; t, window=24)
 ```
 
 Where EMA is the exponential moving average over a 24-tick window. This smooths out short-term shocks and captures sustained degradation or improvement.
@@ -3345,19 +3345,19 @@ Nascent → Active → Operational → Degraded → Dissolved
 | Active | Sufficient members to conduct operations | ongoing |
 | Operational | Has resources AND safe zones; can execute campaigns | ongoing |
 | Degraded | Lost resources or members; capability reduced | ongoing |
-| Dissolved | Membership < dissolution_threshold OR dismantled | terminal |
+| Dissolved | Membership \< dissolution_threshold OR dismantled | terminal |
 
 Transitions:
 
 ```
-Nascent → Active:      member_count ≥ nascent_threshold (default: 15)
-Active → Operational:  resource_held ≥ op_resource_threshold
-                       AND safe_zone_count ≥ 1
-                       AND trained_members ≥ op_trained_threshold
+Nascent → Active:      member_count &gt; nascent_threshold (default: 15)
+Active → Operational:  resource_held &gt; op_resource_threshold
+                       AND safe_zone_count &gt; 1
+                       AND trained_members &gt; op_trained_threshold
 Operational → Degraded: successful counterinsurgency op OR resource drop
 Degraded → Dissolved:   member_count < dissolution_threshold (default: 5)
                          OR amnesty campaign absorbs remaining members
-Active → Dissolved:     amnesty campaign at high strength (amnesty_strength ≥ 0.70)
+Active → Dissolved:     amnesty campaign at high strength (amnesty_strength &gt; 0.70)
 ```
 
 ### 20.2 Cell Growth Dynamics
@@ -3585,7 +3585,7 @@ disruption_damage_resources = resource_seized_fraction · resource_held
 disruption_detection_risk_reduction = disruption_strength · 0.20
 ```
 
-If disruption reduces `member_count < dissolution_threshold`, the cell transitions to `Dissolved`.
+If disruption reduces `member_count \< dissolution_threshold`, the cell transitions to `Dissolved`.
 
 **Hearts-and-minds (HaM) programs:**
 
@@ -3636,7 +3636,7 @@ pub enum CoinOpOutcome {
 }
 
 /// Compute detection probability for a cell given current intelligence investment.
-/// Returns probability as f64 ∈ [0, 1].
+/// Returns probability as f64 &isin; [0, 1].
 pub fn detection_probability(
     base_detection_rate:     f64,
     intelligence_investment: f64,
@@ -4166,7 +4166,7 @@ pub insurgency_r0_civic:     BTreeMap<String, i64>,          // region_key → R
 
 **Diplomatic leverage reduction:**
 
-When a region has `active_cell_count ≥ 3` OR `R₀_civic > 1.5 × FP_SCALE`, the region's diplomatic leverage in external negotiations is reduced:
+When a region has `active_cell_count &gt; 3` OR `R₀_civic > 1.5 × FP_SCALE`, the region's diplomatic leverage in external negotiations is reduced:
 
 ```
 diplomatic_leverage(r, t) = base_leverage(r, t)
@@ -4191,7 +4191,7 @@ foreign_cell_support(r, t) = foreign_actor_hostility(r, t)
     · (1 - counterintelligence_effectiveness(r, t))
 ```
 
-This adds to `resource_acquisition` for cells whose ideology is aligned with the foreign actor (ideological distance < 0.35).
+This adds to `resource_acquisition` for cells whose ideology is aligned with the foreign actor (ideological distance \< 0.35).
 
 ### 22.3 Ideology to Hidden Network (CIV-0105 Coupling)
 
@@ -4518,7 +4518,7 @@ fn test_epidemic_reduces_labor_productivity() {
 /// radicalization conditions (50 ticks), ideology norm exceeds 0.80.
 #[test]
 fn test_radicalization_attractor_drives_to_extreme() {
-    // Start from a moderately positioned node (norm ≈ 0.40).
+    // Start from a moderately positioned node (norm &asymp; 0.40).
     let initial = ExtendedIdeologyVector([
         13000, -6000, 8000, -10000, 14000, 7000, -5000, 9000
     ]);

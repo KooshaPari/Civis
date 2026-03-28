@@ -535,6 +535,185 @@ namespace DINOForge.Runtime
             });
         }
 
+        /// <summary>
+        /// Starts a background thread that handles all polling previously done in Update().
+        /// MonoBehaviour.Update() NEVER fires in DINO, so we run:
+        ///   - F9/F10 key polling via Win32 GetAsyncKeyState (works from background thread)
+        ///   - UGUI canvas readiness checks
+        ///   - ECS World availability polling
+        ///   - VanillaCatalog rebuild once world is fully loaded
+        ///   - Heartbeat logging
+        ///
+        /// Uses UnityEngine.Object.FindObjectsOfType (NOT FindObjectsOfTypeAll) to avoid
+        /// deadlock during asset loading in Mono 2021.3.
+        /// </summary>
+        private void StartBackgroundPollingThread()
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    int heartbeatCounter = 0;
+                    while (true)
+                    {
+                        System.Threading.Thread.Sleep(50); // Poll every 50ms
+
+                        // Guard: only run if initialized
+                        if (!_initialized) continue;
+
+                        // Heartbeat logging (every 1 sec for first 10, then every 10 sec)
+                        heartbeatCounter++;
+                        bool earlyHeartbeat = heartbeatCounter <= 200; // ~10 seconds at 50ms interval
+                        bool laterHeartbeat = heartbeatCounter % 200 == 0; // Every 10 seconds
+                        if (earlyHeartbeat || laterHeartbeat)
+                        {
+                            _log?.LogDebug($"[RuntimeDriver] Background poll heartbeat #{heartbeatCounter} worldFound={_worldFound}");
+                        }
+
+                        // ── F9 key polling via Win32 GetAsyncKeyState ──────────────────
+                        // GetAsyncKeyState returns non-zero if the key is pressed.
+                        // We poll periodically and gate on state change (0x8000 = key down).
+                        const int VK_F9 = 0x78;
+                        if ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
+                        {
+                            // F9 pressed
+                            System.Threading.Thread.Sleep(50); // Debounce
+                            if ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
+                            {
+                                try
+                                {
+                                    _log?.LogDebug("[RuntimeDriver] F9 pressed (background thread)");
+                                    if (_uguiReady && _dfCanvas != null)
+                                    {
+                                        _dfCanvas.ToggleDebug();
+                                    }
+                                    else if (_debugOverlay != null)
+                                    {
+                                        _debugOverlay.Toggle();
+                                    }
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] F9 toggle failed: {ex.Message}");
+                                }
+
+                                // Wait for key release
+                                while ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
+                                {
+                                    System.Threading.Thread.Sleep(50);
+                                }
+                                System.Threading.Thread.Sleep(50); // Additional debounce
+                            }
+                        }
+
+                        // ── F10 key polling via Win32 GetAsyncKeyState ──────────────────
+                        const int VK_F10 = 0x79;
+                        if ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
+                        {
+                            System.Threading.Thread.Sleep(50); // Debounce
+                            if ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
+                            {
+                                try
+                                {
+                                    _log?.LogDebug("[RuntimeDriver] F10 pressed (background thread)");
+                                    if (_uguiReady && _dfCanvas != null)
+                                    {
+                                        _dfCanvas.ToggleModMenu();
+                                    }
+                                    else if (_modMenuHost != null)
+                                    {
+                                        _modMenuHost.Toggle();
+                                    }
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] F10 toggle failed: {ex.Message}");
+                                }
+
+                                // Wait for key release
+                                while ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
+                                {
+                                    System.Threading.Thread.Sleep(50);
+                                }
+                                System.Threading.Thread.Sleep(50); // Additional debounce
+                            }
+                        }
+
+                        // ── Check DFCanvas readiness (UGUI setup) ────────────────────────
+                        // DFCanvas.Start() is deferred, so we can't know in Initialize()
+                        // whether UGUI succeeded. Poll for IsReady each iteration.
+                        if (!_uguiChecked && _dfCanvas != null)
+                        {
+                            try
+                            {
+                                if (_dfCanvas.IsReady)
+                                {
+                                    _uguiReady = true;
+                                    _uguiChecked = true;
+                                    _log?.LogInfo("[RuntimeDriver] DFCanvas confirmed ready — UGUI active (background thread).");
+                                    WireUguiToModPlatform();
+                                }
+                            }
+                            catch { }
+                        }
+
+                        // ── ECS World polling ────────────────────────────────────────────
+                        if (!_worldFound)
+                        {
+                            _worldPollTimer += 0.05f; // Add 50ms per poll iteration
+                            if (_worldPollTimer >= WorldPollInterval)
+                            {
+                                _worldPollTimer = 0f;
+                                try
+                                {
+                                    World? world = World.DefaultGameObjectInjectionWorld;
+                                    if (world != null && world.IsCreated)
+                                    {
+                                        _worldFound = true;
+                                        OnWorldReady(world);
+                                    }
+                                }
+                                catch
+                                {
+                                    // World not ready yet, will retry next poll
+                                }
+                            }
+                        }
+                        // World found — now check if we need to rebuild the catalog
+                        else if (!_catalogRebuilt)
+                        {
+                            try
+                            {
+                                World? w = World.DefaultGameObjectInjectionWorld;
+                                if (w != null && w.IsCreated)
+                                {
+                                    int entityCount = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                                    if (entityCount > 1000)
+                                    {
+                                        _catalogRebuilt = true;
+                                        _log?.LogInfo($"[RuntimeDriver] Catalog rebuild triggered ({entityCount} entities)");
+                                        _modPlatform?.RebuildCatalogAndApplyStats(w);
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    _log?.LogError($"[RuntimeDriver] Background polling thread exception: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// Win32 API: GetAsyncKeyState - polls keyboard state without blocking.
+        /// Returns a short where bit 15 (0x8000) indicates key is currently pressed.
+        /// </summary>
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern short GetAsyncKeyState(int vKey);
+
         private void CleanupUiInterceptors()
         {
             try
@@ -707,110 +886,6 @@ namespace DINOForge.Runtime
                 _log.LogWarning($"[RuntimeDriver] UGUI→ModPlatform wiring failed, activating IMGUI fallback: {ex.Message}");
                 _uguiReady = false;
                 ActivateImguiFallback();
-            }
-        }
-
-        private void Update()
-        {
-            // Wrap entire Update in try/catch — a logger exception (e.g. BepInEx log writer
-            // failure) must NOT propagate out of Update() or Unity will silently disable this
-            // MonoBehaviour forever, killing F9/F10 and all ECS polling.
-            try
-            {
-            if (!_initialized) return;
-
-            // Debug: log heartbeat every 1 sec for first 10 heartbeats, then every 10 sec
-            bool earlyHeartbeat = Time.frameCount <= 600 && Time.frameCount % 60 == 0;
-            bool laterHeartbeat = Time.frameCount > 600 && Time.frameCount % 600 == 0;
-            if (earlyHeartbeat || laterHeartbeat)
-            {
-                WriteDebug($"[RuntimeDriver] Update heartbeat frame={Time.frameCount} worldFound={_worldFound}");
-            }
-
-            // F9/F10 — direct input polling, always works as long as this MonoBehaviour is alive
-            if (Input.GetKeyDown(KeyCode.F9))
-            {
-                try
-                {
-                    WriteDebug("[RuntimeDriver] F9 pressed");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
-                    else _debugOverlay?.Toggle();
-                }
-                catch { }
-            }
-
-            if (Input.GetKeyDown(KeyCode.F10))
-            {
-                try
-                {
-                    WriteDebug("[RuntimeDriver] F10 pressed");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                    else _modMenuHost?.Toggle();
-                }
-                catch { }
-            }
-
-            // ── Check whether DFCanvas.Start() has run yet ───────────────────────
-            // DFCanvas.Start() is deferred by Unity so we can't know in Initialize()
-            // whether UGUI succeeded.  We check IsReady each frame until confirmed.
-            if (!_uguiChecked && _dfCanvas != null)
-            {
-                if (_dfCanvas.IsReady)
-                {
-                    _uguiReady = true;
-                    _uguiChecked = true;
-                    _log.LogInfo("[RuntimeDriver] DFCanvas confirmed ready — UGUI active.");
-                    WireUguiToModPlatform();
-                }
-                // If not yet ready, keep waiting (OnInitFailed callback handles failure)
-            }
-
-            // ── Deferred VanillaCatalog rebuild once the game scene is loaded ────
-            // The world exists at startup with only 24 entities (loading screen).
-            // We wait until entities > 1000 (full scene loaded ~45K entities) to rebuild.
-            if (_worldFound && !_catalogRebuilt)
-            {
-                try
-                {
-                    World? w = World.DefaultGameObjectInjectionWorld;
-                    if (w != null && w.IsCreated)
-                    {
-                        int entityCount = w.EntityManager.UniversalQuery.CalculateEntityCount();
-                        if (entityCount > 1000)
-                        {
-                            _catalogRebuilt = true;
-                            _modPlatform?.RebuildCatalogAndApplyStats(w);
-                        }
-                    }
-                }
-                catch { }
-            }
-
-            // ── ECS world poll ───────────────────────────────────────────────────
-            if (_worldFound) return;
-
-            _worldPollTimer += Time.deltaTime;
-            if (_worldPollTimer < WorldPollInterval) return;
-            _worldPollTimer = 0f;
-
-            try
-            {
-                World? world = World.DefaultGameObjectInjectionWorld;
-                if (world != null && world.IsCreated)
-                {
-                    _worldFound = true;
-                    OnWorldReady(world);
-                }
-            }
-            catch
-            {
-                // World not ready yet, will retry next poll
-            }
-
-            } // end outer try
-            catch (Exception updateEx)
-            {
-                WriteDebug($"[RuntimeDriver] Update() exception (component kept alive): {updateEx.Message}");
             }
         }
 

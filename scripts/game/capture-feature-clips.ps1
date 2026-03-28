@@ -74,8 +74,8 @@ public class Win32Input {
 }
 "@
 
-$VK_F9  = [ushort]0x78
-$VK_F10 = [ushort]0x79
+$VK_F9  = [uint16]0x78
+$VK_F10 = [uint16]0x79
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -100,23 +100,48 @@ function Wait-ForLog {
     return $false
 }
 
-function Start-GdigrabRecording {
+function Invoke-GdigrabSync {
     param(
         [string]$OutputPath,
         [int]   $DurationSec
     )
-    # Title-based capture — records ONLY the named game window, not the desktop
-    $ffArgs = @(
-        "-f", "gdigrab",
-        "-framerate", "30",
-        "-i", "title=$gameTitle",
-        "-t", "$DurationSec",
-        "-vf", "scale=1280:800",
-        "-vcodec", "libx264",
-        "-preset", "ultrafast",
-        "-y", $OutputPath
+    # Synchronous invocation — reliable from non-interactive bash context
+    # For clips requiring mid-recording key injection, use Start-Job pattern below
+    $args = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $ffmpeg
+    $psi.Arguments = $args
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardError = $true
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $stderr = $proc.StandardError.ReadToEnd()
+    $proc.WaitForExit()
+    if ($proc.ExitCode -ne 0) {
+        Write-Warning "ffmpeg exit $($proc.ExitCode): $stderr"
+    }
+}
+
+function Start-GdigrabJob {
+    param(
+        [string]$OutputPath,
+        [int]   $DurationSec
     )
-    return Start-Process -FilePath $ffmpeg -ArgumentList $ffArgs -PassThru -WindowStyle Hidden
+    # Async job — start recording, inject key mid-recording, then wait for job
+    $ffmpegPath = $ffmpeg
+    $title = $gameTitle
+    return Start-Job -ScriptBlock {
+        param($ff, $t, $dur, $out)
+        $args = "-f gdigrab -framerate 30 -i `"title=$t`" -t $dur -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$out`""
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $ff
+        $psi.Arguments = $args
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $psi.RedirectStandardError = $true
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $proc.WaitForExit()
+    } -ArgumentList $ffmpegPath, $title, $DurationSec, $OutputPath
 }
 
 # ── Step 1: Kill any existing game instances ───────────────────────────────────
@@ -153,8 +178,7 @@ Start-Sleep -Seconds 2
 # ── Step 5: Record raw_mods.mp4 (main menu, 6s) ───────────────────────────────
 Write-Host "[Phase 1] Recording raw_mods.mp4 (6s, main menu)..."
 $modsOut = "$outDir\raw_mods.mp4"
-$proc = Start-GdigrabRecording -OutputPath $modsOut -DurationSec 6
-$proc.WaitForExit(20000) | Out-Null
+Invoke-GdigrabSync -OutputPath $modsOut -DurationSec 6
 if (-not (Test-Path $modsOut) -or (Get-Item $modsOut).Length -lt 4096) {
     Write-Error "raw_mods.mp4 missing or empty. ffmpeg may have failed."
     exit 1
@@ -166,15 +190,16 @@ Write-Host "[Phase 1] raw_mods.mp4 ready ($([math]::Round((Get-Item $modsOut).Le
 
 # ── Step 6: Record raw_f9.mp4 (F9 debug overlay, 8s) ─────────────────────────
 Write-Host "[Phase 1] Recording raw_f9.mp4 (8s, F9 overlay)..."
-$f9Out  = "$outDir\raw_f9.mp4"
-$proc   = Start-GdigrabRecording -OutputPath $f9Out -DurationSec 8
+$f9Out = "$outDir\raw_f9.mp4"
+$job   = Start-GdigrabJob -OutputPath $f9Out -DurationSec 8
 
 # Inject F9 after 0.5s so the recording captures the key press event
 Start-Sleep -Milliseconds 500
 [Win32Input]::PressKey($VK_F9)
 Write-Host "[Phase 1] F9 injected via SendInput (no focus required)"
 
-$proc.WaitForExit(20000) | Out-Null
+Wait-Job $job -Timeout 20 | Out-Null
+Remove-Job $job -Force
 if (-not (Test-Path $f9Out) -or (Get-Item $f9Out).Length -lt 4096) {
     Write-Error "raw_f9.mp4 missing or empty."
     exit 1
@@ -192,13 +217,14 @@ Start-Sleep -Seconds 2
 # ── Step 7: Record raw_f10.mp4 (F10 mod menu, 8s) ────────────────────────────
 Write-Host "[Phase 1] Recording raw_f10.mp4 (8s, F10 mod menu)..."
 $f10Out = "$outDir\raw_f10.mp4"
-$proc   = Start-GdigrabRecording -OutputPath $f10Out -DurationSec 8
+$job    = Start-GdigrabJob -OutputPath $f10Out -DurationSec 8
 
 Start-Sleep -Milliseconds 500
 [Win32Input]::PressKey($VK_F10)
 Write-Host "[Phase 1] F10 injected via SendInput (no focus required)"
 
-$proc.WaitForExit(20000) | Out-Null
+Wait-Job $job -Timeout 20 | Out-Null
+Remove-Job $job -Force
 if (-not (Test-Path $f10Out) -or (Get-Item $f10Out).Length -lt 4096) {
     Write-Error "raw_f10.mp4 missing or empty."
     exit 1

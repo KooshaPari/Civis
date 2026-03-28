@@ -393,7 +393,8 @@ The `dinoforge` MCP server (registered in MCP transport config) exposes:
 
 | Tool | Purpose |
 |------|---------|
-| `game_launch` | Launch game exe + wait for bridge (optional `hidden=True` for invisible desktop) |
+| `game_launch` | Launch game exe; `hidden=True` uses Parsec VDD (preferred) or CreateDesktop fallback |
+| `game_launch_vdd` | Explicit Parsec Virtual Display Adapter launch (real virtual monitor, not security isolation) |
 | `game_status` | Running state, entity count, loaded packs |
 | `game_query_entities` | Query ECS entities by component type |
 | `game_get_stat` | Read a stat value on an entity |
@@ -416,6 +417,20 @@ MCP runs from the FastMCP Python server in HTTP mode on `http://127.0.0.1:8765` 
 `scripts/start-mcp.ps1`.
 
 The repo-tracked CC hook can keep MCP alive automatically across sessions using `./scripts/start-mcp.ps1 -Action start -Detached`.
+
+#### Display Isolation Strategy (Parsec VDD)
+
+Parsec Virtual Display Adapter (VDD) is installed and available as a real virtual monitor. For isolated game launches:
+
+- **Primary method**: Use `game_launch(hidden=True)` — auto-detects VDD, launches with Unity `-monitor N` flag targeting that display
+- **Explicit VDD launch**: Use `game_launch_vdd()` — direct control over monitor index
+- **Fallback**: If VDD unavailable, `game_launch(hidden=True)` falls back to Win32 CreateDesktop (security isolation)
+
+The VDD approach is preferred because it:
+- Targets a real virtual monitor (not just a security desktop)
+- Avoids window manager issues with CreateDesktop
+- Allows capture/automation without desktop bleed
+- Works seamlessly with screen recording and input injection
 
 ### Agent Slash Commands for Game Work
 
@@ -457,8 +472,8 @@ tail -50 "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\di
 Unity's native mutex (in UnityPlayer.dll) prevents launching a second instance from the same directory. To support concurrent test instances:
 
 - **Test instance path**: `G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST\`
-- **How to launch**: `Start-Process -FilePath '<TEST_DIR>\Diplomacy is Not an Option.exe' -WorkingDirectory '<TEST_DIR>'`
-- **MCP tool**: `game_launch_test` — launches test instance via MCP server
+- **How to launch**: `Start-Process -FilePath '<TEST_DIR>\Diplomacy is Not an Option.exe' -WorkingDirectory '<TEST_DIR>'` or use MCP tool
+- **MCP tool**: `game_launch_test` — launches test instance via MCP server (CreateDesktop only; use separate Parsec VDD for truly isolated headless)
 - **Path config**: `.dino_test_instance_path` in repo root
 - Both instances are completely independent; each has its own BepInEx installation
 
@@ -466,6 +481,10 @@ To deploy DINOForge to the test instance:
 ```bash
 dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
 ```
+
+For headless test automation, consider:
+1. Primary instance: `game_launch(hidden=True, use_vdd=True)` → Parsec VDD monitor
+2. Secondary instance: `game_launch_test(hidden=True)` → CreateDesktop (TestX desktop)
 
 ### AgilePlus PM Dashboard
 

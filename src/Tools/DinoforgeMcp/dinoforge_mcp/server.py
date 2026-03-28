@@ -143,6 +143,52 @@ if ($ok) { Write-Output "PID:$($pi.dwProcessId)" } else { Write-Output "ERROR: C
     return {"success": False, "error": stdout or result.stderr}
 
 
+async def _launch_on_vdd(exe_path: str, screen_index: int | None = None) -> dict:
+    """
+    Launch game on Parsec Virtual Display Adapter (VDD) using Unity -monitor flag.
+    If screen_index is None, auto-detects the first non-primary display (VDD).
+    """
+    if screen_index is None:
+        # Auto-detect Parsec VDD (first non-primary screen)
+        ps_script = r"""
+Add-Type -AssemblyName System.Windows.Forms
+$screens = [System.Windows.Forms.Screen]::AllScreens
+for ($i = 0; $i -lt $screens.Length; $i++) {
+    $s = $screens[$i]
+    if (-not $s.Primary) {
+        Write-Output "INDEX:$($i+1)"
+        exit 0
+    }
+}
+Write-Output "ERROR: No non-primary display found"
+exit 1
+"""
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+            capture_output=True, text=True, timeout=10
+        )
+        stdout = result.stdout.strip()
+        if stdout.startswith("INDEX:"):
+            screen_index = int(stdout[6:])
+        else:
+            return {"success": False, "error": "Failed to detect Parsec VDD: " + (stdout or result.stderr)}
+
+    # Launch with Unity -monitor flag targeting the VDD
+    try:
+        exe_dir = Path(exe_path).parent
+        args = [str(exe_path), "-monitor", str(screen_index), "-screen-width", "1920", "-screen-height", "1080"]
+        proc = subprocess.Popen(args, cwd=str(exe_dir))
+        return {
+            "success": True,
+            "pid": proc.pid,
+            "display": f"VDD monitor {screen_index}",
+            "resolution": "1920x1080"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # FastMCP server
 # ---------------------------------------------------------------------------
@@ -282,23 +328,44 @@ async def game_catalog(ctx: Context, category: str | None = None) -> dict:
 
 
 @mcp.tool()
-async def game_launch(ctx: Context, hidden: bool = False) -> dict:
+async def game_launch(ctx: Context, hidden: bool = False, use_vdd: bool = True) -> dict:
     """
     Launch Diplomacy is Not an Option directly (bypasses Steam — safe to run
     alongside an existing session for testing).
 
     Args:
-        hidden: If True, launch on an invisible Win32 desktop (CreateDesktop).
+        hidden: If True, launch on an isolated display (Parsec VDD preferred, falls back to CreateDesktop).
+        use_vdd: If True and hidden=True, try Parsec Virtual Display Adapter first (recommended).
     """
     if not GAME_EXE.exists():
         return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
     try:
         if hidden:
+            # Try VDD first if requested
+            if use_vdd:
+                vdd_result = await _launch_on_vdd(str(GAME_EXE))
+                if vdd_result["success"]:
+                    return vdd_result
+                # Fall back to CreateDesktop if VDD fails
             return await _launch_hidden(str(GAME_EXE), "DINOForge_Agent")
         subprocess.Popen([str(GAME_EXE)], cwd=str(GAME_DIR))
         return {"success": True, "message": f"Launched: {GAME_EXE}. Use game_wait_world to wait for ECS world."}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def game_launch_vdd(ctx: Context, screen_index: int | None = None) -> dict:
+    """
+    Launch game on Parsec Virtual Display Adapter (VDD) using Unity -monitor flag.
+    This is the preferred method for isolated game launch (real virtual display, not CreateDesktop).
+
+    Args:
+        screen_index: Optional monitor index (1-based). If None, auto-detects the first non-primary display.
+    """
+    if not GAME_EXE.exists():
+        return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
+    return await _launch_on_vdd(str(GAME_EXE), screen_index)
 
 
 @mcp.tool()

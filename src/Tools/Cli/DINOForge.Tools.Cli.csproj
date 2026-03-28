@@ -25,7 +25,19 @@
 
     <!-- Sketchfab API integration -->
     <PackageReference Include="SketchFabApi.Net" Version="1.0.4" />
+
+    <!-- ScreenRecorderLib for window video recording -->
+    <PackageReference Include="ScreenRecorderLib" Version="6.6.0" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <!-- ScreenRecorderLib requires x64 explicitly (not AnyCPU) - RuntimeIdentifier forces platform at build time -->
+    <Platform>x64</Platform>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- CA1416: ScreenRecorderLib is Windows-only; code already annotated with [SupportedOSPlatform("windows")] -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />

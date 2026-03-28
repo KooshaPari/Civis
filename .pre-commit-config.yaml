@@ -1,8 +1,8 @@
 exclude: |
   (?x)^(
-    packs/.*\.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|gif|bmp|psd|wav|mp3|ogg|ttf|otf|dll|exe|bin|zip|7z|tar|gz)$|
+    packs/.*\.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|gif|bmp|psd|wav|mp3|ogg|ttf|otf|dll|exe|bin|zip|7z|tar|gz|obj|OBJ|mtl|MTL|dae|DAE|plist)$|
     unity-assetbundle-builder/.*|
-    .*\.(fbx|FBX|meta|prefab|mat|asset|unity)$|
+    .*\.(fbx|FBX|meta|prefab|mat|asset|unity|obj|OBJ|mtl|MTL|dae|DAE)$|
     solution-build-parallel\.log$
   )
 
@@ -12,9 +12,9 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin)$
+        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin|obj|OBJ|mtl|MTL|dae|DAE|plist)$
       - id: end-of-file-fixer
-        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin|json)$
+        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin|json|obj|OBJ|mtl|MTL|dae|DAE|plist)$
       - id: check-yaml
         exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|packs/_archived/)
       - id: check-json
@@ -23,7 +23,7 @@ repos:
         exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|\\.log$|\\.xml$|scripts/game/|scripts/unity/|scripts/install-companion)
       - id: check-added-large-files
         args: [--maxkb=500]
-        exclude: (docs/proof-of-features/|coverage/|packs/.*\.zip$)
+        exclude: (docs/proof-of-features/.*\.mp4|coverage/|packs/.*\.zip$)
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1

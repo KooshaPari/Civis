@@ -4,8 +4,8 @@
     DINOForge Prove-Features Pipeline — Phase 1: Game Capture.
 
 .DESCRIPTION
-    Launches the game, records three separate feature clips via ffmpeg gdigrab
-    with window title targeting (isolated from desktop/overlays — no coordinates),
+    Launches the game, records three separate feature clips via DINOForge CLI
+    (ScreenRecorderLib + WindowRecordingSource — true window-isolated capture),
     injects keys via Win32 SendInput (no window focus required), and outputs
     raw clips + metadata to $env:TEMP\DINOForge\capture\.
 
@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-$ffmpeg    = "C:\program files\imagemagick-7.1.0-q16-hdri\ffmpeg.exe"
+$cliExe    = "$PSScriptRoot\..\..\src\Tools\Cli\bin\x64\Release\net11.0\DINOForge.Tools.Cli.exe"
 $gameExe   = "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe"
 $gameDir   = "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option"
 $debugLog  = "$gameDir\BepInEx\dinoforge_debug.log"
@@ -100,24 +100,30 @@ function Wait-ForLog {
     return $false
 }
 
-function Invoke-GdigrabSync {
+function Invoke-RecordSync {
     param(
         [string]$OutputPath,
         [int]   $DurationSec
     )
-    Write-Host "[Capture] Using window title-based capture (WGC-isolated): '$gameTitle'"
-    $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    Start-Process -FilePath $ffmpeg -ArgumentList $ffArgs -Wait -NoNewWindow -RedirectStandardError "$outDir\ffmpeg_sync.txt"
+    Write-Host "[Capture] Using DINOForge CLI ScreenRecorderLib (window-isolated): '$gameTitle'"
+    # Kill any existing CLI processes first
+    Stop-Process -Name "DINOForge.Tools.Cli" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+    $cliArgs = "record --output `"$OutputPath`" --duration $DurationSec --width 1280 --height 800 --framerate 30"
+    Start-Process -FilePath $cliExe -ArgumentList $cliArgs -Wait -NoNewWindow
 }
 
-function Start-GdigrabAsync {
+function Start-RecordAsync {
     param(
         [string]$OutputPath,
         [int]   $DurationSec
     )
-    Write-Host "[Capture] Using window title-based capture (WGC-isolated): '$gameTitle'"
-    $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    return Start-Process -FilePath $ffmpeg -ArgumentList $ffArgs -PassThru -NoNewWindow -RedirectStandardError "$outDir\ffmpeg_async.txt"
+    Write-Host "[Capture] Using DINOForge CLI ScreenRecorderLib (window-isolated): '$gameTitle'"
+    # Kill any existing CLI processes first
+    Stop-Process -Name "DINOForge.Tools.Cli" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+    $cliArgs = "record --output `"$OutputPath`" --duration $DurationSec --width 1280 --height 800 --framerate 30"
+    return Start-Process -FilePath $cliExe -ArgumentList $cliArgs -PassThru -NoNewWindow
 }
 
 # ── Step 1: Kill any existing game instances ───────────────────────────────────
@@ -154,9 +160,9 @@ Start-Sleep -Seconds 2
 # ── Step 5: Record raw_mods.mp4 (main menu, 6s) ───────────────────────────────
 Write-Host "[Phase 1] Recording raw_mods.mp4 (6s, main menu)..."
 $modsOut = "$outDir\raw_mods.mp4"
-Invoke-GdigrabSync -OutputPath $modsOut -DurationSec 6
+Invoke-RecordSync -OutputPath $modsOut -DurationSec 6
 if (-not (Test-Path $modsOut) -or (Get-Item $modsOut).Length -lt 4096) {
-    Write-Error "raw_mods.mp4 missing or empty. ffmpeg may have failed."
+    Write-Error "raw_mods.mp4 missing or empty. CLI recording may have failed."
     exit 1
 }
 Write-Host "[Phase 1] raw_mods.mp4 ready ($([math]::Round((Get-Item $modsOut).Length / 1KB, 0)) KB)"
@@ -167,7 +173,7 @@ Write-Host "[Phase 1] raw_mods.mp4 ready ($([math]::Round((Get-Item $modsOut).Le
 # ── Step 6: Record raw_f9.mp4 (F9 debug overlay, 8s) ─────────────────────────
 Write-Host "[Phase 1] Recording raw_f9.mp4 (8s, F9 overlay)..."
 $f9Out = "$outDir\raw_f9.mp4"
-$proc  = Start-GdigrabAsync -OutputPath $f9Out -DurationSec 8
+$proc  = Start-RecordAsync -OutputPath $f9Out -DurationSec 8
 
 # Inject F9 after 0.5s so the recording captures the key press event
 Start-Sleep -Milliseconds 500
@@ -192,7 +198,7 @@ Start-Sleep -Seconds 2
 # ── Step 7: Record raw_f10.mp4 (F10 mod menu, 8s) ────────────────────────────
 Write-Host "[Phase 1] Recording raw_f10.mp4 (8s, F10 mod menu)..."
 $f10Out = "$outDir\raw_f10.mp4"
-$proc   = Start-GdigrabAsync -OutputPath $f10Out -DurationSec 8
+$proc   = Start-RecordAsync -OutputPath $f10Out -DurationSec 8
 
 Start-Sleep -Milliseconds 500
 [Win32Input]::PressKey($VK_F10)

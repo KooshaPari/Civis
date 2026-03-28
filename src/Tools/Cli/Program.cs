@@ -93,6 +93,7 @@ rootCommand.Add(ResourcesCommand.Create());
 rootCommand.Add(VerifyPackCommand.Create());
 rootCommand.Add(ReloadCommand.Create());
 rootCommand.Add(ScreenshotCommand.Create());
+rootCommand.Add(RecordCommand.Create());
 rootCommand.Add(ComponentMapCommand.Create());
 rootCommand.Add(UiTreeCommand.Create());
 rootCommand.Add(UiQueryCommand.Create());

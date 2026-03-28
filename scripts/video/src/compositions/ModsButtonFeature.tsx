@@ -1,10 +1,11 @@
 import React from "react";
+import { staticFile } from "remotion";
 import { FeatureScene } from "../components/FeatureScene";
 
-// Paths injected via environment variables by the prove-features orchestrator.
-// Defaults allow the Remotion Studio to load without errors.
-const RAW_CLIP = process.env["RAW_MODS_PATH"] ?? "";
-const TTS_FILE = process.env["TTS_MODS_PATH"] ?? "";
+// Use staticFile() for assets in public/assets/ during render.
+// In the Studio, these are pre-copied from capture/tts directories.
+const RAW_CLIP = staticFile("/raw_mods.mp4");
+const TTS_FILE = staticFile("/mods.mp3");
 
 export const ModsButtonFeature: React.FC = () => (
   <FeatureScene

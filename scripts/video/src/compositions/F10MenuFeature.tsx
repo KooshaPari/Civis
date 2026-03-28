@@ -1,8 +1,9 @@
 import React from "react";
+import { staticFile } from "remotion";
 import { FeatureScene } from "../components/FeatureScene";
 
-const RAW_CLIP = process.env["RAW_F10_PATH"] ?? "";
-const TTS_FILE = process.env["TTS_F10_PATH"] ?? "";
+const RAW_CLIP = staticFile("/raw_f10.mp4");
+const TTS_FILE = staticFile("/f10.mp3");
 
 export const F10MenuFeature: React.FC = () => (
   <FeatureScene

@@ -9,24 +9,39 @@ Outputs one MP3 per entry named <id>.mp3.
 """
 import argparse
 import asyncio
+import io
 import json
 import os
 import sys
 
 import edge_tts
 
+# Fix Windows console encoding issues
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-async def generate_one(entry: dict, out_dir: str) -> str:
+
+async def generate_one(entry: dict, out_dir: str, max_retries: int = 3) -> str:
     out_path = os.path.join(out_dir, f"{entry['id']}.mp3")
-    communicate = edge_tts.Communicate(entry["text"], entry["voice"])
-    await communicate.save(out_path)
-    size = os.path.getsize(out_path)
-    if size < 1024:
-        raise RuntimeError(
-            f"{entry['id']}.mp3 is only {size} bytes — TTS likely failed silently"
-        )
-    print(f"  OK  {entry['id']}.mp3  ({size // 1024} KB)")
-    return out_path
+
+    for attempt in range(max_retries):
+        try:
+            communicate = edge_tts.Communicate(entry["text"], entry["voice"])
+            await asyncio.wait_for(communicate.save(out_path), timeout=30.0)
+            size = os.path.getsize(out_path)
+            if size < 1024:
+                raise RuntimeError(
+                    f"{entry['id']}.mp3 is only {size} bytes — TTS likely failed silently"
+                )
+            print(f"  OK  {entry['id']}.mp3  ({size // 1024} KB)")
+            return out_path
+        except (asyncio.TimeoutError, Exception) as e:
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # exponential backoff: 1s, 2s, 4s
+                print(f"  RETRY {entry['id']}.mp3 (attempt {attempt + 1}/{max_retries}, backoff {wait_time}s): {type(e).__name__}", file=sys.stderr)
+                await asyncio.sleep(wait_time)
+            else:
+                raise RuntimeError(f"Failed to generate {entry['id']}.mp3 after {max_retries} attempts: {e}")
 
 
 async def main() -> None:
@@ -39,7 +54,7 @@ async def main() -> None:
         spec = json.load(f)
 
     os.makedirs(args.out, exist_ok=True)
-    print(f"Generating {len(spec)} TTS file(s) → {args.out}")
+    print(f"Generating {len(spec)} TTS file(s) -> {args.out}")
 
     tasks = [generate_one(entry, args.out) for entry in spec]
     results = await asyncio.gather(*tasks, return_exceptions=True)

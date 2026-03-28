@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence } from "remotion";
+import { AbsoluteFill, Sequence, staticFile } from "remotion";
 import { TitleCard } from "../components/TitleCard";
 import { ModsButtonFeature } from "./ModsButtonFeature";
 import { F9OverlayFeature } from "./F9OverlayFeature";
@@ -13,8 +13,8 @@ import { F10MenuFeature } from "./F10MenuFeature";
 //  690 – 989:  F10 feature       (10s)
 //  990 –1139:  outro title card  (5s)
 
-const INTRO_TTS = process.env["TTS_INTRO_PATH"] ?? "";
-const OUTRO_TTS = process.env["TTS_OUTRO_PATH"] ?? "";
+const INTRO_TTS = staticFile("/intro.mp3");
+const OUTRO_TTS = staticFile("/outro.mp3");
 
 export const DINOForgeReel: React.FC = () => (
   <AbsoluteFill style={{ background: "#0a0a0f" }}>

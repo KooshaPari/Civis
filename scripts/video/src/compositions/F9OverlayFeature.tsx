@@ -1,8 +1,9 @@
 import React from "react";
+import { staticFile } from "remotion";
 import { FeatureScene } from "../components/FeatureScene";
 
-const RAW_CLIP = process.env["RAW_F9_PATH"] ?? "";
-const TTS_FILE = process.env["TTS_F9_PATH"] ?? "";
+const RAW_CLIP = staticFile("/raw_f9.mp4");
+const TTS_FILE = staticFile("/f9.mp3");
 
 export const F9OverlayFeature: React.FC = () => (
   <FeatureScene

@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, OffthreadVideo } from "remotion";
+import { AbsoluteFill, Audio, Video } from "remotion";
 import { CalloutBox } from "./CalloutBox";
 import { CaptionBar } from "./CaptionBar";
 import type { FeatureSceneProps } from "../types";
@@ -13,7 +13,7 @@ export const FeatureScene: React.FC<FeatureSceneProps> = ({
 }) => (
   <AbsoluteFill>
     {/* Raw clip — freeze-frames on last frame once source ends */}
-    <OffthreadVideo
+    <Video
       src={videoSrc}
       style={{ width: "100%", height: "100%", objectFit: "cover" }}
     />

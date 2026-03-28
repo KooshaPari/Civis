@@ -95,3 +95,10 @@ docs/sessions/WgcCapture/
 docs/sessions/DINOForgeCompanion/
 docs/screenshots/desktop/
 scripts/game/desktop/
+
+# Test coverage output
+coverage/
+
+# Session audit docs (auto-generated)
+docs/sessions/test-suite-*.md
+docs/sessions/virtual_display*.md

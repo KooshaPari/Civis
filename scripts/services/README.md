@@ -16,6 +16,11 @@ Install the per-user scheduled task:
 ```powershell
 pwsh -File scripts/services/windows/register-mcp-task.ps1 -Action Install
 ```
+For a cross-platform harness install flow, use:
+
+```powershell
+pwsh -File scripts/services/mcp-service.ps1 -Action Install
+```
 
 That creates `DINOForge MCP` and runs:
 
@@ -48,6 +53,15 @@ systemctl --user enable --now dinoforge-mcp.service
 systemctl --user status dinoforge-mcp.service
 ```
 
+Cross-platform install/uninstall:
+
+```bash
+pwsh -File scripts/services/mcp-service.ps1 -Action Install
+pwsh -File scripts/services/mcp-service.ps1 -Action Status
+pwsh -File scripts/services/mcp-service.ps1 -Action Stop
+pwsh -File scripts/services/mcp-service.ps1 -Action Uninstall
+```
+
 Stop and remove:
 
 ```bash
@@ -66,6 +80,15 @@ repo_root="$(pwd)"
 sed "s|__REPO_ROOT__|$repo_root|g" scripts/services/launchd/com.dinoforge.mcp.plist > ~/Library/LaunchAgents/com.dinoforge.mcp.plist
 launchctl unload ~/Library/LaunchAgents/com.dinoforge.mcp.plist 2>/dev/null || true
 launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.dinoforge.mcp.plist
+```
+
+Cross-platform install/uninstall on macOS:
+
+```bash
+pwsh -File scripts/services/mcp-service.ps1 -Action Install
+pwsh -File scripts/services/mcp-service.ps1 -Action Status
+pwsh -File scripts/services/mcp-service.ps1 -Action Stop
+pwsh -File scripts/services/mcp-service.ps1 -Action Uninstall
 ```
 
 Stop and remove:

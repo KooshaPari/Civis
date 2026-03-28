@@ -18,6 +18,7 @@ Runs `./scripts/start-mcp.ps1` in managed mode and prints the current lifecycle 
 - `--watch`: starts companion `scripts/game/hot-reload.ps1 -Watch` so runtime reloads notify MCP automatically.
 - `stop`: stop running MCP + watcher.
 - `status`: show PID + listener state.
+- `service`: manage a persistent service wrapper (`Install|Status|Start|Stop|Uninstall`).
 
 ## Default Actions
 
@@ -46,3 +47,12 @@ Runs `./scripts/start-mcp.ps1` in managed mode and prints the current lifecycle 
 ```
 
 CC hooks attempt automatic MCP startup; use `/dev-harness` only when you want explicit control (force start, status, stop, restart, watcher mode).
+
+For service-managed deployment, run:
+
+```powershell
+pwsh -File scripts/services/mcp-service.ps1 -Action Install
+pwsh -File scripts/services/mcp-service.ps1 -Action Start
+pwsh -File scripts/services/mcp-service.ps1 -Action Stop
+pwsh -File scripts/services/mcp-service.ps1 -Action Uninstall
+```

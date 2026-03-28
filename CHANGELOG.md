@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Prove-features video pipeline v2** — replaces broken v1 pipeline. Three phases: (1) `scripts/game/capture-feature-clips.ps1` — gdigrab by window title (not desktop), Win32 SendInput for focus-free key injection, boot detection via log polling, 1280×800 normalization; (2) `scripts/video/generate_tts.py` + `vo_spec.json` — edge-tts neural TTS via file-based spec (fixes ArgumentList arg-splitting bug from v1); (3) `scripts/video/` Remotion project — spring-physics callout boxes, freeze-frame padding, 38s compilation reel. VLM validation via `game_analyze_screen` MCP gates each clip.
+- **Cross-platform MCP service harness wrapper** — added `scripts/services/mcp-service.ps1` to install/status/start/stop/uninstall the MCP auto-start service across Windows Task Scheduler, Linux systemd (`systemd user`) and macOS launchd, with matching command examples in service docs.
 
 ### Removed
 
@@ -1046,4 +1047,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.3.0]: https://github.com/KooshaPari/Dino/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/KooshaPari/Dino/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/KooshaPari/Dino/releases/tag/v0.1.0
-

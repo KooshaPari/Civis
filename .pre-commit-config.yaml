@@ -14,14 +14,16 @@ repos:
         args: [--markdown-linebreak-ext=md]
         exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin)$
       - id: end-of-file-fixer
-        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin)$
+        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin|json)$
       - id: check-yaml
         exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|packs/_archived/)
       - id: check-json
         exclude: (packs/.*/assets/raw/.*asset_manifest\.json|src/Tests/FuzzCorpus/)
       - id: check-merge-conflict
+        exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|\\.log$|\\.xml$|scripts/game/|scripts/unity/|scripts/install-companion)
       - id: check-added-large-files
         args: [--maxkb=500]
+        exclude: (docs/proof-of-features/|coverage/|packs/.*\.zip$)
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
@@ -39,9 +41,9 @@ repos:
         pass_filenames: false
         types: [c#]
 
-      - id: dotnet-test-integration
-        name: dotnet test (integration)
-        entry: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity quiet
+      - id: dotnet-test-all
+        name: dotnet test (unit + integration)
+        entry: pwsh -File scripts/test-local.ps1
         language: system
         pass_filenames: false
         stages: [pre-push]

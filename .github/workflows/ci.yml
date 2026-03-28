@@ -52,9 +52,9 @@ jobs:
       - name: Build
         run: dotnet build src/DINOForge.CI.NoRuntime.sln --no-restore --configuration Release /p:BuildInParallel=false
 
-      # Note: Unit tests excluded - require Runtime which needs Unity (local build only)
-
-      # Unit tests skipped - require Runtime which needs Unity (run locally)
+      # Unit tests run in CI — they don't require Unity/Runtime (excluded from NoRuntime.sln)
+      - name: Test (Unit)
+        run: dotnet test src/Tests/DINOForge.Tests.csproj --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Test (Integration)
         run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
@@ -63,7 +63,7 @@ jobs:
         uses: dorny/tests-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea0 # v1.9.1
         if: always()
         with:
-          name: Integration Tests
+          name: Unit & Integration Tests
           path: "**/*.trx"
           reporter: dotnet-trx
           fail-on-error: true

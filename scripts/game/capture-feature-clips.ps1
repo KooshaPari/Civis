@@ -4,10 +4,10 @@
     DINOForge Prove-Features Pipeline — Phase 1: Game Capture.
 
 .DESCRIPTION
-    Launches the game, records three separate feature clips via gdigrab
-    (targeted by window title, NOT desktop), injects keys via Win32 SendInput
-    (no window focus required), and outputs raw clips + metadata to
-    $env:TEMP\DINOForge\capture\.
+    Launches the game, records three separate feature clips via ffmpeg gdigrab
+    with window title targeting (isolated from desktop/overlays — no coordinates),
+    injects keys via Win32 SendInput (no window focus required), and outputs
+    raw clips + metadata to $env:TEMP\DINOForge\capture\.
 
     VLM validation (game_analyze_screen MCP) is orchestrated by the caller
     (.claude/commands/prove-features.md) between recording steps, since
@@ -74,20 +74,6 @@ public class Win32Input {
 }
 "@
 
-# ── Win32 GetWindowRect: retrieve window position/size from process handle ───────
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public class Win32Window {
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RECT { public int Left, Top, Right, Bottom; }
-
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-}
-"@
-
 $VK_F9  = [uint16]0x78
 $VK_F10 = [uint16]0x79
 
@@ -114,38 +100,13 @@ function Wait-ForLog {
     return $false
 }
 
-function Get-GameWindowRect {
-    # Get window rect using process MainWindowHandle (works on Parsec virtual displays)
-    $proc = Get-Process -Name "Diplomacy is Not an Option" -ErrorAction SilentlyContinue |
-            Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } |
-            Select-Object -First 1
-    if (-not $proc) { return $null }
-
-    $rect = New-Object Win32Window+RECT
-    $ok = [Win32Window]::GetWindowRect($proc.MainWindowHandle, [ref]$rect)
-    if (-not $ok) { return $null }
-
-    return @{
-        X      = $rect.Left
-        Y      = $rect.Top
-        Width  = $rect.Right  - $rect.Left
-        Height = $rect.Bottom - $rect.Top
-    }
-}
-
 function Invoke-GdigrabSync {
     param(
         [string]$OutputPath,
         [int]   $DurationSec
     )
-    $wr = Get-GameWindowRect
-    if ($wr -and $wr.Width -gt 0) {
-        Write-Host "[Capture] Using process window rect: $($wr.X),$($wr.Y) $($wr.Width)x$($wr.Height)"
-        $ffArgs = "-f gdigrab -framerate 30 -offset_x $($wr.X) -offset_y $($wr.Y) -video_size $($wr.Width)x$($wr.Height) -i desktop -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    } else {
-        Write-Host "[Capture] Falling back to title-based capture"
-        $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    }
+    Write-Host "[Capture] Using window title-based capture (WGC-isolated): '$gameTitle'"
+    $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
     Start-Process -FilePath $ffmpeg -ArgumentList $ffArgs -Wait -NoNewWindow -RedirectStandardError "$outDir\ffmpeg_sync.txt"
 }
 
@@ -154,14 +115,8 @@ function Start-GdigrabAsync {
         [string]$OutputPath,
         [int]   $DurationSec
     )
-    $wr = Get-GameWindowRect
-    if ($wr -and $wr.Width -gt 0) {
-        Write-Host "[Capture] Using process window rect: $($wr.X),$($wr.Y) $($wr.Width)x$($wr.Height)"
-        $ffArgs = "-f gdigrab -framerate 30 -offset_x $($wr.X) -offset_y $($wr.Y) -video_size $($wr.Width)x$($wr.Height) -i desktop -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    } else {
-        Write-Host "[Capture] Falling back to title-based capture"
-        $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
-    }
+    Write-Host "[Capture] Using window title-based capture (WGC-isolated): '$gameTitle'"
+    $ffArgs = "-f gdigrab -framerate 30 -i `"title=$gameTitle`" -t $DurationSec -vf scale=1280:800 -vcodec libx264 -preset ultrafast -y `"$OutputPath`""
     return Start-Process -FilePath $ffmpeg -ArgumentList $ffArgs -PassThru -NoNewWindow -RedirectStandardError "$outDir\ffmpeg_async.txt"
 }
 

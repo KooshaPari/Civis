@@ -356,30 +356,28 @@ namespace DINOForge.Runtime
                 _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex.Message}");
             }
 
-            // ── Wire KeyInputSystem ECS callbacks ───────────────────────────────────
-            // KeyInputSystem lives in the ECS world and survives scene transitions.
-            // It calls these lambdas when F9/F10 are pressed, even after DINOForge_Root
-            // has been resurrected (the lambdas capture `this` — the current driver).
-            Bridge.KeyInputSystem.OnF9Pressed = () =>
-            {
-                try
-                {
-                    WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
-                    else _debugOverlay?.Toggle();
-                }
-                catch { }
-            };
-            Bridge.KeyInputSystem.OnF10Pressed = () =>
-            {
-                try
-                {
-                    WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                    else _modMenuHost?.Toggle();
-                }
-                catch { }
-            };
+            // ── KeyInputSystem ECS callbacks (DISABLED) ────────────────────────────────
+            // DISABLED 2026-03-27: Double-toggle bug fix
+            // The background polling thread (Win32 GetAsyncKeyState) is the reliable
+            // execution path in DINO (Update() never fires, ECS callbacks are unreliable).
+            // Keeping both caused double-toggles (UI opens then immediately closes).
+            // The background thread has proper debouncing with key-release waiting.
+            // ECS callbacks removed to avoid duplicate toggle calls.
+            //
+            // Bridge.KeyInputSystem.OnF9Pressed = () =>
+            // {
+            //     try { WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+            //         if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+            //         else _debugOverlay?.Toggle();
+            //     } catch { }
+            // };
+            // Bridge.KeyInputSystem.OnF10Pressed = () =>
+            // {
+            //     try { WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+            //         if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+            //         else _modMenuHost?.Toggle();
+            //     } catch { }
+            // };
 
             // ── Wire HMR pack reload callback (can be invoked from background thread) ──
             Bridge.KeyInputSystem.OnPackReloadRequested = () =>

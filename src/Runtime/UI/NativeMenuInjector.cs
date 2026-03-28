@@ -347,6 +347,46 @@ namespace DINOForge.Runtime.UI
         }
 
         /// <summary>
+        /// Enforces consistent state on an existing Mods button without re-cloning.
+        /// Sets all Text/TMPro children to "Mods", ensures onClick has OnModsButtonClicked listener,
+        /// and ensures targetGraphic is properly set for visual state transitions.
+        /// </summary>
+        private void EnforceModsButtonState(Button modsButton, long attemptId)
+        {
+            // Set all text components to "Mods"
+            foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+            {
+                legacyText.text = "Mods";
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Enforced Text '{legacyText.name}' to 'Mods'");
+            }
+            System.Type? tmpType = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+            if (tmpType != null)
+            {
+                foreach (Component c in modsButton.GetComponentsInChildren(tmpType, true))
+                {
+                    tmpType.GetProperty("text")?.SetValue(c, "Mods");
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Enforced TMP_Text '{c.name}' to 'Mods'");
+                }
+            }
+
+            // Ensure onClick only has OnModsButtonClicked
+            modsButton.onClick.RemoveAllListeners();
+            modsButton.onClick.AddListener(OnModsButtonClicked);
+            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Wired onClick listener to OnModsButtonClicked");
+
+            // Ensure targetGraphic is set for visual state transitions
+            if (modsButton.targetGraphic == null)
+            {
+                Image? fallbackImage = modsButton.GetComponentInChildren<UnityEngine.UI.Image>(true);
+                if (fallbackImage != null)
+                {
+                    modsButton.targetGraphic = fallbackImage;
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set targetGraphic fallback to '{fallbackImage.name}'");
+                }
+            }
+        }
+
+        /// <summary>
         /// Clones the reference button, labels it "Mods", positions it after the original,
         /// and wires its onClick event.
         /// </summary>
@@ -371,10 +411,10 @@ namespace DINOForge.Runtime.UI
                         if (parent.GetChild(i).name.StartsWith("DINOForge_ModsButton", StringComparison.OrdinalIgnoreCase))
                         {
                             Button existing = parent.GetChild(i).GetComponent<Button>();
-                            if (existing != null)
+                            if (existing != null && existing.gameObject.activeInHierarchy)
                             {
-                                SyncButtonVisualStyle(existing, settingsButton, attemptId);
-                                RewireModsButtonClick(existing, attemptId);
+                                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1R: Mods button already present; re-enforcing state...");
+                                EnforceModsButtonState(existing, attemptId);
                                 _injectedButton = existing;
                                 _injected = true;
                                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓ Mods button already present in parent; SKIPPING re-inject, using existing.");
@@ -627,7 +667,7 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         private void RewireModsButtonClick(Button modsButton, long attemptId)
         {
-            modsButton.onClick = new Button.ButtonClickedEvent();
+            modsButton.onClick.RemoveAllListeners();
             modsButton.onClick.AddListener(OnModsButtonClicked);
             LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Click handler replaced with DINOForge toggle only");
         }
@@ -648,6 +688,16 @@ namespace DINOForge.Runtime.UI
                 string path = GetRelativePath(source.targetGraphic.transform, source.transform);
                 Transform? matching = string.IsNullOrEmpty(path) ? target.transform : target.transform.Find(path);
                 target.targetGraphic = matching?.GetComponent(source.targetGraphic.GetType()) as Graphic;
+            }
+
+            // Fallback: if targetGraphic is still null, use the first Image child
+            if (target.targetGraphic == null)
+            {
+                target.targetGraphic = target.GetComponentInChildren<UnityEngine.UI.Image>(true);
+                if (target.targetGraphic != null)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Applied targetGraphic fallback to '{target.targetGraphic.name}'");
+                }
             }
 
             Text? sourceText = source.GetComponentInChildren<Text>(includeInactive: true);

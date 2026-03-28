@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **F9/F10 double-toggle** — Removed duplicate ECS callback wiring (OnF9Pressed/OnF10Pressed) that fired simultaneously with background thread polling, causing UI to open then immediately close
+- **Mods button text** — Added EnforceModsButtonState guard preventing retry loop from re-cloning and losing "Mods" text; button now persistently shows "Mods"
+- **Mods button click** — onClick now uses RemoveAllListeners() before re-wiring to prevent listener accumulation; OnModsButtonClicked reliably fires
+- **Mods button hover/active states** — Added targetGraphic fallback to first Image child when path-based lookup fails; all 5 button color states (normal/highlighted/pressed/selected/disabled) now render correctly
 - **AssetSwapSystem EntityQuery missing IncludePrefab** — all EntityQuery creations now include `EntityQueryOptions.IncludePrefab`; DINO entities are all Prefab entities, so queries without this flag returned 0 results — 36 pending visual asset swaps were processing empty result sets, leaving units/buildings unchanged in-game; asset swaps are now fully functional
 - **RuntimeDriver.Update() execution** — replaced `MonoBehaviour.Update()` callback with `StartBackgroundPollingThread()` background thread; DINO replaces Unity's PlayerLoop entirely (Awake/OnDestroy/scene callbacks only), so Update never fired; F9/F10 key polling, UGUI readiness detection, and ECS world polling now execute on a background thread
 - **VitePress Vue template parsing errors** — fixed Vue parser errors in 57 markdown files by escaping C# generic types (`<Type>`, `<Type<T>>`), comparison operators (`< value`, `> value`), and unescaped angle brackets outside code blocks; excluded `/archive`, `/research`, `/sessions`, `/worklog` directories from VitePress srcExclude to prevent parsing errors in research documents

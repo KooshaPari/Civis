@@ -32,6 +32,8 @@ namespace DINOForge.Runtime.Bridge
 
         private bool _overlayEnsured;
         private int _updateFrame;
+        private bool _f9PreviousState;
+        private bool _f10PreviousState;
 
         protected override void OnCreate()
         {
@@ -76,24 +78,28 @@ namespace DINOForge.Runtime.Bridge
                 if (!_overlayEnsured)
                     EnsureOverlay();
 
-                // Poll Unity Input for F9/F10
-                bool f9  = Input.GetKeyDown(KeyCode.F9);
-                bool f10 = Input.GetKeyDown(KeyCode.F10);
+                // Poll Unity Input for F9/F10 — detect PRESS (key goes from up to down), not hold
+                bool f9Current  = Input.GetKey(KeyCode.F9);
+                bool f10Current = Input.GetKey(KeyCode.F10);
 
-                if (f9)
+                // F9: trigger on transition from not-pressed to pressed
+                if (f9Current && !_f9PreviousState)
                 {
-                    WriteDebug("F9 pressed");
+                    WriteDebug("F9 pressed (transition detected)");
                     if (OnF9Pressed != null)
                         OnF9Pressed.Invoke();
                     else
                         DebugOverlayBehaviour.Instance?.Toggle();
                 }
+                _f9PreviousState = f9Current;
 
-                if (f10)
+                // F10: trigger on transition from not-pressed to pressed
+                if (f10Current && !_f10PreviousState)
                 {
-                    WriteDebug("F10 pressed");
+                    WriteDebug("F10 pressed (transition detected)");
                     OnF10Pressed?.Invoke();
                 }
+                _f10PreviousState = f10Current;
             }
             catch (System.Exception ex)
             {

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scripts/test-local.ps1` — unified local test runner (unit + integration + optional E2E)
+- `scripts/install-hooks.ps1` — one-command git hook installer (pre-commit + pre-push)
+- Pre-push hook: runs integration tests before every push
+- CI (`ci.yml`): integration tests now run on every PR (dorny/tests-reporter for TRX results)
+
+### Fixed
+
+- `.pre-commit-config.yaml`: `dotnet-format` hook now targets `DINOForge.CI.NoRuntime.sln` (was `DINOForge.CI.sln`)
+- `scripts/test-e2e.ps1`: fixed `$REPO_ROOT` path computation (`Split-Path -Parent $PSScriptRoot`)
+
+---
+
 - **Prove-features video pipeline v2** — replaces broken v1 pipeline. Three phases: (1) `scripts/game/capture-feature-clips.ps1` — gdigrab by window title (not desktop), Win32 SendInput for focus-free key injection, boot detection via log polling, 1280×800 normalization; (2) `scripts/video/generate_tts.py` + `vo_spec.json` — edge-tts neural TTS via file-based spec (fixes ArgumentList arg-splitting bug from v1); (3) `scripts/video/` Remotion project — spring-physics callout boxes, freeze-frame padding, 38s compilation reel. VLM validation via `game_analyze_screen` MCP gates each clip.
 - **Cross-platform MCP service harness wrapper** — added `scripts/services/mcp-service.ps1` to install/status/start/stop/uninstall the MCP auto-start service across Windows Task Scheduler, Linux systemd (`systemd user`) and macOS launchd, with matching command examples in service docs.
 

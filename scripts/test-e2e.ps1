@@ -46,7 +46,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$REPO_ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$REPO_ROOT = Split-Path -Parent $PSScriptRoot
 $E2E_DIR = Join-Path $REPO_ROOT "src/Tests/e2e"
 $REQUIREMENTS_FILE = Join-Path $E2E_DIR "requirements.txt"
 

@@ -1,12 +1,24 @@
+exclude: |
+  (?x)^(
+    packs/.*\.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|gif|bmp|psd|wav|mp3|ogg|ttf|otf|dll|exe|bin|zip|7z|tar|gz)$|
+    unity-assetbundle-builder/.*|
+    .*\.(fbx|FBX|meta|prefab|mat|asset|unity)$|
+    solution-build-parallel\.log$
+  )
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin)$
       - id: end-of-file-fixer
+        exclude: \.(fbx|FBX|png|PNG|meta|prefab|mat|asset|unity|tga|jpg|jpeg|wav|mp3|ogg|ttf|otf|dll|exe|bin)$
       - id: check-yaml
+        exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|packs/_archived/)
       - id: check-json
+        exclude: (packs/.*/assets/raw/.*asset_manifest\.json|src/Tests/FuzzCorpus/)
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
@@ -15,13 +27,21 @@ repos:
     rev: v1.35.1
     hooks:
       - id: yamllint
-        args: [-d, relaxed]
+        args: [-c, .yamllint.yaml, --no-warnings]
+        exclude: (src/Tests/FuzzCorpus/|docs/sessions/|docs/archive/|packs/_archived/)
 
   - repo: local
     hooks:
       - id: dotnet-format
         name: dotnet format
-        entry: dotnet format src/DINOForge.CI.sln --verify-no-changes
+        entry: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes
         language: system
         pass_filenames: false
         types: [c#]
+
+      - id: dotnet-test-integration
+        name: dotnet test (integration)
+        entry: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity quiet
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

@@ -1,0 +1,10 @@
+extends: relaxed
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  new-lines: disable  # allow any line endings (repo has mixed CRLF/LF from Windows)
+  truthy:
+    allowed-values: ["true", "false", "yes", "no", "on", "off"]
+    level: warning

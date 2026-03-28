@@ -81,6 +81,18 @@
           "Microsoft.Extensions.Options": "8.0.2"
         }
       },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.*, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
+      "ScreenRecorderLib": {
+        "type": "Direct",
+        "requested": "[6.6.0, )",
+        "resolved": "6.6.0",
+        "contentHash": "u4//jvO39tRXRNqg6/1Ky+KWPmxGdBsJOfp0A1tz6jnJosozzUSYPM0eu3LzeHwZYXeBMJBhVTRLJJBM6CVNng=="
+      },
       "SketchFabApi.Net": {
         "type": "Direct",
         "requested": "[1.0.4, )",
@@ -282,6 +294,7 @@
       "dinoforge.tools.installer": {
         "type": "Project"
       }
-    }
+    },
+    "net11.0/win-x64": {}
   }
 }

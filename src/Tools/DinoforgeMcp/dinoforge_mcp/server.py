@@ -103,7 +103,7 @@ def _run_pack_compiler(*args: str, timeout: int = 60) -> dict[str, Any]:
 
 
 async def _launch_hidden(exe_path: str, desktop_name: str = "DINOForge_Agent") -> dict:
-    """Launch game on a hidden Win32 desktop using CreateDesktop."""
+    """Launch game on a hidden Win32 desktop using CreateDesktop with -popupwindow flag."""
     ps_script = r"""
 param($ExePath, $DesktopName)
 Add-Type -AssemblyName System.Drawing
@@ -127,7 +127,8 @@ $si.dwFlags = 0x00000001
 $si.wShowWindow = 0
 $pi = New-Object Win32Desktop+PROCESS_INFORMATION
 $exeDir = Split-Path $ExePath -Parent
-$ok = [Win32Desktop]::CreateProcess($ExePath, $null, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x00000010, [IntPtr]::Zero, $exeDir, [ref]$si, [ref]$pi)
+$cmdLine = $ExePath + " -popupwindow"
+$ok = [Win32Desktop]::CreateProcess($ExePath, $cmdLine, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x00000010, [IntPtr]::Zero, $exeDir, [ref]$si, [ref]$pi)
 if ($ok) { Write-Output "PID:$($pi.dwProcessId)" } else { Write-Output "ERROR: CreateProcess failed" }
 """
     result = await asyncio.to_thread(
@@ -301,14 +302,14 @@ async def game_launch(ctx: Context, hidden: bool = False) -> dict:
 
 
 @mcp.tool()
-async def game_launch_test(ctx: Context, hidden: bool = False) -> dict:
+async def game_launch_test(ctx: Context, hidden: bool = True) -> dict:
     """
     Launch the TEST instance of DINO (second concurrent instance for testing).
     Uses G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option_TEST\\.
     Kill existing test instances first if needed.
 
     Args:
-        hidden: If True, launch on an invisible Win32 desktop (CreateDesktop).
+        hidden: If True (default), launch on an invisible Win32 desktop (CreateDesktop). Set to False for visible window.
     """
     test_dir = r"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
     test_exe = Path(test_dir) / "Diplomacy is Not an Option.exe"

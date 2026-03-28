@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Prove-features video pipeline v2** — replaces broken v1 pipeline. Three phases: (1) `scripts/game/capture-feature-clips.ps1` — gdigrab by window title (not desktop), Win32 SendInput for focus-free key injection, boot detection via log polling, 1280×800 normalization; (2) `scripts/video/generate_tts.py` + `vo_spec.json` — edge-tts neural TTS via file-based spec (fixes ArgumentList arg-splitting bug from v1); (3) `scripts/video/` Remotion project — spring-physics callout boxes, freeze-frame padding, 38s compilation reel. VLM validation via `game_analyze_screen` MCP gates each clip.
+
+### Removed
+
+- `scripts/game/prove-features-video.ps1` — retired (v1: wrong window capture, SAPI TTS fallback, no VLM validation)
+
 - **MCP tool aliases** — added canonical CLAUDE.md tool names as aliases: `game_wait_for_world`, `game_get_resources`, `game_input`, `game_ui_automation`, `game_analyze_screen`, `game_wait_and_screenshot`, `game_navigate_to`; all route to the same underlying CLI commands as their existing equivalents
 - **`/hmr` HTTP endpoint** — `POST http://127.0.0.1:8765/hmr` triggers hot-reload event; `scripts/game/hot-reload.ps1` now correctly POSTs to this route after deploying a new Runtime DLL
 

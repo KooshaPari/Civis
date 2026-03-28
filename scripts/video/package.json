@@ -1,0 +1,24 @@
+{
+  "name": "dinoforge-video",
+  "version": "1.0.0",
+  "description": "DINOForge feature demonstration video — Remotion project",
+  "scripts": {
+    "render:mods":  "remotion render src/index.ts ModsButtonFeature --output out/mods_feature.mp4",
+    "render:f9":    "remotion render src/index.ts F9OverlayFeature  --output out/f9_feature.mp4",
+    "render:f10":   "remotion render src/index.ts F10MenuFeature    --output out/f10_feature.mp4",
+    "render:reel":  "remotion render src/index.ts DINOForgeReel     --output out/dinoforge_reel.mp4",
+    "render:all":   "npm run render:mods && npm run render:f9 && npm run render:f10 && npm run render:reel",
+    "studio":       "remotion studio src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.257",
+    "remotion": "4.0.257",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

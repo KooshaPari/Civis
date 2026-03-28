@@ -21,57 +21,48 @@ Run ALL steps from repo root. Each step must succeed before proceeding to the ne
 
 ---
 
-### Step 1: Phase 1 — Game capture
+### Step 1: Phase 1 — Game capture + interleaved VLM validation
+
+Run the capture script, then **immediately validate each feature before moving to the next**.
+The game stays running throughout. Each VLM screenshot is taken with the game in the correct UI state.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/game/capture-feature-clips.ps1
 ```
 
-The script:
-1. Kills any existing game process
-2. Launches the game and waits for DINOForge Awake (Stage A, 30s timeout)
-3. Waits for Mods button injection success (Stage B, 720s timeout)
-4. Records `raw_mods.mp4` (6s, main menu, gdigrab by window title)
-5. Injects F9 via Win32 SendInput, records `raw_f9.mp4` (8s)
-6. Resets F9, injects F10, records `raw_f10.mp4` (8s)
-7. All clips normalized to 1280×800 via `-vf scale=1280:800`
+The script handles: kill → launch → boot detection (Stage A+B) → record all three clips.
+After the script exits (game still running), perform the interleaved VLM sequence below.
 
-Output: `$env:TEMP\DINOForge\capture\raw_mods.mp4`, `raw_f9.mp4`, `raw_f10.mp4`
-
----
-
-### Step 2: VLM validation (game still running, UI states active)
-
-For each feature, call `game_analyze_screen` MCP tool to take a live GDI screenshot of the game window.
-The game remains running in the correct UI state throughout validation.
-
-#### Validate Mods button
-1. Call `game_analyze_screen` — game is still on main menu
+#### 1a. Validate Mods clip (game still on main menu)
+1. Call `game_analyze_screen` — game is on main menu with Mods button visible
 2. Check VLM response for "Mods" text in button/menu area
 3. Save screenshot to `$env:TEMP\DINOForge\capture\validate_mods.png`
-4. On failure: re-check main menu (press Escape to ensure you're on main menu), wait 3s, retry once
-5. Write `{ "feature": "mods", "confirmed": true/false, "vlm_response": "...", "timestamp": "..." }`
+4. **On failure**: press Escape to ensure main menu focus, wait 3s, retry `game_analyze_screen` once
+5. **On second failure**: delete `raw_mods.mp4`, write `confirmed: false`, stop with exit 1
+6. Write `{ "feature": "mods", "confirmed": true, "vlm_response": "...", "timestamp": "..." }`
 
-#### Validate F9 overlay
-1. Call `game_input` to press F9 (re-opens debug overlay after recording closed it)
-2. Wait 2s for UI to render
+#### 1b. Validate F9 clip (re-open overlay for fresh screenshot)
+1. Call `game_input` to press F9 — reopens the debug overlay
+2. Wait 2s for overlay to render
 3. Call `game_analyze_screen`
-4. Check for debug panel with entity counts or runtime stats
+4. Check for debug panel / overlay with entity counts or runtime stats
 5. Save to `$env:TEMP\DINOForge\capture\validate_f9.png`
-6. On failure: re-press F9, wait 3s, retry once
-7. Write `{ "feature": "f9", "confirmed": true/false, "vlm_response": "...", "timestamp": "..." }`
+6. **On failure**: re-press F9, wait 3s, retry once
+7. **On second failure**: delete `raw_f9.mp4`, write `confirmed: false`, stop with exit 1
+8. Write `{ "feature": "f9", "confirmed": true, "vlm_response": "...", "timestamp": "..." }`
+9. Press F9 again to close overlay before next step
 
-#### Validate F10 menu
-1. Press F9 first to close any debug overlay
-2. Call `game_input` to press F10 (opens mod menu)
-3. Wait 2s
-4. Call `game_analyze_screen`
-5. Check for mod menu / pack browser panel
-6. Save to `$env:TEMP\DINOForge\capture\validate_f10.png`
-7. On failure: retry once
-8. Write `{ "feature": "f10", "confirmed": true/false, "vlm_response": "...", "timestamp": "..." }`
+#### 1c. Validate F10 clip (re-open mod menu for fresh screenshot)
+1. Call `game_input` to press F10 — opens the mod menu
+2. Wait 2s for menu to render
+3. Call `game_analyze_screen`
+4. Check for mod menu / pack browser panel
+5. Save to `$env:TEMP\DINOForge\capture\validate_f10.png`
+6. **On failure**: press F10 to close, wait 1s, re-press F10, wait 2s, retry once
+7. **On second failure**: delete `raw_f10.mp4`, write `confirmed: false`, stop with exit 1
+8. Write `{ "feature": "f10", "confirmed": true, "vlm_response": "...", "timestamp": "..." }`
 
-**On second failure for any feature**: stop, do NOT proceed. Report which feature failed and the full VLM response. Delete the clip for that feature.
+**Temporal consistency**: The game window is open and in the correct UI state when `game_analyze_screen` is called for each feature. The screenshot is a live GDI capture — not extracted from the clip file. This guarantees the VLM sees the actual rendered UI, regardless of ffmpeg compression.
 
 Write `$env:TEMP\DINOForge\capture\validate_report.json`:
 ```json

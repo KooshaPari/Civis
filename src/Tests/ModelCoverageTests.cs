@@ -17,6 +17,7 @@ namespace DINOForge.Tests
     /// Coverage tests for zero-coverage model and utility classes.
     /// Tests simple property setters, constructors, and state management.
     /// </summary>
+    [Collection(AssetSwapRegistryCollection.Name)]
     public class ModelCoverageTests
     {
         // Helper to clear AssetSwapRegistry state between tests

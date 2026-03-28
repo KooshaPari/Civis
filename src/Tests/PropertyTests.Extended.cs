@@ -154,6 +154,7 @@ namespace DINOForge.Tests
     /// Property-based tests for AssetSwapRegistry concurrent-access invariants.
     /// </summary>
     [Trait("Category", "Property")]
+    [Collection(AssetSwapRegistryCollection.Name)]
     public class AssetSwapRegistryPropertyTests : IDisposable
     {
         public void Dispose()

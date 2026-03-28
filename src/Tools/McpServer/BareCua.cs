@@ -354,19 +354,19 @@ public sealed class NativeComputer : IAsyncDisposable
 
 /// <summary>Metadata about a top-level window.</summary>
 public sealed record WindowInfo(
-    [property: JsonPropertyName("hwnd")]    long   Hwnd,
-    [property: JsonPropertyName("title")]   string Title,
-    [property: JsonPropertyName("pid")]     uint   Pid,
-    [property: JsonPropertyName("x")]       int    X,
-    [property: JsonPropertyName("y")]       int    Y,
-    [property: JsonPropertyName("width")]   int    Width,
-    [property: JsonPropertyName("height")]  int    Height,
-    [property: JsonPropertyName("visible")] bool   Visible
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("pid")] uint Pid,
+    [property: JsonPropertyName("x")] int X,
+    [property: JsonPropertyName("y")] int Y,
+    [property: JsonPropertyName("width")] int Width,
+    [property: JsonPropertyName("height")] int Height,
+    [property: JsonPropertyName("visible")] bool Visible
 );
 
 /// <summary>Process running state.</summary>
 public sealed record ProcessStatus(
-    [property: JsonPropertyName("running")]   bool Running,
+    [property: JsonPropertyName("running")] bool Running,
     [property: JsonPropertyName("exit_code")] int? ExitCode
 );
 

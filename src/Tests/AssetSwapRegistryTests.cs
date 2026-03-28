@@ -11,6 +11,7 @@ namespace DINOForge.Tests
     /// Tests for <see cref="AssetSwapRegistry"/> covering registration, retrieval,
     /// thread safety, and state management.
     /// </summary>
+    [Collection(AssetSwapRegistryCollection.Name)]
     public class AssetSwapRegistryTests : IDisposable
     {
         public AssetSwapRegistryTests()

@@ -70,7 +70,7 @@ public sealed class GameScreenshotTool
         }
     }
 
-/// <summary>
+    /// <summary>
     /// Builds the response JSON after a successful capture.
     /// </summary>
     private static async Task<string> BuildResponseAsync(string path, bool returnBase64, CancellationToken ct)

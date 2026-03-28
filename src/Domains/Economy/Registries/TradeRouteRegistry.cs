@@ -21,7 +21,7 @@ namespace DINOForge.Domains.Economy.Registries
         /// <summary>
         /// All enabled trade routes.
         /// </summary>
-        public IReadOnlyList<TradeRouteDefinition> Enabled => 
+        public IReadOnlyList<TradeRouteDefinition> Enabled =>
             _routes.Values.Where(r => r.Enabled).ToList().AsReadOnly();
 
         /// <summary>

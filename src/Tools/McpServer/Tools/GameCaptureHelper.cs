@@ -1,5 +1,6 @@
 #nullable enable
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using ScreenCapture.NET;
 using ScreenRecorderLib;
 using BareCua;
@@ -44,7 +45,7 @@ internal static class GameCaptureHelper
             return outputPath;
 
         // Tertiary: DXGI Desktop Duplication (works for exclusive DX11 on physical displays)
-        if (await TryDxgiCaptureAsync(outputPath, ct).ConfigureAwait(false))
+        if (OperatingSystem.IsWindows() && await TryDxgiCaptureAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
         // Quaternary: Windows.Graphics.Capture via ScreenRecorderLib
@@ -153,6 +154,7 @@ internal static class GameCaptureHelper
         catch { return false; }
     }
 
+    [SupportedOSPlatform("windows")]
     private static async Task<bool> TryDxgiCaptureAsync(string outputPath, CancellationToken ct)
     {
         try
@@ -214,6 +216,7 @@ internal static class GameCaptureHelper
     /// <summary>
     /// Saves raw BGRA32 pixel data as a PNG file using System.Drawing.
     /// </summary>
+    [SupportedOSPlatform("windows")]
     private static void SaveBgra32AsPng(byte[] bgra32, int width, int height, string outputPath)
     {
         using var bmp = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);

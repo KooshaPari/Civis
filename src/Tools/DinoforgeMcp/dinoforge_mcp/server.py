@@ -60,6 +60,9 @@ PACK_COMPILER_PROJ = REPO_ROOT / "src/Tools/PackCompiler/DINOForge.Tools.PackCom
 ASSET_CLI_PROJ = REPO_ROOT / "src/Tools/Cli/DINOForge.Tools.Cli.csproj"
 PACKS_DIR = REPO_ROOT / "packs"
 
+# Dedicated DINOForge Virtual Display Driver (Nefarius/MTT VDD)
+_VDD_INDEX_FILE = REPO_ROOT / ".dinoforge_vdd_index"
+
 # ---------------------------------------------------------------------------
 # GameControlCli client (thin wrapper — avoids dotnet run cold-start overhead
 # by using --no-build; caller should run `dotnet build` once before first use)
@@ -98,6 +101,35 @@ def _run_pack_compiler(*args: str, timeout: int = 60) -> dict[str, Any]:
         return {"success": r.returncode == 0, "output": r.stdout.strip(), "error": r.stderr.strip()}
     except subprocess.TimeoutExpired:
         return {"success": False, "error": f"PackCompiler timed out after {timeout}s"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# VDD (Virtual Display Driver) Support
+# ---------------------------------------------------------------------------
+
+def _get_vdd_index() -> int | None:
+    """Read the dedicated DINOForge VDD monitor index from config file."""
+    try:
+        return int(_VDD_INDEX_FILE.read_text().strip())
+    except Exception:
+        return None
+
+
+async def _launch_on_vdd(exe_path: str, width: int = 1920, height: int = 1080) -> dict:
+    """Launch game on dedicated DINOForge Virtual Display Driver (not user's Parsec VDD)."""
+    idx = _get_vdd_index()
+    if idx is None:
+        return {"success": False, "error": "DINOForge VDD not configured — run scripts/setup-vdd.ps1"}
+    try:
+        await asyncio.to_thread(
+            subprocess.Popen,
+            [exe_path, "-monitor", str(idx), "-screen-width", str(width),
+             "-screen-height", str(height), "-popupwindow"],
+            cwd=str(Path(exe_path).parent)
+        )
+        return {"success": True, "message": f"Launched on VDD monitor {idx} ({width}x{height})"}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -288,12 +320,17 @@ async def game_launch(ctx: Context, hidden: bool = False) -> dict:
     alongside an existing session for testing).
 
     Args:
-        hidden: If True, launch on an isolated Win32 desktop (CreateDesktop).
+        hidden: If True, launch on the dedicated DINOForge VDD first, fallback to CreateDesktop.
     """
     if not GAME_EXE.exists():
         return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
     try:
         if hidden:
+            # Try VDD first (dedicated DINOForge virtual display, not user's Parsec VDD)
+            vdd_result = await _launch_on_vdd(str(GAME_EXE))
+            if vdd_result["success"]:
+                return vdd_result
+            # Fall back to CreateDesktop if VDD not configured
             return await _launch_hidden(str(GAME_EXE), "DINOForge_Agent")
         subprocess.Popen([str(GAME_EXE)], cwd=str(GAME_DIR))
         return {"success": True, "message": f"Launched: {GAME_EXE}. Use game_wait_world to wait for ECS world."}
@@ -322,6 +359,21 @@ async def game_launch_test(ctx: Context, hidden: bool = True) -> dict:
         return {"success": True, "message": f"Launched TEST instance: {test_exe}. Use game_wait_world to wait for ECS world."}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def game_launch_vdd(ctx: Context, width: int = 1920, height: int = 1080) -> dict:
+    """
+    Launch game on dedicated DINOForge virtual display (not user's personal VDD).
+    Requires .dinoforge_vdd_index to be configured in repo root.
+
+    Args:
+        width: Virtual display width (default 1920).
+        height: Virtual display height (default 1080).
+    """
+    if not GAME_EXE.exists():
+        return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
+    return await _launch_on_vdd(str(GAME_EXE), width, height)
 
 
 # ===========================================================================

@@ -9,6 +9,15 @@
 - **Language**: C# (.NET), YAML/JSON schemas, CLI tooling
 - **Mod Loader**: BepInEx + custom ECS plugin loader (`BepInEx/ecs_plugins/`)
 
+## .NET Version Policy (MANDATORY — DO NOT CHANGE WITHOUT CHECKING)
+
+**This repo uses .NET 11 preview.** Locally: `11.0.100-preview.2.26159.112`. This is intentional.
+- .NET 11 EXISTS — see https://dotnet.microsoft.com/download/dotnet/11.0
+- Tool/app projects target `net11.0`. Core SDK/domain libraries target `net8.0` (netstandard compat).
+- CI installs .NET 11 preview via `include-prerelease: true` in `setup-dotnet`.
+- **NEVER downgrade `net11.0` TFMs to net9.0/net8.0.** If a build fails on CI due to SDK version, fix the CI workflow to install .NET 11, not the other way around.
+- `global.json` pins `11.0.100-preview.2.26159.112` with `latestMajor` rollforward — do not change this.
+
 ## Agent Operational Rules (MANDATORY)
 
 ### Claude (Orchestrator) Constraints

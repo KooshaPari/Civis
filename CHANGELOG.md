@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **M7: Scenario domain plugin** — Complete scenario system with ScenarioDefinition, VictoryCondition, DefeatCondition, ScriptedEvent, ScenarioRegistry, ScenarioContentLoader, ScenarioRunner, ScenarioValidator, DifficultyScaler; supports win/loss condition evaluation, scripted event triggering, difficulty scaling (Easy/Normal/Hard/Nightmare); scenario-tutorial pack with 2 example scenarios; 8 model types, 5 subsystem types, full YAML deserialization pipeline
+- **Asset pipeline CLI commands** — Unified `assets` command group for v0.7.0+ workflows: `dotnet run -- assets {import,validate,optimize,generate,build}` with pack-path argument; all underlying services (AssetImportService, AssetOptimizationService, PrefabGenerationService, AddressablesService) fully implemented and operational; graceful degradation with clear error messages on missing asset_pipeline.yaml
+- **Test suite completion** — `DINOForge.CI.NoRuntime.sln` now includes all 1,222 unit tests from `DINOForge.Tests` project; total test count: 1,252 (1,222 unit + 21 integration + 9 PackCompiler), exceeding 400+ target by 3x
 - Lefthook v2.1.4 git hook manager replacing prek — no-stash policy (full working tree always visible to hooks)
 - `scripts/hooks/check-yaml.py`, `check-json.py`, `check-merge-conflicts.py` — portable Python hook scripts
 - `lefthook.yml` — parallel pre-commit (format + yaml + json + conflict checks) + serial pre-push (build + 1,222 unit + 18 integration tests)

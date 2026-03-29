@@ -1237,13 +1237,26 @@
         "contentHash": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA=="
       },
       "dinoforge.bridge.client": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "DINOForge.Bridge.Protocol": "[0.3.0, )",
+          "Newtonsoft.Json": "[13.*, )"
+        }
+      },
+      "dinoforge.bridge.protocol": {
+        "type": "Project",
+        "dependencies": {
+          "Newtonsoft.Json": "[13.*, )"
+        }
       },
       "dinoforge.domains.economy": {
         "type": "Project"
       },
       "dinoforge.domains.scenario": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "DINOForge.SDK": "[0.3.0, )"
+        }
       },
       "dinoforge.domains.ui": {
         "type": "Project",

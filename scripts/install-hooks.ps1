@@ -1,12 +1,20 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Install DINOForge git hooks via prek.
+    Install DINOForge git hooks via Lefthook.
 .DESCRIPTION
-    Installs prek (Rust-based pre-commit replacement) and wires up:
-    - pre-commit: trailing-whitespace, YAML/JSON check, dotnet format
-    - pre-push:   dotnet test (unit + integration, ~6s)
-    Run once after cloning.
+    Installs Lefthook (Go binary, no runtime deps) and wires up:
+    - pre-commit (parallel): dotnet format, check-yaml, check-json, check-merge-conflicts
+    - pre-push   (serial):   dotnet build → unit tests → integration tests
+
+    NO STASHING: Lefthook never stashes unstaged changes (no stage_fixed in config).
+    Hooks always run against the full working tree.
+
+    Bypass all hooks:       LEFTHOOK=0 git commit
+    Skip one command:       LEFTHOOK_EXCLUDE=format-check git commit
+    Run manually:           lefthook run pre-commit
+                            lefthook run pre-push
+
 .EXAMPLE
     pwsh -File scripts/install-hooks.ps1
 #>
@@ -15,35 +23,48 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
-Write-Host "Installing DINOForge git hooks via prek..." -ForegroundColor Cyan
+Write-Host "Installing DINOForge git hooks via Lefthook..." -ForegroundColor Cyan
 
-# ── Install prek if missing ────────────────────────────────────────────────────
-$prekAvailable = Get-Command prek -ErrorAction SilentlyContinue
-if (-not $prekAvailable) {
-    Write-Host "prek not found. Installing..." -ForegroundColor Yellow
-    irm https://github.com/j178/prek/releases/latest/download/prek-installer.ps1 | iex
-    # Refresh PATH
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
-    $prekAvailable = Get-Command prek -ErrorAction SilentlyContinue
-    if (-not $prekAvailable) {
-        Write-Host "prek install succeeded but binary not in PATH yet." -ForegroundColor Yellow
-        Write-Host "Restart your shell and re-run this script." -ForegroundColor Yellow
+# ── Install Lefthook if missing ────────────────────────────────────────────────
+$lhAvailable = Get-Command lefthook -ErrorAction SilentlyContinue
+if (-not $lhAvailable) {
+    Write-Host "Lefthook not found. Installing via winget..." -ForegroundColor Yellow
+    winget install evilmartians.lefthook --accept-source-agreements --accept-package-agreements
+    # Refresh PATH for current session
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
+                [System.Environment]::GetEnvironmentVariable("PATH","User")
+    $lhAvailable = Get-Command lefthook -ErrorAction SilentlyContinue
+    if (-not $lhAvailable) {
+        Write-Host "Lefthook installed but not in PATH yet — restart shell and re-run." -ForegroundColor Yellow
         exit 1
     }
 }
 
-Write-Host "prek $(prek --version)" -ForegroundColor Green
+Write-Host "lefthook $(lefthook version)" -ForegroundColor Green
+
+# ── Ensure pyyaml available for check-yaml hook ───────────────────────────────
+$pyYaml = python3 -c "import yaml; print('ok')" 2>&1
+if ($pyYaml -ne "ok") {
+    Write-Host "Installing pyyaml for check-yaml hook..." -ForegroundColor Yellow
+    pip install pyyaml -q
+}
 
 # ── Install hooks ──────────────────────────────────────────────────────────────
 Push-Location $RepoRoot
-prek install --hook-type pre-commit --overwrite
-prek install --hook-type pre-push --overwrite
+lefthook install
 Pop-Location
 
 Write-Host ""
 Write-Host "Done. Hooks active:" -ForegroundColor Cyan
-Write-Host "  pre-commit: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, yamllint, dotnet-format"
-Write-Host "  pre-push:   dotnet test (unit + integration)"
+Write-Host "  pre-commit (parallel):"
+Write-Host "    format-check         — dotnet format --verify-no-changes"
+Write-Host "    check-yaml           — validate all YAML files"
+Write-Host "    check-json           — validate all JSON files"
+Write-Host "    check-merge-conflicts— detect real conflict markers"
+Write-Host "  pre-push (serial):"
+Write-Host "    build                — dotnet build"
+Write-Host "    test-unit            — 1,222 unit tests"
+Write-Host "    test-integration     — 18 integration tests"
 Write-Host ""
-Write-Host "Verify:    prek run --all-files"
+Write-Host "Verify:    lefthook run pre-commit --all-files"
 Write-Host "Run tests: pwsh -File scripts/test-local.ps1"

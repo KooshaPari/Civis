@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            11.0.x
+            8.0.x
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
@@ -54,10 +54,10 @@ jobs:
 
       # Unit tests run in CI — they don't require Unity/Runtime (excluded from NoRuntime.sln)
       - name: Test (Unit)
-        run: dotnet test src/Tests/DINOForge.Tests.csproj --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test src/Tests/DINOForge.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Test (Integration)
-        run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@30eadd5010312f995f0d3b3cff7fe2984f69409e # v2.16.1

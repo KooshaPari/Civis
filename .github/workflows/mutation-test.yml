@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET 8.0
-        uses: actions/setup-dotnet@v4 
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             11.0.x
@@ -34,6 +34,45 @@ jobs:
 
       - name: Run mutation tests on SDK
         run: dotnet stryker --project src/SDK/DINOForge.SDK.csproj
+
+      - name: Export mutation score to docs
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, glob, os, datetime
+
+          # Find Stryker mutation report
+          reports = glob.glob("**/mutation-report.json", recursive=True) + glob.glob("**/StrykerOutput/**/mutation-report.json", recursive=True)
+
+          summary = {
+              "timestamp": datetime.datetime.utcnow().isoformat(),
+              "mutation_score": 0,
+              "killed": 0,
+              "survived": 0,
+              "timeout": 0,
+              "total": 0
+          }
+
+          for report in reports[:1]:  # Take first found
+              with open(report) as f:
+                  data = json.load(f)
+              # Stryker JSON format: files.*.mutants[].status
+              killed = survived = timeout = 0
+              for file_data in data.get("files", {}).values():
+                  for mutant in file_data.get("mutants", []):
+                      status = mutant.get("status", "")
+                      if status == "Killed": killed += 1
+                      elif status == "Survived": survived += 1
+                      elif status == "Timeout": timeout += 1
+              total = killed + survived + timeout
+              score = round(killed / total * 100, 1) if total else 0
+              summary.update({"mutation_score": score, "killed": killed, "survived": survived, "timeout": timeout, "total": total})
+
+          os.makedirs("docs/mutation-score", exist_ok=True)
+          with open("docs/mutation-score/latest.json", "w") as f:
+              json.dump(summary, f, indent=2)
+          print(f"Mutation score: {summary['mutation_score']}% ({summary['killed']}/{summary['total']} killed)")
+          PYEOF
 
       - name: Upload mutation test results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0

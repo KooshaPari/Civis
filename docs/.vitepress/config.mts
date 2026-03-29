@@ -134,6 +134,13 @@ export default withMermaid(
           ],
         },
         {
+          text: 'QA & Observability',
+          items: [
+            { text: 'Performance Benchmarks', link: '/benchmarks/' },
+            { text: 'Mutation Score', link: '/mutation-score/' },
+          ],
+        },
+        {
           text: 'Project',
           items: [
             { text: 'Roadmap', link: '/roadmap/' },

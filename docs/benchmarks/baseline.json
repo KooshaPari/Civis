@@ -1,0 +1,6 @@
+{
+  "DINOForge.Tests.Benchmarks.ContentLoaderBenchmarks.LoadSimplePack": 50000000,
+  "DINOForge.Tests.Benchmarks.ContentLoaderBenchmarks.LoadComplexPack": 150000000,
+  "DINOForge.Tests.Benchmarks.RegistryBenchmarks.QueryUnits": 5000000,
+  "DINOForge.Tests.Benchmarks.RegistryBenchmarks.RegisterBulkUnits": 10000000
+}

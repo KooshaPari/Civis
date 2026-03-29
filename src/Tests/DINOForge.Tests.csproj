@@ -60,6 +60,10 @@
     <None Remove="CompanionTests\**" />
     <Content Remove="CompanionTests\**" />
     <EmbeddedResource Remove="CompanionTests\**" />
+    <Compile Remove="Benchmarks\**" />
+    <None Remove="Benchmarks\**" />
+    <Content Remove="Benchmarks\**" />
+    <EmbeddedResource Remove="Benchmarks\**" />
   </ItemGroup>
 
   <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->

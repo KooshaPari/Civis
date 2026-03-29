@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CI test failure: test projects targeted `net11.0` (non-existent) instead of `net8.0`, CI workflow tried to setup .NET 11.0.x
+- CI test step used `--no-build` causing Debug/Release config mismatch; now uses `--configuration Release` matching build step
 - F9 debug overlay and F10 mod menu fully working via ECS callbacks — RuntimeDriver wired before Initialize()
 - DFCanvas callbacks ordered correctly to fix `_uguiReady` race condition
 - Harmony TMP_Text label patch for native "Mods" button injection

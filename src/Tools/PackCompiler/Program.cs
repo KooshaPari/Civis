@@ -53,45 +53,12 @@ namespace DINOForge.Tools.PackCompiler
                 BuildPack(packPath, outputDir, format);
             });
 
-            // Assets command group
-            var assetsCommand = new Command("assets") { Description = "Inspect and validate Unity asset bundles" };
-
-            var gameDirArg = new Argument<string>("game-dir") { Description = "Game installation directory" };
-            var assetsListCommand = new Command("list") { Description = "List all game asset bundles" };
-            assetsListCommand.Arguments.Add(gameDirArg);
-            assetsListCommand.SetAction(parseResult =>
-            {
-                string gameDir = parseResult.GetValue(gameDirArg)!;
-                AssetsListBundles(gameDir);
-            });
-
-            var bundlePathArg = new Argument<string>("bundle-path") { Description = "Path to a .bundle file" };
-            var assetsInspectCommand = new Command("inspect") { Description = "List assets in a bundle" };
-            assetsInspectCommand.Arguments.Add(bundlePathArg);
-            assetsInspectCommand.SetAction(parseResult =>
-            {
-                string bundlePath = parseResult.GetValue(bundlePathArg)!;
-                AssetsInspect(bundlePath);
-            });
-
-            var modBundlePathArg = new Argument<string>("mod-bundle-path") { Description = "Path to a mod .bundle file" };
-            var assetsValidateCommand = new Command("validate") { Description = "Validate a mod asset bundle" };
-            assetsValidateCommand.Arguments.Add(modBundlePathArg);
-            assetsValidateCommand.SetAction(parseResult =>
-            {
-                string modBundlePath = parseResult.GetValue(modBundlePathArg)!;
-                AssetsValidate(modBundlePath);
-            });
-
-            assetsCommand.Subcommands.Add(assetsListCommand);
-            assetsCommand.Subcommands.Add(assetsInspectCommand);
-            assetsCommand.Subcommands.Add(assetsValidateCommand);
-
-            // Asset pipeline commands (v0.7.0+)
-            var assetPipelineCommand = new Command("pipeline") { Description = "Manage asset import/optimization pipeline" };
+            // Assets command group (v0.7.0+: unified asset pipeline)
+            var assetsCommand = new Command("assets") { Description = "Asset pipeline management: import, validate, optimize, generate" };
 
             var packPathArgAssets = new Argument<string>("pack-path") { Description = "Path to the pack directory with asset_pipeline.yaml" };
 
+            // Asset pipeline subcommands
             var assetImportCommand = new Command("import") { Description = "Import 3D models (GLB/FBX) from asset_pipeline.yaml" };
             assetImportCommand.Arguments.Add(packPathArgAssets);
             assetImportCommand.SetAction(parseResult =>
@@ -100,9 +67,9 @@ namespace DINOForge.Tools.PackCompiler
                 AssetImport(packPath);
             });
 
-            var assetValidateCommand2 = new Command("validate") { Description = "Validate imported assets against config" };
-            assetValidateCommand2.Arguments.Add(packPathArgAssets);
-            assetValidateCommand2.SetAction(parseResult =>
+            var assetValidateCommand = new Command("validate") { Description = "Validate imported assets against config" };
+            assetValidateCommand.Arguments.Add(packPathArgAssets);
+            assetValidateCommand.SetAction(parseResult =>
             {
                 string packPath = parseResult.GetValue(packPathArgAssets)!;
                 AssetValidate(packPath);
@@ -132,11 +99,44 @@ namespace DINOForge.Tools.PackCompiler
                 AssetBuild(packPath);
             });
 
-            assetPipelineCommand.Subcommands.Add(assetImportCommand);
-            assetPipelineCommand.Subcommands.Add(assetValidateCommand2);
-            assetPipelineCommand.Subcommands.Add(assetOptimizeCommand);
-            assetPipelineCommand.Subcommands.Add(assetGenerateCommand);
-            assetPipelineCommand.Subcommands.Add(assetBuildCommand);
+            assetsCommand.Subcommands.Add(assetImportCommand);
+            assetsCommand.Subcommands.Add(assetValidateCommand);
+            assetsCommand.Subcommands.Add(assetOptimizeCommand);
+            assetsCommand.Subcommands.Add(assetGenerateCommand);
+            assetsCommand.Subcommands.Add(assetBuildCommand);
+
+            // Bundle inspection commands (kept for backwards compatibility)
+            var bundlesCommand = new Command("bundles") { Description = "Inspect and validate Unity asset bundles" };
+
+            var gameDirArg = new Argument<string>("game-dir") { Description = "Game installation directory" };
+            var bundlesListCommand = new Command("list") { Description = "List all game asset bundles" };
+            bundlesListCommand.Arguments.Add(gameDirArg);
+            bundlesListCommand.SetAction(parseResult =>
+            {
+                string gameDir = parseResult.GetValue(gameDirArg)!;
+                AssetsListBundles(gameDir);
+            });
+
+            var bundlePathArg = new Argument<string>("bundle-path") { Description = "Path to a .bundle file" };
+            var bundlesInspectCommand = new Command("inspect") { Description = "List assets in a bundle" };
+            bundlesInspectCommand.Arguments.Add(bundlePathArg);
+            bundlesInspectCommand.SetAction(parseResult =>
+            {
+                string bundlePath = parseResult.GetValue(bundlePathArg)!;
+                AssetsInspect(bundlePath);
+            });
+
+            var bundlesValidateCommand = new Command("validate") { Description = "Validate a mod asset bundle" };
+            bundlesValidateCommand.Arguments.Add(bundlePathArg);
+            bundlesValidateCommand.SetAction(parseResult =>
+            {
+                string bundlePath = parseResult.GetValue(bundlePathArg)!;
+                AssetsValidate(bundlePath);
+            });
+
+            bundlesCommand.Subcommands.Add(bundlesListCommand);
+            bundlesCommand.Subcommands.Add(bundlesInspectCommand);
+            bundlesCommand.Subcommands.Add(bundlesValidateCommand);
 
             // Thunderstore command
             var thunderstorePackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
@@ -203,7 +203,7 @@ namespace DINOForge.Tools.PackCompiler
             rootCommand.Subcommands.Add(validateTcCommand);
             rootCommand.Subcommands.Add(thunderstoreCommand);
             rootCommand.Subcommands.Add(assetsCommand);
-            rootCommand.Subcommands.Add(assetPipelineCommand);
+            rootCommand.Subcommands.Add(bundlesCommand);
             rootCommand.Subcommands.Add(packCommand);
 
             Console.WriteLine("[DEBUG] About to call Parse...");

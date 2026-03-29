@@ -32,7 +32,7 @@ jobs:
 
       # Install all required SDKs: net8.0 (SDK/Domains/Tests) + net11.0 (Tools/CLI)
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -482,7 +482,7 @@ jobs:
       # Publish GitHub Release
       # ---------------------------------------------------------------
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           tag_name: ${{ github.ref_name }}
           name: DINOForge ${{ github.ref_name }}
@@ -505,7 +505,7 @@ jobs:
       # Generate SLSA L2 build provenance attestations
       # ---------------------------------------------------------------
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
             staging/DINOForge-v${{ steps.version.outputs.VERSION }}-Installer.exe

@@ -14,7 +14,10 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: |
+            8.0.x
+            11.0.x
+          include-prerelease: true
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln
@@ -47,7 +50,10 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: |
+            8.0.x
+            11.0.x
+          include-prerelease: true
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln

@@ -29,6 +29,7 @@ jobs:
         with:
           dotnet-version: |
             11.0.x
+          include-prerelease: true
 
       - name: Install Versionize
         run: dotnet tool install --global Versionize

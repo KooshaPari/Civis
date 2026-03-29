@@ -20,6 +20,7 @@ jobs:
         with:
           dotnet-version: |
             11.0.x
+          include-prerelease: true
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln

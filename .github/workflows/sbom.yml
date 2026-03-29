@@ -24,6 +24,7 @@ jobs:
         with:
           dotnet-version: |
             11.0.x
+          include-prerelease: true
 
       - name: Install CycloneDX tool
         run: dotnet tool install --global CycloneDX

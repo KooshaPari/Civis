@@ -92,7 +92,7 @@ jobs:
 
       - name: Deploy to GitHub Pages
         if: steps.check-vitepress.outputs.has-package-json == 'true'
-        uses: peaceiris/actions-gh-pages@373f7f263a90a53b41b72ecf88b7b7d12e0a0b6c # v4.0.0
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/.vitepress/dist

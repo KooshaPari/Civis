@@ -99,6 +99,11 @@ scripts/game/desktop/
 # Test coverage output
 coverage/
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+
 # Session audit docs (auto-generated)
 docs/sessions/test-suite-*.md
 docs/sessions/virtual_display*.md

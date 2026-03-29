@@ -1,6 +1,6 @@
 # DINOForge — QA Matrix
 
-> **Last updated**: 2026-03-20
+> **Last updated**: 2026-03-28
 > **Status legend**: ✅ PASS · ❌ FAIL · ⚠️ PARTIAL · 🔄 IN_PROGRESS · 🆕 new
 > **v0.11.0**: .NET 11 migration, Desktop Companion, Asset Swap timing fixes, CLI JSON output
 
@@ -35,6 +35,17 @@
 | `benchmarks.yml` | on demand | P1 performance |
 | `ui-automation.yml` | manual + weekly | P1 companion UI automation (FlaUI) |
 | `game-launch.yml` | manual + weekly (self-hosted) | P2 game launch + overlay automation |
+
+---
+
+## Local QA Infrastructure
+
+| ID | Description | Status | Notes |
+|---|---|---|---|
+| QA-001 | pre-commit hooks (Lefthook) | ✅ PASS | format-check, check-yaml, check-json, check-merge-conflicts |
+| QA-002 | pre-push gate (Lefthook) | ✅ PASS | build + unit + integration |
+| QA-003 | CI integration tests | ✅ PASS | ci.yml runs DINOForge.Tests.Integration on every PR |
+| QA-004 | Local test runner | ✅ PASS | scripts/test-local.ps1 |
 
 ---
 
@@ -123,8 +134,8 @@
 |----|----------|------|------|---------------|--------|
 | RT-001 | BepInEx plugin loads without exception | unit | `RuntimeBootstrapTests.cs` | Plugin `Awake()` completes, no unhandled | ✅ |
 | RT-002 | HideAndDontSave root survives DINO two-boot cycle | integration | `RuntimePersistenceTests.cs` | Root GameObject exists after 2 game restarts | ⚠️ PARTIAL |
-| RT-003 | F9 keypress toggles debug overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → overlay toggle | ❌ FAIL |
-| RT-004 | F10 keypress toggles mod menu overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → menu toggle | ❌ FAIL |
+| RT-003 | F9 keypress toggles debug overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → overlay toggle | ✅ PASS |
+| RT-004 | F10 keypress toggles mod menu overlay | integration | `KeyInputSystemTests.cs` | Win32 watcher hook fires; message → `KeyInputSystem.OnInput` → menu toggle | ✅ PASS |
 | RT-005 | RuntimeDriver.Update survives ≥ 600 frames | integration | `RuntimeDriverTests.cs` | `OnDestroy` not called within 600 frames; root persists | ❌ FAIL |
 
 ### P1 — Asset Swap System (v0.11.0)
@@ -177,7 +188,7 @@
 
 | ID | Scenario | Type | File | Pass Criteria | Status |
 |----|----------|------|------|---------------|--------|
-| NATIVE-001 | "Mods" button injected between Options and Credits | integration | `NativeMenuInjectionTests.cs` | Button exists in main menu, clickable, AutomationId="ModsButton" | ❌ FAIL |
+| NATIVE-001 | "Mods" button injected between Options and Credits | integration | `NativeMenuInjectionTests.cs` | Button exists in main menu, clickable, AutomationId="ModsButton" | ✅ PASS |
 | NATIVE-002 | "Mods" button click opens overlay (F10 equivalent) | integration | `NativeMenuInjectionTests.cs` | Button click sets `ModMenuOverlay.IsVisible=true`; equals F10 behavior | ❌ FAIL |
 | NATIVE-003 | Menu injection survives scene reload + RuntimeDriver persistence | integration | `NativeMenuInjectionTests.cs` | "Mods" button still present after 2+ scene changes; RuntimeDriver.OnDestroy not fired | ❌ FAIL |
 

@@ -107,3 +107,19 @@ __pycache__/
 # Session audit docs (auto-generated)
 docs/sessions/test-suite-*.md
 docs/sessions/virtual_display*.md
+
+# Remotion render logs
+scripts/video/render_*.log
+
+# Build diagnostics
+*.diag.log
+dotnet-build*.log
+solution-build*.log
+cli-build*.log
+cli-msbuild.log
+cli-compile.log
+solution-restore.log
+ui_test_run.log
+scripts/asset_download_web.log
+installer-gui.pp.xml
+src/Runtime/DINOForge.Runtime.pp.xml

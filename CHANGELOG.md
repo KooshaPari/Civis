@@ -9,15 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `scripts/test-local.ps1` — unified local test runner (unit + integration + optional E2E)
-- `scripts/install-hooks.ps1` — one-command git hook installer (pre-commit + pre-push)
-- Pre-push hook: runs integration tests before every push
-- CI (`ci.yml`): integration tests now run on every PR (dorny/tests-reporter for TRX results)
+- Lefthook v2.1.4 git hook manager replacing prek — no-stash policy (full working tree always visible to hooks)
+- `scripts/hooks/check-yaml.py`, `check-json.py`, `check-merge-conflicts.py` — portable Python hook scripts
+- `lefthook.yml` — parallel pre-commit (format + yaml + json + conflict checks) + serial pre-push (build + 1,222 unit + 18 integration tests)
+- `scripts/install-hooks.ps1` — one-command hook setup for contributors (auto-installs Lefthook via winget)
+- `scripts/test-local.ps1` — unified local test runner with `-Fast`, `-E2E`, `-Filter` flags
+- CI `ci.yml`: integration test step now runs on every PR with TRX result publishing (dorny/tests-reporter)
 
 ### Fixed
 
-- `.pre-commit-config.yaml`: `dotnet-format` hook now targets `DINOForge.CI.NoRuntime.sln` (was `DINOForge.CI.sln`)
-- `scripts/test-e2e.ps1`: fixed `$REPO_ROOT` path computation (`Split-Path -Parent $PSScriptRoot`)
+- F9 debug overlay and F10 mod menu fully working via ECS callbacks — RuntimeDriver wired before Initialize()
+- DFCanvas callbacks ordered correctly to fix `_uguiReady` race condition
+- Harmony TMP_Text label patch for native "Mods" button injection
+- `.pre-commit-config.yaml` `dotnet-format` hook pointed at wrong solution (`DINOForge.CI.sln` → `DINOForge.CI.NoRuntime.sln`)
+- `scripts/test-e2e.ps1` `$REPO_ROOT` path computation was one level too high
+- `packs/warfare-starwars/stats/starwars_buffs.yaml` duplicate top-level `overrides` key merged into single list
 
 ---
 

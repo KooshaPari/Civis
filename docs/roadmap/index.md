@@ -130,23 +130,28 @@ PowerShell/Bash installer, Universe Bible system, pack generator.
 - Universe loader for parsing Bible documents
 - Pack generator for scaffolding total conversion packs from a Universe Bible
 
+**Completed 2026-03-15**: Universe Bible system working, installers ready.
+
 ---
 
-### M8 — Runtime Integration :construction:
+### M8 — Runtime Integration & Video Proof :white_check_mark:
 
-**Status**: In Progress (Active Regression Fix)
+**Status**: Complete
 
-ModPlatform orchestrator wiring SDK to Bridge to UI to HMR.
+ModPlatform orchestrator wiring SDK to Bridge to UI to HMR + autonomous video proof pipeline.
 
 - `ModPlatform` class owns entire mod platform lifecycle (ADR-009)
 - Lifecycle phases: Initialize -> OnWorldReady -> LoadPacks -> StartHotReload -> Shutdown
 - Plugin.cs stays thin (bootstrap only, forwards Unity callbacks)
 - ECS bridge with component mapping, stat modifiers, entity queries, override applicator
-- **Critical Fix (2026-03-20)**: F9/F10 overlay regression — root destroyed at frame ~6s due to Harmony patch interference with two-boot cycle
-  - Root cause: LazyPatch + DeltaTimeResurrectionPatch destroying root GameObject despite HideAndDontSave flag
-  - Solution: Remove all Harmony patches, restore pure HideAndDontSave + DontDestroyOnLoad mechanism (df3b55e approach)
-  - Impact: Overlay now persists across scene loads; ModPlatform lifecycle unaffected
-- Remaining work: end-to-end in-game validation with live DINO instance; confirm F9/F10 stability
+- F9/F10 overlay regression fixed (2026-03-20): Removed Harmony patches, restored HideAndDontSave + DontDestroyOnLoad
+- **prove-features v2 pipeline (2026-03-27)**: Remotion video rendering + Edge-TTS voiceover + OmniParser VLM validation
+  - 4 MP4 proof videos rendered with captions and transitions
+  - 5 MP3 audio tracks with neural voice (Microsoft Aria)
+  - OmniParser-based UI element detection for automatic screenshot validation
+  - Evidence bundle: `docs/proof-of-features/20260327_213851/`
+
+**Completed 2026-03-27**: End-to-end validation verified, F9/F10 working, video proof pipeline mature.
 
 ---
 
@@ -195,15 +200,16 @@ Fill test gaps and resolve build-excluded incomplete code items.
 
 ---
 
-## Current Stats (v0.11.0)
+## Current Stats (v0.12.0+)
 
-- **18 projects** in the solution (added Desktop Companion prep)
-- **80+ tests passing** (unit + integration, target 130+)
+- **18 projects** in the solution
+- **100+ tests passing** (unit + integration, target 130+)
 - **17 schemas** covering all content types
-- **6 example packs** demonstrating all mod categories (Modern, Star Wars, Guerrilla, Economy, Scenario, Balance)
-- **4 domain plugins**: Warfare (done), Economy, Scenario, UI
-- **13 MCP tools** for Claude Code integration
-- **11 CLI commands** via `dinoforge` CLI
+- **6 example packs** complete and playable (Modern, Star Wars, Guerrilla, Economy, Scenario, Balance)
+- **4 domain plugins**: Warfare (✅ DONE), Economy, Scenario, UI
+- **21 MCP tools** for Claude Code game automation
+- **8 CLI commands** via `dinoforge` CLI + custom `.claude/commands/`
+- **Autonomous video proof** via Remotion + TTS + OmniParser
 
 ---
 

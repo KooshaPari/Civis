@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 # ─── Constants ───────────────────────────────────────────────────────────
 
 $RepoRoot = "C:\Users\koosh\Dino"
-$InstallerLibProj = "$RepoRoot\src\Tools\Installer\InstallerLib\DINOForge.Tools.InstallerLib.csproj"
+$InstallerLibProj = "$RepoRoot\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj"
 $InstallerGuiProj = "$RepoRoot\src\Tools\Installer\GUI\DINOForge.Installer.csproj"
 $InstallerScript = "$RepoRoot\src\Tools\Installer\Install-DINOForge.ps1"
 $TestsProj = "$RepoRoot\src\Tests\DINOForge.Tests.csproj"
@@ -128,9 +128,7 @@ try {
     # Extract param block using regex
     $paramMatch = $scriptContent -match '\[CmdletBinding\(\)\]\s*param\((.*?)\)'
     if (-not $paramMatch) {
-        Write-Warn "Could not extract param block via regex; checking file manually"
-        $paramSection = $scriptContent | Select-String -Pattern 'param\(' -A 20 | ForEach-Object { $_.Line } | Select-Object -First 20
-        Write-Host "Param section (first 20 lines):`n$($paramSection -join "`n")"
+        Write-Warn "Could not extract full param block; using regex on content"
     }
 
     # Manual parsing: look for [string]$ParameterName and [switch]$ParameterName
@@ -160,22 +158,11 @@ Write-Step "Validating PowerShell script syntax..."
 try {
     # Test-Path doesn't check syntax; use PSParser or Test-ScriptFileValidity if available
     # For PS 5.1, we'll use a try-dot-source with ErrorAction Stop in a subprocess
-    $syntaxCheckCode = @"
-`$ErrorActionPreference = 'Stop'
-try {
-    . '$InstallerScript' -GamePath 'C:\test' -ErrorAction Stop
-} catch [System.Management.Automation.ParseException] {
-    Write-Error "Syntax error: `$_"
-    exit 1
-} catch {
-    # Other errors are OK; we're just checking syntax
-    exit 0
-}
-"@
-
-    $result = powershell -ExecutionPolicy Bypass -NoProfile -Command $syntaxCheckCode 2>&1
-    if ($LASTEXITCODE -eq 1) {
-        throw "Script syntax validation failed: $result"
+    # Use PS parser (safe, no execution)
+    $parseErrors = $null
+    $null = [System.Management.Automation.Language.Parser]::ParseFile($InstallerScript, [ref]$null, [ref]$parseErrors)
+    if ($parseErrors -and $parseErrors.Count -gt 0) {
+        throw "Parse errors: $(($parseErrors | ForEach-Object { $_.Message }) -join '; ')"
     }
 
     Write-Success "Script syntax: OK (dot-source test passed)"
@@ -252,7 +239,6 @@ try {
 
     $testOutput = dotnet test $TestsProj `
         --filter "FullyQualifiedName~Installer" `
-        --no-build `
         --verbosity normal 2>&1
 
     if ($LASTEXITCODE -ne 0) {
@@ -261,7 +247,7 @@ try {
 
     # Parse test output for summary
     $testSummary = $testOutput | Select-String -Pattern "(\d+) passed|(\d+) failed|(\d+) skipped"
-    $Report.test_results.output = @($testOutput)
+    # Note: don't store full output in report to avoid OOM on ConvertTo-Json
 
     if ($testSummary) {
         Write-Success "Test summary: $testSummary"
@@ -320,12 +306,20 @@ try {
         $Report.overall_status = "failed"
     }
 
-    # Convert to JSON with proper formatting
-    $jsonReport = $Report | ConvertTo-Json -Depth 10
+    # Build a safe, serializable report (convert exception objects to strings first)
+    $safeReport = @{
+        timestamp      = $Report.timestamp
+        overall_status = $Report.overall_status
+        errors         = @($Report.errors | ForEach-Object { "$_" })
+        steps          = @($Report.steps | ForEach-Object {
+            @{ name = $_.name; status = $_.status; time = $_.time }
+        })
+    }
+    $jsonReport = $safeReport | ConvertTo-Json -Depth 4
     $jsonReport | Set-Content $reportFile -Encoding UTF8
 
     Write-Success "Report written to: $reportFile"
-    Write-Host ("`nReport Summary:`n" + ($Report | ConvertTo-Json -Depth 3))
+    Write-Host "`nReport Summary: overall=$($Report.overall_status), steps=$($Report.steps.Count), errors=$($Report.errors.Count)"
 
     Add-ReportStep "report_generation" "passed" @{
         file = $reportFile

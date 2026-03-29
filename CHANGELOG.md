@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-03-28
+
 ### Added
 
 - **SDK NuGet publish pipeline** — `release.yml` now packs and publishes SDK and Bridge.Protocol packages to nuget.org on tag push (v*.*.* tags auto-publish stable, v*.*.*-rc/beta/alpha tags marked pre-release); DINOForge.SDK and DINOForge.Bridge.Protocol metadata complete with symbols (.snupkg), documentation, and licensing; NUGET_API_KEY secret required in GitHub repo settings (documented in RELEASING.md); NuGet badges added to README.md
@@ -1075,7 +1077,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Comparison & Release Links
 
-[Unreleased]: https://github.com/KooshaPari/Dino/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/KooshaPari/Dino/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/KooshaPari/Dino/compare/v0.12.0...v0.14.0
+[0.12.0]: https://github.com/KooshaPari/Dino/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/KooshaPari/Dino/compare/v0.5.0...v0.11.0
 [0.5.0]: https://github.com/KooshaPari/Dino/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/KooshaPari/Dino/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/KooshaPari/Dino/compare/v0.2.0...v0.3.0

@@ -36,6 +36,7 @@
     <Compile Remove="UI\ModSettingsPanel.cs" />
     <Compile Remove="UI\NativeMenuInjector.cs" />
     <Compile Remove="UI\NativeUiHelper.cs" />
+    <Compile Remove="UI\UiGridHarmonyPatch.cs" />
     <Compile Remove="UI\UiSelectorEngine.cs" />
     <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
     <Compile Remove="UI\UiBuilder.cs" />
@@ -197,6 +198,7 @@
     <Compile Remove="UI\ModSettingsPanel.cs" />
     <Compile Remove="UI\NativeMenuInjector.cs" />
     <Compile Remove="UI\NativeUiHelper.cs" />
+    <Compile Remove="UI\UiGridHarmonyPatch.cs" />
     <Compile Remove="UI\UiSelectorEngine.cs" />
     <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
     <Compile Remove="UI\DinoForgeStyle.cs" />

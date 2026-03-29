@@ -77,15 +77,18 @@ namespace DINOForge.Runtime
                 Log.LogWarning($"Version detection failed: {ex.Message}");
             }
 
-            // Harmony (available but unused per ADR-005)
+            // Harmony — apply patches from this assembly
+            // ModsButtonTextPatch (UI/UiGridHarmonyPatch.cs) intercepts Text/TMP_Text setters
+            // to prevent DINO's UiGrid from overwriting our repurposed Mods button label.
             try
             {
                 _harmony = new Harmony(PluginInfo.GUID);
-                Log.LogInfo("Harmony initialized (no patches applied).");
+                _harmony.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
+                Log.LogInfo("Harmony initialized and patches applied.");
             }
             catch (Exception ex)
             {
-                Log.LogError($"Harmony init failed: {ex.Message}");
+                Log.LogError($"Harmony init/patch failed: {ex.Message}");
             }
 
             // Create a dedicated persistent GameObject that won't be destroyed.

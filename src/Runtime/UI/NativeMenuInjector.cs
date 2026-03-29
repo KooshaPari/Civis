@@ -37,6 +37,13 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         public static System.Action? OnScanNeeded;
 
+        /// <summary>
+        /// The <see cref="UnityEngine.GameObject.name"/> of the repurposed "Mods" button.
+        /// Set when <see cref="InjectButton"/> repurposes an existing Options button.
+        /// Read by <see cref="UI.ModsButtonTextPatch"/> to intercept UiGrid text overwrite.
+        /// </summary>
+        public static string? RepurposedModsButtonGoName { get; private set; }
+
         // ------------------------------------------------------------------ //
         // Well-known canvas names to check (case-insensitive prefix/substring)
         // ------------------------------------------------------------------ //
@@ -133,6 +140,7 @@ namespace DINOForge.Runtime.UI
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] ⚠ INJECTED BUTTON WAS DESTROYED! Resetting injection flag at {System.DateTime.UtcNow:HH:mm:ss.fff} UTC");
                 _injected = false;
+                RepurposedModsButtonGoName = null;
             }
 
             _rescanTimer += Time.deltaTime;
@@ -202,6 +210,7 @@ namespace DINOForge.Runtime.UI
             LogInfo($"[NativeMenuInjector] Scene changed: {previous.name} → {next.name}. Re-scanning for menu.");
             _injected = false;
             _injectedButton = null;
+            RepurposedModsButtonGoName = null;
             _rescanTimer = 0f;
             TryInjectMenuButton();
         }
@@ -425,8 +434,10 @@ namespace DINOForge.Runtime.UI
                     modsButton = _allOptionsButtons[_allOptionsButtons.Count - 1];
                     LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1: Repurposing last 'Options' button '{modsButton.name}' as 'Mods'...");
 
-                    // Rename GameObject for consistency
+                    // Rename GameObject for consistency and register with Harmony patch
                     modsButton.gameObject.name = "DINOForge_ModsButton_Repurposed";
+                    RepurposedModsButtonGoName = modsButton.gameObject.name;
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Registered RepurposedModsButtonGoName='{RepurposedModsButtonGoName}' for Harmony text-intercept.");
 
                     // Change all text to "Mods"
                     foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))

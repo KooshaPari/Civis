@@ -33,6 +33,16 @@ if (-not $lhAvailable) {
     # Refresh PATH for current session
     $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
                 [System.Environment]::GetEnvironmentVariable("PATH","User")
+    # Winget installs to a long path that git's sh.exe can't find.
+    # Copy binary to ~/.local/bin which is already in PATH (prek installs there too).
+    $localBin = "$env:USERPROFILE\.local\bin"
+    New-Item -ItemType Directory -Force -Path $localBin | Out-Null
+    $wingetLh = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\evilmartians.lefthook*\lefthook.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($wingetLh) {
+        Copy-Item $wingetLh.FullName "$localBin\lefthook.exe" -Force
+        Write-Host "Copied lefthook to $localBin\lefthook.exe" -ForegroundColor Green
+    }
+    $env:PATH = "$localBin;" + $env:PATH
     $lhAvailable = Get-Command lefthook -ErrorAction SilentlyContinue
     if (-not $lhAvailable) {
         Write-Host "Lefthook installed but not in PATH yet — restart shell and re-run." -ForegroundColor Yellow

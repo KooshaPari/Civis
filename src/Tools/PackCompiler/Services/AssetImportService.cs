@@ -37,31 +37,169 @@ namespace DINOForge.Tools.PackCompiler.Services
                     throw new InvalidOperationException($"Failed to import model or no meshes found: {filePath}");
                 }
 
-                // For now, combine all meshes into single asset
-                // TODO: Handle multi-mesh models with proper separation
-                var mesh = scene.Meshes[0];
-                var meshData = ExtractMeshData(mesh);
+                // Combine all meshes into single asset with proper vertex/index aggregation
+                var combinedMeshData = CombineMultipleMeshes(scene.Meshes);
                 var materials = ExtractMaterials(scene);
-                var skeleton = ExtractSkeleton(mesh);
+
+                // Extract skeleton from first rigged mesh if available
+                SkeletonData? skeleton = null;
+                foreach (var mesh in scene.Meshes)
+                {
+                    if (mesh.HasBones)
+                    {
+                        skeleton = ExtractSkeleton(mesh);
+                        break;
+                    }
+                }
+
+                // Calculate total polygon count across all meshes
+                int totalPolyCount = scene.Meshes.Sum(m => m.VertexCount);
+                bool isRigged = scene.Meshes.Any(m => m.HasBones);
 
                 return new ImportedAsset
                 {
                     AssetId = assetId,
                     SourcePath = filePath,
-                    Mesh = meshData,
+                    Mesh = combinedMeshData,
                     Materials = materials,
                     Skeleton = skeleton,
                     Metadata = new AssetMetadata
                     {
-                        PolyCount = mesh.VertexCount,
-                        IsRigged = mesh.HasBones,
+                        PolyCount = totalPolyCount,
+                        IsRigged = isRigged,
                         HasAnimations = scene.AnimationCount > 0,
                         MaterialCount = scene.MaterialCount,
                         TextureCount = ExtractTextureCount(scene),
-                        Bounds = CalculateBounds(meshData)
+                        Bounds = CalculateBounds(combinedMeshData),
+                        Notes = new List<string>
+                        {
+                            scene.MeshCount > 1 ? $"Combined {scene.MeshCount} meshes into single asset" : "Single mesh model"
+                        }
                     }
                 };
             });
+        }
+
+        /// <summary>
+        /// Combines multiple meshes into a single MeshData by aggregating vertices and indices.
+        /// Handles vertex offset remapping for indices and combines all mesh attributes.
+        /// </summary>
+        private MeshData CombineMultipleMeshes(IList<Mesh> meshes)
+        {
+            if (meshes.Count == 0)
+            {
+                throw new InvalidOperationException("Cannot combine zero meshes");
+            }
+
+            // If only one mesh, extract it directly
+            if (meshes.Count == 1)
+            {
+                return ExtractMeshData(meshes[0]);
+            }
+
+            // Calculate total vertex and face counts
+            int totalVertexCount = meshes.Sum(m => m.VertexCount);
+            int totalFaceCount = meshes.Sum(m => m.FaceCount);
+
+            // Combined arrays
+            var combinedVertices = new float[totalVertexCount * 3];
+            var combinedIndices = new uint[totalFaceCount * 3];
+            var combinedNormals = meshes.All(m => m.HasNormals) ? new float[totalVertexCount * 3] : null;
+            var combinedUVs = meshes.All(m => m.HasTextureCoords(0)) ? new float[totalVertexCount * 2] : null;
+            var combinedBoneWeights = meshes.Any(m => m.HasBones) ? new BoneWeight[totalVertexCount] : null;
+
+            // Initialize bone weight indices
+            for (int i = 0; i < totalVertexCount; i++)
+            {
+                if (combinedBoneWeights != null)
+                {
+                    combinedBoneWeights[i] = new BoneWeight
+                    {
+                        Indices = new int[4],
+                        Weights = new float[4]
+                    };
+                }
+            }
+
+            int vertexOffset = 0;
+            int faceOffset = 0;
+
+            // Merge each mesh's data
+            foreach (var mesh in meshes)
+            {
+                // Copy vertices
+                for (int i = 0; i < mesh.VertexCount; i++)
+                {
+                    var v = mesh.Vertices[i];
+                    combinedVertices[(vertexOffset + i) * 3] = v.X;
+                    combinedVertices[(vertexOffset + i) * 3 + 1] = v.Y;
+                    combinedVertices[(vertexOffset + i) * 3 + 2] = v.Z;
+                }
+
+                // Copy indices with vertex offset
+                for (int i = 0; i < mesh.FaceCount; i++)
+                {
+                    var face = mesh.Faces[i];
+                    if (face.IndexCount == 3)
+                    {
+                        combinedIndices[(faceOffset + i) * 3] = (uint)(face.Indices[0] + vertexOffset);
+                        combinedIndices[(faceOffset + i) * 3 + 1] = (uint)(face.Indices[1] + vertexOffset);
+                        combinedIndices[(faceOffset + i) * 3 + 2] = (uint)(face.Indices[2] + vertexOffset);
+                    }
+                }
+
+                // Copy normals
+                if (combinedNormals != null && mesh.HasNormals)
+                {
+                    for (int i = 0; i < mesh.VertexCount; i++)
+                    {
+                        var n = mesh.Normals[i];
+                        combinedNormals[(vertexOffset + i) * 3] = n.X;
+                        combinedNormals[(vertexOffset + i) * 3 + 1] = n.Y;
+                        combinedNormals[(vertexOffset + i) * 3 + 2] = n.Z;
+                    }
+                }
+
+                // Copy UVs
+                if (combinedUVs != null && mesh.HasTextureCoords(0))
+                {
+                    for (int i = 0; i < mesh.VertexCount; i++)
+                    {
+                        var uv = mesh.TextureCoordinateChannels[0][i];
+                        combinedUVs[(vertexOffset + i) * 2] = uv.X;
+                        combinedUVs[(vertexOffset + i) * 2 + 1] = uv.Y;
+                    }
+                }
+
+                // Copy bone weights
+                if (combinedBoneWeights != null && mesh.HasBones)
+                {
+                    var meshBoneWeights = ExtractBoneWeights(mesh);
+                    for (int i = 0; i < mesh.VertexCount; i++)
+                    {
+                        if (vertexOffset + i < combinedBoneWeights.Length)
+                        {
+                            combinedBoneWeights[vertexOffset + i] = meshBoneWeights[i];
+                        }
+                    }
+                }
+
+                vertexOffset += mesh.VertexCount;
+                faceOffset += mesh.FaceCount;
+            }
+
+            var meshName = $"{meshes[0].Name}" + (meshes.Count > 1 ? $"_combined_{meshes.Count}" : "");
+
+            return new MeshData
+            {
+                Name = meshName,
+                Vertices = combinedVertices,
+                Indices = combinedIndices,
+                Normals = combinedNormals,
+                UVs = combinedUVs,
+                BoneWeights = combinedBoneWeights,
+                Bounds = CalculateBounds(combinedVertices)
+            };
         }
 
         /// <summary>Extract mesh geometry (vertices, indices, normals, UVs)</summary>

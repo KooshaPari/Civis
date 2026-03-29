@@ -101,6 +101,15 @@ jobs:
             --output staging/nuget/
         shell: pwsh
 
+      - name: Pack Bridge.Protocol NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
       - name: Pack Templates NuGet package
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
@@ -427,9 +436,10 @@ jobs:
             "staging/SHA256SUMS.txt",
             "DINOForge-v$version-windows.zip"
           )
-          # NuGet packages — at least one SDK and one Templates nupkg must exist
+          # NuGet packages — at least one SDK, Bridge.Protocol, and Templates nupkg must exist
           $nugetFiles = Get-ChildItem "staging/nuget/*.nupkg" -ErrorAction SilentlyContinue
           $hasSdk       = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.SDK\." }
+          $hasProtocol  = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Bridge\.Protocol\." }
           $hasTemplates = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Templates\." }
 
           $missing = @()
@@ -437,6 +447,7 @@ jobs:
             if (-not (Test-Path $path)) { $missing += $path }
           }
           if (-not $hasSdk)       { $missing += "staging/nuget/DINOForge.SDK.*.nupkg" }
+          if (-not $hasProtocol)  { $missing += "staging/nuget/DINOForge.Bridge.Protocol.*.nupkg" }
           if (-not $hasTemplates) { $missing += "staging/nuget/DINOForge.Templates.*.nupkg" }
 
           if ($missing.Count -gt 0) {

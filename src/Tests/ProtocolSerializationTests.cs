@@ -22,7 +22,8 @@ public class ProtocolSerializationTests
 
     // ─── PingResult ───────────────────────────────────────────────────────────
 
-    [Fact] public void PingResult_Defaults_RoundTrip()
+    [Fact]
+    public void PingResult_Defaults_RoundTrip()
     {
         PingResult r = RoundTrip(new PingResult());
         r.Pong.Should().BeFalse();
@@ -30,7 +31,8 @@ public class ProtocolSerializationTests
         r.UptimeSeconds.Should().Be(0);
     }
 
-    [Fact] public void PingResult_Populated_RoundTrip()
+    [Fact]
+    public void PingResult_Populated_RoundTrip()
     {
         PingResult r = RoundTrip(new PingResult { Pong = true, Version = "0.9.0", UptimeSeconds = 123.4 });
         r.Pong.Should().BeTrue();
@@ -40,7 +42,8 @@ public class ProtocolSerializationTests
 
     // ─── GameStatus ───────────────────────────────────────────────────────────
 
-    [Fact] public void GameStatus_Defaults_RoundTrip()
+    [Fact]
+    public void GameStatus_Defaults_RoundTrip()
     {
         GameStatus s = RoundTrip(new GameStatus());
         s.Running.Should().BeFalse();
@@ -49,12 +52,16 @@ public class ProtocolSerializationTests
         s.LoadedPacks.Should().BeEmpty();
     }
 
-    [Fact] public void GameStatus_Populated_RoundTrip()
+    [Fact]
+    public void GameStatus_Populated_RoundTrip()
     {
         GameStatus s = RoundTrip(new GameStatus
         {
-            Running = true, WorldReady = true, WorldName = "Default",
-            EntityCount = 45776, ModPlatformReady = true,
+            Running = true,
+            WorldReady = true,
+            WorldName = "Default",
+            EntityCount = 45776,
+            ModPlatformReady = true,
             LoadedPacks = new List<string> { "warfare-starwars", "example-balance" },
             Version = "0.7.0"
         });
@@ -65,14 +72,16 @@ public class ProtocolSerializationTests
 
     // ─── QueryResult / EntityInfo ─────────────────────────────────────────────
 
-    [Fact] public void QueryResult_Defaults_RoundTrip()
+    [Fact]
+    public void QueryResult_Defaults_RoundTrip()
     {
         QueryResult r = RoundTrip(new QueryResult());
         r.Count.Should().Be(0);
         r.Entities.Should().BeEmpty();
     }
 
-    [Fact] public void QueryResult_WithEntities_RoundTrip()
+    [Fact]
+    public void QueryResult_WithEntities_RoundTrip()
     {
         QueryResult r = RoundTrip(new QueryResult
         {
@@ -89,7 +98,8 @@ public class ProtocolSerializationTests
 
     // ─── StatResult ──────────────────────────────────────────────────────────
 
-    [Fact] public void StatResult_Populated_RoundTrip()
+    [Fact]
+    public void StatResult_Populated_RoundTrip()
     {
         StatResult r = RoundTrip(new StatResult
         {
@@ -107,12 +117,15 @@ public class ProtocolSerializationTests
 
     // ─── OverrideResult ───────────────────────────────────────────────────────
 
-    [Fact] public void OverrideResult_Success_RoundTrip()
+    [Fact]
+    public void OverrideResult_Success_RoundTrip()
     {
         OverrideResult r = RoundTrip(new OverrideResult
         {
-            Success = true, ModifiedCount = 5,
-            SdkPath = "units.rep_clone_trooper.hp", Message = "Applied"
+            Success = true,
+            ModifiedCount = 5,
+            SdkPath = "units.rep_clone_trooper.hp",
+            Message = "Applied"
         });
         r.Success.Should().BeTrue();
         r.ModifiedCount.Should().Be(5);
@@ -120,7 +133,8 @@ public class ProtocolSerializationTests
 
     // ─── ReloadResult ─────────────────────────────────────────────────────────
 
-    [Fact] public void ReloadResult_Success_RoundTrip()
+    [Fact]
+    public void ReloadResult_Success_RoundTrip()
     {
         ReloadResult r = RoundTrip(new ReloadResult
         {
@@ -133,7 +147,8 @@ public class ProtocolSerializationTests
         r.LoadedPacks.Should().Contain("warfare-starwars");
     }
 
-    [Fact] public void ReloadResult_WithErrors_RoundTrip()
+    [Fact]
+    public void ReloadResult_WithErrors_RoundTrip()
     {
         ReloadResult r = RoundTrip(new ReloadResult
         {
@@ -147,7 +162,8 @@ public class ProtocolSerializationTests
 
     // ─── CatalogSnapshot / CatalogEntry ───────────────────────────────────────
 
-    [Fact] public void CatalogSnapshot_Populated_RoundTrip()
+    [Fact]
+    public void CatalogSnapshot_Populated_RoundTrip()
     {
         CatalogSnapshot snap = RoundTrip(new CatalogSnapshot
         {
@@ -169,14 +185,16 @@ public class ProtocolSerializationTests
 
     // ─── ResourceSnapshot ─────────────────────────────────────────────────────
 
-    [Fact] public void ResourceSnapshot_Defaults_RoundTrip()
+    [Fact]
+    public void ResourceSnapshot_Defaults_RoundTrip()
     {
         ResourceSnapshot r = RoundTrip(new ResourceSnapshot());
         r.Food.Should().Be(0); r.Wood.Should().Be(0); r.Stone.Should().Be(0);
         r.Iron.Should().Be(0); r.Money.Should().Be(0); r.Souls.Should().Be(0);
     }
 
-    [Fact] public void ResourceSnapshot_Populated_RoundTrip()
+    [Fact]
+    public void ResourceSnapshot_Populated_RoundTrip()
     {
         ResourceSnapshot r = RoundTrip(new ResourceSnapshot
         { Food = 100, Wood = 200, Stone = 50, Iron = 25, Money = 10, Souls = 5, Bones = 3, Spirit = 1 });
@@ -187,7 +205,8 @@ public class ProtocolSerializationTests
 
     // ─── ScreenshotResult ─────────────────────────────────────────────────────
 
-    [Fact] public void ScreenshotResult_RoundTrip()
+    [Fact]
+    public void ScreenshotResult_RoundTrip()
     {
         ScreenshotResult r = RoundTrip(new ScreenshotResult
         { Path = "C:/tmp/shot.png", Width = 1920, Height = 1080, Success = true });
@@ -198,7 +217,8 @@ public class ProtocolSerializationTests
 
     // ─── LoadSceneResult ─────────────────────────────────────────────────────
 
-    [Fact] public void LoadSceneResult_RoundTrip()
+    [Fact]
+    public void LoadSceneResult_RoundTrip()
     {
         LoadSceneResult r = RoundTrip(new LoadSceneResult
         { Success = true, Scene = "MainMap", SceneCount = 4, BuildIndex = 1 });
@@ -209,7 +229,8 @@ public class ProtocolSerializationTests
 
     // ─── StartGameResult ─────────────────────────────────────────────────────
 
-    [Fact] public void StartGameResult_RoundTrip()
+    [Fact]
+    public void StartGameResult_RoundTrip()
     {
         StartGameResult r = RoundTrip(new StartGameResult { Success = true, Message = "OK" });
         r.Success.Should().BeTrue();
@@ -218,11 +239,14 @@ public class ProtocolSerializationTests
 
     // ─── VerifyResult ─────────────────────────────────────────────────────────
 
-    [Fact] public void VerifyResult_RoundTrip()
+    [Fact]
+    public void VerifyResult_RoundTrip()
     {
         VerifyResult r = RoundTrip(new VerifyResult
         {
-            PackId = "warfare-starwars", Loaded = true, EntityCount = 28,
+            PackId = "warfare-starwars",
+            Loaded = true,
+            EntityCount = 28,
             StatChanges = new List<string> { "hp: 100→150" },
             Errors = new List<string>()
         });
@@ -234,7 +258,8 @@ public class ProtocolSerializationTests
 
     // ─── WaitResult ──────────────────────────────────────────────────────────
 
-    [Fact] public void WaitResult_RoundTrip()
+    [Fact]
+    public void WaitResult_RoundTrip()
     {
         WaitResult r = RoundTrip(new WaitResult { Ready = true, WorldName = "Default" });
         r.Ready.Should().BeTrue();
@@ -243,7 +268,8 @@ public class ProtocolSerializationTests
 
     // ─── UiActionResult ───────────────────────────────────────────────────────
 
-    [Fact] public void UiActionResult_NoMatch_RoundTrip()
+    [Fact]
+    public void UiActionResult_NoMatch_RoundTrip()
     {
         UiActionResult r = RoundTrip(new UiActionResult
         { Success = false, Message = "No element", Selector = "#pack-list", MatchCount = 0 });
@@ -251,15 +277,22 @@ public class ProtocolSerializationTests
         r.MatchedNode.Should().BeNull();
     }
 
-    [Fact] public void UiActionResult_WithNode_RoundTrip()
+    [Fact]
+    public void UiActionResult_WithNode_RoundTrip()
     {
         UiActionResult r = RoundTrip(new UiActionResult
         {
-            Success = true, MatchCount = 1, Actionable = true,
+            Success = true,
+            MatchCount = 1,
+            Actionable = true,
             MatchedNode = new UiNode
             {
-                Id = "n1", Name = "PackListView", Role = "list",
-                Active = true, Visible = true, Interactable = true
+                Id = "n1",
+                Name = "PackListView",
+                Role = "list",
+                Active = true,
+                Visible = true,
+                Interactable = true
             }
         });
         r.MatchedNode.Should().NotBeNull();
@@ -269,12 +302,16 @@ public class ProtocolSerializationTests
 
     // ─── UiExpectationResult ─────────────────────────────────────────────────
 
-    [Fact] public void UiExpectationResult_RoundTrip()
+    [Fact]
+    public void UiExpectationResult_RoundTrip()
     {
         UiExpectationResult r = RoundTrip(new UiExpectationResult
         {
-            Success = true, Selector = "#overlay", Condition = "visible",
-            Message = "Element is visible", MatchCount = 1
+            Success = true,
+            Selector = "#overlay",
+            Condition = "visible",
+            Message = "Element is visible",
+            MatchCount = 1
         });
         r.Success.Should().BeTrue();
         r.Condition.Should().Be("visible");
@@ -282,7 +319,8 @@ public class ProtocolSerializationTests
 
     // ─── UiWaitResult ─────────────────────────────────────────────────────────
 
-    [Fact] public void UiWaitResult_TimedOut_RoundTrip()
+    [Fact]
+    public void UiWaitResult_TimedOut_RoundTrip()
     {
         UiWaitResult r = RoundTrip(new UiWaitResult
         { Ready = false, Selector = "#overlay", State = "visible", Message = "Timeout", MatchCount = 0 });
@@ -292,14 +330,20 @@ public class ProtocolSerializationTests
 
     // ─── UiTreeResult / UiNode / UiBounds ────────────────────────────────────
 
-    [Fact] public void UiTreeResult_WithHierarchy_RoundTrip()
+    [Fact]
+    public void UiTreeResult_WithHierarchy_RoundTrip()
     {
         UiTreeResult r = RoundTrip(new UiTreeResult
         {
-            Success = true, NodeCount = 3, GeneratedAtUtc = "2026-03-15T00:00:00Z",
+            Success = true,
+            NodeCount = 3,
+            GeneratedAtUtc = "2026-03-15T00:00:00Z",
             Root = new UiNode
             {
-                Id = "root", Name = "Canvas", Role = "container", Active = true,
+                Id = "root",
+                Name = "Canvas",
+                Role = "container",
+                Active = true,
                 Bounds = new UiBounds { X = 0, Y = 0, Width = 1920, Height = 1080 },
                 Children = new List<UiNode>
                 {
@@ -315,7 +359,8 @@ public class ProtocolSerializationTests
         r.Root.Children[1].Interactable.Should().BeTrue();
     }
 
-    [Fact] public void UiNode_DefaultsAreNonNull()
+    [Fact]
+    public void UiNode_DefaultsAreNonNull()
     {
         UiNode n = new UiNode();
         n.Id.Should().NotBeNull();
@@ -325,7 +370,8 @@ public class ProtocolSerializationTests
 
     // ─── ComponentMapResult ───────────────────────────────────────────────────
 
-    [Fact] public void ComponentMapResult_RoundTrip()
+    [Fact]
+    public void ComponentMapResult_RoundTrip()
     {
         ComponentMapResult r = RoundTrip(new ComponentMapResult
         {

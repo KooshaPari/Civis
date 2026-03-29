@@ -296,7 +296,9 @@ public class ScenarioRunnerTests
     {
         return new ScenarioDefinition
         {
-            Id = id, DisplayName = id, WaveCount = 10,
+            Id = id,
+            DisplayName = id,
+            WaveCount = 10,
             VictoryConditions = victory ?? new List<VictoryCondition>(),
             DefeatConditions = defeat ?? new List<DefeatCondition>(),
             ScriptedEvents = events ?? new List<ScriptedEvent>()

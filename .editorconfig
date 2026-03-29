@@ -25,3 +25,7 @@ indent_size = 2
 
 [Makefile]
 indent_style = tab
+
+# FuzzTarget files: suppress xUnit1013 (public methods are fuzzing entry points, not test methods)
+[src/Tests/FuzzTargets/*.cs]
+dotnet_diagnostic.xUnit1013.severity = none

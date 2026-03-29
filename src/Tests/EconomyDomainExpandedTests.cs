@@ -222,8 +222,11 @@ public class EconomyDomainExpandedTests
     {
         return new TradeRoute
         {
-            Id = id, SourceResource = source, TargetResource = target,
-            ExchangeRate = exchangeRate, MaxPerTransaction = maxPerTransaction,
+            Id = id,
+            SourceResource = source,
+            TargetResource = target,
+            ExchangeRate = exchangeRate,
+            MaxPerTransaction = maxPerTransaction,
             CooldownTicks = 60
         };
     }

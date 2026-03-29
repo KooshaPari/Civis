@@ -1,5 +1,9 @@
 #nullable enable
+using System;
+using System.IO;
 using System.IO.Pipes;
+using System.Threading;
+using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -356,7 +360,7 @@ public sealed class GameClient : IDisposable
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_disposed) throw new ObjectDisposedException(GetType().Name);
     }
 
     /// <summary>

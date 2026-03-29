@@ -11,8 +11,8 @@
 | Feature | Status | Evidence | Notes |
 |---------|--------|----------|-------|
 | **Mods Button Injection** | ✓ CONFIRMED | `validate_main_menu.png` + `mods_feature.mp4` | Button successfully injected into main menu, TMP_Text set to "Mods", positioned after Settings button. Log: "MODS BUTTON INJECTION FULLY SUCCESSFUL" |
-| **F9 Debug Overlay** | ✓ CONFIRMED | `validate_f9_final.png` + `f9_feature.mp4` + `raw_f9.mp4` | KeyInputSystem detects F9 presses via Win32 background thread. Log: "[KeyInputSystem] F9 pressed (transition detected)" |
-| **F10 Settings Overlay** | ✓ CONFIRMED | `validate_f10_final.png` + `f10_feature.mp4` + `raw_f10.mp4` | KeyInputSystem detects F10 presses via Win32 background thread. Overlay system active and responsive. |
+| **F9 Debug Overlay** | ✓ CONFIRMED | `final_f9_confirmed.png` + `f9_feature.mp4` + `raw_f9.mp4` | F9 overlay is fully visible on left side of gameplay screen showing DINOForge debug menu. Confirmed working and toggleable. |
+| **F10 Settings Overlay** | ⚠ PARTIAL | `final_f10_confirmed.png` + `f10_feature.mp4` + `raw_f10.mp4` | F10 key does not respond in active gameplay state. May require specific game context (main menu) or implementation not yet bound. Further testing needed. |
 
 ---
 
@@ -45,8 +45,9 @@
 
 ### Screenshots
 - `validate_main_menu.png` — Main menu without overlay
-- `validate_f9_final.png` — Main menu after F9 press
-- `validate_f10_final.png` — Main menu after F10 press
+- `final_f9_confirmed.png` — F9 overlay visible during gameplay (confirmed working)
+- `final_f10_confirmed.png` — Gameplay after F10 press attempt (F10 not responsive in gameplay)
+- `final_menu_mods.png` — Clean gameplay view
 
 ### Raw Video Clips
 - `raw_mods.mp4` — 15s of main menu showing Mods button context
@@ -87,16 +88,23 @@
 
 ## Conclusion
 
-All three core features are **working and validated**:
+**Two of three core features confirmed working; one requires further investigation:**
 
-1. ✓ Mods button is injected into the main menu UI
-2. ✓ F9 key input is detected and processed
-3. ✓ F10 key input is detected and processed
+1. ✓ **Mods button** is injected into the main menu UI — CONFIRMED WORKING
+2. ✓ **F9 debug overlay** is fully functional and visible during gameplay — CONFIRMED WORKING
+3. ⚠ **F10 settings overlay** does not respond in active gameplay state — NEEDS INVESTIGATION
+
+### Latest Findings (Final Validation Session)
+
+- **F9 Overlay**: Confirmed visible and fully functional on left side of screen with menu structure intact
+- **F10 Key**: Pressed multiple times during gameplay with no visible response; may be main-menu-only or context-dependent
+- **Game State**: All testing conducted in active gameplay (not main menu)
+- **Recommendation**: Test F10 from main menu context; verify F10 is properly implemented or intended for specific game states
 
 Evidence includes:
-- Visual screenshots from game window
-- Runtime logs confirming implementation success
+- Visual screenshots from game window (F9 confirmed visible)
+- Runtime logs confirming F9 implementation success
 - Video clips showing features in action
-- Structured validation report with methodology
+- Structured validation reports with detailed methodology
 
-The platform is ready for the next phase: F10 menu implementation and feature panel integration.
+**Status Summary**: F9 is production-ready. F10 requires context testing before integration.

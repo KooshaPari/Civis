@@ -138,6 +138,7 @@ export default withMermaid(
           items: [
             { text: 'Roadmap', link: '/roadmap/' },
             { text: 'Community', link: '/community' },
+            { text: 'Test Results', link: '/test-results/' },
             { text: 'Compatibility', link: '/compat' },
             { text: 'Worklog & Research', link: '/worklog/' },
           ],

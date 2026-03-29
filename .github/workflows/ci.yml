@@ -59,6 +59,46 @@ jobs:
       - name: Test (Integration)
         run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-test-results.trx"
 
+      - name: Export test results to docs
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, glob, xml.etree.ElementTree as ET, os, datetime
+
+          results = {"timestamp": datetime.datetime.utcnow().isoformat(), "suites": []}
+          for trx in glob.glob("**/*.trx", recursive=True):
+              tree = ET.parse(trx)
+              root = tree.getroot()
+              ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+              counters = root.find('.//t:ResultSummary/t:Counters', ns)
+              if counters is not None:
+                  results["suites"].append({
+                      "file": trx,
+                      "total": int(counters.get("total", 0)),
+                      "passed": int(counters.get("passed", 0)),
+                      "failed": int(counters.get("failed", 0)),
+                      "skipped": int(counters.get("notExecuted", 0)),
+                  })
+
+          total = sum(s["total"] for s in results["suites"])
+          passed = sum(s["passed"] for s in results["suites"])
+          results["summary"] = {"total": total, "passed": passed, "failed": total - passed, "pass_rate": round(passed/total*100, 1) if total else 0}
+
+          os.makedirs("docs/test-results", exist_ok=True)
+          with open("docs/test-results/latest.json", "w") as f:
+              json.dump(results, f, indent=2)
+          print(f"Test results: {passed}/{total} passed ({results['summary']['pass_rate']}%)")
+          PYEOF
+
+      - name: Commit test results to docs
+        if: always() && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/test-results/latest.json || true
+          git diff --staged --quiet || git commit -m "ci: update test results [skip ci]"
+          git push || true
+
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@30eadd5010312f995f0d3b3cff7fe2984f69409e # v2.16.1
         if: always()

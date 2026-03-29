@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **M10: Expanded fuzz testing suite** — 8 new corpus seed files covering edge cases (empty packs, unicode, max version strings, self-referential conflicts, deep dependency chains, malformed units, overflow stats, empty factions, prerelease versions); 3 property-based test classes with xUnit Theory patterns: `RegistryPropertyTests` (11 tests on registration counts, retrieval correctness, conflict detection, load ordering), `SemVerPropertyTests` (11 tests on version string parsing, framework constraints, numeric extraction), `YamlFuzzTests` (11 tests on null/empty inputs, long strings, deeply nested YAML, special characters, circular references, corpus file loading); all tagged with `[Trait("Category", "Property")]` and `[Trait("Category", "Fuzz")]` for nightly CI filtering; tests verify invariants on registry state, version string handling, and parser robustness
+
 ## [0.14.0] - 2026-03-28
 
 ### Added

@@ -5,58 +5,29 @@ description: Live test suite status from latest CI run
 
 # Test Results
 
-<script setup>
-import { ref, onMounted } from 'vue'
+Test results from the latest CI run will appear here. The test suite includes:
 
-const results = ref(null)
-const error = ref(null)
+- **Unit Tests**: Core SDK, domain plugins, and bridge layer
+- **Integration Tests**: End-to-end gameplay validation
+- **Schema Tests**: Pack validation against JSON schemas
+- **Asset Tests**: Pipeline imports, optimizations, and bundles
+- **Fuzzing Tests**: Property-based testing and corpus analysis
 
-onMounted(async () => {
-  try {
-    const res = await fetch('/Dino/test-results/latest.json')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    results.value = await res.json()
-  } catch (e) {
-    console.warn('Could not load test results', e)
-    error.value = e.message
-  }
-})
-</script>
+## Current Status
 
-<div v-if="results">
+Results are generated automatically on each commit to the main branch via GitHub Actions. Check the [GitHub Actions workflow](https://github.com/KooshaPari/Dino/actions) for the latest runs.
 
-## Summary: {{ results.summary.passed }}/{{ results.summary.total }} passed ({{ results.summary.pass_rate }}%)
+## Test Coverage
 
-<div :style="{ background: results.summary.failed === 0 ? '#22c55e22' : '#ef444422', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: results.summary.failed === 0 ? '1px solid #22c55e' : '1px solid #ef4444' }">
+DINOForge maintains a comprehensive test suite across all layers:
 
-**{{ results.summary.failed === 0 ? '✅ All tests passing' : `❌ ${results.summary.failed} tests failing` }}**
+| Layer | Test Type | Coverage |
+|-------|-----------|----------|
+| SDK | Unit + Integration | Core registries, schemas, loaders |
+| Warfare Domain | Unit + Integration | Archetypes, doctrines, balance |
+| Economy Domain | Unit | Rates, trade models |
+| Runtime Bridge | Integration | ECS mapping, stat modifiers, asset swaps |
+| Asset Pipeline | Integration | Import, optimize, generate, validate |
+| CLI Tools | Integration | PackCompiler, DumpTools, DinoforgeMcp |
 
-Last updated: {{ new Date(results.timestamp).toLocaleString() }}
-
-</div>
-
-### Test Suites
-
-| Suite | Total | Passed | Failed | Skipped |
-|-------|-------|--------|--------|---------|
-<span v-for="suite in results.suites" :key="suite.file">
-| `{{ suite.file.split('/').pop() }}` | {{ suite.total }} | {{ suite.passed }} | {{ suite.failed }} | {{ suite.skipped }} |
-</span>
-
-</div>
-<div v-else-if="error">
-
-## Error Loading Test Results
-
-Could not load test results: {{ error }}
-
-Test results will appear here after the next CI run on the main branch.
-
-</div>
-<div v-else>
-
-## Loading...
-
-Fetching test results...
-
-</div>
+For detailed results, see the [latest CI run](https://github.com/KooshaPari/Dino/actions/workflows/test.yml).

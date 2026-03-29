@@ -17,6 +17,14 @@ export default withMermaid(
     ignoreDeadLinks: true,
     srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**'],
 
+    vite: {
+      build: {
+        rollupOptions: {
+          external: [/\.mp4$/, /\.mp3$/, /\.webm$/],
+        },
+      },
+    },
+
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ],

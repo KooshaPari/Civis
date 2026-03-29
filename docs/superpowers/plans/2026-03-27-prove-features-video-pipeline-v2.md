@@ -1048,7 +1048,6 @@ Evidence bundles from automated feature validation runs.
 
 Each run creates a timestamped directory `YYYYMMDD_HHmmss/`:
 
-```
 <timestamp>/
   raw_mods.mp4          Raw 6s game clip — main menu with Mods button
   raw_f9.mp4            Raw 8s game clip — F9 debug overlay
@@ -1062,7 +1061,6 @@ Each run creates a timestamped directory `YYYYMMDD_HHmmss/`:
   f10_feature.mp4       Remotion-rendered 10s clip with spring callout
   dinoforge_reel.mp4    38s compilation reel — primary deliverable
   proof_report.md       Human-readable summary
-```
 
 ## Pipeline
 

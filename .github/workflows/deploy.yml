@@ -35,9 +35,11 @@ jobs:
           enablement: true
 
       - name: Install dependencies
+        working-directory: docs
         run: npm ci
 
       - name: Build VitePress site
+        working-directory: docs
         run: npm run build
         env:
           GITHUB_PAGES: "true"

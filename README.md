@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/KooshaPari/Dino/actions/workflows/ci.yml/badge.svg)](https://github.com/KooshaPari/Dino/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/KooshaPari/Dino/branch/main/graph/badge.svg)](https://codecov.io/gh/KooshaPari/Dino)
+[![NuGet SDK](https://img.shields.io/nuget/v/DINOForge.SDK.svg)](https://www.nuget.org/packages/DINOForge.SDK/)
+[![NuGet Protocol](https://img.shields.io/nuget/v/DINOForge.Bridge.Protocol.svg)](https://www.nuget.org/packages/DINOForge.Bridge.Protocol/)
 
 **General-purpose mod platform for [Diplomacy is Not an Option](https://store.steampowered.com/app/1272320/Diplomacy_is_Not_an_Option/).**
 

@@ -62,6 +62,17 @@ If a release is invalid:
 2. document the defect in `CHANGELOG.md` and the release notes
 3. ship a follow-up patch release instead of mutating history
 
+## NuGet Setup
+
+Before cutting a release, ensure `NUGET_API_KEY` secret is set in GitHub repository settings:
+
+1. Go to repository **Settings → Secrets and variables → Actions**
+2. Create a new repository secret named `NUGET_API_KEY`
+3. Get your API key from [NuGet.org Account → API Keys](https://www.nuget.org/account/apikeys)
+4. Paste the key and save
+
+The `release.yml` workflow uses this secret to publish SDK and Templates packages to nuget.org automatically on tag push.
+
 ## Cross-project alignment
 
 The KooshaPari cross-project semantics that should remain consistent with Dino are documented in `docs/reference/kooshapari-project-semantics.md`.

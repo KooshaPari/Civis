@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Install DINOForge git hooks (pre-commit framework + pre-push test runner).
+    Install DINOForge git hooks via prek.
 .DESCRIPTION
-    Installs:
-    - pre-commit hooks (trailing whitespace, YAML/JSON check, dotnet format)
-    - pre-push hook: dotnet test integration
-    Run once after cloning. Requires: pre-commit (pip install pre-commit)
+    Installs prek (Rust-based pre-commit replacement) and wires up:
+    - pre-commit: trailing-whitespace, YAML/JSON check, dotnet format
+    - pre-push:   dotnet test (unit + integration, ~6s)
+    Run once after cloning.
 .EXAMPLE
     pwsh -File scripts/install-hooks.ps1
 #>
@@ -15,50 +15,35 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
-Write-Host "Installing DINOForge git hooks..." -ForegroundColor Cyan
+Write-Host "Installing DINOForge git hooks via prek..." -ForegroundColor Cyan
 
-# ── pre-commit framework ───────────────────────────────────────────────────────
-$pcAvailable = Get-Command pre-commit -ErrorAction SilentlyContinue
-if (-not $pcAvailable) {
-    Write-Host "pre-commit not found. Install with: pip install pre-commit" -ForegroundColor Yellow
-    Write-Host "Skipping pre-commit install." -ForegroundColor Yellow
-} else {
-    Push-Location $RepoRoot
-    pre-commit install --hook-type pre-commit
-    pre-commit install --hook-type pre-push
-    Pop-Location
-    Write-Host "pre-commit hooks installed." -ForegroundColor Green
+# ── Install prek if missing ────────────────────────────────────────────────────
+$prekAvailable = Get-Command prek -ErrorAction SilentlyContinue
+if (-not $prekAvailable) {
+    Write-Host "prek not found. Installing..." -ForegroundColor Yellow
+    irm https://github.com/j178/prek/releases/latest/download/prek-installer.ps1 | iex
+    # Refresh PATH
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
+    $prekAvailable = Get-Command prek -ErrorAction SilentlyContinue
+    if (-not $prekAvailable) {
+        Write-Host "prek install succeeded but binary not in PATH yet." -ForegroundColor Yellow
+        Write-Host "Restart your shell and re-run this script." -ForegroundColor Yellow
+        exit 1
+    }
 }
 
-# ── pre-push hook: dotnet test integration ─────────────────────────────────────
-$prePushPath = Join-Path $RepoRoot ".git\hooks\pre-push"
-$prePushContent = @'
-#!/bin/sh
-# DINOForge pre-push: run integration tests before push
-echo "[pre-push] Running integration tests..."
-dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity quiet
-if [ $? -ne 0 ]; then
-  echo "[pre-push] FAIL: integration tests failed. Push blocked."
-  exit 1
-fi
-echo "[pre-push] PASS: integration tests OK."
-exit 0
-'@
+Write-Host "prek $(prek --version)" -ForegroundColor Green
 
-# Write with Unix line endings (required for sh scripts on Windows/Git)
-[System.IO.File]::WriteAllText($prePushPath, $prePushContent.Replace("`r`n", "`n"))
+# ── Install hooks ──────────────────────────────────────────────────────────────
+Push-Location $RepoRoot
+prek install --hook-type pre-commit --overwrite
+prek install --hook-type pre-push --overwrite
+Pop-Location
 
-# Make executable (git on Windows respects this via core.fileMode=false, but set it anyway)
-$gitConfigResult = & git -C $RepoRoot config core.hooksPath
-if ($gitConfigResult) {
-    Write-Host "Note: core.hooksPath is set to '$gitConfigResult'. Hooks written to .git/hooks/ may not fire." -ForegroundColor Yellow
-}
-
-Write-Host "pre-push hook installed at .git/hooks/pre-push" -ForegroundColor Green
 Write-Host ""
 Write-Host "Done. Hooks active:" -ForegroundColor Cyan
-Write-Host "  pre-commit: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, dotnet-format"
-Write-Host "  pre-push:   dotnet test (integration, 18 tests)"
+Write-Host "  pre-commit: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, yamllint, dotnet-format"
+Write-Host "  pre-push:   dotnet test (unit + integration)"
 Write-Host ""
-Write-Host "Run now to verify: pre-commit run --all-files"
-Write-Host "Run tests:         pwsh -File scripts/test-local.ps1"
+Write-Host "Verify:    prek run --all-files"
+Write-Host "Run tests: pwsh -File scripts/test-local.ps1"

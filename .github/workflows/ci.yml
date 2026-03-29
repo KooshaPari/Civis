@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET 8.0
-        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        uses: actions/setup-dotnet@6bd8b7f7c1bea521e4b6fd673d2a96b6afc12c3d # v4.1.0
         with:
           dotnet-version: |
             11.0.x
@@ -60,10 +60,10 @@ jobs:
         run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Publish Test Results
-        uses: dorny/tests-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea0 # v1.9.1
+        uses: EnricoMi/publish-unit-test-result-action@30eadd5010312f995f0d3b3cff7fe2984f69409e # v2.16.1
         if: always()
         with:
-          name: Unit & Integration Tests
-          path: "**/*.trx"
-          reporter: dotnet-trx
-          fail-on-error: true
+          files: |
+            **/*.trx
+          check_name: Unit & Integration Tests
+          compare_to_earlier_commit: false

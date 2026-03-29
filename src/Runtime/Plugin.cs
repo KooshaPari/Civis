@@ -357,27 +357,31 @@ namespace DINOForge.Runtime
             }
 
             // ── KeyInputSystem ECS callbacks (DISABLED) ────────────────────────────────
-            // DISABLED 2026-03-27: Double-toggle bug fix
-            // The background polling thread (Win32 GetAsyncKeyState) is the reliable
-            // execution path in DINO (Update() never fires, ECS callbacks are unreliable).
-            // Keeping both caused double-toggles (UI opens then immediately closes).
-            // The background thread has proper debouncing with key-release waiting.
-            // ECS callbacks removed to avoid duplicate toggle calls.
-            //
-            // Bridge.KeyInputSystem.OnF9Pressed = () =>
-            // {
-            //     try { WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-            //         if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
-            //         else _debugOverlay?.Toggle();
-            //     } catch { }
-            // };
-            // Bridge.KeyInputSystem.OnF10Pressed = () =>
-            // {
-            //     try { WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
-            //         if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-            //         else _modMenuHost?.Toggle();
-            //     } catch { }
-            // };
+            // ECS callbacks are the reliable toggle path — KeyInputSystem.OnUpdate runs
+            // in the ECS loop and correctly sees both physical and synthetic key presses.
+            // The background thread's GetAsyncKeyState DOES NOT reliably see synthetic
+            // keybd_event input from external processes, so ECS callbacks are preferred.
+            // Background thread F9/F10 polling is disabled to prevent double-toggles.
+            Bridge.KeyInputSystem.OnF9Pressed = () =>
+            {
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+                    else _debugOverlay?.Toggle();
+                }
+                catch { }
+            };
+            Bridge.KeyInputSystem.OnF10Pressed = () =>
+            {
+                try
+                {
+                    WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                    else _modMenuHost?.Toggle();
+                }
+                catch { }
+            };
 
             // ── Wire HMR pack reload callback (can be invoked from background thread) ──
             Bridge.KeyInputSystem.OnPackReloadRequested = () =>
@@ -576,48 +580,18 @@ namespace DINOForge.Runtime
                             _log?.LogDebug($"[RuntimeDriver] Background poll heartbeat #{heartbeatCounter} worldFound={_worldFound}");
                         }
 
-                        // ── F9 key polling via Win32 GetAsyncKeyState ──────────────────
-                        // GetAsyncKeyState returns non-zero if the key is pressed.
-                        // We poll periodically and gate on state change (0x8000 = key down).
-                        const int VK_F9 = 0x78;
-                        if ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
-                        {
-                            // F9 pressed
-                            System.Threading.Thread.Sleep(50); // Debounce
-                            if ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
-                            {
-                                try
-                                {
-                                    _log?.LogDebug("[RuntimeDriver] F9 pressed (background thread)");
-                                    if (_uguiReady && _dfCanvas != null)
-                                    {
-                                        _dfCanvas.ToggleDebug();
-                                    }
-                                    else if (_debugOverlay != null)
-                                    {
-                                        _debugOverlay.Toggle();
-                                    }
-                                }
-                                catch (System.Exception ex)
-                                {
-                                    _log?.LogWarning($"[RuntimeDriver] F9 toggle failed: {ex.Message}");
-                                }
-
-                                // Wait for key release
-                                while ((GetAsyncKeyState(VK_F9) & 0x8000) != 0)
-                                {
-                                    System.Threading.Thread.Sleep(50);
-                                }
-                                System.Threading.Thread.Sleep(50); // Additional debounce
-                            }
-                        }
-
-                        // ── F10 key polling via Win32 GetAsyncKeyState ──────────────────
-                        const int VK_F10 = 0x79;
-                        if ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
+                        // ── F9/F10 key polling DISABLED ───────────────────────────────
+                        // F9/F10 are now handled exclusively by KeyInputSystem ECS callbacks
+                        // (OnF9Pressed/OnF10Pressed) which reliably see both physical and
+                        // synthetic key presses. GetAsyncKeyState from this background thread
+                        // does NOT reliably see synthetic keybd_event from external processes.
+                        // Background polling caused double-toggles when both paths were active.
+                        //
+                        // F10 background thread DEAD CODE (kept for reference):
+                        if (false) // DISABLED
                         {
                             System.Threading.Thread.Sleep(50); // Debounce
-                            if ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
+                            if (false)
                             {
                                 try
                                 {
@@ -636,12 +610,8 @@ namespace DINOForge.Runtime
                                     _log?.LogWarning($"[RuntimeDriver] F10 toggle failed: {ex.Message}");
                                 }
 
-                                // Wait for key release
-                                while ((GetAsyncKeyState(VK_F10) & 0x8000) != 0)
-                                {
-                                    System.Threading.Thread.Sleep(50);
-                                }
-                                System.Threading.Thread.Sleep(50); // Additional debounce
+                                // Wait for key release (dead code)
+                                System.Threading.Thread.Sleep(50);
                             }
                         }
 

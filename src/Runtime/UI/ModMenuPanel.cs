@@ -155,8 +155,10 @@ namespace DINOForge.Runtime.UI
         /// <summary>Shows the panel with a slide-in animation.</summary>
         public void Show()
         {
+            // Immediate visibility - no animation (Update() never fires in DINO)
             _targetVisible = true;
-            _animT = 1f; // Start animation at end so AnimatePanel() doesn't flicker
+            _animT = 1f;
+
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 1f;
@@ -168,6 +170,7 @@ namespace DINOForge.Runtime.UI
             if (_panelRt != null)
             {
                 _panelRt.gameObject.SetActive(true);
+                _panelRt.anchoredPosition = Vector2.zero; // Ensure no slide offset
             }
 
             // Force all children to be visible
@@ -188,14 +191,22 @@ namespace DINOForge.Runtime.UI
             }
         }
 
-        /// <summary>Hides the panel with a fade animation.</summary>
+        /// <summary>Hides the panel immediately (no animation, Update() never fires).</summary>
         public void Hide()
         {
             _targetVisible = false;
+            _animT = 0f;
+
             if (_canvasGroup != null)
             {
+                _canvasGroup.alpha = 0f;
                 _canvasGroup.interactable = false;
                 _canvasGroup.blocksRaycasts = false;
+            }
+
+            if (_panelRt != null)
+            {
+                _panelRt.gameObject.SetActive(false);
             }
         }
 
@@ -217,16 +228,8 @@ namespace DINOForge.Runtime.UI
 
         private void AnimatePanel()
         {
-            if (_canvasGroup == null || _panelRt == null) return;
-
-            float target = _targetVisible ? 1f : 0f;
-            _animT = Mathf.MoveTowards(_animT, target, Time.unscaledDeltaTime / AnimDuration);
-
-            _canvasGroup.alpha = _animT;
-
-            // Slide from right (+80px) to resting position
-            float slideOffset = Mathf.Lerp(80f, 0f, _animT);
-            _panelRt.anchoredPosition = new Vector2(slideOffset, 0f);
+            // No-op: Update() never fires in DINO (MonoBehaviour.Update is not called).
+            // Show()/Hide() set state immediately instead.
         }
 
         // ── UI construction ────────────────────────────────────────────────────────

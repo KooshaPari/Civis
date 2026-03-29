@@ -62,6 +62,7 @@ namespace DINOForge.Runtime.UI
         private bool _injected;
         private float _rescanTimer;
         private float _lastClickTimeUnscaled = -10f;
+        private System.Collections.Generic.List<Button>? _allOptionsButtons;
 
         // ===== DIAGNOSTIC FIELDS =====
         private readonly string _sessionId = System.Guid.NewGuid().ToString().Substring(0, 8);
@@ -307,7 +308,8 @@ namespace DINOForge.Runtime.UI
         }
 
         /// <summary>
-        /// Searches a canvas for a button whose label contains "Settings" or "Options".
+        /// Searches a canvas for buttons whose label contains "Settings" or "Options".
+        /// If multiple "Options" buttons are found, stores them so we can repurpose the last one.
         /// </summary>
         private Button? FindSettingsButton(Canvas canvas)
         {
@@ -321,16 +323,28 @@ namespace DINOForge.Runtime.UI
                     return settings;
                 }
 
-                // Try to find Options button
-                Button? options = NativeUiHelper.FindButtonByText(canvas.transform, "Options");
-                if (options != null)
+                // Find ALL "Options" buttons (case-insensitive)
+                Button[] allButtons = canvas.GetComponentsInChildren<Button>(includeInactive: false);
+                System.Collections.Generic.List<Button> optionsButtons = new System.Collections.Generic.List<Button>();
+                foreach (Button b in allButtons)
                 {
-                    LogInfo($"[NativeMenuInjector]     Found 'Options' button: '{options.name}'");
-                    return options;
+                    string label = NativeUiHelper.GetButtonText(b);
+                    if (label.IndexOf("Options", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        optionsButtons.Add(b);
+                        LogInfo($"[NativeMenuInjector]     Found 'Options' button: '{b.name}' (count: {optionsButtons.Count})");
+                    }
+                }
+
+                // Store all found Options buttons; InjectButton will repurpose whichever is best.
+                if (optionsButtons.Count >= 1)
+                {
+                    _allOptionsButtons = optionsButtons;
+                    LogInfo($"[NativeMenuInjector]     Found {optionsButtons.Count} 'Options' button(s); will repurpose for Mods");
+                    return optionsButtons[0];
                 }
 
                 // Log all buttons found for diagnostics
-                Button[] allButtons = canvas.GetComponentsInChildren<Button>(includeInactive: false);
                 LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas. Dumping all {allButtons.Length} active buttons:");
                 foreach (Button b in allButtons)
                 {
@@ -387,8 +401,8 @@ namespace DINOForge.Runtime.UI
         }
 
         /// <summary>
-        /// Clones the reference button, labels it "Mods", positions it after the original,
-        /// and wires its onClick event.
+        /// Repurposes the last "Options" button as "Mods" if 2+ exist, otherwise clones the reference button.
+        /// Labels it "Mods" and wires its onClick event.
         /// </summary>
         private void InjectButton(Button settingsButton, long attemptId)
         {
@@ -402,55 +416,91 @@ namespace DINOForge.Runtime.UI
 
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButton starting with settingsButton='{settingsButton.name}'");
 
-                // Guard: don't inject twice into the same parent
-                Transform parent = settingsButton.transform.parent;
-                if (parent != null)
+                // Guard: check if we should repurpose instead of clone.
+                // Repurpose whenever ANY Options button was found — UiGrid ignores cloned children.
+                Button? modsButton = null;
+                if (_allOptionsButtons != null && _allOptionsButtons.Count >= 1)
                 {
-                    for (int i = 0; i < parent.childCount; i++)
+                    // Repurpose the LAST Options button
+                    modsButton = _allOptionsButtons[_allOptionsButtons.Count - 1];
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1: Repurposing last 'Options' button '{modsButton.name}' as 'Mods'...");
+
+                    // Rename GameObject for consistency
+                    modsButton.gameObject.name = "DINOForge_ModsButton_Repurposed";
+
+                    // Change all text to "Mods"
+                    foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
                     {
-                        if (parent.GetChild(i).name.StartsWith("DINOForge_ModsButton", StringComparison.OrdinalIgnoreCase))
+                        legacyText.text = "Mods";
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set Text '{legacyText.name}' to 'Mods'");
+                    }
+                    // TMPro via reflection
+                    System.Type? tmpType = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+                    if (tmpType != null)
+                    {
+                        foreach (Component c in modsButton.GetComponentsInChildren(tmpType, true))
                         {
-                            Button existing = parent.GetChild(i).GetComponent<Button>();
-                            if (existing != null && existing.gameObject.activeInHierarchy)
+                            tmpType.GetProperty("text")?.SetValue(c, "Mods");
+                            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set TMP_Text '{c.name}' to 'Mods'");
+                        }
+                    }
+
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1 OK: Repurposed button '{modsButton.name}'");
+                }
+                else
+                {
+                    // Fallback: clone the button (original behavior)
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1: Only 1 or 0 'Options' buttons found; cloning Settings button '{settingsButton.name}' to create Mods button...");
+
+                    // Guard: don't inject twice into the same parent
+                    Transform parent = settingsButton.transform.parent;
+                    if (parent != null)
+                    {
+                        for (int i = 0; i < parent.childCount; i++)
+                        {
+                            if (parent.GetChild(i).name.StartsWith("DINOForge_ModsButton", StringComparison.OrdinalIgnoreCase))
                             {
-                                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1R: Mods button already present; re-enforcing state...");
-                                EnforceModsButtonState(existing, attemptId);
-                                _injectedButton = existing;
-                                _injected = true;
-                                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓ Mods button already present in parent; SKIPPING re-inject, using existing.");
-                                return;
+                                Button existing = parent.GetChild(i).GetComponent<Button>();
+                                if (existing != null && existing.gameObject.activeInHierarchy)
+                                {
+                                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1R: Mods button already present; re-enforcing state...");
+                                    EnforceModsButtonState(existing, attemptId);
+                                    _injectedButton = existing;
+                                    _injected = true;
+                                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓ Mods button already present in parent; SKIPPING re-inject, using existing.");
+                                    return;
+                                }
                             }
                         }
                     }
-                }
 
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1: Cloning Settings button '{settingsButton.name}' to create Mods button...");
-                Button modsButton = NativeUiHelper.CloneButton(settingsButton, "Mods");
+                    modsButton = NativeUiHelper.CloneButton(settingsButton, "Mods");
 
-                if (modsButton == null)
-                {
-                    LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   ⚠ STEP 1 FAILED: CloneButton returned null! ABORT.");
-                    return;
-                }
-
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1 OK: Clone successful: '{modsButton.name}'");
-                SyncButtonVisualStyle(modsButton, settingsButton, attemptId);
-
-                // STEP 1.5: Enforce text — cloned button inherits source text ("Options"), must override
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1.5: Enforcing 'Mods' text on all text components...");
-                foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
-                {
-                    legacyText.text = "Mods";
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set Text '{legacyText.name}' to 'Mods'");
-                }
-                // TMPro via reflection to avoid hard compile dependency
-                System.Type? tmpType = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
-                if (tmpType != null)
-                {
-                    foreach (Component c in modsButton.GetComponentsInChildren(tmpType, true))
+                    if (modsButton == null)
                     {
-                        tmpType.GetProperty("text")?.SetValue(c, "Mods");
-                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set TMP_Text '{c.name}' to 'Mods'");
+                        LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   ⚠ STEP 1 FAILED: CloneButton returned null! ABORT.");
+                        return;
+                    }
+
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1 OK: Clone successful: '{modsButton.name}'");
+                    SyncButtonVisualStyle(modsButton, settingsButton, attemptId);
+
+                    // STEP 1.5: Enforce text — cloned button inherits source text ("Options"), must override
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 1.5: Enforcing 'Mods' text on all text components...");
+                    foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+                    {
+                        legacyText.text = "Mods";
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set Text '{legacyText.name}' to 'Mods'");
+                    }
+                    // TMPro via reflection to avoid hard compile dependency
+                    System.Type? tmpType2 = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+                    if (tmpType2 != null)
+                    {
+                        foreach (Component c in modsButton.GetComponentsInChildren(tmpType2, true))
+                        {
+                            tmpType2.GetProperty("text")?.SetValue(c, "Mods");
+                            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set TMP_Text '{c.name}' to 'Mods'");
+                        }
                     }
                 }
 
@@ -462,6 +512,31 @@ namespace DINOForge.Runtime.UI
                 {
                     NativeUiHelper.PositionBeforeSibling(modsRect, settingsRect);
                     LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 OK: Positioned BEFORE Settings (sibling index: {modsButton.transform.GetSiblingIndex()})");
+
+                    // Force layout rebuild so VerticalLayoutGroup/ContentSizeFitter includes the new button.
+                    // Walk up to find the ScrollRect content container (has VerticalLayoutGroup).
+                    Transform layoutParent = settingsRect.parent;
+                    if (layoutParent != null)
+                    {
+                        var layoutRt = layoutParent.GetComponent<RectTransform>();
+                        if (layoutRt != null)
+                        {
+                            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRt);
+                            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 LAYOUT: Forced rebuild on '{layoutParent.name}'");
+                        }
+                        // Also rebuild grandparent in case of nested scroll views
+                        if (layoutParent.parent != null)
+                        {
+                            var gpRt = layoutParent.parent.GetComponent<RectTransform>();
+                            if (gpRt != null)
+                            {
+                                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(gpRt);
+                                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 LAYOUT: Forced rebuild on grandparent '{layoutParent.parent.name}'");
+                            }
+                        }
+                        UnityEngine.Canvas.ForceUpdateCanvases();
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 LAYOUT: Canvas.ForceUpdateCanvases() called");
+                    }
                 }
                 else
                 {

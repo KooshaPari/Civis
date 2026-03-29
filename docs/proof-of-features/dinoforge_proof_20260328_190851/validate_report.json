@@ -1,36 +1,36 @@
 {
-    "summary":  {
-                    "pass_rate":  "75%",
-                    "notes":  [
-                                  "F9 overlay confirmed working and fully visible",
-                                  "F10 key does not respond in active gameplay",
-                                  "Game is in active gameplay state during testing",
-                                  "Runtime successfully loaded with F9 input handler active"
-                              ],
-                    "total_tests":  4,
-                    "failed":  1,
-                    "passed":  3
-                },
-    "timestamp":  "2026-03-28T20:15:00Z",
-    "features_tested":  {
-                            "f10_mod_menu":  {
-                                                 "status":  "NOT_RESPONSIVE_IN_GAMEPLAY",
-                                                 "evidence":  "final_f10_confirmed.png",
-                                                 "description":  "F10 key does not appear to trigger a visible mod menu in gameplay state. Same F9 menu remains visible. F10 may only function on main menu or in specific contexts.",
-                                                 "confirmed":  false
-                                             },
-                            "f9_overlay":  {
-                                               "status":  "WORKING",
-                                               "evidence":  "final_f9_confirmed.png",
-                                               "description":  "F9 overlay is OPEN and visible on left side of screen showing DINOForge debug menu with multiple menu items and options",
-                                               "confirmed":  true
-                                           },
-                            "runtime_loaded":  {
-                                                   "status":  "WORKING",
-                                                   "evidence":  "F9_overlay_presence",
-                                                   "description":  "DINOForge runtime is loaded and F9 input handler is operational",
-                                                   "confirmed":  true
-                                               }
-                        },
-    "test_session":  "final_validation_screenshots"
+  "timestamp": "2026-03-28T21:02:00Z",
+  "validation_results": [
+    {
+      "feature": "F9 Debug Overlay",
+      "screenshot": "validate_f9_CONFIRMED.png",
+      "confirmed": true,
+      "notes": "DFCanvas DebugPanel shows immediately on F9 press. ECS KeyInputSystem callback fires OnF9Pressed -> RuntimeDriver.ToggleDebug(). Animation removed (Update() never fires in DINO), Show/Hide now immediate. Log: '[RuntimeDriver] F9 pressed (via KeyInputSystem)'"
+    },
+    {
+      "feature": "F10 Mod Menu",
+      "screenshot": "validate_f10_CONFIRMED.png",
+      "confirmed": true,
+      "notes": "DFCanvas ModMenuPanel shows on F10 press. Same ECS callback path as F9. Log: '[RuntimeDriver] F10 pressed (via KeyInputSystem)'"
+    },
+    {
+      "feature": "Mods Button (Native Menu)",
+      "screenshot": "validate_menu.png",
+      "confirmed": "partial",
+      "notes": "NativeMenuInjector successfully injects button (sibling_index 12, activeInHierarchy=true). onClick rewired to open DINOForge mod menu (same as F10). However DINO's UiGrid re-renders button labels from its internal data list each frame, so label shows 'OPTIONS' instead of 'Mods'. Button functionality works; label override blocked by UiGrid. Requires Harmony patch on UiGrid.SetButtonLabel() to permanently override text."
+    }
+  ],
+  "log_evidence": {
+    "f9_ecs_callback": "[RuntimeDriver] F9 pressed (via KeyInputSystem)",
+    "f10_ecs_callback": "[RuntimeDriver] F10 pressed (via KeyInputSystem)",
+    "mods_injection": "[NativeMenuInjector] MODS BUTTON INJECTION FULLY SUCCESSFUL",
+    "ugui_ready": "[RuntimeDriver] DFCanvas.OnInitSuccess — UGUI canvas ready on main thread"
+  },
+  "root_causes_fixed": [
+    "DFCanvas OnInitSuccess callback registered after Initialize() — fixed: now registered before",
+    "DebugPanel animation used Update() which never fires in DINO — fixed: immediate Show/Hide",
+    "ModMenuPanel animation same issue — fixed: immediate Show/Hide",
+    "F9/F10 background thread GetAsyncKeyState doesn't see synthetic input — fixed: use ECS KeyInputSystem callbacks instead",
+    "Mods button clone ignored by UiGrid — partial fix: repurpose existing Options button, onClick rewired"
+  ]
 }

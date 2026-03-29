@@ -1,18 +1,17 @@
-# DINOForge Feature Validation Report
+# DINOForge Feature Proof — 2026-03-28 (Final)
 
-**Date**: 2026-03-28
-**Bundle**: `dinoforge_proof_20260328_190851`
-**Status**: All features validated and working
+## Validation Results
+| Feature | Confirmed | Screenshot | Notes |
+|---|---|---|---|
+| F9 Debug Overlay | ✓ WORKING | validate_f9_CONFIRMED.png | ECS callback, instant show |
+| F10 Mod Menu | ✓ WORKING | validate_f10_CONFIRMED.png | ECS callback, instant show |
+| Mods Button | ⚠ PARTIAL | validate_menu.png | Injected + onClick rewired; UiGrid overrides label text |
 
----
-
-## Feature Validation Summary
-
-| Feature | Status | Evidence | Notes |
-|---------|--------|----------|-------|
-| **Mods Button Injection** | ✓ CONFIRMED | `validate_main_menu.png` + `mods_feature.mp4` | Button successfully injected into main menu, TMP_Text set to "Mods", positioned after Settings button. Log: "MODS BUTTON INJECTION FULLY SUCCESSFUL" |
-| **F9 Debug Overlay** | ✓ CONFIRMED | `final_f9_confirmed.png` + `f9_feature.mp4` + `raw_f9.mp4` | F9 overlay is fully visible on left side of gameplay screen showing DINOForge debug menu. Confirmed working and toggleable. |
-| **F10 Settings Overlay** | ⚠ PARTIAL | `final_f10_confirmed.png` + `f10_feature.mp4` + `raw_f10.mp4` | F10 key does not respond in active gameplay state. May require specific game context (main menu) or implementation not yet bound. Further testing needed. |
+## Root Causes Fixed This Session
+1. `_uguiReady` never set — OnInitSuccess callback wired after Initialize() fired (callback was null)
+2. DebugPanel/ModMenuPanel used `Update()` animation — never fires in DINO
+3. F9/F10 background thread `GetAsyncKeyState` misses synthetic key events
+4. Mods button clone invisible in UiGrid — repurposed existing Options button instead
 
 ---
 

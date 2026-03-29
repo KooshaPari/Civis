@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET 8.0
-        uses: actions/setup-dotnet@6bd8b7f7c1bea521e4b6fd673d2a96b6afc12c3d # v4.1.0 
+        uses: actions/setup-dotnet@v4 
         with:
           dotnet-version: |
             11.0.x

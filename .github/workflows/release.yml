@@ -32,7 +32,7 @@ jobs:
 
       # Install both SDKs: net8.0 targets (Installer, CLI, Tests) + net9.0 (PackCompiler)
       - name: Setup .NET 8 + 9
-        uses: actions/setup-dotnet@6bd8b7f7c1bea521e4b6fd673d2a96b6afc12c3d # v4.1.0 
+        uses: actions/setup-dotnet@v4 
         with:
           dotnet-version: |
             8.0.x

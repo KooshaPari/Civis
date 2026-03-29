@@ -417,7 +417,7 @@ Factor definitions:
 | `defense_value_normalized` | structure_defense_rating / max_defense_rating × 1000 | [0, 1000] |
 | `citizen_happiness_gain_normalized` | happiness_delta_per_citizen × pop / max_happiness_impact × 1000 | [-500, 1000] |
 | `joule_cost_penalty` | −joule_cost / current_joule_reserves × 1000, clamped [-1000, 0] | [-1000, 0] |
-| `urgency_modifier` | +500 if district_under_threat; +200 if happiness<40; +300 if supply_critical | [0, 500] |
+| `urgency_modifier` | +500 if district_under_threat; +200 if happiness \< 40; +300 if supply_critical | [0, 500] |
 
 Default weights: `W_production=350, W_defense=200, W_happiness=200, W_joule_cost=150, W_urgency=100`.
 
@@ -1314,9 +1314,9 @@ Alliance types and their minimum requirements:
 | Non-Aggression Pact | 150 | No active war | Neither attacks the other |
 | Trade Agreement | 250 | Trade volume > 10K J/100t | Tariff reduction |
 | Military Cooperation | 400 | Shared enemy exists | Intel sharing |
-| Mutual Defense Pact | 600 | No recent war < 500 ticks | Auto-join defensive war |
+| Mutual Defense Pact | 600 | No recent war \< 500 ticks | Auto-join defensive war |
 | Economic Alliance | 400 | Trade volume > 50K J/100t | Joint production |
-| Full Alliance | 750 | No recent war < 1000 ticks | Full military + economic |
+| Full Alliance | 750 | No recent war \< 1000 ticks | Full military + economic |
 
 ```rust
 fn propose_alliance(
@@ -1746,8 +1746,8 @@ fn apply_perfect_intel(
 
 At difficulties 1–4, the AI's knowledge of other nations is limited:
 
-- Military strength: known within ±20% (based on intelligence operations)
-- Economic state: known within ±30% without spy assets
+- Military strength: known within &plusmn;20% (based on intelligence operations)
+- Economic state: known within &plusmn;30% without spy assets
 - Diplomatic state: fully known (public information)
 - Espionage operations: known only if the AI has infiltration assets
 
@@ -1766,7 +1766,7 @@ fn estimate_military_strength(
 
     // Estimate with noise based on intelligence coverage
     let intel_coverage = ai_state.memory.intelligence_coverage(target);
-    let noise_range = (1000 - intel_coverage) * 2 / 10;  // ±0-20% noise
+    let noise_range = (1000 - intel_coverage) * 2 / 10;  // &plusmn;0-20% noise
     let noise = ai_state.rng.gen_range(-noise_range..=noise_range);
     (true_strength + true_strength * noise / 1000).max(0)
 }
@@ -1814,7 +1814,7 @@ impl MCTSNode {
             let ln_parent = integer_ln(parent_visits as i64);
             let ratio = ln_parent * 1000 / self.visits as i64;
             let sqrt_ratio = integer_sqrt(ratio);
-            1414 * sqrt_ratio / 1000  // C = sqrt(2) ≈ 1.414
+            1414 * sqrt_ratio / 1000  // C = sqrt(2) &asymp; 1.414
         };
         exploitation + exploration
     }
@@ -2518,8 +2518,8 @@ nations:
 | Acceptance Criterion | Addressed By | Section |
 |---|---|---|
 | AI policy: {threat_tolerance, opportunity_threshold, resource_spending_rate, preferred_tactics} | `PersonalityParams` struct with all equivalent parameters | §3.1, §4.1 |
-| Threat eval: compare own vs player military strength; if ratio < threat_tolerance, raise alert | `compute_threat_score()`, `ThreatScore.military_ratio` | §3.3 |
-| Defense: if threatened and structures < threshold, spawn defensive units | `assign_mission()` Defend branch; goal `BuildMilitary` | §6.2, §3.5 |
+| Threat eval: compare own vs player military strength; if ratio \< threat_tolerance, raise alert | `compute_threat_score()`, `ThreatScore.military_ratio` | §3.3 |
+| Defense: if threatened and structures \< threshold, spawn defensive units | `assign_mission()` Defend branch; goal `BuildMilitary` | §6.2, §3.5 |
 | Attack: if opportunity and resources available, queue attack order | `assign_mission()` Attack branch; `select_next_building()` resource check | §6.2 |
 | Diplomacy: if heavily outnumbered, may propose peace/trade, form alliances | `evaluate_war_declaration()`, `propose_alliance()`, `evaluate_peace_offer()` | §8.3, §8.4, §8.6 |
 | Determinism: identical faction state + policy + seed → identical decisions | `ai_rng_for_tick()` ChaCha20Rng seeding; no f64; BTreeMap iteration | §2.4 |
@@ -2615,13 +2615,13 @@ The following criteria must pass before CIV-0400 is considered implemented:
 ### 16.5 Military Operational AI
 
 - [ ] Army groups form correctly: units within 3 hexes of same nation grouped together.
-- [ ] Supply decay: army at 0 supply reduces effective_strength to ≤ 300 within 5 ticks.
-- [ ] Retreat triggered when `effective_strength < 0.4 × initial_strength`.
+- [ ] Supply decay: army at 0 supply reduces effective_strength to &lt; 300 within 5 ticks.
+- [ ] Retreat triggered when `effective_strength \< 0.4 × initial_strength`.
 - [ ] A* pathfinding respects terrain costs and zone of control penalties.
 
 ### 16.6 Difficulty Scaling
 
-- [ ] APM governor enforces rate limits: Novice AI submits ≤ 5 actions/minute in `test_apm_novice`.
+- [ ] APM governor enforces rate limits: Novice AI submits &lt; 5 actions/minute in `test_apm_novice`.
 - [ ] MCTS enabled only at difficulty 4–5: test `mcts_disabled_at_difficulty_3`.
 - [ ] Resource bonus: at Legendary, AI production output is 25% higher than at Advanced on same map.
 - [ ] `ai.leadership_bonus.v1` event emitted every tick at difficulty 4–5.
@@ -2652,7 +2652,7 @@ The following criteria must pass before CIV-0400 is considered implemented:
 - [ ] MCTS terminates within `mcts_compute_budget_ms` on all tested hardware.
 - [ ] MCTS output is deterministic: same root state + rng_seed → same best action.
 - [ ] MCTS reward function produces non-trivial variation across personality archetypes.
-- [ ] MCTS thread does not block simulation tick: tick time < 50ms overhead when MCTS active.
+- [ ] MCTS thread does not block simulation tick: tick time \< 50ms overhead when MCTS active.
 
 ---
 

@@ -293,7 +293,7 @@ The engine generates the session ID at `session.create` RPC time. The ID is incl
 
 ### 2.5 Session Registry
 
-The engine maintains an in-memory `SessionRegistry` mapping `SessionId -> Arc<Mutex<SessionState>>`. On engine startup, incomplete sessions (state != ENDED) are reloaded from the `sessions` database table and offered to clients for resumption.
+The engine maintains an in-memory `SessionRegistry` mapping `SessionId -> Arc \< Mutex\<SessionState\>>`. On engine startup, incomplete sessions (state != ENDED) are reloaded from the `sessions` database table and offered to clients for resumption.
 
 ---
 
@@ -695,7 +695,7 @@ Observers may connect to a **completed session** and scrub the recorded tick tim
 }
 ```
 
-Replay is served from the `.civreplay` file (CIV-0001 format). The engine reconstructs state at any tick by replaying from the nearest save checkpoint. Seek operations with no checkpoint within 500 ticks replay from the beginning (this is a cold seek; warm seeks from a nearby checkpoint complete in < 100ms).
+Replay is served from the `.civreplay` file (CIV-0001 format). The engine reconstructs state at any tick by replaying from the nearest save checkpoint. Seek operations with no checkpoint within 500 ticks replay from the beginning (this is a cold seek; warm seeks from a nearby checkpoint complete in \< 100ms).
 
 ---
 

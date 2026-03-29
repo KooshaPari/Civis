@@ -584,7 +584,7 @@ CivLab simulates potentially hundreds of thousands of entities (citizens, tiles,
 | **Parallel system execution** | YES — `par_iter()` native | YES — `par_iter()` native | YES — via rayon | MANUAL — no system scheduler |
 | **Query API ergonomics** | EXCELLENT — proc macros, filter sets | GOOD — explicit query types | ACCEPTABLE — complex setup | MINIMAL — no scheduler at all |
 | **Compile-time query validation** | YES | PARTIAL | NO — runtime panics | PARTIAL |
-| **Change detection** | YES — `Changed<T>` filter | NO | PARTIAL — flagged components | NO |
+| **Change detection** | YES — `Changed\<T\>` filter | NO | PARTIAL — flagged components | NO |
 | **System ordering/scheduling** | YES — stages + labels | MANUAL — external scheduler | YES — via Dispatcher | NONE |
 | **Bevy compatibility (if needed)** | NATIVE | NO | NO | NO |
 | **Active maintenance (2026)** | HIGH — Bevy project | STAGNANT — last release 2021 | MODERATE | MODERATE |
@@ -608,7 +608,7 @@ CivLab simulates potentially hundreds of thousands of entities (citizens, tiles,
 
 4. **hecs is a building block, not a framework.** hecs provides excellent raw ECS performance but no scheduling, no change detection, and no system ordering. Using hecs would require building all of this infrastructure manually — exactly the "reinventing wheels" anti-pattern the library-first mandate prohibits.
 
-5. **bevy_ecs change detection is required.** The simulation core needs to efficiently detect which components changed in a tick to build incremental state snapshots for the WebSocket protocol. `bevy_ecs`'s `Changed<T>` and `Added<T>` query filters provide this with zero overhead on unchanged components.
+5. **bevy_ecs change detection is required.** The simulation core needs to efficiently detect which components changed in a tick to build incremental state snapshots for the WebSocket protocol. `bevy_ecs`'s `Changed\<T\>` and `Added\<T\>` query filters provide this with zero overhead on unchanged components.
 
 #### Key API Used
 
@@ -722,7 +722,7 @@ let display_value: f64 = surplus.to_num::<f64>();
 - Fixed-point arithmetic on integers is bitwise deterministic across all platforms.
 - `fixed` types do not use any floating-point hardware instructions.
 - **RULE:** `f32` and `f64` are forbidden in simulation-core component values. They may only appear in rendering hints, metric export (for human readability), and Python FFI boundary conversions.
-- `to_num::<f64>()` conversion is acceptable for display/export but must never feed back into simulation state.
+- `to_num::\<f64\>()` conversion is acceptable for display/export but must never feed back into simulation state.
 
 ---
 
@@ -2026,7 +2026,7 @@ The Dwarf Fortress stress model is the most detailed mental health simulation in
 ```
 STRESS ACCUMULATION MODEL:
 
-dwarf.stress ∈ [-5000, 5000]
+dwarf.stress &isin; [-5000, 5000]
   Negative = content; Positive = stressed; > 5000 = breakdown
 
 STRESS SOURCES (per event, scaled by personality):
@@ -2211,7 +2211,7 @@ CK3 has its own stress model for characters (not to be confused with the DF stre
 ```
 CK3 CHARACTER STRESS:
 
-character.stress ∈ [0, 3]  (levels: Serenity, Calm, Uneasy, Stressed, Crisis)
+character.stress &isin; [0, 3]  (levels: Serenity, Calm, Uneasy, Stressed, Crisis)
 
 Stress increases from:
   + acting against personality traits (e.g., generous character forced to be cruel: +1 stress)
@@ -2234,7 +2234,7 @@ At Stress Level 3 (Crisis):
 ```
 VASSAL MANAGEMENT:
 
-vassal.opinion_of_liege ∈ [-100, +100]
+vassal.opinion_of_liege &isin; [-100, +100]
   opinion > 25: vassal is "content"
   opinion < -25: vassal is "disloyal"
   opinion < -50: vassal will join factions against liege
@@ -2479,7 +2479,7 @@ SOLAR POWER MODEL:
 
 > **CONTRACT-FAC-001: CivLab MUST model district production as a throughput-constrained function: `district.output[good] = min(capacity(workers, building_level), input_supply_rate / recipe.inputs[good]) * recipe.outputs[good]`. When any input is supply-constrained, district output falls proportionally. This is the CivLab equivalent of Factorio's input-starved machine running below capacity.**
 
-> **CONTRACT-FAC-002: CivLab MUST implement a Joule grid balance check every tick: `net_joule_balance = total_produced - total_consumed`. If `net_joule_balance < 0`, all production districts receive a proportional efficiency penalty: `district_efficiency = total_produced / total_consumed` (capped at 1.0). This is isomorphic to Factorio's power grid derating mechanic.**
+> **CONTRACT-FAC-002: CivLab MUST implement a Joule grid balance check every tick: `net_joule_balance = total_produced - total_consumed`. If `net_joule_balance \< 0`, all production districts receive a proportional efficiency penalty: `district_efficiency = total_produced / total_consumed` (capped at 1.0). This is isomorphic to Factorio's power grid derating mechanic.**
 
 > **CONTRACT-FAC-003: CivLab MUST implement renewable energy variability: solar and wind generation output varies per tick based on climate parameters (insolation, wind speed). Energy reserves must buffer variability. Players who over-rely on renewables without sufficient reserve storage experience production disruptions during low-generation ticks.**
 
@@ -2605,7 +2605,7 @@ CARGO CHAIN (raw material → processing → consumer goods):
 
 > **CONTRACT-OTTD-001: CivLab MUST implement trade route profitability as: `profit = (price_differential[good] - joule_transport_cost[good, distance, infrastructure_quality]) * units_traded`. A route with negative profit is not executed (merchants do not voluntarily trade at a loss). This is the CivLab equivalent of OpenTTD's income minus operating cost calculation.**
 
-> **CONTRACT-OTTD-002: CivLab MUST implement trade route throughput capacity: each trade route has a `max_throughput_per_tick` determined by infrastructure quality (road < rail < port). If trade demand exceeds route capacity, surplus accumulates at the producing city, driving down the local price via market clearing, and reducing production incentives. This captures OpenTTD's backlog mechanics.**
+> **CONTRACT-OTTD-002: CivLab MUST implement trade route throughput capacity: each trade route has a `max_throughput_per_tick` determined by infrastructure quality (road \< rail &lt; port). If trade demand exceeds route capacity, surplus accumulates at the producing city, driving down the local price via market clearing, and reducing production incentives. This captures OpenTTD's backlog mechanics.**
 
 > **CONTRACT-OTTD-003: CivLab MUST implement good-type-specific transport cost modifiers: perishable goods (food, medicine) have higher Joule cost per unit-distance than durable goods (metals, tools). This captures OpenTTD's cargo type time-sensitivity in energy terms.**
 
@@ -2623,10 +2623,10 @@ Terra Nil (Free Lives, 2023) inverts the factory-building genre: instead of buil
 
 ```
 TILE STATE MODEL:
-  tile.state ∈ {wasteland, remediated, grassland, forest, wetland, tundra, coast}
-  tile.pollution ∈ [0.0, 1.0]
-  tile.moisture ∈ [0.0, 1.0]
-  tile.biodiversity ∈ [0.0, 1.0]  (count of distinct species present / total possible)
+  tile.state &isin; {wasteland, remediated, grassland, forest, wetland, tundra, coast}
+  tile.pollution &isin; [0.0, 1.0]
+  tile.moisture &isin; [0.0, 1.0]
+  tile.biodiversity &isin; [0.0, 1.0]  (count of distinct species present / total possible)
 
 RESTORATION PIPELINE (linear prerequisite chain):
   wasteland (pollution > 0.5)
@@ -2738,7 +2738,7 @@ This creates the "bootstrapping" dynamic:
 
 > **CONTRACT-TERRA-001: CivLab MUST implement climate remediation with non-linear returns: the marginal ROI of reducing CO2 concentration from 550ppm to 450ppm MUST be higher than the ROI of reducing from 450ppm to 350ppm, and both MUST be higher than the ROI of reducing from 600ppm to 550ppm (where climate events are already self-reinforcing). This captures Terra Nil's design insight that early restoration investment unlocks compounding returns.**
 
-> **CONTRACT-TERRA-002: CivLab MUST implement a climate stabilization threshold: at CO2 < 350ppm, climate event probability drops to 0. This is the analog of Terra Nil's "biodiversity > 0.5 → self-sustaining" mechanic. Nations that invest in carbon capture and renewable transition can reach this threshold and permanently exit the climate risk spiral.**
+> **CONTRACT-TERRA-002: CivLab MUST implement a climate stabilization threshold: at CO2 \< 350ppm, climate event probability drops to 0. This is the analog of Terra Nil's "biodiversity > 0.5 → self-sustaining" mechanic. Nations that invest in carbon capture and renewable transition can reach this threshold and permanently exit the climate risk spiral.**
 
 > **CONTRACT-TERRA-003: CivLab MUST model the stranded asset problem: coal and fossil fuel districts have positive economic value (they produce Joules cheaply) but contribute to CO2 accumulation. Decommissioning them before end-of-life writes off their remaining economic value. The stranded asset cost is the economic barrier to rapid renewable transition, and MUST be reflected in the player's decision calculus.**
 
@@ -2876,7 +2876,7 @@ PROPAGANDA (information injection):
 
 ### 9.6 Design Contracts
 
-> **CONTRACT-INF-001: CivLab MUST implement covert operation detection probability as: `detection_probability = base_detection[operation_type] * (1 + target.security_investment / k1) * (1 - attacker.espionage_skill / k2)`, where k1 and k2 are tunable constants calibrated so that a maximally-defended target against a minimally-skilled attacker has > 80% detection probability, and a minimally-defended target against a maximally-skilled attacker has < 10% detection probability. This formula MUST apply to all operation types, with operation-type-specific base_detection values.**
+> **CONTRACT-INF-001: CivLab MUST implement covert operation detection probability as: `detection_probability = base_detection[operation_type] * (1 + target.security_investment / k1) * (1 - attacker.espionage_skill / k2)`, where k1 and k2 are tunable constants calibrated so that a maximally-defended target against a minimally-skilled attacker has > 80% detection probability, and a minimally-defended target against a maximally-skilled attacker has \< 10% detection probability. This formula MUST apply to all operation types, with operation-type-specific base_detection values.**
 
 > **CONTRACT-INF-002: CivLab MUST implement covert operations as multi-tick schemes: each operation has a per-tick progress accumulation function. Operations MUST NOT resolve in a single tick. This ensures operations are interruptible (if the attacker's agent is detected mid-operation, the operation fails and consequences apply).**
 
@@ -3783,7 +3783,7 @@ These items integrate CIV with Venture control-plane. Depends on P0 completion.
 | **P1-4** | Cost Model: CIV Energy → Venture Spend Quotas | P0-2, P0-4, Venture P0-2 | TODO | CIV-Venture Finance |
 | | - Map energy conservation equation to budget model | | | |
 | | - Peak-shaving mechanics → spend velocity controls | | | |
-| | - Cost estimate validation (±5% accuracy) | | | |
+| | - Cost estimate validation (&plusmn;5% accuracy) | | | |
 
 **P1 Exit Gate:** CIV events flow through Venture event bus. Compliance can trace institutional changes and policy decisions.
 

@@ -177,7 +177,7 @@ pub fn step(mut state: WorldState, consumption_joules: f64) -> WorldState {
 
 ### Immediate (Week 1-2)
 
-1. **Fix determinism**: Replace `f64` with `FixedI64<Scale18>` from `fixed` crate
+1. **Fix determinism**: Replace `f64` with `FixedI64\<Scale18\>` from `fixed` crate
 2. **Add ECS**: Integrate `bevy_ecs` with basic components (Cell, Building, Citizen)
 3. **Add tick loop**: Fixed-timestep 100ms with ChaCha20Rng seed
 4. **Add event system**: Define EventEnvelopeV1 and emit to stdout/file

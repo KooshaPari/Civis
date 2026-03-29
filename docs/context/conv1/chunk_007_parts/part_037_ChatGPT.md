@@ -56,7 +56,7 @@ Incoming energy flux:
 Ein=L∗4πR2E\_{in} = \\frac{L\_\*}{4\\pi R^2}Ein​=4πR2L∗​​
 Where L∗L\_\*L∗​ = stellar luminosity.
 Surface temperature baseline:
-T0≈(Ein(1−α)4σ)1/4T\_0 \\approx \\left(\\frac{E\_{in}(1-\\alpha)}{4\\sigma}\\right)^{1/4}T0​≈(4σEin​(1−α)​)1/4
+T0&asymp;(Ein(1−α)4σ)1/4T\_0 \\approx \\left(\\frac{E\_{in}(1-\\alpha)}{4\\sigma}\\right)^{1/4}T0​&asymp;(4σEin​(1−α)​)1/4
 α\\alphaα = albedo
 σ\\sigmaσ = Stefan–Boltzmann constant
 You don’t need exact physics — just relative scaling.
@@ -107,7 +107,7 @@ Freshwater availability Wf(x,y)W\_f(x,y)Wf​(x,y)
 
 Use Perlin/simplex noise + tectonic masks.
 Total planetary resource vector:
-R=∫surface{B,M,F,Re,Wf} dA\\mathcal{R} = \\int\_{surface} \\{B, M, F, R\_e, W\_f\\} \\, dAR=∫surface​{B,M,F,Re​,Wf​}dA
+R=&int;surface{B,M,F,Re,Wf} dA\\mathcal{R} = \\int\_{surface} \\{B, M, F, R\_e, W\_f\\} \\, dAR=&int;surface​{B,M,F,Re​,Wf​}dA
 This feeds future industrial potential.
 
 V. Climate Volatility Model
@@ -141,7 +141,7 @@ Planet parameters constrain ultimate energy potential.
 Define max renewable potential:
 Erenewmax=f(Ein,  land  area,  atmosphere)E\_{renew}^{max} = f(E\_{in},\\; land\\;area,\\; atmosphere)Erenewmax​=f(Ein​,landarea,atmosphere)
 Define fossil potential (if organic burial high):
-Efossiltotal=∫F(x,y) dAE\_{fossil}^{total} = \\int F(x,y)\\, dAEfossiltotal​=∫F(x,y)dA
+Efossiltotal=&int;F(x,y) dAE\_{fossil}^{total} = \\int F(x,y)\\, dAEfossiltotal​=&int;F(x,y)dA
 Define nuclear potential (rare element density):
 Enuclearmax=f(Re)E\_{nuclear}^{max} = f(R\_e)Enuclearmax​=f(Re​)
 This directly caps long-run industrial and space potential.

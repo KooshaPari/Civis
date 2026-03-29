@@ -221,8 +221,8 @@ bitset-core = "0.1.0"
 **Version pin:** `0.4.0`
 
 **Rationale:**
-- **Zero-copy archetype queries:** Components are stored in contiguous typed arrays per archetype. Iterating `(Position, Inventory, Mood)` touches exactly the memory for those three component types, in order. No indirection through `Arc<Mutex<>>` or pointer chasing.
-- **No `Arc<Mutex<>>` in hot path:** `legion` worlds own component data directly. Parallel system dispatch uses safe Rust borrowing rules at compile time, not runtime locks. This is required by the determinism invariant (no non-deterministic lock ordering).
+- **Zero-copy archetype queries:** Components are stored in contiguous typed arrays per archetype. Iterating `(Position, Inventory, Mood)` touches exactly the memory for those three component types, in order. No indirection through `Arc \< Mutex<>>` or pointer chasing.
+- **No `Arc \< Mutex<>>` in hot path:** `legion` worlds own component data directly. Parallel system dispatch uses safe Rust borrowing rules at compile time, not runtime locks. This is required by the determinism invariant (no non-deterministic lock ordering).
 - **Cache-friendly:** Archetype layout ensures entities sharing the same component set are stored together. Iterating all Citizens touches citizen-only memory; no interleaving of unrelated component data.
 - **Pure Rust:** No C dependencies. Compiles cleanly on all tier-1 targets.
 - **Serialization support:** Components implement `serde::Serialize + Deserialize`. `legion` worlds can be serialized to canonical form for state hashing and snapshotting.
@@ -232,7 +232,7 @@ bitset-core = "0.1.0"
 | Alternative | Why Rejected |
 |---|---|
 | `bevy_ecs` (standalone) | Pulls in a large fraction of the Bevy dependency tree even when used headless. The `bevy_ecs` standalone crate is not officially supported as a standalone library — it is maintained as part of Bevy's monorepo and breakage is common when used outside that context. Heavier compile times. |
-| `specs` | Uses `Arc<Mutex<MaskedStorage<T>>>` for component storage. Every parallel system that reads components acquires a read lock. Under high parallelism (rayon scope with 8 threads), this creates lock contention on the component storage. Also uses dynamic dispatch for system scheduling, adding runtime overhead. |
+| `specs` | Uses `Arc \< Mutex \< MaskedStorage\<T\>>>` for component storage. Every parallel system that reads components acquires a read lock. Under high parallelism (rayon scope with 8 threads), this creates lock contention on the component storage. Also uses dynamic dispatch for system scheduling, adding runtime overhead. |
 | `hecs` | Solid alternative, but lacks first-class support for parallel world access patterns. Schedules are manual; no built-in concept of system phases. Would require significant bespoke scheduling code that `legion` provides out of the box. |
 | Custom entity model | Full control, but the correctness burden of a cache-friendly archetype layout is substantial. `legion` has been validated at scale; a custom solution would require the same level of validation. ADR-006 deferred this decision to the P0 prototype but `legion` was selected after benchmarking. |
 
@@ -1049,13 +1049,13 @@ pub fn run_demographics_phase(
 |---|---|---|
 | `<(&Position, &Inventory, &Mood)>::query()` | Sequential archetype scan, high cache hit rate on Citizen archetype | Production, Social |
 | `<(&Position, &BuildingRole, &mut Inventory)>::query()` | Reads Position + BuildingRole (immutable), writes Inventory | Production phase |
-| `<Entity, &Age, &Health>::query().filter(component::<Employment>())` | Filter by component presence, still contiguous | Demographics |
+| `<Entity, &Age, &Health>::query().filter(component::\<Employment\>())` | Filter by component presence, still contiguous | Demographics |
 | `<(&MarketKey, &mut OrderBook)>::query()` | Small archetype (few markets), excellent cache locality | Trade |
 | `<(&InstRole, &mut Treasury, &PolicyBundle)>::query()` | Very small archetype (few institutions), effectively L1-resident | Policy |
 
-**SoA layout note:** `legion` uses archetype-based SoA layout. All `Position` components for Citizen entities are stored in one contiguous `Vec<Position>`. All `Mood` components are in another contiguous `Vec<Mood>`. Iterating both simultaneously is a single strided pass over two cache lines per entity pair. This is the primary performance advantage over an `AoS` layout where `struct Citizen { pos, mood, health, ... }` would interleave hot and cold fields.
+**SoA layout note:** `legion` uses archetype-based SoA layout. All `Position` components for Citizen entities are stored in one contiguous `Vec\<Position\>`. All `Mood` components are in another contiguous `Vec\<Mood\>`. Iterating both simultaneously is a single strided pass over two cache lines per entity pair. This is the primary performance advantage over an `AoS` layout where `struct Citizen { pos, mood, health, ... }` would interleave hot and cold fields.
 
-**Cold data isolation:** Biography text, historical event logs, and birth-location metadata are stored outside the ECS in a `BTreeMap<EntityId, CitizenBiography>` in the engine resources. These are never accessed in hot-path phases. Keeping them out of the ECS prevents them from polluting archetype cache lines.
+**Cold data isolation:** Biography text, historical event logs, and birth-location metadata are stored outside the ECS in a `BTreeMap \< EntityId, CitizenBiography>` in the engine resources. These are never accessed in hot-path phases. Keeping them out of the ECS prevents them from polluting archetype cache lines.
 
 ---
 
@@ -1065,9 +1065,9 @@ pub fn run_demographics_phase(
 
 | Citizen Count | p50 Tick Time | p99 Tick Time | p999 Tick Time | Notes |
 |---|---|---|---|---|
-| 1,000 | ≤ 8 ms | ≤ 14 ms | ≤ 16 ms | Target for 60 FPS game clients |
-| 10,000 | ≤ 30 ms | ≤ 45 ms | ≤ 50 ms | Acceptable for research mode |
-| 100,000 | ≤ 150 ms | ≤ 180 ms | ≤ 200 ms | Research-only; tick rate dropped to 5/sec |
+| 1,000 | &lt; 8 ms | &lt; 14 ms | &lt; 16 ms | Target for 60 FPS game clients |
+| 10,000 | &lt; 30 ms | &lt; 45 ms | &lt; 50 ms | Acceptable for research mode |
+| 100,000 | &lt; 150 ms | &lt; 180 ms | &lt; 200 ms | Research-only; tick rate dropped to 5/sec |
 
 **Measurement methodology:**
 - `TICK_DURATION_HISTOGRAM` Prometheus metric records wall-clock time per tick using `std::time::Instant` (wall clock only, not simulation time).
@@ -1119,12 +1119,12 @@ Across 10,000 citizens, `rayon` dispatches this in parallel; with SIMD, per-citi
 
 ### 5.4 Memory Layout Strategy
 
-**Hot path (ECS archetype arrays):** Citizen components (Position, Inventory, Mood, Health, Age) stored in contiguous `Vec<T>` per component type within each archetype. A sequential scan of 1,000 Citizen Mood components touches exactly 6 KB (1000 × 6 bytes), fitting in L1 cache (typically 32 KB).
+**Hot path (ECS archetype arrays):** Citizen components (Position, Inventory, Mood, Health, Age) stored in contiguous `Vec\<T\>` per component type within each archetype. A sequential scan of 1,000 Citizen Mood components touches exactly 6 KB (1000 × 6 bytes), fitting in L1 cache (typically 32 KB).
 
 **Cold data (off-ECS storage):** The following are stored outside the ECS in engine resources, accessed only on specific events:
-- `BTreeMap<EntityId, CitizenBiography>` — name, birthplace, family history
-- `BTreeMap<EntityId, Vec<HistoricalEvent>>` — per-citizen event log
-- `BTreeMap<InstitutionId, PolicyHistory>` — past policy decisions
+- `BTreeMap \< EntityId, CitizenBiography>` — name, birthplace, family history
+- `BTreeMap \< EntityId, Vec\<HistoricalEvent\>>` — per-citizen event log
+- `BTreeMap \< InstitutionId, PolicyHistory>` — past policy decisions
 
 **Allocation strategy:** No per-tick heap allocations on hot paths. Entity deletion uses tombstone marking (set `alive = false` in `BitSet`) and deferred compaction every 100 ticks. Event vectors are pre-allocated with capacity `= expected_events_per_tick × 1.5` and reset each tick without deallocation.
 
@@ -1306,7 +1306,7 @@ for delta in &deltas {
 **Category:** Architecture discipline
 **Enforced by:** Type system (`&State` vs `&mut State` parameters)
 
-Each phase receives immutable access to prior-phase state and produces a list of mutations. Mutations are accumulated in a `Vec<Delta>` and applied sequentially after the phase completes:
+Each phase receives immutable access to prior-phase state and produces a list of mutations. Mutations are accumulated in a `Vec\<Delta\>` and applied sequentially after the phase completes:
 
 ```rust
 // Phase signature contract
@@ -1574,7 +1574,7 @@ pub async fn run_sim_bridge(
 }
 ```
 
-**Design note:** `Arc<BroadcastFrame>` is used because `broadcast::channel` clones the value for each receiver. Cloning an `Arc` is `O(1)` (atomic increment); cloning a `BroadcastFrame` (potentially 120 KB) for each of 100 clients would be `O(n × frame_size)`. With `Arc`, all clients share the same heap allocation.
+**Design note:** `Arc\<BroadcastFrame\>` is used because `broadcast::channel` clones the value for each receiver. Cloning an `Arc` is `O(1)` (atomic increment); cloning a `BroadcastFrame` (potentially 120 KB) for each of 100 clients would be `O(n × frame_size)`. With `Arc`, all clients share the same heap allocation.
 
 ### 7.4 Command Priority Queue
 
@@ -2050,33 +2050,33 @@ module-name = "civlab._civlab"
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
-| NFR-P-01 | p50 tick time (1k citizens) | ≤ 8 ms | `TICK_DURATION_HISTOGRAM` p50, scraped by Prometheus | CI bench regression: `criterion` baseline comparison on PR |
-| NFR-P-02 | p99 tick time (1k citizens) | ≤ 14 ms | `TICK_DURATION_HISTOGRAM` p99 | CI bench regression gate: fail PR if p99 increases > 10% |
-| NFR-P-03 | p999 tick time (1k citizens) | ≤ 16 ms | `TICK_DURATION_HISTOGRAM` p999 | Prometheus alert in production |
-| NFR-P-04 | p50 tick time (10k citizens) | ≤ 30 ms | Same histogram, different scenario | Separate `bench_10k_citizens` criterion benchmark |
-| NFR-P-05 | p50 tick time (100k citizens) | ≤ 150 ms | Same histogram, large scenario | Performance regression test in nightly CI only |
-| NFR-P-06 | Broadcast lag | p99 ≤ 10 ms from tick completion to last client delivery | `BROADCAST_LAG_HISTOGRAM` | Prometheus alert: `civlab_broadcast_lag_seconds{quantile="0.99"} > 0.010` |
-| NFR-P-07 | Snapshot serialization overhead | ≤ 1 ms per tick for 1k citizens | `TICK_PHASE_DURATION{phase="Snapshot"}` | Criterion benchmark `bench_snapshot_1k` |
-| NFR-P-08 | Memory footprint | ≤ 256 MB RSS for 10k citizens | `/proc/self/status` VmRSS in health endpoint | Nightly memory regression test |
+| NFR-P-01 | p50 tick time (1k citizens) | &lt; 8 ms | `TICK_DURATION_HISTOGRAM` p50, scraped by Prometheus | CI bench regression: `criterion` baseline comparison on PR |
+| NFR-P-02 | p99 tick time (1k citizens) | &lt; 14 ms | `TICK_DURATION_HISTOGRAM` p99 | CI bench regression gate: fail PR if p99 increases > 10% |
+| NFR-P-03 | p999 tick time (1k citizens) | &lt; 16 ms | `TICK_DURATION_HISTOGRAM` p999 | Prometheus alert in production |
+| NFR-P-04 | p50 tick time (10k citizens) | &lt; 30 ms | Same histogram, different scenario | Separate `bench_10k_citizens` criterion benchmark |
+| NFR-P-05 | p50 tick time (100k citizens) | &lt; 150 ms | Same histogram, large scenario | Performance regression test in nightly CI only |
+| NFR-P-06 | Broadcast lag | p99 &lt; 10 ms from tick completion to last client delivery | `BROADCAST_LAG_HISTOGRAM` | Prometheus alert: `civlab_broadcast_lag_seconds{quantile="0.99"} > 0.010` |
+| NFR-P-07 | Snapshot serialization overhead | &lt; 1 ms per tick for 1k citizens | `TICK_PHASE_DURATION{phase="Snapshot"}` | Criterion benchmark `bench_snapshot_1k` |
+| NFR-P-08 | Memory footprint | &lt; 256 MB RSS for 10k citizens | `/proc/self/status` VmRSS in health endpoint | Nightly memory regression test |
 
 ### 10.3 Scalability
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
-| NFR-S-01 | Max simultaneous WebSocket clients | ≥ 100 clients at 10 ticks/sec | Load test: 100 concurrent `tokio-tungstenite` clients | Load test in CI (`tests/load/100_clients.rs`) |
-| NFR-S-02 | Client connection overhead | ≤ 5 ms per client connection (handshake + initial snapshot) | WebSocket upgrade + handshake response latency percentile | Integration test with timer |
-| NFR-S-03 | Citizen count scaling | Tick time scales sub-linearly from 1k to 10k citizens | Ratio: `tick_time_10k / tick_time_1k ≤ 8` (expect ~5 with rayon) | Criterion comparison benchmark |
-| NFR-S-04 | Command throughput | ≥ 1,000 commands/sec accepted without tick delay | Stress test: flood `command_tx` at 1k/sec, verify tick time unchanged | Load test with command flood |
-| NFR-S-05 | Event log growth rate | ≤ 5 MB/minute at 1k citizens, 10 ticks/sec | Monitor `civlab_event_log_bytes_total` | Prometheus recording rule + alert |
-| NFR-S-06 | WebSocket frame size | ≤ 20 KB average binary frame for 1k citizen snapshot | `FRAME_SIZE_HISTOGRAM` | Unit test on `BinaryFrame::to_msgpack_bytes()` with reference snapshot |
+| NFR-S-01 | Max simultaneous WebSocket clients | &gt; 100 clients at 10 ticks/sec | Load test: 100 concurrent `tokio-tungstenite` clients | Load test in CI (`tests/load/100_clients.rs`) |
+| NFR-S-02 | Client connection overhead | &lt; 5 ms per client connection (handshake + initial snapshot) | WebSocket upgrade + handshake response latency percentile | Integration test with timer |
+| NFR-S-03 | Citizen count scaling | Tick time scales sub-linearly from 1k to 10k citizens | Ratio: `tick_time_10k / tick_time_1k &lt; 8` (expect ~5 with rayon) | Criterion comparison benchmark |
+| NFR-S-04 | Command throughput | &gt; 1,000 commands/sec accepted without tick delay | Stress test: flood `command_tx` at 1k/sec, verify tick time unchanged | Load test with command flood |
+| NFR-S-05 | Event log growth rate | &lt; 5 MB/minute at 1k citizens, 10 ticks/sec | Monitor `civlab_event_log_bytes_total` | Prometheus recording rule + alert |
+| NFR-S-06 | WebSocket frame size | &lt; 20 KB average binary frame for 1k citizen snapshot | `FRAME_SIZE_HISTOGRAM` | Unit test on `BinaryFrame::to_msgpack_bytes()` with reference snapshot |
 
 ### 10.4 Reliability — Crash Recovery
 
 | # | Metric | Target | Measurement Method | Enforcement Mechanism |
 |---|---|---|---|---|
 | NFR-R-01 | Snapshot persistence interval | Snapshot written to PostgreSQL every 100 ticks | `civlab_snapshots_written_total` counter | Integration test: run 100 ticks, verify DB has 1 snapshot row |
-| NFR-R-02 | Recovery point objective (RPO) | On crash, resume from last persisted snapshot (≤ 100 ticks lost) | Kill server mid-run, restart, verify tick counter | Recovery integration test |
-| NFR-R-03 | Recovery time objective (RTO) | Server restart + state load ≤ 30 seconds | Time from process start to first tick broadcast | Health check endpoint `/health` transitions from `starting` to `ready` |
+| NFR-R-02 | Recovery point objective (RPO) | On crash, resume from last persisted snapshot (&lt; 100 ticks lost) | Kill server mid-run, restart, verify tick counter | Recovery integration test |
+| NFR-R-03 | Recovery time objective (RTO) | Server restart + state load &lt; 30 seconds | Time from process start to first tick broadcast | Health check endpoint `/health` transitions from `starting` to `ready` |
 | NFR-R-04 | Event log durability | Event log flushed to disk before acknowledgement | `fsync` on event log append (O_DSYNC) | Unit test: write event, kill process, verify log on restart |
 | NFR-R-05 | Client reconnect | Client can reconnect and receive current snapshot within 2 seconds | Integration test: disconnect client, reconnect, measure time to first snapshot | WebSocket reconnect test |
 | NFR-R-06 | Simulation panic isolation | Panic in one tick phase does not kill the server process | Inject panic via test endpoint, verify server continues | Integration test with panic injection |
@@ -2088,7 +2088,7 @@ module-name = "civlab._civlab"
 | NFR-O-01 | Prometheus metric coverage | 100% of tick phases have latency histograms | Count `HistogramVec` labels vs `PhaseId` enum variants | CI test: verify each `PhaseId` has a corresponding metric |
 | NFR-O-02 | Structured log completeness | Every error has structured fields: `tick`, `phase`, `entity_id`, `error` | Log schema validation in CI | `tracing` instrumentation review checklist |
 | NFR-O-03 | Trace propagation | Every WebSocket command is traceable from client receipt to tick application | `tracing::span` with `trace_id` propagated through command → phase | Manual trace inspection in Jaeger |
-| NFR-O-04 | Metrics cardinality | Total Prometheus time series count ≤ 10,000 | Prometheus cardinality API: `count({__name__=~".+"})` | Prometheus alert: `prometheus_tsdb_head_series > 10000` |
+| NFR-O-04 | Metrics cardinality | Total Prometheus time series count &lt; 10,000 | Prometheus cardinality API: `count({__name__=~".+"})` | Prometheus alert: `prometheus_tsdb_head_series > 10000` |
 | NFR-O-05 | Dashboard coverage | All NFR metrics visible in Grafana dashboard | Manual dashboard review | Dashboard JSON committed to repo at `ops/grafana/civ-sim.json` |
 | NFR-O-06 | Alert coverage | Each p99 latency target has a Prometheus alerting rule | Count alert rules vs NFR-P-* count | CI: validate `ops/prometheus/alerts.yml` with `promtool check rules` |
 

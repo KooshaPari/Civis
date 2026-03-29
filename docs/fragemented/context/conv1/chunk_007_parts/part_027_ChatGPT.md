@@ -147,7 +147,7 @@ cognitive development
 
 Qr,t+1=Qr,t+γ1EducationSpend+γ2HealthSpend−γ3Sr,t−γ4Inequalityr,tQ\_{r,t+1} = Q\_{r,t} + \\gamma\_1 \\text{EducationSpend} + \\gamma\_2 \\text{HealthSpend} - \\gamma\_3 S\_{r,t} - \\gamma\_4 \\text{Inequality}\_{r,t}Qr,t+1​=Qr,t​+γ1​EducationSpend+γ2​HealthSpend−γ3​Sr,t​−γ4​Inequalityr,t​
 Workforce effective labor:
-ℓr,teff=∑a=1564Nr,t(a)⋅Qr,t(a)⋅Participation(a)\\ell^{eff}\_{r,t} = \\sum\_{a=15}^{64} N\_{r,t}(a)\\cdot Q\_{r,t}(a)\\cdot \\text{Participation}(a)ℓr,teff​=a=15∑64​Nr,t​(a)⋅Qr,t​(a)⋅Participation(a)
+ℓr,teff=&sum;a=1564Nr,t(a)⋅Qr,t(a)⋅Participation(a)\\ell^{eff}\_{r,t} = \\sum\_{a=15}^{64} N\_{r,t}(a)\\cdot Q\_{r,t}(a)\\cdot \\text{Participation}(a)ℓr,teff​=a=15&sum;64​Nr,t​(a)⋅Qr,t​(a)⋅Participation(a)
 This links demographics directly to growth and innovation.
 
 5) Aging → fiscal stress → legitimacy crisis loop
@@ -181,7 +181,7 @@ This is how “slow decline” happens even in peace.
 6) Demography and war capacity
 Mobilization capacity depends on working-age cohort size and willingness.
 Define mobilizable manpower:
-MPr,t=∑a=1845Nr,t(a)⋅Fitness(a)⋅Willingness(Cr,t,Lr,t)MP\_{r,t} = \\sum\_{a=18}^{45} N\_{r,t}(a)\\cdot \\text{Fitness}(a)\\cdot \\text{Willingness}(C\_{r,t}, L\_{r,t})MPr,t​=a=18∑45​Nr,t​(a)⋅Fitness(a)⋅Willingness(Cr,t​,Lr,t​)
+MPr,t=&sum;a=1845Nr,t(a)⋅Fitness(a)⋅Willingness(Cr,t,Lr,t)MP\_{r,t} = \\sum\_{a=18}^{45} N\_{r,t}(a)\\cdot \\text{Fitness}(a)\\cdot \\text{Willingness}(C\_{r,t}, L\_{r,t})MPr,t​=a=18&sum;45​Nr,t​(a)⋅Fitness(a)⋅Willingness(Cr,t​,Lr,t​)
 Aging societies:
 
 have smaller mobilizable pools

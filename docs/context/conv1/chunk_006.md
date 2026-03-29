@@ -1,4 +1,4 @@
-### **You**
+### You
 
 Absolutely — there are existing games and simulation paradigms you can draw from to model deep world mechanics like social systems, health dynamics, ideology, shadow states, and multi-level governance, but none of them are full-stack political economy civ simulators: instead they each tackle pieces you can integrate into CivLab’s layered architecture. Wikipedia
 Below is a structured breakdown of what to extract from relevant games and social simulation research, organized by LOD scale (global → municipal → individual), domain mechanics, and ideology/complex social dynamics.
@@ -242,7 +242,7 @@ Just pick one.
 
 ---
 
-### **ChatGPT**
+### ChatGPT
 
 Your choice extend last what I said alone
 

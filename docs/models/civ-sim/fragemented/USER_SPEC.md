@@ -486,7 +486,7 @@ User double-clicks a hex tile or uses the "Zoom to City" button. System transiti
 User drags the timeline scrubber to a specific tick. System updates all views (hex map, metric charts, event log) to reflect state at that tick. Scrubbing is frame-synced: display updates within 200ms of scrubber position change.
 
 **Step 8: Inspect event log**
-The event log panel shows all events fired at the current tick and surrounding window (±5 ticks). Events include: policy changes, resource threshold crossings, institution stability changes, conflict onset, diplomatic events. Each event has a causal attribution field showing what triggered it.
+The event log panel shows all events fired at the current tick and surrounding window (&plusmn;5 ticks). Events include: policy changes, resource threshold crossings, institution stability changes, conflict onset, diplomatic events. Each event has a causal attribution field showing what triggered it.
 
 **Step 9: Annotate a moment**
 User right-clicks on the timeline at a specific tick and selects "Add Annotation". A text field appears. User enters commentary. Annotation marker appears on the timeline.
@@ -857,7 +857,7 @@ civlab mod new --type policy --name my_tax_policy
 Mod author implements the required trait in `src/lib.rs`. The SDK provides:
 - `PolicyMod::apply(&self, state: &SimState, tick: u64) -> PolicyEffect`
 - `EconomicMod::compute_production(&self, state: &SimState) -> ResourceDelta`
-- `EventMod::should_fire(&self, state: &SimState, rng: &mut EngineRng) -> Option<Event>`
+- `EventMod::should_fire(&self, state: &SimState, rng: &mut EngineRng) -> Option\<Event\>`
 
 **Step 3: Build**
 
@@ -1131,7 +1131,7 @@ App Root
 - Keyboard `Shift+[` / `Shift+]`: step backward/forward 1000 ticks.
 - Keyboard `Home` / `End`: jump to tick 0 or max tick.
 - Right-click on track: context menu with "Add Annotation", "Create Branch", "Copy Tick Hash".
-- Scroll wheel over scrubber: fine adjustment ±1 tick per scroll click.
+- Scroll wheel over scrubber: fine adjustment &plusmn;1 tick per scroll click.
 
 **Performance contract:** All view updates triggered by scrubber interaction must complete within 200ms. If data for a tick is not yet in the client cache, a skeleton loader appears immediately and is replaced when data loads. The scrubber handle moves immediately on drag; views may lag up to 200ms.
 
@@ -1829,11 +1829,11 @@ The hex map and timeline scrubber are rich visual components that require specia
 
 **Metric Charts Accessible Alternative:**
 - Each chart has a "Data Table" toggle rendering the time series as a scrollable table.
-- Chart SVGs include a `<title>` element with a human-readable description.
-- Example: `<title>Legitimacy metric over 10000 ticks: starts at 0.82, peaks at 0.91 at tick 2300, declines to 0.34 at tick 4200</title>`.
+- Chart SVGs include a `\<title\>` element with a human-readable description.
+- Example: `\<title\>Legitimacy metric over 10000 ticks: starts at 0.82, peaks at 0.91 at tick 2300, declines to 0.34 at tick 4200</title>`.
 
 **Event Log:**
-- Each event log entry is a list item (`<li>`) with full text description.
+- Each event log entry is a list item (`\<li\>`) with full text description.
 - Causal attribution is included in the text: "Legitimacy threshold breach at tick 4195, caused by tax_rate increase at tick 4000."
 
 **Run Status Changes:**
@@ -1993,7 +1993,7 @@ These tests can be performed by Maren (or a QA proxy) without access to engine i
 - Download the ZIP bundle.
 - Verify: ZIP contains PDF, JSON, CSV, and Parquet files.
 - Verify: JSON bundle contains `artifact_fingerprint` field (BLAKE3 hash).
-- Run `civlab verify <bundle.json>` on the JSON bundle.
+- Run `civlab verify \< bundle.json>` on the JSON bundle.
 - Verify: Output is "PASS".
 - Pass criterion: Export complete without UI blocking; bundle passes integrity check.
 

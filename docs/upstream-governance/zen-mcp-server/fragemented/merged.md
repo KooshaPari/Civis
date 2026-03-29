@@ -8,7 +8,7 @@
 
 - Install: `pip install -e .[dev]` (requires Python 3.12+; use the repo `.python-version`).
 - Unit tests: `python -m pytest -xvs`.
-- Targeted test: `python -m pytest tests/<path>::<TestClass>::<test_name> -xvs`.
+- Targeted test: `python -m pytest tests/\<path\>::\<TestClass\>::\<test_name\> -xvs`.
 - Simulator suite: `python communication_simulator_test.py --verbose`.
 - Lint & format: `ruff check .`, `black --check .`, `isort --check-only .`.
 - Auto-fix style: `ruff check . --fix`, `black .`, `isort .`.
@@ -47,7 +47,7 @@ Use `/commands` → **Reload (R)** after editing. Commands reference the work pr
 
 # Git Workflow & Evidence
 
-- Branch naming: `feature/<slug>`, `fix/<slug>`, `chore/<slug>`.
+- Branch naming: `feature/\<slug\>`, `fix/\<slug\>`, `chore/\<slug\>`.
 - Keep commits atomic; prefer `feat:`, `fix:`, `test:`, `docs:`, `chore:`.
 - Mandatory proof before merge:
   - `python -m pytest -xvs`
@@ -63,7 +63,7 @@ Use `/release-checklist` before tagging, `/incident-postmortem` after outages, a
 - Network/tool execution is sandboxed; expand permissions via `.codex/permissions.local.toml`, `.claude/settings.local.json`, `.auggie/settings.local.json`.
 - When changing provider integrations or auth flows, run `/security-sweep` and coordinate with `docs/reports/` owners.
 - Logs rotate at 20 MB; use `logs/mcp_server.log` and `logs/mcp_activity.log` for debugging. Simulator tests require `LOG_LEVEL=DEBUG`.
-- Use `/housekeeping <scope>` (via `ops-concierge`) for simple chores so dev droids stay focused on feature work.
+- Use `/housekeeping \<scope\>` (via `ops-concierge`) for simple chores so dev droids stay focused on feature work.
 
 # Documentation & Prompts
 
@@ -95,7 +95,7 @@ This file contains essential commands and workflows for developing and maintaini
 
 Zen MCP Server is a comprehensive Model Context Protocol (MCP) server that orchestrates multiple AI models for enhanced development workflows. It provides unified deployment with dashboard interface, multi-model collaboration, and extensive tool ecosystem for code analysis, review, debugging, and project management.
 
-> **New to the repo?** Run `/dev-setup <machine-name>` to bootstrap dependencies, then `/agent-briefing <task>` before delegating to the specialized droids. Claude owns the end-to-end flow (idea → planning → dev → review → QA → deploy → evaluation); keep hand-offs explicit so subagents can run in parallel.
+> **New to the repo?** Run `/dev-setup \< machine-name>` to bootstrap dependencies, then `/agent-briefing \<task\>` before delegating to the specialized droids. Claude owns the end-to-end flow (idea → planning → dev → review → QA → deploy → evaluation); keep hand-offs explicit so subagents can run in parallel.
 
 ## Architecture
 
@@ -237,7 +237,7 @@ This script automatically runs:
 - Complete unit test suite (excluding integration tests)
 - Verification that all checks pass 100%
 
-> Tip: `/quality-gate <branch>` asks the assistant to confirm these checks, gather artifacts (screenshots, logs), and propose follow-up actions before you request a review.
+> Tip: `/quality-gate \<branch\>` asks the assistant to confirm these checks, gather artifacts (screenshots, logs), and propose follow-up actions before you request a review.
 
 **Run Integration Tests (requires API keys):**
 ```bash
@@ -341,9 +341,9 @@ tail -f logs/mcp_http_server.log
 
 ### Log Management
 
-Use `/log-triage <issue>` for a guided log investigation (commands, filters, hypotheses) before diving into the files below.
+Use `/log-triage \<issue\>` for a guided log investigation (commands, filters, hypotheses) before diving into the files below.
 
-Run `/housekeeping <scope>` regularly so `ops-concierge` can queue lightweight chores (log rotation, env sync, dependency bumps) while primary workflows execute.
+Run `/housekeeping \<scope\>` regularly so `ops-concierge` can queue lightweight chores (log rotation, env sync, dependency bumps) while primary workflows execute.
 
 #### View Server Logs
 ```bash
@@ -495,7 +495,7 @@ DISABLED_TOOLS=
 
 ### Model Configuration
 
-Run `/provider-audit <provider>` when changing credentials or model routing to verify env vars, rate limits, and smoke tests.
+Run `/provider-audit \<provider\>` when changing credentials or model routing to verify env vars, rate limits, and smoke tests.
 
 ```bash
 # Provider API keys

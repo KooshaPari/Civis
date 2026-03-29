@@ -135,11 +135,11 @@ The following are explicitly **not supported** in resvg:
 - `kerning` (removed in SVG 2)
 
 **Interactive/Dynamic:**
-- Animations (SMIL `<animate>`, `<animateTransform>`, etc.)
-- Scripting (`<script>`)
+- Animations (SMIL `\<animate\>`, `\<animateTransform\>`, etc.)
+- Scripting (`\<script\>`)
 - Events (onclick, onload, etc.)
-- Cursor (`<cursor>`)
-- Links (`<a>`)
+- Cursor (`\<cursor\>`)
+- Links (`\<a\>`)
 
 None of these unsupported features are relevant to CivLab's static icon/UI generation use case.
 

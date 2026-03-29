@@ -75,7 +75,7 @@ A simple positive feedback:
 HPIt+1=HPIt⋅exp⁡(α⋅gC−β⋅rt+ϵt)HPI\_{t+1}=HPI\_t \\cdot \\exp(\\alpha \\cdot g\_C - \\beta \\cdot r\_t + \\epsilon\_t)HPIt+1​=HPIt​⋅exp(α⋅gC​−β⋅rt​+ϵt​)
 where gCg\_CgC​ is credit growth rate.
 Collateral value:
-CollateralValuet∝HPIt\\text{CollateralValue}\_t \\propto HPI\_tCollateralValuet​∝HPIt​
+CollateralValuet&prop;HPIt\\text{CollateralValue}\_t \\propto HPI\_tCollateralValuet​&prop;HPIt​
 This creates the classic loop:
 credit ↑ → prices ↑ → collateral ↑ → credit ↑
 
@@ -105,7 +105,7 @@ unemployment rises (optional)
 political extremism rises
 
 Crisis switch:
-if BankHealtht<hcrit⇒CreditCrunch\\text{if } \\text{BankHealth}\_t < h\_{crit} \\Rightarrow \\text{CreditCrunch}if BankHealtht​<hcrit​⇒CreditCrunch
+if BankHealtht \< hcrit⇒CreditCrunch\\text{if } \\text{BankHealth}\_t \< h\_{crit} \\Rightarrow \\text{CreditCrunch}if BankHealtht​<hcrit​⇒CreditCrunch
 Credit crunch behavior:
 Ct↓↓,rt↑,CSt↑,Yt↓C\_t \\downarrow\\downarrow,\\quad r\_t \\uparrow,\\quad CS\_t \\uparrow,\\quad Y\_t \\downarrowCt​↓↓,rt​↑,CSt​↑,Yt​↓
 

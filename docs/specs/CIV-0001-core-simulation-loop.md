@@ -880,8 +880,8 @@ TickFrame unpack_frame(const std::vector<uint8_t>& raw) {
 **Status:** Open
 
 ### FR-CIV-CORE-004: Sub-16ms Tick Time
-**Spec:** Single tick completes in ≤ 16 ms wall time.
-**Test:** Measure tick_compute_time on commodity hardware; assert < 16 ms.
+**Spec:** Single tick completes in &lt; 16 ms wall time.
+**Test:** Measure tick_compute_time on commodity hardware; assert \< 16 ms.
 **Status:** Open
 
 ### FR-CIV-CORE-005: BTreeMap Ordered Iteration
@@ -956,7 +956,7 @@ TickFrame unpack_frame(const std::vector<uint8_t>& raw) {
 
 ### FR-CIV-CORE-019: ECS Entity Model
 **Spec:** Entities modeled as dense arrays (cache-friendly, zero-copy queries).
-**Test:** Verify all components are Vec<T> or SparseSet; no allocations per iteration.
+**Test:** Verify all components are Vec\<T\> or SparseSet; no allocations per iteration.
 **Status:** Open
 
 ### FR-CIV-CORE-020: Horizontal Multi-Client Scaling

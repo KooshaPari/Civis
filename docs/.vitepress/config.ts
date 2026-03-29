@@ -1,25 +1,34 @@
-import { createPhenotypeConfig } from '@phenotype/docs/config'
+import { defineConfig } from 'vitepress'
 
-export default createPhenotypeConfig({
-  title: 'Civ + Venture Specs',
+export default defineConfig({
+  title: 'Civ',
   description: 'Planning closure, technical specs, and governance docs',
-  githubRepo: 'civ',
-  nav: [
-    { text: 'Wiki', link: '/wiki/' },
-    { text: 'Development Guide', link: '/development-guide/' },
-    { text: 'Document Index', link: '/document-index/' },
-    { text: 'API', link: '/api/' },
-    { text: 'Roadmap', link: '/roadmap/' }
-  ],
-  sidebar: [{ text: 'Categories', items: [
-    { text: 'Wiki', link: '/wiki/' },
-    { text: 'Development Guide', link: '/development-guide/' },
-    { text: 'Document Index', link: '/document-index/' },
-    { text: 'API', link: '/api/' },
-    { text: 'Roadmap', link: '/roadmap/' }
-  ] }],
-  overrides: {
-    outDir: '../docs-dist',
-    srcExclude: ['fragemented/**', 'context/**', 'specs/**', 'models/civ-sim/fragemented/**'],
-  }
+  ignoreDeadLinks: true,
+  cleanUrls: true,
+  srcExclude: ['fragemented/**'],
+  markdown: {
+    lineNumbers: true,
+    theme: {
+      light: 'github-light',
+      dark: 'github-dark',
+    },
+  },
+  themeConfig: {
+    nav: [
+      { text: 'Wiki', link: '/wiki/' },
+      { text: 'Development Guide', link: '/development-guide/' },
+      { text: 'Document Index', link: '/document-index/' },
+      { text: 'API', link: '/api/' },
+      { text: 'Roadmap', link: '/roadmap/' }
+    ],
+    sidebar: [{ text: 'Categories', items: [
+      { text: 'Wiki', link: '/wiki/' },
+      { text: 'Development Guide', link: '/development-guide/' },
+      { text: 'Document Index', link: '/document-index/' },
+      { text: 'API', link: '/api/' },
+      { text: 'Roadmap', link: '/roadmap/' }
+    ] }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/KooshaPari/civ' }],
+    search: { provider: 'local' },
+  },
 })

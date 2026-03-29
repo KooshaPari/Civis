@@ -29,7 +29,7 @@ and where shadow actors can perturb beliefs and payoffs
 
 1) Players, states, and actions
 1.1 Players
-Polities i∈{1,…,n}i \\in \\{1,\\dots,n\\}i∈{1,…,n}.
+Polities i&isin;{1,…,n}i \\in \\{1,\\dots,n\\}i&isin;{1,…,n}.
 Each polity has internal state:
 Xi,t=(Si,t,Ti,t,Li,t,Gi,t,Pi,t,Ei,t,Ri,t,…)X\_{i,t}=(S\_{i,t},T\_{i,t},L\_{i,t},G\_{i,t},P\_{i,t},E\_{i,t},R\_{i,t},\\ldots)Xi,t​=(Si,t​,Ti,t​,Li,t​,Gi,t​,Pi,t​,Ei,t​,Ri,t​,…)
 
@@ -108,7 +108,7 @@ This is the bridge between sim and “4X” flavor.
 
 3) Repeated game with endogenous state transitions
 The interaction is repeated:
-max⁡πi  E[∑t=0∞δtUi,t]\\max\_{\\pi\_i}\\; \\mathbb{E}\\left[\\sum\_{t=0}^\\infty \\delta^t U\_{i,t}\\right]πi​max​E[t=0∑∞​δtUi,t​]
+max⁡πi  E[&sum;t=0&infin;δtUi,t]\\max\_{\\pi\_i}\\; \\mathbb{E}\\left[\\sum\_{t=0}^\\infty \\delta^t U\_{i,t}\\right]πi​max​E[t=0&sum;&infin;​δtUi,t​]
 subject to:
 Xi,t+1=Fi(Xi,t,ui,t,u−i,t,ξt)X\_{i,t+1} = F\_i(X\_{i,t},u\_{i,t},u\_{-i,t},\\xi\_{t})Xi,t+1​=Fi​(Xi,t​,ui,t​,u−i,t​,ξt​)
 So a war decision today changes next year’s:
@@ -144,7 +144,7 @@ domestic tolerance for hardship
 A simple sanction effectiveness function:
 SanEffi→j=σ(c1dj←i+c2CoalitionSize−c3Substitutabilityj−c4Leakage)\\text{SanEff}\_{i\\to j} = \\sigma\\Big(c\_1 d\_{j\\leftarrow i} + c\_2 \\text{CoalitionSize} - c\_3 \\text{Substitutability}\_j - c\_4 \\text{Leakage}\\Big)SanEffi→j​=σ(c1​dj←i​+c2​CoalitionSize−c3​Substitutabilityj​−c4​Leakage)
 The sender also pays:
-SanCosti∝di←j\\text{SanCost}\_{i} \\propto d\_{i\\leftarrow j}SanCosti​∝di←j​
+SanCosti&prop;di←j\\text{SanCost}\_{i} \\propto d\_{i\\leftarrow j}SanCosti​&prop;di←j​
 Equilibrium behavior: sanctions are used when:
 
 sender cost is low
@@ -200,7 +200,7 @@ Let disputed value be VVV.
 Let expected win probability for iii be pip\_ipi​.
 War costs ci,cjc\_i, c\_jci​,cj​.
 Bargaining range exists if:
-piV−ci≤x≤piV+cjp\_i V - c\_i \\le x \\le p\_i V + c\_jpi​V−ci​≤x≤pi​V+cj​
+piV−ci&lt;x&lt;piV+cjp\_i V - c\_i \\le x \\le p\_i V + c\_jpi​V−ci​&lt;x&lt;pi​V+cj​
 where xxx is transfer/settlement.
 War occurs when:
 

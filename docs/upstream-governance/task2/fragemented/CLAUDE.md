@@ -27,7 +27,7 @@ This repository is optimized for Claude (and similar LLM agents) acting as an au
 - Follow the closed-loop workflow: review → research (code/web/reasoning) → plan → execute → test → polish → repeat.
 - Do not ask the user what to do next unless blocked by missing secrets, external access, or true ambiguity.
 - Respect repo architecture, abstractions, auth, and env conventions at all times.
-- **Keep all modules ≤500 lines; target ≤350 lines. Decompose proactively to maintain clarity.**
+- **Keep all modules &lt;500 lines; target &lt;350 lines. Decompose proactively to maintain clarity.**
 - **Avoid backwards compatibility shims, legacy fallbacks, or gentle migrations. Always perform FULL, COMPLETE changes.**
 
 ## 1. Repository Mental Model for Claude
@@ -41,7 +41,7 @@ Understand these as first-class constraints before editing:
   - `infrastructure/`: Adapters (agent CLI invoker, model router, rate limiter, logging).
   - `tests/`: Structured into unit, integration, e2e.
 - Style: Typed where practical, 100-char line length, Ruff/Black-compatible, clear logging, explicit error handling.
-- **File size constraint: all modules ≤500 lines (target ≤350). Larger modules must be decomposed.**
+- **File size constraint: all modules &lt;500 lines (target &lt;350). Larger modules must be decomposed.**
 
 Claude must:
 - Reuse these layers instead of bypassing them.
@@ -51,12 +51,12 @@ Claude must:
 
 ## 2. File Size & Modularity Mandate (Critical)
 
-**Hard constraint: All modules must stay ≤500 lines; target ≤350 lines.**
+**Hard constraint: All modules must stay &lt;500 lines; target &lt;350 lines.**
 
 Before adding features to any file, check its current line count. If it approaches 350+ lines:
 1. **Identify cohesive responsibilities** (task execution, agent CLI delegation, model selection, rate limiting).
 2. **Extract into separate modules** following this hierarchy:
-   - Domain logic → new `services/<domain>/` submodule
+   - Domain logic → new `services/\<domain\>/` submodule
    - Adapters/clients → new `infrastructure/` submodule
    - Tool orchestration → split by feature within `tools/`
    - Helpers/utilities → new `utils/` or domain-specific modules

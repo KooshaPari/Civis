@@ -20,19 +20,19 @@ INFINITE-HORIZON SURVIVABILITY PROOF FRAMEWORK
 0) What we are proving
 Let xtx\_txt​ be the reduced state:
 xt=(St,Lt,Tt,It,Gt,Ft,… )x\_t=(S\_t,L\_t,T\_t,I\_t,G\_t,F\_t,\\dots)xt​=(St​,Lt​,Tt​,It​,Gt​,Ft​,…)
-Let ut∈Uu\_t\\in\\mathcal{U}ut​∈U be policy controls (bounded; constitutional constraints enforced).
+Let ut&isin;Uu\_t\\in\\mathcal{U}ut​&isin;U be policy controls (bounded; constitutional constraints enforced).
 Let shocks ξt\\xi\_tξt​ be drawn from a class Ξ\\XiΞ.
 Dynamics:
 xt+1=f(xt,ut,ξt)x\_{t+1}=f(x\_t,u\_t,\\xi\_t)xt+1​=f(xt​,ut​,ξt​)
 Define a safe set:
-S={x:  S≤Smax⁡, T≤Tmax⁡, L≥Lmin⁡, G≥Gmin⁡, F≤Fmax⁡, I≤Imax⁡}\\mathcal{S}=\\{x:\\; S\\le S\_{\\max},\\,T\\le T\_{\\max},\\,L\\ge L\_{\\min},\\,G\\ge G\_{\\min},\\,F\\le F\_{\\max},\\,I\\le I\_{\\max}\\}S={x:S≤Smax​,T≤Tmax​,L≥Lmin​,G≥Gmin​,F≤Fmax​,I≤Imax​}
+S={x:  S&lt;Smax⁡, T&lt;Tmax⁡, L&gt;Lmin⁡, G&gt;Gmin⁡, F&lt;Fmax⁡, I&lt;Imax⁡}\\mathcal{S}=\\{x:\\; S\\le S\_{\\max},\\,T\\le T\_{\\max},\\,L\\ge L\_{\\min},\\,G\\ge G\_{\\min},\\,F\\le F\_{\\max},\\,I\\le I\_{\\max}\\}S={x:S&lt;Smax​,T&lt;Tmax​,L&gt;Lmin​,G&gt;Gmin​,F&lt;Fmax​,I&lt;Imax​}
 We want to prove one of these (in increasing strength):
 (A) Positive recurrence / ergodicity
 The process returns to S\\mathcal{S}S infinitely often and has a stationary distribution concentrated near it.
 (B) Bounded expected “instability energy”
-There exists a function V(x)V(x)V(x) such that sup⁡tE[V(xt)]<∞\\sup\_t \\mathbb{E}[V(x\_t)] < \\inftysupt​E[V(xt​)]<∞.
+There exists a function V(x)V(x)V(x) such that sup⁡tE[V(xt)]<&infin;\\sup\_t \\mathbb{E}[V(x\_t)] < \\inftysupt​E[V(xt​)]<&infin;.
 (C) High-probability invariance (strongest)
-Pr⁡(xt∈S  ∀t)≥1−δ\\Pr(x\_t\\in \\mathcal{S}\\;\\forall t)\\ge 1-\\deltaPr(xt​∈S∀t)≥1−δ
+Pr⁡(xt&isin;S  ∀t)&gt;1−δ\\Pr(x\_t\\in \\mathcal{S}\\;\\forall t)\\ge 1-\\deltaPr(xt​&isin;S∀t)&gt;1−δ
 for a given δ\\deltaδ, under bounded shocks and admissible policies.
 In a complex system, (A) and (B) are the most realistic formal targets; (C) requires strong assumptions.
 
@@ -40,16 +40,16 @@ In a complex system, (A) and (B) are the most realistic formal targets; (C) requ
 We assume:
 A1) Shock class is bounded in magnitude
 There exists ξˉ\\bar{\\xi}ξˉ​ such that:
-ξt∈Ξ,∥ξt∥≤ξˉ    a.s.\\xi\_t \\in \\Xi,\\quad \\|\\xi\_t\\|\\le \\bar{\\xi} \\;\\;\\text{a.s.}ξt​∈Ξ,∥ξt​∥≤ξˉ​a.s.
+ξt&isin;Ξ,∥ξt∥&lt;ξˉ    a.s.\\xi\_t \\in \\Xi,\\quad \\|\\xi\_t\\|\\le \\bar{\\xi} \\;\\;\\text{a.s.}ξt​&isin;Ξ,∥ξt​∥&lt;ξˉ​a.s.
 This means: you are not trying to survive “planet-killer” shocks in the same theorem.
 A2) Controls are bounded and constitutional
-ut∈U,Bt≥Bmin⁡,  Σt≤Σmax⁡,  Coup=0u\_t\\in \\mathcal{U},\\quad B\_t\\ge B\_{\\min},\\;\\Sigma\_t\\le \\Sigma\_{\\max},\\; Coup=0ut​∈U,Bt​≥Bmin​,Σt​≤Σmax​,Coup=0
+ut&isin;U,Bt&gt;Bmin⁡,  Σt&lt;Σmax⁡,  Coup=0u\_t\\in \\mathcal{U},\\quad B\_t\\ge B\_{\\min},\\;\\Sigma\_t\\le \\Sigma\_{\\max},\\; Coup=0ut​&isin;U,Bt​&gt;Bmin​,Σt​&lt;Σmax​,Coup=0
 A3) System has a stabilizable drift structure
 Outside the safe set, there is a policy that pushes key variables back (scarcity down, legitimacy up, fragility down), with a net negative drift in a Lyapunov function.
 This is the key “controllability” requirement.
 A4) Governance does not instantly collapse
 We require a minimum integrity floor (or a repair mechanism) so the controller can remain effective:
-Gt≥Gmin⁡>0G\_t \\ge G\_{\\min} >0Gt​≥Gmin​>0
+Gt&gt;Gmin⁡>0G\_t \\ge G\_{\\min} >0Gt​&gt;Gmin​>0
 This is equivalent to: if governance goes to zero, no controller can reliably stabilize the system.
 
 2) Construct a Lyapunov function V(x)V(x)V(x)
@@ -62,19 +62,19 @@ where ϕ\\phiϕ are convex increasing penalties (quadratic or exponential).
 Important: For high-probability bounds, you prefer exponential penalties; for expected boundedness, quadratic is fine.
 
 3) Foster–Lyapunov drift condition (core theorem tool)
-We want to show there exist constants c>0c>0c>0, b<∞b<\\inftyb<∞, and a compact set K⊆S\\mathcal{K}\\subseteq \\mathcal{S}K⊆S such that:
-E[V(xt+1)∣xt=x]−V(x)≤−cfor all x∉K\\mathbb{E}[V(x\_{t+1}) \\mid x\_t=x] - V(x)
-\\le -c \\quad \\text{for all } x\\notin \\mathcal{K}E[V(xt+1​)∣xt​=x]−V(x)≤−cfor all x∈/K
+We want to show there exist constants c>0c>0c>0, b<&infin;b<\\inftyb<&infin;, and a compact set K⊆S\\mathcal{K}\\subseteq \\mathcal{S}K⊆S such that:
+E[V(xt+1)∣xt=x]−V(x)&lt;−cfor all x&notin;K\\mathbb{E}[V(x\_{t+1}) \\mid x\_t=x] - V(x)
+\\le -c \\quad \\text{for all } x\\notin \\mathcal{K}E[V(xt+1​)∣xt​=x]−V(x)&lt;−cfor all x&isin;/K
 and
-E[V(xt+1)∣xt=x]<∞∀x\\mathbb{E}[V(x\_{t+1}) \\mid x\_t=x] < \\infty \\quad \\forall xE[V(xt+1​)∣xt​=x]<∞∀x
+E[V(xt+1)∣xt=x]<&infin;∀x\\mathbb{E}[V(x\_{t+1}) \\mid x\_t=x] < \\infty \\quad \\forall xE[V(xt+1​)∣xt​=x]<&infin;∀x
 This implies positive recurrence and existence of a stationary distribution with finite E[V]\\mathbb{E}[V]E[V]. In plain terms: the system can’t drift to infinity; it keeps coming back.
 
 4) Show the drift inequality holds (how CivLab makes it true)
 This is where your earlier “design inequalities” come in. You ensure each destabilizing channel has a countervailing bounded stabilizer.
 4.1 Scarcity drift
 Assume you have policy levers (adaptation, energy investment, rationing rules) that reduce scarcity outside S\\mathcal{S}S:
-E[St+1−St∣xt]≤−ϵSwhen St>Smax⁡\\mathbb{E}[S\_{t+1} - S\_t \\mid x\_t] \\le -\\epsilon\_S
-\\quad \\text{when } S\_t>S\_{\\max}E[St+1​−St​∣xt​]≤−ϵS​when St​>Smax​
+E[St+1−St∣xt]&lt;−ϵSwhen St>Smax⁡\\mathbb{E}[S\_{t+1} - S\_t \\mid x\_t] \\le -\\epsilon\_S
+\\quad \\text{when } S\_t>S\_{\\max}E[St+1​−St​∣xt​]&lt;−ϵS​when St​>Smax​
 This is achieved by:
 
 rights-first rationing
@@ -87,32 +87,32 @@ corridor redundancy (trade diversification)
 
 4.2 Tyranny drift boundedness
 Because coupling lock and surveillance cap hold, your earlier bounded-tyranny inequality ensures:
-Tt+1≤Tmax⁡whenever xt∈ST\_{t+1}\\le T\_{\\max} \\quad \\text{whenever } x\_t\\in \\mathcal{S}Tt+1​≤Tmax​whenever xt​∈S
+Tt+1&lt;Tmax⁡whenever xt&isin;ST\_{t+1}\\le T\_{\\max} \\quad \\text{whenever } x\_t\\in \\mathcal{S}Tt+1​&lt;Tmax​whenever xt​&isin;S
 and if TTT begins to rise due to emergency enforcement, legitimacy penalties and constitutional caps force rollback.
 4.3 Inequality drift control
 Anti-rent constraints + redistribution ensure:
-E[It+1−It∣xt]≤−ϵIwhen It>Imax⁡\\mathbb{E}[I\_{t+1}-I\_t \\mid x\_t] \\le -\\epsilon\_I
-\\quad \\text{when } I\_t>I\_{\\max}E[It+1​−It​∣xt​]≤−ϵI​when It​>Imax​
+E[It+1−It∣xt]&lt;−ϵIwhen It>Imax⁡\\mathbb{E}[I\_{t+1}-I\_t \\mid x\_t] \\le -\\epsilon\_I
+\\quad \\text{when } I\_t>I\_{\\max}E[It+1​−It​∣xt​]&lt;−ϵI​when It​>Imax​
 This is why “boring finance + LVT + antitrust” are not optional: they are needed to satisfy drift negativity.
 4.4 Financial fragility drift control
 Macroprudential caps guarantee:
-E[Ft+1−Ft∣xt]≤−ϵFwhen Ft>Fmax⁡\\mathbb{E}[F\_{t+1}-F\_t \\mid x\_t] \\le -\\epsilon\_F
-\\quad \\text{when } F\_t>F\_{\\max}E[Ft+1​−Ft​∣xt​]≤−ϵF​when Ft​>Fmax​
+E[Ft+1−Ft∣xt]&lt;−ϵFwhen Ft>Fmax⁡\\mathbb{E}[F\_{t+1}-F\_t \\mid x\_t] \\le -\\epsilon\_F
+\\quad \\text{when } F\_t>F\_{\\max}E[Ft+1​−Ft​∣xt​]&lt;−ϵF​when Ft​>Fmax​
 4.5 Legitimacy repair
 With baseline floor Bmin⁡B\_{\\min}Bmin​ and bounded tyranny, legitimacy has a restoring drift when it falls low:
-E[Lt+1−Lt∣xt]≥ϵLwhen Lt<Lmin⁡\\mathbb{E}[L\_{t+1}-L\_t \\mid x\_t] \\ge \\epsilon\_L
-\\quad \\text{when } L\_t<L\_{\\min}E[Lt+1​−Lt​∣xt​]≥ϵL​when Lt​<Lmin​
+E[Lt+1−Lt∣xt]&gt;ϵLwhen Lt \< Lmin⁡\\mathbb{E}[L\_{t+1}-L\_t \\mid x\_t] \\ge \\epsilon\_L
+\\quad \\text{when } L\_t \< L\_{\\min}E[Lt+1​−Lt​∣xt​]&gt;ϵL​when Lt​<Lmin​
 This is the “safety net as stabilizer” fact.
 
 5) Theorem: Infinite-horizon bounded survivability (positive recurrence)
 Theorem A (Stochastic stability under bounded shocks)
-Under assumptions A1–A4, suppose there exists an admissible policy u(x)∈Uu(x)\\in\\mathcal{U}u(x)∈U such that the Foster–Lyapunov drift condition holds for some Lyapunov function V(x)V(x)V(x). Then:
+Under assumptions A1–A4, suppose there exists an admissible policy u(x)&isin;Uu(x)\\in\\mathcal{U}u(x)&isin;U such that the Foster–Lyapunov drift condition holds for some Lyapunov function V(x)V(x)V(x). Then:
 
 The Markov process {xt}\\{x\_t\\}{xt​} is positive recurrent.
 
 There exists a unique invariant distribution π\\piπ.
 
-Eπ[V(x)]<∞\\mathbb{E}\_\\pi[V(x)] < \\inftyEπ​[V(x)]<∞.
+Eπ[V(x)]<&infin;\\mathbb{E}\_\\pi[V(x)] < \\inftyEπ​[V(x)]<&infin;.
 
 The system returns to a compact safe core K⊆S\\mathcal{K}\\subseteq\\mathcal{S}K⊆S infinitely often, with finite expected return time.
 
@@ -121,7 +121,7 @@ The civilization doesn’t “inevitably” drift into collapse; it spends most 
 
 6) High-probability safety bounds (optional strengthening)
 To get a bound like:
-Pr⁡(τSc<∞)≤δ\\Pr(\\tau\_{\\mathcal{S}^c} < \\infty)\\le \\deltaPr(τSc​<∞)≤δ
+Pr⁡(τSc<&infin;)&lt;δ\\Pr(\\tau\_{\\mathcal{S}^c} < \\infty)\\le \\deltaPr(τSc​<&infin;)&lt;δ
 (where τSc\\tau\_{\\mathcal{S}^c}τSc​ is first exit time), you need stronger assumptions:
 
 shocks are bounded and not adversarial
@@ -131,10 +131,10 @@ the controller has margin (strong stabilizers)
 VVV can be made a supermartingale outside S\\mathcal{S}S
 
 If you can show:
-E[eλV(xt+1)∣xt]≤eλV(xt)⋅e−η\\mathbb{E}[e^{\\lambda V(x\_{t+1})} \\mid x\_t] \\le e^{\\lambda V(x\_t)}\\cdot e^{-\\eta}E[eλV(xt+1​)∣xt​]≤eλV(xt​)⋅e−η
+E[eλV(xt+1)∣xt]&lt;eλV(xt)⋅e−η\\mathbb{E}[e^{\\lambda V(x\_{t+1})} \\mid x\_t] \\le e^{\\lambda V(x\_t)}\\cdot e^{-\\eta}E[eλV(xt+1​)∣xt​]&lt;eλV(xt​)⋅e−η
 outside a core set, then you can derive exponential tail bounds on escape probability over time.
 Practical CivLab use:
-You can state these as “for shock frequency ≤ X and magnitude ≤ Y, probability of leaving safe basin in 100 years ≤ 5%.”
+You can state these as “for shock frequency &lt; X and magnitude &lt; Y, probability of leaving safe basin in 100 years &lt; 5%.”
 That’s both rigorous and interpretable.
 
 7) What breaks the proof (important, and honest)

@@ -32,7 +32,7 @@ war readiness and logistics
 
 1) Core objects
 1.1 Polities
-Players i∈{1,…,n}i\\in\\{1,\\dots,n\\}i∈{1,…,n}.
+Players i&isin;{1,…,n}i\\in\\{1,\\dots,n\\}i&isin;{1,…,n}.
 State (subset relevant to scarcity security):
 Xi,t=(Ei,tcap,Ei,tdem,Si,t,Li,t,Ti,t,Gi,t,Pi,t)X\_{i,t}=(E^{cap}\_{i,t}, E^{dem}\_{i,t}, S\_{i,t}, L\_{i,t}, T\_{i,t}, G\_{i,t}, P\_{i,t})Xi,t​=(Ei,tcap​,Ei,tdem​,Si,t​,Li,t​,Ti,t​,Gi,t​,Pi,t​)
 1.2 Resource network (graph)
@@ -41,7 +41,7 @@ G=(V,E)\\mathcal{G}=(V, \\mathcal{E})G=(V,E)
 
 Nodes VVV: regions, ports, producers, chokepoints
 
-Edges e∈Ee\\in\\mathcal{E}e∈E: trade routes / pipelines / shipping lanes
+Edges e&isin;Ee\\in\\mathcal{E}e&isin;E: trade routes / pipelines / shipping lanes
 
 Capacity ce(t)c\_e(t)ce​(t): throughput
 
@@ -54,13 +54,13 @@ Key variable: each polity’s effective deliverable energy is the max flow it ca
 
 2) Energy acquisition as a flow optimization (baseline physics)
 For each polity iii, define its net deliverable energy:
-E~i,t=max⁡{fei}∑v∈Viinflowi(v)\\tilde{E}\_{i,t}=\\max\_{\\{f^i\_e\\}}
-\\sum\_{v\\in V\_i} \\text{inflow}^i(v)E~i,t​={fei​}max​v∈Vi​∑​inflowi(v)
+E~i,t=max⁡{fei}&sum;v&isin;Viinflowi(v)\\tilde{E}\_{i,t}=\\max\_{\\{f^i\_e\\}}
+\\sum\_{v\\in V\_i} \\text{inflow}^i(v)E~i,t​={fei​}max​v&isin;Vi​&sum;​inflowi(v)
 subject to:
 
 flow conservation
 
-0≤fei≤ce(t)⋅1(access allowed)0\\le f^i\_e \\le c\_e(t)\\cdot \\mathbf{1}(\\text{access allowed})0≤fei​≤ce​(t)⋅1(access allowed)
+0&lt;fei&lt;ce(t)⋅1(access allowed)0\\le f^i\_e \\le c\_e(t)\\cdot \\mathbf{1}(\\text{access allowed})0&lt;fei​&lt;ce​(t)⋅1(access allowed)
 
 access allowed depends on trade relations, sanctions, and control
 
@@ -120,9 +120,9 @@ tyranny may stabilize short-term but increases long-run backlash and revolt risk
 5.1 Arms choice increases neighbors’ threat perception
 Let Ai,tA\_{i,t}Ai,t​ be armament/readiness level.
 Neighbor jjj’s perceived threat:
-Θj,t=∑i≠jωji Ai,t−Trustj,t\\Theta\_{j,t} = \\sum\_{i\\neq j} \\omega\_{ji}\\, A\_{i,t} - \\text{Trust}\_{j,t}Θj,t​=i=j∑​ωji​Ai,t​−Trustj,t​
+Θj,t=&sum;i&ne;jωji Ai,t−Trustj,t\\Theta\_{j,t} = \\sum\_{i\\neq j} \\omega\_{ji}\\, A\_{i,t} - \\text{Trust}\_{j,t}Θj,t​=i=j&sum;​ωji​Ai,t​−Trustj,t​
 Then jjj’s best response is to raise Aj,tA\_{j,t}Aj,t​ if:
-∂Uj,t∂Aj,t∣Θj,t>0\\frac{\\partial U\_{j,t}}{\\partial A\_{j,t}} \\Big|\_{\\Theta\_{j,t}} > 0∂Aj,t​∂Uj,t​​​Θj,t​​>0
+&part;Uj,t&part;Aj,t∣Θj,t>0\\frac{\\partial U\_{j,t}}{\\partial A\_{j,t}} \\Big|\_{\\Theta\_{j,t}} > 0&part;Aj,t​&part;Uj,t​​​Θj,t​​>0
 leading to arms races.
 5.2 Scarcity amplifies threat sensitivity
 Under scarcity, the marginal value of controlling corridors increases.

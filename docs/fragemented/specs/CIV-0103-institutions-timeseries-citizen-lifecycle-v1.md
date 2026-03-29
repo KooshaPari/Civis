@@ -808,7 +808,7 @@ All events are emitted to the event bus (CIV-0001 Phase 6 broadcast) and appende
 
 ## 8. Database Schema (SQL DDL)
 
-All time-series tables use a `(run_id, tick, <entity_id>)` composite primary key. No row is ever updated. Deletion is only permitted by retention policy operations on non-canonical runs.
+All time-series tables use a `(run_id, tick, \<entity_id\>)` composite primary key. No row is ever updated. Deletion is only permitted by retention policy operations on non-canonical runs.
 
 ```sql
 -- ============================================================
@@ -1019,7 +1019,7 @@ L_{m,t} = clamp(
 EA_{m,t} = 1 - |enforcement_intensity_{m,t} - constitutional_norm_{m}| / constitutional_range
 ```
 
-Coefficient range: `w_EA ∈ [0.15, 0.30]`. Default: `0.25`.
+Coefficient range: `w_EA &isin; [0.15, 0.30]`. Default: `0.25`.
 
 **Coalition Support (CS)**: Breadth of active social coalition supporting the institution. Derived from ideology aggregation layer — fraction of population with `StatePreference > 0.5` or `TrustInInstitutions > 0.6`.
 
@@ -1029,7 +1029,7 @@ CS_{m,t} = fraction_of_polity_supporting_m(t)
 
 Coalition support is attenuated by polarization: if Gini of ideology distribution > 0.6, CS is multiplied by `(1 - polarization_penalty)`.
 
-Coefficient range: `w_CS ∈ [0.20, 0.35]`. Default: `0.30`.
+Coefficient range: `w_CS &isin; [0.20, 0.35]`. Default: `0.30`.
 
 **Transfer Fairness (TF)**: Degree to which the institution allocates resources equitably. Measured as `1 - Gini(allocation_per_cohort)` for the domains under institution's governance.
 
@@ -1037,7 +1037,7 @@ Coefficient range: `w_CS ∈ [0.20, 0.35]`. Default: `0.30`.
 TF_{m,t} = 1 - Gini(allocation_vector_{m,t})
 ```
 
-Coefficient range: `w_TF ∈ [0.15, 0.25]`. Default: `0.20`.
+Coefficient range: `w_TF &isin; [0.15, 0.25]`. Default: `0.20`.
 
 **External Pressure Penalty (EP)**: Sanctions, geopolitical coercion, or external interference reduce legitimacy by reducing the institution's apparent effectiveness.
 
@@ -1045,7 +1045,7 @@ Coefficient range: `w_TF ∈ [0.15, 0.25]`. Default: `0.20`.
 EP_{m,t} = sanctions_intensity_{t} * external_interference_factor_{m}
 ```
 
-Coefficient range: `w_EP ∈ [0.05, 0.15]`. Default: `0.10`.
+Coefficient range: `w_EP &isin; [0.05, 0.15]`. Default: `0.10`.
 
 **Corruption Penalty (CR)**: Direct corruption leakage from institution outputs reduces legitimacy.
 
@@ -1055,7 +1055,7 @@ CR_{m,t} = corruption_leakage_rate_{m,t} * enforcement_visibility_{m,t}
 
 Visibility term: legitimate enforcement makes corruption more visible and thus more damaging to legitimacy when discovered.
 
-Coefficient range: `w_CR ∈ [0.10, 0.25]`. Default: `0.15`.
+Coefficient range: `w_CR &isin; [0.10, 0.25]`. Default: `0.15`.
 
 **Scarcity Drag (SD)**: Elevated scarcity pressure with tight enforcement creates legitimacy drag because the institution is seen as coercive rather than protective.
 
@@ -1063,7 +1063,7 @@ Coefficient range: `w_CR ∈ [0.10, 0.25]`. Default: `0.15`.
 SD_{m,t} = scarcity_pressure_{r,t} * enforcement_intensity_{m,t} * (1 - baseline_strength_{r,t})
 ```
 
-If baseline is strong, enforcement under scarcity is seen as protective, not punitive. Coefficient range: `w_SD ∈ [0.05, 0.15]`. Default: `0.10`.
+If baseline is strong, enforcement under scarcity is seen as protective, not punitive. Coefficient range: `w_SD &isin; [0.05, 0.15]`. Default: `0.10`.
 
 ### Coefficient Bounds Summary
 
@@ -1157,11 +1157,11 @@ No row from step 6 may reference data from a tick higher than its own tick colum
 
 ### 11.2 Tick-Keyed Primary Key Design
 
-Primary key structure: `(run_id BIGINT, tick BIGINT, <entity_id> BIGINT)`.
+Primary key structure: `(run_id BIGINT, tick BIGINT, \<entity_id\> BIGINT)`.
 
 - `run_id` partitions all data by simulation run. Multiple runs of the same scenario produce independent rows.
 - `tick` is monotonically increasing within a run. There are no gaps (every tick produces a row for every live entity).
-- `<entity_id>` (institution_id or cohort_id) is stable within a run. Entity creation and destruction produce sentinel rows (state = `Collapsed`, population = 0) to maintain completeness of the series.
+- `\<entity_id\>` (institution_id or cohort_id) is stable within a run. Entity creation and destruction produce sentinel rows (state = `Collapsed`, population = 0) to maintain completeness of the series.
 
 ### 11.3 Replay-Safe Read Patterns
 
@@ -1217,7 +1217,7 @@ Upon crossing `T_retire`, a cohort is assigned a maintenance tier based on pool 
 |---|---|---|
 | `solvency_runway_ticks >= 520` (10 years) | `full` | `median_sustain_cost_j * 1.0` per tick |
 | `solvency_runway_ticks in [104, 520)` (2–10 years) | `reduced` | `median_sustain_cost_j * 0.75` per tick |
-| `solvency_runway_ticks < 104` (< 2 years) | `minimum` | `median_sustain_cost_j * 0.50` per tick |
+| `solvency_runway_ticks \< 104` (< 2 years) | `minimum` | `median_sustain_cost_j * 0.50` per tick |
 
 Maintenance tier is re-evaluated each tick and may degrade if pool solvency deteriorates. Degradation from `full` to `reduced` emits a `citizen.retirement_threshold_crossed.v1` event with updated tier.
 
@@ -1280,7 +1280,7 @@ The scarcity supplement increases subsidy under scarcity conditions when baselin
 
 Institutional state changes do not take effect on downstream policy outputs immediately. There is a configurable propagation lag of `propagation_lag_ticks` (default: 5 ticks) between a state transition and the change in output multipliers delivered to the allocation engine.
 
-The pending-effect queue is a `BTreeMap<u64, PendingEffect>` keyed by `apply_at_tick`:
+The pending-effect queue is a `BTreeMap \< u64, PendingEffect>` keyed by `apply_at_tick`:
 
 ```rust
 /// Apply all pending effects for the current tick.
@@ -2199,7 +2199,7 @@ pub struct CohortDemographics {
 
     /// Base weekly birth rate per 1000 citizens in Working age band.
     /// Fixed-point [0, 10_000] representing births per citizen per tick.
-    /// Default: 18 per 1000 per 52 ticks = ~18/52000 per tick ≈ 3 per 10_000.
+    /// Default: 18 per 1000 per 52 ticks = ~18/52000 per tick &asymp; 3 per 10_000.
     pub base_birth_rate_fp: i32,               // default 3
 
     /// Welfare security factor: multiplier at full welfare access.
@@ -3069,7 +3069,7 @@ A shadow institution may formalize through three pathways:
 
 **2. Election Capture:** When `influence_score >= 6_500` and a governance event `election_held` fires, shadow institution influence is added to the relevant candidates' coalition support, potentially resulting in formal institutional control. Legitimacy is moderate (default `5_500`) if election integrity is high; higher if election integrity is compromised.
 
-**3. Coup:** When `influence_score >= 8_000` AND `military_institution_state == Captured` AND `legitimacy_of_formal_institution < 2_000`, a coup event fires. The shadow institution replaces the formal institution with `legitimacy = 2_000` and `capture_score = 8_000` (starts captured by definition).
+**3. Coup:** When `influence_score >= 8_000` AND `military_institution_state == Captured` AND `legitimacy_of_formal_institution \< 2_000`, a coup event fires. The shadow institution replaces the formal institution with `legitimacy = 2_000` and `capture_score = 8_000` (starts captured by definition).
 
 ```rust
 /// Record of a shadow-to-formal transition event.

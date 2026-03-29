@@ -171,7 +171,7 @@ impl Allocator for MarketAllocator {
     }
 
     fn validate(&self, allocation: &AllocationDecision) -> bool {
-        // Sum of allocations ≤ supply
+        // Sum of allocations &lt; supply
         // Conservation equation holds
     }
 }

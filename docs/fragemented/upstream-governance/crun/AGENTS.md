@@ -42,9 +42,9 @@ Skip proposal for:
 
 **Workflow**
 1. Review `agileplus/project.md`, `agileplus list`, and `agileplus list --specs` to understand current context.
-2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, optional `design.md`, and spec deltas under `agileplus/changes/<id>/`.
+2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, optional `design.md`, and spec deltas under `agileplus/changes/\<id\>/`.
 3. Draft spec deltas using `## ADDED|MODIFIED|REMOVED Requirements` with at least one `#### Scenario:` per requirement.
-4. Run `agileplus validate <id> --strict` and resolve any issues before sharing the proposal.
+4. Run `agileplus validate \<id\> --strict` and resolve any issues before sharing the proposal.
 
 ### Stage 2: Implementing Changes
 Track these steps as TODOs and complete them one by one.
@@ -60,7 +60,7 @@ Track these steps as TODOs and complete them one by one.
 After deployment, create separate PR to:
 - Move `changes/[name]/` → `changes/archive/YYYY-MM-DD-[name]/`
 - Update `specs/` if capabilities changed
-- Use `agileplus archive <change-id> --skip-specs --yes` for tooling-only changes (always pass the change ID explicitly)
+- Use `agileplus archive \< change-id> --skip-specs --yes` for tooling-only changes (always pass the change ID explicitly)
 - Run `agileplus validate --strict` to confirm the archived change passes checks
 
 ## Before Any Task
@@ -82,8 +82,8 @@ After deployment, create separate PR to:
 - Enumerate specs: `agileplus spec list --long` (or `--json` for scripts)
 - Enumerate changes: `agileplus list` (or `agileplus change list --json` - deprecated but available)
 - Show details:
-  - Spec: `agileplus show <spec-id> --type spec` (use `--json` for filters)
-  - Change: `agileplus show <change-id> --json --deltas-only`
+  - Spec: `agileplus show \< spec-id> --type spec` (use `--json` for filters)
+  - Change: `agileplus show \< change-id> --json --deltas-only`
 - Full-text search (use ripgrep): `rg -n "Requirement:|Scenario:" agileplus/specs`
 
 ## Quick Start
@@ -191,7 +191,7 @@ The system SHALL provide...
 **Reason**: [Why removing]
 **Migration**: [How to handle]
 ```
-If multiple capabilities are affected, create multiple delta files under `changes/[change-id]/specs/<capability>/spec.md`—one per capability.
+If multiple capabilities are affected, create multiple delta files under `changes/[change-id]/specs/\<capability\>/spec.md`—one per capability.
 
 4. **Create tasks.md:**
 ```markdown
@@ -272,7 +272,7 @@ Headers matched with `trim(header)` - whitespace ignored.
 Common pitfall: Using MODIFIED to add a new concern without including the previous text. This causes loss of detail at archive time. If you aren’t explicitly changing the existing requirement, add a new requirement under ADDED instead.
 
 Authoring a MODIFIED requirement correctly:
-1) Locate the existing requirement in `agileplus/specs/<capability>/spec.md`.
+1) Locate the existing requirement in `agileplus/specs/\<capability\>/spec.md`.
 2) Copy the entire requirement block (from `### Requirement: ...` through its scenarios).
 3) Paste it under `## MODIFIED Requirements` and edit to reflect the new behavior.
 4) Ensure the header text matches exactly (whitespace-insensitive) and keep at least one `#### Scenario:`.
@@ -374,7 +374,7 @@ notifications/spec.md
 ## Best Practices
 
 ### Simplicity First
-- Default to <100 lines of new code
+- Default to \< 100 lines of new code
 - Single-file implementations until proven insufficient
 - Avoid frameworks without clear justification
 - Choose boring, proven patterns

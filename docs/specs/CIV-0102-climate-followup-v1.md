@@ -76,7 +76,7 @@ Atmospheric forcing `AF(t)` is a dimensionless index representing cumulative rad
 ```
 AF(t+1) = AF(t) + ΣEmissions(t) − NaturalSink(t)
 
-NaturalSink(t) = k_sink × AF(t)        where k_sink ∈ (0, 0.05] per tick
+NaturalSink(t) = k_sink × AF(t)        where k_sink &isin; (0, 0.05] per tick
 
 ΣEmissions(t) = Σ_goods [ ProductionVolume(good, t) × EmissionsIntensity(good) ]
 ```
@@ -95,12 +95,12 @@ NaturalSink(t) = k_sink × AF(t)        where k_sink ∈ (0, 0.05] per tick
 
 ### 2.2 Climate Damage Function
 
-Climate damage `CD(t) ∈ [0, 1]` is a sigmoid of forcing above the damage onset threshold:
+Climate damage `CD(t) &isin; [0, 1]` is a sigmoid of forcing above the damage onset threshold:
 
 ```
 CD(t) = 1 / (1 + exp(−α × (AF(t) − AF_onset)))
 
-α ∈ [1.0, 8.0]       steepness parameter (higher α = sharper transition)
+α &isin; [1.0, 8.0]       steepness parameter (higher α = sharper transition)
 ```
 
 For the simulation's fixed-point implementation, this sigmoid is pre-computed into a lookup table indexed by `AF` in steps of `1_000` (i.e., 0.001 forcing units) and stored as `i64` scaled by `1_000_000`.
@@ -110,7 +110,7 @@ For the simulation's fixed-point implementation, this sigmoid is pre-computed in
 ```
 EffectiveProductivity(t) = BaseProductivity(t) × (1 − CD(t) × productivity_damage_weight)
 
-productivity_damage_weight ∈ [0.2, 1.0]   (fraction of CD applied to productivity)
+productivity_damage_weight &isin; [0.2, 1.0]   (fraction of CD applied to productivity)
 ```
 
 **Health baseline penalty:**
@@ -118,7 +118,7 @@ productivity_damage_weight ∈ [0.2, 1.0]   (fraction of CD applied to productiv
 ```
 HealthPenalty(t) = CD(t) × health_damage_weight
 
-health_damage_weight ∈ [0.1, 0.6]
+health_damage_weight &isin; [0.1, 0.6]
 ```
 
 **Housing spoilage rate increase:**
@@ -126,7 +126,7 @@ health_damage_weight ∈ [0.1, 0.6]
 ```
 HousingDecayRate(t) = BaseDecayRate × (1 + housing_decay_amplifier × CD(t))
 
-housing_decay_amplifier ∈ [0.5, 3.0]
+housing_decay_amplifier &isin; [0.5, 3.0]
 ```
 
 ### 2.3 Energy Budget Disruption Formula
@@ -151,19 +151,19 @@ When actual energy demand exceeds ESC, a deficit emerges:
 ```
 EnergyDeficit(t) = max(0, EnergyDemand(t) − ESC(t))
 
-EnergyDeficitRatio(t) = EnergyDeficit(t) / EnergyDemand(t)   ∈ [0, 1]
+EnergyDeficitRatio(t) = EnergyDeficit(t) / EnergyDemand(t)   &isin; [0, 1]
 ```
 
 This ratio feeds directly into scarcity pressure and joule quota tightening.
 
 ### 2.4 Resource Depletion Rate
 
-Resource depletion factor `RDF(t) ∈ [0, 1]` declines as extraction occurs:
+Resource depletion factor `RDF(t) &isin; [0, 1]` declines as extraction occurs:
 
 ```
 RDF(t+1) = RDF(t) − δ × ExtractionVolume(t) / TotalResourceStock_initial
 
-δ ∈ [0.0001, 0.005]   depletion coefficient per extraction unit
+δ &isin; [0.0001, 0.005]   depletion coefficient per extraction unit
 ```
 
 As `RDF` declines, production costs rise:
@@ -171,7 +171,7 @@ As `RDF` declines, production costs rise:
 ```
 EffectiveProductionCost(good, t) = BaseCost(good) × (1 + φ × (1 − RDF(t)))
 
-φ ∈ [0.1, 2.0]   cost amplifier at full depletion
+φ &isin; [0.1, 2.0]   cost amplifier at full depletion
 ```
 
 **Regeneration policy:** Resources can regenerate only if an explicit regeneration investment policy is active. Without it, depletion is strictly monotonic (non-reversible). This is invariant I-3 enforced at the type level — the `ResourcePool` struct contains no regeneration field unless the policy enables it.
@@ -183,7 +183,7 @@ Adaptation investment `A(t)` accumulates into an adaptation stock `AS(t)` with d
 ```
 AS(t+1) = AS(t) × (1 − adapt_depreciation) + A(t)
 
-adapt_depreciation ∈ [0.01, 0.05] per tick
+adapt_depreciation &isin; [0.01, 0.05] per tick
 ```
 
 Effective damage reduction from adaptation:
@@ -191,7 +191,7 @@ Effective damage reduction from adaptation:
 ```
 DamageReduction(t) = η × AS(t) / (1 + η × AS(t))
 
-η ∈ [0.001, 0.05]   adaptation effectiveness coefficient
+η &isin; [0.001, 0.05]   adaptation effectiveness coefficient
 ```
 
 This yields diminishing returns: doubling adaptation stock does not double damage reduction.
@@ -210,7 +210,7 @@ AdaptROI(t) = ΔDamageReduction(t) / A(t)   [damage-fraction per output-unit inv
 
 ### 2.6 Scarcity Pressure Index
 
-Scarcity pressure `SP(t) ∈ [0, 1]` aggregates all supply constraint signals:
+Scarcity pressure `SP(t) &isin; [0, 1]` aggregates all supply constraint signals:
 
 ```
 SP(t) = clip(
@@ -221,7 +221,7 @@ SP(t) = clip(
 , 0, 1)
 
 Default weights: w1=0.35, w2=0.25, w3=0.25, w4=0.15
-resource_scarcity_weight ∈ [0, 1]
+resource_scarcity_weight &isin; [0, 1]
 ```
 
 `SP(t)` is the primary signal consumed by the governance drift model and the tyranny index calculation.
@@ -233,8 +233,8 @@ Each tick, a disaster is sampled from a Bernoulli distribution:
 ```
 DisasterProb(t) = base_disaster_rate + β × CD_effective(t)
 
-base_disaster_rate ∈ [0.001, 0.02]   per tick
-β ∈ [0.01, 0.10]
+base_disaster_rate &isin; [0.001, 0.02]   per tick
+β &isin; [0.01, 0.10]
 ```
 
 When a disaster event fires, severity is drawn from an exponential distribution:
@@ -438,7 +438,7 @@ ScenarioConfig {
 }
 ```
 
-**Expected trajectory:** Forcing peaks below `AF_onset` and stabilizes. Effective damage stays below `CD_effective < 0.15`. Adaptation ROI is highest in early years, tapering as the adaptation stock accumulates.
+**Expected trajectory:** Forcing peaks below `AF_onset` and stabilizes. Effective damage stays below `CD_effective \< 0.15`. Adaptation ROI is highest in early years, tapering as the adaptation stock accumulates.
 
 ---
 
@@ -592,7 +592,7 @@ impl AdaptationInvestment {
 /// Invariant: rdf_scaled is monotonically non-increasing unless regeneration policy active.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResourcePool {
-    /// Resource depletion factor RDF ∈ [0, 1]. Scaled by SCALE.
+    /// Resource depletion factor RDF &isin; [0, 1]. Scaled by SCALE.
     /// Starts at SCALE (1.0), declines with extraction.
     pub rdf_scaled: i64,
     /// Initial total resource stock (joules). Used to compute depletion rate.
@@ -654,8 +654,8 @@ pub struct ClimateState {
     pub damage: DamageEstimate,
     pub adaptation: AdaptationInvestment,
     pub resources: ResourcePool,
-    pub scarcity_pressure: i64,       // SP ∈ [0, 1]. Scaled by SCALE.
-    pub energy_deficit_ratio: i64,    // ∈ [0, 1]. Scaled by SCALE.
+    pub scarcity_pressure: i64,       // SP &isin; [0, 1]. Scaled by SCALE.
+    pub energy_deficit_ratio: i64,    // &isin; [0, 1]. Scaled by SCALE.
     pub active_disaster: Option<DisasterEvent>,
     pub pending_boundary_events: Vec<BoundaryEvent>,
 }
@@ -676,7 +676,7 @@ pub enum DisasterKind {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DisasterEvent {
     pub kind: DisasterKind,
-    /// Severity ∈ [0, 1]. Scaled by SCALE.
+    /// Severity &isin; [0, 1]. Scaled by SCALE.
     pub severity: i64,
     /// Tick on which this disaster fires.
     pub tick: u64,
@@ -1393,7 +1393,7 @@ Cost curve: InfraHardeningCost = hardening_level² × base_hardening_cost
 Diminishing returns: Each 0.1 increment of hardening_level reduces housing decay
                      by decreasing amounts (quadratic cost ensures this).
 
-Valid range: hardening_level ∈ [0.0, 1.0], stored as i64 scaled by SCALE.
+Valid range: hardening_level &isin; [0.0, 1.0], stored as i64 scaled by SCALE.
 ```
 
 **In YAML:**
@@ -1418,9 +1418,9 @@ Cost: RelocCost = relocation_spend (direct output allocation)
 Diminishing returns: Relocation cost per person increases as easiest relocations
                      happen first. Modeled as cost_per_person × (1 + γ × fraction_relocated).
 
-γ ∈ [0.5, 3.0] — relocation difficulty amplifier.
+γ &isin; [0.5, 3.0] — relocation difficulty amplifier.
 
-Valid range: relocation_spend ∈ [0, max_relocation_budget] joules.
+Valid range: relocation_spend &isin; [0, max_relocation_budget] joules.
 ```
 
 ### 9.3 Lever: Emergency Reserves
@@ -1434,12 +1434,12 @@ Effect: During a disaster tick:
         reserve_buffer_fraction = min(reserves_held / shock_demand, 1.0)
 
 Cost: reserves_held × holding_cost_rate per tick (storage overhead).
-      holding_cost_rate ∈ [0.001, 0.02] per tick.
+      holding_cost_rate &isin; [0.001, 0.02] per tick.
 
 Diminishing returns: Once reserves exceed 12 weeks of peak demand,
                      additional reserves yield near-zero scarcity reduction.
 
-Valid range: reserve_weeks ∈ [0, 52] weeks of median demand.
+Valid range: reserve_weeks &isin; [0, 52] weeks of median demand.
 ```
 
 ### 9.4 Lever: Carbon-Intensity Caps
@@ -1457,12 +1457,12 @@ Effect: EmissionsIntensity_effective(good) = min(EmissionsIntensity_base(good),
 Cost: Production cost markup for capped goods:
       CostMarkup = (1 - cap / base_intensity) × intensity_transition_cost_factor
 
-intensity_transition_cost_factor ∈ [0.5, 4.0]
+intensity_transition_cost_factor &isin; [0.5, 4.0]
 
 Diminishing returns: Tighter caps produce smaller and smaller AF reductions
                      because the highest-intensity activities are eliminated first.
 
-Valid range: carbon_intensity_cap ∈ [0.01, 0.40] forcing-units per output-unit.
+Valid range: carbon_intensity_cap &isin; [0.01, 0.40] forcing-units per output-unit.
 ```
 
 ---
@@ -1488,7 +1488,7 @@ All lag values are expressed in ticks and are stored in `ScenarioConfig::adaptat
 
 ### 10.2 Pending-Effect Queue Structure
 
-The `AdaptationInvestment::pending_effects` field is a `BTreeMap<u64, i64>` where:
+The `AdaptationInvestment::pending_effects` field is a `BTreeMap \< u64, i64>` where:
 - Key: `investment_tick + L_adapt` — the tick at which the effect vests.
 - Value: The adaptation stock increment (in scaled units) to apply at that tick.
 
@@ -1542,7 +1542,7 @@ These invariants are enforced as `#[cfg(test)] proptest` property tests in `crat
 ### I-1: Monotonic Damage Under Increasing Forcing
 
 ```
-∀ AF1 < AF2: CD(AF1) ≤ CD(AF2)
+∀ AF1 < AF2: CD(AF1) &lt; CD(AF2)
 ```
 
 **Test (proptest):**
@@ -1564,7 +1564,7 @@ proptest! {
 ### I-2: Non-Reversible Resource Depletion Without Regeneration Policy
 
 ```
-∀ tick: if !regeneration_policy_active: RDF(tick+1) ≤ RDF(tick)
+∀ tick: if !regeneration_policy_active: RDF(tick+1) &lt; RDF(tick)
 ```
 
 **Test:**
@@ -1635,7 +1635,7 @@ proptest! {
 ### I-5: Scarcity Pressure Bounded [0, SCALE]
 
 ```
-∀ inputs: SP(t) ∈ [0, SCALE]
+∀ inputs: SP(t) &isin; [0, SCALE]
 ```
 
 **Test (proptest):** Exhaustive over random component inputs, verifying the `clip()` in the SP formula keeps it in range.
@@ -1674,7 +1674,7 @@ proptest! {
 
 **Sim manifestation:** `cost_multiplier` for basic goods rises above 2.0. `SustainEfficiency` drops below 0.7. `ScarcityPressure` spikes. Tyranny drift activates if governance is weak. Governance module may trigger `AuthoritarianShift` event.
 
-**Detection:** `rdf_scaled < 200_000` (RDF < 0.2) AND `energy_deficit_ratio > 300_000` (deficit > 30%) for 3 consecutive ticks. `climate.resource_stress.v1` emitted with `stress_kind = "esc_deficit_sustained"`.
+**Detection:** `rdf_scaled \< 200_000` (RDF \< 0.2) AND `energy_deficit_ratio > 300_000` (deficit > 30%) for 3 consecutive ticks. `climate.resource_stress.v1` emitted with `stress_kind = "esc_deficit_sustained"`.
 
 ### FM-4: Lagged-Shock Overshoot
 
@@ -2319,7 +2319,7 @@ impl ScenarioComposition {
 |---|---|---|
 | Baseline forcing + HighShock shocks | Forcing accumulates slowly; disasters frequent before adaptation builds | Disaster rate 4x baseline while AF climbs slowly |
 | DelayedAction + HighShock | Trigger fires when AF > 0.8, but repeated disasters delay adaptation build | Lag and disaster overlap creates 20-40 tick vulnerability window |
-| CoordMitigation + HighShock shocks | Strong adaptation stock absorbs most disaster severity | `severity_amplifier × CD_effective` is low because `CD_effective < 0.15` |
+| CoordMitigation + HighShock shocks | Strong adaptation stock absorbs most disaster severity | `severity_amplifier × CD_effective` is low because `CD_effective \< 0.15` |
 
 ### 16.5 Multi-Run Monte Carlo — Batch Execution
 
@@ -2668,7 +2668,7 @@ RenewableOutput_actual(t) = RenewableCapacity(t) × VariabilityFactor(t)
 
 VariabilityFactor(t) ~ Clipped Normal(mean=1.0, sd=variability_sigma, min=0.5, max=1.5)
 
-variability_sigma ∈ [0.05, 0.25]   (default 0.10 for solar/wind mix)
+variability_sigma &isin; [0.05, 0.25]   (default 0.10 for solar/wind mix)
 ```
 
 In fixed-point:
@@ -2720,7 +2720,7 @@ ESC_smoothed(t) = RenewableOutput_actual(t)
 ```
 DemandResponseCurtailment(t) = EnergyDeficitRatio(t) × demand_response_elasticity
 
-demand_response_elasticity ∈ [0.5, 1.5]   (how aggressively demand adjusts)
+demand_response_elasticity &isin; [0.5, 1.5]   (how aggressively demand adjusts)
 
 EffectiveDemand(t) = EnergyDemand(t) × (1 - DemandResponseCurtailment(t) × non_essential_share)
 ```
@@ -2745,7 +2745,7 @@ When embedded energy costs inflate, market-clearing prices for energy-intensive 
 QuantityDemanded_adjusted(good, t) = QuantityDemanded_base(good)
     × (CostMultiplier(t) / SCALE) ^ (-elasticity_good)
 
-elasticity_good ∈ [-2.0, -0.2]   (energy-essential goods have lower |elasticity|)
+elasticity_good &isin; [-2.0, -0.2]   (energy-essential goods have lower |elasticity|)
 ```
 
 This reduces economy output:
@@ -2790,13 +2790,13 @@ YieldMultiplier(t) = BaseYield
     × AdaptationYieldBonus(adaptation_stock(t))
 
 TemperatureStressFactor(cd) = 1 - temp_stress_weight × cd²
-    temp_stress_weight ∈ [0.3, 0.8]
+    temp_stress_weight &isin; [0.3, 0.8]
 
 PrecipitationStressFactor(cd) = 1 - precip_stress_weight × cd
-    precip_stress_weight ∈ [0.2, 0.6]
+    precip_stress_weight &isin; [0.2, 0.6]
 
 AdaptationYieldBonus(AS) = 1 + adapt_yield_coeff × AS / (1 + adapt_yield_coeff × AS)
-    adapt_yield_coeff ∈ [0.001, 0.02]
+    adapt_yield_coeff &isin; [0.001, 0.02]
 ```
 
 The `cd²` term for temperature stress encodes the fact that yield loss accelerates non-linearly as temperatures deviate from optimal — mild warming may even improve yields at some latitudes, but the quadratic ensures severe damage at high CD values.
@@ -2808,7 +2808,7 @@ FoodSupply(t) = BaseAgriculturalCapacity × YieldMultiplier(t)
 
 FoodDeficit(t) = max(0, FoodDemand(t) - FoodSupply(t))
 
-FoodDeficitRatio(t) = FoodDeficit(t) / FoodDemand(t)  ∈ [0, 1]
+FoodDeficitRatio(t) = FoodDeficit(t) / FoodDemand(t)  &isin; [0, 1]
 ```
 
 `FoodDeficitRatio` feeds into `ScarcityPressure` via an additional weight term:
@@ -2956,7 +2956,7 @@ WelfareCost(t) = productivity_loss(t) × output_fraction_welfare_weighted
 
 welfare_weights: productivity=0.45, health=0.35, food=0.20
 
-WelfareCost(t) ∈ [0, 1] (already in fraction space)
+WelfareCost(t) &isin; [0, 1] (already in fraction space)
 ```
 
 **Legitimacy drain formula (consumed by governance module):**
@@ -2965,14 +2965,14 @@ WelfareCost(t) ∈ [0, 1] (already in fraction space)
 LegitimacyDrain_climate(t) = WelfareCost(t) × legitimacy_damage_sensitivity
                              × (1 - adaptation_legitimacy_credit(t))
 
-legitimacy_damage_sensitivity ∈ [0.01, 0.10] per tick
+legitimacy_damage_sensitivity &isin; [0.01, 0.10] per tick
     (how strongly welfare degradation translates to legitimacy loss)
 
 adaptation_legitimacy_credit(t) = min(1.0,
     adaptation_stock(t) × adapt_legitimacy_coeff)
     (visible adaptation investment partially offsets legitimacy drain)
 
-adapt_legitimacy_coeff ∈ [0.001, 0.01]
+adapt_legitimacy_coeff &isin; [0.001, 0.01]
 ```
 
 The governance module integrates this drain via:
@@ -3021,10 +3021,10 @@ DisplacementRate(t) = base_displacement_rate
     + γ_disp × FoodDeficitRatio(t)
     + δ_disp × (disaster_occurred(t) ? disaster_severity(t) : 0)
 
-base_displacement_rate ∈ [0.0001, 0.002]  per tick
-β_disp ∈ [0.005, 0.02]
-γ_disp ∈ [0.003, 0.015]
-δ_disp ∈ [0.01, 0.05]
+base_displacement_rate &isin; [0.0001, 0.002]  per tick
+β_disp &isin; [0.005, 0.02]
+γ_disp &isin; [0.003, 0.015]
+δ_disp &isin; [0.01, 0.05]
 ```
 
 `DisplacementRate(t)` is the fraction of the at-risk population that transitions from `Resident` to `Displaced` state each tick. The CIV-0103 citizen lifecycle module consumes this as:
@@ -3047,11 +3047,11 @@ AdaptationBudget_available(t) = AdaptationBudget_planned(t)
     × (1 - CaptureLeakage(t))
 
 InstitutionalCapacity(t): governance quality × (1 - corruption)
-    Provided by governance module; ∈ [0, 1]
+    Provided by governance module; &isin; [0, 1]
 
 CaptureLeakage(t): fraction of adaptation budget diverted by captured institutions
     = ShadowInfluenceIndex(t) × capture_leakage_sensitivity
-    capture_leakage_sensitivity ∈ [0.1, 0.5]
+    capture_leakage_sensitivity &isin; [0.1, 0.5]
     ShadowInfluenceIndex from CIV-0107 shadow state layer
 ```
 
@@ -3065,7 +3065,7 @@ Visible adaptation success (i.e., measurable reduction in `CD_effective` or disa
 AdaptationPoliticalCapital(t) = Σ_{s=t-window}^{t}
     ΔDamageReduction(s) × adaptation_visibility_factor
 
-adaptation_visibility_factor ∈ [0.5, 2.0]
+adaptation_visibility_factor &isin; [0.5, 2.0]
     (how much citizens perceive adaptation working;
      higher in high-transparency governance)
 ```
@@ -3307,8 +3307,8 @@ When `MaxTransferFlow > 0`, the source region's `FoodSupply` is debited and the 
 A cross-region flow breaks down when any of:
 - `ScarcityPressure(source) > 0.55` (source too stressed to export)
 - `DiplomaticState(source, dest) = War` or `Sanction`
-- `TradeRouteCapacity < minimum_flow_threshold`
-- `export_willingness < 0.1`
+- `TradeRouteCapacity \< minimum_flow_threshold`
+- `export_willingness \< 0.1`
 
 When a flow breaks down, the destination region's `FoodDeficitRatio` increases immediately, which propagates into its `ScarcityPressure` and thence into governance drift.
 
@@ -4307,7 +4307,7 @@ The climate collapse scenario is the extreme-stress integration test. It uses th
 | 10–30 | CD_effective > 0.5 | Steep sigmoid (α=8) and low onset (0.3) |
 | 15–40 | TP-3 fires (CD > 0.6) | Disaster rate doubles |
 | 20–50 | SP > 0.7 | Compound: productivity loss + energy deficit + food deficit |
-| 25–60 | RDF < 0.2 → TP-2 fires | Fast EROI decay doubles |
+| 25–60 | RDF \< 0.2 → TP-2 fires | Fast EROI decay doubles |
 | 30–80 | Governance revolt risk > 0.5 | SP > 0.7 with no legitimacy buffer |
 | 50–150 | AF > 3.0 → TP-4 fires | Fully irreversible runaway |
 
@@ -4315,11 +4315,11 @@ This scenario validates that all four tipping points can fire in a realistic cas
 
 **Key invariants that must hold even in collapse:**
 - `AF >= 0` always (clamped at zero; sink cannot exceed forcing)
-- `CD_effective ∈ [0, SCALE]` always (sigmoid output bounded)
+- `CD_effective &isin; [0, SCALE]` always (sigmoid output bounded)
 - `RDF >= 0` always (depletion cannot go negative)
 - `adaptation_stock >= 0` always (depreciation clamped)
-- `scarcity_pressure ∈ [0, SCALE]` always (clip applied)
-- `energy_deficit_ratio ∈ [0, SCALE]` always
+- `scarcity_pressure &isin; [0, SCALE]` always (clip applied)
+- `energy_deficit_ratio &isin; [0, SCALE]` always
 
 ---
 

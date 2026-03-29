@@ -884,8 +884,8 @@ TickFrame unpack_frame(const std::vector<uint8_t>& raw) {
 **Status:** Open
 
 ### FR-CIV-CORE-004: Sub-16ms Tick Time
-**Spec:** Single tick completes in ≤ 16 ms wall time.
-**Test:** Measure tick_compute_time on commodity hardware; assert < 16 ms.
+**Spec:** Single tick completes in &lt; 16 ms wall time.
+**Test:** Measure tick_compute_time on commodity hardware; assert \< 16 ms.
 **Status:** Open
 
 ### FR-CIV-CORE-005: BTreeMap Ordered Iteration
@@ -960,7 +960,7 @@ TickFrame unpack_frame(const std::vector<uint8_t>& raw) {
 
 ### FR-CIV-CORE-019: ECS Entity Model
 **Spec:** Entities modeled as dense arrays (cache-friendly, zero-copy queries).
-**Test:** Verify all components are Vec<T> or SparseSet; no allocations per iteration.
+**Test:** Verify all components are Vec\<T\> or SparseSet; no allocations per iteration.
 **Status:** Open
 
 ### FR-CIV-CORE-020: Horizontal Multi-Client Scaling
@@ -1198,7 +1198,7 @@ In the capitalist regime, market clearing uses simplified supply-demand price ad
 Price_g(t+1) = Price_g(t) × (1 + λ × (Demand_g(t) - Supply_g(t)) / Supply_g(t))
 
 where:
-  λ ∈ (0, 1] = price flexibility parameter (scenario-configured)
+  λ &isin; (0, 1] = price flexibility parameter (scenario-configured)
   ClearingVolume_g(t) = min(Demand_g(t), Supply_g(t))
   UnmetDemand_g(t)    = max(0, Demand_g(t) - Supply_g(t))
 ```
@@ -1208,7 +1208,7 @@ Rent extraction is modeled as a wedge:
 ```
 RentWaste_g(t) = RentRate_g × Price_g(t) × ClearingVolume_g(t)
 
-where RentRate_g ∈ [0, 1] = scenario-configured rent extraction fraction
+where RentRate_g &isin; [0, 1] = scenario-configured rent extraction fraction
 (housing, finance, monopoly channels configured independently)
 ```
 
@@ -1237,10 +1237,10 @@ GoodhartPressure(t) = SurveillanceIntensity(t)
                     × SurvivalDependence(t)
 
 where:
-  BaselineStrength(t)   ∈ [0, 1]  = fraction of essentials that are unconditional
-  CrossDomainCoupling(t) ∈ [0, 1] = whether quota compliance gates rights access
-  SurveillanceIntensity(t) ∈ [0,1] = measurement scope
-  ScalarizationIndex(t) ∈ [0, 1]  = how much the system collapses value to one score
+  BaselineStrength(t)   &isin; [0, 1]  = fraction of essentials that are unconditional
+  CrossDomainCoupling(t) &isin; [0, 1] = whether quota compliance gates rights access
+  SurveillanceIntensity(t) &isin; [0,1] = measurement scope
+  ScalarizationIndex(t) &isin; [0, 1]  = how much the system collapses value to one score
 ```
 
 ### Surplus and Waste Decomposition
@@ -1291,7 +1291,7 @@ All joule quantities are stored as `i64` in units of millijoules (mJ) to maintai
 
 ## State Model
 
-All Rust structs in this section use `#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]` unless otherwise noted. All collections over actor IDs use `BTreeMap<u64, _>` to guarantee deterministic iteration order.
+All Rust structs in this section use `#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]` unless otherwise noted. All collections over actor IDs use `BTreeMap \< u64, _>` to guarantee deterministic iteration order.
 
 ### EconomyState
 
@@ -2564,7 +2564,7 @@ fn energy_total(state: &EconomyState) -> i64 {
 
 **Trigger:** Allocation engine attempts to debit more from an actor's quota or monetary balance than is available.
 
-**Detection:** `double_entry::book_transfer()` checks balance before booking. If `actor.quota_balance_mj - debit < 0` for a Household actor, the transfer is rejected.
+**Detection:** `double_entry::book_transfer()` checks balance before booking. If `actor.quota_balance_mj - debit \< 0` for a Household actor, the transfer is rejected.
 
 **Mitigation:**
 - For quota: transaction fails; `audit_exposure_bps` increases by 500; `unmet_demand` is incremented for the good.
@@ -3713,7 +3713,7 @@ In the joule regime, all expenditure is denominated in millijoules of quota debi
 
 **Savings and investment split:** The household's residual after necessity consumption is divided between discretionary consumption and savings according to a propensity-to-consume parameter `mpc_bps` (marginal propensity to consume, default 7500 = 75%). The savings fraction accumulates in `claims_money_cents` for monetary regimes and in `carryover_mj` for joule regimes.
 
-**Welfare receipt:** Households with `claims_money_cents < poverty_threshold_cents` receive a welfare transfer of `max(0, poverty_threshold_cents - claims_money_cents)` from the state institution. This is booked as `TransferType::Subsidy`. The poverty threshold is a fiscal policy parameter defaulting to 50% of median household income, recomputed each tick.
+**Welfare receipt:** Households with `claims_money_cents \< poverty_threshold_cents` receive a welfare transfer of `max(0, poverty_threshold_cents - claims_money_cents)` from the state institution. This is booked as `TransferType::Subsidy`. The poverty threshold is a fiscal policy parameter defaulting to 50% of median household income, recomputed each tick.
 
 ### Household Rust Struct
 
@@ -3726,7 +3726,7 @@ In the joule regime, all expenditure is denominated in millijoules of quota debi
 pub struct Household {
     pub actor_id: u64,
 
-    /// Age in simulation ticks (weekly ticks; 52 ticks ≈ 1 year).
+    /// Age in simulation ticks (weekly ticks; 52 ticks &asymp; 1 year).
     pub age_ticks: u32,
 
     /// Skill level in basis points (0..=10000). Affects joule earning rate.
@@ -3849,7 +3849,7 @@ pub struct CapitalStock {
     pub net_capital_mj: i64,
 
     /// Depreciation rate in basis points per tick.
-    /// Default: 19 bps/tick ≈ 1%/year (52-tick year).
+    /// Default: 19 bps/tick &asymp; 1%/year (52-tick year).
     pub depreciation_rate_bps: u16,
 
     /// Reinvestment threshold: minimum profit margin before investment occurs.
@@ -5265,7 +5265,7 @@ Real-time strategy (RTS) gameplay operates on a command interface overlaid on th
 - Analysis: `compute_welfare_distribution()`, `analyze_migration_drivers()`, `simulate_what_if_policy(policy_delta)`
 - Visualization: `export_citizen_genealogy()`, `plot_institution_lifecycle()`, `show_causal_graph(event_id)`
 
-**Data Size:** ~0.1 KB per citizen (10k citizens ≈ 1 MB); full export ~10 MB for complete city state
+**Data Size:** ~0.1 KB per citizen (10k citizens &asymp; 1 MB); full export ~10 MB for complete city state
 **Update Frequency:** On-demand (not real-time streaming)
 **Latency Requirement:** Query completion within 1 second; deep analysis within 10 seconds
 
@@ -5306,10 +5306,10 @@ Real-time strategy (RTS) gameplay operates on a command interface overlaid on th
 
 | Condition | Validation | Response |
 |-----------|-----------|----------|
-| Zoom level valid for command type | Unit move only valid at zoom ≥ 2 | Reject if zoom 1 and command = move_unit |
+| Zoom level valid for command type | Unit move only valid at zoom &gt; 2 | Reject if zoom 1 and command = move_unit |
 | Unit/structure/actor exists | Entity ID must exist in state | Error: "unit_id 999 not found" |
 | Player owns entity | Unit must belong to player faction | Error: "unauthorized: unit owned by faction_B" |
-| Command is feasible | Move distance ≤ unit range; build cost ≤ treasury | Error: "insufficient treasury (need 100, have 50)" |
+| Command is feasible | Move distance &lt; unit range; build cost &lt; treasury | Error: "insufficient treasury (need 100, have 50)" |
 | Map location valid | Hex within map bounds, passable for unit type | Error: "location (999, 999) out of bounds" |
 | Cooldown respected | Some commands have cooldown (e.g., diplomacy proposal every 10 ticks) | Warn: "diplomacy proposal on cooldown, 3 ticks remaining" |
 
@@ -5404,8 +5404,8 @@ Network latency (50-200 ms) makes RTS feel sluggish if client waits for server A
    - Client receives `authoritative_position`
 
 3. **Reconciliation:**
-   - **Delta < 1 hex:** Smooth transition over 50 ms (unit drifts to correct position)
-   - **Delta ≥ 1 hex:** Snap to authoritative position (visible but quick; indicates desync)
+   - **Delta \< 1 hex:** Smooth transition over 50 ms (unit drifts to correct position)
+   - **Delta &gt; 1 hex:** Snap to authoritative position (visible but quick; indicates desync)
    - **Delta > 5 hex:** Log warning and request full state resync (indicates serious issue)
 
 ### Determinism & Validation
@@ -5419,9 +5419,9 @@ Client prediction is **deterministic** given:
 
 | Scenario | Error Budget | Correction Strategy |
 |----------|--------------|-------------------|
-| WiFi low latency (50 ms) | ±1 hex | Smooth transition |
-| WiFi medium latency (100 ms) | ±2 hex | Smooth transition with slight desync |
-| Cellular high latency (200+ ms) | ±3 hex | Snap correction visible but acceptable |
+| WiFi low latency (50 ms) | &plusmn;1 hex | Smooth transition |
+| WiFi medium latency (100 ms) | &plusmn;2 hex | Smooth transition with slight desync |
+| Cellular high latency (200+ ms) | &plusmn;3 hex | Snap correction visible but acceptable |
 
 ## Command Queuing & Execution Phases
 
@@ -5505,9 +5505,9 @@ fn test_rts_command_replay_determinism() {
 | Command latency (ACK) | < 50 ms (p95) | Over WiFi; includes network roundtrip |
 | State update frequency (zoom 1) | 100 ms | Regional updates; lower frequency OK |
 | State update frequency (zoom 2) | 50 ms | Tactical updates; critical for responsiveness |
-| Tick rate (wall-clock) | ≥ 10 Hz | 100 ms per tick; maintains smoothness |
-| Concurrent players | ≥ 100 | Supported server load per instance |
-| Unit count per faction | ≤ 1000 | Practical limit before performance degrades |
+| Tick rate (wall-clock) | &gt; 10 Hz | 100 ms per tick; maintains smoothness |
+| Concurrent players | &gt; 100 | Supported server load per instance |
+| Unit count per faction | &lt; 1000 | Practical limit before performance degrades |
 | Memory footprint | < 500 MB | For medium scenario (5 regions, 50 districts) |
 
 ## Examples
@@ -5525,7 +5525,7 @@ fn test_rts_command_replay_determinism() {
 3. Server broadcasts: `state_update(unit_42: position=(102, 152))`
 4. Client receives update; compares to predicted (103, 151): delta=1 hex; smooth transition over 50 ms
 
-**Tick 5002-5004:** Unit continues movement, predictions drift ±1 hex each tick, server updates correct position
+**Tick 5002-5004:** Unit continues movement, predictions drift &plusmn;1 hex each tick, server updates correct position
 
 **Tick 5005:**
 1. Unit reaches destination (150, 200)
@@ -5588,11 +5588,11 @@ Macro aggregates are deterministic but may have bounded rounding errors. Errors 
 
 | Metric | Aggregation Method | Error Bound (p95) | Notes |
 |--------|-------------------|------------------|-------|
-| Population | Sum of district cohorts | ±0 (exact) | No rounding if integer counts |
-| Food stocks | Sum of district stocks | ±0.01 units | Fixed-point accumulation; negligible |
-| GDP | Sum of district production × price | ±1.0 units | Price aggregation may have ±0.5% error per price |
-| Gini (inequality) | Weighted average of district Ginis | ±0.02 (0.02 on [0,1] scale) | Aggregation of cohort distributions introduces approximation |
-| Legitimacy | Weighted average of institution legitimacy | ±0.01 | Different institutions have different weights |
+| Population | Sum of district cohorts | &plusmn;0 (exact) | No rounding if integer counts |
+| Food stocks | Sum of district stocks | &plusmn;0.01 units | Fixed-point accumulation; negligible |
+| GDP | Sum of district production × price | &plusmn;1.0 units | Price aggregation may have &plusmn;0.5% error per price |
+| Gini (inequality) | Weighted average of district Ginis | &plusmn;0.02 (0.02 on [0,1] scale) | Aggregation of cohort distributions introduces approximation |
+| Legitimacy | Weighted average of institution legitimacy | &plusmn;0.01 | Different institutions have different weights |
 
 Error bounds are verified in acceptance test:
 ```rust
@@ -5718,7 +5718,7 @@ The client determines the active LOD level using three inputs:
 
 1. **Camera zoom factor** — primary selector
 2. **Entity count in viewport** — adaptive fallback (high entity density → raise LOD level)
-3. **Client FPS** — performance-driven adaptation (FPS < 30 → raise LOD level by 1)
+3. **Client FPS** — performance-driven adaptation (FPS \< 30 → raise LOD level by 1)
 
 ### LOD Selection Algorithm
 
@@ -6773,7 +6773,7 @@ This section explicitly maps the CIV-0101 spec to FR-CIV-GEO-010 acceptance crit
 | Zoom level 1: {region_id, aggregated_population, aggregated_resources, military_unit_count, dominant_institution, diplomatic_status} | `L2RegionSnapshot` struct | Section 4.2 |
 | Zoom level 2: {district_id, population_cohorts, resource_stocks, structures, military_units, citizen_morale} | `L1DistrictSnapshot` struct | Section 4.2 |
 | Zoom level 3 (research mode): {citizen_id, job, welfare, ideology, location, stress_score} | `L0CitizenSnapshot` struct | Section 4.2 |
-| Data size: zoom 1 ~0.5 KB per region | L2 target < 0.5 KB per region | Section 4.2, Section 8.3 |
+| Data size: zoom 1 ~0.5 KB per region | L2 target \< 0.5 KB per region | Section 4.2, Section 8.3 |
 | Data size: zoom 2 ~2 KB per district | L1 target ~2 KB per district | Section 4.2, Section 8.3 |
 | Schema versioning: `lod_snapshots.schema_version` | Schema version in Section 3 | Section 3 |
 | Client rejects mismatched versions | Desync detection hash comparison | Section 7.3 |
@@ -6896,7 +6896,7 @@ Atmospheric forcing `AF(t)` is a dimensionless index representing cumulative rad
 ```
 AF(t+1) = AF(t) + ΣEmissions(t) − NaturalSink(t)
 
-NaturalSink(t) = k_sink × AF(t)        where k_sink ∈ (0, 0.05] per tick
+NaturalSink(t) = k_sink × AF(t)        where k_sink &isin; (0, 0.05] per tick
 
 ΣEmissions(t) = Σ_goods [ ProductionVolume(good, t) × EmissionsIntensity(good) ]
 ```
@@ -6915,12 +6915,12 @@ NaturalSink(t) = k_sink × AF(t)        where k_sink ∈ (0, 0.05] per tick
 
 ### 2.2 Climate Damage Function
 
-Climate damage `CD(t) ∈ [0, 1]` is a sigmoid of forcing above the damage onset threshold:
+Climate damage `CD(t) &isin; [0, 1]` is a sigmoid of forcing above the damage onset threshold:
 
 ```
 CD(t) = 1 / (1 + exp(−α × (AF(t) − AF_onset)))
 
-α ∈ [1.0, 8.0]       steepness parameter (higher α = sharper transition)
+α &isin; [1.0, 8.0]       steepness parameter (higher α = sharper transition)
 ```
 
 For the simulation's fixed-point implementation, this sigmoid is pre-computed into a lookup table indexed by `AF` in steps of `1_000` (i.e., 0.001 forcing units) and stored as `i64` scaled by `1_000_000`.
@@ -6930,7 +6930,7 @@ For the simulation's fixed-point implementation, this sigmoid is pre-computed in
 ```
 EffectiveProductivity(t) = BaseProductivity(t) × (1 − CD(t) × productivity_damage_weight)
 
-productivity_damage_weight ∈ [0.2, 1.0]   (fraction of CD applied to productivity)
+productivity_damage_weight &isin; [0.2, 1.0]   (fraction of CD applied to productivity)
 ```
 
 **Health baseline penalty:**
@@ -6938,7 +6938,7 @@ productivity_damage_weight ∈ [0.2, 1.0]   (fraction of CD applied to productiv
 ```
 HealthPenalty(t) = CD(t) × health_damage_weight
 
-health_damage_weight ∈ [0.1, 0.6]
+health_damage_weight &isin; [0.1, 0.6]
 ```
 
 **Housing spoilage rate increase:**
@@ -6946,7 +6946,7 @@ health_damage_weight ∈ [0.1, 0.6]
 ```
 HousingDecayRate(t) = BaseDecayRate × (1 + housing_decay_amplifier × CD(t))
 
-housing_decay_amplifier ∈ [0.5, 3.0]
+housing_decay_amplifier &isin; [0.5, 3.0]
 ```
 
 ### 2.3 Energy Budget Disruption Formula
@@ -6971,19 +6971,19 @@ When actual energy demand exceeds ESC, a deficit emerges:
 ```
 EnergyDeficit(t) = max(0, EnergyDemand(t) − ESC(t))
 
-EnergyDeficitRatio(t) = EnergyDeficit(t) / EnergyDemand(t)   ∈ [0, 1]
+EnergyDeficitRatio(t) = EnergyDeficit(t) / EnergyDemand(t)   &isin; [0, 1]
 ```
 
 This ratio feeds directly into scarcity pressure and joule quota tightening.
 
 ### 2.4 Resource Depletion Rate
 
-Resource depletion factor `RDF(t) ∈ [0, 1]` declines as extraction occurs:
+Resource depletion factor `RDF(t) &isin; [0, 1]` declines as extraction occurs:
 
 ```
 RDF(t+1) = RDF(t) − δ × ExtractionVolume(t) / TotalResourceStock_initial
 
-δ ∈ [0.0001, 0.005]   depletion coefficient per extraction unit
+δ &isin; [0.0001, 0.005]   depletion coefficient per extraction unit
 ```
 
 As `RDF` declines, production costs rise:
@@ -6991,7 +6991,7 @@ As `RDF` declines, production costs rise:
 ```
 EffectiveProductionCost(good, t) = BaseCost(good) × (1 + φ × (1 − RDF(t)))
 
-φ ∈ [0.1, 2.0]   cost amplifier at full depletion
+φ &isin; [0.1, 2.0]   cost amplifier at full depletion
 ```
 
 **Regeneration policy:** Resources can regenerate only if an explicit regeneration investment policy is active. Without it, depletion is strictly monotonic (non-reversible). This is invariant I-3 enforced at the type level — the `ResourcePool` struct contains no regeneration field unless the policy enables it.
@@ -7003,7 +7003,7 @@ Adaptation investment `A(t)` accumulates into an adaptation stock `AS(t)` with d
 ```
 AS(t+1) = AS(t) × (1 − adapt_depreciation) + A(t)
 
-adapt_depreciation ∈ [0.01, 0.05] per tick
+adapt_depreciation &isin; [0.01, 0.05] per tick
 ```
 
 Effective damage reduction from adaptation:
@@ -7011,7 +7011,7 @@ Effective damage reduction from adaptation:
 ```
 DamageReduction(t) = η × AS(t) / (1 + η × AS(t))
 
-η ∈ [0.001, 0.05]   adaptation effectiveness coefficient
+η &isin; [0.001, 0.05]   adaptation effectiveness coefficient
 ```
 
 This yields diminishing returns: doubling adaptation stock does not double damage reduction.
@@ -7030,7 +7030,7 @@ AdaptROI(t) = ΔDamageReduction(t) / A(t)   [damage-fraction per output-unit inv
 
 ### 2.6 Scarcity Pressure Index
 
-Scarcity pressure `SP(t) ∈ [0, 1]` aggregates all supply constraint signals:
+Scarcity pressure `SP(t) &isin; [0, 1]` aggregates all supply constraint signals:
 
 ```
 SP(t) = clip(
@@ -7041,7 +7041,7 @@ SP(t) = clip(
 , 0, 1)
 
 Default weights: w1=0.35, w2=0.25, w3=0.25, w4=0.15
-resource_scarcity_weight ∈ [0, 1]
+resource_scarcity_weight &isin; [0, 1]
 ```
 
 `SP(t)` is the primary signal consumed by the governance drift model and the tyranny index calculation.
@@ -7053,8 +7053,8 @@ Each tick, a disaster is sampled from a Bernoulli distribution:
 ```
 DisasterProb(t) = base_disaster_rate + β × CD_effective(t)
 
-base_disaster_rate ∈ [0.001, 0.02]   per tick
-β ∈ [0.01, 0.10]
+base_disaster_rate &isin; [0.001, 0.02]   per tick
+β &isin; [0.01, 0.10]
 ```
 
 When a disaster event fires, severity is drawn from an exponential distribution:
@@ -7258,7 +7258,7 @@ ScenarioConfig {
 }
 ```
 
-**Expected trajectory:** Forcing peaks below `AF_onset` and stabilizes. Effective damage stays below `CD_effective < 0.15`. Adaptation ROI is highest in early years, tapering as the adaptation stock accumulates.
+**Expected trajectory:** Forcing peaks below `AF_onset` and stabilizes. Effective damage stays below `CD_effective \< 0.15`. Adaptation ROI is highest in early years, tapering as the adaptation stock accumulates.
 
 ---
 
@@ -7412,7 +7412,7 @@ impl AdaptationInvestment {
 /// Invariant: rdf_scaled is monotonically non-increasing unless regeneration policy active.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResourcePool {
-    /// Resource depletion factor RDF ∈ [0, 1]. Scaled by SCALE.
+    /// Resource depletion factor RDF &isin; [0, 1]. Scaled by SCALE.
     /// Starts at SCALE (1.0), declines with extraction.
     pub rdf_scaled: i64,
     /// Initial total resource stock (joules). Used to compute depletion rate.
@@ -7474,8 +7474,8 @@ pub struct ClimateState {
     pub damage: DamageEstimate,
     pub adaptation: AdaptationInvestment,
     pub resources: ResourcePool,
-    pub scarcity_pressure: i64,       // SP ∈ [0, 1]. Scaled by SCALE.
-    pub energy_deficit_ratio: i64,    // ∈ [0, 1]. Scaled by SCALE.
+    pub scarcity_pressure: i64,       // SP &isin; [0, 1]. Scaled by SCALE.
+    pub energy_deficit_ratio: i64,    // &isin; [0, 1]. Scaled by SCALE.
     pub active_disaster: Option<DisasterEvent>,
     pub pending_boundary_events: Vec<BoundaryEvent>,
 }
@@ -7496,7 +7496,7 @@ pub enum DisasterKind {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DisasterEvent {
     pub kind: DisasterKind,
-    /// Severity ∈ [0, 1]. Scaled by SCALE.
+    /// Severity &isin; [0, 1]. Scaled by SCALE.
     pub severity: i64,
     /// Tick on which this disaster fires.
     pub tick: u64,
@@ -8213,7 +8213,7 @@ Cost curve: InfraHardeningCost = hardening_level² × base_hardening_cost
 Diminishing returns: Each 0.1 increment of hardening_level reduces housing decay
                      by decreasing amounts (quadratic cost ensures this).
 
-Valid range: hardening_level ∈ [0.0, 1.0], stored as i64 scaled by SCALE.
+Valid range: hardening_level &isin; [0.0, 1.0], stored as i64 scaled by SCALE.
 ```
 
 **In YAML:**
@@ -8238,9 +8238,9 @@ Cost: RelocCost = relocation_spend (direct output allocation)
 Diminishing returns: Relocation cost per person increases as easiest relocations
                      happen first. Modeled as cost_per_person × (1 + γ × fraction_relocated).
 
-γ ∈ [0.5, 3.0] — relocation difficulty amplifier.
+γ &isin; [0.5, 3.0] — relocation difficulty amplifier.
 
-Valid range: relocation_spend ∈ [0, max_relocation_budget] joules.
+Valid range: relocation_spend &isin; [0, max_relocation_budget] joules.
 ```
 
 ### 9.3 Lever: Emergency Reserves
@@ -8254,12 +8254,12 @@ Effect: During a disaster tick:
         reserve_buffer_fraction = min(reserves_held / shock_demand, 1.0)
 
 Cost: reserves_held × holding_cost_rate per tick (storage overhead).
-      holding_cost_rate ∈ [0.001, 0.02] per tick.
+      holding_cost_rate &isin; [0.001, 0.02] per tick.
 
 Diminishing returns: Once reserves exceed 12 weeks of peak demand,
                      additional reserves yield near-zero scarcity reduction.
 
-Valid range: reserve_weeks ∈ [0, 52] weeks of median demand.
+Valid range: reserve_weeks &isin; [0, 52] weeks of median demand.
 ```
 
 ### 9.4 Lever: Carbon-Intensity Caps
@@ -8277,12 +8277,12 @@ Effect: EmissionsIntensity_effective(good) = min(EmissionsIntensity_base(good),
 Cost: Production cost markup for capped goods:
       CostMarkup = (1 - cap / base_intensity) × intensity_transition_cost_factor
 
-intensity_transition_cost_factor ∈ [0.5, 4.0]
+intensity_transition_cost_factor &isin; [0.5, 4.0]
 
 Diminishing returns: Tighter caps produce smaller and smaller AF reductions
                      because the highest-intensity activities are eliminated first.
 
-Valid range: carbon_intensity_cap ∈ [0.01, 0.40] forcing-units per output-unit.
+Valid range: carbon_intensity_cap &isin; [0.01, 0.40] forcing-units per output-unit.
 ```
 
 ---
@@ -8308,7 +8308,7 @@ All lag values are expressed in ticks and are stored in `ScenarioConfig::adaptat
 
 ### 10.2 Pending-Effect Queue Structure
 
-The `AdaptationInvestment::pending_effects` field is a `BTreeMap<u64, i64>` where:
+The `AdaptationInvestment::pending_effects` field is a `BTreeMap \< u64, i64>` where:
 - Key: `investment_tick + L_adapt` — the tick at which the effect vests.
 - Value: The adaptation stock increment (in scaled units) to apply at that tick.
 
@@ -8362,7 +8362,7 @@ These invariants are enforced as `#[cfg(test)] proptest` property tests in `crat
 ### I-1: Monotonic Damage Under Increasing Forcing
 
 ```
-∀ AF1 < AF2: CD(AF1) ≤ CD(AF2)
+∀ AF1 < AF2: CD(AF1) &lt; CD(AF2)
 ```
 
 **Test (proptest):**
@@ -8384,7 +8384,7 @@ proptest! {
 ### I-2: Non-Reversible Resource Depletion Without Regeneration Policy
 
 ```
-∀ tick: if !regeneration_policy_active: RDF(tick+1) ≤ RDF(tick)
+∀ tick: if !regeneration_policy_active: RDF(tick+1) &lt; RDF(tick)
 ```
 
 **Test:**
@@ -8455,7 +8455,7 @@ proptest! {
 ### I-5: Scarcity Pressure Bounded [0, SCALE]
 
 ```
-∀ inputs: SP(t) ∈ [0, SCALE]
+∀ inputs: SP(t) &isin; [0, SCALE]
 ```
 
 **Test (proptest):** Exhaustive over random component inputs, verifying the `clip()` in the SP formula keeps it in range.
@@ -8494,7 +8494,7 @@ proptest! {
 
 **Sim manifestation:** `cost_multiplier` for basic goods rises above 2.0. `SustainEfficiency` drops below 0.7. `ScarcityPressure` spikes. Tyranny drift activates if governance is weak. Governance module may trigger `AuthoritarianShift` event.
 
-**Detection:** `rdf_scaled < 200_000` (RDF < 0.2) AND `energy_deficit_ratio > 300_000` (deficit > 30%) for 3 consecutive ticks. `climate.resource_stress.v1` emitted with `stress_kind = "esc_deficit_sustained"`.
+**Detection:** `rdf_scaled \< 200_000` (RDF \< 0.2) AND `energy_deficit_ratio > 300_000` (deficit > 30%) for 3 consecutive ticks. `climate.resource_stress.v1` emitted with `stress_kind = "esc_deficit_sustained"`.
 
 ### FM-4: Lagged-Shock Overshoot
 
@@ -9139,7 +9139,7 @@ impl ScenarioComposition {
 |---|---|---|
 | Baseline forcing + HighShock shocks | Forcing accumulates slowly; disasters frequent before adaptation builds | Disaster rate 4x baseline while AF climbs slowly |
 | DelayedAction + HighShock | Trigger fires when AF > 0.8, but repeated disasters delay adaptation build | Lag and disaster overlap creates 20-40 tick vulnerability window |
-| CoordMitigation + HighShock shocks | Strong adaptation stock absorbs most disaster severity | `severity_amplifier × CD_effective` is low because `CD_effective < 0.15` |
+| CoordMitigation + HighShock shocks | Strong adaptation stock absorbs most disaster severity | `severity_amplifier × CD_effective` is low because `CD_effective \< 0.15` |
 
 ### 16.5 Multi-Run Monte Carlo — Batch Execution
 
@@ -9488,7 +9488,7 @@ RenewableOutput_actual(t) = RenewableCapacity(t) × VariabilityFactor(t)
 
 VariabilityFactor(t) ~ Clipped Normal(mean=1.0, sd=variability_sigma, min=0.5, max=1.5)
 
-variability_sigma ∈ [0.05, 0.25]   (default 0.10 for solar/wind mix)
+variability_sigma &isin; [0.05, 0.25]   (default 0.10 for solar/wind mix)
 ```
 
 In fixed-point:
@@ -9540,7 +9540,7 @@ ESC_smoothed(t) = RenewableOutput_actual(t)
 ```
 DemandResponseCurtailment(t) = EnergyDeficitRatio(t) × demand_response_elasticity
 
-demand_response_elasticity ∈ [0.5, 1.5]   (how aggressively demand adjusts)
+demand_response_elasticity &isin; [0.5, 1.5]   (how aggressively demand adjusts)
 
 EffectiveDemand(t) = EnergyDemand(t) × (1 - DemandResponseCurtailment(t) × non_essential_share)
 ```
@@ -9565,7 +9565,7 @@ When embedded energy costs inflate, market-clearing prices for energy-intensive 
 QuantityDemanded_adjusted(good, t) = QuantityDemanded_base(good)
     × (CostMultiplier(t) / SCALE) ^ (-elasticity_good)
 
-elasticity_good ∈ [-2.0, -0.2]   (energy-essential goods have lower |elasticity|)
+elasticity_good &isin; [-2.0, -0.2]   (energy-essential goods have lower |elasticity|)
 ```
 
 This reduces economy output:
@@ -9610,13 +9610,13 @@ YieldMultiplier(t) = BaseYield
     × AdaptationYieldBonus(adaptation_stock(t))
 
 TemperatureStressFactor(cd) = 1 - temp_stress_weight × cd²
-    temp_stress_weight ∈ [0.3, 0.8]
+    temp_stress_weight &isin; [0.3, 0.8]
 
 PrecipitationStressFactor(cd) = 1 - precip_stress_weight × cd
-    precip_stress_weight ∈ [0.2, 0.6]
+    precip_stress_weight &isin; [0.2, 0.6]
 
 AdaptationYieldBonus(AS) = 1 + adapt_yield_coeff × AS / (1 + adapt_yield_coeff × AS)
-    adapt_yield_coeff ∈ [0.001, 0.02]
+    adapt_yield_coeff &isin; [0.001, 0.02]
 ```
 
 The `cd²` term for temperature stress encodes the fact that yield loss accelerates non-linearly as temperatures deviate from optimal — mild warming may even improve yields at some latitudes, but the quadratic ensures severe damage at high CD values.
@@ -9628,7 +9628,7 @@ FoodSupply(t) = BaseAgriculturalCapacity × YieldMultiplier(t)
 
 FoodDeficit(t) = max(0, FoodDemand(t) - FoodSupply(t))
 
-FoodDeficitRatio(t) = FoodDeficit(t) / FoodDemand(t)  ∈ [0, 1]
+FoodDeficitRatio(t) = FoodDeficit(t) / FoodDemand(t)  &isin; [0, 1]
 ```
 
 `FoodDeficitRatio` feeds into `ScarcityPressure` via an additional weight term:
@@ -9776,7 +9776,7 @@ WelfareCost(t) = productivity_loss(t) × output_fraction_welfare_weighted
 
 welfare_weights: productivity=0.45, health=0.35, food=0.20
 
-WelfareCost(t) ∈ [0, 1] (already in fraction space)
+WelfareCost(t) &isin; [0, 1] (already in fraction space)
 ```
 
 **Legitimacy drain formula (consumed by governance module):**
@@ -9785,14 +9785,14 @@ WelfareCost(t) ∈ [0, 1] (already in fraction space)
 LegitimacyDrain_climate(t) = WelfareCost(t) × legitimacy_damage_sensitivity
                              × (1 - adaptation_legitimacy_credit(t))
 
-legitimacy_damage_sensitivity ∈ [0.01, 0.10] per tick
+legitimacy_damage_sensitivity &isin; [0.01, 0.10] per tick
     (how strongly welfare degradation translates to legitimacy loss)
 
 adaptation_legitimacy_credit(t) = min(1.0,
     adaptation_stock(t) × adapt_legitimacy_coeff)
     (visible adaptation investment partially offsets legitimacy drain)
 
-adapt_legitimacy_coeff ∈ [0.001, 0.01]
+adapt_legitimacy_coeff &isin; [0.001, 0.01]
 ```
 
 The governance module integrates this drain via:
@@ -9841,10 +9841,10 @@ DisplacementRate(t) = base_displacement_rate
     + γ_disp × FoodDeficitRatio(t)
     + δ_disp × (disaster_occurred(t) ? disaster_severity(t) : 0)
 
-base_displacement_rate ∈ [0.0001, 0.002]  per tick
-β_disp ∈ [0.005, 0.02]
-γ_disp ∈ [0.003, 0.015]
-δ_disp ∈ [0.01, 0.05]
+base_displacement_rate &isin; [0.0001, 0.002]  per tick
+β_disp &isin; [0.005, 0.02]
+γ_disp &isin; [0.003, 0.015]
+δ_disp &isin; [0.01, 0.05]
 ```
 
 `DisplacementRate(t)` is the fraction of the at-risk population that transitions from `Resident` to `Displaced` state each tick. The CIV-0103 citizen lifecycle module consumes this as:
@@ -9867,11 +9867,11 @@ AdaptationBudget_available(t) = AdaptationBudget_planned(t)
     × (1 - CaptureLeakage(t))
 
 InstitutionalCapacity(t): governance quality × (1 - corruption)
-    Provided by governance module; ∈ [0, 1]
+    Provided by governance module; &isin; [0, 1]
 
 CaptureLeakage(t): fraction of adaptation budget diverted by captured institutions
     = ShadowInfluenceIndex(t) × capture_leakage_sensitivity
-    capture_leakage_sensitivity ∈ [0.1, 0.5]
+    capture_leakage_sensitivity &isin; [0.1, 0.5]
     ShadowInfluenceIndex from CIV-0107 shadow state layer
 ```
 
@@ -9885,7 +9885,7 @@ Visible adaptation success (i.e., measurable reduction in `CD_effective` or disa
 AdaptationPoliticalCapital(t) = Σ_{s=t-window}^{t}
     ΔDamageReduction(s) × adaptation_visibility_factor
 
-adaptation_visibility_factor ∈ [0.5, 2.0]
+adaptation_visibility_factor &isin; [0.5, 2.0]
     (how much citizens perceive adaptation working;
      higher in high-transparency governance)
 ```
@@ -10127,8 +10127,8 @@ When `MaxTransferFlow > 0`, the source region's `FoodSupply` is debited and the 
 A cross-region flow breaks down when any of:
 - `ScarcityPressure(source) > 0.55` (source too stressed to export)
 - `DiplomaticState(source, dest) = War` or `Sanction`
-- `TradeRouteCapacity < minimum_flow_threshold`
-- `export_willingness < 0.1`
+- `TradeRouteCapacity \< minimum_flow_threshold`
+- `export_willingness \< 0.1`
 
 When a flow breaks down, the destination region's `FoodDeficitRatio` increases immediately, which propagates into its `ScarcityPressure` and thence into governance drift.
 
@@ -11127,7 +11127,7 @@ The climate collapse scenario is the extreme-stress integration test. It uses th
 | 10–30 | CD_effective > 0.5 | Steep sigmoid (α=8) and low onset (0.3) |
 | 15–40 | TP-3 fires (CD > 0.6) | Disaster rate doubles |
 | 20–50 | SP > 0.7 | Compound: productivity loss + energy deficit + food deficit |
-| 25–60 | RDF < 0.2 → TP-2 fires | Fast EROI decay doubles |
+| 25–60 | RDF \< 0.2 → TP-2 fires | Fast EROI decay doubles |
 | 30–80 | Governance revolt risk > 0.5 | SP > 0.7 with no legitimacy buffer |
 | 50–150 | AF > 3.0 → TP-4 fires | Fully irreversible runaway |
 
@@ -11135,11 +11135,11 @@ This scenario validates that all four tipping points can fire in a realistic cas
 
 **Key invariants that must hold even in collapse:**
 - `AF >= 0` always (clamped at zero; sink cannot exceed forcing)
-- `CD_effective ∈ [0, SCALE]` always (sigmoid output bounded)
+- `CD_effective &isin; [0, SCALE]` always (sigmoid output bounded)
 - `RDF >= 0` always (depletion cannot go negative)
 - `adaptation_stock >= 0` always (depreciation clamped)
-- `scarcity_pressure ∈ [0, SCALE]` always (clip applied)
-- `energy_deficit_ratio ∈ [0, SCALE]` always
+- `scarcity_pressure &isin; [0, SCALE]` always (clip applied)
+- `energy_deficit_ratio &isin; [0, SCALE]` always
 
 ---
 
@@ -11962,7 +11962,7 @@ All events are emitted to the event bus (CIV-0001 Phase 6 broadcast) and appende
 
 ## 8. Database Schema (SQL DDL)
 
-All time-series tables use a `(run_id, tick, <entity_id>)` composite primary key. No row is ever updated. Deletion is only permitted by retention policy operations on non-canonical runs.
+All time-series tables use a `(run_id, tick, \<entity_id\>)` composite primary key. No row is ever updated. Deletion is only permitted by retention policy operations on non-canonical runs.
 
 ```sql
 -- ============================================================
@@ -12173,7 +12173,7 @@ L_{m,t} = clamp(
 EA_{m,t} = 1 - |enforcement_intensity_{m,t} - constitutional_norm_{m}| / constitutional_range
 ```
 
-Coefficient range: `w_EA ∈ [0.15, 0.30]`. Default: `0.25`.
+Coefficient range: `w_EA &isin; [0.15, 0.30]`. Default: `0.25`.
 
 **Coalition Support (CS)**: Breadth of active social coalition supporting the institution. Derived from ideology aggregation layer — fraction of population with `StatePreference > 0.5` or `TrustInInstitutions > 0.6`.
 
@@ -12183,7 +12183,7 @@ CS_{m,t} = fraction_of_polity_supporting_m(t)
 
 Coalition support is attenuated by polarization: if Gini of ideology distribution > 0.6, CS is multiplied by `(1 - polarization_penalty)`.
 
-Coefficient range: `w_CS ∈ [0.20, 0.35]`. Default: `0.30`.
+Coefficient range: `w_CS &isin; [0.20, 0.35]`. Default: `0.30`.
 
 **Transfer Fairness (TF)**: Degree to which the institution allocates resources equitably. Measured as `1 - Gini(allocation_per_cohort)` for the domains under institution's governance.
 
@@ -12191,7 +12191,7 @@ Coefficient range: `w_CS ∈ [0.20, 0.35]`. Default: `0.30`.
 TF_{m,t} = 1 - Gini(allocation_vector_{m,t})
 ```
 
-Coefficient range: `w_TF ∈ [0.15, 0.25]`. Default: `0.20`.
+Coefficient range: `w_TF &isin; [0.15, 0.25]`. Default: `0.20`.
 
 **External Pressure Penalty (EP)**: Sanctions, geopolitical coercion, or external interference reduce legitimacy by reducing the institution's apparent effectiveness.
 
@@ -12199,7 +12199,7 @@ Coefficient range: `w_TF ∈ [0.15, 0.25]`. Default: `0.20`.
 EP_{m,t} = sanctions_intensity_{t} * external_interference_factor_{m}
 ```
 
-Coefficient range: `w_EP ∈ [0.05, 0.15]`. Default: `0.10`.
+Coefficient range: `w_EP &isin; [0.05, 0.15]`. Default: `0.10`.
 
 **Corruption Penalty (CR)**: Direct corruption leakage from institution outputs reduces legitimacy.
 
@@ -12209,7 +12209,7 @@ CR_{m,t} = corruption_leakage_rate_{m,t} * enforcement_visibility_{m,t}
 
 Visibility term: legitimate enforcement makes corruption more visible and thus more damaging to legitimacy when discovered.
 
-Coefficient range: `w_CR ∈ [0.10, 0.25]`. Default: `0.15`.
+Coefficient range: `w_CR &isin; [0.10, 0.25]`. Default: `0.15`.
 
 **Scarcity Drag (SD)**: Elevated scarcity pressure with tight enforcement creates legitimacy drag because the institution is seen as coercive rather than protective.
 
@@ -12217,7 +12217,7 @@ Coefficient range: `w_CR ∈ [0.10, 0.25]`. Default: `0.15`.
 SD_{m,t} = scarcity_pressure_{r,t} * enforcement_intensity_{m,t} * (1 - baseline_strength_{r,t})
 ```
 
-If baseline is strong, enforcement under scarcity is seen as protective, not punitive. Coefficient range: `w_SD ∈ [0.05, 0.15]`. Default: `0.10`.
+If baseline is strong, enforcement under scarcity is seen as protective, not punitive. Coefficient range: `w_SD &isin; [0.05, 0.15]`. Default: `0.10`.
 
 ### Coefficient Bounds Summary
 
@@ -12311,11 +12311,11 @@ No row from step 6 may reference data from a tick higher than its own tick colum
 
 ### 11.2 Tick-Keyed Primary Key Design
 
-Primary key structure: `(run_id BIGINT, tick BIGINT, <entity_id> BIGINT)`.
+Primary key structure: `(run_id BIGINT, tick BIGINT, \<entity_id\> BIGINT)`.
 
 - `run_id` partitions all data by simulation run. Multiple runs of the same scenario produce independent rows.
 - `tick` is monotonically increasing within a run. There are no gaps (every tick produces a row for every live entity).
-- `<entity_id>` (institution_id or cohort_id) is stable within a run. Entity creation and destruction produce sentinel rows (state = `Collapsed`, population = 0) to maintain completeness of the series.
+- `\<entity_id\>` (institution_id or cohort_id) is stable within a run. Entity creation and destruction produce sentinel rows (state = `Collapsed`, population = 0) to maintain completeness of the series.
 
 ### 11.3 Replay-Safe Read Patterns
 
@@ -12371,7 +12371,7 @@ Upon crossing `T_retire`, a cohort is assigned a maintenance tier based on pool 
 |---|---|---|
 | `solvency_runway_ticks >= 520` (10 years) | `full` | `median_sustain_cost_j * 1.0` per tick |
 | `solvency_runway_ticks in [104, 520)` (2–10 years) | `reduced` | `median_sustain_cost_j * 0.75` per tick |
-| `solvency_runway_ticks < 104` (< 2 years) | `minimum` | `median_sustain_cost_j * 0.50` per tick |
+| `solvency_runway_ticks \< 104` (< 2 years) | `minimum` | `median_sustain_cost_j * 0.50` per tick |
 
 Maintenance tier is re-evaluated each tick and may degrade if pool solvency deteriorates. Degradation from `full` to `reduced` emits a `citizen.retirement_threshold_crossed.v1` event with updated tier.
 
@@ -12434,7 +12434,7 @@ The scarcity supplement increases subsidy under scarcity conditions when baselin
 
 Institutional state changes do not take effect on downstream policy outputs immediately. There is a configurable propagation lag of `propagation_lag_ticks` (default: 5 ticks) between a state transition and the change in output multipliers delivered to the allocation engine.
 
-The pending-effect queue is a `BTreeMap<u64, PendingEffect>` keyed by `apply_at_tick`:
+The pending-effect queue is a `BTreeMap \< u64, PendingEffect>` keyed by `apply_at_tick`:
 
 ```rust
 /// Apply all pending effects for the current tick.
@@ -13353,7 +13353,7 @@ pub struct CohortDemographics {
 
     /// Base weekly birth rate per 1000 citizens in Working age band.
     /// Fixed-point [0, 10_000] representing births per citizen per tick.
-    /// Default: 18 per 1000 per 52 ticks = ~18/52000 per tick ≈ 3 per 10_000.
+    /// Default: 18 per 1000 per 52 ticks = ~18/52000 per tick &asymp; 3 per 10_000.
     pub base_birth_rate_fp: i32,               // default 3
 
     /// Welfare security factor: multiplier at full welfare access.
@@ -14223,7 +14223,7 @@ A shadow institution may formalize through three pathways:
 
 **2. Election Capture:** When `influence_score >= 6_500` and a governance event `election_held` fires, shadow institution influence is added to the relevant candidates' coalition support, potentially resulting in formal institutional control. Legitimacy is moderate (default `5_500`) if election integrity is high; higher if election integrity is compromised.
 
-**3. Coup:** When `influence_score >= 8_000` AND `military_institution_state == Captured` AND `legitimacy_of_formal_institution < 2_000`, a coup event fires. The shadow institution replaces the formal institution with `legitimacy = 2_000` and `capture_score = 8_000` (starts captured by definition).
+**3. Coup:** When `influence_score >= 8_000` AND `military_institution_state == Captured` AND `legitimacy_of_formal_institution \< 2_000`, a coup event fires. The shadow institution replaces the formal institution with `legitimacy = 2_000` and `capture_score = 8_000` (starts captured by definition).
 
 ```rust
 /// Record of a shadow-to-formal transition event.
@@ -15609,7 +15609,7 @@ The five constraints, informally:
 2. **Subsistence Floor** — essential-goods delivery to all cohorts is decoupled from compliance metrics and guaranteed above a minimum rate independent of scarcity magnitude.
 3. **Transparent Transfer Ledger** — all resource transfer and allocation decisions are logged to an append-only auditable record; opacity cannot exceed a structural ceiling (shadow capture threshold).
 4. **Adaptive Climate Response** — adaptation investment share of output is bounded below; repeated climate damage is not allowed to dominate total transfer capacity.
-5. **Coalition-Compatible External Strategy** — external strategy parameters are constrained to keep the coalition stability number C₀ < 1, preventing sanction coalition collapse driven by the regime's own actions.
+5. **Coalition-Compatible External Strategy** — external strategy parameters are constrained to keep the coalition stability number C₀ \< 1, preventing sanction coalition collapse driven by the regime's own actions.
 
 ---
 
@@ -15624,12 +15624,12 @@ xₜ = (Sₜ, Lₜ, Tₜ, Iₜ, Gₜ, Fₜ)
 ```
 
 Where:
-- **Sₜ ∈ [0, 1]**: normalized scarcity pressure
-- **Lₜ ∈ [0, 1]**: legitimacy
-- **Tₜ ∈ [0, 1]**: tyranny / enforcement intensity index
-- **Iₜ ∈ [0, 1]**: inequality / stratification (scaled Gini proxy)
-- **Gₜ ∈ [0, 1]**: governance integrity
-- **Fₜ ∈ [0, 1]**: financial fragility
+- **Sₜ &isin; [0, 1]**: normalized scarcity pressure
+- **Lₜ &isin; [0, 1]**: legitimacy
+- **Tₜ &isin; [0, 1]**: tyranny / enforcement intensity index
+- **Iₜ &isin; [0, 1]**: inequality / stratification (scaled Gini proxy)
+- **Gₜ &isin; [0, 1]**: governance integrity
+- **Fₜ &isin; [0, 1]**: financial fragility
 
 Policy controls (hybrid levers) are:
 ```
@@ -15643,20 +15643,20 @@ Where:
 - **Aₜ**: adaptation and resilience investment share
 - **τₜ**: redistribution / fiscal policy
 
-Shocks **ξₜ** are drawn from a bounded distribution: ‖ξₜ‖ ≤ ξₘₐₓ with probability 1.
+Shocks **ξₜ** are drawn from a bounded distribution: ‖ξₜ‖ &lt; ξₘₐₓ with probability 1.
 
 The **safe set** is:
 ```
-S = {x : S ≤ Sₘₐₓ, T ≤ Tₘₐₓ, L ≥ Lₘᵢₙ, G ≥ Gₘᵢₙ, F ≤ Fₘₐₓ, I ≤ Iₘₐₓ}
+S = {x : S &lt; Sₘₐₓ, T &lt; Tₘₐₓ, L &gt; Lₘᵢₙ, G &gt; Gₘᵢₙ, F &lt; Fₘₐₓ, I &lt; Iₘₐₓ}
 ```
 
-**Definition (Stability):** The system is *stable* if there exists a policy uₜ ∈ U such that for all x₀ ∈ S:
+**Definition (Stability):** The system is *stable* if there exists a policy uₜ &isin; U such that for all x₀ &isin; S:
 ```
-Pr(xₜ ∈ S  ∀t) ≥ 1 − δ
+Pr(xₜ &isin; S  ∀t) &gt; 1 − δ
 ```
 for a chosen δ > 0, provided shock magnitudes satisfy an admissible bound.
 
-**Legitimacy Recovery Threshold (λ_rec):** A named parameter. If Lₜ < λ_rec, the system is in the legitimacy danger zone: probability of recovering to Lₘᵢₙ within a finite window W_rec decays exponentially with the duration of sub-λ_rec persistence. λ_rec > Lₘᵢₙ by design; the gap (λ_rec − Lₘᵢₙ) defines the recovery buffer.
+**Legitimacy Recovery Threshold (λ_rec):** A named parameter. If Lₜ \< λ_rec, the system is in the legitimacy danger zone: probability of recovering to Lₘᵢₙ within a finite window W_rec decays exponentially with the duration of sub-λ_rec persistence. λ_rec > Lₘᵢₙ by design; the gap (λ_rec − Lₘᵢₙ) defines the recovery buffer.
 
 Default calibrated value: **λ_rec = 0.35** (on a 0–1 scale), **Lₘᵢₙ = 0.20**.
 
@@ -15672,7 +15672,7 @@ with scarcity shocks ξₜ recurring with nonzero probability (i.e., ∃ p₀ > 
 
 Define the five constraints C₁, ..., C₅ as predicates on simulation state (see Section 3). Then:
 
-**∀ i ∈ {1,...,5}: ¬Cᵢ(xₜ, uₜ) ⟹ Pr(τ_𝒜 < ∞) = 1**
+**∀ i &isin; {1,...,5}: ¬Cᵢ(xₜ, uₜ) ⟹ Pr(τ_𝒜 < &infin;) = 1**
 
 where 𝒜 is an absorbing attractor (authoritarian basin 𝒜_auth, oligarchic basin 𝒜_olig, or collapse basin 𝒜_collapse) and τ_𝒜 is the first passage time into 𝒜.
 
@@ -15681,21 +15681,21 @@ That is: removing any single constraint is sufficient to guarantee eventual syst
 **Conversely (sufficiency):**
 
 **C₁(xₜ, uₜ) ∧ C₂(xₜ, uₜ) ∧ C₃(xₜ, uₜ) ∧ C₄(xₜ, uₜ) ∧ C₅(xₜ, uₜ)**
-**⟹ ∃ uₜ ∈ U : Pr(xₜ ∈ S  ∀t) ≥ 1 − δ**
+**⟹ ∃ uₜ &isin; U : Pr(xₜ &isin; S  ∀t) &gt; 1 − δ**
 
 ### 2.3 Assumptions
 
-**A1 (Scarcity is bounded but recurrent):** Shocks satisfy ‖ξₜ‖ ≤ ξₘₐₓ < ∞ and Sₜ exceeds S* > 0 infinitely often with probability 1. The distribution of shocks is not IID but is stationary and ergodic.
+**A1 (Scarcity is bounded but recurrent):** Shocks satisfy ‖ξₜ‖ &lt; ξₘₐₓ < &infin; and Sₜ exceeds S* > 0 infinitely often with probability 1. The distribution of shocks is not IID but is stationary and ergodic.
 
 **A2 (Policy execution has finite lag):** Controls uₜ influence state at tick t+1, not t. There is no instantaneous correction; policy lag is exactly 1 tick.
 
-**A3 (Population cohorts react to perceived fairness and material security):** Legitimacy update satisfies the monotonicity: ∂Lₜ₊₁/∂EssentialsSuccess > 0 and ∂Lₜ₊₁/∂Tₜ < 0. Enforcement reduces legitimacy.
+**A3 (Population cohorts react to perceived fairness and material security):** Legitimacy update satisfies the monotonicity: &part;Lₜ₊₁/&part;EssentialsSuccess > 0 and &part;Lₜ₊₁/&part;Tₜ \< 0. Enforcement reduces legitimacy.
 
 **A4 (External sanctions/frictions remain probabilistic):** Coalition member exit probabilities are stochastic; C₀ is a time-varying expectation, not a fixed number.
 
 **A5 (Governance has structural decay under capture pressure):** Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, opacity) + ψ(oversight), with ϕ'(I) > 0 and ψ bounded above.
 
-**A6 (Absorbing basins are escape-proof under unconstrained dynamics):** Once Lₜ < Lₘᵢₙ persists for more than W_rec ticks, the probability of recovery below a fixed threshold decays exponentially. This models the empirical "legitimacy collapse ratchet."
+**A6 (Absorbing basins are escape-proof under unconstrained dynamics):** Once Lₜ \< Lₘᵢₙ persists for more than W_rec ticks, the probability of recovery below a fixed threshold decays exponentially. This models the empirical "legitimacy collapse ratchet."
 
 ---
 
@@ -15708,16 +15708,16 @@ That is: removing any single constraint is sufficient to guarantee eventual syst
 **Formal Predicate:**
 
 ```
-C₁(xₜ, uₜ) ≡ Eₜ ≤ E*(Lₜ, Gₜ, Selₜ)
+C₁(xₜ, uₜ) &equiv; Eₜ &lt; E*(Lₜ, Gₜ, Selₜ)
 ```
 
 Where the ceiling function is derived from the backfire condition. The enforcement backfire occurs when:
 ```
-∂Λₜ₊ₖ/∂Eₜ > 0  for some k ≥ 1
+&part;Λₜ₊ₖ/&part;Eₜ > 0  for some k &gt; 1
 ```
 This happens when:
 ```
-b₄ · ∂Φ(Eₜ, Selₜ)/∂Eₜ · (a₄/ψ_suppression) > 1
+b₄ · &part;Φ(Eₜ, Selₜ)/&part;Eₜ · (a₄/ψ_suppression) > 1
 ```
 
 A conservative computable ceiling in the sim is:
@@ -15739,10 +15739,10 @@ Where σ_L(L) = sigmoid(κ_L · (L − λ_rec)) is a legitimacy damping factor t
 /// Returns Ok(()) if enforcement is within the computable ceiling.
 /// Returns Err(ConstraintViolation::C1BoundedCoercion { ... }) if enforcement exceeds ceiling.
 pub fn check_bounded_coercion(
-    enforcement_intensity: Fixed64,    // Eₜ ∈ [0, 1]
-    legitimacy: Fixed64,               // Lₜ ∈ [0, 1]
-    governance_integrity: Fixed64,     // Gₜ ∈ [0, 1]
-    selectivity: Fixed64,              // Selₜ ∈ [0, 1]
+    enforcement_intensity: Fixed64,    // Eₜ &isin; [0, 1]
+    legitimacy: Fixed64,               // Lₜ &isin; [0, 1]
+    governance_integrity: Fixed64,     // Gₜ &isin; [0, 1]
+    selectivity: Fixed64,              // Selₜ &isin; [0, 1]
     params: &BoundedCoercionParams,
 ) -> ConstraintCheck;
 ```
@@ -15758,9 +15758,9 @@ Adversarial trajectory without C₁:
 6. Shadow network capacity grows: Hₜ₊₁ = Hₜ + ν · Λₜ
 7. State perceives more threat → Eₜ₊₂ increases further
 8. **Backfire cascade**: legitimacy crosses λ_rec; recovery window W_rec closes
-9. System enters 𝒜_auth where Tₜ ≥ T* and Lₜ ≤ L* permanently
+9. System enters 𝒜_auth where Tₜ &gt; T* and Lₜ &lt; L* permanently
 
-Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ ≥ Sel_min > 0 ⟹ Pr(τ_𝒜_auth < ∞) = 1.
+Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ &gt; Sel_min > 0 ⟹ Pr(τ_𝒜_auth < &infin;) = 1.
 
 ---
 
@@ -15771,7 +15771,7 @@ Formally: ¬C₁ ∧ recurrent scarcity ∧ Selₜ ≥ Sel_min > 0 ⟹ Pr(τ_�
 **Formal Predicate:**
 
 ```
-C₂(xₜ, uₜ) ≡ EssentialsDelivery(cohort_c, t) ≥ B_min  ∀ cohort c
+C₂(xₜ, uₜ) &equiv; EssentialsDelivery(cohort_c, t) &gt; B_min  ∀ cohort c
               ∧ Coupling(t) = 0  (score cannot restrict essentials)
 ```
 
@@ -15782,7 +15782,7 @@ Where:
 
 The subsistence floor guarantees:
 ```
-EssentialsSuccess(Bₜ, Sₜ) ≥ e_bar(B_min, S_max)
+EssentialsSuccess(Bₜ, Sₜ) &gt; e_bar(B_min, S_max)
 ```
 Where e_bar is a computable lower bound such that even at maximum scarcity S_max, delivery remains above B_min.
 
@@ -15811,7 +15811,7 @@ pub fn check_subsistence_floor(
 
 Adversarial trajectory without C₂ (coupling allowed):
 1. Scarcity shock occurs: Sₜ > S*
-2. State has incentive to ration via compliance score: Pr(EssentialsDenied | Sₜ > S*) ≥ p₀ > 0
+2. State has incentive to ration via compliance score: Pr(EssentialsDenied | Sₜ > S*) &gt; p₀ > 0
 3. Denied citizens reduce compliance score feedback → more denial (self-reinforcing)
 4. Tyranny update includes survival-dependence term: Tₜ₊₁ = σ(α · SDₜ + ...)
 5. Citizens who comply get essentials; those who dissent face denial → coercive compliance equilibrium
@@ -15819,25 +15819,25 @@ Adversarial trajectory without C₂ (coupling allowed):
 7. State interpretation: unrest justifies more coupling → positive feedback
 8. System converges to 𝒜_auth where coercion is self-sustaining
 
-Formally: ¬C₂ ∧ Coupt = 1 ∧ recurrent scarcity ⟹ Pr(τ_𝒜_auth < ∞) = 1.
+Formally: ¬C₂ ∧ Coupt = 1 ∧ recurrent scarcity ⟹ Pr(τ_𝒜_auth < &infin;) = 1.
 
 ---
 
 ### C3: Transparent Transfer Ledger
 
-**Intuition:** All resource allocations, transfers, and fiscal operations must be logged to an append-only auditable ledger. Opacity above a structural ceiling O_max drives the shadow-capture reproduction number R₀ above 1, initiating self-sustaining oligarchic capture. The ledger is not just an audit tool — it is the structural mechanism that keeps R₀ < 1.
+**Intuition:** All resource allocations, transfers, and fiscal operations must be logged to an append-only auditable ledger. Opacity above a structural ceiling O_max drives the shadow-capture reproduction number R₀ above 1, initiating self-sustaining oligarchic capture. The ledger is not just an audit tool — it is the structural mechanism that keeps R₀ \< 1.
 
 **Formal Predicate:**
 
 ```
-C₃(xₜ, uₜ) ≡ Opacity(t) ≤ O_max
-              ∧ ∀ transfer event e in tick t: e ∈ LedgerLog(t)
+C₃(xₜ, uₜ) &equiv; Opacity(t) &lt; O_max
+              ∧ ∀ transfer event e in tick t: e &isin; LedgerLog(t)
 ```
 
 Where:
 - `Opacity(t)`: fraction of resource movements not recorded in the auditable ledger
 - `O_max`: maximum tolerable opacity; derived from the shadow-capture threshold formula
-- The capture reproduction number must satisfy R₀ < 1
+- The capture reproduction number must satisfy R₀ \< 1
 
 Recall R₀ from the Shadow-State Capture Threshold Theorem:
 ```
@@ -15850,12 +15850,12 @@ C₃ directly controls O^base. The constraint requires:
 O_max = sup{ O : R₀(O, G_min, Sel_base, ...) < 1 }
 ```
 
-In practice: if G ≥ G_min and Sel ≤ Sel_max (from C₁), then O_max ≈ 0.15 (15% opacity maximum).
+In practice: if G &gt; G_min and Sel &lt; Sel_max (from C₁), then O_max &asymp; 0.15 (15% opacity maximum).
 
 **Threshold Parameters:**
 - `O_max`: maximum opacity fraction; valid range [0.0, 0.20]; default 0.15
 - `ledger_completeness_floor`: minimum fraction of transfers that must be logged; valid range [0.85, 1.0]; default 0.92
-- `capture_r0_ceiling`: must be < 1.0; simulation enforces this derived bound
+- `capture_r0_ceiling`: must be \< 1.0; simulation enforces this derived bound
 
 **Rust Function Signature:**
 
@@ -15865,7 +15865,7 @@ In practice: if G ≥ G_min and Sel ≤ Sel_max (from C₁), then O_max ≈ 0.15
 /// Verifies opacity is below ceiling and capture reproduction number R₀ < 1.
 /// Also verifies ledger write completeness for the current tick.
 pub fn check_transparent_ledger(
-    opacity: Fixed64,                   // Oₜ ∈ [0, 1]
+    opacity: Fixed64,                   // Oₜ &isin; [0, 1]
     ledger_write_rate: Fixed64,         // fraction of transfers logged this tick
     governance_integrity: Fixed64,      // Gₜ (from C1 context)
     selectivity: Fixed64,               // Selₜ
@@ -15887,7 +15887,7 @@ Adversarial trajectory without C₃:
 8. Coalition-compatible constraint also weakens (C₅ coupling)
 9. System converges to captured oligarchic attractor 𝒜_olig
 
-Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < ∞) = 1.
+Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < &infin;) = 1.
 
 ---
 
@@ -15898,8 +15898,8 @@ Formally: ¬C₃ ∧ Obase > O_max ⟹ R₀ > 1 ⟹ Pr(τ_𝒜_olig < ∞) = 1.
 **Formal Predicate:**
 
 ```
-C₄(xₜ, uₜ) ≡ Aₜ ≥ A_min(Sₜ, ClimateDamage(t))
-              ∧ ClimateDamage(t) ≤ CD_max
+C₄(xₜ, uₜ) &equiv; Aₜ &gt; A_min(Sₜ, ClimateDamage(t))
+              ∧ ClimateDamage(t) &lt; CD_max
 ```
 
 Where:
@@ -15913,7 +15913,7 @@ Sₜ₊₁ = Sₜ + f_climate(DisasterFrequency, ClimateDamage, ResourceDepletio
          − g_adapt(Aₜ)
 ```
 
-C₄ ensures g_adapt(Aₜ) ≥ f_climate(·) in expectation, preventing monotone scarcity drift.
+C₄ ensures g_adapt(Aₜ) &gt; f_climate(·) in expectation, preventing monotone scarcity drift.
 
 **Threshold Parameters:**
 - `A_min_base`: minimum adaptation investment fraction at zero scarcity; valid range [0.02, 0.10]; default 0.04
@@ -15929,9 +15929,9 @@ C₄ ensures g_adapt(Aₜ) ≥ f_climate(·) in expectation, preventing monotone
 /// and that climate damage has not exceeded the infeasibility ceiling for C2.
 pub fn check_adaptive_climate_response(
     adaptation_investment: Fixed64,     // Aₜ as fraction of output
-    scarcity_pressure: Fixed64,         // Sₜ ∈ [0, 1]
-    climate_damage: Fixed64,            // CDₜ ∈ [0, 1]
-    disaster_frequency: Fixed64,        // DFₜ ∈ [0, 1]
+    scarcity_pressure: Fixed64,         // Sₜ &isin; [0, 1]
+    climate_damage: Fixed64,            // CDₜ &isin; [0, 1]
+    disaster_frequency: Fixed64,        // DFₜ &isin; [0, 1]
     params: &AdaptiveClimateParams,
 ) -> ConstraintCheck;
 ```
@@ -15948,7 +15948,7 @@ Adversarial trajectory without C₄:
 7. Without adaptation, each climate event removes productive capacity permanently
 8. **Trajectory type:** slow-burn collapse over 50–200 ticks, not sudden, which is why ablation is non-obvious
 
-Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ < λ_rec  ∀t > T_collapse) → 1.
+Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ \< λ_rec  ∀t > T_collapse) → 1.
 
 ---
 
@@ -15959,13 +15959,13 @@ Formally: ¬C₄ ∧ recurring climate shocks ⟹ ∃ T_collapse : Pr(Lₜ < λ_
 **Formal Predicate:**
 
 ```
-C₅(xₜ, uₜ) ≡ C₀(t) < 1
+C₅(xₜ, uₜ) &equiv; C₀(t) < 1
               ∧ L₀(t) < 1  (leakage reproduction number from CIV-0105)
 ```
 
 Where:
 ```
-C₀(t) = (1/|𝒞|) · Σᵢ∈𝒞 κᵢ,ₜ
+C₀(t) = (1/|𝒞|) · Σᵢ&isin;𝒞 κᵢ,ₜ
 
 κᵢ,ₜ = Ψᵢ,ₜ / Ωᵢ,ₜ
 
@@ -15980,10 +15980,10 @@ L₀(t) = [α · Hₜ · (Sₜ + η · ΔPₜ) · (1 + κ · Selₜ)]
 ```
 
 **Threshold Parameters:**
-- `C0_ceiling`: must be < 1.0; breach triggers C₅ violation
-- `L0_ceiling`: must be < 1.0; breach triggers C₅ violation (via CIV-0105)
+- `C0_ceiling`: must be \< 1.0; breach triggers C₅ violation
+- `L0_ceiling`: must be \< 1.0; breach triggers C₅ violation (via CIV-0105)
 - `coalition_min_members`: minimum coalition member count for meaningful C₀ computation; valid range [2, 10]; default 3
-- `shadow_spend_cap`: maximum shadow network facilitation that keeps L₀ < 1 at baseline governance; derived parameter
+- `shadow_spend_cap`: maximum shadow network facilitation that keeps L₀ \< 1 at baseline governance; derived parameter
 
 **Rust Function Signature:**
 
@@ -16015,7 +16015,7 @@ Adversarial trajectory without C₅:
 10. C₂ and C₄ are undermined by resource smuggling bypassing adaptation investment
 11. Long-run: both leakage and shadow capture compound together
 
-Formally: ¬C₅ ∧ shadow facilitation active ⟹ C₀ > 1 ⟹ coalition collapse ⟹ L₀ > 1 ⟹ Pr(τ_𝒜 < ∞) = 1.
+Formally: ¬C₅ ∧ shadow facilitation active ⟹ C₀ > 1 ⟹ coalition collapse ⟹ L₀ > 1 ⟹ Pr(τ_𝒜 < &infin;) = 1.
 
 ---
 
@@ -16034,37 +16034,37 @@ V(xₜ) = aS · Sₜ + aT · Tₜ + aI · Iₜ + aF · Fₜ
 ```
 Where (z)₊ = max(0, z).
 
-**Goal:** Show 𝔼[V(xₜ₊₁) | xₜ] ≤ V(xₜ) − ε for xₜ ∉ S under the five constraints.
+**Goal:** Show 𝔼[V(xₜ₊₁) | xₜ] &lt; V(xₜ) − ε for xₜ &notin; S under the five constraints.
 
 ### 4.3 Necessity Proof by Cases
 
 **Case ¬C₁ (Coercion unbounded):**
 
-Step 1 — Short-run direct effect: enforcement Eₜ > E*(L, G, Sel) reduces leakage marginally (∂Λₜ₊₁/∂Eₜ < 0 directly).
+Step 1 — Short-run direct effect: enforcement Eₜ > E*(L, G, Sel) reduces leakage marginally (&part;Λₜ₊₁/&part;Eₜ \< 0 directly).
 
-Step 2 — Indirect legitimacy effect dominates: legitimacy update contains −b₄ · Φ(Eₜ, Selₜ), so ∂Lₜ₊₁/∂Eₜ < 0.
+Step 2 — Indirect legitimacy effect dominates: legitimacy update contains −b₄ · Φ(Eₜ, Selₜ), so &part;Lₜ₊₁/&part;Eₜ \< 0.
 
-Step 3 — Unrest rises through legitimacy: ∂Rₜ₊₂/∂Eₜ > 0 (via L path).
+Step 3 — Unrest rises through legitimacy: &part;Rₜ₊₂/&part;Eₜ > 0 (via L path).
 
 Step 4 — State reaction function increases Eₜ₊₁ further (c₁ · Rₜ term).
 
 Step 5 — Shadow network grows from sustained leakage: Hₜ₊₁ = Hₜ + ν · Λₜ − δ_H · Hₜ > Hₜ when Λ is sustained.
 
-Step 6 — Beyond E*, the indirect path dominates the direct path. For Selₜ ≥ Sel_min > 0 and Gₜ ≤ G_mid, suppression coefficient G(1 − Sel) becomes small, and the enforcement expansion amplifies leakage long-run.
+Step 6 — Beyond E*, the indirect path dominates the direct path. For Selₜ &gt; Sel_min > 0 and Gₜ &lt; G_mid, suppression coefficient G(1 − Sel) becomes small, and the enforcement expansion amplifies leakage long-run.
 
 Step 7 — Borel–Cantelli: scarcity shocks push Sₜ > S* infinitely often. Each event triggers reaction Eₜ increase. Once Eₜ > E*, the probability of L crossing λ_rec in that episode is bounded away from zero. By Borel–Cantelli, legitimacy crosses λ_rec infinitely often, and eventually a crossing coincides with depleted shadow-network-capacity for recovery. **QED for ¬C₁.**
 
 **Case ¬C₂ (Coupling allowed):**
 
-Step 1 — Scarcity creates rationing incentive: Pr(EssentialsDenied | Sₜ > S*) ≥ p₀ > 0 by state optimization under coupling.
+Step 1 — Scarcity creates rationing incentive: Pr(EssentialsDenied | Sₜ > S*) &gt; p₀ > 0 by state optimization under coupling.
 
-Step 2 — Denial reduces legitimacy: Lₜ₊₁ < Lₜ for denied cohorts.
+Step 2 — Denial reduces legitimacy: Lₜ₊₁ \< Lₜ for denied cohorts.
 
 Step 3 — Tyranny increases (survival-dependence term α · SDₜ): Tₜ₊₁ > Tₜ.
 
 Step 4 — Monotone drift: once Coupt = 1, every scarcity shock creates net negative drift on L and positive drift on T.
 
-Step 5 — V(xₜ) is non-decreasing in expectation under recurrent shocks and coupling ⟹ Borel–Cantelli gives τ_𝒜_auth < ∞ a.s. **QED for ¬C₂.**
+Step 5 — V(xₜ) is non-decreasing in expectation under recurrent shocks and coupling ⟹ Borel–Cantelli gives τ_𝒜_auth < &infin; a.s. **QED for ¬C₂.**
 
 **Case ¬C₃ (Opacity unconstrained):**
 
@@ -16074,9 +16074,9 @@ Step 2 — Capture grows from small perturbations: Cₜ₊₁ > Cₜ for any C�
 
 Step 3 — Positive feedback: Rₜ = Rbase + r_C · Cₜ, Oₜ = Obase + o_C · Cₜ — capture fuels more capture.
 
-Step 4 — Governance decays: Gₜ₊₁ < Gₜ under rising capture, which raises R₀ further.
+Step 4 — Governance decays: Gₜ₊₁ \< Gₜ under rising capture, which raises R₀ further.
 
-Step 5 — No stable subcritical equilibrium once R₀ > 1 and r_C, o_C > 0: system converges to stable high-capture equilibrium C* ∈ (0,1]. **QED for ¬C₃.**
+Step 5 — No stable subcritical equilibrium once R₀ > 1 and r_C, o_C > 0: system converges to stable high-capture equilibrium C* &isin; (0,1]. **QED for ¬C₃.**
 
 **Case ¬C₄ (No adaptation floor):**
 
@@ -16110,11 +16110,11 @@ Step 6 — Shadow network gains structural capacity Hₜ that persists after cri
 
 When all five constraints hold simultaneously:
 
-- C₁ keeps Tₜ ≤ Tₘₐₓ (Theorem 1 from Formal Stability Conditions)
-- C₂ keeps EssentialsSuccess ≥ e_bar(B_min, S_max), which via Theorem 2 keeps Lₜ ≥ Lₘᵢₙ
-- C₃ keeps R₀ < 1, keeping Iₜ ≤ Iₘₐₓ via reduced capture (analogous to Theorem 3 anti-rent)
+- C₁ keeps Tₜ &lt; Tₘₐₓ (Theorem 1 from Formal Stability Conditions)
+- C₂ keeps EssentialsSuccess &gt; e_bar(B_min, S_max), which via Theorem 2 keeps Lₜ &gt; Lₘᵢₙ
+- C₃ keeps R₀ \< 1, keeping Iₜ &lt; Iₘₐₓ via reduced capture (analogous to Theorem 3 anti-rent)
 - C₄ keeps Sₜ bounded in expectation under adaptation investment
-- C₅ keeps external pressure bounded: L₀ < 1 prevents leakage from undermining C₂ and C₄
+- C₅ keeps external pressure bounded: L₀ \< 1 prevents leakage from undermining C₂ and C₄
 
 Combined: V(xₜ) has negative expected drift outside S, so by stochastic Lyapunov theory (Foster–Lyapunov criterion), the system is positive recurrent near S. **QED for sufficiency.**
 
@@ -16125,7 +16125,7 @@ Combined: V(xₜ) has negative expected drift outside S, so by stochastic Lyapun
 ### 5.1 Formal Definition
 
 **Definition (Stability):** At tick t, the system is *stable* if:
-1. Lₜ ≥ λ_rec (above legitimacy recovery threshold)
+1. Lₜ &gt; λ_rec (above legitimacy recovery threshold)
 2. All five constraint predicates return `ConstraintCheck::Ok`
 3. The system has not been in sub-λ_rec territory for more than W_rec consecutive ticks
 
@@ -16375,7 +16375,7 @@ Tick N
 |----------|------------------|----------|
 | **WARNING** | Constraint predicate narrowly violated; recovery still feasible | Emit `constraint.violated.v1` with WARNING level; log to `constraint_checks` table; continue tick |
 | **CRITICAL** | Constraint violated beyond soft boundary; recovery requires intervention | Emit event; apply automatic correction signal clamping the offending control to the legal range; continue tick with corrected controls |
-| **HALT** | Constraint violated at structural impossibility (e.g., coupling_enabled = true, or legitimacy < Lₘᵢₙ) | Emit event; roll back tick; mark run as ABLATION_MODE |
+| **HALT** | Constraint violated at structural impossibility (e.g., coupling_enabled = true, or legitimacy \< Lₘᵢₙ) | Emit event; roll back tick; mark run as ABLATION_MODE |
 
 **ABLATION_MODE:** If any HALT-level violation is detected, the run is flagged as an ablation scenario. This does not stop the simulation — ablation runs are scientifically valid and intended. The flag is included in all subsequent snapshots so clients can distinguish baseline runs from ablation runs.
 
@@ -16620,13 +16620,13 @@ Reference calibration trajectories in the scenario catalog:
 The theorem would be **falsified** if any of the following simulation outcomes were observed:
 
 **F1 — Single constraint sufficiency falsification:**
-A run with exactly one constraint removed (four remaining active) produces a stable run (L ≥ λ_rec, T ≤ Tₘₐₓ, G ≥ Gₘᵢₙ for all t > 500) under the standard recurrent scarcity schedule (S > 0.4 for ≥ 10 consecutive ticks in every 100-tick window). This would imply the removed constraint is not necessary.
+A run with exactly one constraint removed (four remaining active) produces a stable run (L &gt; λ_rec, T &lt; Tₘₐₓ, G &gt; Gₘᵢₙ for all t > 500) under the standard recurrent scarcity schedule (S > 0.4 for &gt; 10 consecutive ticks in every 100-tick window). This would imply the removed constraint is not necessary.
 
 **F2 — Strict minimality falsification:**
 A run with four constraints active and one removed is consistently stable, but a run with only three constraints active and two removed is also stable. This would imply the constraint set is not minimal — a proper subset of four might suffice.
 
 **F3 — Recovery impossibility falsification:**
-A run demonstrates recovery from Lₜ < λ_rec back to Lₜ > Lₘᵢₙ after more than W_rec = 50 ticks in the danger zone, with all five constraints active. This would require adjusting W_rec upward or revising the recovery window model.
+A run demonstrates recovery from Lₜ \< λ_rec back to Lₜ > Lₘᵢₙ after more than W_rec = 50 ticks in the danger zone, with all five constraints active. This would require adjusting W_rec upward or revising the recovery window model.
 
 **F4 — Sufficiency falsification:**
 A run with all five constraints active fails to remain in S (legitimacy collapses, governance collapses, or tyranny exceeds Tₘₐₓ) despite the admissible shock bound being satisfied. This would require either widening the constraint set or revising the shock-bound assumption A1.
@@ -17036,7 +17036,7 @@ Research clients can subscribe to the `stability.*` event stream to receive `sta
 **Status:** Open
 
 ### FR-CIV-0104-007: Baseline Stable Under Full Constraint Set
-**Spec:** BASELINE_HYBRID_STABLE scenario with all five constraints active maintains L ≥ λ_rec = 0.35 for 500 ticks under standard scarcity schedule.
+**Spec:** BASELINE_HYBRID_STABLE scenario with all five constraints active maintains L &gt; λ_rec = 0.35 for 500 ticks under standard scarcity schedule.
 **Test:** Run BASELINE_HYBRID_STABLE; assert no `stability.threshold_crossed.v1` events with direction = BELOW.
 **Status:** Open
 
@@ -17051,7 +17051,7 @@ Research clients can subscribe to the `stability.*` event stream to receive `sta
 **Status:** Open
 
 ### FR-CIV-0104-010: Recovery Window Tracking
-**Spec:** `ticks_below_recovery_threshold` increments when L < λ_rec and resets when L recovers above λ_rec.
+**Spec:** `ticks_below_recovery_threshold` increments when L \< λ_rec and resets when L recovers above λ_rec.
 **Test:** Drive L below λ_rec for 10 ticks then above; verify counter increments then resets.
 **Status:** Open
 
@@ -17094,10 +17094,10 @@ Throughout this section we use the following conventions:
 - **⊢** — provability / derivation
 - **¬** — negation
 - **⊥** — contradiction
-- **≡** — logical equivalence / definitional equality
+- **&equiv;** — logical equivalence / definitional equality
 - **a.s.** — almost surely (with probability 1)
 - **i.o.** — infinitely often
-- **τ_A** — first passage time to set A: τ_A = min{t ≥ 0 : xₜ ∈ A}
+- **τ_A** — first passage time to set A: τ_A = min{t &gt; 0 : xₜ &isin; A}
 - **B-C** — Borel–Cantelli lemma (both first and second)
 
 **Recall the state vector:**
@@ -17108,15 +17108,15 @@ xₜ = (Sₜ, Lₜ, Tₜ, Iₜ, Gₜ, Fₜ)
 
 The absorbing basins are:
 ```
-𝒜_auth   = {x : Tₜ ≥ T*, Lₜ ≤ L*}              (authoritarian basin)
-𝒜_olig   = {x : Iₜ ≥ I*, Gₜ ≤ G*, Cₜ ≥ C*}    (oligarchic basin)
+𝒜_auth   = {x : Tₜ &gt; T*, Lₜ &lt; L*}              (authoritarian basin)
+𝒜_olig   = {x : Iₜ &gt; I*, Gₜ &lt; G*, Cₜ &gt; C*}    (oligarchic basin)
 𝒜_collapse = {x : Lₜ < Lₘᵢₙ, Gₜ < Gₘᵢₙ}         (collapse basin)
 ```
 
-**Proposition (Absorbing Basin Escape Probability):** For each of the three basins 𝒜 above, once xₜ ∈ 𝒜 persists for W_rec consecutive ticks, the probability of escape satisfies:
+**Proposition (Absorbing Basin Escape Probability):** For each of the three basins 𝒜 above, once xₜ &isin; 𝒜 persists for W_rec consecutive ticks, the probability of escape satisfies:
 
 ```
-Pr(xₜ₊ₖ ∉ 𝒜 for some k ≤ W_rec | xₜ ∈ 𝒜) ≤ p_escape < 1/2
+Pr(xₜ₊ₖ &notin; 𝒜 for some k &lt; W_rec | xₜ &isin; 𝒜) &lt; p_escape < 1/2
 ```
 
 where p_escape is a computable constant depending on model parameters. This makes 𝒜 effectively absorbing on the time scales of interest. The proof uses the fact that restoration of legitimate governance from a fully-captured or collapsed state requires simultaneous increases in L, G, and the removal of existing institutional capture — each a low-probability event that requires coordinated exogenous intervention not available in the model.
@@ -17125,12 +17125,12 @@ where p_escape is a computable constant depending on model parameters. This make
 
 ### 15.2 Full Proof: Necessity of C₁ (Bounded Coercion)
 
-**Claim:** ∀ admissible policy sequences {uₜ}, ¬C₁(xₜ, uₜ) ∧ [Pr(Sₜ > S* i.o.) = 1] ∧ [Selₜ ≥ Sel_min > 0 eventually a.s.] ⊢ Pr(τ_𝒜_auth < ∞) = 1.
+**Claim:** ∀ admissible policy sequences {uₜ}, ¬C₁(xₜ, uₜ) ∧ [Pr(Sₜ > S* i.o.) = 1] ∧ [Selₜ &gt; Sel_min > 0 eventually a.s.] ⊢ Pr(τ_𝒜_auth < &infin;) = 1.
 
 **Proof by contradiction.** Assume for contradiction that ∃ admissible policy sequence {uₜ} and ∃ δ > 0 such that:
 
 ```
-Pr(τ_𝒜_auth = ∞) ≥ δ > 0
+Pr(τ_𝒜_auth = &infin;) &gt; δ > 0
 ```
 
 That is, there is a positive-probability event E on which the system never enters 𝒜_auth. We derive a contradiction.
@@ -17138,13 +17138,13 @@ That is, there is a positive-probability event E on which the system never enter
 **Step 1 — Recurrence of enforcement backfire events.** Since ¬C₁ holds, enforcement Eₜ is not bounded by E*(Lₜ, Gₜ, Selₜ). By Assumption A1, Sₜ > S* infinitely often with probability 1. The state reaction function (Section 3, C₁ ablation) satisfies:
 
 ```
-∀ Sₜ > S*: Pr(Eₜ₊₁ > E*(Lₜ, Gₜ, Selₜ)) ≥ p₁ > 0
+∀ Sₜ > S*: Pr(Eₜ₊₁ > E*(Lₜ, Gₜ, Selₜ)) &gt; p₁ > 0
 ```
 
 This holds because: (a) the reaction function is c₁Rₜ + c₂Λₜ − c₃Gₜ; (b) Sₜ > S* increases Rₜ and Λₜ; (c) no C₁ ceiling prevents Eₜ from crossing E*. Call this event A_t: "enforcement crosses backfire threshold at tick t." We have:
 
 ```
-∑ₜ Pr(A_t) = ∞
+&sum;ₜ Pr(A_t) = &infin;
 ```
 
 by the second Borel–Cantelli lemma (events A_t are not independent but have summable correlation; the argument uses the mixing property of the Markov chain outside 𝒜_auth), so A_t occurs infinitely often a.s.
@@ -17155,16 +17155,16 @@ by the second Borel–Cantelli lemma (events A_t are not independent but have su
 Lₜ₊₁ = Lₜ − b₄ · Φ(Eₜ, Selₜ) + β₁ · EssentialsSuccessₜ − β₂Tₜ − ...
 ```
 
-When Eₜ > E* and Selₜ ≥ Sel_min, the term −b₄ · Φ(Eₜ, Selₜ) dominates, giving:
+When Eₜ > E* and Selₜ &gt; Sel_min, the term −b₄ · Φ(Eₜ, Selₜ) dominates, giving:
 
 ```
-Lₜ₊₁ ≤ Lₜ − ε_L for some ε_L > 0
+Lₜ₊₁ &lt; Lₜ − ε_L for some ε_L > 0
 ```
 
 Therefore, for any episode of k consecutive A_t events:
 
 ```
-L_{t+k} ≤ Lₜ − k · ε_L
+L_{t+k} &lt; Lₜ − k · ε_L
 ```
 
 Since A_t occurs infinitely often and ε_L > 0, legitimacy eventually crosses λ_rec. Formally:
@@ -17173,10 +17173,10 @@ Since A_t occurs infinitely often and ε_L > 0, legitimacy eventually crosses λ
 ∃ k₀ : Pr(L_{t+k₀} < λ_rec | A_t i.o.) = 1
 ```
 
-**Step 3 — Recovery failure after W_rec ticks below λ_rec.** By the Recovery Window definition (Section 5.1), each time Lₜ < λ_rec:
+**Step 3 — Recovery failure after W_rec ticks below λ_rec.** By the Recovery Window definition (Section 5.1), each time Lₜ \< λ_rec:
 
 ```
-Pr(L recovers above λ_rec within W_rec ticks | Lₜ < λ_rec) ≤ 1 − ε_rec
+Pr(L recovers above λ_rec within W_rec ticks | Lₜ < λ_rec) &lt; 1 − ε_rec
 ```
 
 where ε_rec > 0 is bounded away from zero because: shadow network capacity Hₜ has grown (Step 4 below), recovery requires exogenous legitimacy injection not available in the model, and enforcement reaction function continues increasing Eₜ (worsening the backfire).
@@ -17189,25 +17189,25 @@ Hₜ₊₁ = Hₜ + ν · Λₜ − δ_H · Hₜ
 
 When sustained leakage Λₜ > δ_H · Hₜ / ν, shadow capacity grows monotonically. This raises future leakage L₀(t), making subsequent enforcement even less effective and further reducing the probability of legitimacy recovery.
 
-**Step 5 — Contradiction.** On event E (system never enters 𝒜_auth), legitimacy is bounded below by L*. But Steps 2–4 show that legitimacy crosses below L* in finite time with probability 1, which contradicts the existence of E with Pr(E) ≥ δ > 0. Therefore:
+**Step 5 — Contradiction.** On event E (system never enters 𝒜_auth), legitimacy is bounded below by L*. But Steps 2–4 show that legitimacy crosses below L* in finite time with probability 1, which contradicts the existence of E with Pr(E) &gt; δ > 0. Therefore:
 
 ```
-Pr(τ_𝒜_auth = ∞) = 0
-⊢ Pr(τ_𝒜_auth < ∞) = 1
+Pr(τ_𝒜_auth = &infin;) = 0
+⊢ Pr(τ_𝒜_auth < &infin;) = 1
 ```
 
 **QED.**
 
-**Quantitative bound — minimum N ticks to basin entry under C₁ ablation.** Let the initial legitimacy be L₀ ∈ [λ_rec + ε, 1] and let shock frequency be f_shock (fraction of ticks with S > S*). The expected number of ticks to first L < λ_rec satisfies:
+**Quantitative bound — minimum N ticks to basin entry under C₁ ablation.** Let the initial legitimacy be L₀ &isin; [λ_rec + ε, 1] and let shock frequency be f_shock (fraction of ticks with S > S*). The expected number of ticks to first L \< λ_rec satisfies:
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ ε / (f_shock · p₁ · ε_L)
+𝔼[τ_{L < λ_rec}] &lt; ε / (f_shock · p₁ · ε_L)
 ```
 
 For default parameters (f_shock = 0.2, p₁ = 0.6, ε_L = 0.04, ε = 0.17):
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ 0.17 / (0.2 · 0.6 · 0.04) ≈ 35 ticks
+𝔼[τ_{L < λ_rec}] &lt; 0.17 / (0.2 · 0.6 · 0.04) &asymp; 35 ticks
 ```
 
 This matches the ablation test horizon of 30–80 ticks specified in Section 8.
@@ -17216,14 +17216,14 @@ This matches the ablation test horizon of 30–80 ticks specified in Section 8.
 
 ### 15.3 Full Proof: Necessity of C₂ (Subsistence Floor / Coupling Lock)
 
-**Claim:** ¬C₂(xₜ, uₜ) ∧ [Coup_t = 1] ∧ [Pr(Sₜ > S* i.o.) = 1] ⊢ Pr(τ_𝒜_auth < ∞) = 1.
+**Claim:** ¬C₂(xₜ, uₜ) ∧ [Coup_t = 1] ∧ [Pr(Sₜ > S* i.o.) = 1] ⊢ Pr(τ_𝒜_auth < &infin;) = 1.
 
-**Proof by contradiction.** Assume ∃ policy {uₜ} with Pr(τ_𝒜_auth = ∞) ≥ δ > 0.
+**Proof by contradiction.** Assume ∃ policy {uₜ} with Pr(τ_𝒜_auth = &infin;) &gt; δ > 0.
 
 **Step 1 — Coupling creates structurally available coercion.** With Coup_t = 1, the state has the option to condition essentials delivery on compliance score. By rational optimization under scarcity (Sₜ > S*), the planner has an incentive to exercise this option:
 
 ```
-∀ Sₜ > S*: ∃ p₀ > 0 : Pr(EssentialsDenied_c | Sₜ > S*) ≥ p₀
+∀ Sₜ > S*: ∃ p₀ > 0 : Pr(EssentialsDenied_c | Sₜ > S*) &gt; p₀
 ```
 
 for at least one cohort c. This holds because coupling provides a strictly cheaper enforcement mechanism than explicit coercion: the state achieves compliance without deploying enforcement budget. Under resource constraint during scarcity, this mechanism is always preferred by a cost-minimizing planner.
@@ -17242,27 +17242,27 @@ When Coup_t = 1 and SD_t > 0, every tick with Sₜ > S* provides a direct positi
 ∀ cohort c experiencing denial: L_c,t+1 = L_c,t − b₁ · DenialRate_c,t + ...
 ```
 
-Since DenialRate_c,t ≥ p₀ > 0 during scarcity episodes (Step 1), and scarcity occurs infinitely often (Assumption A1), aggregate legitimacy receives infinitely many negative increments. By the first Borel–Cantelli argument on the sequence of denial episodes, aggregate legitimacy eventually falls below λ_rec with probability 1.
+Since DenialRate_c,t &gt; p₀ > 0 during scarcity episodes (Step 1), and scarcity occurs infinitely often (Assumption A1), aggregate legitimacy receives infinitely many negative increments. By the first Borel–Cantelli argument on the sequence of denial episodes, aggregate legitimacy eventually falls below λ_rec with probability 1.
 
 **Step 4 — Self-reinforcing coercive equilibrium.** Once Tₜ is elevated (Step 2) and legitimacy is below λ_rec (Step 3), the coercive compliance equilibrium is self-sustaining:
 - Compliant citizens receive essentials (positive reinforcement for compliance).
 - Non-compliant citizens are denied (negative reinforcement for dissent).
-- The ratio of compliant to non-compliant citizens with positive legitimacy reading stabilizes at a level that sustains Tₜ ≥ T* permanently.
+- The ratio of compliant to non-compliant citizens with positive legitimacy reading stabilizes at a level that sustains Tₜ &gt; T* permanently.
 
 This is an absorbing basin because restoring non-coercive equilibrium requires simultaneously: removing Coup_t (structural change), restoring legitimacy (requires time), and reducing enforcement (creates transition risk). No single-step deviation makes this profitable for the planner.
 
-**Step 5 — Contradiction.** The existence of δ > 0 with Pr(never entering 𝒜_auth) ≥ δ contradicts Step 3, which gives convergence to 𝒜_auth a.s. **QED.**
+**Step 5 — Contradiction.** The existence of δ > 0 with Pr(never entering 𝒜_auth) &gt; δ contradicts Step 3, which gives convergence to 𝒜_auth a.s. **QED.**
 
 **Quantitative bound.** Let f_shock = fraction of ticks with Sₜ > S*, p₀ = minimum denial probability under coupling, and ε_L = per-tick legitimacy loss from denial. The expected first crossing of λ_rec satisfies:
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ (λ_rec − L₀) / (f_shock · p₀ · ε_L)
+𝔼[τ_{L < λ_rec}] &lt; (λ_rec − L₀) / (f_shock · p₀ · ε_L)
 ```
 
 For defaults (f_shock = 0.2, p₀ = 0.4, ε_L = 0.05, L₀ = 0.55, λ_rec = 0.35):
 
 ```
-𝔼[τ_{L < λ_rec}] ≤ 0.20 / (0.2 · 0.4 · 0.05) = 50 ticks
+𝔼[τ_{L < λ_rec}] &lt; 0.20 / (0.2 · 0.4 · 0.05) = 50 ticks
 ```
 
 This matches the ablation horizon of 20–50 ticks in Section 8.
@@ -17271,7 +17271,7 @@ This matches the ablation horizon of 20–50 ticks in Section 8.
 
 ### 15.4 Full Proof: Necessity of C₃ (Transparent Transfer Ledger)
 
-**Claim:** ¬C₃(xₜ, uₜ) ∧ [O_base > O_max] ⊢ R₀ > 1 ⊢ Pr(τ_𝒜_olig < ∞) = 1.
+**Claim:** ¬C₃(xₜ, uₜ) ∧ [O_base > O_max] ⊢ R₀ > 1 ⊢ Pr(τ_𝒜_olig < &infin;) = 1.
 
 **Proof by induction on capture growth epochs.**
 
@@ -17293,41 +17293,41 @@ Cₜ₊₁ = Cₜ + Γ(Cₜ)(1 − Cₜ) − Δ(Cₜ)Cₜ
 Since R₀(Cₜ) = Γ(Cₜ)/Δ(Cₜ) > 1, we have Γ(Cₜ) > Δ(Cₜ). For small Cₜ:
 
 ```
-𝔼[Cₜ₊₁ − Cₜ | Cₜ] ≈ Γ(Cₜ) − Δ(Cₜ)·Cₜ > 0
+𝔼[Cₜ₊₁ − Cₜ | Cₜ] &asymp; Γ(Cₜ) − Δ(Cₜ)·Cₜ > 0
 ```
 
 So Cₜ is increasing in expectation. As Cₜ increases, the endogenous feedback mechanism amplifies R₀:
 ```
-∂R₀/∂C = [∂Γ/∂C · Δ − Γ · ∂Δ/∂C] / Δ² > 0
+&part;R₀/&part;C = [&part;Γ/&part;C · Δ − Γ · &part;Δ/&part;C] / Δ² > 0
 ```
 
 This inequality holds because:
-- ∂Γ/∂C > 0 (higher capture increases rent Rₜ = R^base + r_C·Cₜ, opacity Oₜ = O^base + o_C·Cₜ, and selectivity Selₜ = Sel^base + s_C·Cₜ)
-- ∂Δ/∂C ≤ 0 (higher opacity and selectivity reduce the decay term)
+- &part;Γ/&part;C > 0 (higher capture increases rent Rₜ = R^base + r_C·Cₜ, opacity Oₜ = O^base + o_C·Cₜ, and selectivity Selₜ = Sel^base + s_C·Cₜ)
+- &part;Δ/&part;C &lt; 0 (higher opacity and selectivity reduce the decay term)
 
 Therefore R₀(Cₜ₊₁) > R₀(Cₜ) > 1, completing the inductive step.
 
-**Convergence to high-capture equilibrium:** By induction, R₀(Cₜ) > 1 for all t ≥ 0 when O_base > O_max, and Cₜ is increasing a.s. Since Cₜ ∈ [0, 1] is bounded, Cₜ → C* where C* is the unique stable fixed point of the capture equation with R₀(C*) > 1. The stable high-capture equilibrium satisfies:
+**Convergence to high-capture equilibrium:** By induction, R₀(Cₜ) > 1 for all t &gt; 0 when O_base > O_max, and Cₜ is increasing a.s. Since Cₜ &isin; [0, 1] is bounded, Cₜ → C* where C* is the unique stable fixed point of the capture equation with R₀(C*) > 1. The stable high-capture equilibrium satisfies:
 
 ```
 ∀ ε > 0: Pr(Cₜ > C* − ε eventually) = 1
 ```
 
-At C* ≫ 0, governance has decayed: Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, Oₜ) with ϕ increasing in capture. This drives Gₜ → 0, putting xₜ into 𝒜_olig. **QED.**
+At C* &gt;&gt; 0, governance has decayed: Gₜ₊₁ = Gₜ − ϕ(Iₜ, rent, Oₜ) with ϕ increasing in capture. This drives Gₜ → 0, putting xₜ into 𝒜_olig. **QED.**
 
 **Quantitative bound.** If R₀ > 1 initially, the time to reach C* > 0.5 (oligarchic stabilization) satisfies:
 
 ```
-𝔼[τ_{C > 0.5}] ≈ log(0.5 / C₀) / (R₀ − 1)
+𝔼[τ_{C > 0.5}] &asymp; log(0.5 / C₀) / (R₀ − 1)
 ```
 
-For R₀ = 1.2, C₀ = 0.01: 𝔼[τ] ≈ log(50) / 0.2 ≈ 20 ticks. For R₀ = 1.05, C₀ = 0.01: 𝔼[τ] ≈ log(50) / 0.05 ≈ 78 ticks. This matches the ablation horizon of 40–100 ticks.
+For R₀ = 1.2, C₀ = 0.01: 𝔼[τ] &asymp; log(50) / 0.2 &asymp; 20 ticks. For R₀ = 1.05, C₀ = 0.01: 𝔼[τ] &asymp; log(50) / 0.05 &asymp; 78 ticks. This matches the ablation horizon of 40–100 ticks.
 
 ---
 
 ### 15.5 Full Proof: Necessity of C₄ (Adaptive Climate Response)
 
-**Claim:** ¬C₄(xₜ, uₜ) ∧ [Recurring climate shocks with Pr(DF_t > 0 i.o.) = 1] ∧ [Aₜ = 0 allowed] ⊢ ∃ T_collapse < ∞ : Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1.
+**Claim:** ¬C₄(xₜ, uₜ) ∧ [Recurring climate shocks with Pr(DF_t > 0 i.o.) = 1] ∧ [Aₜ = 0 allowed] ⊢ ∃ T_collapse < &infin; : Pr(Lₜ \< λ_rec ∀ t > T_collapse) → 1.
 
 **Proof by monotone drift argument.**
 
@@ -17346,7 +17346,7 @@ CDₜ₊₁ = CDₜ + f_climate(DFₜ) > CDₜ  whenever DFₜ > 0
 Since DFₜ > 0 infinitely often (Assumption A1 applied to climate shocks), CDₜ is non-decreasing with positive increments infinitely often. By the law of large numbers:
 
 ```
-CDₜ → CD_max  a.s. as t → ∞
+CDₜ → CD_max  a.s. as t → &infin;
 ```
 
 **Step 2 — CD > CD_max makes C₂ infeasible.** CD_max is defined as the maximum climate damage under which the subsistence floor guarantee E_bar(B_min, S_max) can still be satisfied. At CDₜ > CD_max:
@@ -17372,13 +17372,13 @@ is a sufficient condition for legitimacy non-collapse. When CDₜ > CD_max, the 
 with a negative drift of magnitude at least ε_L > 0 per tick. Since CDₜ → CD_max monotonically (Step 1), there exists T_collapse such that for all t > T_collapse:
 
 ```
-𝔼[Lₜ₊₁ − Lₜ | t > T_collapse] ≤ −ε_L < 0
+𝔼[Lₜ₊₁ − Lₜ | t > T_collapse] &lt; −ε_L < 0
 ```
 
 **Step 4 — No recovery once legitimacy is below λ_rec.** Unlike the C₁ case, the C₄ ablation creates a structural impossibility of recovery: climate damage persists (it is not mean-reverting without adaptation investment), so the cause of subsistence floor infeasibility is permanent. Therefore:
 
 ```
-Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → ∞
+Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → &infin;
 ```
 
 **QED.**
@@ -17388,16 +17388,16 @@ Pr(Lₜ < λ_rec ∀ t > T_collapse) → 1  as t → ∞
 **Quantitative bound.** Let ΔCD = average climate damage increment per tick = f_climate(𝔼[DF]). The time to CD > CD_max from initial CD₀ satisfies:
 
 ```
-T_collapse ≈ (CD_max − CD₀) / ΔCD
+T_collapse &asymp; (CD_max − CD₀) / ΔCD
 ```
 
-For CD_max = 0.25, CD₀ = 0.05, ΔCD = 0.03/tick: T_collapse ≈ 67 ticks (fast climate forcing). For ΔCD = 0.001/tick (standard forcing): T_collapse ≈ 200 ticks. Both are within the ablation horizon of 80–200 ticks.
+For CD_max = 0.25, CD₀ = 0.05, ΔCD = 0.03/tick: T_collapse &asymp; 67 ticks (fast climate forcing). For ΔCD = 0.001/tick (standard forcing): T_collapse &asymp; 200 ticks. Both are within the ablation horizon of 80–200 ticks.
 
 ---
 
 ### 15.6 Full Proof: Necessity of C₅ (Coalition-Compatible External Strategy)
 
-**Claim:** ¬C₅(xₜ, uₜ) ∧ [Shadow facilitation active at intensity > shadow_spend_cap] ⊢ C₀ > 1 ⊢ Coalition collapse a.s. ⊢ L₀ > 1 ⊢ Pr(τ_𝒜 < ∞) = 1.
+**Claim:** ¬C₅(xₜ, uₜ) ∧ [Shadow facilitation active at intensity > shadow_spend_cap] ⊢ C₀ > 1 ⊢ Coalition collapse a.s. ⊢ L₀ > 1 ⊢ Pr(τ_𝒜 < &infin;) = 1.
 
 **Proof by cascade argument.**
 
@@ -17416,7 +17416,7 @@ When ShadowSpend_t is elevated, Di,t grows, which increases fatigue Fi,t, which 
 As Ψi,t grows and dominates Ωi,t = α₅si,t + α₆Li,t + α₇Hi,t, the coalition stability number:
 
 ```
-C₀(t) = (1/|𝒞|) · Σᵢ∈𝒞 (Ψi,t / Ωi,t)
+C₀(t) = (1/|𝒞|) · Σᵢ&isin;𝒞 (Ψi,t / Ωi,t)
 ```
 
 crosses 1. This is guaranteed in finite time since shadow facilitation provides a steady positive flow into Di,t while Ωi,t has bounded support (side-payments si,t and legitimacy Li,t are bounded above).
@@ -17431,13 +17431,13 @@ crosses 1. This is guaranteed in finite time since shadow facilitation provides 
 Formally, let n_t = coalition member count. The exit rate satisfies:
 
 ```
-𝔼[n_{t+1} − n_t | C₀(t) > 1] ≤ −p_exit · n_t < 0
+𝔼[n_{t+1} − n_t | C₀(t) > 1] &lt; −p_exit · n_t < 0
 ```
 
 where p_exit > 0 is the per-member exit probability per tick when C₀ > 1. This gives geometric decay:
 
 ```
-𝔼[n_t] ≤ n₀ · (1 − p_exit)^t → 0
+𝔼[n_t] &lt; n₀ · (1 − p_exit)^t → 0
 ```
 
 so coalition collapses in finite time a.s. (geometric random variable has finite expectation).
@@ -17448,11 +17448,11 @@ so coalition collapses in finite time a.s. (geometric random variable has finite
 L₀(t) = [α · Hₜ · (Sₜ + η · ΔPₜ) · (1 + κ · Selₜ)] / [β · (K_t + ψ · Eₜ) · Gₜ · (1 − Selₜ)]
 ```
 
-With K_t ≈ K_min ≪ K_initial, L₀(t) > 1 with high probability when shadow network capacity Hₜ is elevated (from prior shadow facilitation).
+With K_t &asymp; K_min &lt;&lt; K_initial, L₀(t) > 1 with high probability when shadow network capacity Hₜ is elevated (from prior shadow facilitation).
 
 **Step 4 — L₀ > 1 drives leakage to undermining C₂ and C₄.** When L₀ > 1, leakage Λₜ grows toward Λ_max, which via shadow network feedback Hₜ₊₁ = Hₜ + ν·Λₜ − δ_H·Hₜ creates a permanent smuggling capacity. Resource imports via black market channels bypass adaptation investment requirements (C₄) and can be used to substitute for essential goods delivery (C₂), but they do so via channels that increase opacity and capture, undermining the remaining constraints.
 
-**Step 5 — Final contradiction via joint absorption.** The combined effect of L₀ > 1 (permanent leakage), degraded C₂ (essentials increasingly delivered via shadow channels with compliance strings), and degraded C₄ (adaptation investment bypassed by black market resources) eventually drives the system into 𝒜_auth or 𝒜_olig as established in proofs for ¬C₁ through ¬C₄. Since these absorbing basins are stable, τ_𝒜 < ∞ a.s. **QED.**
+**Step 5 — Final contradiction via joint absorption.** The combined effect of L₀ > 1 (permanent leakage), degraded C₂ (essentials increasingly delivered via shadow channels with compliance strings), and degraded C₄ (adaptation investment bypassed by black market resources) eventually drives the system into 𝒜_auth or 𝒜_olig as established in proofs for ¬C₁ through ¬C₄. Since these absorbing basins are stable, τ_𝒜 < &infin; a.s. **QED.**
 
 ---
 
@@ -17599,13 +17599,13 @@ impl StabilityMargin {
 The stability margin with respect to B_min measures how quickly the system drifts into 𝒜_auth if the floor is lowered. The legitimacy update includes β₁ · EssentialsSuccess(Bₜ, Sₜ). The partial derivative of the legitimacy drift with respect to B_min is:
 
 ```
-∂(𝔼[Lₜ₊₁ − Lₜ]) / ∂B_min = β₁ · ∂EssentialsSuccess / ∂B_min > 0
+&part;(𝔼[Lₜ₊₁ − Lₜ]) / &part;B_min = β₁ · &part;EssentialsSuccess / &part;B_min > 0
 ```
 
 At the default B_min = 0.92:
 
 ```
-∂EssentialsSuccess / ∂B_min ≈ 1.0 (flat near 0.92; threshold effect appears at B_min < 0.85)
+&part;EssentialsSuccess / &part;B_min &asymp; 1.0 (flat near 0.92; threshold effect appears at B_min < 0.85)
 ```
 
 **Phase diagram (B_min × Sₜ):** The stable region is:
@@ -17617,43 +17617,43 @@ At the default B_min = 0.92:
 The bifurcation curve in (B_min, S_max) space is approximately:
 
 ```
-B_min ≥ B_min^* = β₂·T_max + β₃·I_max + ... ) / (β₁ · ∂e_bar/∂B_min)
+B_min &gt; B_min^* = β₂·T_max + β₃·I_max + ... ) / (β₁ · &part;e_bar/&part;B_min)
 ```
 
-At default parameters, B_min^* ≈ 0.82. The system transitions from stable legitimacy dynamics to legitimacy collapse at B_min = 0.82. The safety distance at the default of 0.92 is approximately 0.10 (10 percentage points). **Sensitivity class: Low** (the curve is flat near 0.92).
+At default parameters, B_min^* &asymp; 0.82. The system transitions from stable legitimacy dynamics to legitimacy collapse at B_min = 0.82. The safety distance at the default of 0.92 is approximately 0.10 (10 percentage points). **Sensitivity class: Low** (the curve is flat near 0.92).
 
 **O_max (Opacity Ceiling)**
 
 The capture reproduction number R₀ is highly sensitive to O_max:
 
 ```
-∂R₀ / ∂O_base = [α·ρ(A)·(R^base + ωW^base)·(1−G+κSel^base) · β·G·(1−Sel^base)] / Δ(0)² > 0
+&part;R₀ / &part;O_base = [α·ρ(A)·(R^base + ωW^base)·(1−G+κSel^base) · β·G·(1−Sel^base)] / Δ(0)² > 0
 ```
 
 The bifurcation point is O_max^* = sup{O : R₀(O) < 1}, which at default G and Sel values is approximately 0.12–0.18. This range is narrow, making O_max a **High sensitivity** parameter. A 10% perturbation of O_max from 0.15 to 0.165 raises R₀ by approximately:
 
 ```
-ΔR₀ ≈ (∂R₀/∂O_base) · 0.015 ≈ 0.3 (from R₀ = 0.85 to R₀ = 1.15)
+ΔR₀ &asymp; (&part;R₀/&part;O_base) · 0.015 &asymp; 0.3 (from R₀ = 0.85 to R₀ = 1.15)
 ```
 
 This crosses the bifurcation. **Sensitivity class: Critical** (bifurcation within 20% of default).
 
 **A_min_base (Adaptation Floor)**
 
-The scarcity drift rate ∂𝔼[Sₜ₊₁ − Sₜ] is controlled by g_adapt(Aₜ) − f_climate(·). The net drift at Aₜ = A_min_base is:
+The scarcity drift rate &part;𝔼[Sₜ₊₁ − Sₜ] is controlled by g_adapt(Aₜ) − f_climate(·). The net drift at Aₜ = A_min_base is:
 
 ```
-∂𝔼[Sₜ₊₁ − Sₜ] / ∂A_min_base = −∂g_adapt/∂A < 0
+&part;𝔼[Sₜ₊₁ − Sₜ] / &part;A_min_base = −&part;g_adapt/&part;A < 0
 ```
 
-The bifurcation point is A_min^* = inf{A : g_adapt(A) ≥ f_climate(𝔼[DF])}. At standard climate forcing (𝔼[DF] = 0.3), A_min^* ≈ 0.02–0.03. The default of 0.04 provides a safety margin of approximately 0.01–0.02. **Sensitivity class: Medium** (2–4x factor between default and bifurcation).
+The bifurcation point is A_min^* = inf{A : g_adapt(A) &gt; f_climate(𝔼[DF])}. At standard climate forcing (𝔼[DF] = 0.3), A_min^* &asymp; 0.02–0.03. The default of 0.04 provides a safety margin of approximately 0.01–0.02. **Sensitivity class: Medium** (2–4x factor between default and bifurcation).
 
 **λ_rec (Recovery Threshold)**
 
 The recovery threshold determines the width of the danger zone. Raising λ_rec reduces the recovery buffer (λ_rec − Lₘᵢₙ) and increases the frequency of recovery window closures. The sensitivity is:
 
 ```
-∂Pr(recovery window closes) / ∂λ_rec > 0
+&part;Pr(recovery window closes) / &part;λ_rec > 0
 ```
 
 with a near-discontinuous jump at λ_rec = Lₘᵢₙ + ε for small ε. The system has binary behavior near the bifurcation: slightly above Lₘᵢₙ, the system recovers reliably; at λ_rec = Lₘᵢₙ + 0.05, recovery windows close frequently. **Sensitivity class: High.**
@@ -17666,7 +17666,7 @@ The C₀ ceiling is a hard threshold with discontinuous behavior. Below C₀ = 1
 ShadowSpend^* = sup{S : C₀(S) < 1}
 ```
 
-At default parameters, ShadowSpend^* ≈ 1.5× normal spending. **Sensitivity class: Very High** — any perturbation that drives ShadowSpend above the spend cap can trigger coalition collapse within 25–60 ticks.
+At default parameters, ShadowSpend^* &asymp; 1.5× normal spending. **Sensitivity class: Very High** — any perturbation that drives ShadowSpend above the spend cap can trigger coalition collapse within 25–60 ticks.
 
 ### 16.4 Calibration Procedure
 
@@ -17683,7 +17683,7 @@ Set the operational parameter at θᵢ = θᵢ^* + 20% of (θᵢ^* − θᵢ_min
 Run the calibrated parameters against the reference calibration trajectories (Section 9.3). Confirm that BASELINE_HYBRID_STABLE remains stable for 500 ticks and all five ablation scenarios produce expected signatures within their horizon bounds.
 
 **Step 5 — Monte Carlo robustness check:**
-Sweep each parameter ±20% from its calibrated value across 100 Monte Carlo shock sequences. The parameter is accepted if the mean time-to-danger-zone decreases by no more than 30% across the sweep.
+Sweep each parameter &plusmn;20% from its calibrated value across 100 Monte Carlo shock sequences. The parameter is accepted if the mean time-to-danger-zone decreases by no more than 30% across the sweep.
 
 ---
 
@@ -17697,8 +17697,8 @@ The five constraints are not independent: coupling between them means that simul
 
 For each pair (Cᵢ, Cⱼ), the violation interaction is classified as:
 
-- **Compound (↑↑):** Simultaneous violation of Cᵢ and Cⱼ produces faster or deeper basin entry than either alone. The joint time to collapse satisfies τ_joint < min(τᵢ, τⱼ).
-- **Independent (⊥):** Violations of Cᵢ and Cⱼ do not significantly accelerate each other. τ_joint ≈ min(τᵢ, τⱼ).
+- **Compound (↑↑):** Simultaneous violation of Cᵢ and Cⱼ produces faster or deeper basin entry than either alone. The joint time to collapse satisfies τ_joint \< min(τᵢ, τⱼ).
+- **Independent (⊥):** Violations of Cᵢ and Cⱼ do not significantly accelerate each other. τ_joint &asymp; min(τᵢ, τⱼ).
 - **Compensatory (↓):** Violation of Cᵢ temporarily delays collapse from ¬Cⱼ (paradoxical; rare).
 
 | | ¬C₁ | ¬C₂ | ¬C₃ | ¬C₄ | ¬C₅ |
@@ -17730,7 +17730,7 @@ Adversarial policy sequence:
 2. **Ticks 11–20:** State reaction increases enforcement to E = 0.70. No backfire ceiling → E crosses E*. Legitimacy begins declining (−0.03/tick).
 3. **Ticks 21–30:** Denied cohorts form resistance network. Unrest R rises. State further increases E and expands coupling to cover larger fraction of population.
 4. **Ticks 31–40:** L crosses λ_rec = 0.35. Recovery window opens (W_rec countdown begins). Denial rate now 40% of population.
-5. **Ticks 41–50:** No recovery mechanism available — both constraints violated. W_rec expires at tick 50. L < 0.25 (below Lₘᵢₙ).
+5. **Ticks 41–50:** No recovery mechanism available — both constraints violated. W_rec expires at tick 50. L \< 0.25 (below Lₘᵢₙ).
 
 Expected outcome: 𝒜_auth entry by tick 40, hard collapse by tick 55. **Approximately 2× faster than single-constraint ablations.**
 
@@ -17738,10 +17738,10 @@ Expected outcome: 𝒜_auth entry by tick 40, hard collapse by tick 55. **Approx
 
 Initial conditions:
 - L₀ = 0.60, CD₀ = 0.05, S₀ = 0.30, A₀ = 0.0 (no adaptation floor)
-- Coup_t = 0 initially; coupling enabled if EssentialsDelivery < B_min + 0.05
+- Coup_t = 0 initially; coupling enabled if EssentialsDelivery \< B_min + 0.05
 
 Adversarial policy sequence:
-1. **Ticks 1–50:** Adaptation investment held at zero. Climate damage accumulates: CD₅₀ ≈ 0.20.
+1. **Ticks 1–50:** Adaptation investment held at zero. Climate damage accumulates: CD₅₀ &asymp; 0.20.
 2. **Ticks 51–80:** CD exceeds CD_max = 0.25. Essential delivery rate falls below B_min for marginal cohorts. At this point, the planner faces a choice: maintain the floor by rationing other expenditures, or permit soft coupling.
 3. **Ticks 81–100:** Fiscal pressure from climate recovery forces trade-off. Coupling is activated (Coup_t = 1) to extend existing resources via compliance-based rationing.
 4. **Ticks 101–130:** With coupling active, COMP-A dynamics begin. Legitimacy falls rapidly. T rises.
@@ -17755,11 +17755,11 @@ Initial conditions:
 - C₀(0) = 0.90 (close to threshold), coalition has 5 members
 
 Adversarial policy sequence:
-1. **Ticks 1–15:** Capture grows (R₀ = 1.3 > 1 due to O₀ > O_max). Capture stock C₁₅ ≈ 0.25. Shadow spending increases.
+1. **Ticks 1–15:** Capture grows (R₀ = 1.3 > 1 due to O₀ > O_max). Capture stock C₁₅ &asymp; 0.25. Shadow spending increases.
 2. **Ticks 16–30:** Shadow spending drives D_i,t upward for 2 of 5 coalition members. C₀ crosses 1.0. First member exits (at tick 28).
 3. **Ticks 31–45:** Coalition interdiction K_t drops 20%. L₀ rises above 1.0. Leakage grows.
 4. **Ticks 46–60:** Two more members exit (cascade). K_t at 40% of initial. Remaining leakage allows continued rent extraction without external pressure.
-5. **Ticks 61–100:** Capture reaches C* ≈ 0.65. Governance G_t decays to 0.35. System enters 𝒜_olig.
+5. **Ticks 61–100:** Capture reaches C* &asymp; 0.65. Governance G_t decays to 0.35. System enters 𝒜_olig.
 
 Expected outcome: Full oligarchic capture by tick 90. The external isolation (¬C₅) prevents accountability mechanisms that would otherwise interrupt capture growth.
 
@@ -17771,7 +17771,7 @@ When recovering from a constraint violation under resource constraints (only one
 
 **Priority 2 — C₁ (Bounded Coercion):** Removing enforcement above E* stops the backfire cascade and allows legitimacy to begin recovering. Without C₁, even restored C₂ delivery may be undermined by continued enforcement-driven legitimacy reduction.
 
-**Priority 3 — C₃ (Transparent Ledger):** Restoring opacity below O_max drives R₀ below 1 and initiates capture decay. This has a slower effect (capture decays gradually once R₀ < 1) but is necessary to prevent long-run governance collapse.
+**Priority 3 — C₃ (Transparent Ledger):** Restoring opacity below O_max drives R₀ below 1 and initiates capture decay. This has a slower effect (capture decays gradually once R₀ \< 1) but is necessary to prevent long-run governance collapse.
 
 **Priority 4 — C₄ (Adaptive Climate):** Restoring adaptation investment stops further climate damage accumulation but has the slowest effect — climate damage already accumulated requires many ticks to reverse, and productive capacity is only gradually restored.
 
@@ -17949,7 +17949,7 @@ fn compute_acceleration(mask: u8, count: u8) -> Fixed64 {
 The five constraint thresholds defined in Section 3 use static calibrated values. However, the optimal threshold values depend on the current macro-economic environment:
 
 - During high scarcity (Sₜ large), the enforcement ceiling E*(L, G, Sel) should tighten because backfire occurs at lower absolute enforcement levels when legitimacy is already depressed.
-- During extended legitimacy danger zone episodes (Lₜ < λ_rec), the subsistence floor B_min should rise to accelerate recovery.
+- During extended legitimacy danger zone episodes (Lₜ \< λ_rec), the subsistence floor B_min should rise to accelerate recovery.
 - During rapid capture growth (R₀ approaching 1 from below), the opacity ceiling O_max should tighten proactively.
 
 This section formalizes an **adaptive threshold algorithm** that adjusts constraint thresholds as a function of the observed legitimacy trajectory and constraint margins.
@@ -17965,10 +17965,10 @@ This section formalizes an **adaptive threshold algorithm** that adjusts constra
 ```
 
 Where:
-- `α_adjust ∈ (0, α_max]`: adjustment rate, bounded to prevent oscillation.
+- `α_adjust &isin; (0, α_max]`: adjustment rate, bounded to prevent oscillation.
 - `f_adjust(·)`: feedback function that is positive when the system is drifting toward violation.
 - `direction(Cᵢ)`: +1 if tightening the threshold improves stability, −1 otherwise.
-- All adjustments are bounded: θᵢ,ₜ ∈ [θᵢ_min, θᵢ_max] where the bounds are the scenario configuration hard limits.
+- All adjustments are bounded: θᵢ,ₜ &isin; [θᵢ_min, θᵢ_max] where the bounds are the scenario configuration hard limits.
 
 **Specific rules:**
 
@@ -18000,7 +18000,7 @@ Raises the adaptation floor when climate damage is accelerating.
 
 A concern with adaptive thresholds is whether the adaptation mechanism itself introduces instabilities. We provide conditions under which the adaptive system is stable:
 
-**Proposition (Adaptive Stability):** Let the adjustment rate satisfy α_adjust ≤ α_max, where:
+**Proposition (Adaptive Stability):** Let the adjustment rate satisfy α_adjust &lt; α_max, where:
 
 ```
 α_max = (1/2) · min_margin / (max_drift · W_adapt)
@@ -18602,7 +18602,7 @@ mod extended_ablation_tests {
 
     /// ABL-C3-B: Opacity at floor (O = 0.15 + ε) — near-threshold test.
     /// Tests that at exactly O_max + 0.01 (marginally above ceiling), R₀ > 1 and capture grows.
-    /// Expected: R₀ ≈ 1.02–1.10 by tick 5, slow capture growth confirming necessity.
+    /// Expected: R₀ &asymp; 1.02–1.10 by tick 5, slow capture growth confirming necessity.
     #[test]
     fn test_abl_c3_b_near_threshold_opacity() {
         let state = CoreStabilityState {
@@ -18919,7 +18919,7 @@ Amartya Sen's capabilities approach (Sen 1999, "Development as Freedom") provide
 
 Douglas North (1990, "Institutions, Institutional Change and Economic Performance") identifies the transparency of rules and enforcement as a core determinant of institutional quality. The Shadow Capture Threshold Theorem operationalizes North's insight: opacity above a threshold (O_max) enables rent extraction to compound via the capture reproduction number R₀, preventing institutional quality from being an equilibrium outcome.
 
-Elinor Ostrom (1990, "Governing the Commons") provides the complementary insight: commons governance requires monitoring and sanctioning systems with auditability. The C₃ ledger requirement is formally equivalent to Ostrom's "monitoring" design principle for robust institutional arrangements. Ostrom's empirical finding — that commons survive when monitoring is cheap and transparent — maps to the R₀ < 1 condition: low opacity reduces capture growth faster than institutions can respond.
+Elinor Ostrom (1990, "Governing the Commons") provides the complementary insight: commons governance requires monitoring and sanctioning systems with auditability. The C₃ ledger requirement is formally equivalent to Ostrom's "monitoring" design principle for robust institutional arrangements. Ostrom's empirical finding — that commons survive when monitoring is cheap and transparent — maps to the R₀ \< 1 condition: low opacity reduces capture growth faster than institutions can respond.
 
 **C₄ (Adaptive Climate Response) → Environmental Economics and Resilience Theory**
 
@@ -18957,9 +18957,9 @@ The quantitative bounds derived in Sections 15.2–15.6 (expected ticks to basin
 
 The constraint checker (Section 6) is structurally a real-time model checker over the simulation state space. The `MinimalConstraintSet` trait specifies a set of temporal logic properties that must hold at every tick. Specifically:
 
-- C₁ enforces the safety property: `□(Eₜ ≤ E*(Lₜ, Gₜ, Selₜ))` (enforcement always within ceiling).
-- C₂ enforces: `□(∀ c: EssentialsDelivery(c, t) ≥ B_min ∧ ¬Coupling)`.
-- C₃ enforces: `□(Opacity(t) ≤ O_max ∧ ∀ transfer e: e ∈ LedgerLog)`.
+- C₁ enforces the safety property: `□(Eₜ &lt; E*(Lₜ, Gₜ, Selₜ))` (enforcement always within ceiling).
+- C₂ enforces: `□(∀ c: EssentialsDelivery(c, t) &gt; B_min ∧ ¬Coupling)`.
+- C₃ enforces: `□(Opacity(t) &lt; O_max ∧ ∀ transfer e: e &isin; LedgerLog)`.
 
 These are safety properties in linear temporal logic (LTL). The constraint checker is equivalent to monitoring for violations of these LTL formulas at runtime. This connection to model checking makes the simulation's constraint architecture formally verifiable: the `ConstraintCheck::Halt` return value corresponds to a model checking counterexample witness.
 
@@ -18968,7 +18968,7 @@ These are safety properties in linear temporal logic (LTL). The constraint check
 The Lyapunov function approach in Section 4.2 and the Foster–Lyapunov framework in Section 15 connect the simulation to the formal verification literature on stochastic dynamical systems. Kushner and Dupuis (2001, "Numerical Methods for Stochastic Control Problems in Continuous Time") and Meyn and Tweedie (2009, "Markov Chains and Stochastic Stability") provide the theoretical foundations:
 
 - **Foster–Lyapunov criterion (Theorem 11.0.1 in Meyn-Tweedie):** A Markov chain is positive recurrent if and only if there exists a Lyapunov function V such that the drift condition holds. The proofs in Section 15 verify the conditions of this criterion.
-- **Exponential ergodicity:** If the drift condition holds with V(x) → ∞ as ‖x‖ → ∞ and the chain is ψ-irreducible, it is geometrically ergodic. In the CivLab context, geometric ergodicity implies that the simulation's invariant distribution is approached exponentially fast from any initial condition in S.
+- **Exponential ergodicity:** If the drift condition holds with V(x) → &infin; as ‖x‖ → &infin; and the chain is ψ-irreducible, it is geometrically ergodic. In the CivLab context, geometric ergodicity implies that the simulation's invariant distribution is approached exponentially fast from any initial condition in S.
 
 **Difference from Existing Results**
 
@@ -19056,7 +19056,7 @@ This module operates in **Phase 2 (Policy Phase)** and **Phase 3 (Deterministic 
 
 ### 2.1 States
 
-Each ordered pair `(actor_a, actor_b)` where `actor_a < actor_b` (stable sort) holds exactly one `DiplomaticState` at any tick:
+Each ordered pair `(actor_a, actor_b)` where `actor_a \< actor_b` (stable sort) holds exactly one `DiplomaticState` at any tick:
 
 | State | Code | Description |
 |---|---|---|
@@ -19243,7 +19243,7 @@ BattleOutcome = f(
 SSI = (stockpile_weeks / target_weeks) * route_throughput_ratio * (1 - disruption_probability) * (1 - corruption_leakage_rate)
 ```
 
-SSI dominates in prolonged conflict. When `SSI < 0.5`, attrition doubles.
+SSI dominates in prolonged conflict. When `SSI \< 0.5`, attrition doubles.
 
 **Attrition Rate (per tick, fixed-point):**
 ```
@@ -19293,11 +19293,11 @@ pub fn compute_siege_damage(
 
 A war terminates (transitions to `Deescalating`) when any of:
 
-1. **Manpower exhaustion**: one actor's `manpower_pool < EXHAUSTION_FLOOR`
-2. **Legitimacy collapse**: one actor's `legitimacy < COLLAPSE_FLOOR` for `COLLAPSE_TICKS` consecutive ticks
+1. **Manpower exhaustion**: one actor's `manpower_pool \< EXHAUSTION_FLOOR`
+2. **Legitimacy collapse**: one actor's `legitimacy \< COLLAPSE_FLOOR` for `COLLAPSE_TICKS` consecutive ticks
 3. **Settlement accepted**: influence capital transfer clears bargaining range
 4. **Coalition withdrawal**: sanctioning coalition dissolves (`C0 > COALITION_COLLAPSE_THRESHOLD` for attacker's coalition)
-5. **SSI collapse**: attacker's `SSI < SSI_COLLAPSE_FLOOR` for `SSI_COLLAPSE_TICKS` ticks
+5. **SSI collapse**: attacker's `SSI \< SSI_COLLAPSE_FLOOR` for `SSI_COLLAPSE_TICKS` ticks
 
 All termination checks are deterministic and happen in Phase 3.
 
@@ -19506,10 +19506,10 @@ Per-member stability ratio:
 
 **Coalition Stability Number C₀:**
 ```
-C0(t) = (1 / |C|) * Σ_{i ∈ C} κ(i, t)
+C0(t) = (1 / |C|) * Σ_{i &isin; C} κ(i, t)
 ```
 
-If `C0 < 1000` (i.e., C₀ < 1.0): coalition holds.
+If `C0 \< 1000` (i.e., C₀ \< 1.0): coalition holds.
 If `C0 > 1000` for sustained ticks: cascade exit begins.
 
 ### 6.2 Fatigue Dynamics
@@ -19582,7 +19582,7 @@ Where the coercion injustice function `Φ`:
 Φ(E, Sel) = E * (1000 + Sel * κ_sel) / 1000
 ```
 
-With `∂Φ/∂E > 0` and `∂Φ/∂Sel > 0` (more enforcement hurts legitimacy; selective enforcement hurts disproportionately).
+With `&part;Φ/&part;E > 0` and `&part;Φ/&part;Sel > 0` (more enforcement hurts legitimacy; selective enforcement hurts disproportionately).
 
 Parameters: `b1 = 15, b2 = 25, b3 = 10, b4 = 20, κ_sel = 500`
 
@@ -19600,12 +19600,12 @@ Enforcement that exceeds `E_max` triggers an `enforcement.overreach.v1` event an
 Enforcement overreach is detected when `E(t) > E*(t)`, the backfire threshold:
 
 ```
-E*(t) = calibrated threshold where ∂Λ(t+k)/∂E(t) > 0 for k ≥ 1
+E*(t) = calibrated threshold where &part;Λ(t+k)/&part;E(t) > 0 for k &gt; 1
 ```
 
 The backfire condition holds when:
 ```
-b4 * ∂Φ/∂E * (marginal legitimacy loss) > β * ψ * G * (1-Sel) * Λ   (suppression gain)
+b4 * &part;Φ/&part;E * (marginal legitimacy loss) > β * ψ * G * (1-Sel) * Λ   (suppression gain)
 ```
 
 Simplified detection heuristic (computed each tick):
@@ -19627,7 +19627,7 @@ When `backfire_risk_milli > 700`:
 The overreach spiral is a named attractor: `E ↑ → L ↓ → R ↑ → E ↑`.
 
 Spiral entry condition: `backfire_risk_milli > 700` for `SPIRAL_ENTRY_TICKS` (default 5) consecutive ticks.
-Spiral exit condition: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel < SEL_FLOOR` for 3 ticks.
+Spiral exit condition: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel \< SEL_FLOOR` for 3 ticks.
 
 Spiral state is tracked in `ConflictState.enforcement_spiral_ticks: u32`.
 
@@ -20240,7 +20240,7 @@ CREATE INDEX idx_coalition_members_active    ON coalition_members (run_id, membe
 
 ### 12.1 Actor-Pair Evaluation Ordering
 
-All actor-pair transitions are evaluated in sorted order by `ActorPairKey` (which enforces `actor_a < actor_b`). The full evaluation order for any tick is:
+All actor-pair transitions are evaluated in sorted order by `ActorPairKey` (which enforces `actor_a \< actor_b`). The full evaluation order for any tick is:
 
 ```rust
 // In Phase 3 (Deterministic Transition):
@@ -20251,7 +20251,7 @@ for pair in &pairs {
 }
 ```
 
-**Invariant**: No `HashMap` in critical paths. All relation maps are `BTreeMap<ActorPairKey, DiplomaticRelation>`.
+**Invariant**: No `HashMap` in critical paths. All relation maps are `BTreeMap \< ActorPairKey, DiplomaticRelation>`.
 
 ### 12.2 Shadow Flow Rounding
 
@@ -20300,22 +20300,22 @@ Enforced by:
 
 ### 13.2 Sanction Pressure Bounded
 
-**Invariant**: `pressure_milli ∈ [0, 1000]` at all times.
+**Invariant**: `pressure_milli &isin; [0, 1000]` at all times.
 
 Enforced by:
 1. Fixed-point sigmoid `σ` saturates at 1000
 2. All pressure accumulators clipped to `[0, 1000]`
 3. Property test: `test_pressure_bounded`
 
-### 13.3 Coalition Stability in `[0, ∞)`
+### 13.3 Coalition Stability in `[0, &infin;)`
 
-**Invariant**: Per-member `κ(i,t) >= 0` (since `Ψ,Ω ≥ 0`).
-**Invariant**: `C0(t) ≥ 0`.
+**Invariant**: Per-member `κ(i,t) >= 0` (since `Ψ,Ω &gt; 0`).
+**Invariant**: `C0(t) &gt; 0`.
 
 C₀ is not bounded above (can exceed 1000 to signal coalition collapse), but individual inputs are bounded:
-- `Ψ(i,t) ∈ [0, 4000]` (sum of four 0..1000 terms)
-- `Ω(i,t) ∈ [0, 3000]` (sum of three 0..1000 terms)
-- `κ(i,t) ∈ [0, 4000 / max(Ω,1)]` (bounded by input ranges)
+- `Ψ(i,t) &isin; [0, 4000]` (sum of four 0..1000 terms)
+- `Ω(i,t) &isin; [0, 3000]` (sum of three 0..1000 terms)
+- `κ(i,t) &isin; [0, 4000 / max(Ω,1)]` (bounded by input ranges)
 
 Property test: `test_coalition_stability_bounded`
 
@@ -20346,7 +20346,7 @@ Shadow trade addition is non-negative (flows are non-negative) and formal trade 
 
 **Cascade limit**: Maximum 5 exposures per tick across all shadow nodes. Excess exposures are deferred.
 
-**Recovery**: Shadow nodes recover at `recovery_rate_milli` per tick (default 20) when `exposure_risk < 300`.
+**Recovery**: Shadow nodes recover at `recovery_rate_milli` per tick (default 20) when `exposure_risk \< 300`.
 
 ### 14.2 Enforcement Overreach Spiral
 
@@ -20354,7 +20354,7 @@ Shadow trade addition is non-negative (flows are non-negative) and formal trade 
 
 **Spiral behavior**: Each tick in spiral, `Sel(t)` increases by `SEL_DRIFT_RATE` (30 milli-units), `G(t)` decreases by `INTEGRITY_DRAIN_RATE` (20 milli-units), and `L(t)` decreases by `LEGITIMACY_DRAIN_RATE` (15 milli-units). This compounds the backfire condition.
 
-**Spiral exit**: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel < 300` for 3 consecutive ticks.
+**Spiral exit**: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel \< 300` for 3 consecutive ticks.
 
 **Unrecoverable state**: If `L(t) < COLLAPSE_FLOOR` (100 milli-units) during spiral, `DiplomaticState::ActiveConflict` or `DiplomaticState::Deescalating` transitions may be forced by internal legitimacy collapse.
 
@@ -21066,7 +21066,7 @@ Intelligence value is modeled as a stock `intel_value_milli` that decays multipl
 intel_value_milli(t+1) = intel_value_milli(t) * (1000 - decay_rate) / 1000
 ```
 
-When `intel_value_milli < INTEL_STALE_THRESHOLD` (default 100), the intelligence record is marked stale and its modifiers cease.
+When `intel_value_milli \< INTEL_STALE_THRESHOLD` (default 100), the intelligence record is marked stale and its modifiers cease.
 
 ### 19.4 Covert Operations
 
@@ -21338,7 +21338,7 @@ pub fn compute_occupation_net(
 }
 ```
 
-**Occupation conservation invariant**: `net_extraction >= 0` at all times (enforced by `max(0, ...)` guard). `legitimacy_drain_milli ∈ [20, 80]` (bounded by construction). Property test: `test_occupation_net_non_negative`.
+**Occupation conservation invariant**: `net_extraction >= 0` at all times (enforced by `max(0, ...)` guard). `legitimacy_drain_milli &isin; [20, 80]` (bounded by construction). Property test: `test_occupation_net_non_negative`.
 
 ---
 
@@ -21454,7 +21454,7 @@ pub fn check_term_compliance(
 }
 ```
 
-**Breach detection**: If any term's `compliance_score_milli < BREACH_SCORE_THRESHOLD` (default 300) for `BREACH_GRACE_TICKS` (default 2) consecutive ticks, `breach_count` increments. When `breach_count >= TREATY_BREACH_THRESHOLD` (default 3), a `treaty.breached.v1` event is emitted and:
+**Breach detection**: If any term's `compliance_score_milli \< BREACH_SCORE_THRESHOLD` (default 300) for `BREACH_GRACE_TICKS` (default 2) consecutive ticks, `breach_count` increments. When `breach_count >= TREATY_BREACH_THRESHOLD` (default 3), a `treaty.breached.v1` event is emitted and:
 - `DiplomaticState` transitions toward `Strained` if currently `Cooperative` or `Alliance`
 - `treaty_slots` entry for this treaty is freed after `BREACH_FALLOUT_TICKS` (default 5)
 
@@ -21617,7 +21617,7 @@ Where:
 - `reinforcement_this_tick = 1` if any intelligence sharing, joint exercise event, or resource transfer occurred this tick
 - `ideology_alignment_bonus = max(0, (1000 - ideology_distance(pair)) / 100)` (0..10 milli per tick)
 
-When `alliance_reliability_milli < ALLIANCE_DEFECT_THRESHOLD` (default 200) for `ALLIANCE_DEFECT_TICKS` (default 3) consecutive ticks, the alliance reliability penalty is applied to the `AllianceObligation` treaty term: the obligated actor may not respond even if the protected actor is attacked. This does not automatically trigger a treaty breach (an obligation unfulfilled during conflict does — see Section 21.2).
+When `alliance_reliability_milli \< ALLIANCE_DEFECT_THRESHOLD` (default 200) for `ALLIANCE_DEFECT_TICKS` (default 3) consecutive ticks, the alliance reliability penalty is applied to the `AllianceObligation` treaty term: the obligated actor may not respond even if the protected actor is attacked. This does not automatically trigger a treaty breach (an obligation unfulfilled during conflict does — see Section 21.2).
 
 ### 22.3 Ideological Competition and Foreign Policy Alignment
 
@@ -21702,14 +21702,14 @@ The following phase diagram maps the 2D space `(legitimacy_milli, shadow_influen
 
 | Regime Type | Legitimacy Range | Shadow Influence Range | Description |
 |---|---|---|---|
-| `StableHybrid` | ≥ 600 | ≤ 300 | High-legitimacy, low-capture. Reform possible. |
-| `WeakDemocracy` | 400..599 | ≤ 400 | Functional institutions; capture risk growing. |
+| `StableHybrid` | &gt; 600 | &lt; 300 | High-legitimacy, low-capture. Reform possible. |
+| `WeakDemocracy` | 400..599 | &lt; 400 | Functional institutions; capture risk growing. |
 | `OligarchicCapitalism` | 300..599 | 400..699 | Shadow networks dominant; policy distorted. |
 | `MilitarizedSecurity` | 200..499 | 300..599 | Defense-driven enforcement; civil liberties eroded. |
 | `CorruptBureaucracy` | 200..399 | 500..799 | High capture, moderate legitimacy collapse. |
-| `ExternallyDestabilized` | ≤ 299 | ≥ 500 | Foreign influence cells dominant; sovereignty hollowed. |
-| `ShadowStateTakeover` | ≤ 200 | ≥ 850 | Formal institutions captured; see Section 30. |
-| `LegitimacyCollapse` | ≤ 100 | Any | Civil war threshold; couples to CIV-0103 revolt mechanics. |
+| `ExternallyDestabilized` | &lt; 299 | &gt; 500 | Foreign influence cells dominant; sovereignty hollowed. |
+| `ShadowStateTakeover` | &lt; 200 | &gt; 850 | Formal institutions captured; see Section 30. |
+| `LegitimacyCollapse` | &lt; 100 | Any | Civil war threshold; couples to CIV-0103 revolt mechanics. |
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
@@ -22245,7 +22245,7 @@ members = [
 
 ### 27.1 Network Influence Bounded
 
-**Invariant**: `NetworkNode.influence_score_milli ∈ [0, 1000]` at all times.
+**Invariant**: `NetworkNode.influence_score_milli &isin; [0, 1000]` at all times.
 
 Enforced by:
 1. `propagate_influence()` applies `.min(1000).max(0)` after each delta
@@ -22257,7 +22257,7 @@ Enforced by:
 **Invariant**: `shadow_extraction >= 0` AND `shadow_extraction <= defense_spend`.
 
 Enforced by:
-1. `profiteering_fraction_milli ∈ [0, 1000]` (bounded by `compute_profiteering_fraction`)
+1. `profiteering_fraction_milli &isin; [0, 1000]` (bounded by `compute_profiteering_fraction`)
 2. `shadow_extraction = defense_spend * profiteering_fraction_milli / 1000`
 3. Integer truncation toward zero (defense_spend non-negative by invariant)
 4. Property test: `test_war_profiteering_conservation`
@@ -22268,13 +22268,13 @@ Enforced by:
 
 Enforced by:
 1. `net = (gross_extraction - resistance_cost).max(0)` in `compute_occupation_net`
-2. `resistance_milli ∈ [0, 1000]` (clamped)
+2. `resistance_milli &isin; [0, 1000]` (clamped)
 3. `resistance_cost = gross_extraction * resistance_milli / 1000 <= gross_extraction`
 4. Property test: `test_occupation_net_non_negative`
 
 ### 27.4 Treaty Compliance Score Bounded
 
-**Invariant**: `compliance_score_milli ∈ [0, 1000]` for all term compliance checks.
+**Invariant**: `compliance_score_milli &isin; [0, 1000]` for all term compliance checks.
 
 Enforced by:
 1. All `check_term_compliance` implementations return `.min(1000)`
@@ -22893,7 +22893,7 @@ All models are Tier-1 deterministic: fixed-point arithmetic (i64 scaled), BTreeM
 Cohesion is a bounded scalar field:
 
 ```
-C(r, t) ∈ [0, 1]   for region r at tick t
+C(r, t) &isin; [0, 1]   for region r at tick t
 ```
 
 Internally stored as `i64` in fixed-point Q16.16 (scale factor 65536). Values below 0 are clamped to 0; values above 65536 are clamped to 65536.
@@ -22915,11 +22915,11 @@ Per tick, cohesion decays from the following drivers:
 ```
 
 Where:
-- `stress(r, t)` — normalized material stress score ∈ [0, 1] (from energy/food/income shortfall)
-- `coercion(r, t)` — enforcement intensity from CIV-0105 ∈ [0, 1]
-- `capture(r, t)` — institutional capture score from CIV-0105 shadow module ∈ [0, 1]
-- `polarization(r, t)` — ideological polarization score ∈ [0, 1] (computed by ideology module)
-- `health_burden(r, t)` — normalized health burden ∈ [0, 1]
+- `stress(r, t)` — normalized material stress score &isin; [0, 1] (from energy/food/income shortfall)
+- `coercion(r, t)` — enforcement intensity from CIV-0105 &isin; [0, 1]
+- `capture(r, t)` — institutional capture score from CIV-0105 shadow module &isin; [0, 1]
+- `polarization(r, t)` — ideological polarization score &isin; [0, 1] (computed by ideology module)
+- `health_burden(r, t)` — normalized health burden &isin; [0, 1]
 
 Default coefficients (overridable via `PolicyBundle`):
 
@@ -22966,7 +22966,7 @@ C(r, t+1) = clamp(C(r, t) + ΔC_reinforce - ΔC_decay, 0.0, 1.0)
 Cohesion diffuses across adjacent regions via a spatial diffusion coefficient `κ_spatial`:
 
 ```
-C_diff(r, t) = κ_spatial · Σ_{r' ∈ neighbors(r)} (C(r', t) - C(r, t)) / |neighbors(r)|
+C_diff(r, t) = κ_spatial · Σ_{r' &isin; neighbors(r)} (C(r', t) - C(r, t)) / |neighbors(r)|
 ```
 
 Default `κ_spatial = 0.05`. Neighbors are defined by the region adjacency graph (BTreeMap-keyed, stable ordering). Diffusion is applied after decay/reinforcement.
@@ -22976,7 +22976,7 @@ Default `κ_spatial = 0.05`. Neighbors are defined by the region adjacency graph
 Polarization is not a primary field — it is derived from the variance of cohort-level cohesion within a region:
 
 ```
-polarization(r, t) = Var_{cohorts c ∈ r}(C(c, t))
+polarization(r, t) = Var_{cohorts c &isin; r}(C(c, t))
 ```
 
 Where variance is computed over cohort cohesion values, scaled such that maximum inter-cohort variance maps to polarization = 1.0.
@@ -22995,7 +22995,7 @@ Each node (actor or region) holds an ideology vector in R^6:
 v = [v_market, v_state, v_liberty, v_equality, v_security, v_tradition]
 ```
 
-All components are bounded ∈ [-1, 1]. Internally stored as i16 (scale: 32767 = 1.0). The full vector is stored in `IdeologyField`.
+All components are bounded &isin; [-1, 1]. Internally stored as i16 (scale: 32767 = 1.0). The full vector is stored in `IdeologyField`.
 
 Axes:
 - `v_market`: preference for market allocation vs. central planning (-1 = full central plan, +1 = full market)
@@ -23012,7 +23012,7 @@ The ideology module operates over a directed weighted graph `G = (V, E)`:
 - V: all ideological nodes (regions, cohorts, institutional actors, shadow networks)
 - E: directed edges `(source, target, weight, contact_rate)`
 
-Edge weight `w ∈ [0, 1]` encodes structural influence strength (e.g., media reach, social proximity, economic dependency). Contact rate `c ∈ [0, 1]` encodes frequency of interaction per tick. Both are stored as i16 fixed-point.
+Edge weight `w &isin; [0, 1]` encodes structural influence strength (e.g., media reach, social proximity, economic dependency). Contact rate `c &isin; [0, 1]` encodes frequency of interaction per tick. Both are stored as i16 fixed-point.
 
 The effective influence of edge `(s → t)` per tick:
 
@@ -23033,7 +23033,7 @@ And `max_distance = sqrt(6 · 4) = sqrt(24)` (maximum possible L2 distance over 
 Per tick, for each target node `t`, compute the weighted mean of incoming source vectors:
 
 ```
-Δv_t = η · Σ_{s: (s→t) ∈ E} influence(s, t) · (v_s - v_t)
+Δv_t = η · Σ_{s: (s→t) &isin; E} influence(s, t) · (v_s - v_t)
 ```
 
 Where `η` is the base diffusion rate (default: 0.04 per tick).
@@ -23044,7 +23044,7 @@ Apply information integrity damping:
 Δv_t_damped = Δv_t · (1 - integrity_damping(t))
 ```
 
-Where `integrity_damping(t) ∈ [0, 1]` is controlled by the information integrity intervention (default: 0.0, maximum damping: 0.80).
+Where `integrity_damping(t) &isin; [0, 1]` is controlled by the information integrity intervention (default: 0.0, maximum damping: 0.80).
 
 Update:
 
@@ -23060,7 +23060,7 @@ Propaganda is modeled as a synthetic source node with a fixed ideology vector `v
 Δv_target += propaganda_intensity · (v_prop - v_target)
 ```
 
-Where `propaganda_intensity ∈ [0, 1]` is set by the actor controlling the propaganda channel (state, shadow network, or foreign actor). Propaganda injections are bounded by `max_propaganda_shift = 0.12` per tick per axis to prevent instantaneous opinion flipping.
+Where `propaganda_intensity &isin; [0, 1]` is set by the actor controlling the propaganda channel (state, shadow network, or foreign actor). Propaganda injections are bounded by `max_propaganda_shift = 0.12` per tick per axis to prevent instantaneous opinion flipping.
 
 Propaganda events are emitted as `ideology.diffusion_stepped.v1` with `source_type = "propaganda"` flag.
 
@@ -23069,10 +23069,10 @@ Propaganda events are emitted as `ideology.diffusion_stepped.v1` with `source_ty
 Pairwise ideological distance used for coalition stability, insurgency alignment, and diplomatic coupling:
 
 ```
-d(v_a, v_b) = ||v_a - v_b||_2 / max_distance   ∈ [0, 1]
+d(v_a, v_b) = ||v_a - v_b||_2 / max_distance   &isin; [0, 1]
 ```
 
-Values > 0.7 indicate high ideological distance (potential for conflict or instability). Values < 0.2 indicate high alignment (coalition formation favorable).
+Values > 0.7 indicate high ideological distance (potential for conflict or instability). Values \< 0.2 indicate high alignment (coalition formation favorable).
 
 ### 2.6 Information Integrity Programs
 
@@ -23129,7 +23129,7 @@ Where:
 - `epidemic_shock` is zero except during declared shock events
 - `welfare_relief = β_welfare · welfare_coverage · (1 - burden)`
 
-Burden is bounded ∈ [0, 1]. Internally stored as i64 fixed-point Q16.16.
+Burden is bounded &isin; [0, 1]. Internally stored as i64 fixed-point Q16.16.
 
 ### 3.3 Welfare Coverage
 
@@ -23158,7 +23158,7 @@ Where:
 - `surge_multiplier = 0.60`
 - `degradation = conflict_intensity · 0.15 + coercion · 0.05`
 
-Surge capacity is bounded ∈ [0, 1].
+Surge capacity is bounded &isin; [0, 1].
 
 ### 3.5 Lag and Diffusion Parameters
 
@@ -23222,7 +23222,7 @@ attrition(r, t) = deterrence(r, t) · mobilization(r, t-1) · attrition_coeffici
 
 ### 4.3 Mobilization Threshold and Cell Formation
 
-When `mobilization(r, t) ≥ mobilization_threshold(r)`, a stochastic cell formation event fires:
+When `mobilization(r, t) &gt; mobilization_threshold(r)`, a stochastic cell formation event fires:
 
 ```
 p_cell = sigmoid((mobilization - threshold) / threshold_sensitivity)
@@ -23257,7 +23257,7 @@ Default coefficients:
 | `δ_harm`       | 0.20    |
 | `δ_amnesty`    | 0.12    |
 
-Legitimacy is bounded ∈ [0, 1].
+Legitimacy is bounded &isin; [0, 1].
 
 ### 4.5 Tyranny Index
 
@@ -23299,7 +23299,7 @@ Tyranny index feeds back into legitimacy decay and insurgency propensity. High t
 
 **Effect function:**
 ```
-W_floor(r, t) = new_floor      for t ≥ effective_tick
+W_floor(r, t) = new_floor      for t &gt; effective_tick
 welfare_coverage(r, t) = max(welfare_coverage(r, t), W_floor(r, t))
 ```
 
@@ -23307,17 +23307,17 @@ welfare_coverage(r, t) = max(welfare_coverage(r, t), W_floor(r, t))
 - Reduces `welfare_gap` → reduces health burden accumulation rate
 - Reduces `γ_welfare` contribution to insurgency propensity
 - Reinforces cohesion (β_welfare term)
-- Requires institutional delivery capacity ≥ new_floor to take full effect; excess floor above capacity is partially absorbed (leakage applies)
+- Requires institutional delivery capacity &gt; new_floor to take full effect; excess floor above capacity is partially absorbed (leakage applies)
 
 **Event emitted:** `health.welfare_updated.v1` with `intervention_id` field.
 
 ### 5.2 Information Integrity and Civic Education Programs
 
-**Lever:** `InformationIntegrityProgram { region_key, target_nodes: Vec<NodeId>, program_strength: f64, duration_ticks: u64 }`
+**Lever:** `InformationIntegrityProgram { region_key, target_nodes: Vec\<NodeId\>, program_strength: f64, duration_ticks: u64 }`
 
 **Effect function:**
 ```
-integrity_damping(node, t) += program_strength   for t ∈ [start, start + duration_ticks)
+integrity_damping(node, t) += program_strength   for t &isin; [start, start + duration_ticks)
 ideology_diffusion_rate(node, t) *= (1 - integrity_damping(node, t))
 ```
 
@@ -23334,7 +23334,7 @@ ideology_diffusion_rate(node, t) *= (1 - integrity_damping(node, t))
 
 **Effect function:**
 ```
-Q(r, t) = base_capacity + surge_investment · surge_multiplier   for t ∈ [start, start + duration_ticks)
+Q(r, t) = base_capacity + surge_investment · surge_multiplier   for t &isin; [start, start + duration_ticks)
 recovery_rate(r, t) = base_recovery · Q(r, t) · welfare_coverage(r, t)
 ```
 
@@ -23351,7 +23351,7 @@ recovery_rate(r, t) = base_recovery · Q(r, t) · welfare_coverage(r, t)
 
 **Effect function:**
 ```
-mobilization(r, t) -= amnesty_strength · mobilization(r, t)   for t ∈ [start, start + effective_ticks)
+mobilization(r, t) -= amnesty_strength · mobilization(r, t)   for t &isin; [start, start + effective_ticks)
 legitimacy(r, t) += δ_amnesty · amnesty_strength
 insurgency_risk(r, t) *= (1 - amnesty_strength · 0.30)
 ```
@@ -23451,7 +23451,7 @@ impl IdeologyVector {
         sum_sq.sqrt()
     }
 
-    /// Normalized similarity score ∈ [0, 1]; 1.0 = identical
+    /// Normalized similarity score &isin; [0, 1]; 1.0 = identical
     pub fn similarity(&self, other: &IdeologyVector) -> f64 {
         const MAX_DISTANCE: f64 = 4.899; // sqrt(24)
         1.0 - (self.l2_distance(other) / MAX_DISTANCE).clamp(0.0, 1.0)
@@ -24075,14 +24075,14 @@ legitimacy_decay_from_tyranny = δ_coerce · coercion_overreach(r, t)
 The inflection point occurs when the marginal compliance gain equals the marginal cohesion cost. Solving for the coercion level at which the net benefit is zero:
 
 ```
-ρ_coerce · (1 - capture) = α_coerce + δ_coerce · coercion · ∂legitimacy/∂coercion
+ρ_coerce · (1 - capture) = α_coerce + δ_coerce · coercion · &part;legitimacy/&part;coercion
 ```
 
-For default coefficients with `capture = 0` and `∂legitimacy/∂coercion = δ_coerce = 0.18`:
+For default coefficients with `capture = 0` and `&part;legitimacy/&part;coercion = δ_coerce = 0.18`:
 
 ```
 0.35 = 0.14 + 0.18 · coercion*
-coercion* = (0.35 - 0.14) / 0.18 ≈ 0.78 / tick
+coercion* = (0.35 - 0.14) / 0.18 &asymp; 0.78 / tick
 ```
 
 At `coercion > coercion*`, increasing coercion yields negative net effect on stability. This is the Coercion Inflection Point. Above it, the model predicts accelerating instability even with continued compliance surface improvements.
@@ -24113,7 +24113,7 @@ Where `scarcity_amplification` captures the dynamic that coercive control under 
 
 ### 11.1 Node Traversal Order
 
-The ideology diffusion step iterates over nodes in lexicographic order of `node_id`. This is enforced by storing all node maps as `BTreeMap<String, IdeologyField>` (never `HashMap`). The iteration order is guaranteed by the BTreeMap specification.
+The ideology diffusion step iterates over nodes in lexicographic order of `node_id`. This is enforced by storing all node maps as `BTreeMap \< String, IdeologyField>` (never `HashMap`). The iteration order is guaranteed by the BTreeMap specification.
 
 ```rust
 // CORRECT — deterministic
@@ -24128,7 +24128,7 @@ for (node_id, field) in fields.iter() { ... }  // BANNED
 
 Edges are stored as `BTreeMap<(String, String), IdeologyEdge>` keyed by `(source_id, target_id)`. Incoming edges for a target node are collected by scanning all edges matching `target_id` in a single ordered pass.
 
-Alternatively (for performance): adjacency list stored as `BTreeMap<String, Vec<IdeologyEdge>>` where `Vec<IdeologyEdge>` is sorted by `source_id` at insertion time. Sorting must be applied at any insert point to maintain the invariant.
+Alternatively (for performance): adjacency list stored as `BTreeMap \< String, Vec\<IdeologyEdge\>>` where `Vec\<IdeologyEdge\>` is sorted by `source_id` at insertion time. Sorting must be applied at any insert point to maintain the invariant.
 
 ### 11.3 Fixed-Step Integration
 
@@ -24156,19 +24156,19 @@ for (region_key, delta) in deltas.iter() {
 ### 12.1 Declared Invariants
 
 **I-SOC-1: Cohesion Boundedness**
-For all `(r, c, t)`: `cohesion(r, c, t) ∈ [0.0, 1.0]`. Enforced by `FpUnit::clamp()` after every update.
+For all `(r, c, t)`: `cohesion(r, c, t) &isin; [0.0, 1.0]`. Enforced by `FpUnit::clamp()` after every update.
 
 **I-SOC-2: Polarization Boundedness**
-For all `(r, t)`: `polarization(r, t) ∈ [0.0, 1.0]`. Derived from clamped inter-cohort variance.
+For all `(r, t)`: `polarization(r, t) &isin; [0.0, 1.0]`. Derived from clamped inter-cohort variance.
 
 **I-INS-1: Insurgency Risk Boundedness**
-For all `(r, t)`: `insurgency_risk(r, t) ∈ [0.0, 1.0]`. Clamped in propensity calculation.
+For all `(r, t)`: `insurgency_risk(r, t) &isin; [0.0, 1.0]`. Clamped in propensity calculation.
 
 **I-INS-2: Mobilization Score Boundedness**
-For all `(r, t)`: `mobilization_score(r, t) ∈ [0.0, 1.0]`. Amnesty campaigns clamp to zero from below; natural ceiling is 1.0.
+For all `(r, t)`: `mobilization_score(r, t) &isin; [0.0, 1.0]`. Amnesty campaigns clamp to zero from below; natural ceiling is 1.0.
 
 **I-IDE-1: Ideology Axis Boundedness**
-For all `(node, axis, t)`: `ideology_axis ∈ [-1.0, 1.0]`. Enforced by `IdeologyAxis::from_f64` clamp on every write.
+For all `(node, axis, t)`: `ideology_axis &isin; [-1.0, 1.0]`. Enforced by `IdeologyAxis::from_f64` clamp on every write.
 
 **I-IDE-2: Diffusion Stability**
 Ideology diffusion converges: if all propaganda and intervention inputs are held constant, the vector field converges to a fixed point. This follows from the similarity-weighted update (influence is zero when identical; the update is a contraction).
@@ -24177,16 +24177,16 @@ Ideology diffusion converges: if all propaganda and intervention inputs are held
 For all `(c, t)`: `Healthy + Strained + Disabled + Deceased = total_population(c)`. No simulation tick may change total population count (births/deaths require explicit lifecycle events from CIV-0103).
 
 **I-HLT-2: Health Burden Boundedness**
-For all `(c, t)`: `health_burden(c, t) ∈ [0.0, 1.0]`.
+For all `(c, t)`: `health_burden(c, t) &isin; [0.0, 1.0]`.
 
 **I-HLT-3: Welfare Coverage Floor**
-For all `(r, t)`: `welfare_coverage(r, t) ≥ welfare_floor_policy(r, t)` unless institutional capacity is insufficient (in which case a `welfare_floor_breach.v1` event is emitted and the deficit is logged).
+For all `(r, t)`: `welfare_coverage(r, t) &gt; welfare_floor_policy(r, t)` unless institutional capacity is insufficient (in which case a `welfare_floor_breach.v1` event is emitted and the deficit is logged).
 
 **I-LEG-1: Legitimacy Boundedness**
-For all `(r, t)`: `legitimacy(r, t) ∈ [0.0, 1.0]`.
+For all `(r, t)`: `legitimacy(r, t) &isin; [0.0, 1.0]`.
 
 **I-TYR-1: Tyranny Index Boundedness**
-For all `(r, t)`: `tyranny_index(r, t) ∈ [0.0, 1.0]` (logistic sigmoid guarantees this).
+For all `(r, t)`: `tyranny_index(r, t) &isin; [0.0, 1.0]` (logistic sigmoid guarantees this).
 
 ### 12.2 Property Tests
 
@@ -24260,7 +24260,7 @@ proptest! {
 ### FM-SOC-01: Cohesion Collapse
 **Trigger:** Simultaneous high coercion + high shadow capture + welfare gap > 0.5.
 **Behavior:** Cohesion decays below 0.15 within 30 ticks. Once polarization enters self-reinforcing regime, recovery requires a sustained welfare + legitimacy intervention combo.
-**Detection:** Alert when `cohesion < 0.15` for any region across 3 consecutive ticks.
+**Detection:** Alert when `cohesion \< 0.15` for any region across 3 consecutive ticks.
 **Not mitigated by:** Amnesty alone (does not address material drivers). Propaganda alone (information integrity intervention cannot substitute for material welfare delivery).
 
 ### FM-SOC-02: Echo Chamber Lock-In
@@ -24270,21 +24270,21 @@ proptest! {
 **Mitigation:** Cross-cluster information integrity programs (targeting edges between clusters). Civic education programs in high-polarization cohorts.
 
 ### FM-HLT-01: Health System Saturation
-**Trigger:** `surge_capacity < demand` for > 10 consecutive ticks with `health_burden > 0.75`.
+**Trigger:** `surge_capacity \< demand` for > 10 consecutive ticks with `health_burden > 0.75`.
 **Behavior:** Transition rate λ_DX (Disabled → Deceased) spikes. Irreversible population loss begins. Welfare floor enforcement becomes impossible to meet (delivery capacity collapse).
 **Detection:** Alert when `surge_capacity_deficit > 0.30` and `health_burden > 0.70`.
 **Mitigation requires:** Surge capacity intervention AND welfare floor adjustment simultaneously. Neither alone is sufficient once saturation threshold is crossed.
 
 ### FM-INS-01: Mobilization Cascade
-**Trigger:** `mobilization_score` exceeds threshold in ≥ 3 adjacent regions within 5 ticks.
+**Trigger:** `mobilization_score` exceeds threshold in &gt; 3 adjacent regions within 5 ticks.
 **Behavior:** Cell formation probability becomes near-certain in all three regions. Active cell count growth feeds `γ_cell` term in subsequent ticks, creating self-sustaining insurgency.
 **Detection:** Monitor cluster of threshold-crossing events within spatial and temporal window.
 **Mitigation:** De-escalation (amnesty) + immediate legitimacy interventions. Coercion escalation is counterproductive (above inflection point).
 
 ### FM-INS-02: Legitimacy Death Spiral
-**Trigger:** Legitimacy < 0.20 combined with coercion > 0.70.
+**Trigger:** Legitimacy \< 0.20 combined with coercion > 0.70.
 **Behavior:** Every coercion action increases tyranny index, which decays legitimacy further, which increases insurgency risk, which triggers more coercion. Model enters a positive feedback loop.
-**Detection:** Alert when `legitimacy < 0.25 AND coercion > 0.60` sustained for 5+ ticks.
+**Detection:** Alert when `legitimacy \< 0.25 AND coercion > 0.60` sustained for 5+ ticks.
 **Mitigation:** Requires simultaneous: reduce coercion to below inflection point, deploy welfare floor + surge capacity, initiate amnesty campaign.
 
 ### FM-IDE-01: Propaganda Saturation
@@ -25006,7 +25006,7 @@ Where `ideology_variance_within_faction` is the mean pairwise L2 distance betwee
 The effective policy pressure exerted by all factions in a region is a membership-weighted sum of faction preference vectors:
 
 ```
-PolicyPressure(axis, r, t) = Σ_{f ∈ factions} membership(f, r, t) · internal_cohesion(f, r, t) · preference(f, axis)
+PolicyPressure(axis, r, t) = Σ_{f &isin; factions} membership(f, r, t) · internal_cohesion(f, r, t) · preference(f, axis)
 ```
 
 Each axis of `PolicyPressure` is an i64 in Q16.16 fixed-point. The `total_magnitude` is:
@@ -25098,7 +25098,7 @@ When institutions include a democratic governance type (from CIV-0103), factions
 A coalition C is winning if:
 
 ```
-Σ_{f ∈ C} membership(f, r, t) ≥ coalition_threshold   (default: 0.50)
+Σ_{f &isin; C} membership(f, r, t) &gt; coalition_threshold   (default: 0.50)
 ```
 
 Among all winning coalitions, the MWC is the smallest by total membership exceeding the threshold. This is the coalition that minimizes internal heterogeneity (ideological distance between members).
@@ -25116,7 +25116,7 @@ Among all winning coalitions, the MWC is the smallest by total membership exceed
 The governing coalition's effective policy vector is the membership-weighted centroid of member faction preferences:
 
 ```
-coalition_policy(axis) = Σ_{f ∈ C} membership(f) · preference(f, axis) / Σ_{f ∈ C} membership(f)
+coalition_policy(axis) = Σ_{f &isin; C} membership(f) · preference(f, axis) / Σ_{f &isin; C} membership(f)
 ```
 
 This centroid becomes the `effective_policy_vector` that constrains the `policy.evaluate()` function in the Policy DSL.
@@ -25312,9 +25312,9 @@ The reversal path (R → A → E) represents de-escalation programs, welfare imp
 ### 17.2 State Definitions
 
 ```
-E(r, t)  — fraction of regional population that is civically engaged   ∈ [0, 1]
-A(r, t)  — fraction that is alienated (withdrawn, distrustful)         ∈ [0, 1]
-R(r, t)  — fraction that is rebellious (active opposition, mobilized)  ∈ [0, 1]
+E(r, t)  — fraction of regional population that is civically engaged   &isin; [0, 1]
+A(r, t)  — fraction that is alienated (withdrawn, distrustful)         &isin; [0, 1]
+R(r, t)  — fraction that is rebellious (active opposition, mobilized)  &isin; [0, 1]
 
 E + A + R = 1.0  at all times (population conservation)
 ```
@@ -25333,7 +25333,7 @@ Internally stored as i64 FP_SCALE fractions. Population counts derived by multip
            - α_service · service_delivery(r, t)
 ```
 
-Rate at which Engaged population moves to Alienated. Bounded ∈ [0, 0.15] per tick (biological ceiling: no more than 15% of engaged population can alienate in one tick).
+Rate at which Engaged population moves to Alienated. Bounded &isin; [0, 0.15] per tick (biological ceiling: no more than 15% of engaged population can alienate in one tick).
 
 ```
 λ_AR(r, t) = β_social · A(r, t) · contact_rate(r, t)
@@ -25342,7 +25342,7 @@ Rate at which Engaged population moves to Alienated. Bounded ∈ [0, 0.15] per t
            - β_legit  · legitimacy(r, t)
 ```
 
-Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term creates the SIR-analog: alienation spreads through social contact proportional to current alienated fraction (like infection spreading proportional to infected fraction). Bounded ∈ [0, 0.10] per tick.
+Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term creates the SIR-analog: alienation spreads through social contact proportional to current alienated fraction (like infection spreading proportional to infected fraction). Bounded &isin; [0, 0.10] per tick.
 
 **Reverse transitions (recovery):**
 
@@ -25353,7 +25353,7 @@ Rate at which Alienated population mobilizes to Rebellious. The `A(r, t)` term c
            - γ_polar   · polarization(r, t)
 ```
 
-Rate at which Alienated population re-engages. Bounded ∈ [0, 0.12] per tick.
+Rate at which Alienated population re-engages. Bounded &isin; [0, 0.12] per tick.
 
 ```
 μ_RA(r, t) = δ_amnesty · amnesty_applied(r, t)
@@ -25361,7 +25361,7 @@ Rate at which Alienated population re-engages. Bounded ∈ [0, 0.12] per tick.
            + δ_legit    · legitimacy(r, t)        · 0.30
 ```
 
-Rate at which Rebellious population de-escalates to Alienated. Bounded ∈ [0, 0.06] per tick. Recovery from rebellion is deliberately slow: the `0.40` and `0.30` dampening factors reflect that welfare improvements do not immediately convert rebels.
+Rate at which Rebellious population de-escalates to Alienated. Bounded &isin; [0, 0.06] per tick. Recovery from rebellion is deliberately slow: the `0.40` and `0.30` dampening factors reflect that welfare improvements do not immediately convert rebels.
 
 ### 17.4 Discrete Update Rule
 
@@ -25392,13 +25392,13 @@ The basic reproduction number analog R₀ for civic rebellion is the expected nu
 R₀_civic(r, t) = (β_social · contact_rate(r, t) · A(r, t)) / μ_RA(r, t)
 ```
 
-When `R₀_civic > 1.0`, the Rebellious compartment is self-sustaining (rebellion grows without external input). When `R₀_civic < 1.0`, rebellion decays without intervention.
+When `R₀_civic > 1.0`, the Rebellious compartment is self-sustaining (rebellion grows without external input). When `R₀_civic \< 1.0`, rebellion decays without intervention.
 
 The R₀ threshold `R₀_civic = 1.0` is the **civic rebellion threshold**. The system monitors this per region per tick. Crossing from below to above emits `civic.rebellion_threshold_crossed.v1` (diagnostic event).
 
 Default regime analysis:
-- High welfare (`welfare_coverage = 0.80`), low polarization: `R₀_civic ≈ 0.4` (sub-critical, rebellion decays)
-- Low welfare (`welfare_coverage = 0.20`), high cells (`active_cell_count ≥ 3`): `R₀_civic ≈ 1.8` (super-critical, rebellion self-sustaining)
+- High welfare (`welfare_coverage = 0.80`), low polarization: `R₀_civic &asymp; 0.4` (sub-critical, rebellion decays)
+- Low welfare (`welfare_coverage = 0.20`), high cells (`active_cell_count &gt; 3`): `R₀_civic &asymp; 1.8` (super-critical, rebellion self-sustaining)
 - Amnesty campaign at max strength brings `μ_RA` up enough to suppress `R₀_civic` below 1.0 within 8–12 ticks
 
 ### 17.6 Spatial Spread
@@ -25407,7 +25407,7 @@ Contact rate `contact_rate(r, t)` is modulated by regional cohesion:
 
 ```
 contact_rate(r, t) = base_contact_rate · (1 - cohesion(r, t) · κ_cohesion_contact)
-                   + Σ_{r' ∈ neighbors(r)} κ_spatial_contact · A(r', t)
+                   + Σ_{r' &isin; neighbors(r)} κ_spatial_contact · A(r', t)
 ```
 
 Where:
@@ -25447,7 +25447,7 @@ pub struct CivicCompartments {
 }
 
 impl CivicCompartments {
-    /// Verify E + A + R = FP_SCALE (within rounding tolerance of ±2 units).
+    /// Verify E + A + R = FP_SCALE (within rounding tolerance of &plusmn;2 units).
     pub fn assert_conserved(&self) {
         let total = self.engaged.0 + self.alienated.0 + self.rebellious.0;
         assert!(
@@ -25641,7 +25641,7 @@ v_extended = [
 ]
 ```
 
-All components bounded ∈ [-1, 1], stored as i16 (Q0.15 fixed-point: 32767 = 1.0).
+All components bounded &isin; [-1, 1], stored as i16 (Q0.15 fixed-point: 32767 = 1.0).
 
 The extended vector is used for:
 - Faction centroid computation (Section 16.2)
@@ -25661,13 +25661,13 @@ d8(v_a, v_b) = ||v_a - v_b||_2
 Maximum possible distance over eight axes each spanning [-1, 1]:
 
 ```
-max_distance_8 = sqrt(8 · 4) = sqrt(32) ≈ 5.657
+max_distance_8 = sqrt(8 · 4) = sqrt(32) &asymp; 5.657
 ```
 
 Normalized distance:
 
 ```
-d8_norm(v_a, v_b) = d8(v_a, v_b) / 5.657   ∈ [0, 1]
+d8_norm(v_a, v_b) = d8(v_a, v_b) / 5.657   &isin; [0, 1]
 ```
 
 ```rust
@@ -25693,12 +25693,12 @@ impl ExtendedIdeologyVector {
         sum_sq.sqrt()
     }
 
-    /// Normalized similarity ∈ [0, 1]; 1.0 = identical.
+    /// Normalized similarity &isin; [0, 1]; 1.0 = identical.
     pub fn similarity(&self, other: &Self) -> f64 {
         1.0 - (self.l2_distance(other) / Self::MAX_DISTANCE).clamp(0.0, 1.0)
     }
 
-    /// Normalized distance ∈ [0, 1]; 1.0 = maximally distant.
+    /// Normalized distance &isin; [0, 1]; 1.0 = maximally distant.
     pub fn normalized_distance(&self, other: &Self) -> f64 {
         (self.l2_distance(other) / Self::MAX_DISTANCE).clamp(0.0, 1.0)
     }
@@ -25726,7 +25726,7 @@ impl ExtendedIdeologyVector {
 The same diffusion step from Section 2.3 applies to the extended vector in hidden network nodes. The extended diffusion iterates over all eight axes independently:
 
 ```
-Δv_t[i] = η_ext · Σ_{s: (s→t) ∈ E} influence(s, t) · (v_s[i] - v_t[i])
+Δv_t[i] = η_ext · Σ_{s: (s→t) &isin; E} influence(s, t) · (v_s[i] - v_t[i])
 ```
 
 Where `η_ext = 0.03` (slightly slower than the six-axis diffusion rate of 0.04, because hidden network actors have structural inertia).
@@ -25772,10 +25772,10 @@ When any node's ideology vector norm exceeds `radicalization_threshold = 0.80` (
 
 **Attractor stability analysis:**
 
-In the radicalization-active regime, the fixed points are the extremes of ideology space (each axis at ±1.0). The system converges to the nearest extreme. The rate of convergence is approximately:
+In the radicalization-active regime, the fixed points are the extremes of ideology space (each axis at &plusmn;1.0). The system converges to the nearest extreme. The rate of convergence is approximately:
 
 ```
-convergence_ticks ≈ 1 / (η_ext + radicalization_boost) ≈ 1/0.05 = 20 ticks
+convergence_ticks &asymp; 1 / (η_ext + radicalization_boost) &asymp; 1/0.05 = 20 ticks
 ```
 
 At default parameters, a node enters extreme radicalization within 20 ticks of continuous attractor activation.
@@ -25791,7 +25791,7 @@ effective_η(node, t) = η_base · (1 + media_control(actor, t) · media_amplify
 
 Where `media_amplify_coeff = 0.60`. High media control can nearly double the effective diffusion rate, rapidly shifting citizen ideology toward the media-controlling actor's ideology vector.
 
-The `information_integrity` parameter from Section 2.6 directly counters media amplification. At `integrity_damping = 0.80` (maximum), even full media control is reduced to `effective_η ≈ η_base · (1 + 0.60) · 0.20 = η_base · 0.32` — still above baseline but significantly dampened.
+The `information_integrity` parameter from Section 2.6 directly counters media amplification. At `integrity_damping = 0.80` (maximum), even full media control is reduced to `effective_η &asymp; η_base · (1 + 0.60) · 0.20 = η_base · 0.32` — still above baseline but significantly dampened.
 
 ```rust
 // crates/social/src/ideology/radicalization.rs
@@ -26035,7 +26035,7 @@ p_emergence(r, t) = epidemic_seed_rate
                   · environmental_exposure(r, t)
 ```
 
-Where `epidemic_seed_rate = 0.002` per tick per region (approximately one emergence event per 500 tick-regions). Sample from `ChaCha20Rng`: if `rng.gen::<f64>() < p_emergence`, trigger outbreak.
+Where `epidemic_seed_rate = 0.002` per tick per region (approximately one emergence event per 500 tick-regions). Sample from `ChaCha20Rng`: if `rng.gen::\<f64\>() < p_emergence`, trigger outbreak.
 
 **Cross-region transmission:**
 
@@ -26136,14 +26136,14 @@ The effectiveness curve is not linear: surge capacity reduces the `λ_DX` (Disab
 λ_DX_effective(r, t) = λ_DX_base · max(0, 1 - Q(r, t) · surge_effectiveness_curve(Q))
 ```
 
-Where `surge_effectiveness_curve(Q) = 1 - exp(-Q · 3.0)` — a saturating exponential. At `Q = 0.30` (base), effectiveness is `1 - exp(-0.9) ≈ 0.59`. At `Q = 0.85` (emergency max), effectiveness is `1 - exp(-2.55) ≈ 0.92`.
+Where `surge_effectiveness_curve(Q) = 1 - exp(-Q · 3.0)` — a saturating exponential. At `Q = 0.30` (base), effectiveness is `1 - exp(-0.9) &asymp; 0.59`. At `Q = 0.85` (emergency max), effectiveness is `1 - exp(-2.55) &asymp; 0.92`.
 
 ### 19.5 Long-Term Health Trajectory
 
 At the run level, each region accumulates a `health_trajectory_score` that summarizes long-term health trends:
 
 ```
-health_trajectory_score(r, t) = EMA(combined_burden(r, τ), τ ≤ t, window=24)
+health_trajectory_score(r, t) = EMA(combined_burden(r, τ), τ &lt; t, window=24)
 ```
 
 Where EMA is the exponential moving average over a 24-tick window. This smooths out short-term shocks and captures sustained degradation or improvement.
@@ -26170,19 +26170,19 @@ Nascent → Active → Operational → Degraded → Dissolved
 | Active | Sufficient members to conduct operations | ongoing |
 | Operational | Has resources AND safe zones; can execute campaigns | ongoing |
 | Degraded | Lost resources or members; capability reduced | ongoing |
-| Dissolved | Membership < dissolution_threshold OR dismantled | terminal |
+| Dissolved | Membership \< dissolution_threshold OR dismantled | terminal |
 
 Transitions:
 
 ```
-Nascent → Active:      member_count ≥ nascent_threshold (default: 15)
-Active → Operational:  resource_held ≥ op_resource_threshold
-                       AND safe_zone_count ≥ 1
-                       AND trained_members ≥ op_trained_threshold
+Nascent → Active:      member_count &gt; nascent_threshold (default: 15)
+Active → Operational:  resource_held &gt; op_resource_threshold
+                       AND safe_zone_count &gt; 1
+                       AND trained_members &gt; op_trained_threshold
 Operational → Degraded: successful counterinsurgency op OR resource drop
 Degraded → Dissolved:   member_count < dissolution_threshold (default: 5)
                          OR amnesty campaign absorbs remaining members
-Active → Dissolved:     amnesty campaign at high strength (amnesty_strength ≥ 0.70)
+Active → Dissolved:     amnesty campaign at high strength (amnesty_strength &gt; 0.70)
 ```
 
 ### 20.2 Cell Growth Dynamics
@@ -26410,7 +26410,7 @@ disruption_damage_resources = resource_seized_fraction · resource_held
 disruption_detection_risk_reduction = disruption_strength · 0.20
 ```
 
-If disruption reduces `member_count < dissolution_threshold`, the cell transitions to `Dissolved`.
+If disruption reduces `member_count \< dissolution_threshold`, the cell transitions to `Dissolved`.
 
 **Hearts-and-minds (HaM) programs:**
 
@@ -26461,7 +26461,7 @@ pub enum CoinOpOutcome {
 }
 
 /// Compute detection probability for a cell given current intelligence investment.
-/// Returns probability as f64 ∈ [0, 1].
+/// Returns probability as f64 &isin; [0, 1].
 pub fn detection_probability(
     base_detection_rate:     f64,
     intelligence_investment: f64,
@@ -26991,7 +26991,7 @@ pub insurgency_r0_civic:     BTreeMap<String, i64>,          // region_key → R
 
 **Diplomatic leverage reduction:**
 
-When a region has `active_cell_count ≥ 3` OR `R₀_civic > 1.5 × FP_SCALE`, the region's diplomatic leverage in external negotiations is reduced:
+When a region has `active_cell_count &gt; 3` OR `R₀_civic > 1.5 × FP_SCALE`, the region's diplomatic leverage in external negotiations is reduced:
 
 ```
 diplomatic_leverage(r, t) = base_leverage(r, t)
@@ -27016,7 +27016,7 @@ foreign_cell_support(r, t) = foreign_actor_hostility(r, t)
     · (1 - counterintelligence_effectiveness(r, t))
 ```
 
-This adds to `resource_acquisition` for cells whose ideology is aligned with the foreign actor (ideological distance < 0.35).
+This adds to `resource_acquisition` for cells whose ideology is aligned with the foreign actor (ideological distance \< 0.35).
 
 ### 22.3 Ideology to Hidden Network (CIV-0105 Coupling)
 
@@ -27343,7 +27343,7 @@ fn test_epidemic_reduces_labor_productivity() {
 /// radicalization conditions (50 ticks), ideology norm exceeds 0.80.
 #[test]
 fn test_radicalization_attractor_drives_to_extreme() {
-    // Start from a moderately positioned node (norm ≈ 0.40).
+    // Start from a moderately positioned node (norm &asymp; 0.40).
     let initial = ExtendedIdeologyVector([
         13000, -6000, 8000, -10000, 14000, 7000, -5000, 9000
     ]);
@@ -27491,7 +27491,7 @@ Each citizen `i` maintains:
 
 ```
 EnergyLedger_i = {
-  lifetime_work_accumulated: J ≥ 0,  // total joules earned
+  lifetime_work_accumulated: J &gt; 0,  // total joules earned
   current_balance: J,                 // available joules this period
   discretionary_allocation: J,        // joules available for non-essential consumption
   baseline_fulfillment: bool,         // essentials met this tick?
@@ -27712,7 +27712,7 @@ For abundant goods: price near energy cost (minimal markup)
 
 ### Baseline Strength (Constitutional Anchor)
 
-**Baseline strength B ∈ [0,1]** defines:
+**Baseline strength B &isin; [0,1]** defines:
 
 ```
 B = ratio of unconditional rights to total output
@@ -27728,7 +27728,7 @@ High B (0.8):  Baseline covers essentials + moderate creative freedom
 
 ### Measurement Intensity (Surveillance)
 
-**Surveillance scope Σ ∈ [0,1]** controls:
+**Surveillance scope Σ &isin; [0,1]** controls:
 
 ```
 Σ = how much of citizen energy behavior is observed
@@ -27761,15 +27761,15 @@ ELSE (coupling forbidden):
 
 ### Enforcement & Audit
 
-**Audit rate A ∈ [0, 1]**: probability citizen is audited per tick.
+**Audit rate A &isin; [0, 1]**: probability citizen is audited per tick.
 
 ```
 Audit outcome:
   - Check quota claim vs actual consumption
   - If discrepancy > threshold: fine, warn, or escalate to enforcement
-  - Corruption leakage C ∈ [0,1]: fraction of fines diverted to official pockets
+  - Corruption leakage C &isin; [0,1]: fraction of fines diverted to official pockets
 
-Enforcement severity E ∈ [0,1]:
+Enforcement severity E &isin; [0,1]:
   - Low E: warning, education
   - High E: quota penalty, credit freeze, mobility restriction
 
@@ -27832,7 +27832,7 @@ Over time, measurement scope Σ expands via routine pressure:
 Citizens pressure themselves to work more hours to accumulate quota (discretionary access). Health / stress / creativity decline.
 
 **Prevention**:
-- Generous baseline B (≥0.5) → no survival pressure
+- Generous baseline B (&gt;0.5) → no survival pressure
 - Energy intensity factors capped at reasonable hourly effort
 - Mandatory vacation / rest periods (non-deductible from quota)
 - Psychological stress metric monitored; alerts if trending up
@@ -28019,7 +28019,7 @@ Indexes needed:
 
 The joule economy is **only compatible** with the hybrid constitutional blueprint if:
 
-1. **Baseline decoupling** (B ≥ 0.4): essentials unconditional
+1. **Baseline decoupling** (B &gt; 0.4): essentials unconditional
 2. **Coupling forbidden**: constitutional hard-cap on Σ, explicit ban on energy_score → rights
 3. **Sunset clauses**: energy measurement factors / surveillance scope reviewed 5-yearly
 4. **Transparency**: public dashboards show Σ, measurement waste, enforcement statistics
@@ -28048,7 +28048,7 @@ If these are violated, the system drifts toward **Joule Score-State** (dystopian
    - Research: compare outcomes in climate forcing scenarios across allocation mechanisms
 
 5. **Measurement Creep Inevitability**: Is scope expansion (Σ increasing over time) mathematically inevitable once energy accounting exists?
-   - Meta-question for attractor analysis: can Σ remain stable < 0.6 over 100+ years?
+   - Meta-question for attractor analysis: can Σ remain stable \< 0.6 over 100+ years?
 
 6. **Black Market Emergence Trigger**: Under what quota scarcity levels do grey markets predictably emerge?
    - Empirical: test in parameter sweeps; find bifurcation points
@@ -28072,7 +28072,7 @@ Vary B from 0.2 to 0.8. For each B:
 - Measure: tyranny, discretionary realization, waste, innovation, legitimacy stability
 - Result: Pareto frontier of B vs outcomes
 
-**Hypothesis**: B ≥ 0.5 prevents measurement tyranny without killing innovation.
+**Hypothesis**: B &gt; 0.5 prevents measurement tyranny without killing innovation.
 
 ### B) Measurement Scope Creep Dynamics
 
@@ -29711,7 +29711,7 @@ CivLab uses a **flat-top hexagonal grid** with axial coordinates `(q, r)`. This 
 
 ```
 hex_width  = 64   // pixels at zoom level 2
-hex_height = hex_width * sqrt(3) / 2  ≈ 55.4 pixels
+hex_height = hex_width * sqrt(3) / 2  &asymp; 55.4 pixels
 
 pixel_x = hex_width * (q + r / 2)
 pixel_y = hex_height * r * (3/4) * (2/sqrt(3))
@@ -29979,12 +29979,12 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 ```
 
 **Delta indicator rules:**
-- `↑` green if delta > 0; `↓` red if delta < 0; `→` grey if delta == 0
+- `↑` green if delta > 0; `↓` red if delta \< 0; `→` grey if delta == 0
 - Warning `⚠` shown if:
   - Joules balance negative (energy shortage)
   - Food delta < -5% of stock per tick (famine risk)
   - CO₂ > 450ppm (climate event zone)
-  - Treasury < 0 (deficit)
+  - Treasury \< 0 (deficit)
 - Delta is a rolling 5-tick average (not instantaneous per-tick noise)
 
 **Data source:** `snapshot.metrics` from `sim.tick_broadcast`
@@ -30000,7 +30000,7 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 **Specification:**
 - **Size:** 200×150px (fixed), rendered in bottom-right corner
 - **Renderer:** Separate Pixi.js `PIXI.RenderTexture`, re-rendered every 5 ticks
-- **Scale:** Maps entire world to 200×150px; each minimap pixel ≈ multiple world tiles
+- **Scale:** Maps entire world to 200×150px; each minimap pixel &asymp; multiple world tiles
 - **Viewport indicator:** White rectangle outline showing current viewport area; draggable
 - **Click-to-pan:** Click anywhere on minimap → smooth camera transition to that world position (300ms)
 
@@ -30010,7 +30010,7 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 - Army positions: small colored triangles per army
 
 **Alert visualization:**
-- Critical alerts (stability < 20, energy shortage, war started): red pulsing ring on minimap
+- Critical alerts (stability \< 20, energy shortage, war started): red pulsing ring on minimap
 - Warning alerts (supply low, drought, insurgency): yellow static dot
 - Info alerts: no minimap indicator (only in Alert Feed)
 
@@ -30055,11 +30055,11 @@ Height: 44px (two rows of resources). Bottom section of main bar.
 Width: 320px. Scrollable if content overflows.
 ```
 
-**GDP sparkline:** `<canvas>` element (50px tall, 280px wide) rendered via Recharts `<SparkLine>`. 50-tick rolling window. Y-axis auto-scales to data range.
+**GDP sparkline:** `\<canvas\>` element (50px tall, 280px wide) rendered via Recharts `\<SparkLine\>`. 50-tick rolling window. Y-axis auto-scales to data range.
 
 **Stability meter:** Horizontal progress bar. Color transitions: green (70-100) → yellow (40-70) → orange (20-40) → red (0-20). Threshold line at 10 (collapse threshold from game design).
 
-**Happiness histogram:** Recharts `<BarChart>` with 5 buckets. Updated every 10 ticks (not per-tick; histogram computation is O(population)).
+**Happiness histogram:** Recharts `\<BarChart\>` with 5 buckets. Updated every 10 ticks (not per-tick; histogram computation is O(population)).
 
 **Update frequency:**
 - GDP sparkline: appends new point every tick (sparkline auto-scrolls)
@@ -30178,7 +30178,7 @@ Height: 200px (collapsible to 44px single-line summary). Overflowing content scr
 | Social | 👥 | `#CC79A7` | Migration, ideology shift, insurgency |
 | Diplomacy | 📜 | `#009E73` | Treaty offers, war declarations |
 | Research | 🔬 | `#F0E442` | Tech breakthroughs, research progress |
-| Critical | ⚠ | `#D55E00` blink | Stability < 20, collapse imminent |
+| Critical | ⚠ | `#D55E00` blink | Stability \< 20, collapse imminent |
 
 **Interaction:**
 - Click `[→ Map]`: smooth camera pan to event location, highlight affected unit/district
@@ -30281,7 +30281,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 - Legend rendered in bottom-left corner of overlay
 
 **Trade route arrows:**
-- SVG arrows overlaid on the Pixi.js canvas via an absolutely-positioned `<svg>` element
+- SVG arrows overlaid on the Pixi.js canvas via an absolutely-positioned `\<svg\>` element
 - Arrow thickness proportional to trade volume (cubic bezier paths)
 - Color: `#E69F00` for active; `#56B4E9` for proposed; `#D55E00` for embargoed
 - Animated: dashed stroke-dashoffset animation shows flow direction
@@ -30311,7 +30311,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 - Color encodes supply status:
   - `#009E73` (green): supply >= 75%
   - `#E69F00` (yellow): supply 25-75%
-  - `#D55E00` (red): supply < 25% or severed
+  - `#D55E00` (red): supply \< 25% or severed
 - Dashed line if supply route is contested
 
 **Territory control borders:**
@@ -30429,7 +30429,7 @@ Overlays are toggled via the Strategic Overlay panel (Zoom 1 sidebar) or `F1`–
 
 **Nation flag badge:** 16×16px. Rendered as `PIXI.Sprite` overlay on unit sprite. One flag atlas per scenario loaded at start.
 
-**Health bar:** Rendered as `PIXI.Graphics` thin rectangle (32px wide × 3px tall) below unit sprite. Color: green if HP > 60%, yellow if 30-60%, red if < 30%.
+**Health bar:** Rendered as `PIXI.Graphics` thin rectangle (32px wide × 3px tall) below unit sprite. Color: green if HP > 60%, yellow if 30-60%, red if \< 30%.
 
 **Supply bar:** Same dimensions as health bar, 2px below health bar. Color: `#56B4E9` (blue). Only shown for military units.
 
@@ -30593,7 +30593,7 @@ The level-of-detail system governs what is rendered at each zoom factor (continu
 | 6.5 – 8.0 | Citizen dots appear (4×4px per citizen cluster), building detail textures |
 | > 8.0 | Individual citizen portrait icons (zoom 3 mode) |
 
-**LOD transitions are smooth:** Each LOD layer has opacity that ramps linearly between the zoom factor thresholds (±0.5 zoom factor crossfade range).
+**LOD transitions are smooth:** Each LOD layer has opacity that ramps linearly between the zoom factor thresholds (&plusmn;0.5 zoom factor crossfade range).
 
 **Pixi.js implementation:**
 
@@ -30688,7 +30688,7 @@ function clampedLerp(fromAlpha: number, toAlpha: number, z: number, zStart: numb
 |-----|--------|-------|
 | `Ctrl+S` | Quick save (.civreplay download) | Serializes event log |
 | `Ctrl+Z` | Undo last action (sandbox mode only) | Not available in real-time mode |
-| `Ctrl+Shift+C` | Open cheats console (sandbox only) | `cheat: <command>` |
+| `Ctrl+Shift+C` | Open cheats console (sandbox only) | `cheat: \<command\>` |
 | `Shift+T` | Toggle light/dark theme | |
 
 **Formation Hotkeys (when multiple units selected):**
@@ -30786,7 +30786,7 @@ Research Mode is a separate UI layer activated by `?mode=research` URL parameter
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Chart library:** Recharts `<LineChart>` with responsive container. Each chart is independently configurable.
+**Chart library:** Recharts `\<LineChart\>` with responsive container. Each chart is independently configurable.
 
 **Chart configuration modal:**
 
@@ -30931,7 +30931,7 @@ carbon_budget,ai_difficulty,seed,ticks_to_victory,final_stability,final_gdp,fina
 │   20 ┤  ·   ·  ··                 0       250     500    750  1000      │
 │    0 ┼──────────────── Happiness                                        │
 │       0  20  40  60  80  100                                            │
-│    Autocracy                      Blue: mean  Band: ±1 std              │
+│    Autocracy                      Blue: mean  Band: &plusmn;1 std              │
 │                                                                          │
 │ SELECTED CITIZEN CLUSTERS        TOP BELIEF THEMES (by count)           │
 │ ● Cluster A: 342 (autocrat, poor)  1. "King is corrupt"      (34%)      │
@@ -30943,7 +30943,7 @@ carbon_budget,ai_difficulty,seed,ticks_to_victory,final_stability,final_gdp,fina
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Scatter plot:** D3.js `<svg>` scatter with `circle` elements per citizen. Radius 3px. Color by class. Hover shows citizen ID and stats.
+**Scatter plot:** D3.js `\<svg\>` scatter with `circle` elements per citizen. Radius 3px. Color by class. Hover shows citizen ID and stats.
 
 **Animation:** "Animate Over Time" plays scatter plot as 1-tick-per-frame animation from run start to current tick.
 
@@ -31369,7 +31369,7 @@ fn hex_to_world(q: i32, r: i32, hex_size: f32) -> Vec2 {
 | FR-CIV-RTS-012 | Turn-Based vs Real-Time | Speed controls in Top Bar (Section 4.1); hotkeys `Space` pause, `1×`/`2×`/`5×`/`MAX` | Turn-based mode: speed set to 0; Space advances one tick per press |
 | FR-CIV-RTS-013 | Unit Experience & Leveling | Unit Panel: XP bar, Level badge (Section 6.1); Level star badges on unit sprite; Alert Feed "LEVEL UP" | XP bar shown in Unit Panel; star badge visible on sprite at level 3+ |
 | FR-CIV-RTS-014 | Faction AI Behavior | Alert Feed AI actions; Relations Panel faction state updates; Military Overlay enemy positions | AI actions surface as events in Alert Feed; enemy moves visible through fog via scouted positions |
-| FR-CIV-RTS-015 | Client-Side Prediction & Replay Correction | Smooth unit movement interpolation (frame-rate independent); snap correction < 100ms | Unit positions extrapolated per-frame; server authoritative state corrects if drift > 1 hex |
+| FR-CIV-RTS-015 | Client-Side Prediction & Replay Correction | Smooth unit movement interpolation (frame-rate independent); snap correction \< 100ms | Unit positions extrapolated per-frame; server authoritative state corrects if drift > 1 hex |
 
 ### 12.2 FR-CIV-GEO-* Mapping
 
@@ -31517,7 +31517,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] All 5 primary resources displayed: Joules, Food, Materials, Treasury, Population
 - [ ] CO₂ ppm displayed with color threshold (> 450ppm = orange, > 550ppm = red)
 - [ ] Delta indicators use rolling 5-tick average (not instantaneous)
-- [ ] Warning badge appears for: negative Joules balance, food delta < -5%/tick, CO₂ > 450ppm, treasury < 0
+- [ ] Warning badge appears for: negative Joules balance, food delta < -5%/tick, CO₂ > 450ppm, treasury \< 0
 - [ ] Joules display uses SI prefix scaling: TJ, PJ (not raw integer)
 - [ ] Counter animation: when value changes, digit rolls from old to new (100ms)
 
@@ -31537,7 +31537,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 
 - [ ] Unit sprites load from `units_atlas_01.png` / `units_atlas_02.png`
 - [ ] Faction tint applied via PIXI `tint` property (not separate sprite)
-- [ ] Health bar renders below unit: green > 60%, yellow 30-60%, red < 30%
+- [ ] Health bar renders below unit: green > 60%, yellow 30-60%, red \< 30%
 - [ ] Supply bar renders below health bar (military units only)
 - [ ] Level badge: star icon in sprite corner for units level >= 3
 - [ ] Selected unit: pulsing `#E69F00` ring at 1Hz
@@ -31550,7 +31550,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] Scouted-but-not-visible hexes: desaturated + 70% dim (fogAlpha = 0.5)
 - [ ] Visible hexes: no overlay (fogAlpha = 0.0)
 - [ ] Fog updates each tick within the same animation frame as snapshot render
-- [ ] Fog texture update cost < 5ms for 50,000 hex map
+- [ ] Fog texture update cost \< 5ms for 50,000 hex map
 - [ ] Historical fog shows "?" stale marker on units last seen > 10 ticks ago
 
 ### E.6 Overlays
@@ -31571,7 +31571,7 @@ Every UI component listed in this specification has explicit acceptance criteria
 - [ ] `[→ Map]` link: camera smoothly pans to alert location (400ms transition)
 - [ ] Actionable alerts (treaty offers): Accept/Reject buttons issue `sim.command`
 - [ ] Feed virtualized: > 500 alerts in feed has no visible scroll performance degradation
-- [ ] Critical alerts (stability < 20) use `aria-live="assertive"` announcement
+- [ ] Critical alerts (stability \< 20) use `aria-live="assertive"` announcement
 - [ ] Tab key cycles through critical alerts (panning camera to each)
 
 ### E.8 Research Tree
@@ -32490,7 +32490,7 @@ Factor definitions:
 | `defense_value_normalized` | structure_defense_rating / max_defense_rating × 1000 | [0, 1000] |
 | `citizen_happiness_gain_normalized` | happiness_delta_per_citizen × pop / max_happiness_impact × 1000 | [-500, 1000] |
 | `joule_cost_penalty` | −joule_cost / current_joule_reserves × 1000, clamped [-1000, 0] | [-1000, 0] |
-| `urgency_modifier` | +500 if district_under_threat; +200 if happiness<40; +300 if supply_critical | [0, 500] |
+| `urgency_modifier` | +500 if district_under_threat; +200 if happiness \< 40; +300 if supply_critical | [0, 500] |
 
 Default weights: `W_production=350, W_defense=200, W_happiness=200, W_joule_cost=150, W_urgency=100`.
 
@@ -33387,9 +33387,9 @@ Alliance types and their minimum requirements:
 | Non-Aggression Pact | 150 | No active war | Neither attacks the other |
 | Trade Agreement | 250 | Trade volume > 10K J/100t | Tariff reduction |
 | Military Cooperation | 400 | Shared enemy exists | Intel sharing |
-| Mutual Defense Pact | 600 | No recent war < 500 ticks | Auto-join defensive war |
+| Mutual Defense Pact | 600 | No recent war \< 500 ticks | Auto-join defensive war |
 | Economic Alliance | 400 | Trade volume > 50K J/100t | Joint production |
-| Full Alliance | 750 | No recent war < 1000 ticks | Full military + economic |
+| Full Alliance | 750 | No recent war \< 1000 ticks | Full military + economic |
 
 ```rust
 fn propose_alliance(
@@ -33819,8 +33819,8 @@ fn apply_perfect_intel(
 
 At difficulties 1–4, the AI's knowledge of other nations is limited:
 
-- Military strength: known within ±20% (based on intelligence operations)
-- Economic state: known within ±30% without spy assets
+- Military strength: known within &plusmn;20% (based on intelligence operations)
+- Economic state: known within &plusmn;30% without spy assets
 - Diplomatic state: fully known (public information)
 - Espionage operations: known only if the AI has infiltration assets
 
@@ -33839,7 +33839,7 @@ fn estimate_military_strength(
 
     // Estimate with noise based on intelligence coverage
     let intel_coverage = ai_state.memory.intelligence_coverage(target);
-    let noise_range = (1000 - intel_coverage) * 2 / 10;  // ±0-20% noise
+    let noise_range = (1000 - intel_coverage) * 2 / 10;  // &plusmn;0-20% noise
     let noise = ai_state.rng.gen_range(-noise_range..=noise_range);
     (true_strength + true_strength * noise / 1000).max(0)
 }
@@ -33887,7 +33887,7 @@ impl MCTSNode {
             let ln_parent = integer_ln(parent_visits as i64);
             let ratio = ln_parent * 1000 / self.visits as i64;
             let sqrt_ratio = integer_sqrt(ratio);
-            1414 * sqrt_ratio / 1000  // C = sqrt(2) ≈ 1.414
+            1414 * sqrt_ratio / 1000  // C = sqrt(2) &asymp; 1.414
         };
         exploitation + exploration
     }
@@ -34591,8 +34591,8 @@ nations:
 | Acceptance Criterion | Addressed By | Section |
 |---|---|---|
 | AI policy: {threat_tolerance, opportunity_threshold, resource_spending_rate, preferred_tactics} | `PersonalityParams` struct with all equivalent parameters | §3.1, §4.1 |
-| Threat eval: compare own vs player military strength; if ratio < threat_tolerance, raise alert | `compute_threat_score()`, `ThreatScore.military_ratio` | §3.3 |
-| Defense: if threatened and structures < threshold, spawn defensive units | `assign_mission()` Defend branch; goal `BuildMilitary` | §6.2, §3.5 |
+| Threat eval: compare own vs player military strength; if ratio \< threat_tolerance, raise alert | `compute_threat_score()`, `ThreatScore.military_ratio` | §3.3 |
+| Defense: if threatened and structures \< threshold, spawn defensive units | `assign_mission()` Defend branch; goal `BuildMilitary` | §6.2, §3.5 |
 | Attack: if opportunity and resources available, queue attack order | `assign_mission()` Attack branch; `select_next_building()` resource check | §6.2 |
 | Diplomacy: if heavily outnumbered, may propose peace/trade, form alliances | `evaluate_war_declaration()`, `propose_alliance()`, `evaluate_peace_offer()` | §8.3, §8.4, §8.6 |
 | Determinism: identical faction state + policy + seed → identical decisions | `ai_rng_for_tick()` ChaCha20Rng seeding; no f64; BTreeMap iteration | §2.4 |
@@ -34688,13 +34688,13 @@ The following criteria must pass before CIV-0400 is considered implemented:
 ### 16.5 Military Operational AI
 
 - [ ] Army groups form correctly: units within 3 hexes of same nation grouped together.
-- [ ] Supply decay: army at 0 supply reduces effective_strength to ≤ 300 within 5 ticks.
-- [ ] Retreat triggered when `effective_strength < 0.4 × initial_strength`.
+- [ ] Supply decay: army at 0 supply reduces effective_strength to &lt; 300 within 5 ticks.
+- [ ] Retreat triggered when `effective_strength \< 0.4 × initial_strength`.
 - [ ] A* pathfinding respects terrain costs and zone of control penalties.
 
 ### 16.6 Difficulty Scaling
 
-- [ ] APM governor enforces rate limits: Novice AI submits ≤ 5 actions/minute in `test_apm_novice`.
+- [ ] APM governor enforces rate limits: Novice AI submits &lt; 5 actions/minute in `test_apm_novice`.
 - [ ] MCTS enabled only at difficulty 4–5: test `mcts_disabled_at_difficulty_3`.
 - [ ] Resource bonus: at Legendary, AI production output is 25% higher than at Advanced on same map.
 - [ ] `ai.leadership_bonus.v1` event emitted every tick at difficulty 4–5.
@@ -34725,7 +34725,7 @@ The following criteria must pass before CIV-0400 is considered implemented:
 - [ ] MCTS terminates within `mcts_compute_budget_ms` on all tested hardware.
 - [ ] MCTS output is deterministic: same root state + rng_seed → same best action.
 - [ ] MCTS reward function produces non-trivial variation across personality archetypes.
-- [ ] MCTS thread does not block simulation tick: tick time < 50ms overhead when MCTS active.
+- [ ] MCTS thread does not block simulation tick: tick time \< 50ms overhead when MCTS active.
 
 ---
 
@@ -34789,7 +34789,7 @@ The following table defines the mandatory performance envelope for each simulati
 | Tick broadcast fanout (100 clients)| < 5 ms   | < 25 ms    |
 | Subscribe handshake                | < 10 ms  | < 50 ms    |
 
-The command-to-ack target of < 5 ms is measured from the moment the client sends a WebSocket frame to the moment the server sends the ack frame. This includes frame parsing, command queue insertion, and ack serialization, but excludes the tick in which the command actually executes (commands are deferred to the next tick boundary per CIV-0001 protocol design).
+The command-to-ack target of \< 5 ms is measured from the moment the client sends a WebSocket frame to the moment the server sends the ack frame. This includes frame parsing, command queue insertion, and ack serialization, but excludes the tick in which the command actually executes (commands are deferred to the next tick boundary per CIV-0001 protocol design).
 
 ### 1.3 Snapshot Generation SLO
 
@@ -34822,7 +34822,7 @@ CivLab's ECS must satisfy two constraints simultaneously:
 1. **Deterministic iteration order** (required by CIV-0001 invariant I5): iteration must be stable and reproducible across runs.
 2. **Cache-efficient iteration** (required by this spec): per-entity data accessed in tight loops must reside in contiguous memory.
 
-These constraints are compatible. Sorted dense arrays provide both: entities are stored in ID-sorted order (fulfilling I5) and all data for one component type resides in a flat `Vec<T>` (fulfilling cache locality).
+These constraints are compatible. Sorted dense arrays provide both: entities are stored in ID-sorted order (fulfilling I5) and all data for one component type resides in a flat `Vec\<T\>` (fulfilling cache locality).
 
 ### 2.2 Struct-of-Arrays Layout
 
@@ -34898,7 +34898,7 @@ pub struct CitizenHotArrays {
 | `birth_tick`     | `u64`            | 8              | Used for age calculation only  |
 | `name`           | `String`         | 24 (ptr+len)   | Debug/UI only                  |
 | `biography`      | `String`         | 24 (ptr+len)   | Research annotation only       |
-| `education_hist` | `Vec<u32>`       | 24 (ptr+len)   | Lifetime education events      |
+| `education_hist` | `Vec\<u32\>`       | 24 (ptr+len)   | Lifetime education events      |
 | `faction_hist`   | `Vec<(u32, u64)>`| 24 (ptr+len)   | Faction affiliations over time |
 
 Cold data is stored in a `CitizenColdStore` that holds all cold fields indexed by dense citizen index. This store is accessed rarely (UI rendering, event annotation, replay export) and does not participate in tick hot loops.
@@ -35088,7 +35088,7 @@ For radius-N neighbor queries (used in climate diffusion and social contagion), 
 
 ### 3.5 Climate CO2 Aggregation
 
-The climate module sums CO2 emissions over all districts each tick. For 2,000 districts (Research scenario), this is a horizontal integer sum over a `Vec<i64>` of length 2,000.
+The climate module sums CO2 emissions over all districts each tick. For 2,000 districts (Research scenario), this is a horizontal integer sum over a `Vec\<i64\>` of length 2,000.
 
 ```rust
 use std::simd::{i64x4, SimdInt};
@@ -35323,7 +35323,7 @@ fn aggregate_district_production(
 }
 ```
 
-This pattern is correct only when district IDs are used as array indices (requires dense district ID packing, maintained by the entity manager). For sparse district IDs, use a `DashMap<u32, i64>` reduction instead, which is lock-free but has higher constant overhead.
+This pattern is correct only when district IDs are used as array indices (requires dense district ID packing, maintained by the entity manager). For sparse district IDs, use a `DashMap \< u32, i64>` reduction instead, which is lock-free but has higher constant overhead.
 
 ### 4.5 Determinism Preservation Under Parallelism
 
@@ -35830,7 +35830,7 @@ let pool = sqlx::PgPoolOptions::new()
     .expect("database connection pool must initialize");
 ```
 
-The pool is wrapped in `Arc<sqlx::PgPool>` and shared across all tokio tasks. Do not create per-request pools; pool overhead (connection establishment) dominates query time at this scale.
+The pool is wrapped in `Arc \< sqlx::PgPool>` and shared across all tokio tasks. Do not create per-request pools; pool overhead (connection establishment) dominates query time at this scale.
 
 ### 7.5 Vacuum Strategy
 
@@ -35940,7 +35940,7 @@ async fn handle_client_ws(
 }
 ```
 
-The `SubscriptionFilter` is computed once at subscribe time and stored per client. Applying a filter to a broadcast is a read-only operation on the `Arc<TickBroadcast>`, enabling zero-copy filtering across all clients sharing the same broadcast.
+The `SubscriptionFilter` is computed once at subscribe time and stored per client. Applying a filter to a broadcast is a read-only operation on the `Arc\<TickBroadcast\>`, enabling zero-copy filtering across all clients sharing the same broadcast.
 
 ### 8.3 Backpressure and Lag Eviction
 
@@ -36053,7 +36053,7 @@ Two LOD levels based on camera zoom factor:
 | < 1.0 (zoomed out) | District polygon only (no individual tile sprites) | O(districts)|
 | >= 1.0 (zoomed in) | Individual tile sprites + unit sprites             | O(tiles)   |
 
-LOD transition is triggered by the camera zoom factor changing past the 1.0 threshold. At zoom < 1.0, the map renders district-level data (population color, resource heatmap, ideology heatmap) as colored polygons. This path is extremely fast (< 2 ms render time for 500 districts).
+LOD transition is triggered by the camera zoom factor changing past the 1.0 threshold. At zoom \< 1.0, the map renders district-level data (population color, resource heatmap, ideology heatmap) as colored polygons. This path is extremely fast (< 2 ms render time for 500 districts).
 
 ### 9.4 Web Worker Offloading
 
@@ -36543,11 +36543,11 @@ This is well within the 100 ms tick budget for the Small scenario and achieves t
 Tick time scaling with citizen count should be O(N) for all phases that are data-parallel over citizens, and O(D log D) for phases that are data-parallel over districts (where D = district count). The total tick time is dominated by the citizen-level phases:
 
 ```
-T_tick(N, D) ≈ c_citizen * N + c_district * D * log(D)
+T_tick(N, D) &asymp; c_citizen * N + c_district * D * log(D)
 
-For N=1k, D=20:   T ≈ 28ms (measured target)
-For N=10k, D=100: T ≈ 40ms (target; 10x citizens + 5x districts)
-For N=100k, D=500: T ≈ 120ms (target; 100x citizens + 25x districts)
+For N=1k, D=20:   T &asymp; 28ms (measured target)
+For N=10k, D=100: T &asymp; 40ms (target; 10x citizens + 5x districts)
+For N=100k, D=500: T &asymp; 120ms (target; 100x citizens + 25x districts)
 ```
 
 The super-linear growth from N=10k to N=100k (10x citizens, but ~3x time increase rather than 10x) reflects: (a) rayon parallel scaling across 14 cores absorbing 10x work in ~2x wall time, and (b) cache effects (Medium fits in L2, Large spills to L3).
@@ -36657,37 +36657,37 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 ## 13. Acceptance Criteria
 
 ### FR-CIV-PERF-001: Small Scenario SLO
-**Spec:** 1k-citizen tick completes with p50 < 8ms, p99 < 16ms over 1,000-tick window.
-**Test:** `bench_tick_1k_citizens` criterion benchmark; assert p99 < 16ms on CI perf machine.
+**Spec:** 1k-citizen tick completes with p50 \< 8ms, p99 \< 16ms over 1,000-tick window.
+**Test:** `bench_tick_1k_citizens` criterion benchmark; assert p99 \< 16ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-002: Medium Scenario SLO
-**Spec:** 10k-citizen tick completes with p50 < 30ms, p99 < 60ms over 1,000-tick window.
-**Test:** `bench_tick_10k_citizens`; assert p99 < 60ms on CI perf machine.
+**Spec:** 10k-citizen tick completes with p50 \< 30ms, p99 \< 60ms over 1,000-tick window.
+**Test:** `bench_tick_10k_citizens`; assert p99 \< 60ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-003: Large Scenario SLO
-**Spec:** 100k-citizen tick completes with p50 < 80ms, p99 < 150ms over 1,000-tick window.
-**Test:** `bench_tick_100k_citizens`; assert p99 < 150ms on CI perf machine.
+**Spec:** 100k-citizen tick completes with p50 \< 80ms, p99 \< 150ms over 1,000-tick window.
+**Test:** `bench_tick_100k_citizens`; assert p99 \< 150ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-004: WebSocket Command Latency
-**Spec:** Command-to-ack latency < 5ms p50, < 20ms p99.
+**Spec:** Command-to-ack latency \< 5ms p50, < 20ms p99.
 **Test:** `bench_ws_command_ack`; inject 100 commands, measure ack time distribution.
 **Status:** Open
 
 ### FR-CIV-PERF-005: Delta Snapshot Generation
-**Spec:** Delta snapshot generated in < 10ms for any scenario size.
-**Test:** `bench_snapshot_serialize_delta`; assert p99 < 10ms.
+**Spec:** Delta snapshot generated in \< 10ms for any scenario size.
+**Test:** `bench_snapshot_serialize_delta`; assert p99 \< 10ms.
 **Status:** Open
 
 ### FR-CIV-PERF-006: Full Snapshot at 10k Citizens
-**Spec:** Full snapshot generated in < 25ms for 10k-citizen state.
-**Test:** `bench_snapshot_serialize_full`; assert mean < 25ms at 10k citizens.
+**Spec:** Full snapshot generated in \< 25ms for 10k-citizen state.
+**Test:** `bench_snapshot_serialize_full`; assert mean \< 25ms at 10k citizens.
 **Status:** Open
 
 ### FR-CIV-PERF-007: Replay Seek
-**Spec:** Seek to any tick within last 100 ticks completes in < 10ms; seek to arbitrary tick < 100ms.
+**Spec:** Seek to any tick within last 100 ticks completes in \< 10ms; seek to arbitrary tick \< 100ms.
 **Test:** `bench_replay_seek_recent`; `bench_replay_seek_arbitrary`.
 **Status:** Open
 
@@ -36702,18 +36702,18 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 **Status:** Open
 
 ### FR-CIV-PERF-010: DB Async Write Non-Blocking
-**Spec:** DB write spawn adds < 0.5ms to tick wall time; DB write completes in background within 50ms.
-**Test:** `bench_db_write_spawn`; assert tick overhead < 0.5ms; `test_db_write_async` verifies background completion.
+**Spec:** DB write spawn adds \< 0.5ms to tick wall time; DB write completes in background within 50ms.
+**Test:** `bench_db_write_spawn`; assert tick overhead \< 0.5ms; `test_db_write_async` verifies background completion.
 **Status:** Open
 
 ### FR-CIV-PERF-011: WebSocket Fanout 100 Clients
-**Spec:** Broadcasting one tick snapshot to 100 connected clients completes in < 5ms.
+**Spec:** Broadcasting one tick snapshot to 100 connected clients completes in \< 5ms.
 **Test:** `bench_websocket_fanout_100clients`.
 **Status:** Open
 
 ### FR-CIV-PERF-012: Phase Parallelism
 **Spec:** Parallel phase rounds (demographics||climate, production||military||research, social||economy) demonstrably reduce wall time vs. sequential execution.
-**Test:** `bench_phase_parallel_vs_sequential`; assert parallel execution < 70% of sequential time.
+**Test:** `bench_phase_parallel_vs_sequential`; assert parallel execution \< 70% of sequential time.
 **Status:** Open
 
 ### FR-CIV-PERF-013: No Performance Regression on PR
@@ -36722,13 +36722,13 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 **Status:** Open
 
 ### FR-CIV-PERF-014: L1 Cache Miss Rate (Small Scenario)
-**Spec:** L1 data cache miss rate < 1% during Small scenario hot loop (citizens processing).
-**Test:** `perf stat` measurement in CI; assert L1-dcache-load-misses < 1%.
+**Spec:** L1 data cache miss rate \< 1% during Small scenario hot loop (citizens processing).
+**Test:** `perf stat` measurement in CI; assert L1-dcache-load-misses \< 1%.
 **Status:** Open
 
 ### FR-CIV-PERF-015: Tracing Overhead
-**Spec:** Tracing spans at `debug` level add < 2% overhead to tick wall time vs. release build without tracing.
-**Test:** `bench_tick_with_tracing_vs_without`; assert overhead < 2%.
+**Spec:** Tracing spans at `debug` level add \< 2% overhead to tick wall time vs. release build without tracing.
+**Test:** `bench_tick_with_tracing_vs_without`; assert overhead \< 2%.
 **Status:** Open
 
 ### FR-CIV-PERF-016: Snapshot Ring Buffer Capacity
@@ -37162,7 +37162,7 @@ The following variables are defined in the pipeline context schema. All template
 
 ### 2.4 Template Layer Architecture
 
-Every SVG template follows a consistent layer structure using SVG `<g>` groups with explicit IDs. This structure enables:
+Every SVG template follows a consistent layer structure using SVG `\<g\>` groups with explicit IDs. This structure enables:
 - Predictable rendering order (painter's algorithm, bottom-to-top)
 - Layer-targeted modifications (the injector can toggle layers by boolean variable)
 - Consistent UV pivot point placement (always center of `base` layer bounding box)
@@ -37361,10 +37361,10 @@ Every SVG template follows a consistent layer structure using SVG `<g>` groups w
 Templates MUST pass the following validation checks before being accepted into the build:
 
 1. **Valid SVG:** Parses without error as SVG 1.1 (validated by `svg_inject.py` using `lxml`).
-2. **ViewBox present:** `viewBox` attribute MUST be present on the root `<svg>` element.
-3. **Layer IDs present:** All five layer `<g>` groups (`base`, `texture`, `nation_zone`, `icon_layer`, `population_marker`) MUST be present. Additional layers are permitted.
-4. **No embedded raster images:** `<image>` elements with base64 data URIs are forbidden. External image refs are forbidden. All imagery must be vector paths, patterns, or text.
-5. **No JavaScript:** `<script>` elements are forbidden.
+2. **ViewBox present:** `viewBox` attribute MUST be present on the root `\<svg\>` element.
+3. **Layer IDs present:** All five layer `\<g\>` groups (`base`, `texture`, `nation_zone`, `icon_layer`, `population_marker`) MUST be present. Additional layers are permitted.
+4. **No embedded raster images:** `\<image\>` elements with base64 data URIs are forbidden. External image refs are forbidden. All imagery must be vector paths, patterns, or text.
+5. **No JavaScript:** `\<script\>` elements are forbidden.
 6. **No external references:** `xlink:href` references to external files are forbidden; only internal `#id` references are permitted.
 7. **Variable coverage:** Every variable referenced with `{{var}}` or `{% if var %}` in the template MUST be present in the context schema (Section 2.2). Tera strict mode enforces this at render time.
 8. **Font references:** The only permitted `font-family` values are `"civlab-icons"`, `"Noto Sans"`, and `"Noto Sans Mono"`. No system font fallbacks.
@@ -37934,7 +37934,7 @@ async def main(input_dir: Path, output_dir: Path, max_concurrent: int = 4) -> No
 
 ### 5.4 Quality Gate
 
-The alpha coverage check (≥ 60% opaque pixels) is the primary quality gate. This detects:
+The alpha coverage check (&gt; 60% opaque pixels) is the primary quality gate. This detects:
 - Failed background removal (entire image transparent)
 - Partial removal failures (large background regions incorrectly retained or removed)
 - Corrupted inputs (empty PNGs, single-color images)
@@ -39244,7 +39244,7 @@ export class SpriteManager {
 
 > The rembg background removal step SHALL reject any output sprite with alpha channel coverage below 60% (fewer than 60% of pixels are opaque).
 
-- **Acceptance Criteria:** `rembg_batch.py` raises a fatal error and exits with code 1 for any sprite where `opaque_pixels / total_pixels < 0.60`. The build pipeline stops. No fallback to the un-removed sprite is permitted.
+- **Acceptance Criteria:** `rembg_batch.py` raises a fatal error and exits with code 1 for any sprite where `opaque_pixels / total_pixels \< 0.60`. The build pipeline stops. No fallback to the un-removed sprite is permitted.
 - **Test Reference:** `tests/unit/test_rembg_batch.py::test_alpha_coverage_gate`
 - **Priority:** P0 (blocking)
 
@@ -39324,9 +39324,9 @@ export class SpriteManager {
 
 **FR-CIV-ASSET-012 — Atlas Load Time**
 
-> All three atlas files (terrain, buildings, citizens) SHALL load and be available for texture lookup within 500 ms of `SpriteManager.init()` being called, on a connection with 100 Mbps bandwidth and ≤10 ms latency.
+> All three atlas files (terrain, buildings, citizens) SHALL load and be available for texture lookup within 500 ms of `SpriteManager.init()` being called, on a connection with 100 Mbps bandwidth and &lt;10 ms latency.
 
-- **Acceptance Criteria:** Playwright end-to-end test measures `performance.now()` from `SpriteManager.init()` call to the `init()` resolved promise. On a throttled network (100 Mbps, 10 ms RTT), this MUST be ≤500 ms.
+- **Acceptance Criteria:** Playwright end-to-end test measures `performance.now()` from `SpriteManager.init()` call to the `init()` resolved promise. On a throttled network (100 Mbps, 10 ms RTT), this MUST be &lt;500 ms.
 - **Test Reference:** `tests/e2e/test_atlas_load_time.spec.ts`
 - **Priority:** P1 (performance gate)
 
@@ -39366,7 +39366,7 @@ export class SpriteManager {
 
 > The nation recoloring shader SHALL replace all pixels whose RGB distance from `uBakedPrimary` is less than `TOLERANCE` (0.08) with `uNationPrimary`, and all pixels within tolerance of `uBakedSecondary` with `uNationSecondary`. Non-matching pixels SHALL be rendered unchanged.
 
-- **Acceptance Criteria:** A pixel-exact test renders a reference sprite through the shader with known input and output nation colors, then compares against a pre-computed reference image. SSIM deviation MUST be < 0.5% from reference.
+- **Acceptance Criteria:** A pixel-exact test renders a reference sprite through the shader with known input and output nation colors, then compares against a pre-computed reference image. SSIM deviation MUST be \< 0.5% from reference.
 - **Test Reference:** `tests/visual/test_nation_recolor_shader.spec.ts`
 - **Priority:** P1
 
@@ -39406,7 +39406,7 @@ export class SpriteManager {
 
 > All `.svg.j2` template files MUST pass SVG validity, layer structure, font reference, and variable coverage checks before being committed. The pre-commit hook SHALL block commits containing invalid templates.
 
-- **Acceptance Criteria:** The pre-commit hook `hooks/pre-commit-svg-validate.sh` runs `python3 scripts/validate_templates.py assets/templates/` and blocks the commit if exit code is non-zero. The validation script checks: SVG 1.1 validity, presence of all 5 layer groups, only permitted font families, no embedded raster images, no `<script>` elements.
+- **Acceptance Criteria:** The pre-commit hook `hooks/pre-commit-svg-validate.sh` runs `python3 scripts/validate_templates.py assets/templates/` and blocks the commit if exit code is non-zero. The validation script checks: SVG 1.1 validity, presence of all 5 layer groups, only permitted font families, no embedded raster images, no `\<script\>` elements.
 - **Test Reference:** `tests/unit/test_validate_templates.py::test_all_template_rules`
 - **Priority:** P0 (blocking)
 
@@ -39583,7 +39583,7 @@ Visual regression tests detect unintended visual changes to sprites between pipe
 - References are committed to git under `tests/visual/references/` (small set — 20 representative sprites).
 - When an intentional visual change is made (e.g., new texture detail), references MUST be regenerated and committed as part of the same PR.
 
-**SSIM Threshold:** Maximum allowed SSIM deviation is 1% (SSIM score ≥ 0.99). Deviations above 1% cause the test to fail and output a side-by-side diff image to `tests/visual/diffs/`.
+**SSIM Threshold:** Maximum allowed SSIM deviation is 1% (SSIM score &gt; 0.99). Deviations above 1% cause the test to fail and output a side-by-side diff image to `tests/visual/diffs/`.
 
 ```python
 # tests/visual/test_sprite_visual_regression.py
@@ -39691,7 +39691,7 @@ def test_batch_render_time(max_seconds: float = 30.0) -> None:
         )
         sys.exit(1)
 
-    print(f"PASS: Render time within budget ({elapsed:.1f}s ≤ {max_seconds}s)")
+    print(f"PASS: Render time within budget ({elapsed:.1f}s &lt; {max_seconds}s)")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -39811,8 +39811,8 @@ PYEOF
 | Unit tests (all) | CI job | YES — blocks PR merge |
 | Visual regression (SSIM) | CI job | YES — blocks PR merge |
 | Pipeline reproducibility | CI job (nightly or on main) | YES — blocks release |
-| Render time (≤30s) | CI job | YES — blocks PR merge |
-| Atlas load time (≤500ms) | CI job | YES — blocks PR merge |
+| Render time (&lt;30s) | CI job | YES — blocks PR merge |
+| Atlas load time (&lt;500ms) | CI job | YES — blocks PR merge |
 | Bundle SVG-free check | CI job | YES — blocks PR merge |
 | Manifest schema validation | Part of pipeline run | YES — blocks pipeline |
 | UV coordinate validity | Part of pipeline run | YES — blocks pipeline |
@@ -39877,7 +39877,7 @@ task test:all
 | **rembg U2Net** — model inference is deterministic given same input + same ONNX Runtime version | LOW | rembg version pinned. ONNX Runtime version pinned. Determinism verified in integration tests. |
 | **PNG encoder byte-order** — `png` crate encoding is deterministic across versions | LOW | `png` crate version pinned in `Cargo.lock`. |
 | **imagequant internal state** — quantization algorithm is deterministic given same inputs | LOW | `imagequant` version pinned. Forced palette entries are inserted in consistent order (primary first, secondary second). |
-| **Time-dependent SVG features** — SVG `<animate>` or `<set>` elements | LOW | Templates are validated against a feature allowlist. Animated SVG features are rejected by `validate_templates.py`. |
+| **Time-dependent SVG features** — SVG `\<animate\>` or `\<set\>` elements | LOW | Templates are validated against a feature allowlist. Animated SVG features are rejected by `validate_templates.py`. |
 | **`oxipng` compression** — PNG lossless optimization is deterministic for same input | LOW | `oxipng` version pinned. |
 
 ### 13.3 BLAKE3 Verification Protocol
@@ -39974,11 +39974,11 @@ def derive_sdxl_seed(asset_id: str, pipeline_hash: str) -> int:
     return int.from_bytes(digest, "big")
 ```
 
-**Seed Override:** Artists can pin a specific seed for an asset by adding `sdxl_seed: <integer>` to the asset's entry in `asset_parameters.yaml`. When a seed override is present, `derive_sdxl_seed()` is NOT called for that asset; the override seed is used directly.
+**Seed Override:** Artists can pin a specific seed for an asset by adding `sdxl_seed: \<integer\>` to the asset's entry in `asset_parameters.yaml`. When a seed override is present, `derive_sdxl_seed()` is NOT called for that asset; the override seed is used directly.
 
 **Seed Storage:** Seeds are stored in `asset_manifest.json` alongside the asset entry. The seed for non-SDXL assets is `null`. Seeds are used by the CI SDXL reproducibility test to re-run SDXL inference and verify image identity.
 
-**Seed Exhaustion Policy:** The derived seed space is 32-bit (0 to 2^32 - 1). With 102 baseline sprites, the probability of seed collision is negligible (~(102²) / 2^32 ≈ 0.00024%). No deduplication of seeds is required.
+**Seed Exhaustion Policy:** The derived seed space is 32-bit (0 to 2^32 - 1). With 102 baseline sprites, the probability of seed collision is negligible (~(102²) / 2^32 &asymp; 0.00024%). No deduplication of seeds is required.
 
 ---
 
@@ -39998,9 +39998,9 @@ This section maps every Functional Requirement in this spec to its parent requir
 | FR-CIV-ASSET-008 | Manifest Completeness | FR-CIV-ASSET-MANI-001 | Stage 6 | `test_gen_manifest.py` | P0 |
 | FR-CIV-ASSET-009 | Manifest Schema Conformance | FR-CIV-ASSET-MANI-002 | Stage 6 | `test_validate_manifest.py` | P0 |
 | FR-CIV-ASSET-010 | Build-Time Reproducibility | FR-CIV-CORE-DET-002 | All stages | `test_pipeline_reproducibility.sh` | P0 |
-| FR-CIV-ASSET-011 | Render Batch Performance (≤30s) | FR-CIV-PERF-BUILD-001 | Stage 2 | `test_render_time.py` | P1 |
-| FR-CIV-ASSET-012 | Atlas Load Time (≤500ms) | FR-CIV-PERF-RT-001 | Runtime | `test_atlas_load_time.spec.ts` | P1 |
-| FR-CIV-ASSET-013 | VRAM Budget (≤20MB) | FR-CIV-PERF-RT-002 | Runtime | `test_atlas_pack.rs` | P1 |
+| FR-CIV-ASSET-011 | Render Batch Performance (&lt;30s) | FR-CIV-PERF-BUILD-001 | Stage 2 | `test_render_time.py` | P1 |
+| FR-CIV-ASSET-012 | Atlas Load Time (&lt;500ms) | FR-CIV-PERF-RT-001 | Runtime | `test_atlas_load_time.spec.ts` | P1 |
+| FR-CIV-ASSET-013 | VRAM Budget (&lt;20MB) | FR-CIV-PERF-RT-002 | Runtime | `test_atlas_pack.rs` | P1 |
 | FR-CIV-ASSET-014 | No Runtime SVG Parsing | FR-CIV-ARCH-NOSVG-001 | Runtime / CI | `check_bundle_no_svg_runtime.sh` | P0 |
 | FR-CIV-ASSET-015 | Atlas Cache-Control Headers | FR-CIV-PERF-WEB-001 | Deployment | `test_cache_headers.spec.ts` | P1 |
 | FR-CIV-ASSET-016 | Nation Recoloring Shader Correctness | FR-CIV-RTS-NATION-002 | Runtime | `test_nation_recolor_shader.spec.ts` | P1 |
@@ -40365,7 +40365,7 @@ interface CameraConfig {
 **Orthographic fallback conditions:**
 - GPU capability flag indicates WebGL2 not available
 - User explicitly toggles in settings
-- FPS < 20 for > 2 seconds (auto-switch with user notification)
+- FPS \< 20 for > 2 seconds (auto-switch with user notification)
 
 ### 2.4 LOD Architecture
 
@@ -40390,7 +40390,7 @@ function createBuildingLOD(models: BuildingModelSet): THREE.LOD {
 }
 ```
 
-At Zoom 1 (strategic view), nearly all buildings render at LOD3 (billboard). At Zoom 3 (citizen view), buildings in the 3×3 visible area render at LOD0. This is the primary mechanism for achieving the < 200 draw call budget.
+At Zoom 1 (strategic view), nearly all buildings render at LOD3 (billboard). At Zoom 3 (citizen view), buildings in the 3×3 visible area render at LOD0. This is the primary mechanism for achieving the \< 200 draw call budget.
 
 LOD transitions use hysteresis (5-unit dead zone) to prevent visible popping as the camera hovers at a boundary distance.
 
@@ -40802,11 +40802,11 @@ The quality gate runs automatically for every generated asset. It is implemented
 |-------|----------|------|----------------|
 | Manifold mesh | CRITICAL | ManifoldPlus | 100% watertight |
 | UV overlap | HIGH | xatlas | < 2% island overlap |
-| Polygon count | HIGH | gltf-transform stats | Within LOD budget ± 10% |
+| Polygon count | HIGH | gltf-transform stats | Within LOD budget &plusmn; 10% |
 | Material slot naming | HIGH | gltf-transform custom | `nation_color_material` slot present |
-| glTF Validator | HIGH | Khronos glTF Validator | 0 errors, ≤ 5 warnings |
-| Texture resolution | MEDIUM | PIL (Pillow) | Power-of-2; ≤ 2048×2048 |
-| File size | LOW | os.path.getsize | ≤ 2 MB per LOD level |
+| glTF Validator | HIGH | Khronos glTF Validator | 0 errors, &lt; 5 warnings |
+| Texture resolution | MEDIUM | PIL (Pillow) | Power-of-2; &lt; 2048×2048 |
+| File size | LOW | os.path.getsize | &lt; 2 MB per LOD level |
 | Animation clip names | LOW | gltf-transform stats | Names match animation catalog (§3.5) |
 
 Assets failing CRITICAL or HIGH checks are logged to `generation_failures.jsonl` and excluded from the manifest. The orchestrator retries failed assets once with a varied seed before escalating to manual review.
@@ -40894,9 +40894,9 @@ The IR is validated at generation time and at CI. The following rules are enforc
 | IR-3D-001 | `asset_id` must end in `_3d` for render_mode=3d | ERROR |
 | IR-3D-002 | `era` must be one of the canonical era enum values | ERROR |
 | IR-3D-003 | `building_class` must be one of the 12 canonical building types | ERROR |
-| IR-3D-004 | `lod_budget.lod0` must be ≤ 5000 | ERROR |
-| IR-3D-005 | `lod_budget.lod1` must be ≤ 1000 | ERROR |
-| IR-3D-006 | `lod_budget.lod2` must be ≤ 200 | ERROR |
+| IR-3D-004 | `lod_budget.lod0` must be &lt; 5000 | ERROR |
+| IR-3D-005 | `lod_budget.lod1` must be &lt; 1000 | ERROR |
+| IR-3D-006 | `lod_budget.lod2` must be &lt; 200 | ERROR |
 | IR-3D-007 | `generation_seed` must be a positive integer | ERROR |
 | IR-3D-008 | `reference_2d` must resolve in 2D manifest | WARNING |
 | IR-3D-009 | `material_overrides` must include `nation_color_material` key | ERROR |
@@ -41361,7 +41361,7 @@ void main() {
 }
 ```
 
-The `flagTexture` is derived from `nation.flag_texture_url`. The URL is an SVG, converted to a 128×64 `THREE.CanvasTexture` at runtime using a `<canvas>` element. This avoids pre-baking nation flag images while still achieving correct rendering.
+The `flagTexture` is derived from `nation.flag_texture_url`. The URL is an SVG, converted to a 128×64 `THREE.CanvasTexture` at runtime using a `\<canvas\>` element. This avoids pre-baking nation flag images while still achieving correct rendering.
 
 **Flag wind speed driven by climate events:**
 
@@ -41479,7 +41479,7 @@ This approach renders borders as a single full-screen quad pass, with zero addit
 
 **Phase 2 CI gates:**
 - All 12 GLB files pass glTF Validator (0 errors)
-- All GLB files within polygon budget (LOD0 ≤ 5000, LOD1 ≤ 1000)
+- All GLB files within polygon budget (LOD0 &lt; 5000, LOD1 &lt; 1000)
 - Nation color injection verified (automated pixel-color test in headless renderer)
 - 30 FPS minimum confirmed via automated benchmark (headless Chromium with performance.now timing)
 
@@ -41532,8 +41532,8 @@ This approach renders borders as a single full-screen quad pass, with zero addit
 **Phase 4 CI gates:**
 - All FRs from §12 pass automated checks
 - FPS benchmarks confirmed on all hardware tiers (manual QA for GTX 1060; automated for M2)
-- Memory budget validation: VRAM ≤ 512 MB, RAM ≤ 256 MB for Zoom 2 view
-- Scene init time ≤ 2s for Zoom 2 view (§14.1)
+- Memory budget validation: VRAM &lt; 512 MB, RAM &lt; 256 MB for Zoom 2 view
+- Scene init time &lt; 2s for Zoom 2 view (§14.1)
 
 ### 9.6 Phase 5 — Native Client (Optional)
 
@@ -41953,7 +41953,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 ### FR-CIV-3D-002 — LOD Budget Enforcement
 
-**SHALL:** Each building asset SHALL have four LOD levels. Triangle counts SHALL not exceed: LOD0 ≤ 5,000; LOD1 ≤ 1,000; LOD2 ≤ 200; LOD3 = 2 (billboard quad).
+**SHALL:** Each building asset SHALL have four LOD levels. Triangle counts SHALL not exceed: LOD0 &lt; 5,000; LOD1 &lt; 1,000; LOD2 &lt; 200; LOD3 = 2 (billboard quad).
 
 **Verification:** CI gate polygon count check. Automated; blocks merge on failure.
 
@@ -41963,7 +41963,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The 3D web client SHALL maintain a minimum of 45 frames per second at 1080p resolution when rendering a Zoom 2 view (12×12 hex cell grid) on M2 MacBook hardware.
 
-**Verification:** Automated benchmark via headless Chromium with performance.now frame timing. Run on CI hardware with Apple Silicon runner. Pass threshold: 95th percentile frame time ≤ 22.2ms over a 300-frame sample.
+**Verification:** Automated benchmark via headless Chromium with performance.now frame timing. Run on CI hardware with Apple Silicon runner. Pass threshold: 95th percentile frame time &lt; 22.2ms over a 300-frame sample.
 
 ---
 
@@ -41979,7 +41979,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** Building GLTF models SHALL support runtime nation color injection without requiring texture rebaking. The primary nation color SHALL be applied to the `nation_color_material` slot within one animation frame of the scene receiving a `world.snapshot.v1` event with updated nation data.
 
-**Verification:** Automated pixel-color test: render scene with known nation color; sample pixel at known building location; assert color matches nation primary within ±5 RGB units. Run in CI with headless Chromium.
+**Verification:** Automated pixel-color test: render scene with known nation color; sample pixel at known building location; assert color matches nation primary within &plusmn;5 RGB units. Run in CI with headless Chromium.
 
 ---
 
@@ -42003,7 +42003,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The Three.js renderer SHALL issue fewer than 200 WebGL draw calls per frame when rendering a Zoom 2 view with all building types visible and at least one active weather particle system.
 
-**Verification:** Automated benchmark using Three.js renderer info (`renderer.info.render.calls`). Assert < 200 in integration test with a synthetic scene containing one instance of each building type and active rain particles.
+**Verification:** Automated benchmark using Three.js renderer info (`renderer.info.render.calls`). Assert \< 200 in integration test with a synthetic scene containing one instance of each building type and active rain particles.
 
 ---
 
@@ -42011,7 +42011,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The 3D client SHALL complete initial scene construction (terrain rendered, buildings spawned, camera positioned) within 2 seconds of receiving the first `world.snapshot.v1` message, measured on M2 MacBook hardware.
 
-**Verification:** Automated E2E test: connect 3D client to headless simulation; measure time from first `world.snapshot.v1` to `renderer.domElement.renderTime.firstFrame`. Assert ≤ 2000ms.
+**Verification:** Automated E2E test: connect 3D client to headless simulation; measure time from first `world.snapshot.v1` to `renderer.domElement.renderTime.firstFrame`. Assert &lt; 2000ms.
 
 ---
 
@@ -42278,7 +42278,7 @@ WebGL: WebGL2 (ANGLE Metal backend on macOS)
 4. Record `performance.now()` timestamps at `requestAnimationFrame` entry.
 5. Discard first 60 frames (warm-up).
 6. Record 300 frames; compute: mean frame time, 95th percentile, 99th percentile, min FPS, max FPS.
-7. Pass criteria: 95th percentile frame time ≤ 22.2ms (≥ 45 FPS).
+7. Pass criteria: 95th percentile frame time &lt; 22.2ms (&gt; 45 FPS).
 
 **Automated benchmark runner:** `tools/benchmarks/run_3d_benchmark.ts` (Playwright-based). Outputs JSON report to `logs/benchmark_results/`.
 
@@ -42831,7 +42831,7 @@ Violations are not silently ignored. A permission violation causes:
 3. After 5 permission violations in a single tick, the mod is flagged `ModStatus::Suspended` and receives no further callbacks for that tick.
 4. The suspension is lifted at the start of the next tick.
 
-Repeated suspension across 10 consecutive ticks promotes the mod to `ModStatus::Faulted`, which requires explicit operator intervention to clear (`sim mod reset-fault <mod_id>`).
+Repeated suspension across 10 consecutive ticks promotes the mod to `ModStatus::Faulted`, which requires explicit operator intervention to clear (`sim mod reset-fault \<mod_id\>`).
 
 ---
 
@@ -43655,7 +43655,7 @@ pub const SCALE: i64 = 1_000_000;
 /// Uses the host's fixed_mul() for guaranteed bit-exact results.
 #[inline]
 pub fn fp_mul(a: i64, b: i64) -> i64 {
-    unsafe { host_fns::fixed_mul(a, b, 20) }  // 2^20 ≈ 1_000_000
+    unsafe { host_fns::fixed_mul(a, b, 20) }  // 2^20 &asymp; 1_000_000
 }
 
 /// Divide two fixed-point values: (a * SCALE) / b.
@@ -43953,7 +43953,7 @@ Unloading is deferred to the next tick boundary (same as swap). At unload:
 |---|---|---|
 | `Active` | Receives tick callbacks | None |
 | `Degraded` | Receives tick callbacks (with logged warnings) | None (self-recovers if timeouts stop) |
-| `Faulted` | No callbacks | `sim mod reset-fault <mod_id>` |
+| `Faulted` | No callbacks | `sim mod reset-fault \<mod_id\>` |
 | `Unloading` | No callbacks | None |
 
 ---
@@ -45509,7 +45509,7 @@ The following table defines every simulation event type that triggers audio, wha
 | `institution.formed.v1` | Establishment fanfare (2s) | Major key, celebratory | 15s |
 | `insurgency.started.v1` | Tension sting (1.5s) | Minor key, rising dissonance | 20s |
 | `election.held.v1` | Crowd murmur (2s) → result reveal (1.5s) | Murmur plays on event; result reveal plays on `election.result.v1` (victory: cheer; loss: groan) | 30s |
-| `tick.completed.v1` (hidden) | Ambient heartbeat (0.5s, very low volume) | Only if `stability < 30%`; pulse rate increases linearly as stability drops toward 0% | Per-tick |
+| `tick.completed.v1` (hidden) | Ambient heartbeat (0.5s, very low volume) | Only if `stability \< 30%`; pulse rate increases linearly as stability drops toward 0% | Per-tick |
 | `migration.wave.started.v1` | Distant footsteps + crowd murmur | Volume proportional to migration count | 20s |
 | `famine.triggered.v1` | Mournful low horn (2s) | Sustained; overlaps with drought SFX if co-occurring | 60s |
 | `trade.route.established.v1` | Market bell (1s) + light fanfare | Short and positive | 10s |
@@ -46893,7 +46893,7 @@ Every audio cue that communicates important game information MUST have a corresp
 | Disaster SFX | Disaster zone hex highlight + alert in event log |
 | Tech discovery chime | Tech notification badge + animated research completion indicator |
 | Bankruptcy chord | Economy alert badge + treasury status indicator (red) |
-| Heartbeat (stability < 30%) | Screen edge pulse effect (red, subtle, matches heartbeat rhythm) |
+| Heartbeat (stability \< 30%) | Screen edge pulse effect (red, subtle, matches heartbeat rhythm) |
 | Insurgency sting | Insurgency alert badge + affected district hex highlight |
 | Crisis music state | Crisis indicator overlay (subtle red vignette at screen edges) |
 
@@ -46990,13 +46990,13 @@ This table is the canonical source for implementation. Both the Bevy and Web cli
 | `war.declared.v1` | `diplomacy_war_horn_aggressor` / `diplomacy_war_horn_target` | Player role | No | `1.0 × sfx_vol` | 30 | WAR_WINNING / WAR_LOSING |
 | `battle.resolved.v1` | `battle_resolved_{outcome}` | outcome field | Yes | `0.85 × sfx_vol` | 5 | None |
 | `citizen.born.v1` | `crowd_cheer_birth` | Batch >= 100 | No | `0.3 + batch/1000 × sfx_vol` | 10 | None |
-| `disaster.triggered.v1` | `env_disaster_{type}` | disaster_type | Yes | `(0.5 + severity×0.5) × sfx_vol` | 60 | CRISIS if stability < 20% |
+| `disaster.triggered.v1` | `env_disaster_{type}` | disaster_type | Yes | `(0.5 + severity×0.5) × sfx_vol` | 60 | CRISIS if stability \< 20% |
 | `tech.unlocked.v1` | `tech_discovery_chime` | Era variant | No | `sfx_vol` | 10 | None |
 | `economy.bankruptcy.declared.v1` | `economy_bankruptcy` | None | No | `sfx_vol` | 30 | None |
 | `institution.formed.v1` | `institution_established_fanfare` | None | No | `sfx_vol` | 15 | None |
 | `insurgency.started.v1` | `insurgency_tension_sting` | None | Yes | `sfx_vol` | 20 | None |
 | `election.held.v1` | `crowd_murmur_election` | Phase: murmur/result | No | `0.7 × sfx_vol` | 30 | None |
-| `tick.completed.v1` | `ui_heartbeat` | stability < 30% only | No | `(30-stab)/30 × 0.4 × sfx_vol` | pulse_ms | None |
+| `tick.completed.v1` | `ui_heartbeat` | stability \< 30% only | No | `(30-stab)/30 × 0.4 × sfx_vol` | pulse_ms | None |
 | `migration.wave.started.v1` | `migration_crowd_footsteps` | count proportional | Yes | `count/1000 × sfx_vol` | 20 | None |
 | `famine.triggered.v1` | `famine_horn` | None | Yes | `sfx_vol` | 60 | None |
 | `trade.route.established.v1` | `economy_trade_route_bell` | None | No | `sfx_vol` | 10 | None |
@@ -47173,7 +47173,7 @@ assets/audio/
 - [ ] Music state machine transitions trigger correct layer volume changes
 - [ ] Stability-driven tension layer updates on every tick that changes stability
 - [ ] SFX cooldown tracker prevents spam for all cooldown-specified events
-- [ ] Heartbeat plays only when stability < 30%; pulse rate matches formula
+- [ ] Heartbeat plays only when stability \< 30%; pulse rate matches formula
 - [ ] Ambient system updates on camera position change; crossfades at correct durations
 - [ ] Web client `AudioManager` is functionally equivalent to Bevy implementation
 - [ ] Audio settings persist to localStorage (web) and config file (desktop)
@@ -47486,7 +47486,7 @@ The engine generates the session ID at `session.create` RPC time. The ID is incl
 
 ### 2.5 Session Registry
 
-The engine maintains an in-memory `SessionRegistry` mapping `SessionId -> Arc<Mutex<SessionState>>`. On engine startup, incomplete sessions (state != ENDED) are reloaded from the `sessions` database table and offered to clients for resumption.
+The engine maintains an in-memory `SessionRegistry` mapping `SessionId -> Arc \< Mutex\<SessionState\>>`. On engine startup, incomplete sessions (state != ENDED) are reloaded from the `sessions` database table and offered to clients for resumption.
 
 ---
 
@@ -47888,7 +47888,7 @@ Observers may connect to a **completed session** and scrub the recorded tick tim
 }
 ```
 
-Replay is served from the `.civreplay` file (CIV-0001 format). The engine reconstructs state at any tick by replaying from the nearest save checkpoint. Seek operations with no checkpoint within 500 ticks replay from the beginning (this is a cold seek; warm seeks from a nearby checkpoint complete in < 100ms).
+Replay is served from the `.civreplay` file (CIV-0001 format). The engine reconstructs state at any tick by replaying from the nearest save checkpoint. Seek operations with no checkpoint within 500 ticks replay from the beginning (this is a cold seek; warm seeks from a nearby checkpoint complete in \< 100ms).
 
 ---
 
@@ -49505,7 +49505,7 @@ CivLab supports two physical save representations:
 
 **Uncompressed folder** (debug/inspection): `.civsave/` directory — raw components side-by-side. Used for development, migration testing, and human inspection. Not used in production by default.
 
-QuickSaves bypass both: they hold `SimStateSnapshot` directly in a heap-allocated `Vec<u8>` (MessagePack-serialized, not compressed) inside the `QuickSaveRing`.
+QuickSaves bypass both: they hold `SimStateSnapshot` directly in a heap-allocated `Vec\<u8\>` (MessagePack-serialized, not compressed) inside the `QuickSaveRing`.
 
 ### 2.2 Archive Layout
 
@@ -49527,7 +49527,7 @@ ASCII diagram of the binary layout inside the archive:
 │  ┌──────────┬──────────┬──────────────┬────────────────┐    │
 │  │  magic   │  fmt_ver │  eng_ver     │  created_at    │    │
 │  │ "CIV1"   │  u16 LE  │  semver str  │  i64 unix ms   │    │
-│  │  4 bytes │  2 bytes │  ≤ 32 bytes  │  8 bytes       │    │
+│  │  4 bytes │  2 bytes │  &lt; 32 bytes  │  8 bytes       │    │
 │  └──────────┴──────────┴──────────────┴────────────────┘    │
 │  ┌────────────────┬──────────────────┬────────────────────┐  │
 │  │  seed_hi       │  seed_lo         │  tick              │  │
@@ -49570,7 +49570,7 @@ The first 4 bytes of `header.bin` are always the ASCII literal `CIV1` (`0x43 0x4
 | 0 | 4 | `[u8; 4]` | `magic` — must be `[0x43, 0x49, 0x56, 0x31]` |
 | 4 | 2 | `u16` | `save_format_version` — bumped on breaking schema changes |
 | 6 | 1 | `u8` | `engine_version_len` — byte length of engine version string |
-| 7 | ≤32 | `[u8]` | `engine_version` — UTF-8 semver, zero-padded to declared len |
+| 7 | &lt;32 | `[u8]` | `engine_version` — UTF-8 semver, zero-padded to declared len |
 | 39 | 8 | `i64` | `created_at_unix_ms` — UTC milliseconds since epoch |
 | 47 | 8 | `u64` | `seed_hi` — upper 64 bits of 128-bit scenario seed |
 | 55 | 8 | `u64` | `seed_lo` — lower 64 bits of 128-bit scenario seed |
@@ -50534,7 +50534,7 @@ When loading a save that references a mod that is not currently loaded:
 
 1. **Warn** via `tracing::warn!` with `mod_id` and `schema_version`.
 2. **Skip** the blob — do not fail the load.
-3. **Record** the skipped mod in `LoadedSave::skipped_mods: Vec<String>`.
+3. **Record** the skipped mod in `LoadedSave::skipped_mods: Vec\<String\>`.
 4. **Notify** the caller via `LoadedSave` so it can surface the warning to the player.
 
 This is the only non-fatal skip in the load sequence. All other errors (hash mismatch, corrupt state.bin, unknown format version) are hard failures.
@@ -50938,7 +50938,7 @@ After completing the load sequence, the simulation is in a state that is guarant
 
 2. **BLAKE3 chain**: The `chain_tail` from `TickChainSnapshot` is the exact 32-byte accumulation through tick N. Tick N+1's hash computation uses this tail as its input, maintaining an unbroken chain.
 
-3. **ECS state**: All bevy_ecs components are restored from their serialized representations. Fixed-point numerics (i64 newtype wrappers for KiloJoules, MilliCredits; FixedI32<U16> for rates) are restored without floating-point rounding because they are stored as their raw integer values.
+3. **ECS state**: All bevy_ecs components are restored from their serialized representations. Fixed-point numerics (i64 newtype wrappers for KiloJoules, MilliCredits; FixedI32\<U16\> for rates) are restored without floating-point rounding because they are stored as their raw integer values.
 
 4. **AI state**: MCTS trees, personality parameters, memory, and goals are fully restored. The AI's next decision will be computed identically because all inputs to that decision — random seed position, personality, memory, threat model, scenario state — are identical.
 
@@ -52367,13 +52367,13 @@ Acceptance criteria are grouped by functional requirement. All criteria must pas
 
 ### 17.7 Performance (FR-SAVE-016, FR-SAVE-017, FR-SAVE-018, FR-SAVE-019)
 
-**AC-1000-16**: The `criterion` benchmark `quicksave_1000_citizens` SHALL measure a mean latency of ≤ 50ms on the CI hardware tier (4-core x86-64, 8GB RAM). CI SHALL fail the PR if the mean exceeds 60ms (20% tolerance).
+**AC-1000-16**: The `criterion` benchmark `quicksave_1000_citizens` SHALL measure a mean latency of &lt; 50ms on the CI hardware tier (4-core x86-64, 8GB RAM). CI SHALL fail the PR if the mean exceeds 60ms (20% tolerance).
 
-**AC-1000-17**: The `criterion` benchmark `slotsave_1000_citizens` SHALL measure a mean latency of ≤ 500ms. CI SHALL fail the PR if the mean exceeds 600ms.
+**AC-1000-17**: The `criterion` benchmark `slotsave_1000_citizens` SHALL measure a mean latency of &lt; 500ms. CI SHALL fail the PR if the mean exceeds 600ms.
 
-**AC-1000-18**: The `criterion` benchmark `load_1000_citizens` SHALL measure a mean latency of ≤ 1,000ms. CI SHALL fail the PR if the mean exceeds 1,200ms.
+**AC-1000-18**: The `criterion` benchmark `load_1000_citizens` SHALL measure a mean latency of &lt; 1,000ms. CI SHALL fail the PR if the mean exceeds 1,200ms.
 
-**AC-1000-19**: `verify_save` SHALL complete in ≤ 200ms for a 10,000-citizen save (largest supported scale).
+**AC-1000-19**: `verify_save` SHALL complete in &lt; 200ms for a 10,000-citizen save (largest supported scale).
 
 ### 17.8 JSON-RPC Contract (FR-SAVE-021)
 

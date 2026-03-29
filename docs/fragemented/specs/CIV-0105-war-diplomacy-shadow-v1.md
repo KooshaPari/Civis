@@ -36,7 +36,7 @@ This module operates in **Phase 2 (Policy Phase)** and **Phase 3 (Deterministic 
 
 ### 2.1 States
 
-Each ordered pair `(actor_a, actor_b)` where `actor_a < actor_b` (stable sort) holds exactly one `DiplomaticState` at any tick:
+Each ordered pair `(actor_a, actor_b)` where `actor_a \< actor_b` (stable sort) holds exactly one `DiplomaticState` at any tick:
 
 | State | Code | Description |
 |---|---|---|
@@ -223,7 +223,7 @@ BattleOutcome = f(
 SSI = (stockpile_weeks / target_weeks) * route_throughput_ratio * (1 - disruption_probability) * (1 - corruption_leakage_rate)
 ```
 
-SSI dominates in prolonged conflict. When `SSI < 0.5`, attrition doubles.
+SSI dominates in prolonged conflict. When `SSI \< 0.5`, attrition doubles.
 
 **Attrition Rate (per tick, fixed-point):**
 ```
@@ -273,11 +273,11 @@ pub fn compute_siege_damage(
 
 A war terminates (transitions to `Deescalating`) when any of:
 
-1. **Manpower exhaustion**: one actor's `manpower_pool < EXHAUSTION_FLOOR`
-2. **Legitimacy collapse**: one actor's `legitimacy < COLLAPSE_FLOOR` for `COLLAPSE_TICKS` consecutive ticks
+1. **Manpower exhaustion**: one actor's `manpower_pool \< EXHAUSTION_FLOOR`
+2. **Legitimacy collapse**: one actor's `legitimacy \< COLLAPSE_FLOOR` for `COLLAPSE_TICKS` consecutive ticks
 3. **Settlement accepted**: influence capital transfer clears bargaining range
 4. **Coalition withdrawal**: sanctioning coalition dissolves (`C0 > COALITION_COLLAPSE_THRESHOLD` for attacker's coalition)
-5. **SSI collapse**: attacker's `SSI < SSI_COLLAPSE_FLOOR` for `SSI_COLLAPSE_TICKS` ticks
+5. **SSI collapse**: attacker's `SSI \< SSI_COLLAPSE_FLOOR` for `SSI_COLLAPSE_TICKS` ticks
 
 All termination checks are deterministic and happen in Phase 3.
 
@@ -486,10 +486,10 @@ Per-member stability ratio:
 
 **Coalition Stability Number C₀:**
 ```
-C0(t) = (1 / |C|) * Σ_{i ∈ C} κ(i, t)
+C0(t) = (1 / |C|) * Σ_{i &isin; C} κ(i, t)
 ```
 
-If `C0 < 1000` (i.e., C₀ < 1.0): coalition holds.
+If `C0 \< 1000` (i.e., C₀ \< 1.0): coalition holds.
 If `C0 > 1000` for sustained ticks: cascade exit begins.
 
 ### 6.2 Fatigue Dynamics
@@ -562,7 +562,7 @@ Where the coercion injustice function `Φ`:
 Φ(E, Sel) = E * (1000 + Sel * κ_sel) / 1000
 ```
 
-With `∂Φ/∂E > 0` and `∂Φ/∂Sel > 0` (more enforcement hurts legitimacy; selective enforcement hurts disproportionately).
+With `&part;Φ/&part;E > 0` and `&part;Φ/&part;Sel > 0` (more enforcement hurts legitimacy; selective enforcement hurts disproportionately).
 
 Parameters: `b1 = 15, b2 = 25, b3 = 10, b4 = 20, κ_sel = 500`
 
@@ -580,12 +580,12 @@ Enforcement that exceeds `E_max` triggers an `enforcement.overreach.v1` event an
 Enforcement overreach is detected when `E(t) > E*(t)`, the backfire threshold:
 
 ```
-E*(t) = calibrated threshold where ∂Λ(t+k)/∂E(t) > 0 for k ≥ 1
+E*(t) = calibrated threshold where &part;Λ(t+k)/&part;E(t) > 0 for k &gt; 1
 ```
 
 The backfire condition holds when:
 ```
-b4 * ∂Φ/∂E * (marginal legitimacy loss) > β * ψ * G * (1-Sel) * Λ   (suppression gain)
+b4 * &part;Φ/&part;E * (marginal legitimacy loss) > β * ψ * G * (1-Sel) * Λ   (suppression gain)
 ```
 
 Simplified detection heuristic (computed each tick):
@@ -607,7 +607,7 @@ When `backfire_risk_milli > 700`:
 The overreach spiral is a named attractor: `E ↑ → L ↓ → R ↑ → E ↑`.
 
 Spiral entry condition: `backfire_risk_milli > 700` for `SPIRAL_ENTRY_TICKS` (default 5) consecutive ticks.
-Spiral exit condition: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel < SEL_FLOOR` for 3 ticks.
+Spiral exit condition: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel \< SEL_FLOOR` for 3 ticks.
 
 Spiral state is tracked in `ConflictState.enforcement_spiral_ticks: u32`.
 
@@ -1220,7 +1220,7 @@ CREATE INDEX idx_coalition_members_active    ON coalition_members (run_id, membe
 
 ### 12.1 Actor-Pair Evaluation Ordering
 
-All actor-pair transitions are evaluated in sorted order by `ActorPairKey` (which enforces `actor_a < actor_b`). The full evaluation order for any tick is:
+All actor-pair transitions are evaluated in sorted order by `ActorPairKey` (which enforces `actor_a \< actor_b`). The full evaluation order for any tick is:
 
 ```rust
 // In Phase 3 (Deterministic Transition):
@@ -1231,7 +1231,7 @@ for pair in &pairs {
 }
 ```
 
-**Invariant**: No `HashMap` in critical paths. All relation maps are `BTreeMap<ActorPairKey, DiplomaticRelation>`.
+**Invariant**: No `HashMap` in critical paths. All relation maps are `BTreeMap \< ActorPairKey, DiplomaticRelation>`.
 
 ### 12.2 Shadow Flow Rounding
 
@@ -1280,22 +1280,22 @@ Enforced by:
 
 ### 13.2 Sanction Pressure Bounded
 
-**Invariant**: `pressure_milli ∈ [0, 1000]` at all times.
+**Invariant**: `pressure_milli &isin; [0, 1000]` at all times.
 
 Enforced by:
 1. Fixed-point sigmoid `σ` saturates at 1000
 2. All pressure accumulators clipped to `[0, 1000]`
 3. Property test: `test_pressure_bounded`
 
-### 13.3 Coalition Stability in `[0, ∞)`
+### 13.3 Coalition Stability in `[0, &infin;)`
 
-**Invariant**: Per-member `κ(i,t) >= 0` (since `Ψ,Ω ≥ 0`).
-**Invariant**: `C0(t) ≥ 0`.
+**Invariant**: Per-member `κ(i,t) >= 0` (since `Ψ,Ω &gt; 0`).
+**Invariant**: `C0(t) &gt; 0`.
 
 C₀ is not bounded above (can exceed 1000 to signal coalition collapse), but individual inputs are bounded:
-- `Ψ(i,t) ∈ [0, 4000]` (sum of four 0..1000 terms)
-- `Ω(i,t) ∈ [0, 3000]` (sum of three 0..1000 terms)
-- `κ(i,t) ∈ [0, 4000 / max(Ω,1)]` (bounded by input ranges)
+- `Ψ(i,t) &isin; [0, 4000]` (sum of four 0..1000 terms)
+- `Ω(i,t) &isin; [0, 3000]` (sum of three 0..1000 terms)
+- `κ(i,t) &isin; [0, 4000 / max(Ω,1)]` (bounded by input ranges)
 
 Property test: `test_coalition_stability_bounded`
 
@@ -1326,7 +1326,7 @@ Shadow trade addition is non-negative (flows are non-negative) and formal trade 
 
 **Cascade limit**: Maximum 5 exposures per tick across all shadow nodes. Excess exposures are deferred.
 
-**Recovery**: Shadow nodes recover at `recovery_rate_milli` per tick (default 20) when `exposure_risk < 300`.
+**Recovery**: Shadow nodes recover at `recovery_rate_milli` per tick (default 20) when `exposure_risk \< 300`.
 
 ### 14.2 Enforcement Overreach Spiral
 
@@ -1334,7 +1334,7 @@ Shadow trade addition is non-negative (flows are non-negative) and formal trade 
 
 **Spiral behavior**: Each tick in spiral, `Sel(t)` increases by `SEL_DRIFT_RATE` (30 milli-units), `G(t)` decreases by `INTEGRITY_DRAIN_RATE` (20 milli-units), and `L(t)` decreases by `LEGITIMACY_DRAIN_RATE` (15 milli-units). This compounds the backfire condition.
 
-**Spiral exit**: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel < 300` for 3 consecutive ticks.
+**Spiral exit**: `ServiceDelivery > RECOVERY_SERVICE_FLOOR` AND `Sel \< 300` for 3 consecutive ticks.
 
 **Unrecoverable state**: If `L(t) < COLLAPSE_FLOOR` (100 milli-units) during spiral, `DiplomaticState::ActiveConflict` or `DiplomaticState::Deescalating` transitions may be forced by internal legitimacy collapse.
 
@@ -2046,7 +2046,7 @@ Intelligence value is modeled as a stock `intel_value_milli` that decays multipl
 intel_value_milli(t+1) = intel_value_milli(t) * (1000 - decay_rate) / 1000
 ```
 
-When `intel_value_milli < INTEL_STALE_THRESHOLD` (default 100), the intelligence record is marked stale and its modifiers cease.
+When `intel_value_milli \< INTEL_STALE_THRESHOLD` (default 100), the intelligence record is marked stale and its modifiers cease.
 
 ### 19.4 Covert Operations
 
@@ -2318,7 +2318,7 @@ pub fn compute_occupation_net(
 }
 ```
 
-**Occupation conservation invariant**: `net_extraction >= 0` at all times (enforced by `max(0, ...)` guard). `legitimacy_drain_milli ∈ [20, 80]` (bounded by construction). Property test: `test_occupation_net_non_negative`.
+**Occupation conservation invariant**: `net_extraction >= 0` at all times (enforced by `max(0, ...)` guard). `legitimacy_drain_milli &isin; [20, 80]` (bounded by construction). Property test: `test_occupation_net_non_negative`.
 
 ---
 
@@ -2434,7 +2434,7 @@ pub fn check_term_compliance(
 }
 ```
 
-**Breach detection**: If any term's `compliance_score_milli < BREACH_SCORE_THRESHOLD` (default 300) for `BREACH_GRACE_TICKS` (default 2) consecutive ticks, `breach_count` increments. When `breach_count >= TREATY_BREACH_THRESHOLD` (default 3), a `treaty.breached.v1` event is emitted and:
+**Breach detection**: If any term's `compliance_score_milli \< BREACH_SCORE_THRESHOLD` (default 300) for `BREACH_GRACE_TICKS` (default 2) consecutive ticks, `breach_count` increments. When `breach_count >= TREATY_BREACH_THRESHOLD` (default 3), a `treaty.breached.v1` event is emitted and:
 - `DiplomaticState` transitions toward `Strained` if currently `Cooperative` or `Alliance`
 - `treaty_slots` entry for this treaty is freed after `BREACH_FALLOUT_TICKS` (default 5)
 
@@ -2597,7 +2597,7 @@ Where:
 - `reinforcement_this_tick = 1` if any intelligence sharing, joint exercise event, or resource transfer occurred this tick
 - `ideology_alignment_bonus = max(0, (1000 - ideology_distance(pair)) / 100)` (0..10 milli per tick)
 
-When `alliance_reliability_milli < ALLIANCE_DEFECT_THRESHOLD` (default 200) for `ALLIANCE_DEFECT_TICKS` (default 3) consecutive ticks, the alliance reliability penalty is applied to the `AllianceObligation` treaty term: the obligated actor may not respond even if the protected actor is attacked. This does not automatically trigger a treaty breach (an obligation unfulfilled during conflict does — see Section 21.2).
+When `alliance_reliability_milli \< ALLIANCE_DEFECT_THRESHOLD` (default 200) for `ALLIANCE_DEFECT_TICKS` (default 3) consecutive ticks, the alliance reliability penalty is applied to the `AllianceObligation` treaty term: the obligated actor may not respond even if the protected actor is attacked. This does not automatically trigger a treaty breach (an obligation unfulfilled during conflict does — see Section 21.2).
 
 ### 22.3 Ideological Competition and Foreign Policy Alignment
 
@@ -2682,14 +2682,14 @@ The following phase diagram maps the 2D space `(legitimacy_milli, shadow_influen
 
 | Regime Type | Legitimacy Range | Shadow Influence Range | Description |
 |---|---|---|---|
-| `StableHybrid` | ≥ 600 | ≤ 300 | High-legitimacy, low-capture. Reform possible. |
-| `WeakDemocracy` | 400..599 | ≤ 400 | Functional institutions; capture risk growing. |
+| `StableHybrid` | &gt; 600 | &lt; 300 | High-legitimacy, low-capture. Reform possible. |
+| `WeakDemocracy` | 400..599 | &lt; 400 | Functional institutions; capture risk growing. |
 | `OligarchicCapitalism` | 300..599 | 400..699 | Shadow networks dominant; policy distorted. |
 | `MilitarizedSecurity` | 200..499 | 300..599 | Defense-driven enforcement; civil liberties eroded. |
 | `CorruptBureaucracy` | 200..399 | 500..799 | High capture, moderate legitimacy collapse. |
-| `ExternallyDestabilized` | ≤ 299 | ≥ 500 | Foreign influence cells dominant; sovereignty hollowed. |
-| `ShadowStateTakeover` | ≤ 200 | ≥ 850 | Formal institutions captured; see Section 30. |
-| `LegitimacyCollapse` | ≤ 100 | Any | Civil war threshold; couples to CIV-0103 revolt mechanics. |
+| `ExternallyDestabilized` | &lt; 299 | &gt; 500 | Foreign influence cells dominant; sovereignty hollowed. |
+| `ShadowStateTakeover` | &lt; 200 | &gt; 850 | Formal institutions captured; see Section 30. |
+| `LegitimacyCollapse` | &lt; 100 | Any | Civil war threshold; couples to CIV-0103 revolt mechanics. |
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
@@ -3225,7 +3225,7 @@ members = [
 
 ### 27.1 Network Influence Bounded
 
-**Invariant**: `NetworkNode.influence_score_milli ∈ [0, 1000]` at all times.
+**Invariant**: `NetworkNode.influence_score_milli &isin; [0, 1000]` at all times.
 
 Enforced by:
 1. `propagate_influence()` applies `.min(1000).max(0)` after each delta
@@ -3237,7 +3237,7 @@ Enforced by:
 **Invariant**: `shadow_extraction >= 0` AND `shadow_extraction <= defense_spend`.
 
 Enforced by:
-1. `profiteering_fraction_milli ∈ [0, 1000]` (bounded by `compute_profiteering_fraction`)
+1. `profiteering_fraction_milli &isin; [0, 1000]` (bounded by `compute_profiteering_fraction`)
 2. `shadow_extraction = defense_spend * profiteering_fraction_milli / 1000`
 3. Integer truncation toward zero (defense_spend non-negative by invariant)
 4. Property test: `test_war_profiteering_conservation`
@@ -3248,13 +3248,13 @@ Enforced by:
 
 Enforced by:
 1. `net = (gross_extraction - resistance_cost).max(0)` in `compute_occupation_net`
-2. `resistance_milli ∈ [0, 1000]` (clamped)
+2. `resistance_milli &isin; [0, 1000]` (clamped)
 3. `resistance_cost = gross_extraction * resistance_milli / 1000 <= gross_extraction`
 4. Property test: `test_occupation_net_non_negative`
 
 ### 27.4 Treaty Compliance Score Bounded
 
-**Invariant**: `compliance_score_milli ∈ [0, 1000]` for all term compliance checks.
+**Invariant**: `compliance_score_milli &isin; [0, 1000]` for all term compliance checks.
 
 Enforced by:
 1. All `check_term_compliance` implementations return `.min(1000)`

@@ -307,7 +307,7 @@ interface CameraConfig {
 **Orthographic fallback conditions:**
 - GPU capability flag indicates WebGL2 not available
 - User explicitly toggles in settings
-- FPS < 20 for > 2 seconds (auto-switch with user notification)
+- FPS \< 20 for > 2 seconds (auto-switch with user notification)
 
 ### 2.4 LOD Architecture
 
@@ -332,7 +332,7 @@ function createBuildingLOD(models: BuildingModelSet): THREE.LOD {
 }
 ```
 
-At Zoom 1 (strategic view), nearly all buildings render at LOD3 (billboard). At Zoom 3 (citizen view), buildings in the 3×3 visible area render at LOD0. This is the primary mechanism for achieving the < 200 draw call budget.
+At Zoom 1 (strategic view), nearly all buildings render at LOD3 (billboard). At Zoom 3 (citizen view), buildings in the 3×3 visible area render at LOD0. This is the primary mechanism for achieving the \< 200 draw call budget.
 
 LOD transitions use hysteresis (5-unit dead zone) to prevent visible popping as the camera hovers at a boundary distance.
 
@@ -744,11 +744,11 @@ The quality gate runs automatically for every generated asset. It is implemented
 |-------|----------|------|----------------|
 | Manifold mesh | CRITICAL | ManifoldPlus | 100% watertight |
 | UV overlap | HIGH | xatlas | < 2% island overlap |
-| Polygon count | HIGH | gltf-transform stats | Within LOD budget ± 10% |
+| Polygon count | HIGH | gltf-transform stats | Within LOD budget &plusmn; 10% |
 | Material slot naming | HIGH | gltf-transform custom | `nation_color_material` slot present |
-| glTF Validator | HIGH | Khronos glTF Validator | 0 errors, ≤ 5 warnings |
-| Texture resolution | MEDIUM | PIL (Pillow) | Power-of-2; ≤ 2048×2048 |
-| File size | LOW | os.path.getsize | ≤ 2 MB per LOD level |
+| glTF Validator | HIGH | Khronos glTF Validator | 0 errors, &lt; 5 warnings |
+| Texture resolution | MEDIUM | PIL (Pillow) | Power-of-2; &lt; 2048×2048 |
+| File size | LOW | os.path.getsize | &lt; 2 MB per LOD level |
 | Animation clip names | LOW | gltf-transform stats | Names match animation catalog (§3.5) |
 
 Assets failing CRITICAL or HIGH checks are logged to `generation_failures.jsonl` and excluded from the manifest. The orchestrator retries failed assets once with a varied seed before escalating to manual review.
@@ -836,9 +836,9 @@ The IR is validated at generation time and at CI. The following rules are enforc
 | IR-3D-001 | `asset_id` must end in `_3d` for render_mode=3d | ERROR |
 | IR-3D-002 | `era` must be one of the canonical era enum values | ERROR |
 | IR-3D-003 | `building_class` must be one of the 12 canonical building types | ERROR |
-| IR-3D-004 | `lod_budget.lod0` must be ≤ 5000 | ERROR |
-| IR-3D-005 | `lod_budget.lod1` must be ≤ 1000 | ERROR |
-| IR-3D-006 | `lod_budget.lod2` must be ≤ 200 | ERROR |
+| IR-3D-004 | `lod_budget.lod0` must be &lt; 5000 | ERROR |
+| IR-3D-005 | `lod_budget.lod1` must be &lt; 1000 | ERROR |
+| IR-3D-006 | `lod_budget.lod2` must be &lt; 200 | ERROR |
 | IR-3D-007 | `generation_seed` must be a positive integer | ERROR |
 | IR-3D-008 | `reference_2d` must resolve in 2D manifest | WARNING |
 | IR-3D-009 | `material_overrides` must include `nation_color_material` key | ERROR |
@@ -1303,7 +1303,7 @@ void main() {
 }
 ```
 
-The `flagTexture` is derived from `nation.flag_texture_url`. The URL is an SVG, converted to a 128×64 `THREE.CanvasTexture` at runtime using a `<canvas>` element. This avoids pre-baking nation flag images while still achieving correct rendering.
+The `flagTexture` is derived from `nation.flag_texture_url`. The URL is an SVG, converted to a 128×64 `THREE.CanvasTexture` at runtime using a `\<canvas\>` element. This avoids pre-baking nation flag images while still achieving correct rendering.
 
 **Flag wind speed driven by climate events:**
 
@@ -1421,7 +1421,7 @@ This approach renders borders as a single full-screen quad pass, with zero addit
 
 **Phase 2 CI gates:**
 - All 12 GLB files pass glTF Validator (0 errors)
-- All GLB files within polygon budget (LOD0 ≤ 5000, LOD1 ≤ 1000)
+- All GLB files within polygon budget (LOD0 &lt; 5000, LOD1 &lt; 1000)
 - Nation color injection verified (automated pixel-color test in headless renderer)
 - 30 FPS minimum confirmed via automated benchmark (headless Chromium with performance.now timing)
 
@@ -1474,8 +1474,8 @@ This approach renders borders as a single full-screen quad pass, with zero addit
 **Phase 4 CI gates:**
 - All FRs from §12 pass automated checks
 - FPS benchmarks confirmed on all hardware tiers (manual QA for GTX 1060; automated for M2)
-- Memory budget validation: VRAM ≤ 512 MB, RAM ≤ 256 MB for Zoom 2 view
-- Scene init time ≤ 2s for Zoom 2 view (§14.1)
+- Memory budget validation: VRAM &lt; 512 MB, RAM &lt; 256 MB for Zoom 2 view
+- Scene init time &lt; 2s for Zoom 2 view (§14.1)
 
 ### 9.6 Phase 5 — Native Client (Optional)
 
@@ -1895,7 +1895,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 ### FR-CIV-3D-002 — LOD Budget Enforcement
 
-**SHALL:** Each building asset SHALL have four LOD levels. Triangle counts SHALL not exceed: LOD0 ≤ 5,000; LOD1 ≤ 1,000; LOD2 ≤ 200; LOD3 = 2 (billboard quad).
+**SHALL:** Each building asset SHALL have four LOD levels. Triangle counts SHALL not exceed: LOD0 &lt; 5,000; LOD1 &lt; 1,000; LOD2 &lt; 200; LOD3 = 2 (billboard quad).
 
 **Verification:** CI gate polygon count check. Automated; blocks merge on failure.
 
@@ -1905,7 +1905,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The 3D web client SHALL maintain a minimum of 45 frames per second at 1080p resolution when rendering a Zoom 2 view (12×12 hex cell grid) on M2 MacBook hardware.
 
-**Verification:** Automated benchmark via headless Chromium with performance.now frame timing. Run on CI hardware with Apple Silicon runner. Pass threshold: 95th percentile frame time ≤ 22.2ms over a 300-frame sample.
+**Verification:** Automated benchmark via headless Chromium with performance.now frame timing. Run on CI hardware with Apple Silicon runner. Pass threshold: 95th percentile frame time &lt; 22.2ms over a 300-frame sample.
 
 ---
 
@@ -1921,7 +1921,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** Building GLTF models SHALL support runtime nation color injection without requiring texture rebaking. The primary nation color SHALL be applied to the `nation_color_material` slot within one animation frame of the scene receiving a `world.snapshot.v1` event with updated nation data.
 
-**Verification:** Automated pixel-color test: render scene with known nation color; sample pixel at known building location; assert color matches nation primary within ±5 RGB units. Run in CI with headless Chromium.
+**Verification:** Automated pixel-color test: render scene with known nation color; sample pixel at known building location; assert color matches nation primary within &plusmn;5 RGB units. Run in CI with headless Chromium.
 
 ---
 
@@ -1945,7 +1945,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The Three.js renderer SHALL issue fewer than 200 WebGL draw calls per frame when rendering a Zoom 2 view with all building types visible and at least one active weather particle system.
 
-**Verification:** Automated benchmark using Three.js renderer info (`renderer.info.render.calls`). Assert < 200 in integration test with a synthetic scene containing one instance of each building type and active rain particles.
+**Verification:** Automated benchmark using Three.js renderer info (`renderer.info.render.calls`). Assert \< 200 in integration test with a synthetic scene containing one instance of each building type and active rain particles.
 
 ---
 
@@ -1953,7 +1953,7 @@ CI failure on any gate check blocks the PR from merging. No exceptions and no by
 
 **SHALL:** The 3D client SHALL complete initial scene construction (terrain rendered, buildings spawned, camera positioned) within 2 seconds of receiving the first `world.snapshot.v1` message, measured on M2 MacBook hardware.
 
-**Verification:** Automated E2E test: connect 3D client to headless simulation; measure time from first `world.snapshot.v1` to `renderer.domElement.renderTime.firstFrame`. Assert ≤ 2000ms.
+**Verification:** Automated E2E test: connect 3D client to headless simulation; measure time from first `world.snapshot.v1` to `renderer.domElement.renderTime.firstFrame`. Assert &lt; 2000ms.
 
 ---
 
@@ -2220,7 +2220,7 @@ WebGL: WebGL2 (ANGLE Metal backend on macOS)
 4. Record `performance.now()` timestamps at `requestAnimationFrame` entry.
 5. Discard first 60 frames (warm-up).
 6. Record 300 frames; compute: mean frame time, 95th percentile, 99th percentile, min FPS, max FPS.
-7. Pass criteria: 95th percentile frame time ≤ 22.2ms (≥ 45 FPS).
+7. Pass criteria: 95th percentile frame time &lt; 22.2ms (&gt; 45 FPS).
 
 **Automated benchmark runner:** `tools/benchmarks/run_3d_benchmark.ts` (Playwright-based). Outputs JSON report to `logs/benchmark_results/`.
 

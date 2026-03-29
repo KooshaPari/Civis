@@ -107,7 +107,7 @@ The engine MUST support saving and restoring full simulation state.
 - [ ] `simulation.snapshot() → JSON` works
 - [ ] `simulation.restore(json)` works  
 - [ ] Restored simulation produces same results
-- [ ] Snapshot size < 1MB for 10K entities
+- [ ] Snapshot size \< 1MB for 10K entities
 
 ---
 
@@ -209,9 +209,9 @@ legitimacy_index = 1.0 - tyranny_index
 ```
 
 **Thresholds:**
-- tyranny < 0.3: Stable
-- 0.3 ≤ tyranny < 0.7: Unrest risk
-- tyranny ≥ 0.7: Rebellion risk
+- tyranny \< 0.3: Stable
+- 0.3 &lt; tyranny \< 0.7: Unrest risk
+- tyranny &gt; 0.7: Rebellion risk
 
 ---
 

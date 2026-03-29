@@ -162,7 +162,7 @@ CivLab simulates potentially hundreds of thousands of entities (citizens, tiles,
 | **Parallel system execution** | YES — `par_iter()` native | YES — `par_iter()` native | YES — via rayon | MANUAL — no system scheduler |
 | **Query API ergonomics** | EXCELLENT — proc macros, filter sets | GOOD — explicit query types | ACCEPTABLE — complex setup | MINIMAL — no scheduler at all |
 | **Compile-time query validation** | YES | PARTIAL | NO — runtime panics | PARTIAL |
-| **Change detection** | YES — `Changed<T>` filter | NO | PARTIAL — flagged components | NO |
+| **Change detection** | YES — `Changed\<T\>` filter | NO | PARTIAL — flagged components | NO |
 | **System ordering/scheduling** | YES — stages + labels | MANUAL — external scheduler | YES — via Dispatcher | NONE |
 | **Bevy compatibility (if needed)** | NATIVE | NO | NO | NO |
 | **Active maintenance (2026)** | HIGH — Bevy project | STAGNANT — last release 2021 | MODERATE | MODERATE |
@@ -186,7 +186,7 @@ CivLab simulates potentially hundreds of thousands of entities (citizens, tiles,
 
 4. **hecs is a building block, not a framework.** hecs provides excellent raw ECS performance but no scheduling, no change detection, and no system ordering. Using hecs would require building all of this infrastructure manually — exactly the "reinventing wheels" anti-pattern the library-first mandate prohibits.
 
-5. **bevy_ecs change detection is required.** The simulation core needs to efficiently detect which components changed in a tick to build incremental state snapshots for the WebSocket protocol. `bevy_ecs`'s `Changed<T>` and `Added<T>` query filters provide this with zero overhead on unchanged components.
+5. **bevy_ecs change detection is required.** The simulation core needs to efficiently detect which components changed in a tick to build incremental state snapshots for the WebSocket protocol. `bevy_ecs`'s `Changed\<T\>` and `Added\<T\>` query filters provide this with zero overhead on unchanged components.
 
 #### Key API Used
 
@@ -300,7 +300,7 @@ let display_value: f64 = surplus.to_num::<f64>();
 - Fixed-point arithmetic on integers is bitwise deterministic across all platforms.
 - `fixed` types do not use any floating-point hardware instructions.
 - **RULE:** `f32` and `f64` are forbidden in simulation-core component values. They may only appear in rendering hints, metric export (for human readability), and Python FFI boundary conversions.
-- `to_num::<f64>()` conversion is acceptable for display/export but must never feed back into simulation state.
+- `to_num::\<f64\>()` conversion is acceptable for display/export but must never feed back into simulation state.
 
 ---
 

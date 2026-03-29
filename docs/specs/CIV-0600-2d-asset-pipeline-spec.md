@@ -376,7 +376,7 @@ The following variables are defined in the pipeline context schema. All template
 
 ### 2.4 Template Layer Architecture
 
-Every SVG template follows a consistent layer structure using SVG `<g>` groups with explicit IDs. This structure enables:
+Every SVG template follows a consistent layer structure using SVG `\<g\>` groups with explicit IDs. This structure enables:
 - Predictable rendering order (painter's algorithm, bottom-to-top)
 - Layer-targeted modifications (the injector can toggle layers by boolean variable)
 - Consistent UV pivot point placement (always center of `base` layer bounding box)
@@ -575,10 +575,10 @@ Every SVG template follows a consistent layer structure using SVG `<g>` groups w
 Templates MUST pass the following validation checks before being accepted into the build:
 
 1. **Valid SVG:** Parses without error as SVG 1.1 (validated by `svg_inject.py` using `lxml`).
-2. **ViewBox present:** `viewBox` attribute MUST be present on the root `<svg>` element.
-3. **Layer IDs present:** All five layer `<g>` groups (`base`, `texture`, `nation_zone`, `icon_layer`, `population_marker`) MUST be present. Additional layers are permitted.
-4. **No embedded raster images:** `<image>` elements with base64 data URIs are forbidden. External image refs are forbidden. All imagery must be vector paths, patterns, or text.
-5. **No JavaScript:** `<script>` elements are forbidden.
+2. **ViewBox present:** `viewBox` attribute MUST be present on the root `\<svg\>` element.
+3. **Layer IDs present:** All five layer `\<g\>` groups (`base`, `texture`, `nation_zone`, `icon_layer`, `population_marker`) MUST be present. Additional layers are permitted.
+4. **No embedded raster images:** `\<image\>` elements with base64 data URIs are forbidden. External image refs are forbidden. All imagery must be vector paths, patterns, or text.
+5. **No JavaScript:** `\<script\>` elements are forbidden.
 6. **No external references:** `xlink:href` references to external files are forbidden; only internal `#id` references are permitted.
 7. **Variable coverage:** Every variable referenced with `{{var}}` or `{% if var %}` in the template MUST be present in the context schema (Section 2.2). Tera strict mode enforces this at render time.
 8. **Font references:** The only permitted `font-family` values are `"civlab-icons"`, `"Noto Sans"`, and `"Noto Sans Mono"`. No system font fallbacks.
@@ -1148,7 +1148,7 @@ async def main(input_dir: Path, output_dir: Path, max_concurrent: int = 4) -> No
 
 ### 5.4 Quality Gate
 
-The alpha coverage check (≥ 60% opaque pixels) is the primary quality gate. This detects:
+The alpha coverage check (&gt; 60% opaque pixels) is the primary quality gate. This detects:
 - Failed background removal (entire image transparent)
 - Partial removal failures (large background regions incorrectly retained or removed)
 - Corrupted inputs (empty PNGs, single-color images)
@@ -2458,7 +2458,7 @@ export class SpriteManager {
 
 > The rembg background removal step SHALL reject any output sprite with alpha channel coverage below 60% (fewer than 60% of pixels are opaque).
 
-- **Acceptance Criteria:** `rembg_batch.py` raises a fatal error and exits with code 1 for any sprite where `opaque_pixels / total_pixels < 0.60`. The build pipeline stops. No fallback to the un-removed sprite is permitted.
+- **Acceptance Criteria:** `rembg_batch.py` raises a fatal error and exits with code 1 for any sprite where `opaque_pixels / total_pixels \< 0.60`. The build pipeline stops. No fallback to the un-removed sprite is permitted.
 - **Test Reference:** `tests/unit/test_rembg_batch.py::test_alpha_coverage_gate`
 - **Priority:** P0 (blocking)
 
@@ -2538,9 +2538,9 @@ export class SpriteManager {
 
 **FR-CIV-ASSET-012 — Atlas Load Time**
 
-> All three atlas files (terrain, buildings, citizens) SHALL load and be available for texture lookup within 500 ms of `SpriteManager.init()` being called, on a connection with 100 Mbps bandwidth and ≤10 ms latency.
+> All three atlas files (terrain, buildings, citizens) SHALL load and be available for texture lookup within 500 ms of `SpriteManager.init()` being called, on a connection with 100 Mbps bandwidth and &lt;10 ms latency.
 
-- **Acceptance Criteria:** Playwright end-to-end test measures `performance.now()` from `SpriteManager.init()` call to the `init()` resolved promise. On a throttled network (100 Mbps, 10 ms RTT), this MUST be ≤500 ms.
+- **Acceptance Criteria:** Playwright end-to-end test measures `performance.now()` from `SpriteManager.init()` call to the `init()` resolved promise. On a throttled network (100 Mbps, 10 ms RTT), this MUST be &lt;500 ms.
 - **Test Reference:** `tests/e2e/test_atlas_load_time.spec.ts`
 - **Priority:** P1 (performance gate)
 
@@ -2580,7 +2580,7 @@ export class SpriteManager {
 
 > The nation recoloring shader SHALL replace all pixels whose RGB distance from `uBakedPrimary` is less than `TOLERANCE` (0.08) with `uNationPrimary`, and all pixels within tolerance of `uBakedSecondary` with `uNationSecondary`. Non-matching pixels SHALL be rendered unchanged.
 
-- **Acceptance Criteria:** A pixel-exact test renders a reference sprite through the shader with known input and output nation colors, then compares against a pre-computed reference image. SSIM deviation MUST be < 0.5% from reference.
+- **Acceptance Criteria:** A pixel-exact test renders a reference sprite through the shader with known input and output nation colors, then compares against a pre-computed reference image. SSIM deviation MUST be \< 0.5% from reference.
 - **Test Reference:** `tests/visual/test_nation_recolor_shader.spec.ts`
 - **Priority:** P1
 
@@ -2620,7 +2620,7 @@ export class SpriteManager {
 
 > All `.svg.j2` template files MUST pass SVG validity, layer structure, font reference, and variable coverage checks before being committed. The pre-commit hook SHALL block commits containing invalid templates.
 
-- **Acceptance Criteria:** The pre-commit hook `hooks/pre-commit-svg-validate.sh` runs `python3 scripts/validate_templates.py assets/templates/` and blocks the commit if exit code is non-zero. The validation script checks: SVG 1.1 validity, presence of all 5 layer groups, only permitted font families, no embedded raster images, no `<script>` elements.
+- **Acceptance Criteria:** The pre-commit hook `hooks/pre-commit-svg-validate.sh` runs `python3 scripts/validate_templates.py assets/templates/` and blocks the commit if exit code is non-zero. The validation script checks: SVG 1.1 validity, presence of all 5 layer groups, only permitted font families, no embedded raster images, no `\<script\>` elements.
 - **Test Reference:** `tests/unit/test_validate_templates.py::test_all_template_rules`
 - **Priority:** P0 (blocking)
 
@@ -2797,7 +2797,7 @@ Visual regression tests detect unintended visual changes to sprites between pipe
 - References are committed to git under `tests/visual/references/` (small set — 20 representative sprites).
 - When an intentional visual change is made (e.g., new texture detail), references MUST be regenerated and committed as part of the same PR.
 
-**SSIM Threshold:** Maximum allowed SSIM deviation is 1% (SSIM score ≥ 0.99). Deviations above 1% cause the test to fail and output a side-by-side diff image to `tests/visual/diffs/`.
+**SSIM Threshold:** Maximum allowed SSIM deviation is 1% (SSIM score &gt; 0.99). Deviations above 1% cause the test to fail and output a side-by-side diff image to `tests/visual/diffs/`.
 
 ```python
 # tests/visual/test_sprite_visual_regression.py
@@ -2905,7 +2905,7 @@ def test_batch_render_time(max_seconds: float = 30.0) -> None:
         )
         sys.exit(1)
 
-    print(f"PASS: Render time within budget ({elapsed:.1f}s ≤ {max_seconds}s)")
+    print(f"PASS: Render time within budget ({elapsed:.1f}s &lt; {max_seconds}s)")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -3025,8 +3025,8 @@ PYEOF
 | Unit tests (all) | CI job | YES — blocks PR merge |
 | Visual regression (SSIM) | CI job | YES — blocks PR merge |
 | Pipeline reproducibility | CI job (nightly or on main) | YES — blocks release |
-| Render time (≤30s) | CI job | YES — blocks PR merge |
-| Atlas load time (≤500ms) | CI job | YES — blocks PR merge |
+| Render time (&lt;30s) | CI job | YES — blocks PR merge |
+| Atlas load time (&lt;500ms) | CI job | YES — blocks PR merge |
 | Bundle SVG-free check | CI job | YES — blocks PR merge |
 | Manifest schema validation | Part of pipeline run | YES — blocks pipeline |
 | UV coordinate validity | Part of pipeline run | YES — blocks pipeline |
@@ -3091,7 +3091,7 @@ task test:all
 | **rembg U2Net** — model inference is deterministic given same input + same ONNX Runtime version | LOW | rembg version pinned. ONNX Runtime version pinned. Determinism verified in integration tests. |
 | **PNG encoder byte-order** — `png` crate encoding is deterministic across versions | LOW | `png` crate version pinned in `Cargo.lock`. |
 | **imagequant internal state** — quantization algorithm is deterministic given same inputs | LOW | `imagequant` version pinned. Forced palette entries are inserted in consistent order (primary first, secondary second). |
-| **Time-dependent SVG features** — SVG `<animate>` or `<set>` elements | LOW | Templates are validated against a feature allowlist. Animated SVG features are rejected by `validate_templates.py`. |
+| **Time-dependent SVG features** — SVG `\<animate\>` or `\<set\>` elements | LOW | Templates are validated against a feature allowlist. Animated SVG features are rejected by `validate_templates.py`. |
 | **`oxipng` compression** — PNG lossless optimization is deterministic for same input | LOW | `oxipng` version pinned. |
 
 ### 13.3 BLAKE3 Verification Protocol
@@ -3188,11 +3188,11 @@ def derive_sdxl_seed(asset_id: str, pipeline_hash: str) -> int:
     return int.from_bytes(digest, "big")
 ```
 
-**Seed Override:** Artists can pin a specific seed for an asset by adding `sdxl_seed: <integer>` to the asset's entry in `asset_parameters.yaml`. When a seed override is present, `derive_sdxl_seed()` is NOT called for that asset; the override seed is used directly.
+**Seed Override:** Artists can pin a specific seed for an asset by adding `sdxl_seed: \<integer\>` to the asset's entry in `asset_parameters.yaml`. When a seed override is present, `derive_sdxl_seed()` is NOT called for that asset; the override seed is used directly.
 
 **Seed Storage:** Seeds are stored in `asset_manifest.json` alongside the asset entry. The seed for non-SDXL assets is `null`. Seeds are used by the CI SDXL reproducibility test to re-run SDXL inference and verify image identity.
 
-**Seed Exhaustion Policy:** The derived seed space is 32-bit (0 to 2^32 - 1). With 102 baseline sprites, the probability of seed collision is negligible (~(102²) / 2^32 ≈ 0.00024%). No deduplication of seeds is required.
+**Seed Exhaustion Policy:** The derived seed space is 32-bit (0 to 2^32 - 1). With 102 baseline sprites, the probability of seed collision is negligible (~(102²) / 2^32 &asymp; 0.00024%). No deduplication of seeds is required.
 
 ---
 
@@ -3212,9 +3212,9 @@ This section maps every Functional Requirement in this spec to its parent requir
 | FR-CIV-ASSET-008 | Manifest Completeness | FR-CIV-ASSET-MANI-001 | Stage 6 | `test_gen_manifest.py` | P0 |
 | FR-CIV-ASSET-009 | Manifest Schema Conformance | FR-CIV-ASSET-MANI-002 | Stage 6 | `test_validate_manifest.py` | P0 |
 | FR-CIV-ASSET-010 | Build-Time Reproducibility | FR-CIV-CORE-DET-002 | All stages | `test_pipeline_reproducibility.sh` | P0 |
-| FR-CIV-ASSET-011 | Render Batch Performance (≤30s) | FR-CIV-PERF-BUILD-001 | Stage 2 | `test_render_time.py` | P1 |
-| FR-CIV-ASSET-012 | Atlas Load Time (≤500ms) | FR-CIV-PERF-RT-001 | Runtime | `test_atlas_load_time.spec.ts` | P1 |
-| FR-CIV-ASSET-013 | VRAM Budget (≤20MB) | FR-CIV-PERF-RT-002 | Runtime | `test_atlas_pack.rs` | P1 |
+| FR-CIV-ASSET-011 | Render Batch Performance (&lt;30s) | FR-CIV-PERF-BUILD-001 | Stage 2 | `test_render_time.py` | P1 |
+| FR-CIV-ASSET-012 | Atlas Load Time (&lt;500ms) | FR-CIV-PERF-RT-001 | Runtime | `test_atlas_load_time.spec.ts` | P1 |
+| FR-CIV-ASSET-013 | VRAM Budget (&lt;20MB) | FR-CIV-PERF-RT-002 | Runtime | `test_atlas_pack.rs` | P1 |
 | FR-CIV-ASSET-014 | No Runtime SVG Parsing | FR-CIV-ARCH-NOSVG-001 | Runtime / CI | `check_bundle_no_svg_runtime.sh` | P0 |
 | FR-CIV-ASSET-015 | Atlas Cache-Control Headers | FR-CIV-PERF-WEB-001 | Deployment | `test_cache_headers.spec.ts` | P1 |
 | FR-CIV-ASSET-016 | Nation Recoloring Shader Correctness | FR-CIV-RTS-NATION-002 | Runtime | `test_nation_recolor_shader.spec.ts` | P1 |

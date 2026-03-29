@@ -166,7 +166,7 @@ AI coding agents (Claude, Codex, ChatGPT) have a **systemic tendency** to add fa
 **CRITICAL**: Prefer **library + thin wrapper** over full custom implementation. Apply from the start of development and throughout.
 
 - **First question**: "Is there a library that solves this?"
-- **Generic problems** (retry, cache, file watch, circuit breaker, rate limit): Use a library. Keep wrapper < 50 LOC.
+- **Generic problems** (retry, cache, file watch, circuit breaker, rate limit): Use a library. Keep wrapper \< 50 LOC.
 - **Custom logic**: Only for domain-specific behavior. **ADR required** if choosing custom over library.
 
 | Need | Library | Notes |
@@ -204,7 +204,7 @@ See: `docs/research/PROACTIVE_GOVERNANCE_EVOLUTION_PLAN.md`
 
 **Format:** Dated filename. Sections: Issues Addressed, Fixes Applied, Research Findings, Plans, Open Questions, Cursor-Agent Recovery Note (if applicable).
 
-**Tooling:** `thegent prompts sessions` to list sessions; `thegent prompts dump <session_id>` to dump to docs/research/.
+**Tooling:** `thegent prompts sessions` to list sessions; `thegent prompts dump \<session_id\>` to dump to docs/research/.
 
 ---
 
@@ -283,8 +283,8 @@ See: `~/.claude/docs/friction-reduction.md` for full helpers, detection patterns
 | Idle wait | `thegent plan wait-next` |
 | Model-specific | `thegent run "Task" -M claude-sonnet-4.5` |
 | Cost-optimized | `thegent run "Task" -M gemini-3-flash -R cheapest` |
-| Continue prior session | `thegent bg "Task" -C <session_id>` |
-| Session mgmt | `thegent ps` / `thegent status <id>` / `thegent wait <id>` |
+| Continue prior session | `thegent bg "Task" -C \<session_id\>` |
+| Session mgmt | `thegent ps` / `thegent status \<id\>` / `thegent wait \<id\>` |
 | Role-based | `thegent research/review/fix/code/explain/summarize "..."` |
 
 ## Key Providers
@@ -305,7 +305,7 @@ See: `~/.claude/docs/friction-reduction.md` for full helpers, detection patterns
 
 ## Anti-Patterns
 
-- **Don't** use busy loops → use `plan wait-next` or `wait <id>`
+- **Don't** use busy loops → use `plan wait-next` or `wait \<id\>`
 - **Don't** use bash wrappers for loops → use native `--repeat`, `--do-next`, `plan loop`
 - **Don't** hardcode agents → use `free` as default, override when needed
 - **Don't** `ls -l` in project root → use `fd` or subdirectories
@@ -398,7 +398,7 @@ Prefer native services over Docker for local dev. Prefer local, OSS, and free to
 
 # Plugin Ecosystem Awareness
 
-Use AgilePlus for spec tracking: `agileplus <command>`. Check `/` for slash commands. Start new conversation to switch agent personas.
+Use AgilePlus for spec tracking: `agileplus \<command\>`. Check `/` for slash commands. Start new conversation to switch agent personas.
 
 ---
 
@@ -482,7 +482,7 @@ For significant changes: create `docs/changes/{change-name}/` with `proposal.md`
 
 ## Test Maturity Target
 
-- **All projects**: Level 3+ (≥80% coverage, FR traceability ≥50%, security scanning, strict linters)
+- **All projects**: Level 3+ (&gt;80% coverage, FR traceability &gt;50%, security scanning, strict linters)
 - **Agent-Only**: Level 5 (100% E2E/Integration/Unit, mutation testing, BDD, SDD alignment)
 
 ## Security Pipeline (5 layers)
@@ -534,8 +534,8 @@ See: `~/.claude/docs/qa-governance-detail.md` for full TDD/BDD mandates, smart c
 
 - Use tach.toml for boundary enforcement (already configured)
 - All new agents use the agent runner strategy pattern
-- New hooks: `hooks/<event>-<name>.sh` + register in `hooks/hook-config.yaml`
-- Shared hook logic: `hooks/lib/<utility>.sh` (sourced by hooks, never called directly)
+- New hooks: `hooks/\<event\>-\<name\>.sh` + register in `hooks/hook-config.yaml`
+- Shared hook logic: `hooks/lib/\<utility\>.sh` (sourced by hooks, never called directly)
 - **Rust tooling**: Prefer `rg` over `grep`, `fd` over `find`, `jaq` over `jq`. Export `USE_BUILTIN_RIPGREP=0` for system ripgrep (5-10x faster).
 - Provider pattern: use ProviderRegistry for extensible services. MCP tools through FastMCP registration.
 
@@ -562,11 +562,11 @@ See: `~/.claude/docs/qa-governance-detail.md` for full TDD/BDD mandates, smart c
 
 | Add... | Put in... |
 |--------|-----------|
-| Agent persona | `agents/<name>.md` |
-| Lifecycle hook | `hooks/<event>-<name>.sh` + `hooks/hook-config.yaml` |
-| Governance policy | `contracts/<policy>.json` + `qa-policy-engine.sh` |
+| Agent persona | `agents/\<name\>.md` |
+| Lifecycle hook | `hooks/\<event\>-\<name\>.sh` + `hooks/hook-config.yaml` |
+| Governance policy | `contracts/\<policy\>.json` + `qa-policy-engine.sh` |
 | MCP tool | MCP server (FastMCP pattern) |
-| CLI command | `commands/<command>/` + register in dispatch |
+| CLI command | `commands/\<command\>/` + register in dispatch |
 | Quality gate | `hooks/qa-<gate-name>.sh` |
 
 ## Work Stream
@@ -585,7 +585,7 @@ Canonical: `docs/reference/WORK_STREAM.md`. Claim before starting → mark COMPL
 |---------|---------|
 | `thegent plan loop` | Continuous work loop (RECOMMENDED) |
 | `thegent orchestrate loop "prompt" "todo"` | Worker + checker lifecycle loop |
-| `thegent bg "Task" -C <session_id>` | Continue from prior session |
+| `thegent bg "Task" -C \<session_id\>` | Continue from prior session |
 | `thegent_loop_takeover` (MCP) | Agent injects prompt into running loop |
 
 **Ports:** MCP 3847, proxy 8317. Debug: `thegent run --debug` sets `THGENT_DEBUG=1`.

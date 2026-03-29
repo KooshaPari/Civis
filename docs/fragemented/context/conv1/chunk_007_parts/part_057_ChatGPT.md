@@ -42,30 +42,30 @@ Hard constitutional constraints for hybrid:
 
 Coupling lock: essentials access independent of score
 
-Surveillance ceiling: Σt≤Σmax⁡\\Sigma\_t \\le \\Sigma\_{\\max}Σt​≤Σmax​
+Surveillance ceiling: Σt&lt;Σmax⁡\\Sigma\_t \\le \\Sigma\_{\\max}Σt​&lt;Σmax​
 
-Baseline floor: Bt≥Bmin⁡B\_t \\ge B\_{\\min}Bt​≥Bmin​
+Baseline floor: Bt&gt;Bmin⁡B\_t \\ge B\_{\\min}Bt​&gt;Bmin​
 
 Shocks ξt\\xi\_tξt​ include climate disasters, war disruptions, energy supply shocks.
 Dynamics (stochastic discrete-time):
 xt+1=f(xt,ut,ξt)x\_{t+1} = f(x\_t, u\_t, \\xi\_t)xt+1​=f(xt​,ut​,ξt​)
 We want to keep the system inside a safe set:
-S={x:  S≤Smax⁡,  T≤Tmax⁡,  L≥Lmin⁡,  G≥Gmin⁡,  F≤Fmax⁡,  I≤Imax⁡}\\mathcal{S} = \\{x:\\; S\\le S\_{\\max},\\; T\\le T\_{\\max},\\; L\\ge L\_{\\min},\\; G\\ge G\_{\\min},\\; F\\le F\_{\\max},\\; I\\le I\_{\\max}\\}S={x:S≤Smax​,T≤Tmax​,L≥Lmin​,G≥Gmin​,F≤Fmax​,I≤Imax​}
+S={x:  S&lt;Smax⁡,  T&lt;Tmax⁡,  L&gt;Lmin⁡,  G&gt;Gmin⁡,  F&lt;Fmax⁡,  I&lt;Imax⁡}\\mathcal{S} = \\{x:\\; S\\le S\_{\\max},\\; T\\le T\_{\\max},\\; L\\ge L\_{\\min},\\; G\\ge G\_{\\min},\\; F\\le F\_{\\max},\\; I\\le I\_{\\max}\\}S={x:S&lt;Smax​,T&lt;Tmax​,L&gt;Lmin​,G&gt;Gmin​,F&lt;Fmax​,I&lt;Imax​}
 
 1) Key structural assumptions (explicit)
 We assume the following monotonicities hold in the model (they’re design choices you can enforce):
 A1 (Baseline reduces scarcity impact on legitimacy).
 Higher BBB increases essentials delivery resilience, raising legitimacy under scarcity:
-∂Lt+1∂Bt>0,∂Lt+1∂St<0\\frac{\\partial L\_{t+1}}{\\partial B\_t} > 0,\\quad
-\\frac{\\partial L\_{t+1}}{\\partial S\_t} < 0∂Bt​∂Lt+1​​>0,∂St​∂Lt+1​​<0
+&part;Lt+1&part;Bt>0,&part;Lt+1&part;St<0\\frac{\\partial L\_{t+1}}{\\partial B\_t} > 0,\\quad
+\\frac{\\partial L\_{t+1}}{\\partial S\_t} < 0&part;Bt​&part;Lt+1​​>0,&part;St​&part;Lt+1​​<0
 A2 (Enforcement reduces unrest but increases tyranny and may reduce legitimacy).
-∂unrest∂Et<0,∂Tt+1∂Et>0\\frac{\\partial \\text{unrest}}{\\partial E\_t} < 0,\\quad
-\\frac{\\partial T\_{t+1}}{\\partial E\_t} > 0∂Et​∂unrest​<0,∂Et​∂Tt+1​​>0
+&part;unrest&part;Et<0,&part;Tt+1&part;Et>0\\frac{\\partial \\text{unrest}}{\\partial E\_t} < 0,\\quad
+\\frac{\\partial T\_{t+1}}{\\partial E\_t} > 0&part;Et​&part;unrest​<0,&part;Et​&part;Tt+1​​>0
 A3 (Rent suppression reduces inequality drift).
-∂It+1∂Rt<0\\frac{\\partial I\_{t+1}}{\\partial R\_t} < 0∂Rt​∂It+1​​<0
+&part;It+1&part;Rt<0\\frac{\\partial I\_{t+1}}{\\partial R\_t} < 0&part;Rt​&part;It+1​​<0
 A4 (Fragility increases under high debt and shocks; strong governance reduces it).
-∂Ft+1∂St>0,∂Ft+1∂Gt<0\\frac{\\partial F\_{t+1}}{\\partial S\_t} > 0,\\quad
-\\frac{\\partial F\_{t+1}}{\\partial G\_t} < 0∂St​∂Ft+1​​>0,∂Gt​∂Ft+1​​<0
+&part;Ft+1&part;St>0,&part;Ft+1&part;Gt<0\\frac{\\partial F\_{t+1}}{\\partial S\_t} > 0,\\quad
+\\frac{\\partial F\_{t+1}}{\\partial G\_t} < 0&part;St​&part;Ft+1​​>0,&part;Gt​&part;Ft+1​​<0
 A5 (Governance decays under capture pressure; capture pressure rises with rent and opacity).
 Gt+1=Gt−ϕ(It,rent,Σt,war)+ψ(oversight)G\_{t+1} = G\_t - \\phi(I\_t,\\text{rent},\\Sigma\_t,\\text{war}) + \\psi(\\text{oversight})Gt+1​=Gt​−ϕ(It​,rent,Σt​,war)+ψ(oversight)
 A6 (Coupling lock prevents survival dependence on metrics).
@@ -84,13 +84,13 @@ a\_S S\_t
 + a\_G (G\_{\\min}-G\_t)\_+V(xt​)=aS​St​+aT​Tt​+aI​It​+aF​Ft​+aL​(Lmin​−Lt​)+​+aG​(Gmin​−Gt​)+​
 where (z)+=max⁡(0,z)(z)\_+=\\max(0,z)(z)+​=max(0,z).
 Goal: show that under certain policies, the expected change satisfies:
-E[V(xt+1)∣xt]≤V(xt)−ϵfor xt∉S\\mathbb{E}[V(x\_{t+1}) \\mid x\_t] \\le V(x\_t) - \\epsilon
-\\quad \\text{for } x\_t \\notin \\mathcal{S}E[V(xt+1​)∣xt​]≤V(xt​)−ϵfor xt​∈/S
+E[V(xt+1)∣xt]&lt;V(xt)−ϵfor xt&notin;S\\mathbb{E}[V(x\_{t+1}) \\mid x\_t] \\le V(x\_t) - \\epsilon
+\\quad \\text{for } x\_t \\notin \\mathcal{S}E[V(xt+1​)∣xt​]&lt;V(xt​)−ϵfor xt​&isin;/S
 This implies stochastic stability / positive recurrence near S\\mathcal{S}S.
 
 3) Theorem 1 — Sufficient condition for bounded tyranny under scarcity
 Theorem 1 (Bounded Tyranny under Constitutional Hybrid).
-Assume coupling lock holds, surveillance is capped Σt≤Σmax⁡\\Sigma\_t \\le \\Sigma\_{\\max}Σt​≤Σmax​, and baseline satisfies Bt≥Bmin⁡B\_t \\ge B\_{\\min}Bt​≥Bmin​. Suppose the tyranny update has the form (consistent with your earlier model):
+Assume coupling lock holds, surveillance is capped Σt&lt;Σmax⁡\\Sigma\_t \\le \\Sigma\_{\\max}Σt​&lt;Σmax​, and baseline satisfies Bt&gt;Bmin⁡B\_t \\ge B\_{\\min}Bt​&gt;Bmin​. Suppose the tyranny update has the form (consistent with your earlier model):
 Tt+1=σ(α1St(Σt+Et)+α2It(1−Mt)+α3Et(1−Gt)−α4Bt−α5Gt)T\_{t+1} = \\sigma\\Big(
 \\alpha\_1 S\_t(\\Sigma\_t+E\_t)
 + \\alpha\_2 I\_t(1-M\_t)
@@ -98,11 +98,11 @@ Tt+1=σ(α1St(Σt+Et)+α2It(1−Mt)+α3Et(1−Gt)−α4Bt−α5Gt)T\_{t+1} = \\s
 - \\alpha\_4 B\_t
 - \\alpha\_5 G\_t
 \\Big)Tt+1​=σ(α1​St​(Σt​+Et​)+α2​It​(1−Mt​)+α3​Et​(1−Gt​)−α4​Bt​−α5​Gt​)
-Then for any shock process with St≤Smax⁡S\_t \\le S\_{\\max}St​≤Smax​ and any admissible utu\_tut​, there exists a computable upper bound Tub<1T\_{\\text{ub}} < 1Tub​<1. Moreover, if:
+Then for any shock process with St&lt;Smax⁡S\_t \\le S\_{\\max}St​&lt;Smax​ and any admissible utu\_tut​, there exists a computable upper bound Tub<1T\_{\\text{ub}} < 1Tub​<1. Moreover, if:
 α4Bmin⁡+α5Gmin⁡>α1Smax⁡(Σmax⁡+Emax⁡)+α2Imax⁡+α3Emax⁡(1−Gmin⁡)\\alpha\_4 B\_{\\min} + \\alpha\_5 G\_{\\min}
 > \\alpha\_1 S\_{\\max}(\\Sigma\_{\\max}+E\_{\\max}) + \\alpha\_2 I\_{\\max} + \\alpha\_3 E\_{\\max}(1-G\_{\\min})α4​Bmin​+α5​Gmin​>α1​Smax​(Σmax​+Emax​)+α2​Imax​+α3​Emax​(1−Gmin​)
 then:
-Tt≤Tmax⁡∀tT\_{t} \\le T\_{\\max}\\quad \\forall tTt​≤Tmax​∀t
+Tt&lt;Tmax⁡∀tT\_{t} \\le T\_{\\max}\\quad \\forall tTt​&lt;Tmax​∀t
 for some Tmax⁡<1T\_{\\max}<1Tmax​<1 (explicitly derivable).
 Interpretation (plain):
 If baseline and governance are strong enough relative to maximum scarcity and maximum coercive capacity, tyranny can be bounded away from the authoritarian basin.
@@ -112,13 +112,13 @@ This is your “constitutional inequality”: a design requirement.
 Model legitimacy as:
 Lt+1=Lt+β1EssentialsSuccess(Bt,St)−β2Tt−β3It−β4WarHarmt−β5CorruptiontL\_{t+1} = L\_t + \\beta\_1 \\text{EssentialsSuccess}(B\_t,S\_t) - \\beta\_2 T\_t - \\beta\_3 I\_t - \\beta\_4 \\text{WarHarm}\_t - \\beta\_5 \\text{Corruption}\_tLt+1​=Lt​+β1​EssentialsSuccess(Bt​,St​)−β2​Tt​−β3​It​−β4​WarHarmt​−β5​Corruptiont​
 Assume EssentialsSuccess has lower bound:
-EssentialsSuccess(Bt,St)≥e‾(Bmin⁡,Smax⁡)\\text{EssentialsSuccess}(B\_t,S\_t)\\ge \\underline{e}(B\_{\\min},S\_{\\max})EssentialsSuccess(Bt​,St​)≥e​(Bmin​,Smax​)
+EssentialsSuccess(Bt,St)&gt;e‾(Bmin⁡,Smax⁡)\\text{EssentialsSuccess}(B\_t,S\_t)\\ge \\underline{e}(B\_{\\min},S\_{\\max})EssentialsSuccess(Bt​,St​)&gt;e​(Bmin​,Smax​)
 Theorem 2 (Legitimacy Lower Bound).
 If there exists δL>0\\delta\_L>0δL​>0 such that for all ttt:
 β1e‾(Bmin⁡,Smax⁡)>β2Tmax⁡+β3Imax⁡+β4Wmax⁡+β5Cmax⁡+δL\\beta\_1 \\underline{e}(B\_{\\min},S\_{\\max})
 > \\beta\_2 T\_{\\max} + \\beta\_3 I\_{\\max} + \\beta\_4 W\_{\\max} + \\beta\_5 C\_{\\max} + \\delta\_Lβ1​e​(Bmin​,Smax​)>β2​Tmax​+β3​Imax​+β4​Wmax​+β5​Cmax​+δL​
 then legitimacy is bounded away from collapse:
-Lt≥Lmin⁡∀tL\_t \\ge L\_{\\min} \\quad \\forall tLt​≥Lmin​∀t
+Lt&gt;Lmin⁡∀tL\_t \\ge L\_{\\min} \\quad \\forall tLt​&gt;Lmin​∀t
 for some Lmin⁡L\_{\\min}Lmin​ depending on initial conditions and δL\\delta\_LδL​.
 Interpretation:
 Under bounded tyranny/inequality/corruption and sufficient essential delivery, legitimacy won’t cross the revolt threshold.
@@ -127,14 +127,14 @@ Under bounded tyranny/inequality/corruption and sufficient essential delivery, l
 Let inequality drift:
 It+1=It+γ1RentSharet−γ2Redistributiont−γ3MobilityMechanismstI\_{t+1} = I\_t + \\gamma\_1 \\text{RentShare}\_t - \\gamma\_2 \\text{Redistribution}\_t - \\gamma\_3 \\text{MobilityMechanisms}\_tIt+1​=It​+γ1​RentSharet​−γ2​Redistributiont​−γ3​MobilityMechanismst​
 Assume rent share is decreasing in anti-rent strength RtR\_tRt​:
-RentSharet≤r‾(Rmin⁡)\\text{RentShare}\_t \\le \\overline{r}(R\_{\\min})RentSharet​≤r(Rmin​)
+RentSharet&lt;r‾(Rmin⁡)\\text{RentShare}\_t \\le \\overline{r}(R\_{\\min})RentSharet​&lt;r(Rmin​)
 Theorem 3 (No runaway inequality).
 If:
 γ1r‾(Rmin⁡)<γ2τ‾+γ3m‾\\gamma\_1 \\overline{r}(R\_{\\min})
 < \\gamma\_2 \\underline{\\tau} + \\gamma\_3 \\underline{m}γ1​r(Rmin​)<γ2​τ​+γ3​m​
 (where τ‾\\underline{\\tau}τ​ is minimum redistribution effort and m‾\\underline{m}m​ is minimum mobility mechanism strength),
 then:
-It≤Imax⁡∀tI\_t \\le I\_{\\max}\\quad \\forall tIt​≤Imax​∀t
+It&lt;Imax⁡∀tI\_t \\le I\_{\\max}\\quad \\forall tIt​&lt;Imax​∀t
 and the oligarchic attractor is avoided.
 Interpretation:
 If rent extraction is structurally suppressed enough, inequality cannot run away, which prevents capture-driven governance collapse.
@@ -151,15 +151,15 @@ LTV cap
 boring finance constraint → bounds CreditGrowth
 
 So:
-CreditGrowtht≤c‾,CapitalBuffert≥b‾\\text{CreditGrowth}\_t \\le \\overline{c}
+CreditGrowtht&lt;c‾,CapitalBuffert&gt;b‾\\text{CreditGrowth}\_t \\le \\overline{c}
 \\quad,\\quad
-\\text{CapitalBuffer}\_t \\ge \\underline{b}CreditGrowtht​≤c,CapitalBuffert​≥b​
+\\text{CapitalBuffer}\_t \\ge \\underline{b}CreditGrowtht​&lt;c,CapitalBuffert​&gt;b​
 Theorem 4 (No credit-crisis cascade).
 If:
 η1Smax⁡+η2c‾<η3b‾+η4Gmin⁡\\eta\_1 S\_{\\max} + \\eta\_2 \\overline{c}
 < \\eta\_3 \\underline{b} + \\eta\_4 G\_{\\min}η1​Smax​+η2​c<η3​b​+η4​Gmin​
 then:
-Ft≤Fmax⁡∀tF\_t \\le F\_{\\max} \\quad \\forall tFt​≤Fmax​∀t
+Ft&lt;Fmax⁡∀tF\_t \\le F\_{\\max} \\quad \\forall tFt​&lt;Fmax​∀t
 and credit crunch events become exponentially rare under bounded shocks.
 Interpretation:
 Macroprudential constraints + governance integrity can mathematically prevent the finance layer from becoming a collapse amplifier.
@@ -181,8 +181,8 @@ macroprudential caps enforced
 
 adaptation investment keeps StS\_tSt​ bounded with high probability
 
-Then there exists a policy ut∈Uu\_t\\in \\mathcal{U}ut​∈U (constant or MPC) such that for any initial x0∈Sx\_0\\in \\mathcal{S}x0​∈S:
-Pr⁡(xt∈S ∀t)≥1−δ\\Pr(x\_t \\in \\mathcal{S}\\ \\forall t) \\ge 1-\\deltaPr(xt​∈S ∀t)≥1−δ
+Then there exists a policy ut&isin;Uu\_t\\in \\mathcal{U}ut​&isin;U (constant or MPC) such that for any initial x0&isin;Sx\_0\\in \\mathcal{S}x0​&isin;S:
+Pr⁡(xt&isin;S ∀t)&gt;1−δ\\Pr(x\_t \\in \\mathcal{S}\\ \\forall t) \\ge 1-\\deltaPr(xt​&isin;S ∀t)&gt;1−δ
 for chosen δ\\deltaδ, provided shock magnitudes satisfy an admissible bound.
 Interpretation:
 Under properly designed constitutional constraints and minimum policy strengths, the hybrid can remain in the safe basin indefinitely with high probability.

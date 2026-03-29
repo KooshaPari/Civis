@@ -96,7 +96,7 @@ Early settlement clustering
 Long-run industrial potential
 
 Conservation invariant:
-∫surfaceenergy\_potential=Eplanetmax\\int\_{surface} \\text{energy\\\_potential} = E\_{planet}^{max}∫surface​energy\_potential=Eplanetmax​
+&int;surfaceenergy\_potential=Eplanetmax\\int\_{surface} \\text{energy\\\_potential} = E\_{planet}^{max}&int;surface​energy\_potential=Eplanetmax​
 No later module may violate this ceiling.
 
 IV. 2) Resource & Energy Fields

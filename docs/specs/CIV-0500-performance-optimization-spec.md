@@ -51,7 +51,7 @@ The following table defines the mandatory performance envelope for each simulati
 | Tick broadcast fanout (100 clients)| < 5 ms   | < 25 ms    |
 | Subscribe handshake                | < 10 ms  | < 50 ms    |
 
-The command-to-ack target of < 5 ms is measured from the moment the client sends a WebSocket frame to the moment the server sends the ack frame. This includes frame parsing, command queue insertion, and ack serialization, but excludes the tick in which the command actually executes (commands are deferred to the next tick boundary per CIV-0001 protocol design).
+The command-to-ack target of \< 5 ms is measured from the moment the client sends a WebSocket frame to the moment the server sends the ack frame. This includes frame parsing, command queue insertion, and ack serialization, but excludes the tick in which the command actually executes (commands are deferred to the next tick boundary per CIV-0001 protocol design).
 
 ### 1.3 Snapshot Generation SLO
 
@@ -84,7 +84,7 @@ CivLab's ECS must satisfy two constraints simultaneously:
 1. **Deterministic iteration order** (required by CIV-0001 invariant I5): iteration must be stable and reproducible across runs.
 2. **Cache-efficient iteration** (required by this spec): per-entity data accessed in tight loops must reside in contiguous memory.
 
-These constraints are compatible. Sorted dense arrays provide both: entities are stored in ID-sorted order (fulfilling I5) and all data for one component type resides in a flat `Vec<T>` (fulfilling cache locality).
+These constraints are compatible. Sorted dense arrays provide both: entities are stored in ID-sorted order (fulfilling I5) and all data for one component type resides in a flat `Vec\<T\>` (fulfilling cache locality).
 
 ### 2.2 Struct-of-Arrays Layout
 
@@ -160,7 +160,7 @@ pub struct CitizenHotArrays {
 | `birth_tick`     | `u64`            | 8              | Used for age calculation only  |
 | `name`           | `String`         | 24 (ptr+len)   | Debug/UI only                  |
 | `biography`      | `String`         | 24 (ptr+len)   | Research annotation only       |
-| `education_hist` | `Vec<u32>`       | 24 (ptr+len)   | Lifetime education events      |
+| `education_hist` | `Vec\<u32\>`       | 24 (ptr+len)   | Lifetime education events      |
 | `faction_hist`   | `Vec<(u32, u64)>`| 24 (ptr+len)   | Faction affiliations over time |
 
 Cold data is stored in a `CitizenColdStore` that holds all cold fields indexed by dense citizen index. This store is accessed rarely (UI rendering, event annotation, replay export) and does not participate in tick hot loops.
@@ -350,7 +350,7 @@ For radius-N neighbor queries (used in climate diffusion and social contagion), 
 
 ### 3.5 Climate CO2 Aggregation
 
-The climate module sums CO2 emissions over all districts each tick. For 2,000 districts (Research scenario), this is a horizontal integer sum over a `Vec<i64>` of length 2,000.
+The climate module sums CO2 emissions over all districts each tick. For 2,000 districts (Research scenario), this is a horizontal integer sum over a `Vec\<i64\>` of length 2,000.
 
 ```rust
 use std::simd::{i64x4, SimdInt};
@@ -585,7 +585,7 @@ fn aggregate_district_production(
 }
 ```
 
-This pattern is correct only when district IDs are used as array indices (requires dense district ID packing, maintained by the entity manager). For sparse district IDs, use a `DashMap<u32, i64>` reduction instead, which is lock-free but has higher constant overhead.
+This pattern is correct only when district IDs are used as array indices (requires dense district ID packing, maintained by the entity manager). For sparse district IDs, use a `DashMap \< u32, i64>` reduction instead, which is lock-free but has higher constant overhead.
 
 ### 4.5 Determinism Preservation Under Parallelism
 
@@ -1092,7 +1092,7 @@ let pool = sqlx::PgPoolOptions::new()
     .expect("database connection pool must initialize");
 ```
 
-The pool is wrapped in `Arc<sqlx::PgPool>` and shared across all tokio tasks. Do not create per-request pools; pool overhead (connection establishment) dominates query time at this scale.
+The pool is wrapped in `Arc \< sqlx::PgPool>` and shared across all tokio tasks. Do not create per-request pools; pool overhead (connection establishment) dominates query time at this scale.
 
 ### 7.5 Vacuum Strategy
 
@@ -1202,7 +1202,7 @@ async fn handle_client_ws(
 }
 ```
 
-The `SubscriptionFilter` is computed once at subscribe time and stored per client. Applying a filter to a broadcast is a read-only operation on the `Arc<TickBroadcast>`, enabling zero-copy filtering across all clients sharing the same broadcast.
+The `SubscriptionFilter` is computed once at subscribe time and stored per client. Applying a filter to a broadcast is a read-only operation on the `Arc\<TickBroadcast\>`, enabling zero-copy filtering across all clients sharing the same broadcast.
 
 ### 8.3 Backpressure and Lag Eviction
 
@@ -1315,7 +1315,7 @@ Two LOD levels based on camera zoom factor:
 | < 1.0 (zoomed out) | District polygon only (no individual tile sprites) | O(districts)|
 | >= 1.0 (zoomed in) | Individual tile sprites + unit sprites             | O(tiles)   |
 
-LOD transition is triggered by the camera zoom factor changing past the 1.0 threshold. At zoom < 1.0, the map renders district-level data (population color, resource heatmap, ideology heatmap) as colored polygons. This path is extremely fast (< 2 ms render time for 500 districts).
+LOD transition is triggered by the camera zoom factor changing past the 1.0 threshold. At zoom \< 1.0, the map renders district-level data (population color, resource heatmap, ideology heatmap) as colored polygons. This path is extremely fast (< 2 ms render time for 500 districts).
 
 ### 9.4 Web Worker Offloading
 
@@ -1805,11 +1805,11 @@ This is well within the 100 ms tick budget for the Small scenario and achieves t
 Tick time scaling with citizen count should be O(N) for all phases that are data-parallel over citizens, and O(D log D) for phases that are data-parallel over districts (where D = district count). The total tick time is dominated by the citizen-level phases:
 
 ```
-T_tick(N, D) ≈ c_citizen * N + c_district * D * log(D)
+T_tick(N, D) &asymp; c_citizen * N + c_district * D * log(D)
 
-For N=1k, D=20:   T ≈ 28ms (measured target)
-For N=10k, D=100: T ≈ 40ms (target; 10x citizens + 5x districts)
-For N=100k, D=500: T ≈ 120ms (target; 100x citizens + 25x districts)
+For N=1k, D=20:   T &asymp; 28ms (measured target)
+For N=10k, D=100: T &asymp; 40ms (target; 10x citizens + 5x districts)
+For N=100k, D=500: T &asymp; 120ms (target; 100x citizens + 25x districts)
 ```
 
 The super-linear growth from N=10k to N=100k (10x citizens, but ~3x time increase rather than 10x) reflects: (a) rayon parallel scaling across 14 cores absorbing 10x work in ~2x wall time, and (b) cache effects (Medium fits in L2, Large spills to L3).
@@ -1919,37 +1919,37 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 ## 13. Acceptance Criteria
 
 ### FR-CIV-PERF-001: Small Scenario SLO
-**Spec:** 1k-citizen tick completes with p50 < 8ms, p99 < 16ms over 1,000-tick window.
-**Test:** `bench_tick_1k_citizens` criterion benchmark; assert p99 < 16ms on CI perf machine.
+**Spec:** 1k-citizen tick completes with p50 \< 8ms, p99 \< 16ms over 1,000-tick window.
+**Test:** `bench_tick_1k_citizens` criterion benchmark; assert p99 \< 16ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-002: Medium Scenario SLO
-**Spec:** 10k-citizen tick completes with p50 < 30ms, p99 < 60ms over 1,000-tick window.
-**Test:** `bench_tick_10k_citizens`; assert p99 < 60ms on CI perf machine.
+**Spec:** 10k-citizen tick completes with p50 \< 30ms, p99 \< 60ms over 1,000-tick window.
+**Test:** `bench_tick_10k_citizens`; assert p99 \< 60ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-003: Large Scenario SLO
-**Spec:** 100k-citizen tick completes with p50 < 80ms, p99 < 150ms over 1,000-tick window.
-**Test:** `bench_tick_100k_citizens`; assert p99 < 150ms on CI perf machine.
+**Spec:** 100k-citizen tick completes with p50 \< 80ms, p99 \< 150ms over 1,000-tick window.
+**Test:** `bench_tick_100k_citizens`; assert p99 \< 150ms on CI perf machine.
 **Status:** Open
 
 ### FR-CIV-PERF-004: WebSocket Command Latency
-**Spec:** Command-to-ack latency < 5ms p50, < 20ms p99.
+**Spec:** Command-to-ack latency \< 5ms p50, < 20ms p99.
 **Test:** `bench_ws_command_ack`; inject 100 commands, measure ack time distribution.
 **Status:** Open
 
 ### FR-CIV-PERF-005: Delta Snapshot Generation
-**Spec:** Delta snapshot generated in < 10ms for any scenario size.
-**Test:** `bench_snapshot_serialize_delta`; assert p99 < 10ms.
+**Spec:** Delta snapshot generated in \< 10ms for any scenario size.
+**Test:** `bench_snapshot_serialize_delta`; assert p99 \< 10ms.
 **Status:** Open
 
 ### FR-CIV-PERF-006: Full Snapshot at 10k Citizens
-**Spec:** Full snapshot generated in < 25ms for 10k-citizen state.
-**Test:** `bench_snapshot_serialize_full`; assert mean < 25ms at 10k citizens.
+**Spec:** Full snapshot generated in \< 25ms for 10k-citizen state.
+**Test:** `bench_snapshot_serialize_full`; assert mean \< 25ms at 10k citizens.
 **Status:** Open
 
 ### FR-CIV-PERF-007: Replay Seek
-**Spec:** Seek to any tick within last 100 ticks completes in < 10ms; seek to arbitrary tick < 100ms.
+**Spec:** Seek to any tick within last 100 ticks completes in \< 10ms; seek to arbitrary tick \< 100ms.
 **Test:** `bench_replay_seek_recent`; `bench_replay_seek_arbitrary`.
 **Status:** Open
 
@@ -1964,18 +1964,18 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 **Status:** Open
 
 ### FR-CIV-PERF-010: DB Async Write Non-Blocking
-**Spec:** DB write spawn adds < 0.5ms to tick wall time; DB write completes in background within 50ms.
-**Test:** `bench_db_write_spawn`; assert tick overhead < 0.5ms; `test_db_write_async` verifies background completion.
+**Spec:** DB write spawn adds \< 0.5ms to tick wall time; DB write completes in background within 50ms.
+**Test:** `bench_db_write_spawn`; assert tick overhead \< 0.5ms; `test_db_write_async` verifies background completion.
 **Status:** Open
 
 ### FR-CIV-PERF-011: WebSocket Fanout 100 Clients
-**Spec:** Broadcasting one tick snapshot to 100 connected clients completes in < 5ms.
+**Spec:** Broadcasting one tick snapshot to 100 connected clients completes in \< 5ms.
 **Test:** `bench_websocket_fanout_100clients`.
 **Status:** Open
 
 ### FR-CIV-PERF-012: Phase Parallelism
 **Spec:** Parallel phase rounds (demographics||climate, production||military||research, social||economy) demonstrably reduce wall time vs. sequential execution.
-**Test:** `bench_phase_parallel_vs_sequential`; assert parallel execution < 70% of sequential time.
+**Test:** `bench_phase_parallel_vs_sequential`; assert parallel execution \< 70% of sequential time.
 **Status:** Open
 
 ### FR-CIV-PERF-013: No Performance Regression on PR
@@ -1984,13 +1984,13 @@ P0 items block phase completion. P1 items must be resolved before the subsequent
 **Status:** Open
 
 ### FR-CIV-PERF-014: L1 Cache Miss Rate (Small Scenario)
-**Spec:** L1 data cache miss rate < 1% during Small scenario hot loop (citizens processing).
-**Test:** `perf stat` measurement in CI; assert L1-dcache-load-misses < 1%.
+**Spec:** L1 data cache miss rate \< 1% during Small scenario hot loop (citizens processing).
+**Test:** `perf stat` measurement in CI; assert L1-dcache-load-misses \< 1%.
 **Status:** Open
 
 ### FR-CIV-PERF-015: Tracing Overhead
-**Spec:** Tracing spans at `debug` level add < 2% overhead to tick wall time vs. release build without tracing.
-**Test:** `bench_tick_with_tracing_vs_without`; assert overhead < 2%.
+**Spec:** Tracing spans at `debug` level add \< 2% overhead to tick wall time vs. release build without tracing.
+**Test:** `bench_tick_with_tracing_vs_without`; assert overhead \< 2%.
 **Status:** Open
 
 ### FR-CIV-PERF-016: Snapshot Ring Buffer Capacity

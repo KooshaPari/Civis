@@ -58,7 +58,7 @@ Lt+1=Lt+b1ServiceDeliveryt−b2St−b3Λt−b4Φ(Et,Selt)⏟coercion injusticeL
 - b\_3 \\Lambda\_t
 - b\_4 \\underbrace{\\Phi(E\_t, Sel\_t)}\_{\\text{coercion injustice}}Lt+1​=Lt​+b1​ServiceDeliveryt​−b2​St​−b3​Λt​−b4​coercion injusticeΦ(Et​,Selt​)​​
 Assume Φ\\PhiΦ increases in both:
-∂Φ∂E>0,∂Φ∂Sel>0\\frac{\\partial \\Phi}{\\partial E} > 0,\\quad \\frac{\\partial \\Phi}{\\partial Sel} > 0∂E∂Φ​>0,∂Sel∂Φ​>0
+&part;Φ&part;E>0,&part;Φ&part;Sel>0\\frac{\\partial \\Phi}{\\partial E} > 0,\\quad \\frac{\\partial \\Phi}{\\partial Sel} > 0&part;E&part;Φ​>0,&part;Sel&part;Φ​>0
 Meaning: more enforcement hurts legitimacy, and selective enforcement hurts it disproportionately.
 
 1.4 Enforcement choice (state reaction function)
@@ -69,32 +69,32 @@ If governance is strong, enforcement rises less (better targeted, less panic).
 2) Define the “backfire region”
 We say enforcement backfires if increasing enforcement EtE\_tEt​ causes higher long-run leakage Λ\\LambdaΛ and/or higher unrest RRR.
 Formally, in a neighborhood of states:
-∂Λt+k∂Et>0for some horizon k≥1\\frac{\\partial \\Lambda\_{t+k}}{\\partial E\_t} > 0
-\\quad \\text{for some horizon }k\\ge 1∂Et​∂Λt+k​​>0for some horizon k≥1
+&part;Λt+k&part;Et>0for some horizon k&gt;1\\frac{\\partial \\Lambda\_{t+k}}{\\partial E\_t} > 0
+\\quad \\text{for some horizon }k\\ge 1&part;Et​&part;Λt+k​​>0for some horizon k&gt;1
 and/or
-∂Rt+k∂Et>0\\frac{\\partial R\_{t+k}}{\\partial E\_t} > 0∂Et​∂Rt+k​​>0
+&part;Rt+k&part;Et>0\\frac{\\partial R\_{t+k}}{\\partial E\_t} > 0&part;Et​&part;Rt+k​​>0
 
 3) The theorem statement
 Theorem (Repression Trap / Enforcement Backfire)
 Assume:
 
-Enforcement is partly selective: Selt≥Selmin⁡>0Sel\_t \\ge Sel\_{\\min} > 0Selt​≥Selmin​>0 (corruption exists).
+Enforcement is partly selective: Selt&gt;Selmin⁡>0Sel\_t \\ge Sel\_{\\min} > 0Selt​&gt;Selmin​>0 (corruption exists).
 
-Governance integrity is bounded below but not high: Gt≤GmidG\_t \\le G\_{\\text{mid}}Gt​≤Gmid​.
+Governance integrity is bounded below but not high: Gt&lt;GmidG\_t \\le G\_{\\text{mid}}Gt​&lt;Gmid​.
 
-Scarcity pressure is nontrivial: St≥Smin⁡>0S\_t \\ge S\_{\\min} > 0St​≥Smin​>0.
+Scarcity pressure is nontrivial: St&gt;Smin⁡>0S\_t \\ge S\_{\\min} > 0St​&gt;Smin​>0.
 
-Legitimacy is near a critical threshold: Lt≈LcritL\_t \\approx L\_{crit}Lt​≈Lcrit​ where unrest sensitivity is high.
+Legitimacy is near a critical threshold: Lt&asymp;LcritL\_t \\approx L\_{crit}Lt​&asymp;Lcrit​ where unrest sensitivity is high.
 
 Leakage networks have positive feedback: Ht+1=Ht+νΛt−δHHtH\_{t+1} = H\_t + \\nu \\Lambda\_t - \\delta\_H H\_tHt+1​=Ht​+νΛt​−δH​Ht​.
 
 Then there exists an enforcement level E\\\*E^\\\*E\\\* such that:
 
-For Et<E\\\*E\_t < E^\\\*Et​<E\\\*, increasing enforcement reduces leakage short-run:
-∂Λt+1∂Et<0\\frac{\\partial \\Lambda\_{t+1}}{\\partial E\_t} < 0∂Et​∂Λt+1​​<0
+For Et \< E\\\*E\_t \< E^\\\*Et​<E\\\*, increasing enforcement reduces leakage short-run:
+&part;Λt+1&part;Et \< 0\\frac{\\partial \\Lambda\_{t+1}}{\\partial E\_t} < 0&part;Et​&part;Λt+1​​<0
 
 For Et>E\\\*E\_t > E^\\\*Et​>E\\\*, increasing enforcement reduces legitimacy enough to raise unrest and expand shadow network capacity, causing net leakage to increase over a finite horizon:
-∃k≥1:∂Λt+k∂Et>0\\exists k\\ge 1:\\quad \\frac{\\partial \\Lambda\_{t+k}}{\\partial E\_t} > 0∃k≥1:∂Et​∂Λt+k​​>0
+∃k&gt;1:&part;Λt+k&part;Et>0\\exists k\\ge 1:\\quad \\frac{\\partial \\Lambda\_{t+k}}{\\partial E\_t} > 0∃k&gt;1:&part;Et​&part;Λt+k​​>0
 
 Moreover, when legitimacy crosses below a stability threshold LsecL\_{sec}Lsec​, fragmentation probability rises and the shadow network becomes harder to suppress, shifting the system into a high-leakage attractor.
 Interpretation:
@@ -105,19 +105,19 @@ Step 1: Direct effect of enforcement on leakage is negative
 From leakage suppression term:
 −β(K+ψE)G(1−Sel)Λ-\\beta (K+\\psi E)G(1-Sel)\\Lambda−β(K+ψE)G(1−Sel)Λ
 so marginally:
-∂Λt+1∂Et∼−βψG(1−Sel)Λt<0\\frac{\\partial \\Lambda\_{t+1}}{\\partial E\_t} \\sim -\\beta \\psi G(1-Sel)\\Lambda\_t < 0∂Et​∂Λt+1​​∼−βψG(1−Sel)Λt​<0
+&part;Λt+1&part;Et∼−βψG(1−Sel)Λt \< 0\\frac{\\partial \\Lambda\_{t+1}}{\\partial E\_t} \\sim -\\beta \\psi G(1-Sel)\\Lambda\_t \< 0&part;Et​&part;Λt+1​​∼−βψG(1−Sel)Λt​<0
 (short-run reduction)
 Step 2: Indirect effect of enforcement on legitimacy is negative
 Legitimacy update includes:
 −b4Φ(E,Sel)-b\_4 \\Phi(E,Sel)−b4​Φ(E,Sel)
 so:
-∂Lt+1∂Et<0\\frac{\\partial L\_{t+1}}{\\partial E\_t} < 0∂Et​∂Lt+1​​<0
+&part;Lt+1&part;Et \< 0\\frac{\\partial L\_{t+1}}{\\partial E\_t} < 0&part;Et​&part;Lt+1​​<0
 and stronger negativity when SelSelSel is high.
 Step 3: Lower legitimacy increases unrest
 Unrest update includes:
 −a4Lt-a\_4 L\_t−a4​Lt​
 so:
-∂Rt+2∂Et>0\\frac{\\partial R\_{t+2}}{\\partial E\_t} > 0∂Et​∂Rt+2​​>0
+&part;Rt+2&part;Et>0\\frac{\\partial R\_{t+2}}{\\partial E\_t} > 0&part;Et​&part;Rt+2​​>0
 (through LLL)
 Step 4: Higher unrest increases enforcement and reduces governance effectiveness
 Reaction function increases EEE, and unrest/capture reduces effective integrity (in full CivLab):
@@ -148,7 +148,7 @@ Hence the backfire inequality holds for some horizon kkk.
 Corollary 1: Enforcement works only with integrity
 If G(1−Sel)G(1-Sel)G(1−Sel) is small, raising enforcement has little suppression effect but large legitimacy cost → backfire.
 So you need:
-G(1−Sel)≥γminG(1-Sel) \\ge \\gamma\_{min}G(1−Sel)≥γmin​
+G(1−Sel)&gt;γminG(1-Sel) \\ge \\gamma\_{min}G(1−Sel)&gt;γmin​
 before using high enforcement.
 Corollary 2: Service-first beats crackdown-first under scarcity
 If you increase ServiceDelivery (or baseline rights) you raise legitimacy and reduce scarcity, decreasing both leakage incentives and unrest. This shifts E\\\*E^\\\*E\\\* upward (wider safe enforcement range).

@@ -48,7 +48,7 @@ LOD zoom views
 
 1) Tech as a regime, not a list
 Define a technology regime RtR\_tRt​ for each region rrr:
-Rr,t∈{0,1,2,… }R\_{r,t}\\in \\{0,1,2,\\dots\\}Rr,t​∈{0,1,2,…}
+Rr,t&isin;{0,1,2,… }R\_{r,t}\\in \\{0,1,2,\\dots\\}Rr,t​&isin;{0,1,2,…}
 But instead of being chosen, it is inferred from state variables.
 Each regime has a parameter bundle:
 
@@ -156,7 +156,7 @@ automation/AI
 orbital infrastructure (later)
 
 Model GPT as a multiplicative boost that spreads across sectors with diffusion.
-GPT adoption fraction gr,t∈[0,1]g\_{r,t}\\in[0,1]gr,t​∈[0,1]:
+GPT adoption fraction gr,t&isin;[0,1]g\_{r,t}\\in[0,1]gr,t​&isin;[0,1]:
 gr,t+1=gr,t+λ(1−gr,t)⋅Openness⋅Investmentg\_{r,t+1}=g\_{r,t}+\\lambda(1-g\_{r,t})\\cdot \\text{Openness}\\cdot \\text{Investment}gr,t+1​=gr,t​+λ(1−gr,t​)⋅Openness⋅Investment
 Productivity:
 Ar,s,teff=Ar,s,t⋅(1+κsgr,t)A\_{r,s,t}^{eff}=A\_{r,s,t}\\cdot (1+\\kappa\_s g\_{r,t})Ar,s,teff​=Ar,s,t​⋅(1+κs​gr,t​)
@@ -178,7 +178,7 @@ IP/knowledge controls
 shadow leakage
 
 Diffusion dynamic:
-Kr,t+1know=Kr,tknow+ρ⋅R&Dr,t+ψ⋅∑j≠rwrj⋅(Kj,tknow−Kr,tknow)+K^{know}\_{r,t+1} = K^{know}\_{r,t} + \\rho \\cdot R\\&D\_{r,t} + \\psi \\cdot \\sum\_{j\\neq r} w\_{rj}\\cdot (K^{know}\_{j,t}-K^{know}\_{r,t})\_+Kr,t+1know​=Kr,tknow​+ρ⋅R&Dr,t​+ψ⋅j=r∑​wrj​⋅(Kj,tknow​−Kr,tknow​)+​
+Kr,t+1know=Kr,tknow+ρ⋅R&Dr,t+ψ⋅&sum;j&ne;rwrj⋅(Kj,tknow−Kr,tknow)+K^{know}\_{r,t+1} = K^{know}\_{r,t} + \\rho \\cdot R\\&D\_{r,t} + \\psi \\cdot \\sum\_{j\\neq r} w\_{rj}\\cdot (K^{know}\_{j,t}-K^{know}\_{r,t})\_+Kr,t+1know​=Kr,tknow​+ρ⋅R&Dr,t​+ψ⋅j=r&sum;​wrj​⋅(Kj,tknow​−Kr,tknow​)+​
 Where wrjw\_{rj}wrj​ depends on trade and ties.
 
 7) Tech and inequality: why advanced regimes polarize
@@ -233,7 +233,7 @@ resource prospecting (future scarcity relief)
 
 potential surveillance creep capability
 
-Again: capability ≠ tyranny. But it raises the stakes.
+Again: capability &ne; tyranny. But it raises the stakes.
 
 10) UI & gameplay representation (4X “eras” without a tech tree)
 Macro “Era” timeline

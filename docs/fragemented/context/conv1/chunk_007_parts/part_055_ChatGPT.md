@@ -47,7 +47,7 @@ II. Core Collapse Variables
 Collapse risk depends primarily on:
 1) Legitimacy threshold
 If:
-Lt<LcritL\_t < L\_{crit}Lt​<Lcrit​
+Lt \< LcritL\_t \< L\_{crit}Lt​<Lcrit​
 Then probability of civil unrest spikes.
 
 2) Scarcity × Polarization Interaction
@@ -60,7 +60,7 @@ Then protest hazard increases superlinearly.
 
 3) Governance Failure
 If:
-Gt<GminG\_t < G\_{min}Gt​<Gmin​
+Gt \< GminG\_t \< G\_{min}Gt​<Gmin​
 Then:
 
 Enforcement becomes selective
@@ -115,7 +115,7 @@ Define territory divided into subregions kkk.
 Each subregion has:
 Lk,t,Pk,t,Ck,t,Sk,tL\_{k,t}, P\_{k,t}, C\_{k,t}, S\_{k,t}Lk,t​,Pk,t​,Ck,t​,Sk,t​
 If:
-Lk,t<LsecANDCk,t<CcohesionL\_{k,t} < L\_{sec}
+Lk,t \< LsecANDCk,t \< CcohesionL\_{k,t} < L\_{sec}
 \\quad \\text{AND} \\quad
 C\_{k,t} < C\_{cohesion}Lk,t​<Lsec​ANDCk,t​<Ccohesion​
 Then:
@@ -134,7 +134,7 @@ This modifies trade graph and corridor control.
 VI. Civil War Dynamics (Internal War Game)
 If insurgency > threshold:
 Civil war state activates.
-Split region into factions f∈{1..m}f \\in \\{1..m\\}f∈{1..m}.
+Split region into factions f&isin;{1..m}f \\in \\{1..m\\}f&isin;{1..m}.
 Each faction has:
 
 manpower

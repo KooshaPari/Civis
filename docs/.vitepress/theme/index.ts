@@ -1,9 +1,6 @@
-import Theme from '@phenotype/docs/theme'
-import CategorySwitcher from '../components/CategorySwitcher.vue'
+import DefaultTheme from 'vitepress/theme'
+import './style.css'
 
 export default {
-  ...Theme,
-  enhanceApp({ app }) {
-    app.component('CategorySwitcher', CategorySwitcher)
-  }
+  extends: DefaultTheme,
 }

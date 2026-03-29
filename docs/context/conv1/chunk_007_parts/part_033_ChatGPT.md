@@ -49,7 +49,7 @@ xi,t+1=H(xi,t,Yc,t,Xr,t,ur,t,ϵi,t)x\_{i,t+1} = H(x\_{i,t}, Y\_{c,t}, X\_{r,t}, 
 Used selectively (LOD) for hotspots.
 Conservation
 Define the re-aggregation operator A\\mathcal{A}A:
-Xr,t≈A({xi,t},Yc,t)X\_{r,t} \\approx \\mathcal{A}\\big(\\{x\_{i,t}\\}, Y\_{c,t}\\big)Xr,t​≈A({xi,t​},Yc,t​)
+Xr,t&asymp;A({xi,t},Yc,t)X\_{r,t} \\approx \\mathcal{A}\\big(\\{x\_{i,t}\\}, Y\_{c,t}\\big)Xr,t​&asymp;A({xi,t​},Yc,t​)
 This is the mathematical statement of your LOD architecture.
 
 A2) Regimes as policy modules, not separate games
@@ -85,7 +85,7 @@ This makes it publishable as “comparative institutional dynamics under scarcit
 
 A4) Control framing (AI policy agents)
 You formalize governance as constrained robust MPC:
-min⁡ut:t+H−1max⁡ξ∈ΞJ(X,u,ξ)\\min\_{u\_{t:t+H-1}} \\max\_{\\xi\\in\\Xi} J(X,u,\\xi)ut:t+H−1​min​ξ∈Ξmax​J(X,u,ξ)
+min⁡ut:t+H−1max⁡ξ&isin;ΞJ(X,u,ξ)\\min\_{u\_{t:t+H-1}} \\max\_{\\xi\\in\\Xi} J(X,u,\\xi)ut:t+H−1​min​ξ&isin;Ξmax​J(X,u,ξ)
 subject to constitutional constraints U\\mathcal{U}U (e.g., coupling lock, surveillance cap).
 This is a real research contribution: “constitutional constraints in socio-economic control systems.”
 

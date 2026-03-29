@@ -114,7 +114,7 @@ CivLab supports two physical save representations:
 
 **Uncompressed folder** (debug/inspection): `.civsave/` directory — raw components side-by-side. Used for development, migration testing, and human inspection. Not used in production by default.
 
-QuickSaves bypass both: they hold `SimStateSnapshot` directly in a heap-allocated `Vec<u8>` (MessagePack-serialized, not compressed) inside the `QuickSaveRing`.
+QuickSaves bypass both: they hold `SimStateSnapshot` directly in a heap-allocated `Vec\<u8\>` (MessagePack-serialized, not compressed) inside the `QuickSaveRing`.
 
 ### 2.2 Archive Layout
 
@@ -136,7 +136,7 @@ ASCII diagram of the binary layout inside the archive:
 │  ┌──────────┬──────────┬──────────────┬────────────────┐    │
 │  │  magic   │  fmt_ver │  eng_ver     │  created_at    │    │
 │  │ "CIV1"   │  u16 LE  │  semver str  │  i64 unix ms   │    │
-│  │  4 bytes │  2 bytes │  ≤ 32 bytes  │  8 bytes       │    │
+│  │  4 bytes │  2 bytes │  &lt; 32 bytes  │  8 bytes       │    │
 │  └──────────┴──────────┴──────────────┴────────────────┘    │
 │  ┌────────────────┬──────────────────┬────────────────────┐  │
 │  │  seed_hi       │  seed_lo         │  tick              │  │
@@ -179,7 +179,7 @@ The first 4 bytes of `header.bin` are always the ASCII literal `CIV1` (`0x43 0x4
 | 0 | 4 | `[u8; 4]` | `magic` — must be `[0x43, 0x49, 0x56, 0x31]` |
 | 4 | 2 | `u16` | `save_format_version` — bumped on breaking schema changes |
 | 6 | 1 | `u8` | `engine_version_len` — byte length of engine version string |
-| 7 | ≤32 | `[u8]` | `engine_version` — UTF-8 semver, zero-padded to declared len |
+| 7 | &lt;32 | `[u8]` | `engine_version` — UTF-8 semver, zero-padded to declared len |
 | 39 | 8 | `i64` | `created_at_unix_ms` — UTC milliseconds since epoch |
 | 47 | 8 | `u64` | `seed_hi` — upper 64 bits of 128-bit scenario seed |
 | 55 | 8 | `u64` | `seed_lo` — lower 64 bits of 128-bit scenario seed |
@@ -1143,7 +1143,7 @@ When loading a save that references a mod that is not currently loaded:
 
 1. **Warn** via `tracing::warn!` with `mod_id` and `schema_version`.
 2. **Skip** the blob — do not fail the load.
-3. **Record** the skipped mod in `LoadedSave::skipped_mods: Vec<String>`.
+3. **Record** the skipped mod in `LoadedSave::skipped_mods: Vec\<String\>`.
 4. **Notify** the caller via `LoadedSave` so it can surface the warning to the player.
 
 This is the only non-fatal skip in the load sequence. All other errors (hash mismatch, corrupt state.bin, unknown format version) are hard failures.
@@ -1547,7 +1547,7 @@ After completing the load sequence, the simulation is in a state that is guarant
 
 2. **BLAKE3 chain**: The `chain_tail` from `TickChainSnapshot` is the exact 32-byte accumulation through tick N. Tick N+1's hash computation uses this tail as its input, maintaining an unbroken chain.
 
-3. **ECS state**: All bevy_ecs components are restored from their serialized representations. Fixed-point numerics (i64 newtype wrappers for KiloJoules, MilliCredits; FixedI32<U16> for rates) are restored without floating-point rounding because they are stored as their raw integer values.
+3. **ECS state**: All bevy_ecs components are restored from their serialized representations. Fixed-point numerics (i64 newtype wrappers for KiloJoules, MilliCredits; FixedI32\<U16\> for rates) are restored without floating-point rounding because they are stored as their raw integer values.
 
 4. **AI state**: MCTS trees, personality parameters, memory, and goals are fully restored. The AI's next decision will be computed identically because all inputs to that decision — random seed position, personality, memory, threat model, scenario state — are identical.
 
@@ -2976,13 +2976,13 @@ Acceptance criteria are grouped by functional requirement. All criteria must pas
 
 ### 17.7 Performance (FR-SAVE-016, FR-SAVE-017, FR-SAVE-018, FR-SAVE-019)
 
-**AC-1000-16**: The `criterion` benchmark `quicksave_1000_citizens` SHALL measure a mean latency of ≤ 50ms on the CI hardware tier (4-core x86-64, 8GB RAM). CI SHALL fail the PR if the mean exceeds 60ms (20% tolerance).
+**AC-1000-16**: The `criterion` benchmark `quicksave_1000_citizens` SHALL measure a mean latency of &lt; 50ms on the CI hardware tier (4-core x86-64, 8GB RAM). CI SHALL fail the PR if the mean exceeds 60ms (20% tolerance).
 
-**AC-1000-17**: The `criterion` benchmark `slotsave_1000_citizens` SHALL measure a mean latency of ≤ 500ms. CI SHALL fail the PR if the mean exceeds 600ms.
+**AC-1000-17**: The `criterion` benchmark `slotsave_1000_citizens` SHALL measure a mean latency of &lt; 500ms. CI SHALL fail the PR if the mean exceeds 600ms.
 
-**AC-1000-18**: The `criterion` benchmark `load_1000_citizens` SHALL measure a mean latency of ≤ 1,000ms. CI SHALL fail the PR if the mean exceeds 1,200ms.
+**AC-1000-18**: The `criterion` benchmark `load_1000_citizens` SHALL measure a mean latency of &lt; 1,000ms. CI SHALL fail the PR if the mean exceeds 1,200ms.
 
-**AC-1000-19**: `verify_save` SHALL complete in ≤ 200ms for a 10,000-citizen save (largest supported scale).
+**AC-1000-19**: `verify_save` SHALL complete in &lt; 200ms for a 10,000-citizen save (largest supported scale).
 
 ### 17.8 JSON-RPC Contract (FR-SAVE-021)
 

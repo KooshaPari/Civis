@@ -155,7 +155,7 @@ The following table defines every simulation event type that triggers audio, wha
 | `institution.formed.v1` | Establishment fanfare (2s) | Major key, celebratory | 15s |
 | `insurgency.started.v1` | Tension sting (1.5s) | Minor key, rising dissonance | 20s |
 | `election.held.v1` | Crowd murmur (2s) → result reveal (1.5s) | Murmur plays on event; result reveal plays on `election.result.v1` (victory: cheer; loss: groan) | 30s |
-| `tick.completed.v1` (hidden) | Ambient heartbeat (0.5s, very low volume) | Only if `stability < 30%`; pulse rate increases linearly as stability drops toward 0% | Per-tick |
+| `tick.completed.v1` (hidden) | Ambient heartbeat (0.5s, very low volume) | Only if `stability \< 30%`; pulse rate increases linearly as stability drops toward 0% | Per-tick |
 | `migration.wave.started.v1` | Distant footsteps + crowd murmur | Volume proportional to migration count | 20s |
 | `famine.triggered.v1` | Mournful low horn (2s) | Sustained; overlaps with drought SFX if co-occurring | 60s |
 | `trade.route.established.v1` | Market bell (1s) + light fanfare | Short and positive | 10s |
@@ -1539,7 +1539,7 @@ Every audio cue that communicates important game information MUST have a corresp
 | Disaster SFX | Disaster zone hex highlight + alert in event log |
 | Tech discovery chime | Tech notification badge + animated research completion indicator |
 | Bankruptcy chord | Economy alert badge + treasury status indicator (red) |
-| Heartbeat (stability < 30%) | Screen edge pulse effect (red, subtle, matches heartbeat rhythm) |
+| Heartbeat (stability \< 30%) | Screen edge pulse effect (red, subtle, matches heartbeat rhythm) |
 | Insurgency sting | Insurgency alert badge + affected district hex highlight |
 | Crisis music state | Crisis indicator overlay (subtle red vignette at screen edges) |
 
@@ -1636,13 +1636,13 @@ This table is the canonical source for implementation. Both the Bevy and Web cli
 | `war.declared.v1` | `diplomacy_war_horn_aggressor` / `diplomacy_war_horn_target` | Player role | No | `1.0 × sfx_vol` | 30 | WAR_WINNING / WAR_LOSING |
 | `battle.resolved.v1` | `battle_resolved_{outcome}` | outcome field | Yes | `0.85 × sfx_vol` | 5 | None |
 | `citizen.born.v1` | `crowd_cheer_birth` | Batch >= 100 | No | `0.3 + batch/1000 × sfx_vol` | 10 | None |
-| `disaster.triggered.v1` | `env_disaster_{type}` | disaster_type | Yes | `(0.5 + severity×0.5) × sfx_vol` | 60 | CRISIS if stability < 20% |
+| `disaster.triggered.v1` | `env_disaster_{type}` | disaster_type | Yes | `(0.5 + severity×0.5) × sfx_vol` | 60 | CRISIS if stability \< 20% |
 | `tech.unlocked.v1` | `tech_discovery_chime` | Era variant | No | `sfx_vol` | 10 | None |
 | `economy.bankruptcy.declared.v1` | `economy_bankruptcy` | None | No | `sfx_vol` | 30 | None |
 | `institution.formed.v1` | `institution_established_fanfare` | None | No | `sfx_vol` | 15 | None |
 | `insurgency.started.v1` | `insurgency_tension_sting` | None | Yes | `sfx_vol` | 20 | None |
 | `election.held.v1` | `crowd_murmur_election` | Phase: murmur/result | No | `0.7 × sfx_vol` | 30 | None |
-| `tick.completed.v1` | `ui_heartbeat` | stability < 30% only | No | `(30-stab)/30 × 0.4 × sfx_vol` | pulse_ms | None |
+| `tick.completed.v1` | `ui_heartbeat` | stability \< 30% only | No | `(30-stab)/30 × 0.4 × sfx_vol` | pulse_ms | None |
 | `migration.wave.started.v1` | `migration_crowd_footsteps` | count proportional | Yes | `count/1000 × sfx_vol` | 20 | None |
 | `famine.triggered.v1` | `famine_horn` | None | Yes | `sfx_vol` | 60 | None |
 | `trade.route.established.v1` | `economy_trade_route_bell` | None | No | `sfx_vol` | 10 | None |
@@ -1819,7 +1819,7 @@ assets/audio/
 - [ ] Music state machine transitions trigger correct layer volume changes
 - [ ] Stability-driven tension layer updates on every tick that changes stability
 - [ ] SFX cooldown tracker prevents spam for all cooldown-specified events
-- [ ] Heartbeat plays only when stability < 30%; pulse rate matches formula
+- [ ] Heartbeat plays only when stability \< 30%; pulse rate matches formula
 - [ ] Ambient system updates on camera position change; crossfades at correct durations
 - [ ] Web client `AudioManager` is functionally equivalent to Bevy implementation
 - [ ] Audio settings persist to localStorage (web) and config file (desktop)

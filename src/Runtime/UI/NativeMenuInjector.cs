@@ -454,14 +454,14 @@ namespace DINOForge.Runtime.UI
                     }
                 }
 
-                // Position adjacent to Settings button
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2: Positioning Mods button after Settings button...");
+                // Position Mods button BEFORE Settings button (so it appears earlier in the menu)
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2: Positioning Mods button BEFORE Settings button...");
                 RectTransform modsRect = modsButton.GetComponent<RectTransform>();
                 RectTransform settingsRect = settingsButton.GetComponent<RectTransform>();
                 if (modsRect != null && settingsRect != null)
                 {
-                    NativeUiHelper.PositionAfterSibling(modsRect, settingsRect);
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 OK: Positioned (sibling index: {modsButton.transform.GetSiblingIndex()})");
+                    NativeUiHelper.PositionBeforeSibling(modsRect, settingsRect);
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   STEP 2 OK: Positioned BEFORE Settings (sibling index: {modsButton.transform.GetSiblingIndex()})");
                 }
                 else
                 {

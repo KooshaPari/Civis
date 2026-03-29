@@ -398,17 +398,23 @@ namespace DINOForge.Runtime
             };
 
             // ── Step 2: Attempt UGUI canvas setup ───────────────────────────────────
-            // DFCanvas.Initialize() only stores the logger; the actual canvas hierarchy
-            // is built in DFCanvas.Start() which Unity calls on the NEXT frame.
-            // We register an OnInitFailed callback so that if Start() throws, we can
-            // activate the IMGUI fallback from Update() on the same frame it fails.
+            // DFCanvas.Initialize() builds the canvas hierarchy synchronously and calls
+            // OnInitSuccess immediately if successful, or OnInitFailed if it throws.
+            // We register both callbacks so that _uguiReady is set on the main thread,
+            // not from the background polling thread (which would cause UnityException).
             bool uguiAddedOk = false;
             try
             {
                 _dfCanvas = gameObject.AddComponent<DFCanvas>();
-                _dfCanvas.Initialize(_log);
 
-                // Register failure callback — called by DFCanvas.Start() if BuildCanvas throws.
+                // Register callbacks BEFORE Initialize() — Initialize() calls them synchronously.
+                _dfCanvas.OnInitSuccess = () =>
+                {
+                    _uguiReady = true;
+                    _uguiChecked = true;
+                    _log.LogInfo("[RuntimeDriver] DFCanvas.OnInitSuccess — UGUI canvas ready on main thread.");
+                    WriteDebug("[RuntimeDriver] DFCanvas.OnInitSuccess: UGUI is ready.");
+                };
                 _dfCanvas.OnInitFailed = () =>
                 {
                     _log.LogWarning("[RuntimeDriver] DFCanvas.OnInitFailed — activating IMGUI fallback.");
@@ -417,8 +423,10 @@ namespace DINOForge.Runtime
                     ActivateImguiFallback();
                 };
 
+                _dfCanvas.Initialize(_log);
+
                 uguiAddedOk = true;
-                _log.LogInfo("[RuntimeDriver] Added DFCanvas — canvas hierarchy deferred to Start().");
+                _log.LogInfo("[RuntimeDriver] Added DFCanvas — UGUI canvas built in Initialize().");
             }
             catch (Exception ex)
             {
@@ -637,23 +645,9 @@ namespace DINOForge.Runtime
                             }
                         }
 
-                        // ── Check DFCanvas readiness (UGUI setup) ────────────────────────
-                        // DFCanvas.Start() is deferred, so we can't know in Initialize()
-                        // whether UGUI succeeded. Poll for IsReady each iteration.
-                        if (!_uguiChecked && _dfCanvas != null)
-                        {
-                            try
-                            {
-                                if (_dfCanvas.IsReady)
-                                {
-                                    _uguiReady = true;
-                                    _uguiChecked = true;
-                                    _log?.LogInfo("[RuntimeDriver] DFCanvas confirmed ready — UGUI active (background thread).");
-                                    WireUguiToModPlatform();
-                                }
-                            }
-                            catch { }
-                        }
+                        // ── DFCanvas readiness is handled by OnInitSuccess callback ──────────────
+                        // No need to poll IsReady from background thread (causes UnityException).
+                        // The callback is invoked synchronously from DFCanvas.Initialize() on main thread.
 
                         // ── ECS World polling ────────────────────────────────────────────
                         if (!_worldFound)

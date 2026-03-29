@@ -103,6 +103,21 @@ namespace DINOForge.Runtime.UI
         }
 
         /// <summary>
+        /// Positions <paramref name="target"/> immediately before <paramref name="sibling"/> in
+        /// the shared parent's child list.  Both transforms must share the same parent.
+        /// </summary>
+        /// <param name="target">Transform to reposition.</param>
+        /// <param name="sibling">Reference sibling; target will be placed before this.</param>
+        public static void PositionBeforeSibling(RectTransform target, RectTransform sibling)
+        {
+            if (target == null || sibling == null) return;
+            if (target.parent != sibling.parent) return;
+
+            int siblingIndex = sibling.GetSiblingIndex();
+            target.SetSiblingIndex(siblingIndex);
+        }
+
+        /// <summary>
         /// Positions <paramref name="target"/> immediately after <paramref name="sibling"/> in
         /// the shared parent's child list.  Both transforms must share the same parent.
         /// </summary>

@@ -44,6 +44,13 @@ namespace DINOForge.Runtime.UI
         // ── Bootstrap ─────────────────────────────────────────────────────────────
 
         /// <summary>
+        /// Callback invoked when DFCanvas successfully builds its canvas hierarchy in Initialize().
+        /// RuntimeDriver sets this to mark UGUI as ready without polling IsReady from a background thread
+        /// (which causes UnityException on background thread access to MonoBehaviour fields).
+        /// </summary>
+        public Action? OnInitSuccess;
+
+        /// <summary>
         /// Callback invoked when DFCanvas fails to build its canvas hierarchy in Start().
         /// RuntimeDriver sets this before the first frame so it can activate the IMGUI
         /// fallback if UGUI setup fails after the component is already added.
@@ -74,6 +81,7 @@ namespace DINOForge.Runtime.UI
                 BuildCanvas();
                 _ready = true;
                 _log?.LogInfo("[DFCanvas] UGUI canvas hierarchy built successfully in Initialize().");
+                OnInitSuccess?.Invoke();
             }
             catch (Exception ex)
             {
@@ -92,6 +100,7 @@ namespace DINOForge.Runtime.UI
                 BuildCanvas();
                 _ready = true;
                 _log?.LogInfo("[DFCanvas] UGUI canvas hierarchy built in Start() (fallback).");
+                OnInitSuccess?.Invoke();
             }
             catch (Exception ex)
             {

@@ -15,15 +15,12 @@ namespace DINOForge.Runtime.UI
         // ── Constants ─────────────────────────────────────────────────────────────
         private const float PanelWidth = 380f;
         private const float HeaderHeight = 44f;
-        private const float AnimDuration = 0.15f;
 
         // ── State ─────────────────────────────────────────────────────────────────
         private ModPlatform? _modPlatform;
 
         private CanvasGroup? _canvasGroup;
         private RectTransform? _panelRt;
-        private float _animT;
-        private bool _targetVisible;
 
         // Section toggle state
         private bool _showPlatform = true;
@@ -79,11 +76,9 @@ namespace DINOForge.Runtime.UI
             }
         }
 
-        /// <summary>Shows the panel with a slide-in animation.</summary>
+        /// <summary>Shows the panel immediately (no animation).</summary>
         public void Show()
         {
-            _targetVisible = true;
-            _animT = 1f; // Start animation at end so AnimatePanel() doesn't flicker
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 1f;
@@ -91,15 +86,17 @@ namespace DINOForge.Runtime.UI
                 _canvasGroup.blocksRaycasts = true;
             }
 
-            // Force panel to be fully visible
+            // Set panel to fully open position immediately
             if (_panelRt != null)
             {
+                _panelRt.offsetMin = new Vector2(-PanelWidth, 0f);
+                _panelRt.offsetMax = Vector2.zero;
                 _panelRt.gameObject.SetActive(true);
             }
 
             // Immediately refresh content so panel displays on first open
             RefreshContent();
-            
+
             // Force all content children visible
             if (_contentRoot != null)
             {
@@ -116,19 +113,27 @@ namespace DINOForge.Runtime.UI
             {
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_panelRt);
             }
-            
+
             Debug.Log($"[DebugPanel] Show() called. ModPlatform={(_modPlatform != null ? "set" : "NULL")}. Content refreshed.");
         }
 
-        /// <summary>Hides the panel with a fade animation.</summary>
+        /// <summary>Hides the panel immediately (no animation).</summary>
         public void Hide()
         {
-            _targetVisible = false;
             if (_canvasGroup != null)
             {
+                _canvasGroup.alpha = 0f;
                 _canvasGroup.interactable = false;
                 _canvasGroup.blocksRaycasts = false;
             }
+
+            // Deactivate panel gameobject
+            if (_panelRt != null)
+            {
+                _panelRt.gameObject.SetActive(false);
+            }
+
+            Debug.Log("[DebugPanel] Hide() called.");
         }
 
         /// <summary>Whether the panel is currently visible.</summary>
@@ -138,7 +143,10 @@ namespace DINOForge.Runtime.UI
 
         private void Update()
         {
-            AnimatePanel();
+            // NOTE: MonoBehaviour.Update() NEVER fires in DINO (Unity PlayerLoop is replaced by ECS).
+            // This method is kept as a safeguard but will not execute.
+            // All panel visibility changes are now immediate (no animation).
+            // Panel refresh happens on Show() and via F9 key handler in RuntimeDriver.
 
             if (!IsVisible) return;
 
@@ -148,23 +156,6 @@ namespace DINOForge.Runtime.UI
                 _refreshTimer = 0f;
                 RefreshContent();
             }
-        }
-
-        // ── Animation ─────────────────────────────────────────────────────────────
-
-        private void AnimatePanel()
-        {
-            if (_canvasGroup == null || _panelRt == null) return;
-
-            float target = _targetVisible ? 1f : 0f;
-            _animT = Mathf.MoveTowards(_animT, target, Time.deltaTime / AnimDuration);
-
-            _canvasGroup.alpha = _animT;
-
-            // Slide from right (+PanelWidth) to resting position
-            float slideX = Mathf.Lerp(PanelWidth, 0f, _animT);
-            _panelRt.offsetMin = new Vector2(-PanelWidth + slideX, 0f);
-            _panelRt.offsetMax = new Vector2(slideX, 0f);
         }
 
         // ── UI construction ────────────────────────────────────────────────────────

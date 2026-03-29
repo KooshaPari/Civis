@@ -43,6 +43,7 @@ export default withMermaid(
             { text: 'Installation', link: '/guide/getting-started' },
             { text: 'Quick Start', link: '/guide/quick-start' },
             { text: 'Creating Packs', link: '/guide/creating-packs' },
+            { text: 'MCP Bridge & Automation', link: '/guide/mcp-bridge' },
             { text: 'Pack Registry', link: '/packs' },
           ],
         },

@@ -111,6 +111,9 @@ docs/sessions/virtual_display*.md
 # Remotion render logs
 scripts/video/render_*.log
 
+# Game screenshot artifacts (from game automation)
+game_screenshot*.png
+
 # Build diagnostics
 *.diag.log
 dotnet-build*.log

@@ -83,6 +83,9 @@ namespace DINOForge.Runtime.UI
 
         // ── ISSUE-044: InitialGameLoader auto-advance (skips splash screen) ──────
         private bool _anyKeyPatchApplied;
+        // Static re-entrancy guard: prevents double LoadScene(1) calls when the scene transition
+        // destroys RuntimeDriver and a new one is created before the old TryInjectMenuButton returns.
+        private static volatile bool _s_sceneTransitionGuard;
 
         // ------------------------------------------------------------------ //
         // Public wiring surface
@@ -120,6 +123,9 @@ namespace DINOForge.Runtime.UI
 
         private void Start()
         {
+            // Reset the scene transition guard for the new RuntimeDriver's NativeMenuInjector.
+            // The old RuntimeDriver set _s_sceneTransitionGuard=true before calling LoadScene(1).
+            _s_sceneTransitionGuard = false;
             LogInfo($"[NativeMenuInjector::{_sessionId}] Start() called at {System.DateTime.UtcNow:HH:mm:ss.fff} UTC");
             TryInjectMenuButton();
         }
@@ -277,6 +283,15 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         internal void TryInjectMenuButton()
         {
+            // GUARD: Prevent re-entrant LoadScene calls. When SceneManager.LoadScene(1) is
+            // called below, it synchronously destroys the RuntimeDriver (even though it has
+            // DontDestroyOnLoad) and triggers the creation of a new RuntimeDriver via
+            // resurrection. The new RuntimeDriver's TryInjectMenuButton runs before the old
+            // call stack unwinds, leading to a second LoadScene(1) call on the same frame.
+            // That second call destabilizes the scene transition and crashes the game.
+            if (_s_sceneTransitionGuard) return;
+            _s_sceneTransitionGuard = true;
+
             _injectionAttemptCount++;
             long attemptId = _injectionAttemptCount;
 

@@ -281,6 +281,9 @@ namespace DINOForge.Runtime
         private bool _initialized;
         private bool _catalogRebuilt;
         private float _worldPollTimer;
+        // Cross-thread flag: true once OnDestroy is called. The background polling thread
+        // checks this to avoid calling OnWorldReady after the RuntimeDriver is destroyed.
+        private volatile bool _destroyed;
 
         /// <summary>Polling interval in seconds for ECS world detection.</summary>
         private const float WorldPollInterval = 0.5f;
@@ -478,7 +481,11 @@ namespace DINOForge.Runtime
             // When detected, triggers soft UI + pack reload without full game restart
             StartHmrWatcher();
 
-            // ── Step 5: Log key handler registration ────────────────────────────────
+            // ── Step 5: Start background polling (ECS world, catalog rebuild, heartbeats) ──
+            // MonoBehaviour.Update() NEVER fires in DINO — background thread polling is required.
+            StartBackgroundPollingThread();
+
+            // ── Step 6: Log key handler registration ────────────────────────────────
             WriteDebug($"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
@@ -625,6 +632,10 @@ namespace DINOForge.Runtime
                         // ── ECS World polling ────────────────────────────────────────────
                         if (!_worldFound)
                         {
+                            // Bail out if RuntimeDriver was destroyed (e.g., during scene transition).
+                            // OnDestroy sets _destroyed=true so the background thread exits cleanly.
+                            if (_destroyed) break;
+
                             _worldPollTimer += 0.05f; // Add 50ms per poll iteration
                             if (_worldPollTimer >= WorldPollInterval)
                             {
@@ -634,6 +645,18 @@ namespace DINOForge.Runtime
                                     World? world = World.DefaultGameObjectInjectionWorld;
                                     if (world != null && world.IsCreated)
                                     {
+                                        // GUARD: Do not fire OnWorldReady at InitialGameLoader — the game will
+                                        // auto-advance to the main menu via LoadScene(1), destroying RuntimeDriver.
+                                        // Wait for the scene transition to complete first.
+                                        Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                                        bool isLoaderScene = activeScene.name != null &&
+                                            activeScene.name.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0;
+                                        if (isLoaderScene)
+                                        {
+                                            _log?.LogDebug("[RuntimeDriver] ECS world found but at InitialGameLoader — waiting for scene transition.");
+                                            continue; // Skip this poll iteration; NativeMenuInjector will trigger LoadScene(1)
+                                        }
+
                                         _worldFound = true;
                                         OnWorldReady(world);
                                     }
@@ -647,6 +670,7 @@ namespace DINOForge.Runtime
                         // World found — now check if we need to rebuild the catalog
                         else if (!_catalogRebuilt)
                         {
+                            if (_destroyed) break;
                             try
                             {
                                 World? w = World.DefaultGameObjectInjectionWorld;
@@ -958,6 +982,7 @@ namespace DINOForge.Runtime
 
         private void OnDestroy()
         {
+            _destroyed = true; // Signal background polling thread to stop
             WriteDebug("[RuntimeDriver] OnDestroy called — this should not happen with HideAndDontSave.");
             Plugin.NeedsResurrection = true;
             Plugin.PersistentRoot = null;

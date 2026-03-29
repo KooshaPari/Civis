@@ -34,6 +34,18 @@ namespace DINOForge.Runtime.Bridge
         private NamedPipeServerStream? _currentPipe;
 
         /// <summary>
+        /// True while the ModPlatform is alive (not destroyed during a scene transition).
+        /// </summary>
+        private bool IsPlatformAlive
+        {
+            get
+            {
+                try { return _platform != null && _platform.IsInitialized; }
+                catch { return false; }
+            }
+        }
+
+        /// <summary>
         /// Creates a new game bridge server.
         /// </summary>
         /// <param name="platform">The ModPlatform instance for accessing subsystems.</param>
@@ -304,8 +316,8 @@ namespace DINOForge.Runtime.Bridge
             GameStatus status = new GameStatus
             {
                 Running = true,
-                WorldReady = _platform.IsWorldReady,
-                ModPlatformReady = _platform.IsInitialized,
+                WorldReady = IsPlatformAlive && _platform.IsWorldReady,
+                ModPlatformReady = IsPlatformAlive && _platform.IsInitialized,
                 Version = PluginInfo.VERSION,
                 LoadedPacks = new List<string>()
             };
@@ -351,7 +363,7 @@ namespace DINOForge.Runtime.Bridge
             }
 
             // Populate loaded pack names from platform (background-thread safe)
-            if (_platform.IsInitialized)
+            if (IsPlatformAlive && _platform.IsInitialized)
             {
                 try
                 {
@@ -370,7 +382,7 @@ namespace DINOForge.Runtime.Bridge
 
         private JToken HandleGetCatalog()
         {
-            VanillaCatalog? catalog = _platform.Catalog;
+            VanillaCatalog? catalog = IsPlatformAlive ? _platform.Catalog : null;
             CatalogSnapshot snapshot = new CatalogSnapshot();
 
             if (catalog == null || !catalog.IsBuilt)
@@ -699,6 +711,16 @@ namespace DINOForge.Runtime.Bridge
         private JToken HandleReloadPacks(JObject? parameters)
         {
             ReloadResult reloadResult;
+            if (!IsPlatformAlive)
+            {
+                reloadResult = new ReloadResult
+                {
+                    Success = false,
+                    LoadedPacks = new List<string>(),
+                    Errors = new List<string> { "ModPlatform not ready (scene transition in progress)." }
+                };
+                return JToken.FromObject(reloadResult);
+            }
             try
             {
                 // Pack loading involves file IO and registry updates
@@ -892,7 +914,7 @@ namespace DINOForge.Runtime.Bridge
             DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             while (DateTime.UtcNow < deadline && _running)
             {
-                if (_platform.IsWorldReady)
+                if (IsPlatformAlive && _platform.IsWorldReady)
                 {
                     string worldName = "";
                     try
@@ -1082,7 +1104,7 @@ namespace DINOForge.Runtime.Bridge
             else if (!string.IsNullOrEmpty(category))
             {
                 // Use VanillaCatalog to filter by category
-                VanillaCatalog? catalog = _platform.Catalog;
+                VanillaCatalog? catalog = IsPlatformAlive ? _platform.Catalog : null;
                 if (catalog != null && catalog.IsBuilt)
                 {
                     IReadOnlyList<VanillaEntityInfo> list;

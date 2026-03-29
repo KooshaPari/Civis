@@ -18,9 +18,7 @@ jobs:
       - name: Setup .NET 8.0
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.sln

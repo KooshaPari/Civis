@@ -25,11 +25,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4 
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Install Versionize
         run: dotnet tool install --global Versionize

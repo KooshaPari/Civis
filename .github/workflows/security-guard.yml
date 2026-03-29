@@ -27,9 +27,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.NoRuntime.sln
@@ -66,9 +64,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore src/DINOForge.CI.NoRuntime.sln

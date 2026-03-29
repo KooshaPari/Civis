@@ -29,11 +29,9 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET 8.0
-        uses: actions/setup-dotnet@v4 
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj

@@ -22,9 +22,7 @@ jobs:
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4 
         with:
-          dotnet-version: |
-            11.0.x
-          include-prerelease: true
+          global-json-file: global.json
 
       - name: Install CycloneDX tool
         run: dotnet tool install --global CycloneDX

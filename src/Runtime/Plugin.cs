@@ -83,7 +83,7 @@ namespace DINOForge.Runtime
             try
             {
                 _harmony = new Harmony(PluginInfo.GUID);
-                _harmony.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
+                UI.ModsButtonTextPatch.Apply(_harmony);
                 Log.LogInfo("Harmony initialized and patches applied.");
             }
             catch (Exception ex)

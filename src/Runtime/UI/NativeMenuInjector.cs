@@ -71,6 +71,11 @@ namespace DINOForge.Runtime.UI
         private float _lastClickTimeUnscaled = -10f;
         private System.Collections.Generic.List<Button>? _allOptionsButtons;
 
+        // Text re-enforcement: after injection, re-assert "Mods" text every N frames
+        // in case UiGrid or any internal update reverts it via a path Harmony doesn't cover.
+        private int _textEnforceFrame;
+        private const int TextEnforceInterval = 10; // every 10 frames (~6x/sec at 60fps)
+
         // ===== DIAGNOSTIC FIELDS =====
         private readonly string _sessionId = System.Guid.NewGuid().ToString().Substring(0, 8);
         private int _injectionAttemptCount;
@@ -132,8 +137,17 @@ namespace DINOForge.Runtime.UI
                 CheckScreenshotRequest();
             }
 
-            // If we have already injected and the button is still alive, nothing to do.
-            if (_injected && _injectedButton != null) return;
+            // If we have already injected and the button is still alive, re-enforce button text.
+            if (_injected && _injectedButton != null)
+            {
+                _textEnforceFrame++;
+                if (_textEnforceFrame >= TextEnforceInterval)
+                {
+                    _textEnforceFrame = 0;
+                    EnforceModsButtonText();
+                }
+                return;
+            }
 
             // Button was destroyed (e.g. scene unloaded) — reset and re-scan.
             if (_injected && _injectedButton == null)
@@ -199,6 +213,43 @@ namespace DINOForge.Runtime.UI
         {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             LogInfo($"[NativeMenuInjector::{_sessionId}] OnDestroy called. Injector cleanup complete.");
+        }
+
+        // ------------------------------------------------------------------ //
+        // Text re-enforcement
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Called every <see cref="TextEnforceInterval"/> frames after injection to re-assert
+        /// "Mods" on all Text/TMP_Text children of the repurposed button.  This handles the case
+        /// where UiGrid or any other system reverts the label via a code path Harmony doesn't cover.
+        /// </summary>
+        private void EnforceModsButtonText()
+        {
+            if (_injectedButton == null) return;
+            bool changed = false;
+            foreach (UnityEngine.UI.Text t in _injectedButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+            {
+                if (string.Compare(t.text, "Options", System.StringComparison.OrdinalIgnoreCase) == 0
+                    || string.Compare(t.text, "OPTIONS", System.StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    t.text = "Mods";
+                    changed = true;
+                }
+            }
+            foreach (TMPro.TMP_Text t in _injectedButton.GetComponentsInChildren<TMPro.TMP_Text>(true))
+            {
+                if (string.Compare(t.text, "Options", System.StringComparison.OrdinalIgnoreCase) == 0
+                    || string.Compare(t.text, "OPTIONS", System.StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    t.text = "Mods";
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                LogInfo($"[NativeMenuInjector] EnforceModsButtonText: re-set reverted label to 'Mods'");
+            }
         }
 
         // ------------------------------------------------------------------ //

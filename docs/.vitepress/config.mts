@@ -146,6 +146,7 @@ export default withMermaid(
             { text: 'Roadmap', link: '/roadmap/' },
             { text: 'Community', link: '/community' },
             { text: 'Test Results', link: '/test-results/' },
+            { text: 'Feature Proof', link: '/proof/' },
             { text: 'Compatibility', link: '/compat' },
             { text: 'Worklog & Research', link: '/worklog/' },
           ],

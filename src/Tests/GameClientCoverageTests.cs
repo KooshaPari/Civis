@@ -60,23 +60,21 @@ public class GameClientCoverageTests
     // ──────────────────────── ConnectAsync error paths ────────────────────────
 
     [Fact]
-    public void ConnectAsync_WhenPipeTimesOut_ThrowsGameClientException()
+    public async Task ConnectAsync_WhenPipeTimesOut_ThrowsGameClientException()
     {
-        var cts = new CancellationTokenSource();
         var options = new GameClientOptions
         {
             ConnectTimeoutMs = 1, // Very short timeout
             PipeName = "nonexistent-pipe-timeout"
         };
-        GameClient client = new(options);
+        using GameClient client = new(options);
 
-        Func<Task> action = async () => await client.ConnectAsync(cts.Token);
+        Func<Task> action = async () => await client.ConnectAsync();
 
-        action.Should().ThrowAsync<GameClientException>()
+        await action.Should().ThrowAsync<GameClientException>()
             .WithMessage("*Failed to connect*");
 
         client.State.Should().BeOneOf(ConnectionState.Error, ConnectionState.Disconnected);
-        client.Dispose();
     }
 
     [Fact]

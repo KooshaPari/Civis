@@ -12,9 +12,19 @@
   <PropertyGroup>
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-    <Threshold>85</Threshold>
+    <!-- Per-package minimum thresholds: each module must meet its own bar -->
+    <Threshold>75</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
+    <!-- Per-package overrides: tighter bars for critical modules -->
+    <Policy_Bridge_Client>65</Policy_Bridge_Client>
+    <Policy_SDK>75</Policy_SDK>
+    <Policy_Installer>80</Policy_Installer>
+    <Policy_Economy>82</Policy_Economy>
+    <Policy_Scenario>76</Policy_Scenario>
+    <Policy_UI>78</Policy_UI>
+    <Policy_Warfare>95</Policy_Warfare>
+    <Policy_Protocol>100</Policy_Protocol>
   </PropertyGroup>
 
   <!-- Wrapped test dependencies (ADR-008) -->

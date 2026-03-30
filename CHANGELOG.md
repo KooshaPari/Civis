@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **M12: Local mod manager client** — Extended DesktopCompanion (WinUI 3) with 3 new views: BrowsePage (catalog browsing from file:// or https:// URLs), UpdatePage (version comparison against catalog), ConflictPage (pack dependency tree with conflict detection); 3 new ViewModels (BrowseViewModel, UpdateViewModel, ConflictViewModel); 3 new services (ModCatalogService, UpdateCheckService, ConflictDetectionService); MainWindow navigation updated with Browse, Updates, Conflicts items; existing PackListViewModel enhanced with conflict/warning badges; ADR-019-mod-manager-client.md spec created
+- **M13: Asset library browser and catalog store** — SQLite-backed persistent asset catalog (AssetCatalogStore) replacing placeholder CandidateCatalog; AssetLibraryCommand with list/search/show/stats/sync/import/export subcommands; LocalSourceAdapter for querying pack registry directories; ISourceAdapter interface for future source adapters (Sketchfab, BlendSwap); schemas/asset-library.schema.json for catalog export format; ADR-010 updated with M13 scope; CandidateCatalog() wired to real catalog store
+
 ## [0.15.0] - 2026-03-29
 
 ### Added

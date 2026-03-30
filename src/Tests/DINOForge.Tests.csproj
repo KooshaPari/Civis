@@ -98,6 +98,7 @@
     <None Remove="GameControlCliTests\**" />
     <Content Remove="GameControlCliTests\**" />
     <EmbeddedResource Remove="GameControlCliTests\**" />
+    <Compile Remove="GameClientCoverageTests.cs" />
   </ItemGroup>
 
 </Project>

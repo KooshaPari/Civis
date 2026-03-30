@@ -429,6 +429,7 @@ namespace DINOForge.Runtime.Bridge
 
         private JToken HandleStatus()
         {
+            WriteDebug("[GameBridgeServer] HandleStatus ENTER");
             // Status can be partially read from background thread (simple field reads)
             GameStatus status = new GameStatus
             {
@@ -439,36 +440,32 @@ namespace DINOForge.Runtime.Bridge
                 LoadedPacks = new List<string>()
             };
 
-            // Entity count + world name require main thread (ECS pump via KeyInputSystem.OnUpdate).
-            // At main menu no ECS world ticks, so the pump is dead — use very short timeout
-            // and return degraded status (EntityCount=-1) rather than blocking.
+            // Read entity count + world name directly — no main-thread pump needed.
+            // Mono 2021.3 in DINO allows background-thread reads of World properties.
+            // If it throws (rare Unity version restriction), fall back to -1.
             try
             {
-                var entityTask = MainThreadDispatcher.RunOnMainThread(() =>
+                World? world = GetActiveWorld();
+                if (world != null && world.IsCreated)
                 {
-                    World? world = GetActiveWorld();
-                    if (world == null || !world.IsCreated) return 0;
-                    EntityQuery all = world.EntityManager.CreateEntityQuery(new EntityQueryDesc
+                    status.WorldName = world.Name ?? "";
+                    status.EntityCount = -1; // Default if query fails
+                    try
                     {
-                        Options = EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabled
-                    });
-                    int count = all.CalculateEntityCount();
-                    all.Dispose();
-                    return count;
-                });
-
-                var nameTask = MainThreadDispatcher.RunOnMainThread(() =>
+                        EntityQuery all = world.EntityManager.CreateEntityQuery(new EntityQueryDesc
+                        {
+                            Options = EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabled
+                        });
+                        status.EntityCount = all.CalculateEntityCount();
+                        all.Dispose();
+                    }
+                    catch { }
+                }
+                else
                 {
-                    World? world = GetActiveWorld();
-                    return world?.Name ?? "";
-                });
-
-                // 200ms timeout — fast fail when no ECS pump is active (main menu)
-                bool entityDone = entityTask.Wait(200);
-                bool nameDone = nameTask.Wait(100);
-
-                status.EntityCount = entityDone ? entityTask.Result : -1;
-                status.WorldName = nameDone ? nameTask.Result : "";
+                    status.EntityCount = -1;
+                    status.WorldName = "";
+                }
             }
             catch (Exception ex)
             {

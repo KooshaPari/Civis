@@ -184,6 +184,12 @@ namespace DINOForge.Runtime
 
                 RuntimeDriver driver = host.AddComponent<RuntimeDriver>();
                 driver.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
+
+                // Immediately register KeyInputSystem in the current ECS world.
+                // The polling thread will also do this, but scene transitions may have already
+                // created a new DefaultGameObjectInjectionWorld that the thread hasn't caught yet.
+                // This call bridges the gap so the pump is active without waiting for a poll cycle.
+                Bridge.KeyInputSystem.RecreateInCurrentWorld();
                 WriteDebug($"[Plugin] Resurrection complete via {trigger} on '{sceneName}' host='{host.name}'.");
             }
             catch (Exception ex)
@@ -290,6 +296,26 @@ namespace DINOForge.Runtime
         // _uguiChecked: we only need to check DFCanvas readiness once after it has
         // had at least one frame to run its Start().
         internal bool _uguiChecked;
+
+        /// <summary>
+        /// Registers KeyInputSystem in the given ECS world if not already registered.
+        /// Called every poll cycle to ensure the pump survives scene transitions.
+        /// Safe to call multiple times (GetOrCreateSystem is idempotent).
+        /// </summary>
+        private void TryRegisterKeyInputSystem(World world)
+        {
+            if (_registeredWorldInstance != null && ReferenceEquals(_registeredWorldInstance, world)) return;
+            try
+            {
+                world.GetOrCreateSystem<Bridge.KeyInputSystem>();
+                _log.LogInfo($"[RuntimeDriver] KeyInputSystem registered in world '{world.Name}'.");
+                _registeredWorldInstance = world;
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[RuntimeDriver] TryRegisterKeyInputSystem failed: {ex.Message}");
+            }
+        }
 
         private bool _worldFound;
         private bool _initialized;
@@ -664,16 +690,17 @@ namespace DINOForge.Runtime
                                     World? world = World.DefaultGameObjectInjectionWorld;
                                     if (world != null && world.IsCreated)
                                     {
-                                        // GUARD: Do not fire OnWorldReady at InitialGameLoader — the game will
-                                        // auto-advance to the main menu via LoadScene(1), destroying RuntimeDriver.
-                                        // Wait for the scene transition to complete first.
+                                        // Register KeyInputSystem immediately — ECS systems survive scene transitions.
+                                        // This ensures the main-thread pump (DrainQueue) is active even during InitialGameLoader.
+                                        TryRegisterKeyInputSystem(world);
+
                                         Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
                                         bool isLoaderScene = activeScene.name != null &&
                                             activeScene.name.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0;
                                         if (isLoaderScene)
                                         {
                                             _log?.LogDebug("[RuntimeDriver] ECS world found but at InitialGameLoader — waiting for scene transition.");
-                                            continue; // Skip this poll iteration; NativeMenuInjector will trigger LoadScene(1)
+                                            continue; // Skip pack loading; NativeMenuInjector will trigger LoadScene(1)
                                         }
 
                                         _worldFound = true;
@@ -690,17 +717,30 @@ namespace DINOForge.Runtime
                         else if (!_catalogRebuilt)
                         {
                             if (_destroyed) break;
+                            // Also handle world changes (scene transitions): re-register KeyInputSystem
+                            // in the new DefaultGameObjectInjectionWorld if it changed since last registration.
                             try
                             {
                                 World? w = World.DefaultGameObjectInjectionWorld;
-                                if (w != null && w.IsCreated)
+                                if (w != null && w.IsCreated && (_registeredWorldInstance == null || !ReferenceEquals(_registeredWorldInstance, w)))
                                 {
-                                    int entityCount = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                                    TryRegisterKeyInputSystem(w);
+                                }
+                            }
+                            catch { }
+
+                            // Catalog rebuild: only trigger once when enough entities exist
+                            try
+                            {
+                                World? w2 = World.DefaultGameObjectInjectionWorld;
+                                if (w2 != null && w2.IsCreated)
+                                {
+                                    int entityCount = w2.EntityManager.UniversalQuery.CalculateEntityCount();
                                     if (entityCount > 1000)
                                     {
                                         _catalogRebuilt = true;
                                         _log?.LogInfo($"[RuntimeDriver] Catalog rebuild triggered ({entityCount} entities)");
-                                        _modPlatform?.RebuildCatalogAndApplyStats(w);
+                                        _modPlatform?.RebuildCatalogAndApplyStats(w2);
                                     }
                                 }
                             }
@@ -925,24 +965,14 @@ namespace DINOForge.Runtime
         }
 
         /// <summary>
-        /// Called once when the ECS World becomes available.
-        /// Registers systems, loads packs, starts hot reload.
+        /// Called once when the ECS World becomes available (non-InitialGameLoader scenes only).
+        /// Loads packs, starts hot reload. KeyInputSystem is registered every poll cycle
+        /// via <see cref="TryRegisterKeyInputSystem"/> so it survives scene transitions.
         /// </summary>
         private void OnWorldReady(World ecsWorld)
         {
             _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
             _registeredWorldInstance = ecsWorld;
-
-            // Register KeyInputSystem — handles F9/F10 via ECS (survives scene transitions)
-            try
-            {
-                ecsWorld.GetOrCreateSystem<Bridge.KeyInputSystem>();
-                _log.LogInfo("[RuntimeDriver] KeyInputSystem registered in default world.");
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[RuntimeDriver] KeyInputSystem registration failed: {ex.Message}");
-            }
 
             // Register DumpSystem if configured
             if (_dumpOnStartup)

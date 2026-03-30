@@ -186,15 +186,16 @@ public static class Program
         {
             await client.ConnectAsync();
 
+            DINOForge.Bridge.Protocol.ScreenshotResult ssResult = null!;
             await AnsiConsole.Progress()
                 .StartAsync(async progress =>
                 {
                     var task = progress.AddTask("[cyan]Taking screenshot...[/]");
-                    await client.ScreenshotAsync(outputPath);
+                    ssResult = await client.ScreenshotAsync(outputPath);
                     task.Increment(100);
                 });
 
-            AnsiConsole.MarkupLine($"[green]✓[/] Screenshot saved");
+            AnsiConsole.MarkupLine($"[green]✓[/] Screenshot saved: {ssResult.Path}");
             client.Disconnect();
             return 0;
         }

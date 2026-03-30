@@ -72,6 +72,7 @@ namespace DINOForge.DesktopCompanion
             services.AddTransient<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<PackListViewModel>();
+            services.AddTransient<AssetBrowserViewModel>();
             services.AddTransient<DebugPanelViewModel>();
             services.AddTransient<SettingsViewModel>();
 

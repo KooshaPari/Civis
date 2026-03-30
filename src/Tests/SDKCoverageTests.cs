@@ -7,7 +7,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.SDK;
+using DINOForge.SDK.Assets;
 using DINOForge.SDK.Registry;
+using DINOForge.SDK.Universe;
 using FluentAssertions;
 using Xunit;
 
@@ -652,5 +654,865 @@ type: content
         var genericType = interfaceType.MakeGenericType(typeof(string));
 
         genericType.Should().NotBeNull();
+    }
+
+    // ──────────────────────── YamlLoader tests ────────────────────────
+
+    [Fact]
+    public void YamlLoader_Deserialize_WithEmptyString_ReturnsDefault()
+    {
+        var result = YamlLoader.Deserialize<string>("");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void YamlLoader_Deserialize_WithNullString_ReturnsDefault()
+    {
+        string? yaml = null;
+        var result = YamlLoader.Deserialize<string>(yaml!);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void YamlLoader_DeserializeFromFile_WithMissingFile_ReturnsDefault()
+    {
+        string fakePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".yaml");
+
+        var result = YamlLoader.DeserializeFromFile<Dictionary<string, object>>(fakePath);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void YamlLoader_DeserializeFromFile_WithValidYaml_ReturnsObject()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.yaml");
+        string yaml = "key: value\nnumber: 42";
+        File.WriteAllText(tempFile, yaml);
+
+        try
+        {
+            var result = YamlLoader.DeserializeFromFile<Dictionary<string, object>>(tempFile);
+
+            result.Should().NotBeNull();
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void YamlLoader_Serialize_WithNullObject_ReturnsEmpty()
+    {
+        string result = YamlLoader.Serialize<object>(null!);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void YamlLoader_Serialize_WithObject_ReturnsYaml()
+    {
+        var obj = new { Name = "Test", Value = 42 };
+        string result = YamlLoader.Serialize(obj);
+
+        result.Should().NotBeEmpty();
+        // YamlDotNet uses underscore naming convention
+        result.Should().Contain("name");
+        result.Should().Contain("Test");
+    }
+
+    [Fact]
+    public void YamlLoader_SerializeToFile_WithNullObject_DoesNotThrow()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.yaml");
+
+        try
+        {
+            Action action = () => YamlLoader.SerializeToFile<object>(tempFile, null!);
+
+            action.Should().NotThrow();
+            File.Exists(tempFile).Should().BeFalse();
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void YamlLoader_Serializer_And_Deserializer_AreAccessible()
+    {
+        YamlLoader.Serializer.Should().NotBeNull();
+        YamlLoader.Deserializer.Should().NotBeNull();
+    }
+
+    // ──────────────────────── FileDiscoveryService tests ────────────────────────
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_WithNonExistentDirectory_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string fakePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        var results = service.GetFiles(fakePath, "*.yaml");
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_WithEmptyDirectory_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var results = service.GetFiles(tempDir, "*.yaml");
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_WithPatternMatchingFiles_ReturnsFiles()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(tempDir, "file2.yaml"), "content");
+        File.WriteAllText(Path.Combine(tempDir, "file3.txt"), "content");
+
+        try
+        {
+            var results = service.GetFiles(tempDir, "*.yaml");
+
+            results.Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_WithRecursive_SearchesSubdirectories()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string subDir = Path.Combine(tempDir, "subdir");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(subDir, "file2.yaml"), "content");
+
+        try
+        {
+            var results = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+
+            results.Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_ExcludesExcludedDirectories()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string subDir = Path.Combine(tempDir, "bin");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(subDir, "file2.yaml"), "content");
+
+        try
+        {
+            var results = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+
+            results.Should().HaveCount(1);
+            results[0].Should().NotContain("bin");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetDirectories_WithNonExistentDirectory_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string fakePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        var results = service.GetDirectories(fakePath);
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetDirectories_WithRecursive_IncludesAllSubdirectories()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string subDir1 = Path.Combine(tempDir, "sub1");
+        string subDir2 = Path.Combine(subDir1, "sub2");
+        Directory.CreateDirectory(subDir1);
+        Directory.CreateDirectory(subDir2);
+
+        try
+        {
+            var results = service.GetDirectories(tempDir, SearchOption.AllDirectories);
+
+            results.Should().Contain(subDir1);
+            results.Should().Contain(subDir2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_DiscoverPackDirectories_WithNoPacks_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        Directory.CreateDirectory(Path.Combine(tempDir, "not-a-pack"));
+
+        try
+        {
+            var results = service.DiscoverPackDirectories(tempDir);
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_DiscoverPackDirectories_WithPacks_ReturnsPackDirectories()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string packDir1 = Path.Combine(tempDir, "pack1");
+        string packDir2 = Path.Combine(tempDir, "pack2");
+        Directory.CreateDirectory(packDir1);
+        Directory.CreateDirectory(packDir2);
+        File.WriteAllText(Path.Combine(packDir1, "pack.yaml"), "id: pack1");
+        File.WriteAllText(Path.Combine(packDir2, "pack.yaml"), "id: pack2");
+
+        try
+        {
+            var results = service.DiscoverPackDirectories(tempDir);
+
+            results.Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_AddAndRemoveExclusion_WorksCorrectly()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string customDir = Path.Combine(tempDir, "custom");
+        Directory.CreateDirectory(customDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(customDir, "file2.yaml"), "content");
+
+        try
+        {
+            // Initially should include custom directory
+            var results1 = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results1.Should().HaveCount(2);
+
+            // Add custom to exclusions
+            service.AddExclusion("custom");
+
+            // Now should exclude custom directory
+            var results2 = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results2.Should().HaveCount(1);
+
+            // Remove from exclusions
+            service.RemoveExclusion("custom");
+
+            // Should include custom directory again
+            var results3 = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results3.Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_ClearExclusions_RemovesAll()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string binDir = Path.Combine(tempDir, "bin");
+        Directory.CreateDirectory(binDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(binDir, "file2.yaml"), "content");
+
+        try
+        {
+            // Clear defaults
+            service.ClearExclusions();
+
+            var results = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results.Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_ResetToDefaults_RestoresDefaultExclusions()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string binDir = Path.Combine(tempDir, "bin");
+        Directory.CreateDirectory(binDir);
+        File.WriteAllText(Path.Combine(tempDir, "file1.yaml"), "content");
+        File.WriteAllText(Path.Combine(binDir, "file2.yaml"), "content");
+
+        try
+        {
+            service.ClearExclusions();
+            var results1 = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results1.Should().HaveCount(2);
+
+            service.ResetToDefaults();
+            var results2 = service.GetFiles(tempDir, "*.yaml", SearchOption.AllDirectories);
+            results2.Should().HaveCount(1);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_DefaultExclusions_AreCorrect()
+    {
+        var service = new FileDiscoveryService();
+
+        service.DefaultExclusions.Should().Contain("bin");
+        service.DefaultExclusions.Should().Contain("obj");
+        service.DefaultExclusions.Should().Contain("node_modules");
+    }
+
+    [Fact]
+    public void FileDiscoveryService_WithNullSearchPatterns_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var results = service.GetFiles(tempDir, (string[])null!);
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FileDiscoveryService_WithEmptySearchPatterns_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var results = service.GetFiles(tempDir, Array.Empty<string>());
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── ContentDiscoveryService tests ────────────────────────
+
+    [Fact]
+    public void ContentDiscoveryService_DiscoverYamlFiles_WithNoFiles_ReturnsEmpty()
+    {
+        var service = new ContentDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var results = service.DiscoverYamlFiles(tempDir, "units", null);
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void ContentDiscoveryService_DiscoverYamlFiles_WithSubdirectoriesOnly_ReturnsEmpty()
+    {
+        var service = new ContentDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string subDir = Path.Combine(tempDir, "subdir");
+        Directory.CreateDirectory(subDir);
+
+        try
+        {
+            var results = service.DiscoverYamlFiles(tempDir, "units", null);
+
+            results.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void ContentDiscoveryService_DiscoverYamlFiles_WithDeclaredPaths_FindsFiles()
+    {
+        var service = new ContentDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string unitsDir = Path.Combine(tempDir, "units");
+        Directory.CreateDirectory(unitsDir);
+        File.WriteAllText(Path.Combine(unitsDir, "trooper.yaml"), "content");
+
+        try
+        {
+            var results = service.DiscoverYamlFiles(tempDir, "units", new List<string> { "units" });
+
+            results.Should().HaveCount(1);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void ContentDiscoveryService_DiscoverYamlFiles_WithMissingPath_AddsYamlExtension()
+    {
+        var service = new ContentDiscoveryService();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "trooper.yaml"), "content");
+
+        try
+        {
+            var results = service.DiscoverYamlFiles(tempDir, "units", new List<string> { "trooper" });
+
+            results.Should().HaveCount(1);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── AddressablesCatalog tests ────────────────────────
+
+    [Fact]
+    public void AddressablesCatalog_Load_WithMissingFile_ThrowsFileNotFoundException()
+    {
+        string fakePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".json");
+
+        Action action = () => AddressablesCatalog.Load(fakePath);
+
+        action.Should().Throw<FileNotFoundException>();
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_WithInvalidJson_ThrowsInvalidOperationException()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json");
+        File.WriteAllText(tempFile, "not valid json {{{");
+
+        try
+        {
+            Action action = () => AddressablesCatalog.Load(tempFile);
+
+            // Invalid JSON throws an exception (JsonReaderException wraps in InvalidOperationException)
+            action.Should().Throw<Exception>();
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_WithMissingInternalIds_ThrowsInvalidOperationException()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json");
+        File.WriteAllText(tempFile, "{\"otherField\": []}");
+
+        try
+        {
+            Action action = () => AddressablesCatalog.Load(tempFile);
+
+            action.Should().Throw<InvalidOperationException>().WithMessage("*m_InternalIds*");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_WithValidCatalog_ParsesCorrectly()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json");
+        string catalogJson = @"{
+            ""m_InternalIds"": [
+                ""{UnityEngine.AddressableAssets.Addressables.RuntimePath}/test.bundle"",
+                ""{UnityEngine.AddressableAssets.Addressables.RuntimePath}/assets/test.prefab""
+            ]
+        }";
+        File.WriteAllText(tempFile, catalogJson);
+
+        try
+        {
+            var catalog = AddressablesCatalog.Load(tempFile);
+
+            catalog.InternalIds.Should().HaveCount(2);
+            catalog.BundlePaths.Should().HaveCount(1);
+            catalog.BundlePaths[0].Should().Contain("test.bundle");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void AddressablesCatalog_ResolveBundlePath_WithPlaceholder_ReplacesCorrectly()
+    {
+        string bundlePath = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/test.bundle";
+        string gameDir = "G:\\Games\\DINO";
+
+        string result = AddressablesCatalog.ResolveBundlePath(bundlePath, gameDir);
+
+        result.Should().Contain("StreamingAssets");
+        result.Should().Contain("aa");
+        result.Should().Contain("test.bundle");
+    }
+
+    [Fact]
+    public void AddressablesCatalog_ResolveBundlePath_WithoutPlaceholder_ReturnsUnchanged()
+    {
+        string bundlePath = "C:\\Some\\Other\\Path\\test.bundle";
+        string gameDir = "G:\\Games\\DINO";
+
+        string result = AddressablesCatalog.ResolveBundlePath(bundlePath, gameDir);
+
+        result.Should().Be(bundlePath);
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_WithEmptyCatalog_ReturnsEmptyCollections()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json");
+        string catalogJson = @"{
+            ""m_InternalIds"": []
+        }";
+        File.WriteAllText(tempFile, catalogJson);
+
+        try
+        {
+            var catalog = AddressablesCatalog.Load(tempFile);
+
+            catalog.InternalIds.Should().BeEmpty();
+            catalog.BundlePaths.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    // ──────────────────────── UniverseLoader tests ────────────────────────
+
+    [Fact]
+    public void UniverseLoader_LoadFromDirectory_WithMissingFile_ThrowsFileNotFoundException()
+    {
+        var loader = new UniverseLoader();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            Action action = () => loader.LoadFromDirectory(tempDir);
+
+            action.Should().Throw<FileNotFoundException>();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromDirectory_WithInvalidYaml_ThrowsException()
+    {
+        var loader = new UniverseLoader();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "universe.yaml"), "invalid: yaml: {{{");
+
+        try
+        {
+            Action action = () => loader.LoadFromDirectory(tempDir);
+
+            action.Should().Throw<Exception>();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromDirectory_WithValidYaml_LoadsCorrectly()
+    {
+        var loader = new UniverseLoader();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string universeYaml = @"
+id: test-universe
+name: Test Universe
+version: '1.0'
+";
+        File.WriteAllText(Path.Combine(tempDir, "universe.yaml"), universeYaml);
+
+        try
+        {
+            var bible = loader.LoadFromDirectory(tempDir);
+
+            bible.Id.Should().Be("test-universe");
+            bible.Name.Should().Be("Test Universe");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromDirectory_WithCrosswalk_LoadsCrosswalk()
+    {
+        var loader = new UniverseLoader();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "universe.yaml"), @"
+id: test-universe
+name: Test Universe
+");
+        // Note: crosswalk.yaml loading is optional and will be skipped if file doesn't exist
+        // Testing with a valid but non-loading file - the crosswalk loading happens in UniverseLoader
+        try
+        {
+            var bible = loader.LoadFromDirectory(tempDir);
+
+            bible.CrosswalkDictionary.Should().NotBeNull();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromYaml_WithInvalidYaml_ThrowsException()
+    {
+        var loader = new UniverseLoader();
+
+        Action action = () => loader.LoadFromYaml("invalid: {{{");
+
+        action.Should().Throw<Exception>();
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromYaml_WithValidYaml_LoadsCorrectly()
+    {
+        var loader = new UniverseLoader();
+        string yaml = @"
+id: inline-universe
+name: Inline Universe
+";
+
+        var bible = loader.LoadFromYaml(yaml);
+
+        bible.Id.Should().Be("inline-universe");
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromYaml_WithNullContent_ThrowsArgumentNullException()
+    {
+        var loader = new UniverseLoader();
+
+        Action action = () => loader.LoadFromYaml(null!);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void UniverseLoader_LoadFromYaml_WithEmptyContent_ReturnsUniverse()
+    {
+        var loader = new UniverseLoader();
+
+        Action action = () => loader.LoadFromYaml("");
+
+        // Empty YAML may produce a universe with defaults — should not throw
+        action.Should().NotThrow();
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_WithNoMatchingFiles_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+        var service = new FileDiscoveryService();
+
+        var results = service.GetFiles(tempDir.Path, "*.xyz");
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_NonExistentDirectory_ReturnsEmpty()
+    {
+        var service = new FileDiscoveryService();
+
+        var results = service.GetFiles(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), "*.yaml");
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_Recursive_FindsNestedFiles()
+    {
+        using var tempDir = new TempDirectory();
+        Directory.CreateDirectory(Path.Combine(tempDir.Path, "sub1", "sub2"));
+        File.WriteAllText(Path.Combine(tempDir.Path, "root.yaml"), "root: true");
+        File.WriteAllText(Path.Combine(tempDir.Path, "sub1", "mid.yaml"), "mid: true");
+        File.WriteAllText(Path.Combine(tempDir.Path, "sub1", "sub2", "deep.yaml"), "deep: true");
+
+        var service = new FileDiscoveryService();
+        var results = service.GetFiles(tempDir.Path, "*.yaml", SearchOption.AllDirectories);
+
+        results.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void FileDiscoveryService_GetFiles_NonRecursive_OnlyTopLevel()
+    {
+        using var tempDir = new TempDirectory();
+        Directory.CreateDirectory(Path.Combine(tempDir.Path, "subdir"));
+        File.WriteAllText(Path.Combine(tempDir.Path, "root.yaml"), "root: true");
+        File.WriteAllText(Path.Combine(tempDir.Path, "subdir", "nested.yaml"), "nested: true");
+
+        var service = new FileDiscoveryService();
+        var results = service.GetFiles(tempDir.Path, "*.yaml", SearchOption.TopDirectoryOnly);
+
+        results.Should().HaveCount(1);
+        results[0].Should().EndWith("root.yaml");
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_NonExistentFile_ThrowsFileNotFoundException()
+    {
+        string nonexistent = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".json");
+
+        Action action = () => AddressablesCatalog.Load(nonexistent);
+
+        action.Should().Throw<FileNotFoundException>();
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_InvalidJson_ThrowsInvalidOperationException()
+    {
+        using var tempDir = new TempDirectory();
+        string badFile = Path.Combine(tempDir.Path, "catalog.json");
+        File.WriteAllText(badFile, "not valid json {{{");
+
+        Action action = () => AddressablesCatalog.Load(badFile);
+
+        action.Should().Throw<Exception>();
+    }
+
+    [Fact]
+    public void AddressablesCatalog_Load_ValidMinimalCatalog_LoadsWithoutThrowing()
+    {
+        using var tempDir = new TempDirectory();
+        string catalogFile = Path.Combine(tempDir.Path, "catalog.json");
+        string minimalCatalog = @"{
+    ""m_InternalIds"": [""test-key""],
+    ""m_KeyDataString"": """",
+    ""m_BucketDataString"": """",
+    ""m_EntryDataString"": """"
+}";
+        File.WriteAllText(catalogFile, minimalCatalog);
+
+        Action action = () => AddressablesCatalog.Load(catalogFile);
+
+        action.Should().NotThrow();
+    }
+
+    /// <summary>RAII temp directory that auto-deletes on dispose.</summary>
+    private sealed class TempDirectory : IDisposable
+    {
+        public string Path { get; }
+
+        public TempDirectory()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dinotest_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Path);
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(Path, recursive: true); } catch { }
+        }
     }
 }

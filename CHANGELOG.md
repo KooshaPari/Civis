@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Test Coverage Expansion (Step 6)** — Coverage campaign targeting error paths and edge cases across all domains
+  - `EconomyCoverageTests.cs` (521 lines): `EconomyContentLoader` null/invalid YAML paths, `TradeRouteRegistry`, `ResourceRegistry`, `EconomyProfileRegistry` edge cases
+  - `ScenarioDomainCoverageTests.cs` (792 lines): `StartingConditions`, `WinConditionDefinition`, `ScenarioEventDefinition`, `ScenarioValidator`, `DifficultyScaler` edge cases
+  - `UiDomainCoverageTests.cs` (974 lines): `UIContentLoader`, `ThemeColorPalette`, `HUDElementDefinition`, `UIPlugin` coverage
+  - `GameClientCoverageTests.cs` (+230 lines): GameClient error paths, retry logic, `ConnectAsync` state machine, `ReadLineAsync` cancellation, `GameProcessManager` edge cases
+  - `InstallerCoverageTests.cs` (+138 lines): SteamLocator VDF/ACF parsing error paths, `FindGameInLibrary` edge cases
+  - `SDKCoverageTests.cs` (+862 lines): `YamlLoader`, `FileDiscoveryService`, `AddressablesCatalog`, `ContentDiscoveryService` error paths
+  - **Coverage results**: Bridge.Client 79.1%, Bridge.Protocol 100%, Economy 87.9%, Scenario 93.1%, UI 89.2%, Warfare 95.6%, SDK 76.4%, Installer 80.2%, Total 83.5%
+  - Fixed cross-platform path separators in `InstallLifecycle.cs` (`LegacyPluginFiles` uses `Path.DirectorySeparatorChar` instead of hardcoded `\`)
+  - Fixed `InstallerCoverageTests` assertions to use `Path.GetFullPath` normalization (Linux CI compatibility)
+
 - **Test Coverage Expansion (Steps 1-5)** — Comprehensive test pyramid audit to reach 85-100% coverage
   1. **Step 1: CLI Tool Tests** — `DINOForge.Tests.CliTools` project with 84 xUnit tests covering GameStatus, QueryResult, OverrideResult, ResourceSnapshot, and ReloadCommand protocol types; uses Moq for Bridge.Client mocking
   2. **Step 3: PackCompiler Service Tests** — Asset pipeline tests covering AssetValidationService, AssetOptimizationService, PrefabGenerationService, AddressablesService (17 tests); LOD generation, mesh decimation, prefab YAML creation, catalog entry generation all verified

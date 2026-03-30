@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   build-and-test:
-    name: Build & Test
+    name: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,5 +106,5 @@ jobs:
         with:
           files: |
             **/*.trx
-          check_name: Unit & Integration Tests
+          check_name: test
           compare_to_earlier_commit: false

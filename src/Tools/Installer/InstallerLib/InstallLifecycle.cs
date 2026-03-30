@@ -33,17 +33,17 @@ namespace DINOForge.Tools.Installer
         };
 
         private static readonly string[] LegacyPluginFiles =
-        {
-            @"BepInEx\ecs_plugins\DINOForge.Runtime.dll",
-            @"BepInEx\ecs_plugins\DINOForge.Runtime.pdb",
-            @"BepInEx\ecs_plugins\DINOForge.Runtime.deps.json",
-            @"BepInEx\ecs_plugins\DINOForge.SDK.dll",
-            @"BepInEx\ecs_plugins\DINOForge.SDK.pdb",
-            @"BepInEx\ecs_plugins\DINOForge.SDK.xml",
-            @"BepInEx\ecs_plugins\DINOForge.Bridge.Protocol.dll",
-            @"BepInEx\ecs_plugins\DINOForge.Bridge.Protocol.pdb",
-            @"BepInEx\plugins\DINOForge.Runtime.dll.bak",
-        };
+        [
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.Runtime.dll",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.Runtime.pdb",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.Runtime.deps.json",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.SDK.dll",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.SDK.pdb",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.SDK.xml",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.Bridge.Protocol.dll",
+            $"BepInEx{Path.DirectorySeparatorChar}ecs_plugins{Path.DirectorySeparatorChar}DINOForge.Bridge.Protocol.pdb",
+            $"BepInEx{Path.DirectorySeparatorChar}plugins{Path.DirectorySeparatorChar}DINOForge.Runtime.dll.bak",
+        ];
 
         /// <summary>Gets the BepInEx root directory.</summary>
         public static string GetBepInExDirectory(string gamePath) => Path.Combine(gamePath, "BepInEx");

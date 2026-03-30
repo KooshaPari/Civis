@@ -29,7 +29,7 @@ internal static class PackCommand
     private static Command CreateAddCommand()
     {
         Argument<string> repoUrlArg = new("repoUrl") { Description = "Repository URL (HTTPS or SSH format)" };
-        Option<string?> pathOpt = new("--path", "Optional submodule path (defaults to packs/{repo-name})");
+        Option<string?> pathOpt = new("--path") { Description = "Optional submodule path (defaults to packs/{repo-name})" };
         Option<string> formatOpt = CommandOutput.CreateFormatOption();
 
         Command command = new("add", "Add a pack repository as a git submodule");

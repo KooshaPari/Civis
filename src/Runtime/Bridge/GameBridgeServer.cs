@@ -27,7 +27,7 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>The well-known pipe name used by the DINOForge bridge.</summary>
         public const string PipeName = "dinoforge-game-bridge";
 
-        private readonly ModPlatform _platform;
+        private ModPlatform _platform;
         private readonly DateTime _startTime;
         private Thread? _serverThread;
         private volatile bool _running;
@@ -66,7 +66,9 @@ namespace DINOForge.Runtime.Bridge
             _serverThread = new Thread(ServerLoop)
             {
                 Name = "DINOForge-Bridge-Server",
-                IsBackground = true
+                // IMPORTANT: Must NOT be IsBackground=true. Background threads are
+                // aborted during AppDomain/scene transitions. Foreground threads survive.
+                IsBackground = false
             };
             _serverThread.Start();
 
@@ -96,6 +98,16 @@ namespace DINOForge.Runtime.Bridge
         public void Dispose()
         {
             Stop();
+        }
+
+        /// <summary>
+        /// Updates the ModPlatform reference after resurrection.
+        /// Called when a new RuntimeDriver is created and re-initializes ModPlatform.
+        /// </summary>
+        public void UpdatePlatform(ModPlatform platform)
+        {
+            _platform = platform;
+            WriteDebug("[GameBridgeServer] Platform reference updated (post-resurrection).");
         }
 
         /// <summary>
@@ -322,8 +334,10 @@ namespace DINOForge.Runtime.Bridge
                 LoadedPacks = new List<string>()
             };
 
-            // Entity count + world name require main thread — use timeout to avoid deadlock.
-            // Both tasks are enqueued together so they can both be drained in consecutive frames.
+            // Entity count + world name require main thread — use short timeout.
+            // If the MainThreadDispatcher MonoBehaviour was destroyed by DINO's scene
+            // transition, the queue pump is dead and these will time out. Return -1
+            // for entity count rather than blocking for 12+ seconds.
             WriteDebug("[GameBridgeServer] HandleStatus: enqueuing main-thread tasks");
             try
             {
@@ -331,7 +345,6 @@ namespace DINOForge.Runtime.Bridge
                 {
                     World? world = World.DefaultGameObjectInjectionWorld;
                     if (world == null || !world.IsCreated) return 0;
-                    // Avoid scanning all 45K+ entities — just get the count cheaply
                     EntityQuery all = world.EntityManager.CreateEntityQuery(new EntityQueryDesc
                     {
                         Options = EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabled
@@ -347,14 +360,17 @@ namespace DINOForge.Runtime.Bridge
                     return world?.Name ?? "";
                 });
 
-                WriteDebug("[GameBridgeServer] HandleStatus: waiting for entity count (3s)");
-                bool entityDone = entityTask.Wait(3000);
+                WriteDebug("[GameBridgeServer] HandleStatus: waiting for entity count (1s)");
+                bool entityDone = entityTask.Wait(1000);
                 WriteDebug($"[GameBridgeServer] HandleStatus: entityDone={entityDone}");
                 bool nameDone = nameTask.Wait(500);
 
                 status.EntityCount = entityDone ? entityTask.Result : -1;
                 status.WorldName = nameDone ? nameTask.Result : "";
-                WriteDebug($"[GameBridgeServer] HandleStatus: EntityCount={status.EntityCount} WorldName={status.WorldName}");
+                if (!entityDone)
+                    WriteDebug("[GameBridgeServer] HandleStatus: main thread pump unavailable (RuntimeDriver destroyed). Returning degraded status.");
+                else
+                    WriteDebug($"[GameBridgeServer] HandleStatus: EntityCount={status.EntityCount} WorldName={status.WorldName}");
             }
             catch (Exception ex)
             {

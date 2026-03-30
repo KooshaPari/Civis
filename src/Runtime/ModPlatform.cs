@@ -268,12 +268,22 @@ namespace DINOForge.Runtime
                 _log.LogWarning($"[ModPlatform] ComponentMap validation failed: {ex.Message}");
             }
 
-            // Start the IPC bridge server
+            // Start/reuse the IPC bridge server (static singleton on Plugin to survive scene transitions)
             try
             {
-                _gameBridgeServer = new GameBridgeServer(this);
-                _gameBridgeServer.Start();
-                _log.LogInfo("[ModPlatform] GameBridgeServer started.");
+                if (Plugin.SharedBridgeServer == null)
+                {
+                    var bridge = new GameBridgeServer(this);
+                    bridge.Start();
+                    Plugin.SharedBridgeServer = bridge;
+                    _log.LogInfo("[ModPlatform] GameBridgeServer started (new singleton).");
+                }
+                else
+                {
+                    Plugin.SharedBridgeServer.UpdatePlatform(this);
+                    _log.LogInfo("[ModPlatform] GameBridgeServer reattached to new ModPlatform.");
+                }
+                _gameBridgeServer = Plugin.SharedBridgeServer;
             }
             catch (Exception ex)
             {
@@ -822,18 +832,17 @@ namespace DINOForge.Runtime
         /// Shuts down the mod platform and disposes all resources.
         /// Call from <see cref="Plugin.OnDestroy"/>.
         /// </summary>
-        public void Shutdown()
+        /// <summary>
+        /// Shuts down non-bridge resources (file watchers, HMR) while keeping the
+        /// bridge server alive. Called when RuntimeDriver is destroyed by DINO's
+        /// scene transitions — the bridge must survive for CLI/MCP tools to work.
+        /// </summary>
+        public void ShutdownNonBridge()
         {
-            _log?.LogInfo("[ModPlatform] Shutting down...");
+            _log?.LogInfo("[ModPlatform] Partial shutdown (keeping bridge)...");
 
             try
             {
-                if (_gameBridgeServer != null)
-                {
-                    _gameBridgeServer.Dispose();
-                    _gameBridgeServer = null;
-                }
-
                 if (_hotReloadBridge != null)
                 {
                     _hotReloadBridge.OnRuntimeUpdated -= OnHotReloadCompleted;
@@ -846,6 +855,31 @@ namespace DINOForge.Runtime
                     _packFileWatcher.Dispose();
                     _packFileWatcher = null;
                 }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[ModPlatform] Error during partial shutdown: {ex.Message}");
+            }
+
+            _log?.LogInfo("[ModPlatform] Partial shutdown complete. Bridge server still running.");
+        }
+
+        /// <summary>
+        /// Full shutdown including bridge server. Only call on game exit.
+        /// </summary>
+        public void Shutdown()
+        {
+            _log?.LogInfo("[ModPlatform] Full shutdown...");
+
+            try
+            {
+                if (_gameBridgeServer != null)
+                {
+                    _gameBridgeServer.Dispose();
+                    _gameBridgeServer = null;
+                }
+
+                ShutdownNonBridge();
             }
             catch (Exception ex)
             {

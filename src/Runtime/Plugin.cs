@@ -52,6 +52,12 @@ namespace DINOForge.Runtime
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
 
+        /// <summary>
+        /// Static singleton bridge server that survives RuntimeDriver destruction.
+        /// Created once, thread owned by Plugin class (not by any MonoBehaviour).
+        /// </summary>
+        internal static Bridge.GameBridgeServer? SharedBridgeServer;
+
         private void Awake()
         {
             Log = Logger;
@@ -83,6 +89,7 @@ namespace DINOForge.Runtime
             try
             {
                 _harmony = new Harmony(PluginInfo.GUID);
+                Bridge.DestroyGuardPatch.Apply(_harmony);
                 UI.ModsButtonTextPatch.Apply(_harmony);
                 Log.LogInfo("Harmony initialized and patches applied.");
             }
@@ -990,10 +997,17 @@ namespace DINOForge.Runtime
         private void OnDestroy()
         {
             _destroyed = true; // Signal background polling thread to stop
-            WriteDebug("[RuntimeDriver] OnDestroy called — this should not happen with HideAndDontSave.");
+            WriteDebug("[RuntimeDriver] OnDestroy called — DINO destroyed our root. Bridge kept alive.");
             Plugin.NeedsResurrection = true;
             Plugin.PersistentRoot = null;
-            try { _modPlatform?.Shutdown(); }
+            // IMPORTANT: Do NOT call _modPlatform.Shutdown() here.
+            // The bridge server runs on its own thread and must survive RuntimeDriver destruction.
+            // It will be reattached when TryResurrect creates a new RuntimeDriver.
+            // Only shut down file watchers and HMR (they depend on the MonoBehaviour lifecycle).
+            try
+            {
+                _modPlatform?.ShutdownNonBridge();
+            }
             catch { }
         }
     }

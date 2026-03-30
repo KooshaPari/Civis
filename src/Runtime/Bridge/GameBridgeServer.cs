@@ -27,6 +27,10 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>The well-known pipe name used by the DINOForge bridge.</summary>
         public const string PipeName = "dinoforge-game-bridge";
 
+        // CLR's COR_E_THREADABORT HRESULT — Thread.Abort on .NET Core wraps as IOException.
+        // See: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Threading/Thread.cs
+        private const int COR_E_THREADABORT = unchecked((int)0x80131623);
+
         private ModPlatform _platform;
         private readonly DateTime _startTime;
         private Thread? _serverThread;
@@ -62,17 +66,57 @@ namespace DINOForge.Runtime.Bridge
         {
             if (_running) return;
             _running = true;
+            StartThread();
+        }
 
-            _serverThread = new Thread(ServerLoop)
+        /// <summary>
+        /// Starts (or restarts) the server thread. If the thread was aborted by
+        /// DINO's scene transitions, this creates a new one.
+        /// </summary>
+        private void StartThread()
+        {
+            _serverThread = new Thread(ServerLoopWithAutoRestart)
             {
                 Name = "DINOForge-Bridge-Server",
-                // IMPORTANT: Must NOT be IsBackground=true. Background threads are
-                // aborted during AppDomain/scene transitions. Foreground threads survive.
                 IsBackground = false
             };
             _serverThread.Start();
-
             WriteDebug("[GameBridgeServer] Started on pipe: " + PipeName);
+        }
+
+        /// <summary>
+        /// Wrapper around ServerLoop that catches ThreadAbortException and restarts.
+        /// </summary>
+        private void ServerLoopWithAutoRestart()
+        {
+            try
+            {
+                ServerLoop();
+            }
+            catch
+            {
+                // ServerLoop exited — either stopped normally or thread was aborted.
+                // Dispose any lingering pipe to free the pipe name for restart.
+                try { _currentPipe?.Dispose(); } catch { }
+                _currentPipe = null;
+
+                if (_running)
+                {
+                    WriteDebug("[GameBridgeServer] Server loop exited — restarting in 2s...");
+                    try
+                    {
+                        new Thread(() =>
+                        {
+                            Thread.Sleep(2000);
+                            if (_running) StartThread();
+                        }) { IsBackground = false, Name = "DINOForge-Bridge-Restart" }.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteDebug($"[GameBridgeServer] Restart failed: {ex.Message}");
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -103,11 +147,29 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>
         /// Updates the ModPlatform reference after resurrection.
         /// Called when a new RuntimeDriver is created and re-initializes ModPlatform.
+        /// Also ensures the server thread is alive — restarts it if it died.
         /// </summary>
         public void UpdatePlatform(ModPlatform platform)
         {
             _platform = platform;
             WriteDebug("[GameBridgeServer] Platform reference updated (post-resurrection).");
+            EnsureServerAlive();
+        }
+
+        /// <summary>
+        /// Checks if the server thread is alive and restarts it if dead.
+        /// Called from KeyInputSystem.OnUpdate() every ~50ms to ensure the bridge
+        /// survives Unity's scene transitions which may abort background threads.
+        /// </summary>
+        public void EnsureServerAlive()
+        {
+            if (_running && (_serverThread == null || !_serverThread.IsAlive))
+            {
+                WriteDebug("[GameBridgeServer] Server thread is dead — restarting...");
+                Stop();
+                // Create fresh thread — the old thread object is abandoned after abort.
+                Start();
+            }
         }
 
         /// <summary>
@@ -124,10 +186,13 @@ namespace DINOForge.Runtime.Bridge
                     // Use None (synchronous mode) — this server runs on a dedicated background
                     // thread so async pipe mode is not needed and causes ReadLine() to block
                     // indefinitely on Windows when no data is available.
+                    // Allow multiple server instances so that after a ThreadAbortException
+                    // + ResetAbort cycle, a new pipe can be created even if the old one
+                    // hasn't been fully disposed yet.
                     pipe = new NamedPipeServerStream(
                         PipeName,
                         PipeDirection.InOut,
-                        1,
+                        NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
                         PipeOptions.None);
 
@@ -150,7 +215,13 @@ namespace DINOForge.Runtime.Bridge
                         }
                         catch (IOException ex)
                         {
-                            WriteDebug($"[GameBridgeServer] Read IOException: {ex.Message}");
+                            WriteDebug($"[GameBridgeServer] Read IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
+                            // Thread.Abort may manifest as IOException with COR_E_THREADABORT HResult.
+                            if (ex.HResult == COR_E_THREADABORT)
+                            {
+                                Thread.ResetAbort();
+                                WriteDebug("[GameBridgeServer] Thread abort detected and reset — restarting connection.");
+                            }
                             break;
                         }
                         catch (ObjectDisposedException)
@@ -187,6 +258,29 @@ namespace DINOForge.Runtime.Bridge
                 {
                     // Server is shutting down
                 }
+                catch (System.Threading.ThreadAbortException)
+                {
+                    // DINO/Unity may abort threads during scene transitions.
+                    // Reset the abort and continue the loop — the bridge must survive.
+                    System.Threading.Thread.ResetAbort();
+                    WriteDebug("[GameBridgeServer] ThreadAbortException caught and reset — bridge surviving.");
+                }
+                catch (IOException ex)
+                {
+                    // Thread.Abort may manifest as IOException with COR_E_THREADABORT HResult
+                    // (0x80131623) when the abort interrupts a blocking synchronous I/O call.
+                    // See: https://github.com/dotnet/runtime/issues/30675
+                    WriteDebug($"[GameBridgeServer] IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
+                    if (ex.HResult == COR_E_THREADABORT)
+                    {
+                        Thread.ResetAbort();
+                        WriteDebug("[GameBridgeServer] Thread abort (wrapped as IOException) detected — resetting and restarting.");
+                    }
+                    else
+                    {
+                        WriteDebug($"[GameBridgeServer] Non-abort IOException — will retry on next loop iteration.");
+                    }
+                }
                 catch (Exception ex)
                 {
                     WriteDebug($"[GameBridgeServer] Error in server loop: {ex.Message}");
@@ -198,10 +292,10 @@ namespace DINOForge.Runtime.Bridge
                     _currentPipe = null;
                 }
 
-                // Brief pause before re-listening to avoid tight loop on errors
+                // Pause before re-listening. Longer delay after errors to avoid log spam.
                 if (_running)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(1000);
                 }
             }
         }
@@ -334,16 +428,14 @@ namespace DINOForge.Runtime.Bridge
                 LoadedPacks = new List<string>()
             };
 
-            // Entity count + world name require main thread — use short timeout.
-            // If the MainThreadDispatcher MonoBehaviour was destroyed by DINO's scene
-            // transition, the queue pump is dead and these will time out. Return -1
-            // for entity count rather than blocking for 12+ seconds.
-            WriteDebug("[GameBridgeServer] HandleStatus: enqueuing main-thread tasks");
+            // Entity count + world name require main thread (ECS pump via KeyInputSystem.OnUpdate).
+            // At main menu no ECS world ticks, so the pump is dead — use very short timeout
+            // and return degraded status (EntityCount=-1) rather than blocking.
             try
             {
-                System.Threading.Tasks.Task<int> entityTask = MainThreadDispatcher.RunOnMainThread(() =>
+                var entityTask = MainThreadDispatcher.RunOnMainThread(() =>
                 {
-                    World? world = World.DefaultGameObjectInjectionWorld;
+                    World? world = GetActiveWorld();
                     if (world == null || !world.IsCreated) return 0;
                     EntityQuery all = world.EntityManager.CreateEntityQuery(new EntityQueryDesc
                     {
@@ -354,23 +446,18 @@ namespace DINOForge.Runtime.Bridge
                     return count;
                 });
 
-                System.Threading.Tasks.Task<string> nameTask = MainThreadDispatcher.RunOnMainThread(() =>
+                var nameTask = MainThreadDispatcher.RunOnMainThread(() =>
                 {
-                    World? world = World.DefaultGameObjectInjectionWorld;
+                    World? world = GetActiveWorld();
                     return world?.Name ?? "";
                 });
 
-                WriteDebug("[GameBridgeServer] HandleStatus: waiting for entity count (1s)");
-                bool entityDone = entityTask.Wait(1000);
-                WriteDebug($"[GameBridgeServer] HandleStatus: entityDone={entityDone}");
-                bool nameDone = nameTask.Wait(500);
+                // 200ms timeout — fast fail when no ECS pump is active (main menu)
+                bool entityDone = entityTask.Wait(200);
+                bool nameDone = nameTask.Wait(100);
 
                 status.EntityCount = entityDone ? entityTask.Result : -1;
                 status.WorldName = nameDone ? nameTask.Result : "";
-                if (!entityDone)
-                    WriteDebug("[GameBridgeServer] HandleStatus: main thread pump unavailable (RuntimeDriver destroyed). Returning degraded status.");
-                else
-                    WriteDebug($"[GameBridgeServer] HandleStatus: EntityCount={status.EntityCount} WorldName={status.WorldName}");
             }
             catch (Exception ex)
             {
@@ -688,7 +775,7 @@ namespace DINOForge.Runtime.Bridge
             // Also enqueue so the StatModifierSystem re-applies it after scene reloads.
             OverrideResult result = MainThreadDispatcher.RunOnMainThread(() =>
             {
-                World? world = World.DefaultGameObjectInjectionWorld;
+                World? world = GetActiveWorld();
                 int modified = 0;
                 if (world != null && world.IsCreated)
                 {
@@ -770,7 +857,7 @@ namespace DINOForge.Runtime.Bridge
             // the bridge thread indefinitely if the main thread is busy.
             System.Threading.Tasks.Task<ResourceSnapshot> task = MainThreadDispatcher.RunOnMainThread(() =>
             {
-                World? world = World.DefaultGameObjectInjectionWorld;
+                World? world = GetActiveWorld();
                 if (world == null || !world.IsCreated)
                     return new ResourceSnapshot();
                 return ResourceReader.ReadResources(world.EntityManager);
@@ -869,7 +956,7 @@ namespace DINOForge.Runtime.Bridge
             // Rebuild the catalog for a fresh dump
             CatalogSnapshot snapshot = MainThreadDispatcher.RunOnMainThread(() =>
             {
-                World? world = World.DefaultGameObjectInjectionWorld;
+                World? world = GetActiveWorld();
                 if (world == null || !world.IsCreated)
                     return new CatalogSnapshot();
 
@@ -937,7 +1024,7 @@ namespace DINOForge.Runtime.Bridge
                     {
                         worldName = MainThreadDispatcher.RunOnMainThread(() =>
                         {
-                            World? world = World.DefaultGameObjectInjectionWorld;
+                            World? world = GetActiveWorld();
                             return world?.Name ?? "";
                         }).Result;
                     }
@@ -986,7 +1073,7 @@ namespace DINOForge.Runtime.Bridge
                 return result;
             }
 
-            World? world = World.DefaultGameObjectInjectionWorld;
+            World? world = GetActiveWorld();
             if (world == null || !world.IsCreated)
                 return result;
 
@@ -1070,7 +1157,7 @@ namespace DINOForge.Runtime.Bridge
         {
             QueryResult result = new QueryResult();
 
-            World? world = World.DefaultGameObjectInjectionWorld;
+            World? world = GetActiveWorld();
             if (world == null || !world.IsCreated)
                 return result;
 
@@ -1258,7 +1345,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    World? world = World.DefaultGameObjectInjectionWorld;
+                    World? world = GetActiveWorld();
                     if (world == null || !world.IsCreated)
                         return new { success = false, message = "No ECS world" };
 
@@ -1700,7 +1787,7 @@ namespace DINOForge.Runtime.Bridge
                     // Strategy 0: Create a LoadRequest ECS entity — the game's SaveLoadSystem
                     // reads Components.RawComponents.LoadRequest singletons and triggers a load.
                     // Fields: NameToLoad (FixedString128Bytes), FromMenu (Boolean)
-                    World? world = World.DefaultGameObjectInjectionWorld;
+                    World? world = GetActiveWorld();
                     if (world != null && world.IsCreated)
                     {
                         Type? loadRequestType = null;
@@ -1982,6 +2069,29 @@ namespace DINOForge.Runtime.Bridge
                 }
             };
             return JsonConvert.SerializeObject(response, Formatting.None);
+        }
+
+        /// <summary>
+        /// Returns the ECS world to use for entity queries.
+        ///
+        /// After scene transitions, KeyInputSystem may live in a different world than
+        /// GetActiveWorld() (because OnCreate fires before the default
+        /// world is set). We query DefaultGameObjectInjectionWorld first (has all game entities).
+        /// If that's null (startup edge case), we scan all worlds to find one with entities.
+        /// </summary>
+        private static World? GetActiveWorld()
+        {
+            World? preferred = World.DefaultGameObjectInjectionWorld;
+            if (preferred != null && preferred.IsCreated)
+                return preferred;
+
+            // Fallback: find any world with entities (startup edge case before Default is set)
+            foreach (World w in World.All)
+            {
+                if (w.IsCreated && w.EntityManager.UniversalQuery.CalculateEntityCount() > 0)
+                    return w;
+            }
+            return preferred;
         }
 
         private static void WriteDebug(string msg)

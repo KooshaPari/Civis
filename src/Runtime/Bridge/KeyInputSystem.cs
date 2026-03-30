@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+using System.Reflection;
 using Unity.Entities;
 using UnityEngine;
 using DINOForge.Runtime;
@@ -21,6 +23,18 @@ namespace DINOForge.Runtime.Bridge
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class KeyInputSystem : SystemBase
     {
+        /// <summary>
+        /// Caches the world that KeyInputSystem lives in. Updated on every OnCreate.
+        /// Used by GameBridgeServer to always query the correct world after scene transitions.
+        /// </summary>
+        private static World? _cachedWorld;
+
+        /// <summary>
+        /// Returns the ECS world that the active KeyInputSystem instance lives in.
+        /// Falls back to World.DefaultGameObjectInjectionWorld if no instance exists.
+        /// </summary>
+        public static World? GetActiveWorld() => _cachedWorld ?? World.DefaultGameObjectInjectionWorld;
+
         /// <summary>Called when F9 is pressed (set by RuntimeDriver if alive).</summary>
         public static System.Action? OnF9Pressed;
 
@@ -34,6 +48,16 @@ namespace DINOForge.Runtime.Bridge
         private int _updateFrame;
         private bool _f9PreviousState;
         private bool _f10PreviousState;
+        // Tracks the last DefaultGameObjectInjectionWorld seen by OnUpdate.
+        // When it changes (scene transition), we re-check if KeyInputSystem is in the right world.
+        private World? _lastDefaultWorld;
+
+        /// <summary>
+        /// Returns the ECS world that this KeyInputSystem instance lives in.
+        /// Used by GameBridgeServer to query the correct world (which may differ from
+        /// World.DefaultGameObjectInjectionWorld after scene transitions).
+        /// </summary>
+        public World OwningWorld => World;
 
         protected override void OnCreate()
         {
@@ -47,6 +71,13 @@ namespace DINOForge.Runtime.Bridge
                 Plugin.NeedsResurrection = false;
                 Plugin.TryResurrect("(ECS OnCreate)", "KeyInputSystem.OnCreate");
             }
+
+            // Key insight: OnCreate fires BEFORE World.DefaultGameObjectInjectionWorld is set,
+            // so this system ends up in whatever world DINO created, NOT the default world.
+            // We cache our world here so GameBridgeServer can always query the correct world.
+            _cachedWorld = World;
+            _lastDefaultWorld = World.DefaultGameObjectInjectionWorld;
+
             WriteDebug($"KeyInputSystem.OnCreate complete, Enabled={Enabled}");
         }
 
@@ -70,8 +101,34 @@ namespace DINOForge.Runtime.Bridge
                 // so this is the only reliable pump for main-thread work.
                 MainThreadDispatcher.DrainQueue();
 
+                // Ensure bridge server thread is alive — may have been aborted during
+                // scene transitions. Restart it if dead so CLI/MCP tools recover.
+                Plugin.SharedBridgeServer?.EnsureServerAlive();
+
                 // If PersistentRoot was destroyed by DINO, resurrect it via ECS
                 Plugin.TryResurrect("(ECS tick)", "KeyInputSystem");
+
+                // Detect world changes (scene transitions) and re-register KeyInputSystem
+                // in DefaultGameObjectInjectionWorld if it changed. This fixes the bug where
+                // OnCreate fires before DefaultGameObjectInjectionWorld is set, causing the
+                // system to be registered in the wrong world and DrainQueue to never run.
+                World? currentDefault = World.DefaultGameObjectInjectionWorld;
+                if (currentDefault != null && !ReferenceEquals(currentDefault, _lastDefaultWorld))
+                {
+                    WriteDebug($"[KeyInputSystem.OnUpdate] DefaultGameObjectInjectionWorld changed: " +
+                        $"'{_lastDefaultWorld?.Name ?? "null"}' → '{currentDefault.Name}'. " +
+                        $"Re-registering in new world.");
+                    try
+                    {
+                        currentDefault.GetOrCreateSystem<KeyInputSystem>();
+                        WriteDebug("[KeyInputSystem.OnUpdate] KeyInputSystem registered in new default world.");
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteDebug($"[KeyInputSystem.OnUpdate] Re-registration failed: {ex.Message}");
+                    }
+                    _lastDefaultWorld = currentDefault;
+                }
 
                 // Consume any pending F9/F10 toggles (for future compatibility)
                 if (Plugin.PendingF9Toggle)

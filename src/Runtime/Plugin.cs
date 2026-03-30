@@ -295,6 +295,11 @@ namespace DINOForge.Runtime
         private bool _initialized;
         private bool _catalogRebuilt;
         private float _worldPollTimer;
+        // Tracks the ECS world instance that KeyInputSystem was registered in.
+        // When DINO transitions scenes, it destroys the old world and creates a new one.
+        // We detect this by comparing the current DefaultGameObjectInjectionWorld against
+        // _registeredWorldInstance and re-registering KeyInputSystem in the new world.
+        private World? _registeredWorldInstance;
         // Cross-thread flag: true once OnDestroy is called. The background polling thread
         // checks this to avoid calling OnWorldReady after the RuntimeDriver is destroyed.
         private volatile bool _destroyed;
@@ -701,6 +706,33 @@ namespace DINOForge.Runtime
                             }
                             catch { }
                         }
+                        // Stable state: detect world changes (scene transitions) and re-register KeyInputSystem.
+                        // After scene transitions, DINO creates a new ECS world and updates
+                        // DefaultGameObjectInjectionWorld. We detect this and re-register KeyInputSystem
+                        // so DrainQueue keeps pumping — this unblocks the MCP bridge.
+                        else
+                        {
+                            if (_destroyed) break;
+                            try
+                            {
+                                World? current = World.DefaultGameObjectInjectionWorld;
+                                if (current != null && current.IsCreated && !ReferenceEquals(current, _registeredWorldInstance))
+                                {
+                                    _registeredWorldInstance = current;
+                                    _log?.LogInfo($"[RuntimeDriver] ECS world changed to '{current.Name}' — re-registering KeyInputSystem");
+                                    try
+                                    {
+                                        current.GetOrCreateSystem<Bridge.KeyInputSystem>();
+                                        _log?.LogInfo("[RuntimeDriver] KeyInputSystem re-registered in new world.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _log?.LogWarning($"[RuntimeDriver] KeyInputSystem re-registration failed: {ex.Message}");
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
                     }
                 }
                 catch (System.Exception ex)
@@ -899,6 +931,7 @@ namespace DINOForge.Runtime
         private void OnWorldReady(World ecsWorld)
         {
             _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
+            _registeredWorldInstance = ecsWorld;
 
             // Register KeyInputSystem — handles F9/F10 via ECS (survives scene transitions)
             try

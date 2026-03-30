@@ -67,7 +67,6 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Enable toggle — IsOn TwoWay so the toggle actually writes back -->
@@ -99,33 +98,9 @@
                                     Foreground="{StaticResource DFAccentBrush}" />
                             </StackPanel>
 
-                            <!-- Conflict badge -->
-                            <Border
-                                Grid.Column="2"
-                                Background="{StaticResource DFErrorBrush}"
-                                CornerRadius="12"
-                                Padding="8,2"
-                                VerticalAlignment="Center"
-                                ToolTipService.ToolTip="Pack has conflicts with other active packs"
-                                Visibility="{x:Bind HasConflict, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="⚠ Conflict" Foreground="White" FontSize="11" />
-                            </Border>
-
-                            <!-- Missing dependency badge -->
-                            <Border
-                                Grid.Column="2"
-                                Background="{StaticResource DFWarningBrush}"
-                                CornerRadius="12"
-                                Padding="8,2"
-                                VerticalAlignment="Center"
-                                ToolTipService.ToolTip="Pack has missing dependencies"
-                                Visibility="{x:Bind HasMissingDependency, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="⚠ Missing Dep" Foreground="White" FontSize="11" />
-                            </Border>
-
                             <!-- Error badge -->
                             <Border
-                                Grid.Column="3"
+                                Grid.Column="2"
                                 Background="{StaticResource DFErrorBrush}"
                                 CornerRadius="12"
                                 Padding="8,2"
@@ -139,7 +114,7 @@
 
                             <!-- Load order -->
                             <TextBlock
-                                Grid.Column="4"
+                                Grid.Column="3"
                                 Text="{x:Bind LoadOrderText}"
                                 Style="{StaticResource DFSecondaryText}"
                                 VerticalAlignment="Center"

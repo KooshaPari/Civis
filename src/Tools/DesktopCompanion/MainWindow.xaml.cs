@@ -37,9 +37,6 @@ namespace DINOForge.DesktopCompanion
             {
                 "Dashboard" => typeof(DashboardPage),
                 "PackList" => typeof(PackListPage),
-                "Browse" => typeof(BrowsePage),
-                "Update" => typeof(UpdatePage),
-                "Conflict" => typeof(ConflictPage),
                 "DebugPanel" => typeof(DebugPanelPage),
                 "Settings" => typeof(SettingsPage),
                 _ => null

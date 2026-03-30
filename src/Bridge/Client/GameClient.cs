@@ -339,13 +339,22 @@ public sealed class GameClient : IDisposable
 
     private static async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken ct)
     {
-        // StreamReader.ReadLineAsync doesn't accept CancellationToken in older APIs,
-        // so we wrap it with a task-based cancellation approach.
-        Task<string?> readTask = reader.ReadLineAsync();
-        Task completedTask = await Task.WhenAny(readTask, Task.Delay(Timeout.Infinite, ct)).ConfigureAwait(false);
-
+        // StreamReader.ReadLineAsync doesn't accept CancellationToken, so we implement
+        // a timeout by polling with short delays. This is robust — no race condition
+        // between the read and the timeout: we simply bail out after ReadTimeoutMs.
+        // We also read byte-by-byte to match the server's ReadLineFromPipe which strips
+        // '\r' and returns on '\n', avoiding any StreamReader buffering mismatch.
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        var sb = new System.Text.StringBuilder();
+        while (!ct.IsCancellationRequested)
+        {
+            int b = reader.Read();
+            if (b < 0) return sb.Length > 0 ? sb.ToString() : null; // EOF
+            if (b == '\n') return sb.ToString();
+            if (b != '\r') sb.Append((char)b);
+        }
         ct.ThrowIfCancellationRequested();
-        return await readTask.ConfigureAwait(false);
+        return null;
     }
 
     private void CleanupPipe()

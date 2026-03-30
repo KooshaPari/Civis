@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 import threading
 from pathlib import Path
 from typing import Any
@@ -166,22 +167,28 @@ async def _launch_on_vdd(exe_path: str, width: int = 1920, height: int = 1080) -
 
 async def _launch_hidden(exe_path: str, desktop_name: str = "DINOForge_Agent") -> dict:
     """Launch game on a hidden Win32 desktop using CreateDesktop with -popupwindow flag."""
-    ps_script = r"""
+    # Write script to a temp file to avoid -Command here-string parsing issues
+    # (here-strings via -Command can fail with "Invalid argument" on some PowerShell versions)
+    script_path = Path(tempfile.gettempdir()) / f"dinoforge_launch_{os.getpid()}.ps1"
+    script_content = f'''\
 param($ExePath, $DesktopName)
-Add-Type -AssemblyName System.Drawing
 Add-Type @"
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-public class Win32Desktop {
+public class Win32Desktop {{
     [DllImport("user32.dll")] public static extern IntPtr CreateDesktop(string lpszDesktop, IntPtr lpszDevice, IntPtr pDevmode, int dwFlags, uint dwDesiredAccess, IntPtr lpsa);
     [DllImport("user32.dll")] public static extern bool CloseDesktop(IntPtr hDesktop);
-    [DllImport("kernel32.dll")] public static extern bool CreateProcess(string lpAppName, string lpCmdLine, IntPtr lpPA, IntPtr lpTA, bool bInherit, uint dwFlags, IntPtr lpEnv, string lpCurDir, ref STARTUPINFO lpSI, out PROCESS_INFORMATION lpPI);
-    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)] public struct STARTUPINFO { public int cb; public string lpReserved; public string lpDesktop; public string lpTitle; public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags; public short wShowWindow, cbReserved2; public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError; }
-    [StructLayout(LayoutKind.Sequential)] public struct PROCESS_INFORMATION { public IntPtr hProcess, hThread; public int dwProcessId, dwThreadId; }
-}
+    [DllImport("kernel32.dll")] public static extern bool CreateProcess(string lpAppName, string lpCmdLine, IntPtr lpPA, IntPtr lpTA, bool bInherit, uint dwCreationFlags, IntPtr lpEnv, string lpCurDir, ref STARTUPINFO lpSI, out PROCESS_INFORMATION lpPI);
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)] public struct STARTUPINFO {{ public int cb; public string lpReserved; public string lpDesktop; public string lpTitle; public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags; public short wShowWindow, cbReserved2; public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError; }}
+    [StructLayout(LayoutKind.Sequential)] public struct PROCESS_INFORMATION {{ public IntPtr hProcess, hThread; public int dwProcessId, dwThreadId; }}
+}}
 "@
-$desktop = [Win32Desktop]::CreateDesktop($DesktopName, [IntPtr]::Zero, [IntPtr]::Zero, 0, 0x01FF, [IntPtr]::Zero)
-if ($desktop -eq [IntPtr]::Zero) { Write-Output "ERROR: CreateDesktop failed"; exit 1 }
+$DESKTOP_ALL = [uint32]0x000F01FF
+$CREATE_NO_WINDOW = [uint32]0x08000000
+$CREATE_DEFAULT_ERROR_MODE = [uint32]0x04000000
+$desktop = [Win32Desktop]::CreateDesktop($DesktopName, [IntPtr]::Zero, [IntPtr]::Zero, 0, $DESKTOP_ALL, [IntPtr]::Zero)
+if ($desktop -eq [IntPtr]::Zero) {{ Write-Output "ERROR:CreateDesktop"; exit 1 }}
 $si = New-Object Win32Desktop+STARTUPINFO
 $si.cb = [System.Runtime.InteropServices.Marshal]::SizeOf($si)
 $si.lpDesktop = $DesktopName
@@ -190,19 +197,39 @@ $si.wShowWindow = 0
 $pi = New-Object Win32Desktop+PROCESS_INFORMATION
 $exeDir = Split-Path $ExePath -Parent
 $cmdLine = $ExePath + " -popupwindow"
-$ok = [Win32Desktop]::CreateProcess($ExePath, $cmdLine, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x00000010, [IntPtr]::Zero, $exeDir, [ref]$si, [ref]$pi)
-if ($ok) { Write-Output "PID:$($pi.dwProcessId)" } else { Write-Output "ERROR: CreateProcess failed" }
-"""
-    result = await asyncio.to_thread(
-        subprocess.run,
-        ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script, "-ExePath", exe_path, "-DesktopName", desktop_name],
-        capture_output=True, text=True, timeout=30
-    )
-    stdout = result.stdout.strip()
-    if stdout.startswith("PID:"):
-        pid = int(stdout[4:])
-        return {"success": True, "pid": pid, "desktop": desktop_name, "hidden": True}
-    return {"success": False, "error": stdout or result.stderr}
+$creationFlags = $CREATE_NO_WINDOW -bor $CREATE_DEFAULT_ERROR_MODE -bor [uint32]0x00000010
+$ok = [Win32Desktop]::CreateProcess($ExePath, $cmdLine, [IntPtr]::Zero, [IntPtr]::Zero, $false, $creationFlags, [IntPtr]::Zero, $exeDir, [ref]$si, [ref]$pi)
+if (!$ok) {{ Write-Output "ERROR:CreateProcess"; exit 1 }}
+$scriptBlock = {{
+    param($desktopHandle, $processId)
+    try {{
+        $proc = [System.Diagnostics.Process]::GetProcessById($processId)
+        $proc.WaitForExit()
+    }} finally {{
+        [Win32Desktop]::CloseDesktop($desktopHandle) | Out-Null
+    }}
+}}
+Start-Job -ScriptBlock $scriptBlock -ArgumentList $desktop, $pi.dwProcessId | Out-Null
+Write-Output "PID:$($pi.dwProcessId)"
+'''
+    try:
+        script_path.write_text(script_content, encoding="utf-8-sig")
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path),
+             "-ExePath", exe_path, "-DesktopName", desktop_name],
+            capture_output=True, text=True, timeout=30
+        )
+        stdout = result.stdout.strip()
+        if stdout.startswith("PID:"):
+            pid = int(stdout[4:])
+            return {"success": True, "pid": pid, "desktop": desktop_name, "hidden": True}
+        return {"success": False, "error": stdout or result.stderr}
+    finally:
+        try:
+            script_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------

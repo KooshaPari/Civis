@@ -158,11 +158,22 @@ namespace DINOForge.Runtime.Bridge
 
         /// <summary>
         /// Checks if the server thread is alive and restarts it if dead.
+        /// Also triggers RuntimeDriver resurrection if PersistentRoot is null.
         /// Called from KeyInputSystem.OnUpdate() every ~50ms to ensure the bridge
-        /// survives Unity's scene transitions which may abort background threads.
+        /// and UI systems survive Unity's scene transitions which may abort threads
+        /// and destroy the RuntimeDriver.
         /// </summary>
         public void EnsureServerAlive()
         {
+            // If RuntimeDriver was destroyed (scene transition), resurrect it.
+            // This creates a new RuntimeDriver which re-registers KeyInputSystem
+            // in the current ECS world, ensuring DrainQueue and F9/F10 work.
+            if (Plugin.PersistentRoot == null)
+            {
+                WriteDebug("[GameBridgeServer] PersistentRoot is null — triggering resurrection...");
+                Plugin.TryResurrect("(Bridge supervisor)", "EnsureServerAlive");
+            }
+
             if (_running && (_serverThread == null || !_serverThread.IsAlive))
             {
                 WriteDebug("[GameBridgeServer] Server thread is dead — restarting...");

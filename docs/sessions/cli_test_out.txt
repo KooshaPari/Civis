@@ -1,0 +1,15 @@
+✓ Connected to game bridge
+Running: True
+World ready: True
+World name: 
+Entity count: 0
+Mod platform ready: True
+Loaded packs: 7
+  - vanilla-dino
+  - economy-balanced
+  - scenario-tutorial
+  - ui-hud-minimal
+  - warfare-aerial
+  - warfare-modern
+  - warfare-starwars
+Version: 0.1.0

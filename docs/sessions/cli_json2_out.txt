@@ -1,0 +1,36 @@
+Invalid command
+DINOForge Game Control CLI
+Direct game process communication via named pipes
+
+Commands:
+  status           - Check game connection and status
+  ping             - Ping the game bridge (no ECS queries)
+  wait-world       - Wait for ECS world to be ready
+  resources        - Show current resource values
+  screenshot       - Capture in-game screenshot
+  catalog <cat>      - Dump game catalog (units/buildings/projectiles)
+  entities <comp>    - Query entities by component type
+  load-scene <name>  - Load a game scene by name/index (11 scenes: 
+level0-level9, etc.)
+  start-game         - Trigger game world load via ECS singleton (bypasses menu)
+  list-saves         - List save files discovered by the bridge
+  load-save <name>   - Load a save by name (default: AUTOSAVE_1)
+  dismiss            - Dismiss 'Press Any Key to Continue' loading screen
+  click-button <name>   - Click a named Unity UI button (e.g. 
+DINOForge_ModsButton)
+  toggle-ui <target>    - Toggle DINOForge UI: modmenu (F10) or debug (F9)
+  scan-scene <filter>   - Dump active MonoBehaviours + their void() methods
+  invoke-method <target> <method> - Call a void() method on matching MB
+  ui-tree <selector>    - Snapshot the live Unity UI hierarchy (Playwright-style
+DOM)
+  demo             - Full end-to-end demo: menu → mods → F9/F10 → save → 
+gameplay
+  --help, -h       - Show this help
+
+JSON-output commands (for MCP/scripting):
+  get-stat <sdk_path> <idx>            - Read stat value by SDK path (JSON)
+  apply-override <sdk_path> <value> <mode> <filter> - Apply stat override (JSON)
+  get-component-map <sdk_path>         - SDK-to-ECS component mappings (JSON)
+  reload-packs <path>                  - Reload content packs from disk (JSON)
+  verify-mod <pack_path>               - End-to-end mod verification (JSON)
+  dump-state <category>                - ECS state snapshot as JSON

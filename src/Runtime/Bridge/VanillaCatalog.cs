@@ -96,6 +96,14 @@ namespace DINOForge.Runtime.Bridge
             NativeArray<Entity> allEntities = em.GetAllEntities(Allocator.Temp);
             WriteDebug($"VanillaCatalog: scanning {allEntities.Length} entities");
 
+            // Skip if no entities (e.g., still on MainMenu scene)
+            if (allEntities.Length == 0)
+            {
+                WriteDebug("VanillaCatalog.Build: No entities found. Skipping catalog build.");
+                allEntities.Dispose();
+                return;
+            }
+
             // Group entities by archetype (component signature)
             Dictionary<string, ArchetypeGroup> archetypeGroups =
                 new Dictionary<string, ArchetypeGroup>();

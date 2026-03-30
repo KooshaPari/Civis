@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Test Coverage Expansion (Steps 1-5)** — Comprehensive test pyramid audit to reach 85-100% coverage
+  1. **Step 1: CLI Tool Tests** — `DINOForge.Tests.CliTools` project with 84 xUnit tests covering GameStatus, QueryResult, OverrideResult, ResourceSnapshot, and ReloadCommand protocol types; uses Moq for Bridge.Client mocking
+  2. **Step 3: PackCompiler Service Tests** — Asset pipeline tests covering AssetValidationService, AssetOptimizationService, PrefabGenerationService, AddressablesService (17 tests); LOD generation, mesh decimation, prefab YAML creation, catalog entry generation all verified
+  3. **Step 4: Python Hook Tests** — Pre-commit hook validation (26 tests, 19 passing)
+     - test_check_json.py: 8 tests for JSON schema validation across node_modules/binary file skipping
+     - test_check_yaml.py: 9 tests for YAML syntax validation
+     - test_check_merge_conflicts.py: 9 tests for conflict marker detection (with test directory exclusion in check-merge-conflicts.py)
+  4. **Step 5: MCP Server Tool Tests** — Unit test structure for all 21 game automation tools
+     - test_game_tools.py: 40+ tests with mocking fixtures for GameStatus, QueryEntities, ApplyOverride, ReloadPacks, DumpState, Screenshot, Input, WaitForWorld tools
+     - Includes mock game process, game state fixtures, and tool response validation
+
+### Added
+
 - **M15: Real-game validation system** — Maximal strictness testing replaces false-green CI with real-world proof. New components:
   1. **GameLaunchTests.cs** — xUnit test class `GameLaunchValidationTests` with 5 tests (TestGameBoots, TestRuntimePluginLoads, TestF9OverlayWorks, TestF10ModMenuWorks, TestModsButtonVisible); runs serially via `[Collection("GameLaunch")]` to avoid process conflicts; captures failure state on any exception via `GameDiagnosticsCapture`
   2. **GameTestDiagnostics.cs** — Static failure capture service with `CaptureFailureStateAsync` (screenshot, logs, process info, entity count → JSON manifest) and `AnalyzeFailureRootAsync` (extracts error patterns, affected systems, recommendations from logs)

@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Note:** DesktopCompanion (WinUI 3) requires local build with VS 2022 + Windows SDK toolchain
 > (XamlCompiler needs VC++ ATL/MFC). CI releases do not include the Companion zip — build it locally.
 
+### Added
+
+- **M15: Real-game validation system** — Maximal strictness testing replaces false-green CI with real-world proof. New components:
+  1. **GameLaunchTests.cs** — xUnit test class `GameLaunchValidationTests` with 5 tests (TestGameBoots, TestRuntimePluginLoads, TestF9OverlayWorks, TestF10ModMenuWorks, TestModsButtonVisible); runs serially via `[Collection("GameLaunch")]` to avoid process conflicts; captures failure state on any exception via `GameDiagnosticsCapture`
+  2. **GameTestDiagnostics.cs** — Static failure capture service with `CaptureFailureStateAsync` (screenshot, logs, process info, entity count → JSON manifest) and `AnalyzeFailureRootAsync` (extracts error patterns, affected systems, recommendations from logs)
+  3. **GameLaunchAnalyzer.cs** — DumpTools service for post-mortem analysis; `GenerateFailureReportAsync` creates markdown reports from failure manifests; `AnalyzeLogs` identifies error patterns; `GenerateRecommendations` provides actionable fixes
+  4. **prove-features-gate.ps1** — CI gate command that orchestrates `/prove-features` skill, validates all 3 features confirmed=true, analyzes failure logs, writes `gate_result.json`; gates merges on real game execution proof
+  5. **game-launch-validation.yml** — GitHub Actions workflow (windows-latest runner) that builds, deploys, runs game tests, captures diagnostics, uploads artifacts, comments on PRs with failure analysis; makes game validation a required status check before merge
+  6. **EnvironmentMatrixTests.cs** — Compatibility tests for Desktop/RDP/Sandbox environments (skipped by default, enabled when needed)
+  7. **game-launch-dashboard.md** — Live monitoring dashboard showing feature status, last 10 runs, failure trends, environment matrix, quick links to logs/reports
+
 ### Fixed
 
 - **M13 D1/D2: KeyInputSystem ECS pump survives all scene transitions** — KeyInputSystem now re-registers in the current ECS world on every `SceneManager.sceneLoaded` callback, ensuring the main-thread pump (DrainQueue) and bridge supervisor survive InitialGameLoader → MainMenu → gameplay transitions. Previously, KeyInputSystem was only registered during InitialGameLoader and missed the gameplay world. Root cause: `_worldFound` flag prevented re-registration after the first world was found, and `OnWorldReady` was guarded against InitialGameLoader. Fix adds `SceneManager.sceneLoaded` callback in Plugin.Awake that calls `KeyInputSystem.RecreateInCurrentWorld()` on every scene load, and a world-change check in `TryRegisterKeyInputSystem` that re-registers when `DefaultGameObjectInjectionWorld` changes. ECS pump verified alive at frame 4200+ in gameplay world.

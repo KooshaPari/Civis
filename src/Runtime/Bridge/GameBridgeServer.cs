@@ -109,7 +109,8 @@ namespace DINOForge.Runtime.Bridge
                         {
                             Thread.Sleep(2000);
                             if (_running) StartThread();
-                        }) { IsBackground = false, Name = "DINOForge-Bridge-Restart" }.Start();
+                        })
+                        { IsBackground = false, Name = "DINOForge-Bridge-Restart" }.Start();
                     }
                     catch (Exception ex)
                     {
@@ -216,99 +217,99 @@ namespace DINOForge.Runtime.Bridge
                     // Read lines manually byte-by-byte to avoid StreamReader buffering issues
                     // on Mono with synchronous named pipes.
                     while (_running && pipe.IsConnected)
-{
-    string? line = null;
-    bool responseWritten = false;
-    try
-    {
-        // Read line from client
-        try
-        {
-            line = ReadLineFromPipe(pipe);
-        }
-        catch (IOException ex)
-        {
-            if (ex.HResult == unchecked((int)0x80131623))
-                Thread.ResetAbort();
-        }
-        catch (ThreadAbortException)
-        {
-            Thread.ResetAbort();
-        }
-        catch { }
+                    {
+                        string? line = null;
+                        bool responseWritten = false;
+                        try
+                        {
+                            // Read line from client
+                            try
+                            {
+                                line = ReadLineFromPipe(pipe);
+                            }
+                            catch (IOException ex)
+                            {
+                                if (ex.HResult == unchecked((int)0x80131623))
+                                    Thread.ResetAbort();
+                            }
+                            catch (ThreadAbortException)
+                            {
+                                Thread.ResetAbort();
+                            }
+                            catch { }
 
-        if (line == null) continue;
-        if (string.IsNullOrWhiteSpace(line)) continue;
+                            if (line == null) continue;
+                            if (string.IsNullOrWhiteSpace(line)) continue;
 
-        // Process message
-        string? response = null;
-        try
-        {
-            response = ProcessMessage(line);
-        }
-        catch (ThreadAbortException)
-        {
-            Thread.ResetAbort();
-        }
-        catch { }
+                            // Process message
+                            string? response = null;
+                            try
+                            {
+                                response = ProcessMessage(line);
+                            }
+                            catch (ThreadAbortException)
+                            {
+                                Thread.ResetAbort();
+                            }
+                            catch { }
 
-        if (response == null) continue;
+                            if (response == null) continue;
 
-        // Write response to client
-        try
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(response + "\n");
-            pipe.Write(bytes, 0, bytes.Length);
-            pipe.Flush();
-            responseWritten = true;
-        }
-        catch (IOException ex)
-        {
-            if (ex.HResult == unchecked((int)0x80131623))
-                Thread.ResetAbort();
-        }
-        catch (ThreadAbortException)
-        {
-            Thread.ResetAbort();
-        }
-        catch { }
-    }
-    finally
-    {
-        // GUARANTEED fallback: if no response was written (exception occurred),
-        // send a minimal error response so the client unblocks and does not hang.
-        if (!responseWritten)
-        {
-            bool pipeWriteFailed = false;
-            try
-            {
-                byte[] fallback = Encoding.UTF8.GetBytes(
-                    "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}\n");
-                pipe.Write(fallback, 0, fallback.Length);
-                pipe.Flush();
-            }
-            catch
-            {
-                pipeWriteFailed = true;
-            }
+                            // Write response to client
+                            try
+                            {
+                                byte[] bytes = Encoding.UTF8.GetBytes(response + "\n");
+                                pipe.Write(bytes, 0, bytes.Length);
+                                pipe.Flush();
+                                responseWritten = true;
+                            }
+                            catch (IOException ex)
+                            {
+                                if (ex.HResult == unchecked((int)0x80131623))
+                                    Thread.ResetAbort();
+                            }
+                            catch (ThreadAbortException)
+                            {
+                                Thread.ResetAbort();
+                            }
+                            catch { }
+                        }
+                        finally
+                        {
+                            // GUARANTEED fallback: if no response was written (exception occurred),
+                            // send a minimal error response so the client unblocks and does not hang.
+                            if (!responseWritten)
+                            {
+                                bool pipeWriteFailed = false;
+                                try
+                                {
+                                    byte[] fallback = Encoding.UTF8.GetBytes(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}\n");
+                                    pipe.Write(fallback, 0, fallback.Length);
+                                    pipe.Flush();
+                                }
+                                catch
+                                {
+                                    pipeWriteFailed = true;
+                                }
 
-            if (pipeWriteFailed)
-            {
-                // Pipe is broken (e.g., Thread.Abort during write).
-                // Write fallback to a file as a backup. The CLI will check this file.
-                try
-                {
-                    string fallbackDir = Path.Combine(Path.GetTempPath(), "DINOForge");
-                    Directory.CreateDirectory(fallbackDir);
-                    string fallbackFile = Path.Combine(fallbackDir, "dinoforge_bridge_fallback.txt");
-                    File.WriteAllText(fallbackFile,
-                        "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}");
-                }
-                catch { }
-            }
-        }
-    }
-}
+                                if (pipeWriteFailed)
+                                {
+                                    // Pipe is broken (e.g., Thread.Abort during write).
+                                    // Write fallback to a file as a backup. The CLI will check this file.
+                                    try
+                                    {
+                                        string fallbackDir = Path.Combine(Path.GetTempPath(), "DINOForge");
+                                        Directory.CreateDirectory(fallbackDir);
+                                        string fallbackFile = Path.Combine(fallbackDir, "dinoforge_bridge_fallback.txt");
+                                        File.WriteAllText(fallbackFile,
+                                            "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}");
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                    }
 
                     WriteDebug("[GameBridgeServer] Exited read loop");
 

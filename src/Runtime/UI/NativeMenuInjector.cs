@@ -179,7 +179,7 @@ namespace DINOForge.Runtime.UI
             try
             {
                 string bepRoot = BepInEx.Paths.BepInExRootPath;
-                string reqFile  = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
+                string reqFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
                 string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
 
                 if (_pendingScreenshotPath != null)

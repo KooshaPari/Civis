@@ -1,5 +1,6 @@
 #nullable enable
 using System.CommandLine;
+using System.Text.Json;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
 using Spectre.Console;
@@ -13,6 +14,9 @@ namespace DINOForge.Tools.GameControlCli;
 /// </summary>
 public static class Program
 {
+    /// <summary>When true, commands output machine-readable JSON instead of human-readable text.</summary>
+    public static bool JsonOutput { get; set; }
+
     public static async Task<int> Main(string[] args)
     {
         if (args.Length == 0)
@@ -21,34 +25,58 @@ public static class Program
             return 0;
         }
 
-        string command = args[0];
+        // Global --format json flag (accepted before the command)
+        var remainingArgs = args;
+        if (args.Length > 1 && args[0] == "--format" && args[1] == "json")
+        {
+            JsonOutput = true;
+            remainingArgs = args.Skip(2).ToArray();
+        }
+        else if (args.Any(a => a == "--format" && a == "json"))
+        {
+            JsonOutput = true;
+            remainingArgs = args.Where(a => !(a == "--format" || a == "json")).ToArray();
+        }
+        else if (args.Contains("--format=json"))
+        {
+            JsonOutput = true;
+            remainingArgs = args.Where(a => a != "--format=json").ToArray();
+        }
+
+        if (remainingArgs.Length == 0)
+        {
+            ShowHelp();
+            return 0;
+        }
+
+        string command = remainingArgs[0];
         return command switch
         {
             "status" => await HandleStatusCommand(),
             "ping" => await HandlePingCommand(),
             "wait-world" => await HandleWaitWorldCommand(),
             "resources" => await HandleResourcesCommand(),
-            "screenshot" => await HandleScreenshotCommand(args.Skip(1).FirstOrDefault()),
-            "catalog" => await HandleCatalogCommand(args.Skip(1).FirstOrDefault()),
-            "entities" => await HandleEntitiesCommand(args.Skip(1).FirstOrDefault()),
-            "load-scene" => await HandleLoadSceneCommand(args.Skip(1).FirstOrDefault()),
+            "screenshot" => await HandleScreenshotCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "catalog" => await HandleCatalogCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "entities" => await HandleEntitiesCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "load-scene" => await HandleLoadSceneCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "start-game" => await HandleStartGameCommand(),
             "list-saves" => await HandleListSavesCommand(),
-            "load-save" => await HandleLoadSaveCommand(args.Skip(1).FirstOrDefault()),
+            "load-save" => await HandleLoadSaveCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "dismiss" => await HandleDismissCommand(),
-            "click-button" => await HandleClickButtonCommand(args.Skip(1).FirstOrDefault()),
-            "toggle-ui" => await HandleToggleUiCommand(args.Skip(1).FirstOrDefault()),
-            "scan-scene" => await HandleScanSceneCommand(args.Skip(1).FirstOrDefault()),
-            "invoke-method" => await HandleInvokeMethodCommand(args.Skip(1).ToArray()),
-            "ui-tree" => await HandleUiTreeCommand(args.Skip(1).FirstOrDefault()),
+            "click-button" => await HandleClickButtonCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "toggle-ui" => await HandleToggleUiCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "scan-scene" => await HandleScanSceneCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "invoke-method" => await HandleInvokeMethodCommand(remainingArgs.Skip(1).ToArray()),
+            "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "demo" => await HandleDemoCommand(),
             // JSON-output bridge commands (used by Python MCP server)
-            "get-stat" => await HandleGetStatCommand(args.Skip(1).ToArray()),
-            "apply-override" => await HandleApplyOverrideCommand(args.Skip(1).ToArray()),
-            "get-component-map" => await HandleGetComponentMapCommand(args.Skip(1).FirstOrDefault()),
-            "reload-packs" => await HandleReloadPacksCommand(args.Skip(1).FirstOrDefault()),
-            "verify-mod" => await HandleVerifyModCommand(args.Skip(1).FirstOrDefault()),
-            "dump-state" => await HandleDumpStateJsonCommand(args.Skip(1).FirstOrDefault()),
+            "get-stat" => await HandleGetStatCommand(remainingArgs.Skip(1).ToArray()),
+            "apply-override" => await HandleApplyOverrideCommand(remainingArgs.Skip(1).ToArray()),
+            "get-component-map" => await HandleGetComponentMapCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "reload-packs" => await HandleReloadPacksCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "verify-mod" => await HandleVerifyModCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "dump-state" => await HandleDumpStateJsonCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "--help" or "-h" => ShowHelpAndReturn(0),
             _ => ShowHelpAndReturn(1)
         };
@@ -104,20 +132,38 @@ public static class Program
         try
         {
             await client.ConnectAsync();
-            AnsiConsole.MarkupLine("[green]✓[/] Connected to game bridge");
-
             var status = await client.StatusAsync();
-            AnsiConsole.MarkupLine($"[cyan]Running:[/] {status.Running}");
-            AnsiConsole.MarkupLine($"[cyan]World ready:[/] {status.WorldReady}");
-            AnsiConsole.MarkupLine($"[cyan]World name:[/] {status.WorldName}");
-            AnsiConsole.MarkupLine($"[cyan]Entity count:[/] {status.EntityCount}");
-            AnsiConsole.MarkupLine($"[cyan]Mod platform ready:[/] {status.ModPlatformReady}");
-            AnsiConsole.MarkupLine($"[cyan]Loaded packs:[/] {status.LoadedPacks.Count}");
-            foreach (var pack in status.LoadedPacks)
+
+            if (JsonOutput)
             {
-                AnsiConsole.MarkupLine($"  - {pack}");
+                var json = new
+                {
+                    success = true,
+                    Running = status.Running,
+                    WorldReady = status.WorldReady,
+                    WorldName = status.WorldName,
+                    EntityCount = status.EntityCount,
+                    ModPlatformReady = status.ModPlatformReady,
+                    LoadedPacks = status.LoadedPacks,
+                    Version = status.Version
+                };
+                Console.WriteLine(JsonSerializer.Serialize(json));
             }
-            AnsiConsole.MarkupLine($"[cyan]Version:[/] {status.Version}");
+            else
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Connected to game bridge");
+                AnsiConsole.MarkupLine($"[cyan]Running:[/] {status.Running}");
+                AnsiConsole.MarkupLine($"[cyan]World ready:[/] {status.WorldReady}");
+                AnsiConsole.MarkupLine($"[cyan]World name:[/] {status.WorldName}");
+                AnsiConsole.MarkupLine($"[cyan]Entity count:[/] {status.EntityCount}");
+                AnsiConsole.MarkupLine($"[cyan]Mod platform ready:[/] {status.ModPlatformReady}");
+                AnsiConsole.MarkupLine($"[cyan]Loaded packs:[/] {status.LoadedPacks.Count}");
+                foreach (var pack in status.LoadedPacks)
+                {
+                    AnsiConsole.MarkupLine($"  - {pack}");
+                }
+                AnsiConsole.MarkupLine($"[cyan]Version:[/] {status.Version}");
+            }
 
             client.Disconnect();
             return 0;
@@ -132,14 +178,29 @@ public static class Program
                 try
                 {
                     string fallback = File.ReadAllText(fallbackPath).Trim();
-                    AnsiConsole.MarkupLine("[yellow]⚠[/] Bridge response via fallback file (timed out waiting for live response):");
-                    AnsiConsole.MarkupLine($"[cyan]  {fallback}[/]");
+                    if (JsonOutput)
+                    {
+                        Console.WriteLine(JsonSerializer.Serialize(new { success = true, raw = fallback }));
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[yellow]⚠[/] Bridge response via fallback file (timed out waiting for live response):");
+                        AnsiConsole.MarkupLine($"[cyan]  {fallback}[/]");
+                    }
                     File.Delete(fallbackPath);
                     return 0;
                 }
                 catch { }
             }
-            AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+
+            if (JsonOutput)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new { success = false, error = ex.Message }));
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+            }
             return 1;
         }
     }
@@ -150,17 +211,40 @@ public static class Program
         try
         {
             await client.ConnectAsync();
-            AnsiConsole.MarkupLine("[green]✓[/] Connected to game bridge");
             var ping = await client.PingAsync();
-            AnsiConsole.MarkupLine($"[cyan]Pong:[/] {ping.Pong}");
-            AnsiConsole.MarkupLine($"[cyan]Version:[/] {ping.Version}");
-            AnsiConsole.MarkupLine($"[cyan]Uptime:[/] {ping.UptimeSeconds:F1}s");
+
+            if (JsonOutput)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    Running = true,
+                    Pong = ping.Pong,
+                    Version = ping.Version,
+                    UptimeSeconds = ping.UptimeSeconds
+                }));
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Connected to game bridge");
+                AnsiConsole.MarkupLine($"[cyan]Pong:[/] {ping.Pong}");
+                AnsiConsole.MarkupLine($"[cyan]Version:[/] {ping.Version}");
+                AnsiConsole.MarkupLine($"[cyan]Uptime:[/] {ping.UptimeSeconds:F1}s");
+            }
+
             client.Disconnect();
             return 0;
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+            if (JsonOutput)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new { success = false, error = ex.Message }));
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+            }
             return 1;
         }
     }

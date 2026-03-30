@@ -187,7 +187,7 @@ namespace DINOForge.Runtime.Bridge
                     EnsureOverlay();
 
                 // Poll Unity Input for F9/F10 — detect PRESS (key goes from up to down), not hold
-                bool f9Current  = Input.GetKey(KeyCode.F9);
+                bool f9Current = Input.GetKey(KeyCode.F9);
                 bool f10Current = Input.GetKey(KeyCode.F10);
 
                 // F9: trigger on transition from not-pressed to pressed

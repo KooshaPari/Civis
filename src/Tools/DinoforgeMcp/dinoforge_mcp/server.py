@@ -78,8 +78,10 @@ def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True) -> di
         "dotnet", "run",
         "--project", str(GAME_CONTROL_PROJ),
         "--no-build",
+        "-c", "Release",
         "--",
         *args,
+        "--format=json",
     ]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT)

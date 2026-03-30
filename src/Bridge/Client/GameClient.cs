@@ -18,7 +18,7 @@ namespace DINOForge.Bridge.Client;
 /// Thread-safe. All public methods use internal locking to ensure that
 /// only one request is in flight at a time on the underlying pipe stream.
 /// </remarks>
-public sealed class GameClient : IDisposable
+public sealed class GameClient : IGameClient
 {
     private readonly GameClientOptions _options;
     private readonly SemaphoreSlim _sendLock = new(1, 1);

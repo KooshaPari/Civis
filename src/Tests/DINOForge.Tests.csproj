@@ -12,7 +12,7 @@
   <PropertyGroup>
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-    <Threshold>75</Threshold>
+    <Threshold>85</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>
@@ -30,6 +30,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- coverlet.msbuild enforces the coverage threshold gate -->
+    <PackageReference Include="coverlet.msbuild" Version="6.*" />
     <PackageReference Include="NetArchTest.Rules" Version="1.*" />
     <PackageReference Include="AutoFixture" Version="4.*" />
     <PackageReference Include="AutoFixture.Xunit2" Version="4.*" />
@@ -69,6 +71,10 @@
     <None Remove="CliToolTests\**" />
     <Content Remove="CliToolTests\**" />
     <EmbeddedResource Remove="CliToolTests\**" />
+    <Compile Remove="PackCompiler\**" />
+    <None Remove="PackCompiler\**" />
+    <Content Remove="PackCompiler\**" />
+    <EmbeddedResource Remove="PackCompiler\**" />
   </ItemGroup>
 
   <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->
@@ -77,6 +83,8 @@
   <!-- UiAutomation tests depend on FlaUI which is not a project dependency -->
   <!-- VanillaCatalogTests and UiActionTraceTests depend on DINOForge.Runtime which is not referenced -->
   <!-- GameLaunch tests have incompatible API calls to GameClient (GetStatusAsync, QueryUnitsAsync, etc. not in current Bridge.Client) -->
+  <!-- PackCompiler services tested in separate project (DINOForge.Tests.PackCompiler.csproj) targeting net11.0 -->
+  <!-- GameControlCliTests has its own csproj (DINOForge.Tests.GameControlCli.csproj) -->
   <ItemGroup>
     <Compile Remove="UnitSpawnerTests.cs" />
     <Compile Remove="FactionSystemTests.cs" />
@@ -86,6 +94,10 @@
     <Compile Remove="VanillaCatalogTests.cs" />
     <Compile Remove="UiActionTraceTests.cs" />
     <Compile Remove="GameLaunch\**" />
+    <Compile Remove="GameControlCliTests\**" />
+    <None Remove="GameControlCliTests\**" />
+    <Content Remove="GameControlCliTests\**" />
+    <EmbeddedResource Remove="GameControlCliTests\**" />
   </ItemGroup>
 
 </Project>

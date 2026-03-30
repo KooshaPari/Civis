@@ -39,6 +39,14 @@ namespace DINOForge.Runtime.Bridge
         {
             WriteDebug("KeyInputSystem.OnCreate");
             Enabled = true;
+            // Attempt resurrection in OnCreate — this fires when a new ECS world starts,
+            // which happens after DINO tears down the previous world (and our RuntimeDriver).
+            if (Plugin.NeedsResurrection || ReferenceEquals(Plugin.PersistentRoot, null))
+            {
+                WriteDebug($"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))}");
+                Plugin.NeedsResurrection = false;
+                Plugin.TryResurrect("(ECS OnCreate)", "KeyInputSystem.OnCreate");
+            }
             WriteDebug($"KeyInputSystem.OnCreate complete, Enabled={Enabled}");
         }
 

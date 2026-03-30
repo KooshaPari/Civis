@@ -134,13 +134,20 @@ namespace DINOForge.Runtime
         }
 
         /// <summary>
-        /// Legacy emergency resurrection watcher. All primary resurrection is now done via
-        /// ECS KeyInputSystem.OnUpdate() and RuntimeDriver.OnDestroy().
+        /// Registers a static SceneManager.activeSceneChanged callback that triggers
+        /// resurrection when PersistentRoot has been destroyed by DINO's scene transitions.
+        /// This callback persists as a static delegate even after the Plugin MonoBehaviour
+        /// is destroyed, ensuring resurrection can happen on every scene load.
+        /// </summary>
+        /// <summary>
+        /// Resurrection is now handled by KeyInputSystem.OnCreate() — when DINO creates a
+        /// new ECS world after scene transition, OnCreate checks if PersistentRoot was destroyed
+        /// and calls TryResurrect. Background threads don't work because DINO aborts them.
         /// </summary>
         private static void StartResurrectionWatcher()
         {
-            // Placeholder for future expansion. Currently all resurrection happens
-            // synchronously in KeyInputSystem.OnUpdate() and RuntimeDriver.OnDestroy().
+            // No-op: resurrection handled by KeyInputSystem.OnCreate.
+            WriteDebug("[Plugin] Resurrection delegated to KeyInputSystem.OnCreate.");
         }
 
         internal static void TryResurrect(string sceneName, string trigger)

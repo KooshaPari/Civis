@@ -150,7 +150,7 @@ namespace DINOForge.Tests
             // All environment details should be accessible
             details.OSVersion.Should().NotBeNull();
             details.ProcessorCount.Should().BeGreaterThan(0);
-            details.UserInteractive.Should().NotBeNull();
+            (details.UserInteractive == true || details.UserInteractive == false).Should().BeTrue();
         }
 
         /// <summary>

@@ -15,11 +15,14 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 - **Typed Registries** — Units, buildings, factions, weapons, projectiles, doctrines, skills, waves, squads with layered override priority
 - **ECS Bridge** — Maps mod content to DINO's actual Unity ECS components at runtime (30+ component mappings)
 - **Asset Pipeline** — Full import → validate → optimize → LOD → prefab → Addressables pipeline; 38 catalog entries with 3-level LOD (100%/60%/30%)
+- **Pack Submodule Management** — Add/list/update/lock git submodule packs via CLI and Desktop Companion
+- **Asset Browser & Mod Manager** — Desktop Companion with visual asset browser, mod conflict detection, and update management
+- **Asset Library & Catalog** — SQLite asset catalog with source adapters and CLI asset-library commands
 - **Warfare Domain** — Faction archetypes (Order, Industrial Swarm, Asymmetric), doctrines, unit role validation, wave composition, balance calculation
 - **Star Wars Clone Wars Pack** — 28 units (Republic + CIS) and 10 buildings with visual assets, prefabs, and Addressables entries
 - **Dev Tooling** — PackCompiler CLI, DumpTools, in-game debug overlay, entity dumper
 - **MCP Server** — game automation and analysis tools (screenshot capture, UI automation, input injection, state and catalog queries)
-- **Schema Validation** — 10 JSON schemas catch errors before runtime
+- **Schema Validation** — 24 JSON schemas catch errors before runtime
 
 ## Milestone Status
 
@@ -37,6 +40,9 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 | M9 | Desktop Companion (WinUI 3, Mica, pack manager) | Done |
 | M10 | Fuzzing (FsCheck 30+ props, SharpFuzz, corpus, nightly CI) | Done |
 | M11 | Test Coverage + Code Completion (1017+ tests) | Done |
+| M12 | Pack Submodule Management (PackSubmoduleManager, CLI pack add/list/update/lock) | Done |
+| M13 | Asset Browser + Mod Manager (DesktopCompanion Asset Browser page, Browse/Update/Conflict views) | Done |
+| M14 | Asset Library & Catalog (SQLite AssetCatalogStore, asset-library CLI commands, LocalSourceAdapter) | Done |
 
 **Current test count: 1,017+ passing**
 

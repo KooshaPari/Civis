@@ -157,7 +157,7 @@ DINOForge/
     warfare-guerrilla/   #   Asymmetric warfare (Guerrilla faction)
     economy-balanced/    #   Economy balance pack
     scenario-tutorial/   #   Tutorial scenario pack
-  schemas/               # Canonical JSON/YAML schema definitions (17 schemas)
+  schemas/               # Canonical JSON/YAML schema definitions (24 schemas)
   docs/                  # All project documentation
   manifests/             # System contracts, ownership maps, extension points
 ```

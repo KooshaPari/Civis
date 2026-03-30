@@ -339,19 +339,29 @@ public sealed class GameClient : IDisposable
 
     private static async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken ct)
     {
-        // StreamReader.ReadLineAsync doesn't accept CancellationToken, so we implement
-        // a timeout by polling with short delays. This is robust — no race condition
-        // between the read and the timeout: we simply bail out after ReadTimeoutMs.
-        // We also read byte-by-byte to match the server's ReadLineFromPipe which strips
-        // '\r' and returns on '\n', avoiding any StreamReader buffering mismatch.
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        // Read byte-by-byte from the underlying stream with DataAvailable polling.
+        // StreamReader.Read() blocks indefinitely, so we check the underlying stream's
+        // DataAvailable property (or just use ReadAsync with Task.Delay timeout loop).
         var sb = new System.Text.StringBuilder();
+        Stream baseStream = reader.BaseStream;
+
+        byte[] buf = new byte[1];
         while (!ct.IsCancellationRequested)
         {
-            int b = reader.Read();
-            if (b < 0) return sb.Length > 0 ? sb.ToString() : null; // EOF
-            if (b == '\n') return sb.ToString();
-            if (b != '\r') sb.Append((char)b);
+            // Try to read one byte with a short internal timeout via Task.WhenAny.
+            Task<int> readTask = baseStream.ReadAsync(buf, 0, 1, ct);
+            Task delayTask = Task.Delay(200, ct);
+            Task completed = await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
+
+            if (completed == readTask)
+            {
+                int bytesRead = readTask.Result;
+                if (bytesRead == 0) return sb.Length > 0 ? sb.ToString() : null; // EOF
+                char c = (char)buf[0];
+                if (c == '\n') return sb.ToString();
+                if (c != '\r') sb.Append(c);
+            }
+            // If delayTask won, loop back and check cancellation token
         }
         ct.ThrowIfCancellationRequested();
         return null;

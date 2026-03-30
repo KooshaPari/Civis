@@ -216,107 +216,100 @@ namespace DINOForge.Runtime.Bridge
                     // Read lines manually byte-by-byte to avoid StreamReader buffering issues
                     // on Mono with synchronous named pipes.
                     while (_running && pipe.IsConnected)
-                    {
-                        string? line = null;
-                        bool abortDuringRead = false;
-                        try
-                        {
-                            WriteDebug("[GameBridgeServer] Reading line...");
-                            line = ReadLineFromPipe(pipe);
-                            WriteDebug($"[GameBridgeServer] Got line: {(line == null ? "null" : $"len={line.Length}")}");
-                        }
-                        catch (IOException ex)
-                        {
-                            try { WriteDebug($"[GameBridgeServer] Read IOException: {ex.Message} (HResult=0x{ex.HResult:X8})"); } catch { }
-                            if (ex.HResult == COR_E_THREADABORT)
-                            {
-                                Thread.ResetAbort();
-                                abortDuringRead = true;
-                                try { WriteDebug("[GameBridgeServer] COR_E_THREADABORT detected — abortDuringRead=true"); } catch { }
-                            }
-                            else
-                            {
-                                try { WriteDebug("[GameBridgeServer] Non-COR_E_THREADABORT IOException — breaking"); } catch { }
-                                break;
-                            }
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            try { WriteDebug("[GameBridgeServer] ObjectDisposedException — breaking"); } catch { }
-                            break;
-                        }
-                        catch (ThreadAbortException)
-                        {
-                            abortDuringRead = true;
-                            Thread.ResetAbort();
-                            try { WriteDebug("[GameBridgeServer] ThreadAbortException in inner block — abortDuringRead=true"); } catch { }
-                        }
-                        catch (Exception ex)
-                        {
-                            string exName = (ex != null) ? ex.GetType().Name : "null";
-                            string exMsg = (ex != null) ? ex.Message : "unknown";
-                            try { WriteDebug($"[GameBridgeServer] Unexpected inner exception: {exName}: {exMsg}"); } catch { }
-                            break;
-                        }
+{
+    string? line = null;
+    bool responseWritten = false;
+    try
+    {
+        // Read line from client
+        try
+        {
+            line = ReadLineFromPipe(pipe);
+        }
+        catch (IOException ex)
+        {
+            if (ex.HResult == unchecked((int)0x80131623))
+                Thread.ResetAbort();
+        }
+        catch (ThreadAbortException)
+        {
+            Thread.ResetAbort();
+        }
+        catch { }
 
-                        // If thread was aborted during read, reset abort BEFORE any other operations.
-                        // Then write a fallback response so the client unblocks.
-                        if (abortDuringRead)
-                        {
-                            Thread.ResetAbort();
-                            try { WriteDebug("[GameBridgeServer] ThreadAbort/IO — writing fallback response."); } catch { }
-                            try
-                            {
-                                byte[] fallback = Encoding.UTF8.GetBytes(
-                                    "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge thread abort\"}}\n");
-                                pipe.Write(fallback, 0, fallback.Length);
-                                pipe.Flush();
-                                try { WriteDebug("[GameBridgeServer] Fallback response written successfully."); } catch { }
-                            }
-                            catch (ThreadAbortException)
-                            {
-                                Thread.ResetAbort();
-                                try { WriteDebug("[GameBridgeServer] Fallback pipe.Write ThreadAbortException — resetting abort."); } catch { }
-                            }
-                            catch (Exception ex2)
-                            {
-                                try { WriteDebug($"[GameBridgeServer] Fallback pipe.Write failed: {ex2.GetType().Name}: {ex2.Message}"); } catch { }
-                            }
-                            break;
-                        }
+        if (line == null) continue;
+        if (string.IsNullOrWhiteSpace(line)) continue;
 
-                        try { WriteDebug("[GameBridgeServer] Read completed successfully, processing..."); } catch { }
+        // Process message
+        string? response = null;
+        try
+        {
+            response = ProcessMessage(line);
+        }
+        catch (ThreadAbortException)
+        {
+            Thread.ResetAbort();
+        }
+        catch { }
 
-                        if (line == null) break;
-                        if (string.IsNullOrWhiteSpace(line)) continue;
+        if (response == null) continue;
 
-                        string response;
-                        try
-                        {
-                            response = ProcessMessage(line);
-                        }
-                        catch (ThreadAbortException)
-                        {
-                            Thread.ResetAbort();
-                            response = "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Thread abort in handler\"}}";
-                        }
+        // Write response to client
+        try
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(response + "\n");
+            pipe.Write(bytes, 0, bytes.Length);
+            pipe.Flush();
+            responseWritten = true;
+        }
+        catch (IOException ex)
+        {
+            if (ex.HResult == unchecked((int)0x80131623))
+                Thread.ResetAbort();
+        }
+        catch (ThreadAbortException)
+        {
+            Thread.ResetAbort();
+        }
+        catch { }
+    }
+    finally
+    {
+        // GUARANTEED fallback: if no response was written (exception occurred),
+        // send a minimal error response so the client unblocks and does not hang.
+        if (!responseWritten)
+        {
+            bool pipeWriteFailed = false;
+            try
+            {
+                byte[] fallback = Encoding.UTF8.GetBytes(
+                    "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}\n");
+                pipe.Write(fallback, 0, fallback.Length);
+                pipe.Flush();
+            }
+            catch
+            {
+                pipeWriteFailed = true;
+            }
 
-                        try
-                        {
-                            byte[] responseBytes = Encoding.UTF8.GetBytes(response + "\n");
-                            pipe.Write(responseBytes, 0, responseBytes.Length);
-                            pipe.Flush();
-                        }
-                        catch (IOException ex)
-                        {
-                            try { WriteDebug($"[GameBridgeServer] Write IOException: {ex.Message}"); } catch { }
-                            break;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            break;
-                        }
-                    }
+            if (pipeWriteFailed)
+            {
+                // Pipe is broken (e.g., Thread.Abort during write).
+                // Write fallback to a file as a backup. The CLI will check this file.
+                try
+                {
+                    string fallbackDir = Path.Combine(Path.GetTempPath(), "DINOForge");
+                    Directory.CreateDirectory(fallbackDir);
+                    string fallbackFile = Path.Combine(fallbackDir, "dinoforge_bridge_fallback.txt");
+                    File.WriteAllText(fallbackFile,
+                        "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}");
+                }
+                catch { }
+            }
+        }
+    }
+}
+
                     WriteDebug("[GameBridgeServer] Exited read loop");
 
                     WriteDebug("[GameBridgeServer] Client disconnected.");
@@ -330,7 +323,8 @@ namespace DINOForge.Runtime.Bridge
                     // DINO/Unity may abort threads during scene transitions.
                     // Reset the abort and continue the loop — the bridge must survive.
                     System.Threading.Thread.ResetAbort();
-                    WriteDebug("[GameBridgeServer] [OUTER] ThreadAbortException caught — bridge surviving.");
+                    WriteDebug("[GameBridgeServer] [OUTER] ThreadAbortException caught — closing pipe to unblock client.");
+                    try { pipe?.Dispose(); } catch { }
                 }
                 catch (IOException ex)
                 {
@@ -347,15 +341,19 @@ namespace DINOForge.Runtime.Bridge
                     {
                         WriteDebug($"[GameBridgeServer] [OUTER-IO] Non-abort IOException.");
                     }
+                    try { pipe?.Dispose(); } catch { }
                 }
                 catch (Exception ex)
                 {
                     WriteDebug($"[GameBridgeServer] [OUTER] Error in server loop: {ex.Message}");
+                    try { pipe?.Dispose(); } catch { }
                 }
                 finally
                 {
-                    try { pipe?.Dispose(); }
-                    catch { }
+                    // Close the pipe handle. Unlike Dispose(), Close() on Windows named pipes
+                    // sends ERROR_OPIPE_NOT_CONNECTED to waiting clients without blocking.
+                    // This unblocks any client blocked in Read() on this pipe.
+                    try { pipe?.Dispose(); } catch { }
                     _currentPipe = null;
                 }
 

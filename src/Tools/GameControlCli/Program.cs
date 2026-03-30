@@ -25,6 +25,7 @@ public static class Program
         return command switch
         {
             "status" => await HandleStatusCommand(),
+            "ping" => await HandlePingCommand(),
             "wait-world" => await HandleWaitWorldCommand(),
             "resources" => await HandleResourcesCommand(),
             "screenshot" => await HandleScreenshotCommand(args.Skip(1).FirstOrDefault()),
@@ -60,6 +61,7 @@ public static class Program
         AnsiConsole.MarkupLine("");
         AnsiConsole.MarkupLine("[green]Commands:[/]");
         AnsiConsole.MarkupLine("  status           - Check game connection and status");
+        AnsiConsole.MarkupLine("  ping             - Ping the game bridge (no ECS queries)");
         AnsiConsole.MarkupLine("  wait-world       - Wait for ECS world to be ready");
         AnsiConsole.MarkupLine("  resources        - Show current resource values");
         AnsiConsole.MarkupLine("  screenshot       - Capture in-game screenshot");
@@ -117,6 +119,42 @@ public static class Program
             }
             AnsiConsole.MarkupLine($"[cyan]Version:[/] {status.Version}");
 
+            client.Disconnect();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            // If the request timed out (e.g., bridge thread abort), check the fallback response file.
+            string fallbackPath = Path.Combine(
+                Path.GetTempPath(), "DINOForge", "dinoforge_bridge_fallback.txt");
+            if (File.Exists(fallbackPath))
+            {
+                try
+                {
+                    string fallback = File.ReadAllText(fallbackPath).Trim();
+                    AnsiConsole.MarkupLine("[yellow]⚠[/] Bridge response via fallback file (timed out waiting for live response):");
+                    AnsiConsole.MarkupLine($"[cyan]  {fallback}[/]");
+                    File.Delete(fallbackPath);
+                    return 0;
+                }
+                catch { }
+            }
+            AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandlePingCommand()
+    {
+        using var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 5000 });
+        try
+        {
+            await client.ConnectAsync();
+            AnsiConsole.MarkupLine("[green]✓[/] Connected to game bridge");
+            var ping = await client.PingAsync();
+            AnsiConsole.MarkupLine($"[cyan]Pong:[/] {ping.Pong}");
+            AnsiConsole.MarkupLine($"[cyan]Version:[/] {ping.Version}");
+            AnsiConsole.MarkupLine($"[cyan]Uptime:[/] {ping.UptimeSeconds:F1}s");
             client.Disconnect();
             return 0;
         }

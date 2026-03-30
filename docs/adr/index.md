@@ -18,6 +18,7 @@ ADRs document significant architectural decisions made during DINOForge developm
 | [ADR-010](./ADR-010-asset-intake-pipeline.md) | Deterministic Star-Wars Asset Intake Pipeline | Proposed |
 | [ADR-011](./ADR-011-desktop-companion.md) | WinUI 3 Desktop Companion App | Accepted |
 | [ADR-012](./ADR-012-fuzzing-strategy.md) | Fuzzing and Property-Based Testing Strategy | Accepted |
+| [ADR-019](./ADR-019-mod-manager-client.md) | Local Mod Manager Client (M12) | Accepted |
 
 ## Format
 

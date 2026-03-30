@@ -1,0 +1,153 @@
+<Page
+    x:Class="DINOForge.DesktopCompanion.Views.UpdatePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:data="using:DINOForge.DesktopCompanion.Data"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock
+            Grid.Row="0"
+            Text="Updates"
+            Style="{StaticResource TitleTextBlockStyle}"
+            Foreground="{StaticResource DFAccentBrush}" />
+
+        <!-- Catalog source input -->
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                Grid.Column="0"
+                x:Name="UpdateCatalogBox"
+                AutomationProperties.AutomationId="UpdateCatalogBox"
+                PlaceholderText="Enter catalog URL or folder path"
+                Text="{x:Bind ViewModel.CatalogSource, Mode=TwoWay}" />
+
+            <Button
+                Grid.Column="1"
+                x:Name="CheckUpdatesButton"
+                AutomationProperties.AutomationId="CheckUpdatesButton"
+                Content="Check for Updates"
+                Style="{StaticResource DFAccentButton}"
+                Command="{x:Bind ViewModel.CheckForUpdatesCommand}" />
+        </Grid>
+
+        <!-- Summary cards -->
+        <Grid Grid.Row="2" ColumnSpacing="16" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Installed count -->
+            <Border Grid.Column="0" Style="{StaticResource DFCard}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Installed Packs" Style="{StaticResource DFSecondaryText}" />
+                    <TextBlock
+                        Text="{x:Bind ViewModel.TotalInstalled, Mode=OneWay}"
+                        FontSize="28"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource DFAccentBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Updates available -->
+            <Border Grid.Column="1" Style="{StaticResource DFCard}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Updates Available" Style="{StaticResource DFSecondaryText}" />
+                    <TextBlock
+                        Text="{x:Bind ViewModel.UpdatesAvailable, Mode=OneWay}"
+                        FontSize="28"
+                        FontWeight="Bold"
+                        Foreground="{x:Bind ViewModel.UpdatesAvailable, Mode=OneWay, Converter={StaticResource ErrorCountToColorConverter}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Status -->
+            <Border Grid.Column="2" Style="{StaticResource DFCard}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Status" Style="{StaticResource DFSecondaryText}" />
+                    <TextBlock
+                        Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                        Style="{StaticResource DFBodyText}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Loading indicator -->
+        <ProgressBar
+            Grid.Row="3"
+            IsIndeterminate="True"
+            Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+            Margin="0,8,0,0" />
+
+        <!-- Updates list -->
+        <ListView
+            Grid.Row="4"
+            x:Name="UpdatesListView"
+            Margin="0,8,0,0"
+            ItemsSource="{x:Bind ViewModel.Updates, Mode=OneWay}"
+            SelectedItem="{x:Bind ViewModel.SelectedUpdate, Mode=TwoWay}"
+            SelectionMode="Single">
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="data:UpdateInfo">
+                    <Border Style="{StaticResource DFCard}" Margin="0,4">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Update info -->
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock
+                                    Text="{x:Bind PackName}"
+                                    Style="{StaticResource DFBodyText}"
+                                    FontWeight="SemiBold" />
+                                <TextBlock Style="{StaticResource DFSecondaryText}">
+                                    <Run Text="{x:Bind PackId}" />
+                                    <Run Text=" • " />
+                                    <Run Text="{x:Bind CurrentVersion}" Foreground="{StaticResource DFErrorBrush}" />
+                                    <Run Text=" → " />
+                                    <Run Text="{x:Bind AvailableVersion}" Foreground="{StaticResource DFSuccessBrush}" />
+                                </TextBlock>
+                                <TextBlock
+                                    Text="{x:Bind Description}"
+                                    Style="{StaticResource DFSecondaryText}"
+                                    TextTrimming="CharacterEllipsis"
+                                    MaxWidth="400" />
+                            </StackPanel>
+
+                            <!-- Download button -->
+                            <Button
+                                Grid.Column="1"
+                                x:Name="DownloadUpdateButton"
+                                Content="Download"
+                                Style="{StaticResource DFAccentButton}"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

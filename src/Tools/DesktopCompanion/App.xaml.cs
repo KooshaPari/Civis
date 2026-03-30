@@ -67,11 +67,17 @@ namespace DINOForge.DesktopCompanion
             services.AddSingleton<AppConfigService>();
             services.AddSingleton<DisabledPacksService>();
             services.AddSingleton<IPackDataService, FileSystemPackDataService>();
+            services.AddSingleton<IModCatalogService, ModCatalogService>();
+            services.AddSingleton<UpdateCheckService>();
+            services.AddSingleton<ConflictDetectionService>();
 
             // ViewModels
             services.AddTransient<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<PackListViewModel>();
+            services.AddTransient<BrowseViewModel>();
+            services.AddTransient<UpdateViewModel>();
+            services.AddTransient<ConflictViewModel>();
             services.AddTransient<DebugPanelViewModel>();
             services.AddTransient<SettingsViewModel>();
 

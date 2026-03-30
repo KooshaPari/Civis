@@ -31,6 +31,12 @@
                                     AutomationProperties.AutomationId="NavDashboard" />
                 <NavigationViewItem Content="Pack List" Tag="PackList" Icon="List"
                                     AutomationProperties.AutomationId="NavPackList" />
+                <NavigationViewItem Content="Browse" Tag="Browse" Icon="Browse"
+                                    AutomationProperties.AutomationId="NavBrowse" />
+                <NavigationViewItem Content="Updates" Tag="Update" Icon="Sync"
+                                    AutomationProperties.AutomationId="NavUpdate" />
+                <NavigationViewItem Content="Conflicts" Tag="Conflict" Icon="Warning"
+                                    AutomationProperties.AutomationId="NavConflict" />
                 <NavigationViewItem Content="Debug Panel" Tag="DebugPanel" Icon="Repair"
                                     AutomationProperties.AutomationId="NavDebugPanel" />
             </NavigationView.MenuItems>

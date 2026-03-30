@@ -33,6 +33,20 @@ namespace DINOForge.DesktopCompanion.Data
         [ObservableProperty]
         private bool _enabled = true;
 
+        /// <summary>
+        /// Whether this pack has conflicts with other active packs.
+        /// Set by <see cref="ConflictDetectionService"/> after analysis.
+        /// </summary>
+        [ObservableProperty]
+        private bool _hasConflict;
+
+        /// <summary>
+        /// Whether this pack has missing dependencies.
+        /// Set by <see cref="ConflictDetectionService"/> after analysis.
+        /// </summary>
+        [ObservableProperty]
+        private bool _hasMissingDependency;
+
         /// <summary>Number of validation errors detected for this pack.</summary>
         public int ErrorCount { get; init; } = 0;
 

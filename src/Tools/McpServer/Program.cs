@@ -28,7 +28,7 @@ public static class Program
                 // Register GameClient and GameProcessManager as singletons
                 services.AddSingleton<GameClientOptions>();
                 services.AddSingleton<GameClient>();
-                services.AddSingleton<GameProcessManager>();
+                services.AddSingleton<GameProcessManager>(); // Owned by this file; wraps Process.Start()
 
                 // Register the MCP server with stdio transport and all tools
                 services.AddMcpServer(options =>
@@ -41,6 +41,7 @@ public static class Program
                 })
                 .WithStdioServerTransport()
                 .WithTools<Tools.GameLaunchTool>()
+                .WithTools<Tools.GameLaunchTestTool>()
                 .WithTools<Tools.GameStatusTool>()
                 .WithTools<Tools.GameWaitForWorldTool>()
                 .WithTools<Tools.GameQueryEntitiesTool>()

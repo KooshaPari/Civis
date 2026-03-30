@@ -523,7 +523,7 @@ jobs:
           path: |
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip.sha256
-          if-no-files-found: skip
+          if-no-files-found: ignore
 
       # ---------------------------------------------------------------
       # Generate SLSA L2 build provenance attestations

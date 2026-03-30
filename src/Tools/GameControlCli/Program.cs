@@ -96,7 +96,9 @@ public static class Program
 
     private static async Task<int> HandleStatusCommand()
     {
-        using var client = new GameClient();
+        // Short read timeout — bridge may be restarting after scene transition abort.
+        // If first attempt fails, retry with a fresh connection.
+        using var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 5000 });
         try
         {
             await client.ConnectAsync();

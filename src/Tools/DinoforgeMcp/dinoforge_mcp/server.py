@@ -63,6 +63,9 @@ PACKS_DIR = REPO_ROOT / "packs"
 # Dedicated DINOForge Virtual Display Driver (Nefarius/MTT VDD)
 _VDD_INDEX_FILE = REPO_ROOT / ".dinoforge_vdd_index"
 
+# Test instance path config file
+_TEST_INSTANCE_PATH_FILE = REPO_ROOT / ".dino_test_instance_path"
+
 # ---------------------------------------------------------------------------
 # GameControlCli client (thin wrapper — avoids dotnet run cold-start overhead
 # by using --no-build; caller should run `dotnet build` once before first use)
@@ -115,6 +118,33 @@ def _get_vdd_index() -> int | None:
         return int(_VDD_INDEX_FILE.read_text().strip())
     except Exception:
         return None
+
+
+def _get_test_instance_path() -> str:
+    """
+    Read the test instance path from .dino_test_instance_path config file.
+    Falls back to default path if file doesn't exist or is invalid.
+    Validates that the directory exists.
+    """
+    default_path = r"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
+
+    # Try to read from config file
+    if _TEST_INSTANCE_PATH_FILE.exists():
+        try:
+            config_path = _TEST_INSTANCE_PATH_FILE.read_text().strip()
+            if config_path:
+                path_obj = Path(config_path)
+                if path_obj.exists() and path_obj.is_dir():
+                    logger.info(f"Using test instance path from {_TEST_INSTANCE_PATH_FILE}: {config_path}")
+                    return config_path
+                else:
+                    logger.warning(f"Config path doesn't exist or is not a directory: {config_path}. Using default.")
+        except Exception as e:
+            logger.warning(f"Error reading {_TEST_INSTANCE_PATH_FILE}: {e}. Using default.")
+    else:
+        logger.info(f"Config file not found at {_TEST_INSTANCE_PATH_FILE}. Using default path.")
+
+    return default_path
 
 
 async def _launch_on_vdd(exe_path: str, width: int = 1920, height: int = 1080) -> dict:
@@ -342,23 +372,32 @@ async def game_launch(ctx: Context, hidden: bool = False) -> dict:
 async def game_launch_test(ctx: Context, hidden: bool = True) -> dict:
     """
     Launch the TEST instance of DINO (second concurrent instance for testing).
-    Uses G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option_TEST\\.
+    Reads path from .dino_test_instance_path config file (if present) or uses default.
     Kill existing test instances first if needed.
 
     Args:
         hidden: If True (default), launch on an invisible Win32 desktop (CreateDesktop). Set to False for visible window.
     """
-    test_dir = r"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
+    test_dir = _get_test_instance_path()
     test_exe = Path(test_dir) / "Diplomacy is Not an Option.exe"
     if not test_exe.exists():
-        return {"success": False, "error": f"Test game exe not found: {test_exe}"}
+        error_msg = (
+            f"Test game exe not found: {test_exe}. "
+            f"Check that the test instance is installed at the path specified in {_TEST_INSTANCE_PATH_FILE} "
+            f"or at the default location."
+        )
+        return {"success": False, "error": error_msg}
     try:
         if hidden:
             return await _launch_hidden(str(test_exe), "DINOForge_Agent_Test")
         subprocess.Popen([str(test_exe)], cwd=test_dir)
         return {"success": True, "message": f"Launched TEST instance: {test_exe}. Use game_wait_world to wait for ECS world."}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        error_msg = (
+            f"Failed to launch test instance: {str(e)}. "
+            f"If the path is wrong, update {_TEST_INSTANCE_PATH_FILE} or reinstall the test instance."
+        )
+        return {"success": False, "error": error_msg}
 
 
 @mcp.tool()

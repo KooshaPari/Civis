@@ -339,32 +339,19 @@ public sealed class GameClient : IDisposable
 
     private static async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken ct)
     {
-        // Read byte-by-byte from the underlying stream with DataAvailable polling.
-        // StreamReader.Read() blocks indefinitely, so we check the underlying stream's
-        // DataAvailable property (or just use ReadAsync with Task.Delay timeout loop).
-        var sb = new System.Text.StringBuilder();
-        Stream baseStream = reader.BaseStream;
+        // Wrap StreamReader.ReadLineAsync in a cancellation-aware Task.WhenAny.
+        // StreamReader.ReadLineAsync doesn't accept CancellationToken in older .NET,
+        // so we race it against a delay loop that checks the token.
+        Task<string?> readTask = reader.ReadLineAsync();
 
-        byte[] buf = new byte[1];
-        while (!ct.IsCancellationRequested)
+        while (!readTask.IsCompleted)
         {
-            // Try to read one byte with a short internal timeout via Task.WhenAny.
-            Task<int> readTask = baseStream.ReadAsync(buf, 0, 1, ct);
+            ct.ThrowIfCancellationRequested();
             Task delayTask = Task.Delay(200, ct);
-            Task completed = await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
-
-            if (completed == readTask)
-            {
-                int bytesRead = readTask.Result;
-                if (bytesRead == 0) return sb.Length > 0 ? sb.ToString() : null; // EOF
-                char c = (char)buf[0];
-                if (c == '\n') return sb.ToString();
-                if (c != '\r') sb.Append(c);
-            }
-            // If delayTask won, loop back and check cancellation token
+            await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
         }
-        ct.ThrowIfCancellationRequested();
-        return null;
+
+        return readTask.Result;
     }
 
     private void CleanupPipe()

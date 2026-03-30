@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>DINOForge.Tests</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <!-- Code coverage configuration -->
@@ -64,6 +65,10 @@
     <None Remove="Benchmarks\**" />
     <Content Remove="Benchmarks\**" />
     <EmbeddedResource Remove="Benchmarks\**" />
+    <Compile Remove="CliToolTests\**" />
+    <None Remove="CliToolTests\**" />
+    <Content Remove="CliToolTests\**" />
+    <EmbeddedResource Remove="CliToolTests\**" />
   </ItemGroup>
 
   <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->

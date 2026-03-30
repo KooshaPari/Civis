@@ -269,6 +269,9 @@ namespace DINOForge.Runtime.UI
             _injectedButton = null;
             RepurposedModsButtonGoName = null;
             _rescanTimer = 0f;
+            // Reset the guard so TryInjectMenuButton can run for the new scene.
+            // The guard was set true during the LoadScene(1) call that triggered this scene change.
+            _s_sceneTransitionGuard = false;
             TryInjectMenuButton();
         }
 

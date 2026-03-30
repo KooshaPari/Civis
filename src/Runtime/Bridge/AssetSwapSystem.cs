@@ -172,59 +172,47 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
-            // Extract the replacement asset raw bytes from the mod bundle.
+            // Phase 1 (optional): Patch the vanilla bundle on disk.
+            // This only works when the AssetAddress matches a real Addressables catalog key.
+            // Mod packs typically use bundle filenames as AssetAddress, so catalog lookup
+            // may fail — that's expected. Phase 2 (entity swap) is the primary mechanism.
+            bool patchResult = false;
             byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
-            if (modAssetBytes == null || modAssetBytes.Length == 0)
+
+            if (modAssetBytes != null && modAssetBytes.Length > 0)
             {
-                // Only log extraction failure once per address to reduce noise.
-                if (_reportedFailures.Add($"extract:{request.AssetAddress}"))
+                IReadOnlyDictionary<string, string> catalog = assetService.ReadCatalog();
+                if (catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
+                    && !string.IsNullOrEmpty(vanillaBundleRelPath))
                 {
-                    WriteDebug(
-                        $"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}'");
-                }
-                return false;
-            }
+                    string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
+                        vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
 
-            // Find which vanilla bundle contains the addressed asset via Addressables catalog.
-            IReadOnlyDictionary<string, string> catalog = assetService.ReadCatalog();
-            if (!catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
-                || string.IsNullOrEmpty(vanillaBundleRelPath))
-            {
-                // Only log catalog lookup failure once per address to reduce noise.
-                if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
+                    if (File.Exists(vanillaBundlePath))
+                    {
+                        string patchedFileName = Path.GetFileName(vanillaBundlePath);
+                        string outputPath = Path.Combine(patchDir, patchedFileName);
+
+                        patchResult = assetService.ReplaceAsset(
+                            vanillaBundlePath,
+                            request.AssetAddress,
+                            modAssetBytes,
+                            outputPath);
+
+                        if (patchResult)
+                            WriteDebug($"ApplySwap: patched bundle written to '{outputPath}'");
+                        else
+                            WriteDebug($"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                    }
+                }
+                else if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
                 {
-                    WriteDebug($"ApplySwap: address '{request.AssetAddress}' not found in catalog");
+                    WriteDebug($"ApplySwap: address '{request.AssetAddress}' not in catalog — skipping disk patch, using entity swap only");
                 }
-                return false;
             }
-
-            string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
-                vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
-
-            if (!File.Exists(vanillaBundlePath))
+            else if (_reportedFailures.Add($"extract:{request.AssetAddress}"))
             {
-                WriteDebug($"ApplySwap: vanilla bundle not found: {vanillaBundlePath}");
-                return false;
-            }
-
-            // Build output path in the patched bundles directory.
-            string patchedFileName = Path.GetFileName(vanillaBundlePath);
-            string outputPath = Path.Combine(patchDir, patchedFileName);
-
-            bool patchResult = assetService.ReplaceAsset(
-                vanillaBundlePath,
-                request.AssetAddress,
-                modAssetBytes,
-                outputPath);
-
-            if (!patchResult)
-            {
-                WriteDebug($"ApplySwap: bundle patch failed for '{request.AssetAddress}' — " +
-                           "attempting in-memory entity swap only");
-            }
-            else
-            {
-                WriteDebug($"ApplySwap: patched bundle written to '{outputPath}'");
+                WriteDebug($"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}' — using entity swap only");
             }
 
             // Best-effort live RenderMesh swap on ECS entities.

@@ -455,11 +455,11 @@ Future: Install a dedicated DINOForge virtual display driver (IDD/WDDM) to provi
 ### Deploying Fixes
 
 ```bash
-# Build + deploy DLL + packs
+# Deploy to MAIN instance (overwrites main save — safe for CI/CD):
 dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true
 
-# Then restart game (or launch 2nd instance):
-start "" "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe"
+# Deploy to TEST instance (isolated, no save impact — use during active dev):
+dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
 
 # Check results after ~12s (600-frame delay):
 tail -50 "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_debug.log"
@@ -470,15 +470,10 @@ tail -50 "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\di
 Unity's native mutex (in UnityPlayer.dll) prevents launching a second instance from the same directory. To support concurrent test instances:
 
 - **Test instance path**: `G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST\`
-- **How to launch**: `Start-Process -FilePath '<TEST_DIR>\Diplomacy is Not an Option.exe' -WorkingDirectory '<TEST_DIR>'` or use MCP tool
-- **MCP tool**: `game_launch_test` — launches test instance via MCP server using CreateDesktop isolation
-- **Path config**: `.dino_test_instance_path` in repo root
+- **Deploy to TEST**: `dotnet build -p:DeployToGame=true -p:GameInstallPath="...\Diplomacy is Not an Option_TEST"`
+- **MCP tool**: `game_launch_test(hidden=True)` — launches TEST instance on hidden Win32 desktop (CreateDesktop), no visible window
+- **Path config**: `.dino_test_instance_path` in repo root (auto-detected by MCP server)
 - Both instances are completely independent; each has its own BepInEx installation
-
-To deploy DINOForge to the test instance:
-```bash
-dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
-```
 
 ### AgilePlus PM Dashboard
 

@@ -1,7 +1,15 @@
 <Project>
   <PropertyGroup>
-    <!-- DINO game install path - update if your game is elsewhere -->
-    <GameDir>G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option</GameDir>
+    <!--
+      DINO game install path.
+      Override with: dotnet build -p:GameInstallPath="<path>"
+      This lets you deploy to a TEST instance during development:
+        dotnet build -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"
+      The TEST instance has its own BepInEx installation and is launched via
+      game_launch_test (hidden=True) to avoid interfering with the main save.
+    -->
+    <GameInstallPath Condition="'$(GameInstallPath)' == ''">G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option</GameInstallPath>
+    <GameDir>$(GameInstallPath)</GameDir>
     <ManagedDir>$(GameDir)\Diplomacy is Not an Option_Data\Managed</ManagedDir>
     <PluginsDir>$(GameDir)\Diplomacy is Not an Option_Data\Plugins\x86_64</PluginsDir>
 

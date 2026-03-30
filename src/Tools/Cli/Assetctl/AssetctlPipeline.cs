@@ -34,14 +34,25 @@ internal sealed class AssetctlPipeline
     private readonly SourceRulesDocument _rules;
     private readonly NJsonSchemaValidator _schemaValidator;
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+    private readonly AssetCatalogStore? _catalogStore;
+    private readonly LocalSourceAdapter? _localSourceAdapter;
+    private readonly string _repositoryRoot;
 
-    public AssetctlPipeline()
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AssetctlPipeline"/> class with a catalog store.
+    /// </summary>
+    /// <param name="catalogStore">The asset catalog store to use for queries. If null, falls back to hardcoded candidates.</param>
+    /// <param name="repositoryRoot">The repository root path for local source adapter.</param>
+    public AssetctlPipeline(AssetCatalogStore? catalogStore = null, string? repositoryRoot = null)
     {
         _rules = LoadRules();
         _schemaValidator = new NJsonSchemaValidator(new Dictionary<string, string>
         {
             ["asset-manifest"] = File.ReadAllText(DefaultSchemaPath)
         });
+        _catalogStore = catalogStore;
+        _repositoryRoot = repositoryRoot ?? Directory.GetCurrentDirectory();
+        _localSourceAdapter = catalogStore is not null ? new LocalSourceAdapter(_repositoryRoot) : null;
     }
 
     /// <summary>
@@ -1016,7 +1027,38 @@ internal sealed class AssetctlPipeline
         };
     }
 
-    private static List<AssetCandidate> CandidateCatalog()
+    /// <summary>
+    /// Gets the candidate catalog, using the asset catalog store if available,
+    /// otherwise falling back to the hardcoded placeholder list.
+    /// </summary>
+    private List<AssetCandidate> CandidateCatalog()
+    {
+        // If we have a local source adapter with a catalog store, query it
+        if (_localSourceAdapter is not null)
+        {
+            try
+            {
+                IEnumerable<AssetCandidate> localCandidates = _localSourceAdapter.SearchAsync("").GetAwaiter().GetResult();
+                List<AssetCandidate> result = localCandidates.ToList();
+                if (result.Count > 0)
+                {
+                    return result;
+                }
+            }
+            catch
+            {
+                // Fall back to hardcoded list if local adapter fails
+            }
+        }
+
+        // Fall back to hardcoded placeholder candidates
+        return GetHardcodedCandidates();
+    }
+
+    /// <summary>
+    /// Returns the hardcoded placeholder candidate list.
+    /// </summary>
+    private static List<AssetCandidate> GetHardcodedCandidates()
     {
         return new List<AssetCandidate>
         {
@@ -1169,6 +1211,7 @@ internal sealed class AssetctlPipeline
             }
         };
     }
+
 
     // ===== Helper Methods for Normalization and Stylization =====
 

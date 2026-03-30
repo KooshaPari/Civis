@@ -28,6 +28,9 @@
 
     <!-- ScreenRecorderLib for window video recording -->
     <PackageReference Include="ScreenRecorderLib" Version="6.6.0" />
+
+    <!-- SQLite for asset catalog store -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.*" />
   </ItemGroup>
 
   <PropertyGroup>

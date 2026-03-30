@@ -1,6 +1,6 @@
 # ADR-010: Deterministic Star-Wars-Style Asset Intake Pipeline
 
-**Status**: Proposed
+**Status**: Implementation in Progress
 **Date**: 2026-03-11
 **Deciders**: Agent Org
 
@@ -42,3 +42,77 @@ The immediate need is a pre-implementation contract for an `assetctl` toolchain,
   - rejected in V1 due to complexity and scope, but preserved as a future extension.
 - Browser automation as default:
   - rejected because it is brittle and harder to audit for policy and retries.
+
+## M13: Asset Library Browser
+
+The asset library browser (M13) extends the asset intake pipeline with a persistent catalog store and CLI surface for browsing and managing assets.
+
+### Components
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `AssetCatalogStore` | `AssetCatalogStore.cs` | SQLite-backed persistent catalog with CRUD operations |
+| `ISourceAdapter` | `ISourceAdapter.cs` | Interface for asset source adapters |
+| `LocalSourceAdapter` | `LocalSourceAdapter.cs` | Reads assets from local pack registry directories |
+| `AssetLibraryCommand` | `AssetLibraryCommand.cs` | CLI surface for library operations |
+
+### AssetCatalogStore Design
+
+The catalog store provides:
+
+- **SQLite persistence**: Assets are stored in a local SQLite database for fast queries
+- **JSON export/import**: Portable catalog format via `schemas/asset-library.schema.json`
+- **Search capabilities**: Filter by faction, type, status, and free-text query
+- **Statistics**: Aggregate counts by faction, type, status, and pack
+
+#### Database Schema
+
+```sql
+CREATE TABLE assets (
+    asset_id TEXT PRIMARY KEY,
+    name TEXT,
+    faction TEXT,
+    type TEXT,
+    source_url TEXT,
+    status TEXT,
+    provenance TEXT,
+    pack_id TEXT,
+    metadata_json TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_assets_faction ON assets(faction);
+CREATE INDEX idx_assets_type ON assets(type);
+CREATE INDEX idx_assets_status ON assets(status);
+CREATE INDEX idx_assets_pack_id ON assets(pack_id);
+```
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `dinoforge assetctl library list [--faction X] [--type Y] [--status Z]` | List assets from catalog |
+| `dinoforge assetctl library search <query>` | Search assets by name or ID |
+| `dinoforge assetctl library show <asset-id>` | Show detailed asset info |
+| `dinoforge assetctl library stats` | Show catalog statistics |
+| `dinoforge assetctl library sync` | Sync from pack registries |
+| `dinoforge assetctl library import local` | Import from local pack registries |
+| `dinoforge assetctl library export <path>` | Export catalog to JSON |
+
+### Source Adapter Interface
+
+The `ISourceAdapter` interface enables future extensibility:
+
+```csharp
+public interface ISourceAdapter
+{
+    Task<IEnumerable<AssetCandidate>> SearchAsync(string query, CancellationToken ct = default);
+    Task<AssetCandidate?> GetByIdAsync(string id, CancellationToken ct = default);
+    string SourceName { get; }
+    bool SupportsSearch { get; }
+    bool SupportsGetById { get; }
+}
+```
+
+Implementations:
+- `LocalSourceAdapter`: Reads from `packs/*/assets/registry/asset_index.json`

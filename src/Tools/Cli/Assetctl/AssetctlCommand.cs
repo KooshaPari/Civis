@@ -39,6 +39,7 @@ internal static class AssetctlCommand
         command.Add(CreateDownloadBatchSketchfabCommand(serviceProvider));
         command.Add(CreateValidateSketchfabTokenCommand(serviceProvider));
         command.Add(CreateSketchfabQuotaCommand(serviceProvider));
+        command.Add(AssetLibraryCommand.Create());
         return command;
     }
 

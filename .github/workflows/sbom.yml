@@ -28,7 +28,7 @@ jobs:
         run: dotnet tool install --global CycloneDX
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
       - name: Generate SBOM for SDK
         run: |
@@ -37,11 +37,11 @@ jobs:
             --filename sbom-sdk \
             --json
 
-      - name: Generate SBOM for Runtime
+      - name: Generate SBOM for Bridge Protocol
         run: |
-          dotnet CycloneDX src/Runtime/DINOForge.Runtime.csproj \
+          dotnet CycloneDX src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj \
             --output . \
-            --filename sbom-runtime \
+            --filename sbom-bridge-protocol \
             --json
 
       - name: Upload SBOMs as artifacts
@@ -50,7 +50,7 @@ jobs:
           name: sbom-files
           path: |
             sbom-sdk.json
-            sbom-runtime.json
+            sbom-bridge-protocol.json
           retention-days: 90
 
       - name: Attach SBOM to release
@@ -59,4 +59,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release upload "$RELEASE_TAG" sbom-sdk.json sbom-runtime.json --clobber
+          gh release upload "$RELEASE_TAG" sbom-sdk.json sbom-bridge-protocol.json --clobber

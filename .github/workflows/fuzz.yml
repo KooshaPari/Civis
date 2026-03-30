@@ -14,18 +14,32 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
           global-json-file: global.json
+          include-prerelease: true
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
-      - name: Build
-        run: dotnet build src/DINOForge.CI.sln --no-restore --configuration Release
+      - name: Build dependencies (ordered)
+        run: |
+          for p in \
+            src/SDK/DINOForge.SDK.csproj \
+            src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj \
+            src/Bridge/Client/DINOForge.Bridge.Client.csproj \
+            src/Domains/Warfare/DINOForge.Domains.Warfare.csproj \
+            src/Domains/Economy/DINOForge.Domains.Economy.csproj \
+            src/Domains/Scenario/DINOForge.Domains.Scenario.csproj \
+            src/Domains/UI/DINOForge.Domains.UI.csproj \
+            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj; do
+            dotnet build "$p" -c Release --no-restore --verbosity minimal || exit 1
+          done
+          dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore /p:BuildInParallel=false
 
       - name: Run property tests
         run: |
-          dotnet test src/DINOForge.CI.sln \
+          dotnet test src/Tests/DINOForge.Tests.csproj \
             --no-build \
             --filter "Category=Property" \
             --configuration Release \
@@ -48,18 +62,32 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
           global-json-file: global.json
+          include-prerelease: true
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
 
-      - name: Build
-        run: dotnet build src/DINOForge.CI.sln --no-restore --configuration Release
+      - name: Build dependencies (ordered)
+        run: |
+          for p in \
+            src/SDK/DINOForge.SDK.csproj \
+            src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj \
+            src/Bridge/Client/DINOForge.Bridge.Client.csproj \
+            src/Domains/Warfare/DINOForge.Domains.Warfare.csproj \
+            src/Domains/Economy/DINOForge.Domains.Economy.csproj \
+            src/Domains/Scenario/DINOForge.Domains.Scenario.csproj \
+            src/Domains/UI/DINOForge.Domains.UI.csproj \
+            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj; do
+            dotnet build "$p" -c Release --no-restore --verbosity minimal || exit 1
+          done
+          dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore /p:BuildInParallel=false
 
       - name: Run fuzz smoke tests
         run: |
-          dotnet test src/DINOForge.CI.sln \
+          dotnet test src/Tests/DINOForge.Tests.csproj \
             --no-build \
             --filter "Category=Fuzz" \
             --configuration Release \

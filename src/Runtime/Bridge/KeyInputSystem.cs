@@ -65,7 +65,10 @@ namespace DINOForge.Runtime.Bridge
                 if (_updateFrame <= 5 || _updateFrame % 600 == 0)
                     WriteDebug($"[KeyInputSystem.OnUpdate] frame={_updateFrame} enabled={Enabled} overlayEnsured={_overlayEnsured} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
 
-                // PlayerLoop drain injection has been removed in this version.
+                // Drain the MainThreadDispatcher queue from ECS OnUpdate.
+                // MonoBehaviour.Update() never fires in DINO (custom PlayerLoop),
+                // so this is the only reliable pump for main-thread work.
+                MainThreadDispatcher.DrainQueue();
 
                 // If PersistentRoot was destroyed by DINO, resurrect it via ECS
                 Plugin.TryResurrect("(ECS tick)", "KeyInputSystem");

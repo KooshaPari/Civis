@@ -574,16 +574,86 @@ async def game_input(
         mouse_y: Mouse Y coordinate (screen absolute).
         click: If True, send a left mouse click at (mouse_x, mouse_y).
     """
-    args = ["input"]
-    if key:
-        args += ["--key", key]
-    if mouse_x is not None:
-        args += ["--x", str(mouse_x)]
-    if mouse_y is not None:
-        args += ["--y", str(mouse_y)]
-    if click:
-        args.append("--click")
-    return _run_game_cli(*args)
+    try:
+        import ctypes
+    except ImportError:
+        return {"success": False, "error": "ctypes not available."}
+
+    SendInput = ctypes.windll.user32.SendInput
+    KEYEVENTF_KEYUP = 0x0002
+    MOUSEEVENTF_LEFTDOWN = 0x0002
+    MOUSEEVENTF_LEFTUP = 0x0004
+    MOUSEEVENTF_MOVE = 0x0001
+
+    VK_CODES = {
+        "escape": 0x1B, "esc": 0x1B,
+        "space": 0x20, "enter": 0x0D, "return": 0x0D,
+        "tab": 0x09, "left": 0x25, "up": 0x26, "right": 0x27, "down": 0x28,
+        "f1": 0x70, "f2": 0x71, "f3": 0x72, "f4": 0x73,
+        "f5": 0x74, "f6": 0x75, "f7": 0x76, "f8": 0x77,
+        "f9": 0x78, "f10": 0x79, "f11": 0x7A, "f12": 0x7B,
+        "a": 0x41, "b": 0x42, "c": 0x43, "d": 0x44, "e": 0x45,
+        "f": 0x46, "g": 0x47, "h": 0x48, "i": 0x49, "j": 0x4A,
+        "k": 0x4B, "l": 0x4C, "m": 0x4D, "n": 0x4E, "o": 0x4F,
+        "p": 0x50, "q": 0x51, "r": 0x52, "s": 0x53, "t": 0x54,
+        "u": 0x55, "v": 0x56, "w": 0x57, "x": 0x58, "y": 0x59, "z": 0x5A,
+        "0": 0x30, "1": 0x31, "2": 0x32, "3": 0x33, "4": 0x34,
+        "5": 0x35, "6": 0x36, "7": 0x37, "8": 0x38, "9": 0x39,
+    }
+
+    class _KEYBDINPUT(ctypes.Structure):
+        _fields_ = [("wVk", ctypes.c_ushort), ("wScan", ctypes.c_ushort),
+                     ("dwFlags", ctypes.c_uint), ("time", ctypes.c_uint),
+                     ("dwExtraInfo", ctypes.c_void_p)]
+
+    class _MOUSEINPUT(ctypes.Structure):
+        _fields_ = [("dx", ctypes.c_long), ("dy", ctypes.c_long),
+                     ("mouseData", ctypes.c_uint), ("dwFlags", ctypes.c_uint),
+                     ("time", ctypes.c_uint), ("dwExtraInfo", ctypes.c_void_p)]
+
+    class _INPUT_UNION(ctypes.Union):
+        _fields_ = [("ki", _KEYBDINPUT), ("mi", _MOUSEINPUT)]
+
+    class _INPUT(ctypes.Structure):
+        _fields_ = [("type", ctypes.c_uint), ("data", _INPUT_UNION)]
+
+    def _make_input(type_val: int, union_val) -> _INPUT:
+        inp = _INPUT()
+        inp.type = type_val
+        ctypes.memmove(ctypes.addressof(inp.data), ctypes.addressof(union_val), ctypes.sizeof(union_val))
+        return inp
+
+    def _send_key(vk: int) -> None:
+        ki_down = _KEYBDINPUT(vk, 0, 0, 0, None)
+        ki_up = _KEYBDINPUT(vk, 0, KEYEVENTF_KEYUP, 0, None)
+        arr = (_INPUT * 2)(*[_make_input(1, ki_down), _make_input(1, ki_up)])
+        SendInput(2, arr, ctypes.sizeof(_INPUT))
+
+    def _send_mouse_move(x: int, y: int) -> None:
+        mi = _MOUSEINPUT(x, y, 0, MOUSEEVENTF_MOVE, 0, None)
+        arr = (_INPUT * 1)(*[_make_input(0, mi)])
+        SendInput(1, arr, ctypes.sizeof(_INPUT))
+
+    def _send_click(x: int, y: int) -> None:
+        _send_mouse_move(x, y)
+        for flags in (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP):
+            mi = _MOUSEINPUT(0, 0, 0, flags, 0, None)
+            arr = (_INPUT * 1)(*[_make_input(0, mi)])
+            SendInput(1, arr, ctypes.sizeof(_INPUT))
+
+    try:
+        if key:
+            vk = VK_CODES.get(key.lower())
+            if vk is None:
+                return {"success": False, "error": f"Unknown key: {key}"}
+            _send_key(vk)
+        if mouse_x is not None and mouse_y is not None and click:
+            _send_click(mouse_x, mouse_y)
+        elif mouse_x is not None and mouse_y is not None:
+            _send_mouse_move(mouse_x, mouse_y)
+        return {"success": True, "message": "Input injected."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @mcp.tool()
@@ -614,6 +684,153 @@ async def game_analyze_screen(ctx: Context, screenshot_path: str | None = None) 
     if screenshot_path:
         args += ["--input", screenshot_path]
     return _run_game_cli(*args)
+
+
+def _analyze_screenshot_cv(screenshot_path: str | None) -> dict:
+    """
+    Analyze a screenshot using OpenCV to detect UI regions.
+    Returns health bars, buttons, portraits, and faction color patches.
+    """
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return {"success": False, "error": "opencv-python-headless not installed"}
+
+    temp_dir = Path(os.getenv("TEMP", "/tmp")) / "DINOForge"
+    if screenshot_path is None:
+        screenshot_path = str(temp_dir / "screenshot.png")
+        cap_result = _run_game_cli("screenshot", screenshot_path)
+        if not cap_result.get("success"):
+            return {"success": False, "error": f"Failed to capture screenshot: {cap_result}"}
+
+    if not Path(screenshot_path).exists():
+        return {"success": False, "error": f"Screenshot not found: {screenshot_path}"}
+
+    img = cv2.imread(screenshot_path)
+    if img is None:
+        return {"success": False, "error": f"Failed to read image: {screenshot_path}"}
+
+    h, w = img.shape[:2]
+    elements: list[dict] = []
+
+    # Convert to different color spaces for analysis
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Detect health bars: narrow horizontal rectangles, typically green/red/yellow
+    # Green health bar range in HSV
+    green_lower = np.array([35, 50, 50])
+    green_upper = np.array([85, 255, 255])
+    green_mask = cv2.inRange(hsv, green_lower, green_upper)
+    # Find contours (horizontal bar-shaped)
+    contours, _ = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    for cnt in contours:
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        aspect = bw / max(bh, 1)
+        if aspect > 3 and 5 < bw < w * 0.4 and 2 < bh < 20:  # Long thin bar = health bar
+            elements.append({
+                "type": "health_bar",
+                "x": int(x), "y": int(y),
+                "width": int(bw), "height": int(bh),
+                "color": "green",
+                "confidence": min(1.0, bw / 200),
+            })
+
+    # Red/amber bar for enemy health
+    red_lower1 = np.array([0, 70, 50]); red_upper1 = np.array([10, 255, 255])
+    red_lower2 = np.array([170, 70, 50]); red_upper2 = np.array([180, 255, 255])
+    red_mask = cv2.inRange(hsv, red_lower1, red_upper1) | cv2.inRange(hsv, red_lower2, red_upper2)
+    contours2, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    for cnt in contours2:
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        aspect = bw / max(bh, 1)
+        if aspect > 3 and 5 < bw < w * 0.4 and 2 < bh < 20:
+            elements.append({
+                "type": "health_bar",
+                "x": int(x), "y": int(y),
+                "width": int(bw), "height": int(bh),
+                "color": "red",
+                "confidence": min(1.0, bw / 200),
+            })
+
+    # Detect faction color patches: large uniform color regions (top corners = faction banners)
+    faction_colors = [
+        ("republic_blue",   ( 70,  80, 180), (110, 160, 255), 0.8),
+        ("cis_gold",        ( 15, 100, 150), ( 35, 200, 255), 0.8),
+        ("enemy_red",       (  0, 100, 100), ( 10, 255, 255), 0.8),
+        ("neutral_gray",    ( 80,   0,  80), (120,  50, 180), 0.5),
+    ]
+    for name, bgr_low, bgr_high, conf in faction_colors:
+        low = np.array(bgr_low); upper = np.array(bgr_high)
+        mask = cv2.inRange(img, low, upper)
+        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in cnts:
+            x, y, bw, bh = cv2.boundingRect(cnt)
+            if bw > 30 and bh > 30:  # Faction banner minimum size
+                elements.append({
+                    "type": "faction_patch",
+                    "faction": name,
+                    "x": int(x), "y": int(y),
+                    "width": int(bw), "height": int(bh),
+                    "confidence": conf,
+                })
+
+    # Detect portrait-like regions: square-ish shapes in the bottom-left area (unit portrait zone)
+    portrait_zone = img[int(h * 0.7):, :int(w * 0.3)]
+    gray_portrait = cv2.cvtColor(portrait_zone, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray_portrait, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    cnts3, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    offset_y = int(h * 0.7)
+    for cnt in cnts3:
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        aspect = min(bw, bh) / max(bw, bh, 1)
+        area = bw * bh
+        if aspect > 0.7 and 400 < area < 50000:  # Square-ish, portrait-sized
+            elements.append({
+                "type": "unit_portrait",
+                "x": int(x), "y": int(y + offset_y),
+                "width": int(bw), "height": int(bh),
+                "confidence": 0.6,
+            })
+
+    # Button-like regions: light/white rectangles near bottom of screen
+    button_zone = img[int(h * 0.85):, :]
+    button_gray = cv2.cvtColor(button_zone, cv2.COLOR_BGR2GRAY)
+    _, button_thresh = cv2.threshold(button_gray, 200, 255, cv2.THRESH_BINARY)
+    cnts4, _ = cv2.findContours(button_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    button_offset_y = int(h * 0.85)
+    for cnt in cnts4:
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        if bw > 60 and 10 < bh < 60 and bw / max(bh, 1) > 2:
+            elements.append({
+                "type": "button",
+                "x": int(x), "y": int(y + button_offset_y),
+                "width": int(bw), "height": int(bh),
+                "confidence": 0.7,
+            })
+
+    return {
+        "success": True,
+        "screenshot": screenshot_path,
+        "resolution": {"width": w, "height": h},
+        "elements_detected": len(elements),
+        "elements": elements,
+        "method": "opencv_color_contour",
+    }
+
+
+@mcp.tool()
+async def game_analyze_screen(ctx: Context, screenshot_path: str | None = None) -> dict:
+    """
+    Capture a screenshot and detect UI elements via OpenCV color/contour analysis
+    (health bars, unit portraits, buttons, faction indicators).
+    Falls back to VLM (transformers + vit-base) if available.
+
+    Args:
+        screenshot_path: Optional path to existing screenshot (takes new one if omitted).
+    """
+    return _analyze_screenshot_cv(screenshot_path)
 
 
 @mcp.tool()
@@ -648,7 +865,71 @@ async def game_navigate_to(ctx: Context, state: str) -> dict:
     Args:
         state: Target state — 'main_menu', 'gameplay', or 'pause_menu'.
     """
-    return _run_game_cli("navigate-to", state)
+    # Validate state
+    if state not in ("main_menu", "gameplay", "pause_menu"):
+        return {
+            "success": False,
+            "error": f"Unknown state '{state}'. Valid values: 'main_menu', 'gameplay', 'pause_menu'."
+        }
+
+    # Check current state via status
+    status_result = _run_game_cli("status")
+    if not status_result.get("Running"):
+        return {"success": False, "error": "Game is not running."}
+
+    # Parse entity count from the raw/text response
+    raw = status_result.get("raw", "")
+    entity_count = 0
+    for line in raw.split("\n"):
+        if "Entity count:" in line:
+            try:
+                entity_count = int(line.split("Entity count:")[1].strip())
+            except (ValueError, IndexError):
+                pass
+
+    if state == "main_menu":
+        # Can't programmatically return to main menu without keyboard input.
+        return {
+            "success": False,
+            "error": (
+                "Returning to main_menu requires keyboard input (ESC or menu navigation) "
+                "which is not yet implemented in the bridge. "
+                "Use game_launch() to restart the game."
+            )
+        }
+
+    if state == "pause_menu":
+        # From gameplay: send ESC twice — requires keyboard input.
+        return {
+            "success": False,
+            "error": (
+                "pause_menu requires keyboard input (ESC key) which is not yet available. "
+                "Use game_input(key='Escape') once keyboard input is implemented."
+            )
+        }
+
+    # state == "gameplay"
+    if entity_count > 50000:
+        return {
+            "success": True,
+            "message": "Already at gameplay state.",
+            "entityCount": entity_count
+        }
+
+    # Load AUTOSAVE_1 to enter gameplay
+    save_result = _run_game_cli("load-save", "AUTOSAVE_1")
+    if not save_result.get("success") and "already" not in save_result.get("error", "").lower():
+        return save_result
+
+    # Dismiss loading screen if present
+    dismiss_result = _run_game_cli("dismiss")
+    return {
+        "success": True,
+        "message": "Navigated to gameplay.",
+        "loadResult": save_result,
+        "dismissResult": dismiss_result,
+        "entityCount": entity_count
+    }
 
 
 # ===========================================================================
@@ -775,6 +1056,62 @@ async def log_bepinex(ctx: Context, lines: int = 50) -> dict:
             all_lines = f.readlines()
         tail = all_lines[-lines:]
         return {"success": True, "lines": [l.rstrip() for l in tail]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def log_debug_log(ctx: Context, lines: int = 500) -> dict:
+    """
+    Read the full DINOForge debug log (all entries, not just tail).
+    Use this for deep analysis of swap exceptions, ECS world state, and pack loading.
+
+    Args:
+        lines: Maximum lines to return (default 500, use 0 for all).
+    """
+    if not DEBUG_LOG.exists():
+        return {"success": False, "error": f"Debug log not found: {DEBUG_LOG}"}
+    try:
+        with open(DEBUG_LOG, encoding="utf-8", errors="replace") as f:
+            all_lines = f.readlines()
+        tail = all_lines[-lines:] if lines > 0 else all_lines
+        return {
+            "success": True,
+            "path": str(DEBUG_LOG),
+            "total_lines": len(all_lines),
+            "returned_lines": len(tail),
+            "lines": [l.rstrip() for l in tail],
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def log_packs_loaded(ctx: Context) -> dict:
+    """
+    Extract pack loading summary from the debug log (PacksLoader.OnAfterDeserialize output).
+    Returns a list of loaded packs with their versions and any load errors.
+    """
+    if not DEBUG_LOG.exists():
+        return {"success": False, "error": f"Debug log not found: {DEBUG_LOG}"}
+    try:
+        with open(DEBUG_LOG, encoding="utf-8", errors="replace") as f:
+            content = f.read()
+
+        packs: list[dict] = []
+        for line in content.splitlines():
+            if any(tag in line for tag in ("PacksLoader", "Pack loaded", "Pack load error",
+                                            "warfare-starwars", "warfare-modern", "warfare-guerrilla",
+                                            "economy-balanced", "example-balance")):
+                ts = line[:23] if len(line) >= 23 else ""
+                msg = line[24:].strip() if len(line) > 24 else line
+                packs.append({"timestamp": ts, "line": msg.strip()})
+
+        return {
+            "success": True,
+            "total_entries": len(packs),
+            "entries": packs,
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

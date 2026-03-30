@@ -323,11 +323,16 @@ namespace DINOForge.Runtime.Bridge
                 new EntityQueryDesc { All = queryComponents });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
-            MethodInfo? getShared = typeof(EntityManager).GetMethod(
-                "GetSharedComponentData", new[] { typeof(Entity) });
-            MethodInfo? setShared = typeof(EntityManager).GetMethod("SetSharedComponentData");
+            // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
+            // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
+            // for entities that have multiple instances of T (e.g. a unit with shadow+main mesh).
+            MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethod(
+                "GetSharedComponentData",
+                new[] { typeof(Entity), typeof(ComponentType) });
+            MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethod(
+                "SetSharedComponentData");
 
-            if (getShared == null || setShared == null)
+            if (getSharedNonGeneric == null || setSharedGeneric == null)
             {
                 WriteDebug(
                     "TrySwapRenderMeshFromBundle: GetSharedComponentData/SetSharedComponentData not found");
@@ -336,45 +341,72 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
-            MethodInfo genericGet = getShared.MakeGenericMethod(renderMeshType);
-            MethodInfo genericSet = setShared.MakeGenericMethod(renderMeshType);
-
+            MethodInfo genericSet = setSharedGeneric.MakeGenericMethod(renderMeshType);
             FieldInfo? meshField = renderMeshType.GetField("mesh");
             FieldInfo? materialField = renderMeshType.GetField("material");
 
+            ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
             int swapCount = 0;
             for (int i = 0; i < entities.Length; i++)
             {
+                Entity entity = entities[i];
                 try
                 {
-                    if (!EntityManager.HasComponent(entities[i], ComponentType.ReadOnly(renderMeshType)))
+                    if (!EntityManager.HasComponent(entity, renderMeshComponentType))
                         continue;
 
-                    object? renderMesh = genericGet.Invoke(EntityManager, new object[] { entities[i] });
+                    // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
+                    object? renderMesh = getSharedNonGeneric.Invoke(
+                        EntityManager, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
                     bool changed = false;
                     if (replacementMesh != null && meshField != null)
                     {
+                        object? currentMesh = meshField.GetValue(renderMesh);
+                        if (currentMesh == null)
+                        {
+                            WriteDebug(
+                                $"TrySwapRenderMeshFromBundle: mesh field is null on entity {entity.Index} " +
+                                $"(building/entity not yet loaded — skipping)");
+                            continue;
+                        }
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
                     if (replacementMat != null && materialField != null)
                     {
+                        object? currentMat = materialField.GetValue(renderMesh);
+                        if (currentMat == null)
+                        {
+                            WriteDebug(
+                                $"TrySwapRenderMeshFromBundle: material field is null on entity {entity.Index} " +
+                                $"(building/entity not yet loaded — skipping)");
+                            continue;
+                        }
                         materialField.SetValue(renderMesh, replacementMat);
                         changed = true;
                     }
 
                     if (changed)
                     {
-                        genericSet.Invoke(EntityManager, new object[] { entities[i], renderMesh });
+                        genericSet.Invoke(EntityManager, new object[] { entity, renderMesh });
                         swapCount++;
                     }
+                }
+                catch (TargetInvocationException ex) when (
+                    ex.InnerException?.Message.Contains("Ambiguous match found") == true)
+                {
+                    // Entity has multiple RenderMesh instances (shadow + main mesh).
+                    // Skip — unit swaps only need one mesh visible anyway.
+                    WriteDebug(
+                        $"TrySwapRenderMeshFromBundle: entity {entity.Index} has multiple " +
+                        $"RenderMesh instances — skipping (ambiguous match)");
                 }
                 catch (Exception ex)
                 {
                     WriteDebug(
-                        $"TrySwapRenderMeshFromBundle: failed on entity {entities[i].Index}: {ex.Message}");
+                        $"TrySwapRenderMeshFromBundle: failed on entity {entity.Index}: {ex.Message}");
                 }
             }
 

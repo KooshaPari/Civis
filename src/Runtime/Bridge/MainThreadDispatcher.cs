@@ -8,18 +8,23 @@ using UnityEngine;
 namespace DINOForge.Runtime.Bridge
 {
     /// <summary>
-    /// MonoBehaviour that dispatches work from background threads onto the Unity main thread.
-    /// Attach to the plugin's GameObject so that Update() is called every frame.
-    /// Background IPC handlers use <see cref="RunOnMainThread{T}"/> to safely access Unity APIs.
+    /// Dispatches work from background threads onto the Unity main thread.
+    ///
+    /// IMPORTANT: MonoBehaviour.Update() NEVER fires in DINO (custom PlayerLoop).
+    /// The queue is pumped by <see cref="DrainQueue"/> which is called from
+    /// <see cref="KeyInputSystem.OnUpdate"/> (ECS SystemBase — survives scene transitions).
+    /// The MonoBehaviour.Update() method is kept as a fallback but is not relied upon.
     /// </summary>
     public class MainThreadDispatcher : MonoBehaviour
     {
         private static readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
 
         /// <summary>
-        /// Drains the pending action queue each frame, executing all enqueued work on the main thread.
+        /// Drains the pending action queue. Called from ECS SystemBase.OnUpdate()
+        /// (KeyInputSystem) which fires reliably on the main thread.
+        /// Also called from MonoBehaviour.Update() as a fallback (rarely fires in DINO).
         /// </summary>
-        private void Update()
+        public static void DrainQueue()
         {
             int processed = 0;
             while (_queue.TryDequeue(out Action? action))
@@ -33,11 +38,18 @@ namespace DINOForge.Runtime.Bridge
                     Debug.LogError($"[MainThreadDispatcher] Exception in queued action: {ex}");
                 }
 
-                // Safety valve: don't block the frame forever
                 processed++;
                 if (processed > 100)
                     break;
             }
+        }
+
+        /// <summary>
+        /// MonoBehaviour.Update() fallback — rarely fires in DINO but kept for safety.
+        /// </summary>
+        private void Update()
+        {
+            DrainQueue();
         }
 
         /// <summary>

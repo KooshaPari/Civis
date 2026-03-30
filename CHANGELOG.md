@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **Note:** DesktopCompanion (WinUI 3) requires local build with VS 2022 + Windows SDK toolchain
+> (XamlCompiler needs VC++ ATL/MFC). CI releases do not include the Companion zip — build it locally.
+
 ## [0.16.0] - 2026-03-29
 
 ### Added

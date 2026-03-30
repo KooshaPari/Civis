@@ -141,20 +141,22 @@ namespace DINOForge.Runtime
         }
 
         /// <summary>
-        /// Registers a static SceneManager.activeSceneChanged callback that triggers
-        /// resurrection when PersistentRoot has been destroyed by DINO's scene transitions.
-        /// This callback persists as a static delegate even after the Plugin MonoBehaviour
-        /// is destroyed, ensuring resurrection can happen on every scene load.
-        /// </summary>
-        /// <summary>
-        /// Resurrection is now handled by KeyInputSystem.OnCreate() — when DINO creates a
-        /// new ECS world after scene transition, OnCreate checks if PersistentRoot was destroyed
-        /// and calls TryResurrect. Background threads don't work because DINO aborts them.
+        /// Registers a static SceneManager.activeSceneChanged callback that re-registers
+        /// KeyInputSystem in the current ECS world whenever a new scene finishes loading.
+        /// This is the most reliable scene-transition detector — fires for every scene load
+        /// including InitialGameLoader→gameplay where the ECS world changes.
+        /// The callback persists as a static delegate even after Plugin MonoBehaviour destruction.
         /// </summary>
         private static void StartResurrectionWatcher()
         {
-            // No-op: resurrection handled by KeyInputSystem.OnCreate.
-            WriteDebug("[Plugin] Resurrection delegated to KeyInputSystem.OnCreate.");
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            WriteDebug("[Plugin] SceneLoaded watcher registered.");
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            WriteDebug($"[Plugin] OnSceneLoaded: scene='{scene.name}' mode={mode}");
+            Bridge.KeyInputSystem.RecreateInCurrentWorld();
         }
 
         internal static void TryResurrect(string sceneName, string trigger)

@@ -175,6 +175,28 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
+        /// <summary>
+        /// Called by the bridge supervisor on a background thread when it detects that
+        /// our owning world was destroyed (RuntimeDriver.OnDestroy). Recreates KeyInputSystem
+        /// in the current DefaultGameObjectInjectionWorld so the pump survives scene transitions.
+        /// This is the only reliable way to handle world changes — OnUpdate only runs while
+        /// the system is alive, so it can't self-recover after destruction.
+        /// </summary>
+        public static void RecreateInCurrentWorld()
+        {
+            try
+            {
+                World? current = World.DefaultGameObjectInjectionWorld;
+                if (current == null || !current.IsCreated) return;
+                current.GetOrCreateSystem<KeyInputSystem>();
+                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Registered in '{current.Name}'.");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Failed: {ex.Message}");
+            }
+        }
+
         private void EnsureOverlay()
         {
             if (DebugOverlayBehaviour.Instance != null)

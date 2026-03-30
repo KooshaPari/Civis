@@ -127,16 +127,24 @@ namespace DINOForge.Runtime.Bridge
                     }
                     else
                     {
+                        AssetSwapRegistry.MarkFailed(request.AssetAddress);
                         failed++;
-                        // Only log failure once per address; subsequent failures logged at debug level to reduce noise.
-                        if (_reportedFailures.Add(request.AssetAddress))
+                        int newCount = request.FailCount;
+                        if (newCount >= AssetSwapRegistry.MaxRetries)
                         {
-                            WriteDebug($"AssetSwapSystem: swap failed — address='{request.AssetAddress}'");
+                            WriteDebug($"AssetSwapSystem: giving up on '{request.AssetAddress}' " +
+                                       $"after {newCount} failures");
+                        }
+                        else if (_reportedFailures.Add(request.AssetAddress))
+                        {
+                            WriteDebug($"AssetSwapSystem: swap failed — address='{request.AssetAddress}' " +
+                                       $"(attempt {newCount}/{AssetSwapRegistry.MaxRetries})");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
+                    AssetSwapRegistry.MarkFailed(request.AssetAddress);
                     failed++;
                     if (_reportedFailures.Add(request.AssetAddress))
                     {

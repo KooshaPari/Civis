@@ -159,6 +159,61 @@ namespace DINOForge.Tests
         }
 
         [Fact]
+        public void MarkFailed_AfterMaxRetries_ExcludedFromPending()
+        {
+            // Arrange
+            AssetSwapRequest request = new AssetSwapRequest("addr/unit.prefab", "/mod.bundle", "UnitAsset");
+            AssetSwapRegistry.Register(request);
+
+            // Act — fail MaxRetries times
+            for (int i = 0; i < AssetSwapRegistry.MaxRetries; i++)
+            {
+                AssetSwapRegistry.MarkFailed("addr/unit.prefab");
+            }
+
+            IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
+
+            // Assert — exhausted retries are excluded from pending
+            pending.Should().BeEmpty();
+            AssetSwapRegistry.Count.Should().Be(1); // still registered
+        }
+
+        [Fact]
+        public void MarkFailed_BelowMaxRetries_StillInPending()
+        {
+            // Arrange
+            AssetSwapRequest request = new AssetSwapRequest("addr/unit.prefab", "/mod.bundle", "UnitAsset");
+            AssetSwapRegistry.Register(request);
+
+            // Act — fail once (below max)
+            AssetSwapRegistry.MarkFailed("addr/unit.prefab");
+            IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
+
+            // Assert — still pending
+            pending.Should().HaveCount(1);
+            pending[0].FailCount.Should().Be(1);
+        }
+
+        [Fact]
+        public void ResetApplied_ResetsFailCounts()
+        {
+            // Arrange
+            AssetSwapRequest request = new AssetSwapRequest("addr/unit.prefab", "/mod.bundle", "UnitAsset");
+            AssetSwapRegistry.Register(request);
+            for (int i = 0; i < AssetSwapRegistry.MaxRetries; i++)
+                AssetSwapRegistry.MarkFailed("addr/unit.prefab");
+            AssetSwapRegistry.GetPending().Should().BeEmpty();
+
+            // Act
+            AssetSwapRegistry.ResetApplied();
+            IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
+
+            // Assert — reset makes them retryable again
+            pending.Should().HaveCount(1);
+            pending[0].FailCount.Should().Be(0);
+        }
+
+        [Fact]
         public void Register_ConcurrentFromMultipleThreads_NoneAreLost()
         {
             // Arrange — 10 threads, each registers 10 unique addresses = 100 total

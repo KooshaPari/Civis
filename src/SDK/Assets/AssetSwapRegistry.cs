@@ -29,6 +29,9 @@ namespace DINOForge.SDK.Assets
         /// <summary>Whether this swap has already been applied in the current session.</summary>
         public bool Applied { get; set; }
 
+        /// <summary>Number of times this swap has failed. After <see cref="AssetSwapRegistry.MaxRetries"/> failures it is permanently skipped.</summary>
+        public int FailCount { get; set; }
+
         /// <summary>
         /// Pack <c>vanilla_mapping</c> value (e.g. "line_infantry", "ranged_infantry") that
         /// identifies which ECS archetype to target when swapping live RenderMesh components.
@@ -63,6 +66,11 @@ namespace DINOForge.SDK.Assets
     /// </summary>
     public static class AssetSwapRegistry
     {
+        /// <summary>
+        /// Maximum number of retry attempts before a swap is permanently skipped.
+        /// </summary>
+        public const int MaxRetries = 3;
+
         private static readonly object _lock = new object();
         private static readonly Dictionary<string, AssetSwapRequest> _requests =
             new Dictionary<string, AssetSwapRequest>(StringComparer.OrdinalIgnoreCase);
@@ -93,12 +101,30 @@ namespace DINOForge.SDK.Assets
                 var pending = new List<AssetSwapRequest>(_requests.Count);
                 foreach (AssetSwapRequest req in _requests.Values)
                 {
-                    if (!req.Applied)
+                    if (!req.Applied && req.FailCount < MaxRetries)
                     {
                         pending.Add(req);
                     }
                 }
                 return pending;
+            }
+        }
+
+        /// <summary>
+        /// Increments the fail count for the swap at <paramref name="assetAddress"/>.
+        /// After <see cref="MaxRetries"/> failures, <see cref="GetPending"/> will no longer return it.
+        /// </summary>
+        /// <param name="assetAddress">The Addressables key whose swap failed.</param>
+        public static void MarkFailed(string assetAddress)
+        {
+            if (string.IsNullOrEmpty(assetAddress)) return;
+
+            lock (_lock)
+            {
+                if (_requests.TryGetValue(assetAddress, out AssetSwapRequest? req))
+                {
+                    req.FailCount++;
+                }
             }
         }
 
@@ -140,7 +166,10 @@ namespace DINOForge.SDK.Assets
             lock (_lock)
             {
                 foreach (AssetSwapRequest req in _requests.Values)
+                {
                     req.Applied = false;
+                    req.FailCount = 0;
+                }
             }
         }
 

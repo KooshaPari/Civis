@@ -30,6 +30,13 @@
     <SolidColorBrush x:Key="DFTextSecondaryBrush" Color="{StaticResource DFTextSecondary}" />
     <SolidColorBrush x:Key="DFBorderBrush" Color="{StaticResource DFBorder}" />
 
+    <!-- Title text style -->
+    <Style x:Key="TitleTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource DFTextPrimaryBrush}" />
+    </Style>
+
     <!-- Accent button style -->
     <Style x:Key="DFAccentButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource DFAccentBrush}" />

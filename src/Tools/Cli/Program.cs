@@ -100,6 +100,7 @@ rootCommand.Add(UiQueryCommand.Create());
 rootCommand.Add(UiClickCommand.Create());
 rootCommand.Add(UiWaitCommand.Create());
 rootCommand.Add(UiExpectCommand.Create());
+rootCommand.Add(PackCommand.Create());
 rootCommand.Add(WatchCommand.Create());
 rootCommand.Add(AssetctlCommand.Create(serviceProvider));
 rootCommand.Add(SyncCommand.Create());

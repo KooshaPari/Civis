@@ -1,8 +1,5 @@
 using System;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI;
-using Windows.UI;
 
 namespace DINOForge.DesktopCompanion.Themes.Converters
 {
@@ -19,10 +16,10 @@ namespace DINOForge.DesktopCompanion.Themes.Converters
         {
             if (value is int depth)
             {
-                return new GridLength(depth * IndentPerLevel, GridUnitType.Pixel);
+                return depth * IndentPerLevel;
             }
 
-            return new GridLength(0, GridUnitType.Pixel);
+            return 0.0;
         }
 
         /// <inheritdoc />

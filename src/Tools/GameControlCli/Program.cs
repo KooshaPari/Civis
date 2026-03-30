@@ -63,28 +63,28 @@ public static class Program
         AnsiConsole.MarkupLine("  wait-world       - Wait for ECS world to be ready");
         AnsiConsole.MarkupLine("  resources        - Show current resource values");
         AnsiConsole.MarkupLine("  screenshot       - Capture in-game screenshot");
-        AnsiConsole.MarkupLine("  catalog [cat]    - Dump game catalog (units/buildings/projectiles)");
-        AnsiConsole.MarkupLine("  entities [comp]  - Query entities by component type");
-        AnsiConsole.MarkupLine("  load-scene [name]- Load a game scene by name/index (11 scenes: level0-level9, etc.)");
-        AnsiConsole.MarkupLine("  start-game       - Trigger game world load via ECS singleton (bypasses menu)");
-        AnsiConsole.MarkupLine("  list-saves       - List save files discovered by the bridge");
-        AnsiConsole.MarkupLine("  load-save [name] - Load a save by name (default: AUTOSAVE_1)");
-        AnsiConsole.MarkupLine("  dismiss          - Dismiss 'Press Any Key to Continue' loading screen");
-        AnsiConsole.MarkupLine("  click-button [name] - Click a named Unity UI button (e.g. DINOForge_ModsButton)");
-        AnsiConsole.MarkupLine("  toggle-ui [target]  - Toggle DINOForge UI: modmenu (F10) or debug (F9)");
-        AnsiConsole.MarkupLine("  scan-scene [filter] - Dump active MonoBehaviours + their void() methods");
+        AnsiConsole.MarkupLine("  catalog <cat>      - Dump game catalog (units/buildings/projectiles)");
+        AnsiConsole.MarkupLine("  entities <comp>    - Query entities by component type");
+        AnsiConsole.MarkupLine("  load-scene <name>  - Load a game scene by name/index (11 scenes: level0-level9, etc.)");
+        AnsiConsole.MarkupLine("  start-game         - Trigger game world load via ECS singleton (bypasses menu)");
+        AnsiConsole.MarkupLine("  list-saves         - List save files discovered by the bridge");
+        AnsiConsole.MarkupLine("  load-save <name>   - Load a save by name (default: AUTOSAVE_1)");
+        AnsiConsole.MarkupLine("  dismiss            - Dismiss 'Press Any Key to Continue' loading screen");
+        AnsiConsole.MarkupLine("  click-button <name>   - Click a named Unity UI button (e.g. DINOForge_ModsButton)");
+        AnsiConsole.MarkupLine("  toggle-ui <target>    - Toggle DINOForge UI: modmenu (F10) or debug (F9)");
+        AnsiConsole.MarkupLine("  scan-scene <filter>   - Dump active MonoBehaviours + their void() methods");
         AnsiConsole.MarkupLine("  invoke-method <target> <method> - Call a void() method on matching MB");
-        AnsiConsole.MarkupLine("  ui-tree [selector]  - Snapshot the live Unity UI hierarchy (Playwright-style DOM)");
+        AnsiConsole.MarkupLine("  ui-tree <selector>    - Snapshot the live Unity UI hierarchy (Playwright-style DOM)");
         AnsiConsole.MarkupLine("  demo             - Full end-to-end demo: menu → mods → F9/F10 → save → gameplay");
         AnsiConsole.MarkupLine("  --help, -h       - Show this help");
         AnsiConsole.MarkupLine("");
         AnsiConsole.MarkupLine("[grey]JSON-output commands (for MCP/scripting):[/]");
-        AnsiConsole.MarkupLine("  get-stat <sdk_path> [idx]          - Read stat value by SDK path (JSON)");
-        AnsiConsole.MarkupLine("  apply-override <sdk_path> <value> [mode] [filter] - Apply stat override (JSON)");
-        AnsiConsole.MarkupLine("  get-component-map [sdk_path]       - SDK-to-ECS component mappings (JSON)");
-        AnsiConsole.MarkupLine("  reload-packs [path]                - Reload content packs from disk (JSON)");
-        AnsiConsole.MarkupLine("  verify-mod <pack_path>             - End-to-end mod verification (JSON)");
-        AnsiConsole.MarkupLine("  dump-state [category]              - ECS state snapshot as JSON");
+        AnsiConsole.MarkupLine("  get-stat <sdk_path> <idx>            - Read stat value by SDK path (JSON)");
+        AnsiConsole.MarkupLine("  apply-override <sdk_path> <value> <mode> <filter> - Apply stat override (JSON)");
+        AnsiConsole.MarkupLine("  get-component-map <sdk_path>         - SDK-to-ECS component mappings (JSON)");
+        AnsiConsole.MarkupLine("  reload-packs <path>                  - Reload content packs from disk (JSON)");
+        AnsiConsole.MarkupLine("  verify-mod <pack_path>               - End-to-end mod verification (JSON)");
+        AnsiConsole.MarkupLine("  dump-state <category>                - ECS state snapshot as JSON");
     }
 
     private static int ShowHelpAndReturn(int code)

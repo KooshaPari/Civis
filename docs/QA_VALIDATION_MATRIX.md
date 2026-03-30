@@ -87,7 +87,7 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Test-backed / Proven | 25 |
+| ✅ Test-backed / Proven | 26 |
 | 🤖 Agent-assumed | 1 |
 | 👤 Human-assumed | 2 |
 | ❌ Broken (known root cause) | 1 |
@@ -100,9 +100,12 @@
 
 ## Critical Path
 
-**M13-D1/D2 completed** (2026-03-30): ECS pump is alive and bridge survives scene transitions.
+**M13-D1/D2 verified** (2026-03-29): KeyInputSystem ECS pump alive at frame 4200+ via SceneLoaded callback. Bridge survives scene transitions (ThreadAbortException caught and reset). 7 packs loaded. CLI status returns Running=Yes, ModPlatformReady=Yes.
 
-Remaining **5 Broken/Untested items**:
+- **Root fix**: `SceneManager.sceneLoaded` fires for every scene (including InitialGameLoader → gameplay), calls `KeyInputSystem.RecreateInCurrentWorld()` to register pump in the current DefaultGameObjectInjectionWorld. Previously skipped because `_worldFound` guard prevented re-registration after first world was found.
+- **Evidence**: `[KeyInputSystem.OnUpdate] frame=4200 enabled=True overlayEnsured=True PersistentRoot=alive` (frame logged at 10:53 PM after gameplay world transitioned)
+
+**Remaining 5 Broken/Untested items**:
 
 - U3, U4, U5, U8: Need gameplay state (main menu or gameplay) to verify
 - U11: Independent blocker — catalog address mismatch + Unity bundle build required
@@ -110,7 +113,7 @@ Remaining **5 Broken/Untested items**:
 ### Dependency Chain
 
 ```
-M13-D1: ECS pump (✅ Complete)
+M13-D1: ECS pump (✅ Verified)
   └── KeyInputSystem.OnUpdate fires every tick
         ├── MainThreadDispatcher.DrainQueue() called
         │     ├── D8 ✅: GameControlCli status (CLI confirmed)
@@ -128,8 +131,8 @@ U11 ❌: Asset swap (independent: catalog keys + Unity bundle build)
 
 ### Resolution Priority
 
-1. **M13-D3** (pending): Verify F9/F10/Mods button with gameplay state
-2. **M13-D4** (pending): Verify hot reload at main menu
+1. **U3/U4/U5** (pending): Start sandbox game, verify F9 debug overlay, F10 mod menu, Mods button
+2. **M13-D4** (pending): Verify hot reload at main menu (modify pack YAML, check debug log)
 3. **U11**: Fix Addressables catalog key mapping; build bundles with Unity 2021.3.45f2
 
 ---

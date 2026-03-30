@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Note:** DesktopCompanion (WinUI 3) requires local build with VS 2022 + Windows SDK toolchain
 > (XamlCompiler needs VC++ ATL/MFC). CI releases do not include the Companion zip — build it locally.
 
+### Fixed
+
+- **M13 D1/D2: KeyInputSystem ECS pump survives all scene transitions** — KeyInputSystem now re-registers in the current ECS world on every `SceneManager.sceneLoaded` callback, ensuring the main-thread pump (DrainQueue) and bridge supervisor survive InitialGameLoader → MainMenu → gameplay transitions. Previously, KeyInputSystem was only registered during InitialGameLoader and missed the gameplay world. Root cause: `_worldFound` flag prevented re-registration after the first world was found, and `OnWorldReady` was guarded against InitialGameLoader. Fix adds `SceneManager.sceneLoaded` callback in Plugin.Awake that calls `KeyInputSystem.RecreateInCurrentWorld()` on every scene load, and a world-change check in `TryRegisterKeyInputSystem` that re-registers when `DefaultGameObjectInjectionWorld` changes. ECS pump verified alive at frame 4200+ in gameplay world.
+
+- **M13 D2: Bridge server direct ECS reads** — GameBridgeServer now queries `World.DefaultGameObjectInjectionWorld` directly for entity counts and other status data instead of going through RuntimeDriver's `ModPlatform`, bypassing the destroyed-RuntimeDriver problem during scene transitions.
+
+### Added
+
+- **M13 D1: SceneLoaded watcher** — Plugin.Awake registers a static `SceneManager.sceneLoaded` callback that fires for every scene load (including InitialGameLoader → gameplay transitions). This is the most reliable scene-transition detector since it fires synchronously when Unity finishes loading a scene.
+
+- **M13 D1: KeyInputSystem.RecreateInCurrentWorld** — Static public method on KeyInputSystem that safely registers a KeyInputSystem instance in `World.DefaultGameObjectInjectionWorld` whenever called. Called from both `OnSceneLoaded` (for immediate registration) and from `Plugin.TryResurrect` (for post-resurrection bridging).
+
 ## [0.16.0] - 2026-03-29
 
 ### Added

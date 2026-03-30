@@ -218,6 +218,7 @@ namespace DINOForge.Runtime.Bridge
                     while (_running && pipe.IsConnected)
                     {
                         string? line = null;
+                        bool abortDuringRead = false;
                         try
                         {
                             WriteDebug("[GameBridgeServer] Reading line...");
@@ -226,24 +227,79 @@ namespace DINOForge.Runtime.Bridge
                         }
                         catch (IOException ex)
                         {
-                            WriteDebug($"[GameBridgeServer] Read IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
-                            // Thread.Abort may manifest as IOException with COR_E_THREADABORT HResult.
+                            try { WriteDebug($"[GameBridgeServer] Read IOException: {ex.Message} (HResult=0x{ex.HResult:X8})"); } catch { }
                             if (ex.HResult == COR_E_THREADABORT)
                             {
                                 Thread.ResetAbort();
-                                WriteDebug("[GameBridgeServer] Thread abort detected and reset — restarting connection.");
+                                abortDuringRead = true;
+                                try { WriteDebug("[GameBridgeServer] COR_E_THREADABORT detected — abortDuringRead=true"); } catch { }
                             }
-                            break;
+                            else
+                            {
+                                try { WriteDebug("[GameBridgeServer] Non-COR_E_THREADABORT IOException — breaking"); } catch { }
+                                break;
+                            }
                         }
                         catch (ObjectDisposedException)
                         {
+                            try { WriteDebug("[GameBridgeServer] ObjectDisposedException — breaking"); } catch { }
                             break;
                         }
+                        catch (ThreadAbortException)
+                        {
+                            abortDuringRead = true;
+                            Thread.ResetAbort();
+                            try { WriteDebug("[GameBridgeServer] ThreadAbortException in inner block — abortDuringRead=true"); } catch { }
+                        }
+                        catch (Exception ex)
+                        {
+                            string exName = (ex != null) ? ex.GetType().Name : "null";
+                            string exMsg = (ex != null) ? ex.Message : "unknown";
+                            try { WriteDebug($"[GameBridgeServer] Unexpected inner exception: {exName}: {exMsg}"); } catch { }
+                            break;
+                        }
+
+                        // If thread was aborted during read, reset abort BEFORE any other operations.
+                        // Then write a fallback response so the client unblocks.
+                        if (abortDuringRead)
+                        {
+                            Thread.ResetAbort();
+                            try { WriteDebug("[GameBridgeServer] ThreadAbort/IO — writing fallback response."); } catch { }
+                            try
+                            {
+                                byte[] fallback = Encoding.UTF8.GetBytes(
+                                    "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge thread abort\"}}\n");
+                                pipe.Write(fallback, 0, fallback.Length);
+                                pipe.Flush();
+                                try { WriteDebug("[GameBridgeServer] Fallback response written successfully."); } catch { }
+                            }
+                            catch (ThreadAbortException)
+                            {
+                                Thread.ResetAbort();
+                                try { WriteDebug("[GameBridgeServer] Fallback pipe.Write ThreadAbortException — resetting abort."); } catch { }
+                            }
+                            catch (Exception ex2)
+                            {
+                                try { WriteDebug($"[GameBridgeServer] Fallback pipe.Write failed: {ex2.GetType().Name}: {ex2.Message}"); } catch { }
+                            }
+                            break;
+                        }
+
+                        try { WriteDebug("[GameBridgeServer] Read completed successfully, processing..."); } catch { }
 
                         if (line == null) break;
                         if (string.IsNullOrWhiteSpace(line)) continue;
 
-                        string response = ProcessMessage(line);
+                        string response;
+                        try
+                        {
+                            response = ProcessMessage(line);
+                        }
+                        catch (ThreadAbortException)
+                        {
+                            Thread.ResetAbort();
+                            response = "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Thread abort in handler\"}}";
+                        }
 
                         try
                         {
@@ -253,7 +309,7 @@ namespace DINOForge.Runtime.Bridge
                         }
                         catch (IOException ex)
                         {
-                            WriteDebug($"[GameBridgeServer] Write IOException: {ex.Message}");
+                            try { WriteDebug($"[GameBridgeServer] Write IOException: {ex.Message}"); } catch { }
                             break;
                         }
                         catch (ObjectDisposedException)
@@ -274,27 +330,27 @@ namespace DINOForge.Runtime.Bridge
                     // DINO/Unity may abort threads during scene transitions.
                     // Reset the abort and continue the loop — the bridge must survive.
                     System.Threading.Thread.ResetAbort();
-                    WriteDebug("[GameBridgeServer] ThreadAbortException caught and reset — bridge surviving.");
+                    WriteDebug("[GameBridgeServer] [OUTER] ThreadAbortException caught — bridge surviving.");
                 }
                 catch (IOException ex)
                 {
                     // Thread.Abort may manifest as IOException with COR_E_THREADABORT HResult
                     // (0x80131623) when the abort interrupts a blocking synchronous I/O call.
                     // See: https://github.com/dotnet/runtime/issues/30675
-                    WriteDebug($"[GameBridgeServer] IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
+                    WriteDebug($"[GameBridgeServer] [OUTER-IO] IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
                     if (ex.HResult == COR_E_THREADABORT)
                     {
                         Thread.ResetAbort();
-                        WriteDebug("[GameBridgeServer] Thread abort (wrapped as IOException) detected — resetting and restarting.");
+                        WriteDebug("[GameBridgeServer] [OUTER-IO] COR_E_THREADABORT — resetting and restarting.");
                     }
                     else
                     {
-                        WriteDebug($"[GameBridgeServer] Non-abort IOException — will retry on next loop iteration.");
+                        WriteDebug($"[GameBridgeServer] [OUTER-IO] Non-abort IOException.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[GameBridgeServer] Error in server loop: {ex.Message}");
+                    WriteDebug($"[GameBridgeServer] [OUTER] Error in server loop: {ex.Message}");
                 }
                 finally
                 {
@@ -336,6 +392,15 @@ namespace DINOForge.Runtime.Bridge
             {
                 JToken result = DispatchMethod(request.Method, request.Params);
                 return SerializeSuccess(request.Id, result);
+            }
+            catch (ThreadAbortException tae)
+            {
+                // Thread.Abort() was called on the bridge thread (e.g., by Unity/Mono runtime cleanup).
+                // Reset the abort so the thread can continue. Return a valid response so the client
+                // unblocks — otherwise the pipe breaks without a response and the client hangs forever.
+                Thread.ResetAbort();
+                WriteDebug($"[GameBridgeServer] ThreadAbortException during '{request.Method}': {tae.Message}");
+                return SerializeError(request.Id, -32603, "Bridge thread abort — retry later");
             }
             catch (Exception ex)
             {
@@ -430,50 +495,43 @@ namespace DINOForge.Runtime.Bridge
         private JToken HandleStatus()
         {
             WriteDebug("[GameBridgeServer] HandleStatus ENTER");
-            // Status can be partially read from background thread (simple field reads)
             GameStatus status = new GameStatus
             {
                 Running = true,
                 WorldReady = IsPlatformAlive && _platform.IsWorldReady,
                 ModPlatformReady = IsPlatformAlive && _platform.IsInitialized,
                 Version = PluginInfo.VERSION,
+                EntityCount = -1,
                 LoadedPacks = new List<string>()
             };
 
-            // Read entity count + world name directly — no main-thread pump needed.
-            // Mono 2021.3 in DINO allows background-thread reads of World properties.
-            // If it throws (rare Unity version restriction), fall back to -1.
+            // Access KeyInputSystem cached values for world name.
+            // KeyInputSystem.OnUpdate caches these from the main ECS thread each frame.
+            // Reading static strings from a background thread is safe.
             try
             {
-                World? world = GetActiveWorld();
-                if (world != null && world.IsCreated)
-                {
-                    status.WorldName = world.Name ?? "";
-                    status.EntityCount = -1; // Default if query fails
-                    try
-                    {
-                        EntityQuery all = world.EntityManager.CreateEntityQuery(new EntityQueryDesc
-                        {
-                            Options = EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabled
-                        });
-                        status.EntityCount = all.CalculateEntityCount();
-                        all.Dispose();
-                    }
-                    catch { }
-                }
-                else
-                {
-                    status.EntityCount = -1;
-                    status.WorldName = "";
-                }
+                string? cachedName = KeyInputSystem.CachedWorldName;
+                if (!string.IsNullOrEmpty(cachedName))
+                    status.WorldName = cachedName;
+            }
+            catch (Exception worldEx)
+            {
+                WriteDebug($"[GameBridgeServer] KeyInputSystem.CachedWorldName failed: {worldEx.Message}");
+            }
+
+            // Try entity count from KeyInputSystem cached value (updated each OnUpdate frame).
+            // This is a static int read — thread-safe and never triggers ECS main-thread checks.
+            try
+            {
+                int cachedCount = KeyInputSystem.LastEntityCount;
+                status.EntityCount = cachedCount;
             }
             catch (Exception ex)
             {
-                WriteDebug($"[GameBridgeServer] Error in HandleStatus: {ex.Message}");
-                status.EntityCount = -1;
+                WriteDebug($"[GameBridgeServer] KeyInputSystem.LastEntityCount failed: {ex.Message}");
             }
 
-            // Populate loaded pack names from platform (background-thread safe)
+            // Populate loaded pack names from platform
             if (IsPlatformAlive && _platform.IsInitialized)
             {
                 try
@@ -488,7 +546,9 @@ namespace DINOForge.Runtime.Bridge
                 catch { }
             }
 
-            return JToken.FromObject(status);
+            WriteDebug($"[GameBridgeServer] HandleStatus EXIT: worldName='{status.WorldName}' entityCount={status.EntityCount}");
+            try { return JToken.FromObject(status); }
+            catch { return JToken.FromObject(new { EntityCount = -1, Running = true }); }
         }
 
         private JToken HandleGetCatalog()
@@ -2092,23 +2152,21 @@ namespace DINOForge.Runtime.Bridge
             World? preferred = World.DefaultGameObjectInjectionWorld;
             if (preferred != null && preferred.IsCreated)
                 return preferred;
-
-            // Fallback: find any world with entities (startup edge case before Default is set)
-            foreach (World w in World.All)
-            {
-                if (w.IsCreated && w.EntityManager.UniversalQuery.CalculateEntityCount() > 0)
-                    return w;
-            }
-            return preferred;
+            return null;
         }
 
         private static void WriteDebug(string msg)
         {
+            string? logPath = null;
+            try { logPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log"); } catch { }
+            if (logPath == null) return;
             try
             {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(logPath, $"[{DateTime.Now}] {msg}\n");
+            }
+            catch (ThreadAbortException)
+            {
+                Thread.ResetAbort();
             }
             catch { }
         }

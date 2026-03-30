@@ -29,11 +29,45 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private static World? _cachedWorld;
 
+        /// <summary>Cached world name updated by OnUpdate. Thread-safe string reads.</summary>
+        private static string _lastCachedWorldName = "";
+
+        /// <summary>
+        /// Cached entity count updated by OnUpdate.
+        /// Thread-safe read (int reads are atomic in .NET).
+        /// Read by GameBridgeServer.HandleStatus to avoid main-thread dispatch from background thread.
+        /// </summary>
+        private static int _lastCachedEntityCount;
+
+        /// <summary>Returns cached entity count from OnUpdate. Returns -2 if never updated.</summary>
+        public static int LastEntityCount => _lastCachedEntityCount;
+
+        /// <summary>Returns cached world name from OnUpdate.</summary>
+        public static string CachedWorldName => _lastCachedWorldName;
+
         /// <summary>
         /// Returns the ECS world that the active KeyInputSystem instance lives in.
         /// Falls back to World.DefaultGameObjectInjectionWorld if no instance exists.
         /// </summary>
-        public static World? GetActiveWorld() => _cachedWorld ?? World.DefaultGameObjectInjectionWorld;
+        public static World? GetActiveWorld()
+        {
+            World? result = _cachedWorld ?? World.DefaultGameObjectInjectionWorld;
+            // If cached/default world is null or disposed, scan all worlds for a valid one.
+            if (result == null || !result.IsCreated)
+            {
+                WriteDebug("[KeyInputSystem.GetActiveWorld] cached/default world invalid — scanning all worlds...");
+                foreach (World w in World.All)
+                {
+                    if (w.IsCreated)
+                    {
+                        result = w;
+                        WriteDebug($"[KeyInputSystem.GetActiveWorld] Found valid world: '{w.Name}'.");
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
 
         /// <summary>Called when F9 is pressed (set by RuntimeDriver if alive).</summary>
         public static System.Action? OnF9Pressed;
@@ -44,6 +78,9 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>Called when pack reload is requested (set by RuntimeDriver if alive). Can be invoked from background thread.</summary>
         public static System.Action? OnPackReloadRequested;
 
+        /// <summary>
+        /// Cached entity count updated by OnUpdate every tick.
+        /// Thread-safe read (int reads are atomic in .NET).
         private bool _overlayEnsured;
         private int _updateFrame;
         private bool _f9PreviousState;
@@ -61,7 +98,7 @@ namespace DINOForge.Runtime.Bridge
 
         protected override void OnCreate()
         {
-            WriteDebug("KeyInputSystem.OnCreate");
+            WriteDebug($"KeyInputSystem.OnCreate: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
             Enabled = true;
             // Attempt resurrection in OnCreate — this fires when a new ECS world starts,
             // which happens after DINO tears down the previous world (and our RuntimeDriver).
@@ -83,7 +120,10 @@ namespace DINOForge.Runtime.Bridge
 
         protected override void OnDestroy()
         {
-            WriteDebug("KeyInputSystem.OnDestroy called");
+            WriteDebug($"KeyInputSystem.OnDestroy: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
+            // Clear the cached world reference so GetActiveWorld() falls back to scanning
+            // all worlds until a new KeyInputSystem is registered in the new world.
+            _cachedWorld = null;
             base.OnDestroy();
         }
 
@@ -168,6 +208,41 @@ namespace DINOForge.Runtime.Bridge
                     OnF10Pressed?.Invoke();
                 }
                 _f10PreviousState = f10Current;
+
+                // Cache entity count for background-thread readers (GameBridgeServer).
+                // Cache world name and entity count for background-thread readers (GameBridgeServer).
+                // World name is a string (thread-safe), entity count is int (atomic read).
+                try
+                {
+                    World? w = _cachedWorld ?? World;
+                    // If our cached world is invalid, find any valid world.
+                    if (w == null || !w.IsCreated)
+                    {
+                        foreach (World candidate in World.All)
+                        {
+                            if (candidate.IsCreated) { w = candidate; break; }
+                        }
+                    }
+                    _lastCachedWorldName = (w != null && w.IsCreated) ? (w.Name ?? "") : "";
+                    if (w != null && w.IsCreated)
+                    {
+                        EntityQuery all = w.EntityManager.CreateEntityQuery(new EntityQueryDesc
+                        {
+                            Options = EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabled
+                        });
+                        _lastCachedEntityCount = all.CalculateEntityCount();
+                        all.Dispose();
+                    }
+                    else
+                    {
+                        _lastCachedEntityCount = -1;
+                    }
+                }
+                catch
+                {
+                    _lastCachedWorldName = "";
+                    _lastCachedEntityCount = -1;
+                }
             }
             catch (System.Exception ex)
             {
@@ -186,14 +261,38 @@ namespace DINOForge.Runtime.Bridge
         {
             try
             {
+                // Find the current ECS world: prefer DefaultGameObjectInjectionWorld if valid,
+                // otherwise scan all worlds and pick the first one with entities (handles scene
+                // transitions where DefaultGameObjectInjectionWorld may lag behind).
                 World? current = World.DefaultGameObjectInjectionWorld;
-                if (current == null || !current.IsCreated) return;
-                current.GetOrCreateSystem<KeyInputSystem>();
+                if (current == null || !current.IsCreated)
+                {
+                    WriteDebug("[KeyInputSystem.RecreateInCurrentWorld] DefaultWorld null/disposed — scanning all worlds...");
+                    foreach (World w in World.All)
+                    {
+                        if (w.IsCreated)
+                        {
+                            current = w;
+                            WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Found valid world: '{w.Name}'.");
+                            break;
+                        }
+                    }
+                }
+                if (current == null || !current.IsCreated)
+                {
+                    WriteDebug("[KeyInputSystem.RecreateInCurrentWorld] No valid world found.");
+                    return;
+                }
+                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Calling GetOrCreateSystem in '{current.Name}' (IsCreated={current.IsCreated}).");
+                KeyInputSystem sys = current.GetOrCreateSystem<KeyInputSystem>();
+                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Got system: World={sys.World?.Name ?? "null"} IsCreated={sys.World?.IsCreated ?? false}");
+                // Update the cached world so GetActiveWorld() returns the current world.
+                _cachedWorld = current;
                 WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Registered in '{current.Name}'.");
             }
             catch (Exception ex)
             {
-                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Failed: {ex.Message}");
+                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Failed: {ex.Message}\n{ex.StackTrace}");
             }
         }
 

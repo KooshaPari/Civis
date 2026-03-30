@@ -6,6 +6,9 @@ from pathlib import Path
 
 import pytest
 
+# Get hooks directory from conftest
+HOOKS_DIR = Path(__file__).parent.parent
+
 
 class TestCheckJson:
     """Test suite for JSON validation hook."""
@@ -18,8 +21,9 @@ class TestCheckJson:
         json_file.write_text(json.dumps(valid_data))
 
         # Act
+        check_json_script = HOOKS_DIR / "check-json.py"
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(check_json_script)],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -37,7 +41,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -55,7 +59,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -72,7 +76,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -89,7 +93,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -107,7 +111,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -125,7 +129,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)
@@ -145,7 +149,7 @@ class TestCheckJson:
 
         # Act
         result = subprocess.run(
-            [sys.executable, "../check-json.py"],
+            [sys.executable, str(HOOKS_DIR / "check-json.py")],
             capture_output=True,
             text=True,
             cwd=str(change_to_temp_dir)

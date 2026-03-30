@@ -9,6 +9,9 @@ import pytest
 hooks_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(hooks_dir))
 
+# Export hook scripts location for use in tests
+HOOKS_DIR = hooks_dir
+
 
 @pytest.fixture
 def temp_dir():

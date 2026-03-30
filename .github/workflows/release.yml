@@ -16,7 +16,7 @@ permissions: {}
 jobs:
   build-and-release:
     name: Build & Release
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
       attestations: write

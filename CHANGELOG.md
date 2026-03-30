@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-03-29
+
 ### Added
 
 - **M13: Asset Browser page** — DesktopCompanion WinUI 3 page for inspecting asset bundles across all installed packs; AssetBrowserViewModel with ReloadAsync command; PackAssetGroup and BundleEntry data models for hierarchical asset browsing; displays pack name, version, total bundle count, total size, and per-bundle metrics (file size, asset count, manifest presence); details pane shows selected bundle info; integrated with MainWindow navigation as "Asset Browser" menu item; new value converters (NullToVisibilityConverter, NullToStringConverter) added to theme resources; scans packs/*/assets/bundles/ directories to discover .bundle files and .manifest metadata
@@ -1091,7 +1093,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Comparison & Release Links
 
-[Unreleased]: https://github.com/KooshaPari/Dino/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/KooshaPari/Dino/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/KooshaPari/Dino/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/KooshaPari/Dino/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/KooshaPari/Dino/compare/v0.12.0...v0.14.0
 [0.12.0]: https://github.com/KooshaPari/Dino/compare/v0.11.0...v0.12.0

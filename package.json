@@ -8,6 +8,9 @@
     "lint": "oxlint",
     "format": "oxfmt --write ."
   },
+  "dependencies": {
+    "@phenotype/docs": "^0.1.0"
+  },
   "devDependencies": {
     "oxlint": "latest",
     "typescript": "latest",

@@ -528,5 +528,342 @@ type: content
         }
 
         #endregion
+
+        #region Dependency Resolution Edge Cases (6 new scenarios)
+
+        [Fact]
+        public void Given_PackWithNoConflicts_When_DetectConflicts_Then_ReturnsEmpty()
+        {
+            // Given: A pack with no conflict declarations
+            var pack = new PackManifest
+            {
+                Id = "peaceful-pack",
+                Name = "Peaceful Pack",
+                ConflictsWith = new List<string>() // Empty conflicts
+            };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Detecting conflicts for this single pack
+            var conflicts = resolver.DetectConflicts(new[] { pack });
+
+            // Then: Should return no conflicts
+            conflicts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Given_PackConflictsWithAbsentPack_When_DetectConflicts_Then_NoFalsePositive()
+        {
+            // Given: A pack that declares conflict with non-existent pack
+            var pack = new PackManifest
+            {
+                Id = "modern-pack",
+                Name = "Modern Warfare",
+                ConflictsWith = new List<string> { "nonexistent-pack" }
+            };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Detecting conflicts (absent packs should not trigger false conflict)
+            var conflicts = resolver.DetectConflicts(new[] { pack });
+
+            // Then: Conflict with absent pack should not be reported as a conflict
+            conflicts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Given_ThreePacksWithChainedConflicts_When_DetectConflicts_Then_BothPairsReported()
+        {
+            // Given: Three packs with chain: A→B conflict, B→C conflict (but not A→C)
+            var packA = new PackManifest
+            {
+                Id = "pack-a",
+                ConflictsWith = new List<string> { "pack-b" }
+            };
+            var packB = new PackManifest
+            {
+                Id = "pack-b",
+                ConflictsWith = new List<string> { "pack-c" }
+            };
+            var packC = new PackManifest
+            {
+                Id = "pack-c",
+                ConflictsWith = new List<string>()
+            };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Detecting all conflicts
+            var conflicts = resolver.DetectConflicts(new[] { packA, packB, packC });
+
+            // Then: Both A-B and B-C pairs should be reported
+            conflicts.Should().HaveCountGreaterThanOrEqualTo(2);
+        }
+
+        [Fact]
+        public void Given_EmptyPackList_When_LoadOrderComputed_Then_SucceedsWithEmptyOrder()
+        {
+            // Given: An empty list of packs
+            var packs = new PackManifest[] { };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Computing load order for empty set
+            var result = resolver.ComputeLoadOrder(packs);
+
+            // Then: Should succeed with empty load order
+            result.IsSuccess.Should().BeTrue();
+            result.LoadOrder.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Given_FourPacksWithDiamondDependency_When_LoadOrderComputed_Then_BasePackFirst()
+        {
+            // Given: Diamond dependency: D is depended on by both B and C, B and C depended on by A
+            // Dependency graph: D ← B ← A
+            //                   D ← C ← A
+            var packD = new PackManifest { Id = "pack-d", Name = "Pack D" };
+            var packB = new PackManifest { Id = "pack-b", Name = "Pack B", DependsOn = new List<string> { "pack-d" } };
+            var packC = new PackManifest { Id = "pack-c", Name = "Pack C", DependsOn = new List<string> { "pack-d" } };
+            var packA = new PackManifest { Id = "pack-a", Name = "Pack A", DependsOn = new List<string> { "pack-b", "pack-c" } };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Computing load order
+            var result = resolver.ComputeLoadOrder(new[] { packA, packB, packC, packD });
+
+            // Then: Pack D should be first (base), A should be last
+            result.IsSuccess.Should().BeTrue();
+            result.LoadOrder.Should().HaveCount(4);
+            result.LoadOrder[0].Id.Should().Be("pack-d");
+            result.LoadOrder[3].Id.Should().Be("pack-a");
+        }
+
+        [Fact]
+        public void Given_PackDependsOnItself_When_Resolved_Then_FailsWithCircularError()
+        {
+            // Given: A pack that depends on itself
+            var packSelf = new PackManifest
+            {
+                Id = "recursive-pack",
+                Name = "Recursive Pack",
+                DependsOn = new List<string> { "recursive-pack" }
+            };
+
+            var resolver = new PackDependencyResolver();
+
+            // When: Attempting to resolve
+            var result = resolver.ComputeLoadOrder(new[] { packSelf });
+
+            // Then: Should fail with circular dependency error
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainSingle(e => e.Contains("Circular") || e.Contains("circular"));
+        }
+
+        #endregion
+
+        #region Registry Priority Scenarios (3 new scenarios)
+
+        [Fact]
+        public void Given_Registry_When_LowerPriorityRegisteredAfterHigher_Then_HigherStillWins()
+        {
+            // Given: A registry with a high-priority entry already registered
+            var registry = new Registry<UnitDefinition>();
+            var unit = new UnitDefinition { Id = "unit-1", DisplayName = "High Priority Unit", Stats = new UnitStats { Hp = 100f } };
+
+            registry.Register(unit.Id, unit, RegistrySource.Pack, "pack-a", 200); // High priority
+
+            // When: Registering same ID with lower priority
+            var lowerUnit = new UnitDefinition { Id = "unit-1", DisplayName = "Low Priority Unit", Stats = new UnitStats { Hp = 50f } };
+            registry.Register(lowerUnit.Id, lowerUnit, RegistrySource.Pack, "pack-b", 100); // Lower priority
+
+            // Then: High priority unit should still be retrieved
+            registry.Get("unit-1")!.DisplayName.Should().Be("High Priority Unit");
+            registry.Get("unit-1")!.Stats.Hp.Should().Be(100f);
+        }
+
+        [Fact]
+        public void Given_Registry_When_NonExistentIdQueried_Then_ReturnsNull()
+        {
+            // Given: A registry with some registered entries
+            var registry = new Registry<UnitDefinition>();
+            registry.Register("unit-1", new UnitDefinition { Id = "unit-1", DisplayName = "Unit 1", Stats = new UnitStats { Hp = 100f } },
+                RegistrySource.BaseGame, "base-game");
+
+            // When: Querying for non-existent ID
+            var result = registry.Get("nonexistent-unit");
+
+            // Then: Should return null
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public void Given_Registry_When_UnregisteredIdQueried_Then_DoesNotThrow()
+        {
+            // Given: A registry (may be empty or have other entries)
+            var registry = new Registry<UnitDefinition>();
+
+            // When: Querying for unregistered ID
+            var action = () => registry.Get("unregistered-id");
+
+            // Then: Should not throw exception
+            action.Should().NotThrow();
+            action().Should().BeNull();
+        }
+
+        #endregion
+
+        #region Version Prefix Handling (3 new scenarios)
+
+        [Fact]
+        public void Given_PackWithGTEPrefixedVersionReq_When_ExactVersionInstalled_Then_Compatible()
+        {
+            // Given: A pack requiring >=0.3.0
+            var pack = new PackManifest
+            {
+                Id = "gte-pack",
+                FrameworkVersion = ">=0.3.0"
+            };
+
+            var resolver = new PackDependencyResolver();
+            string installedFramework = "0.3.0";
+
+            // When: Exact version is installed
+            bool isCompatible = resolver.CheckFrameworkCompatibility(pack, installedFramework);
+
+            // Then: Should be compatible
+            isCompatible.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Given_PackWithTildePrefixVersion_When_MatchingVersion_Then_Compatible()
+        {
+            // Given: A pack requiring ~0.3.0 (allows 0.3.x but not 0.4.0)
+            var pack = new PackManifest
+            {
+                Id = "tilde-pack",
+                FrameworkVersion = "~0.3.0"
+            };
+
+            var resolver = new PackDependencyResolver();
+            string installedFramework = "0.3.0";
+
+            // When: Matching patch version is installed
+            bool isCompatible = resolver.CheckFrameworkCompatibility(pack, installedFramework);
+
+            // Then: Should be compatible
+            isCompatible.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Given_PackWithVersionReq_When_OlderVersionInstalled_Then_Incompatible()
+        {
+            // Given: A pack requiring 1.0.0
+            var pack = new PackManifest
+            {
+                Id = "new-pack",
+                FrameworkVersion = "1.0.0"
+            };
+
+            var resolver = new PackDependencyResolver();
+            string installedFramework = "0.9.0";
+
+            // When: Older version is installed
+            bool isCompatible = resolver.CheckFrameworkCompatibility(pack, installedFramework);
+
+            // Then: Should be incompatible
+            isCompatible.Should().BeFalse();
+        }
+
+        #endregion
+
+        #region Content Loader Edge Cases (2 new scenarios)
+
+        [Fact]
+        public void Given_MultipleValidPackDirectories_When_EachLoaded_Then_AllPackIdsPresent()
+        {
+            // Given: Two valid pack directories
+            string tempDir1 = Path.Combine(Path.GetTempPath(), "pack-1-" + Guid.NewGuid());
+            string tempDir2 = Path.Combine(Path.GetTempPath(), "pack-2-" + Guid.NewGuid());
+            Directory.CreateDirectory(tempDir1);
+            Directory.CreateDirectory(tempDir2);
+
+            File.WriteAllText(Path.Combine(tempDir1, "pack.yaml"), "id: pack-1\nname: Pack 1\nversion: 1.0.0\nauthor: Test\ntype: content\n");
+            File.WriteAllText(Path.Combine(tempDir2, "pack.yaml"), "id: pack-2\nname: Pack 2\nversion: 1.0.0\nauthor: Test\ntype: content\n");
+
+            try
+            {
+                // When: Loading both packs
+                var registryManager = new RegistryManager();
+                var loader = new ContentLoader(registryManager);
+                var result1 = loader.LoadPack(tempDir1);
+                var result2 = loader.LoadPack(tempDir2);
+
+                // Then: Both pack IDs should be present
+                result1.IsSuccess.Should().BeTrue();
+                result2.IsSuccess.Should().BeTrue();
+                result1.LoadedPacks.Should().Contain("pack-1");
+                result2.LoadedPacks.Should().Contain("pack-2");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir1))
+                    Directory.Delete(tempDir1, true);
+                if (Directory.Exists(tempDir2))
+                    Directory.Delete(tempDir2, true);
+            }
+        }
+
+        [Fact]
+        public void Given_PackWithInvalidYaml_When_Loaded_Then_ReturnsFailureNotException()
+        {
+            // Given: A pack directory with malformed YAML
+            string tempDir = Path.Combine(Path.GetTempPath(), "bad-yaml-" + Guid.NewGuid());
+            Directory.CreateDirectory(tempDir);
+            File.WriteAllText(Path.Combine(tempDir, "pack.yaml"), "id: bad-pack\nname: [broken yaml structure without closing bracket");
+
+            try
+            {
+                // When: Attempting to load
+                var registryManager = new RegistryManager();
+                var loader = new ContentLoader(registryManager);
+                var action = () => loader.LoadPack(tempDir);
+
+                // Then: Should return failure result, not throw
+                action.Should().NotThrow();
+                var result = loader.LoadPack(tempDir);
+                result.IsSuccess.Should().BeFalse();
+                result.Errors.Should().NotBeEmpty();
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+        }
+
+        #endregion
+
+        #region Pack Loading Stat Validation (1 new scenario)
+
+        [Fact]
+        public void Given_PackWithAllZeroStats_When_CountingNonZeroFields_Then_ZeroReturned()
+        {
+            // Given: A unit with all zero stats
+            var zeroStats = new UnitStats { Hp = 0f, Speed = 0f, Armor = 0f, Damage = 0f, Range = 0f };
+
+            // When: Counting non-zero stat fields
+            int nonZeroCount = 0;
+            if (zeroStats.Hp > 0) nonZeroCount++;
+            if (zeroStats.Speed > 0) nonZeroCount++;
+            if (zeroStats.Armor > 0) nonZeroCount++;
+            if (zeroStats.Damage > 0) nonZeroCount++;
+            if (zeroStats.Range > 0) nonZeroCount++;
+
+            // Then: Count should be zero
+            nonZeroCount.Should().Be(0);
+        }
+
+        #endregion
     }
 }

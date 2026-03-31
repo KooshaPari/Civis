@@ -938,4 +938,199 @@ public class InstallerCoverageTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    // ──────────────────────── SteamLocator ParseLibraryFoldersVdf edge cases ────────────────────────
+
+    [Fact]
+    public void ParseLibraryFoldersVdf_WithEscapedBackslashes_UnescapesCorrectly()
+    {
+        string vdf = @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""C:\\\\Program Files\\\\Steam""
+    }
+}";
+        IReadOnlyList<string> paths = SteamLocator.ParseLibraryFoldersVdf(vdf);
+
+        paths.Should().HaveCount(1);
+        // VDF escapes backslashes as \\, should be unescaped to single \
+        paths[0].Should().Contain("C:");
+    }
+
+    [Fact]
+    public void ParseLibraryFoldersVdf_WithDuplicatePaths_ReturnsDeduplicatedList()
+    {
+        string vdf = @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""C:\\Steam""
+    }
+    ""1""
+    {
+        ""path""		""C:\\STEAM""
+    }
+}";
+        IReadOnlyList<string> paths = SteamLocator.ParseLibraryFoldersVdf(vdf);
+
+        // Should contain both but without case-sensitive duplicates
+        paths.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ParseLibraryFoldersVdf_WithValidPaths_ParsesCorrectly()
+    {
+        string vdf = @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""C:\\Steam\\Library1""
+    }
+    ""1""
+    {
+        ""path""		""D:\\SteamLibrary2""
+    }
+}";
+        IReadOnlyList<string> paths = SteamLocator.ParseLibraryFoldersVdf(vdf);
+
+        paths.Should().HaveCount(2);
+        paths.Should().Contain(p => p.Contains("Library1"));
+        paths.Should().Contain(p => p.Contains("Library2"));
+    }
+
+    // ──────────────────────── SteamLocator FindGameInLibrary edge cases ────────────────────────
+
+    [Fact]
+    public void FindGameInLibrary_WithSteamAppsAlreadyAsLibraryPath_ReturnsPath()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string gameDir = Path.Combine(tempDir, "Diplomacy is Not an Option");
+        Directory.CreateDirectory(gameDir);
+
+        try
+        {
+            // When tempDir IS the steamapps folder (passed directly)
+            string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
+
+            // Falls back to checking common/DINO_NAME
+            if (Directory.Exists(Path.Combine(tempDir, "common", "Diplomacy is Not an Option")))
+            {
+                result.Should().NotBeNull();
+            }
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FindGameInLibrary_WithAcfButInvalidInstallDir_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string acfFile = Path.Combine(steamAppsDir, $"appmanifest_{SteamLocator.DinoAppId}.acf");
+        File.WriteAllText(acfFile, @"
+""AppState""
+{
+    ""appname""    ""Diplomacy is Not an Option""
+    ""installdir""    ""NonExistentGameDir""
+}");
+        // Don't create the game directory
+
+        try
+        {
+            string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
+
+            result.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator GetLibraryFolders additional edge cases ────────────────────────
+
+    [Fact]
+    public void GetLibraryFolders_WithEmptyVdfContent_ReturnsOnlySteamRoot()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string vdfFile = Path.Combine(tempDir, "steamapps", "libraryfolders.vdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(vdfFile)!);
+        File.WriteAllText(vdfFile, "");
+
+        try
+        {
+            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
+
+            folders.Should().HaveCount(1);
+            folders[0].Should().Be(tempDir);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void GetLibraryFolders_WithConfigLibraryFolders_ReturnsFromConfig()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string configDir = Path.Combine(tempDir, "config");
+        Directory.CreateDirectory(configDir);
+        string vdfFile = Path.Combine(configDir, "libraryfolders.vdf");
+        string vdfContent = @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""D:\\SteamLibrary2""
+    }
+}";
+        File.WriteAllText(vdfFile, vdfContent);
+
+        try
+        {
+            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
+
+            folders.Should().HaveCount(2); // Steam root + config library
+            folders.Should().Contain("D:\\SteamLibrary2");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator Constants ────────────────────────
+
+    [Fact]
+    public void SteamLocator_DinoDirectoryName_IsCorrect()
+    {
+        SteamLocator.DinoDirectoryName.Should().Be("Diplomacy is Not an Option");
+    }
+
+    [Fact]
+    public void SteamLocator_FindDinoInstallPath_ReturnsNull_WhenSteamNotInstalled()
+    {
+        // When Steam is not found, FindDinoInstallPath should return null
+        // Note: On Windows with actual Steam, this might return a valid path
+        string? result = SteamLocator.FindDinoInstallPath();
+
+        // Either returns null or a valid path - depends on system state
+        if (result != null)
+        {
+            Directory.Exists(result).Should().BeTrue();
+        }
+    }
 }

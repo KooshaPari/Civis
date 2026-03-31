@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.SDK;
 using DINOForge.SDK.Assets;
+using DINOForge.SDK.Dependencies;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Universe;
 using FluentAssertions;
@@ -1498,6 +1499,244 @@ name: Inline Universe
 
         action.Should().NotThrow();
     }
+
+    // ──────────────────────── PackSubmoduleManager coverage ────────────────────────
+
+    [Fact]
+    public void PackSubmoduleManager_ListPacks_WithNoGitmodulesFile_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        List<PackSubmoduleEntry> entries = manager.ListPacks();
+
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PackSubmoduleManager_ListPacks_WithPacksSubmodule_ReturnsEntries()
+    {
+        using var tempDir = new TempDirectory();
+        string gitmodulesPath = Path.Combine(tempDir.Path, ".gitmodules");
+        File.WriteAllText(gitmodulesPath, @"[submodule ""packs/warfare-starwars""]
+    path = packs/warfare-starwars
+    url = https://github.com/example/warfare-starwars
+[submodule ""packs/economy-balanced""]
+    path = packs/economy-balanced
+    url = https://github.com/example/economy-balanced
+[submodule ""docs/readme""]
+    path = docs/readme
+    url = https://github.com/example/readme
+");
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        List<PackSubmoduleEntry> entries = manager.ListPacks();
+
+        entries.Should().HaveCount(2);
+        entries.Should().Contain(e => e.Path == "packs/warfare-starwars");
+        entries.Should().Contain(e => e.Path == "packs/economy-balanced");
+        entries.Should().NotContain(e => e.Path == "docs/readme");
+    }
+
+    [Fact]
+    public void PackSubmoduleManager_ListPacks_WithNonPackSubmodule_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+        string gitmodulesPath = Path.Combine(tempDir.Path, ".gitmodules");
+        File.WriteAllText(gitmodulesPath, @"[submodule ""external/dep""]
+    path = external/dep
+    url = https://github.com/example/dep
+");
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        List<PackSubmoduleEntry> entries = manager.ListPacks();
+
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PackSubmoduleManager_ReadLockFile_WithNoLockFile_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        Dictionary<string, string> lockEntries = manager.ReadLockFile();
+
+        lockEntries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PackSubmoduleManager_ReadLockFile_WithValidEntries_ReturnsDictionary()
+    {
+        using var tempDir = new TempDirectory();
+        string lockPath = Path.Combine(tempDir.Path, "packs.lock");
+        File.WriteAllText(lockPath, @"# Comment line
+packs/warfare-starwars a1b2c3d4e5f6
+packs/economy-balanced f6e5d4c3b2a1
+# Another comment
+packs/scenario-tutorial 1234567890ab
+");
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        Dictionary<string, string> lockEntries = manager.ReadLockFile();
+
+        lockEntries.Should().HaveCount(3);
+        lockEntries["packs/warfare-starwars"].Should().Be("a1b2c3d4e5f6");
+        lockEntries["packs/economy-balanced"].Should().Be("f6e5d4c3b2a1");
+        lockEntries["packs/scenario-tutorial"].Should().Be("1234567890ab");
+    }
+
+    [Fact]
+    public void PackSubmoduleManager_ReadLockFile_SkipsInvalidLines()
+    {
+        using var tempDir = new TempDirectory();
+        string lockPath = Path.Combine(tempDir.Path, "packs.lock");
+        File.WriteAllText(lockPath, @"# Only one part
+packs/invalid
+# Blank lines should be skipped
+
+packs/valid-parts abc123
+# Extra parts beyond two
+packs/three parts extra
+");
+
+        var manager = new PackSubmoduleManager(tempDir.Path);
+
+        Dictionary<string, string> lockEntries = manager.ReadLockFile();
+
+        lockEntries.Should().HaveCount(1);
+        lockEntries["packs/valid-parts"].Should().Be("abc123");
+    }
+
+    // ──────────────────────── AssetService coverage ────────────────────────
+
+    [Fact]
+    public void AssetService_Constructor_WithNullGameDir_ThrowsArgumentNullException()
+    {
+        Action action = () => new AssetService(null!);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void AssetService_Constructor_WithValidPath_SetsGameDir()
+    {
+        using var tempDir = new TempDirectory();
+
+        var service = new AssetService(tempDir.Path);
+
+        service.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AssetService_ExpectedUnityVersion_IsCorrect()
+    {
+        AssetService.ExpectedUnityVersion.Should().Be("2021.3");
+    }
+
+    [Fact]
+    public void AssetService_ListBundles_WithNoStreamingAssetsDir_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+
+        var service = new AssetService(tempDir.Path);
+
+        IReadOnlyList<BundleInfo> bundles = service.ListBundles();
+
+        bundles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AssetService_ListAssets_WithNonExistentBundle_ThrowsFileNotFoundException()
+    {
+        using var tempDir = new TempDirectory();
+        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
+
+        var service = new AssetService(tempDir.Path);
+
+        Action action = () => service.ListAssets(nonexistentBundle);
+
+        action.Should().Throw<FileNotFoundException>();
+    }
+
+    [Fact]
+    public void AssetService_ExtractAsset_WithNonExistentBundle_ReturnsNull()
+    {
+        using var tempDir = new TempDirectory();
+        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
+
+        var service = new AssetService(tempDir.Path);
+
+        byte[]? result = service.ExtractAsset(nonexistentBundle, "some-asset");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void AssetService_ValidateModBundle_WithNonExistentFile_ReturnsErrorResult()
+    {
+        using var tempDir = new TempDirectory();
+        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
+
+        var service = new AssetService(tempDir.Path);
+
+        AssetValidationResult result = service.ValidateModBundle(nonexistentBundle);
+
+        result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AssetService_ReplaceAsset_WithNonExistentBundle_ReturnsFalse()
+    {
+        using var tempDir = new TempDirectory();
+        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
+
+        var service = new AssetService(tempDir.Path);
+
+        bool result = service.ReplaceAsset(nonexistentBundle, "asset", new byte[] { 1, 2, 3 }, Path.Combine(tempDir.Path, "out.bundle"));
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AssetService_FindBundlesWithType_WithNoBundles_ReturnsEmpty()
+    {
+        using var tempDir = new TempDirectory();
+
+        var service = new AssetService(tempDir.Path);
+
+        IReadOnlyList<BundleInfo> bundles = service.FindBundlesWithType("Texture2D");
+
+        bundles.Should().BeEmpty();
+    }
+
+    // ──────────────────────── AddressablesCatalog ParseEntryData coverage ────────────────────────
+
+    [Fact]
+    public void AddressablesCatalog_ParseEntryData_WithValidEntry_ReturnsEntry()
+    {
+        using var tempDir = new TempDirectory();
+        string catalogFile = Path.Combine(tempDir.Path, "catalog.json");
+        // Valid catalog with at least one entry - exercises ParseEntryData internally
+        string catalog = @"{
+    ""m_InternalIds"": [""entry:test-asset""],
+    ""m_KeyDataString"": """",
+    ""m_BucketDataString"": """",
+    ""m_EntryDataString"": """"
+}";
+        File.WriteAllText(catalogFile, catalog);
+
+        Action action = () => AddressablesCatalog.Load(catalogFile);
+
+        action.Should().NotThrow();
+    }
+
+    // ──────────────────────── ContentLoader error paths coverage ────────────────────────
 
     /// <summary>RAII temp directory that auto-deletes on dispose.</summary>
     private sealed class TempDirectory : IDisposable

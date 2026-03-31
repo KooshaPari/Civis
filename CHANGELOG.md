@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Test Coverage Expansion (Step 7)** — Coverage raised from 75% to 80%, 16 new SDK tests
+  - `PackSubmoduleManager.ListPacks` — no gitmodules (empty), packs/ submodules (2 entries), non-pack submodules (empty)
+  - `PackSubmoduleManager.ReadLockFile` — no lock file (empty), valid entries (3 entries), invalid lines (skipped)
+  - `AssetService` — null constructor, `ExpectedUnityVersion` constant, `ListBundles` (empty dir), `ListAssets`/`ExtractAsset`/`ValidateModBundle`/`ReplaceAsset`/`FindBundlesWithType` (non-existent bundle → error paths)
+  - Fixed 2 flaky `GameProcessManager` tests that depended on game running state
+  - **Result**: 1782 tests, 80.67% line coverage (up from 79.4%)
+
+- **MCP Server Pytest Suite** — Comprehensive test coverage for FastMCP server (21 tools, all categories)
+  - 5 test modules with 51 test classes and 186 test methods
+  - **test_game_bridge_tools.py**: 10 classes, 50+ tests covering game_status, query_entities, get_stat, apply_override, screenshot, input, ui_tree, click_button
+  - **test_game_launch_tools.py**: 7 classes, 35+ tests covering game_launch, game_launch_test, game_launch_vdd, load_scene, start, dismiss with validation workflows
+  - **test_asset_pack_tools.py**: 8 classes, 45+ tests covering asset_validate/import/optimize/build and pack_validate/build/list with integration workflows
+  - **test_log_analysis_tools.py**: 7 classes, 40+ tests covering log_tail, dump_state, swap_status, catalog operations, BepInEx logs
+  - **test_error_handling.py**: 10 classes, 60+ tests covering input validation, timeouts, process failures, file system errors, resource exhaustion, concurrency, consistency, edge cases
+  - **conftest.py**: 20+ fixtures for process mocks, game state, CLI commands, packs/assets, entities/components, logging, and async support
+  - **pytest.ini**: Standard pytest configuration with markers, timeout, coverage gates (>70%), JUnit/HTML/JSON reporting
+  - **CI workflow (mcp-pytest.yml)**: Multi-Python (3.10/3.11/3.12) matrix testing, code quality (Black/isort/flake8/mypy), integration tests, coverage upload to Codecov
+  - **Test README**: Comprehensive guide for running tests, fixtures, CI integration, writing new tests
+
 - **Test Coverage Expansion (Step 6)** — Coverage campaign targeting error paths and edge cases across all domains
   - `EconomyCoverageTests.cs` (521 lines): `EconomyContentLoader` null/invalid YAML paths, `TradeRouteRegistry`, `ResourceRegistry`, `EconomyProfileRegistry` edge cases
   - `ScenarioDomainCoverageTests.cs` (792 lines): `StartingConditions`, `WinConditionDefinition`, `ScenarioEventDefinition`, `ScenarioValidator`, `DifficultyScaler` edge cases

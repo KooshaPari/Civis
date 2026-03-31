@@ -13,10 +13,8 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
     <!-- Coverage gates enforced on every PR. Raise incrementally as tests are added.
-         Current state (77.2%): SDK 73.6%, Bridge.Client 56.8%, Economy 80.3%,
-         Scenario 74.4%, UI 77.7%, Installer 76.0%, Warfare 95.6%, Protocol 100%
-         To raise: add tests for uncovered lines, then bump Threshold. -->
-    <Threshold>75</Threshold>
+         Step 7: Raise to 80% (from 75%). 85% requires closing SDK PackSubmoduleManager Git-mock gap. -->
+    <Threshold>80</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>
@@ -55,6 +53,23 @@
     <ProjectReference Include="..\Domains\Economy\DINOForge.Domains.Economy.csproj" />
     <ProjectReference Include="..\Domains\Scenario\DINOForge.Domains.Scenario.csproj" />
     <ProjectReference Include="..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+  </ItemGroup>
+
+  <!-- Link pure-C# Runtime bridge files directly — no Unity/BepInEx project reference needed -->
+  <!-- Step 6: Runtime Extraction Tests (30 tests for pure-C# bridge logic) -->
+  <ItemGroup>
+    <Compile Include="..\Runtime\Bridge\PackStatMappings.cs">
+      <Link>RuntimeBridge\PackStatMappings.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\Bridge\VanillaArchetypeMapper.cs">
+      <Link>RuntimeBridge\VanillaArchetypeMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\Bridge\ComponentMapping.cs">
+      <Link>RuntimeBridge\ComponentMapping.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\Bridge\ComponentMap.cs">
+      <Link>RuntimeBridge\ComponentMap.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <!-- Exclude sub-projects that have their own csproj -->

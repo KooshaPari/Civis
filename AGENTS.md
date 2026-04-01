@@ -257,6 +257,100 @@ AGENTS.md                     # This file
 4. Update this AGENTS.md under "MCP Server Tools"
 5. Notify qa-engineer to add CI coverage
 
+## Kilo Gastown Integration
+
+This repo is a Kilo Gastown rig.
+
+### Rig Identity
+
+| Property | Value |
+|----------|-------|
+| **Rig ID** | `6c6d4555-91e8-4f06-a974-018cf3e766d2` |
+| **Town ID** | `78a8d430-a206-4a25-96c0-5cd9f5caf984` |
+| **Town Name** | Gastown |
+| **Feature Branch** | `convoy/methodology-dino/c61d464c/head` |
+
+### Kilo Coordination Tools
+
+Use these tools for work delegation and progress tracking:
+
+| Tool | Purpose |
+|------|---------|
+| `gt_sling` | Delegate a single bead (work item) to another agent |
+| `gt_sling_batch` | Delegate multiple beads at once |
+| `gt_prime` | Get full context: identity, hooked bead, mail, open beads |
+| `gt_done` | Push branch and submit work for review |
+| `gt_bead_close` | Close a bead when work is complete |
+| `gt_bead_status` | Inspect any bead by ID |
+| `gt_mail_send` | Send a typed message to another agent |
+| `gt_mail_check` | Read and acknowledge pending mail |
+| `gt_escalate` | Create an escalation bead for blocked issues |
+| `gt_checkpoint` | Write crash-recovery state |
+| `gt_status` | Emit plain-language status for dashboard |
+| `gt_nudge` | Real-time wake-up nudge to another agent |
+| `gt_triage_resolve` | Resolve a triage request |
+| `gt_mol_current` | Get current molecule step for hooked bead |
+| `gt_mol_advance` | Advance to next molecule step |
+
+### Work Delegation Pattern
+
+When a bead requires skills outside your domain:
+
+```bash
+# Delegate to the appropriate specialist
+gt_sling <bead_id> <target_agent_id>
+
+# Batch delegate multiple beads
+gt_sling_batch [<bead_id_1>, <bead_id_2>, ...] <target_agent_id>
+```
+
+### Convoy Pattern
+
+Work flows through convoys — tracked feature branches that aggregate multiple agents' contributions:
+
+1. Agent completes a bead → commits + pushes to feature branch
+2. `gt_done` → bead transitions to `in_review`
+3. Refinery merges the convoy branch when all agents complete
+4. Feature branch lands on main
+
+### Pre-Submission Gates
+
+Before calling `gt_done`, always run:
+
+```bash
+# Build
+dotnet build src/DINOForge.sln
+
+# Test (all must pass)
+dotnet test src/DINOForge.sln
+
+# Format check
+dotnet format src/DINOForge.sln --verify-no-changes
+```
+
+### Stack Info
+
+| Component | Technology |
+|-----------|------------|
+| **Language** | C# (.NET 11 preview) |
+| **Game** | Diplomacy is Not an Option (Unity ECS) |
+| **Mod Loader** | BepInEx 5.4.x |
+| **Build** | `dotnet build src/DINOForge.sln` |
+| **Test** | `dotnet test src/DINOForge.sln` |
+| **Lint** | `dotnet format --verify-no-changes` |
+| **Pack Validate** | `dotnet run --project src/Tools/PackCompiler -- validate packs/` |
+| **SDK Target** | netstandard2.0 |
+| **Tools Target** | net11.0 |
+
+### Agent Identity
+
+Each agent in this rig follows the GUPP principle: **work is on your hook — execute immediately**. When dispatched with a bead:
+1. Prime: `gt_prime` for full context
+2. Work: Implement the bead's requirements
+3. Commit frequently: small, focused commits pushed often
+4. Checkpoint: `gt_checkpoint` after significant milestones
+5. Done: push branch and `gt_done`
+
 ## Contact & Escalation
 
 For questions about:

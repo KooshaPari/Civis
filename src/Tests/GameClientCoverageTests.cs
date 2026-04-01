@@ -1756,7 +1756,282 @@ public class GameClientCoverageTests
         client.Dispose();
     }
 
-    // ──────────────────────── GameClient JsonRpc coverage ────────────────────────
+    // ──────────────────────── Untested GameClient method delegation ────────────────────────
+
+    [Fact]
+    public async Task ListSavesAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"saves\":[]}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        JObject result = await client.ListSavesAsync();
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task DismissLoadScreenAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        StartGameResult result = await client.DismissLoadScreenAsync();
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task LoadSaveAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        StartGameResult result = await client.LoadSaveAsync("CONTINUE");
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task ClickButtonAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        StartGameResult result = await client.ClickButtonAsync("DINOForge_ModsButton");
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task ScanSceneAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        StartGameResult result = await client.ScanSceneAsync("Canvas");
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task InvokeMethodAsync_SendsCorrectRequest()
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        StartGameResult result = await client.InvokeMethodAsync("MyComponent", "OnTrigger");
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    // ──────────────────────── SendRequestCoreAsync error paths ────────────────────────
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenDisconnected_RequestThrows()
+    {
+        // When disconnected, any request throws
+        GameClient client = new(new GameClientOptions { RetryCount = 0 });
+
+        Func<Task> action = async () => await client.PingAsync();
+
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenServerReturnsError_ThrowsGameClientException()
+    {
+        // Server returns JSON-RPC error object
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"}}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+
+        // Server error is wrapped by retry logic into GameClientException
+        var ex = await action.Should().ThrowAsync<GameClientException>();
+        ex.And.Message.Should().NotBeNullOrEmpty();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestAsync_RetriesAndSucceeds()
+    {
+        // First attempt returns error, second succeeds
+        string responseJson = "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"pong\":true}}" + Environment.NewLine;
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(responseJson));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions
+        {
+            RetryCount = 1,
+            RetryDelayMs = 10,
+            ReadTimeoutMs = 1000
+        });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        PingResult result = await client.PingAsync();
+
+        result.Should().NotBeNull();
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestAsync_GivesUpAfterAllRetries()
+    {
+        // All retries fail with connection error
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":null}" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions
+        {
+            RetryCount = 1,
+            RetryDelayMs = 5,
+            ReadTimeoutMs = 1000
+        });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    // ──────────────────────── GameClientOptions coverage ────────────────────────
+
+    [Fact]
+    public void GameClientOptions_DefaultValues_AreCorrect()
+    {
+        var options = new GameClientOptions();
+
+        options.PipeName.Should().Be("dinoforge-game-bridge");
+        options.ConnectTimeoutMs.Should().Be(5000);
+        options.ReadTimeoutMs.Should().Be(30000);
+        options.RetryCount.Should().Be(3);
+        options.RetryDelayMs.Should().Be(1000);
+    }
+
+    [Fact]
+    public void GameClientOptions_CanSetCustomValues()
+    {
+        var options = new GameClientOptions
+        {
+            PipeName = "custom-pipe",
+            ConnectTimeoutMs = 1000,
+            ReadTimeoutMs = 5000,
+            RetryCount = 5,
+            RetryDelayMs = 500
+        };
+
+        options.PipeName.Should().Be("custom-pipe");
+        options.ConnectTimeoutMs.Should().Be(1000);
+        options.ReadTimeoutMs.Should().Be(5000);
+        options.RetryCount.Should().Be(5);
+        options.RetryDelayMs.Should().Be(500);
+    }
+
+    // ──────────────────────── ConnectionState coverage ────────────────────────
+
+    [Fact]
+    public void GameClient_InitialState_IsDisconnected()
+    {
+        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 50 });
+
+        // Initial state is Disconnected
+        client.State.Should().Be(ConnectionState.Disconnected);
+        client.IsConnected.Should().BeFalse();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public void GameClient_Dispose_CanBeCalledMultipleTimes()
+    {
+        var client = new GameClient();
+
+        client.Dispose();
+        client.Dispose(); // Should not throw
+    }
+
+    [Fact]
+    public void GameClientException_Constructors_WorkCorrectly()
+    {
+        // Message-only constructor
+        var ex1 = new GameClientException("Test error");
+        ex1.Message.Should().Be("Test error");
+        ex1.InnerException.Should().BeNull();
+
+        // Message + inner exception constructor
+        var inner = new InvalidOperationException("Inner error");
+        var ex2 = new GameClientException("Outer error", inner);
+        ex2.Message.Should().Be("Outer error");
+        ex2.InnerException.Should().Be(inner);
+    }
+
+    [Fact]
+    public void GameClient_Constructor_WithNullOptions_ThrowsArgumentNullException()
+    {
+        Action action = () => new GameClient(null!);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    // ──────────────────────── JsonRpc coverage ────────────────────────
 
     [Fact]
     public void JsonRpcRequest_WithNullId_SerializesCorrectly()

@@ -1,24 +1,20 @@
-import xml.etree.ElementTree as ET
-import glob
+import re
+with open('src/Tests/coverage.cobertura.xml', 'r', encoding='utf-8', errors='replace') as f:
+    content = f.read()
 
-files = glob.glob(r'C:\Users\koosh\Dino\src\Tests\TestResults\*\coverage.cobertura.xml')
-latest = max(files, key=lambda f: __import__('os').path.getmtime(f))
-print(f'Coverage file: {latest}\n')
-
-tree = ET.parse(latest)
-root = tree.getroot()
-
-print(f'Overall: {float(root.get("line-rate"))*100:.1f}% line, {float(root.get("branch-rate"))*100:.1f}% branch')
-print(f'Lines: {root.get("lines-covered")}/{root.get("lines-valid")}\n')
-
-packages = root.findall('packages/package')
-print(f'Packages ({len(packages)}):')
-for p in packages:
-    name = p.get('name', '')
-    lr = float(p.get('line-rate') or 0)
-    br = float(p.get('branch-rate') or 0)
-    lc = p.get('lines-covered') or '0'
-    lv = p.get('lines-valid') or '0'
-    pct = lr*100
-    flag = ' <<<' if pct < 85 else ''
-    print(f'  {pct:.1f}% LR / {br*100:.1f}% BR [{lc}/{lv}]: {name}{flag}')
+# Find all class elements with any attributes
+classes = re.findall(r'<class\s+([^>]+)>', content)
+for cls in classes:
+    name_match = re.search(r'name="([^"]+)"', cls)
+    fname_match = re.search(r'filename="([^"]+)"', cls)
+    lr_match = re.search(r'line-rate="([^"]+)"', cls)
+    lc_match = re.search(r'lines-covered="([^"]+)"', cls)
+    lv_match = re.search(r'lines-valid="([^"]+)"', cls)
+    if name_match and fname_match:
+        name = name_match.group(1)
+        fname = fname_match.group(1)
+        lr = float(lr_match.group(1)) * 100 if lr_match else 0
+        lc = lc_match.group(1) if lc_match else '0'
+        lv = lv_match.group(1) if lv_match else '0'
+        if 'Bridge/Client' in fname or 'SDK' in fname.split('/')[-1].split('.')[0]:
+            print(f'{name} ({fname}): {lr:.1f}% ({lc}/{lv})')

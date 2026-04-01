@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
 using FluentAssertions;
@@ -17,15 +18,15 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
     [Fact]
     public async Task Bridge_IsHealthy_AfterBootstrap()
     {
-        StatusResult status = await fixture.Client!.GetStatusAsync();
-        status.Ready.Should().BeTrue("DINOForge plugin should report ready after BepInEx bootstrap");
+        GameStatus status = await fixture.Client!.StatusAsync();
+        status.WorldReady.Should().BeTrue("DINOForge plugin should report world ready after BepInEx bootstrap");
         status.EntityCount.Should().BeGreaterThan(0, "the ECS world should have spawned entities");
     }
 
     [Fact]
     public async Task Bridge_Ping_RoundTripUnder100ms()
     {
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
         await fixture.Client!.PingAsync();
         sw.Stop();
 

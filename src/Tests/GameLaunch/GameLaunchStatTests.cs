@@ -16,23 +16,22 @@ public sealed class GameLaunchStatTests(GameLaunchFixture fixture)
     [Fact]
     public async Task StatOverride_HP_PersistsAfterReload()
     {
-        const string unitId = "rep_clone_trooper";
+        const string sdkPath = "units/rep_clone_trooper/stats/hp";
         const float overrideHp = 999f;
 
         // Apply override
         OverrideResult overrideResult = await fixture.Client!.ApplyOverrideAsync(
-            unitId: unitId,
-            stat: "hp",
+            sdkPath: sdkPath,
             value: overrideHp);
 
         overrideResult.Success.Should().BeTrue("override should apply without error");
 
         // Reload packs
-        ReloadResult reloadResult = await fixture.Client.ReloadPacksAsync(path: null);
+        ReloadResult reloadResult = await fixture.Client.ReloadPacksAsync();
         reloadResult.Success.Should().BeTrue("reload should succeed");
 
         // Verify stat persisted
-        StatResult statResult = await fixture.Client.ReadStatAsync(unitId, "hp");
+        StatResult statResult = await fixture.Client.GetStatAsync(sdkPath);
         statResult.Value.Should().BeApproximately(overrideHp, precision: 0.1f,
             "HP override should survive ReloadPacks");
     }

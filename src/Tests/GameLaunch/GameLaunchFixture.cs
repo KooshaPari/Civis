@@ -2,7 +2,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
 using Xunit;
@@ -15,15 +17,13 @@ namespace DINOForge.Tests.GameLaunch;
 /// <see cref="GameLaunchCollection"/> finish.
 ///
 /// Required environment variables:
-///   DINO_GAME_PATH   — path to the DINO game executable
-///   DINO_BRIDGE_PORT — (optional) bridge listen port, defaults to 7474
+///   DINO_GAME_PATH — path to the DINO game executable (or auto-detected from Steam)
 ///
 /// Tests are tagged [Trait("Category","GameLaunch")] and excluded from ci.yml.
 /// They run via game-launch.yml on a self-hosted runner that has the game installed.
 /// </summary>
 public sealed class GameLaunchFixture : IAsyncLifetime
 {
-    private const int DefaultBridgePort = 7474;
     private const int BootstrapTimeoutMs = 30_000;
     private const int PollIntervalMs = 500;
 
@@ -33,30 +33,54 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        string gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
-            ?? throw new InvalidOperationException(
-                "DINO_GAME_PATH environment variable is required for game-launch tests.");
+        string? gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
+        var processManager = new GameProcessManager();
 
-        int port = int.TryParse(
-            Environment.GetEnvironmentVariable("DINO_BRIDGE_PORT"), out int p) ? p : DefaultBridgePort;
-
-        _gameProcess = Process.Start(new ProcessStartInfo
+        if (gamePath == null)
         {
-            FileName = gamePath,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        }) ?? throw new InvalidOperationException($"Failed to start game at: {gamePath}");
+            if (processManager.IsRunning)
+            {
+                Client = new GameClient();
+                await ConnectAndWaitAsync();
+                return;
+            }
 
-        Client = new GameClient($"http://localhost:{port}");
+            throw new InvalidOperationException(
+                "DINO_GAME_PATH environment variable is required for game-launch tests, " +
+                "or the game must already be running.");
+        }
 
+        if (!File.Exists(gamePath))
+        {
+            throw new InvalidOperationException($"Game executable not found: {gamePath}");
+        }
+
+        // Launch the game if not already running
+        if (!processManager.IsRunning)
+        {
+            bool launched = await processManager.LaunchAsync(gamePath);
+            if (!launched)
+            {
+                throw new InvalidOperationException($"Failed to launch game at: {gamePath}");
+            }
+        }
+
+        _gameProcess = Process.GetProcessesByName("Diplomacy is Not an Option").FirstOrDefault();
+        Client = new GameClient();
+
+        await ConnectAndWaitAsync();
+    }
+
+    private async Task ConnectAndWaitAsync()
+    {
         // Poll until the bridge is healthy or timeout
         using CancellationTokenSource cts = new(BootstrapTimeoutMs);
         while (!cts.IsCancellationRequested)
         {
             try
             {
-                DINOForge.Bridge.Protocol.StatusResult status = await Client.GetStatusAsync();
-                if (status.Ready)
+                var status = await Client!.StatusAsync();
+                if (status.WorldReady)
                     return;
             }
             catch
@@ -76,6 +100,7 @@ public sealed class GameLaunchFixture : IAsyncLifetime
         try { _gameProcess?.Kill(entireProcessTree: true); }
         catch { /* best-effort */ }
         _gameProcess?.Dispose();
+        Client?.Dispose();
         return Task.CompletedTask;
     }
 }

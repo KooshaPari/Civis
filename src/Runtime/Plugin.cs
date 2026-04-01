@@ -157,6 +157,14 @@ namespace DINOForge.Runtime
         {
             WriteDebug($"[Plugin] OnSceneLoaded: scene='{scene.name}' mode={mode}");
             Bridge.KeyInputSystem.RecreateInCurrentWorld();
+            // RuntimeDriver may have been destroyed when DINO destroyed our root.
+            // Trigger resurrection here so TryResurrect fires even if KeyInputSystem.OnCreate
+            // doesn't fire (e.g. when RecreateInCurrentWorld finds no valid world).
+            if (NeedsResurrection || PersistentRoot == null)
+            {
+                WriteDebug($"[Plugin] OnSceneLoaded: resurrection needed - NeedsRes={NeedsResurrection} rootNull={PersistentRoot == null}");
+                TryResurrect(scene.name, "OnSceneLoaded");
+            }
         }
 
         internal static void TryResurrect(string sceneName, string trigger)

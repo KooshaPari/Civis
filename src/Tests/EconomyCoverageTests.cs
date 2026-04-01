@@ -6,6 +6,9 @@ using System.Linq;
 using DINOForge.Domains.Economy;
 using DINOForge.Domains.Economy.Models;
 using DINOForge.Domains.Economy.Registries;
+using DINOForge.Domains.Economy.Validation;
+using DINOForge.SDK.Models;
+using DINOForge.SDK.Registry;
 using FluentAssertions;
 using Xunit;
 
@@ -485,6 +488,355 @@ public class EconomyCoverageTests : IDisposable
         Action action = () => new TradeRouteDefinition(null!, "name", "src", "tgt", 1f, 60, 1000f, true);
 
         action.Should().Throw<ArgumentNullException>();
+    }
+
+    // ───────────────── EconomyValidator ─────────────────
+
+    [Fact]
+    public void EconomyValidator_Validate_WithEmptyPackId_ThrowsArgumentException()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>();
+
+        Action action = () => validator.Validate("", registries, profiles, routes);
+
+        action.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_WithNullRegistries_ThrowsArgumentNullException()
+    {
+        var validator = new EconomyValidator();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>();
+
+        Action action = () => validator.Validate("test-pack", null!, profiles, routes);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_WithNullProfiles_ThrowsArgumentNullException()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var routes = new List<TradeRoute>();
+
+        Action action = () => validator.Validate("test-pack", registries, null!, routes);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_WithNullRoutes_ThrowsArgumentNullException()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+
+        Action action = () => validator.Validate("test-pack", registries, profiles, null!);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_ValidInput_ReturnsNoErrors()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>
+        {
+            new EconomyProfile { Id = "default", TradeRateModifier = 1.0f, WorkerEfficiency = 1.0f, StorageMultiplier = 1.0f }
+        };
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "stone", TargetResource = "gold", ExchangeRate = 1.5f, CooldownTicks = 60, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_DuplicateProfileId_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>
+        {
+            new EconomyProfile { Id = "dup", TradeRateModifier = 1.0f },
+            new EconomyProfile { Id = "dup", TradeRateModifier = 1.0f }
+        };
+        var routes = new List<TradeRoute>();
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("Duplicate economy profile ID"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_EmptyProfileId_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>
+        {
+            new EconomyProfile { Id = "", TradeRateModifier = 1.0f }
+        };
+        var routes = new List<TradeRoute>();
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("empty or missing ID"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_NegativeStartingResources_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>
+        {
+            new EconomyProfile { Id = "bad", StartingResources = new ResourceCost { Food = -10 }, TradeRateModifier = 1.0f }
+        };
+        var routes = new List<TradeRoute>();
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("negative starting food"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_DuplicateTradeRouteId_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "dup", SourceResource = "stone", TargetResource = "gold", ExchangeRate = 1.5f, CooldownTicks = 60, Enabled = true },
+            new TradeRoute { Id = "dup", SourceResource = "food", TargetResource = "iron", ExchangeRate = 2.0f, CooldownTicks = 60, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("Duplicate trade route ID"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_InvalidSourceResource_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "invalid_res", TargetResource = "gold", ExchangeRate = 1.5f, CooldownTicks = 60, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("invalid source resource"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_SameSourceAndTargetResource_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "stone", TargetResource = "stone", ExchangeRate = 1.5f, CooldownTicks = 60, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("same source and target resource"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_NonPositiveExchangeRate_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "stone", TargetResource = "gold", ExchangeRate = 0, CooldownTicks = 60, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("non-positive exchange rate"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_NegativeCooldown_AddsError()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "stone", TargetResource = "gold", ExchangeRate = 1.5f, CooldownTicks = -1, Enabled = true }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("negative cooldown"));
+    }
+
+    [Fact]
+    public void EconomyValidator_Validate_DisabledRoute_StillValidatedForFormat()
+    {
+        var validator = new EconomyValidator();
+        var registries = new DINOForge.SDK.Registry.RegistryManager();
+        var profiles = new List<EconomyProfile>();
+        var routes = new List<TradeRoute>
+        {
+            new TradeRoute { Id = "route1", SourceResource = "invalid", TargetResource = "gold", ExchangeRate = 1.5f, CooldownTicks = 60, Enabled = false }
+        };
+
+        var result = validator.Validate("test-pack", registries, profiles, routes);
+
+        // Disabled routes are still validated for format errors (invalid resources)
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("invalid source resource"));
+    }
+
+    // ───────────────── EconomyProfile property tests ─────────────────
+
+    [Fact]
+    public void EconomyProfile_DefaultValues()
+    {
+        var profile = new EconomyProfile();
+
+        profile.Id.Should().BeEmpty();
+        profile.DisplayName.Should().BeEmpty();
+        profile.TradeRateModifier.Should().Be(1.0f);
+        profile.WorkerEfficiency.Should().Be(1.0f);
+        profile.StorageMultiplier.Should().Be(1.0f);
+        profile.StartingResources.Should().NotBeNull();
+        profile.ProductionMultipliers.Should().NotBeNull();
+        profile.ConsumptionMultipliers.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void EconomyProfile_CanSetAllProperties()
+    {
+        var profile = new EconomyProfile
+        {
+            Id = "test-profile",
+            DisplayName = "Test Profile",
+            TradeRateModifier = 2.5f,
+            WorkerEfficiency = 0.8f,
+            StorageMultiplier = 1.5f
+        };
+
+        profile.Id.Should().Be("test-profile");
+        profile.DisplayName.Should().Be("Test Profile");
+        profile.TradeRateModifier.Should().Be(2.5f);
+        profile.WorkerEfficiency.Should().Be(0.8f);
+        profile.StorageMultiplier.Should().Be(1.5f);
+    }
+
+    [Fact]
+    public void EconomyProfile_StartingResourcesCanBeModified()
+    {
+        var profile = new EconomyProfile();
+        profile.StartingResources.Food = 100;
+        profile.StartingResources.Wood = 200;
+
+        profile.StartingResources.Food.Should().Be(100);
+        profile.StartingResources.Wood.Should().Be(200);
+    }
+
+    // ───────────────── TradeRoute property tests ─────────────────
+
+    [Fact]
+    public void TradeRoute_DefaultValues()
+    {
+        var route = new TradeRoute();
+
+        route.Id.Should().BeEmpty();
+        route.DisplayName.Should().BeEmpty();
+        route.SourceResource.Should().BeEmpty();
+        route.TargetResource.Should().BeEmpty();
+        route.ExchangeRate.Should().Be(1.0f);
+        route.CooldownTicks.Should().Be(60);
+        route.MaxPerTransaction.Should().Be(0);
+        route.Enabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TradeRoute_CanSetAllProperties()
+    {
+        var route = new TradeRoute
+        {
+            Id = "test-route",
+            DisplayName = "Test Route",
+            SourceResource = "iron",
+            TargetResource = "gold",
+            ExchangeRate = 3.0f,
+            CooldownTicks = 120,
+            MaxPerTransaction = 500,
+            Enabled = true
+        };
+
+        route.Id.Should().Be("test-route");
+        route.DisplayName.Should().Be("Test Route");
+        route.SourceResource.Should().Be("iron");
+        route.TargetResource.Should().Be("gold");
+        route.ExchangeRate.Should().Be(3.0f);
+        route.CooldownTicks.Should().Be(120);
+        route.MaxPerTransaction.Should().Be(500);
+        route.Enabled.Should().BeTrue();
+    }
+
+    // ───────────────── ResourceCost tests ─────────────────
+
+    [Fact]
+    public void ResourceCost_DefaultValues()
+    {
+        var cost = new ResourceCost();
+
+        cost.Food.Should().Be(0);
+        cost.Wood.Should().Be(0);
+        cost.Stone.Should().Be(0);
+        cost.Iron.Should().Be(0);
+        cost.Gold.Should().Be(0);
+    }
+
+    [Fact]
+    public void ResourceCost_CanSetAllProperties()
+    {
+        var cost = new ResourceCost
+        {
+            Food = 100,
+            Wood = 200,
+            Stone = 300,
+            Iron = 400,
+            Gold = 500
+        };
+
+        cost.Food.Should().Be(100);
+        cost.Wood.Should().Be(200);
+        cost.Stone.Should().Be(300);
+        cost.Iron.Should().Be(400);
+        cost.Gold.Should().Be(500);
     }
 
     // ───────────────── Helper ─────────────────

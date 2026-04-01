@@ -49,10 +49,9 @@ namespace DINOForge.Runtime.Bridge
     public class AssetSwapSystem : SystemBase
     {
         /// <summary>
-        /// Cache of loaded AssetBundles keyed by file path (used for RenderMesh visual swap).
+        /// Cache of loaded AssetBundles (LRU with max 10 bundles, auto-unload on eviction).
         /// </summary>
-        private readonly Dictionary<string, AssetBundle> _loadedBundles =
-            new Dictionary<string, AssetBundle>(StringComparer.OrdinalIgnoreCase);
+        private readonly AssetBundleCache _loadedBundles = new AssetBundleCache(maxSize: 10);
 
         /// <summary>
         /// Tracks asset addresses that have already had their first failure logged.
@@ -481,11 +480,12 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
-        /// Loads an AssetBundle from disk, caching the result.
+        /// Loads an AssetBundle from disk, caching the result (LRU with auto-eviction).
         /// </summary>
         private AssetBundle? LoadBundle(string path)
         {
-            if (_loadedBundles.TryGetValue(path, out AssetBundle? cached))
+            AssetBundle? cached = _loadedBundles.Get(path);
+            if (cached != null)
                 return cached;
 
             string fullPath = ResolveModBundlePath(path);
@@ -501,7 +501,7 @@ namespace DINOForge.Runtime.Bridge
                 AssetBundle bundle = AssetBundle.LoadFromFile(fullPath);
                 if (bundle != null)
                 {
-                    _loadedBundles[path] = bundle;
+                    _loadedBundles.Set(path, bundle);
                     WriteDebug($"LoadBundle: loaded '{fullPath}'");
                 }
                 return bundle;
@@ -516,12 +516,7 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc/>
         protected override void OnDestroy()
         {
-            foreach (AssetBundle bundle in _loadedBundles.Values)
-            {
-                try { bundle.Unload(false); }
-                catch { }
-            }
-            _loadedBundles.Clear();
+            _loadedBundles.Dispose();
 
             base.OnDestroy();
             WriteDebug("AssetSwapSystem.OnDestroy - bundles unloaded");

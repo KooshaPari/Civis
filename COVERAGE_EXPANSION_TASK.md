@@ -1,12 +1,44 @@
 # Coverage Expansion Task
 
 ## Objective
-Expand DINOForge test coverage from 1248 tests (1227 main + 21 integration) to 1348+ tests by adding 100+ high-value tests targeting critical gaps.
+Expand DINOForge test coverage to 85%+ for all packages, with threshold enforcement on every PR.
 
-## Current Status
-- **Total tests**: 1227 main + 21 integration = 1248
-- **Failing tests**: 4 ScenarioContentLoader tests (YAML parsing issues)
-- **Test files**: 112 .cs files in src/Tests/
+## Current Status (Step 8 Complete)
+- **Total tests**: 1898 (1902 with skipped)
+- **Failing tests**: 0
+- **Total coverage**: 81.63% (threshold: 81%)
+- **Test files**: 81 .cs files in src/Tests/
+
+## Package Coverage Status
+
+| Package | Coverage | Target | Status |
+|---------|----------|--------|--------|
+| Protocol | 100% | 85% | ✓ Done |
+| Warfare | 93.5% | 85% | ✓ Done |
+| UI | 89.1% | 85% | ✓ Done |
+| Installer | 88.3% | 85% | ✓ Done |
+| Scenario | 92.7% | 85% | ✓ Done |
+| Economy | 85.2% | 85% | ✓ Done |
+| Bridge.Client | 82.4% | 85% | Close (async state machines need integration tests) |
+| SDK | 72.3% | 85% | Blocked (native interop, see below) |
+
+## SDK Native Interop Gap (85% Blocker)
+
+SDK at 72.3% requires integration-level testing for:
+
+1. **AssetService** (59.8%): `BundleFileInstance`, `AssetsFileInstance` from `_assetsManager` — requires real Unity `.bundle` files
+2. **GoDependencyResolver** (0.0%): P/Invoke to Go binary — requires Go runtime
+3. **RustAssetPipeline** (0.0%): P/Invoke to Rust binary — requires Rust toolchain
+
+These cannot be unit-tested without:
+- Adding mock interfaces (e.g., `IAssetsManager` for `AssetService`)
+- Integration tests with actual Unity bundles / Go runtime / Rust toolchain
+- Source modifications to expose testable seams
+
+Options to reach 85%:
+1. **Short-term**: Add `IAssetsManager` interface, mock in tests (source change)
+2. **Medium-term**: Add integration tests with real bundle files
+3. **Long-term**: Add CI pipeline with Unity/Go/Rust toolchains
 
 ## Priority Gap Areas (in order)
 

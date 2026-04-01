@@ -13,8 +13,10 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
     <!-- Coverage gates enforced on every PR. Raise incrementally as tests are added.
-         Step 7: Raise to 80% (from 75%). 85% requires closing SDK PackSubmoduleManager Git-mock gap. -->
-    <Threshold>80</Threshold>
+         Step 8: Raise to 81% (from 80%). 85% requires closing SDK native-interop gaps in
+         AssetService, GoDependencyResolver, RustAssetPipeline — these require integration tests
+         with real Unity bundles, Go runtime, or Rust toolchain. See COVERAGE_EXPANSION_TASK.md. -->
+    <Threshold>81</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>

@@ -16,6 +16,49 @@ namespace DINOForge.Tests;
 /// </summary>
 public class InstallerCoverageTests
 {
+    // ──────────────────────── InstallLifecycle WriteManifest error paths ────────────────────────
+
+    [Fact]
+    public void WriteManifest_WithDirectoryCreation_CreatesParentDirectories()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        // BepInEx directory does not exist, but WriteManifest should create it
+
+        try
+        {
+            string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.0.0");
+
+            File.Exists(manifestPath).Should().BeTrue();
+            Directory.Exists(Path.Combine(tempDir, "BepInEx", "plugins")).Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator GetLibraryFolders exception paths ────────────────────────
+
+    [Fact]
+    public void GetLibraryFolders_WithMissingVdfFile_ReturnsOnlySteamPath()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
+
+            folders.Should().HaveCount(1);
+            folders[0].Should().Be(tempDir);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
     // ──────────────────────── SteamLocator VDF parsing edge cases ────────────────────────
 
     [Fact]
@@ -92,25 +135,6 @@ public class InstallerCoverageTests
             SteamLocator.DinoAppId)!;
 
         result.Should().BeNull();
-    }
-
-    [Fact]
-    public void GetLibraryFolders_WithMissingVdfFile_ReturnsOnlySteamPath()
-    {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
-
-            folders.Should().HaveCount(1);
-            folders[0].Should().Be(tempDir);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
     }
 
     // ──────────────────────── InstallLifecycle ────────────────────────
@@ -1131,6 +1155,450 @@ public class InstallerCoverageTests
         if (result != null)
         {
             Directory.Exists(result).Should().BeTrue();
+        }
+    }
+
+    // ──────────────────────── InstallLifecycle MigrateLegacyPacks edge cases ────────────────────────
+
+    [Fact]
+    public void MigrateLegacyPacks_WithSubdirectories_MigratesAllFiles()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string legacyDir = Path.Combine(tempDir, "dinoforge_packs");
+        Directory.CreateDirectory(legacyDir);
+        string subDir = Path.Combine(legacyDir, "subdir");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(legacyDir, "root.txt"), "root content");
+        File.WriteAllText(Path.Combine(subDir, "nested.txt"), "nested content");
+
+        try
+        {
+            bool result = InstallLifecycle.MigrateLegacyPacks(tempDir);
+
+            result.Should().BeTrue();
+            Directory.Exists(legacyDir).Should().BeFalse();
+            string newPacksDir = Path.Combine(tempDir, "BepInEx", "dinoforge_packs");
+            Directory.Exists(newPacksDir).Should().BeTrue();
+            File.Exists(Path.Combine(newPacksDir, "root.txt")).Should().BeTrue();
+            File.Exists(Path.Combine(newPacksDir, "subdir", "nested.txt")).Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void MigrateLegacyPacks_WithEmptySubdirectories_MigratesStructure()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string legacyDir = Path.Combine(tempDir, "dinoforge_packs");
+        Directory.CreateDirectory(legacyDir);
+        Directory.CreateDirectory(Path.Combine(legacyDir, "empty_subdir"));
+
+        try
+        {
+            bool result = InstallLifecycle.MigrateLegacyPacks(tempDir);
+
+            result.Should().BeTrue();
+            Directory.Exists(Path.Combine(tempDir, "BepInEx", "dinoforge_packs", "empty_subdir")).Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── InstallLifecycle CleanupLegacyArtifacts edge cases ────────────────────────
+
+    [Fact]
+    public void CleanupLegacyArtifacts_WithReadOnlyFiles_HandlesGracefully()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string legacyFile = Path.Combine(tempDir, "BepInEx", "ecs_plugins", "DINOForge.Runtime.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyFile)!);
+        File.WriteAllBytes(legacyFile, new byte[] { 0 });
+
+        try
+        {
+            int count = InstallLifecycle.CleanupLegacyArtifacts(tempDir);
+
+            count.Should().BeGreaterOrEqualTo(1);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator FindGameInLibrary additional edge cases ────────────────────────
+
+    [Fact]
+    public void FindGameInLibrary_WithSteamAppsAsRoot_HandlesCorrectly()
+    {
+        // When libraryPath is the steamapps folder itself (not the Steam root)
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string gameDir = Path.Combine(steamAppsDir, "common", "Diplomacy is Not an Option");
+        Directory.CreateDirectory(gameDir);
+
+        try
+        {
+            // Pass steamapps as library path - should fall through to common check
+            string? result = SteamLocator.FindGameInLibrary(steamAppsDir, SteamLocator.DinoAppId);
+
+            result.Should().Be(gameDir);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FindGameInLibrary_WithManifestHavingWhitespace_ReturnsCleanPath()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string acfFile = Path.Combine(steamAppsDir, $"appmanifest_{SteamLocator.DinoAppId}.acf");
+        File.WriteAllText(acfFile, @"
+""AppState""
+{
+    ""appname""    ""Diplomacy is Not an Option""
+    ""installdir""    ""  Diplomacy is Not an Option  ""
+}");
+        string gameDir = Path.Combine(steamAppsDir, "common", "Diplomacy is Not an Option");
+        Directory.CreateDirectory(gameDir);
+
+        try
+        {
+            string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
+
+            result.Should().Be(gameDir);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── InstallLifecycle WriteManifest with UI assets ────────────────────────
+
+    [Fact]
+    public void WriteManifest_WithUiAssetsDirectory_IncludesUiAssetsFiles()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+        string uiAssetsDir = Path.Combine(pluginsDir, "dinoforge-ui-assets");
+        Directory.CreateDirectory(uiAssetsDir);
+        File.WriteAllBytes(Path.Combine(pluginsDir, "DINOForge.Runtime.dll"), new byte[] { 0, 1, 2, 3 });
+        File.WriteAllText(Path.Combine(uiAssetsDir, "test.json"), "{}");
+
+        try
+        {
+            string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.0.0");
+
+            File.Exists(manifestPath).Should().BeTrue();
+            string content = File.ReadAllText(manifestPath);
+            content.Should().Contain("DINOForge.Runtime.dll");
+            content.Should().Contain("test.json");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void WriteManifest_WithEmptyPluginsDirectory_CreatesManifest()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        // BepInEx/plugins directory doesn't exist
+
+        try
+        {
+            string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.0.0");
+
+            File.Exists(manifestPath).Should().BeTrue();
+            string content = File.ReadAllText(manifestPath);
+            content.Should().Contain("1.0.0");
+            content.Should().Contain("Files");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── InstallLifecycle Inspect with manifest ────────────────────────
+
+    [Fact]
+    public void Inspect_WithManifestContainingMissingFiles_ReportsIssues()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+        // Write a manifest that references a file that doesn't exist
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, @"{
+    ""InstallerVersion"": ""1.0.0"",
+    ""InstalledAtUtc"": ""2026-03-30T00:00:00Z"",
+    ""Files"": [
+        { ""RelativePath"": ""BepInEx/plugins/missing.dll"", ""Size"": 100, ""Sha256"": ""abc123"" }
+    ]
+}");
+
+        try
+        {
+            var inspection = InstallLifecycle.Inspect(tempDir);
+
+            inspection.ManifestPresent.Should().BeTrue();
+            inspection.Issues.Should().Contain(i => i.Contains("missing"));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void Inspect_WithManifestAndRuntime_ReportsHealthy()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+        File.WriteAllBytes(Path.Combine(pluginsDir, "DINOForge.Runtime.dll"), new byte[] { 0 });
+        // Create manifest with the runtime file
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, @"{
+    ""InstallerVersion"": ""1.0.0"",
+    ""InstalledAtUtc"": ""2026-03-30T00:00:00Z"",
+    ""Files"": [
+        { ""RelativePath"": ""BepInEx/plugins/DINOForge.Runtime.dll"", ""Size"": 1, ""Sha256"": ""e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"" }
+    ]
+}");
+
+        try
+        {
+            var inspection = InstallLifecycle.Inspect(tempDir);
+
+            inspection.RuntimeInstalled.Should().BeTrue();
+            inspection.ManifestPresent.Should().BeTrue();
+            inspection.IsHealthy.Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── InstallLifecycle RemoveManagedFiles with manifest ────────────────────────
+
+    [Fact]
+    public void RemoveManagedFiles_WithValidManifest_DeletesManifestFiles()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+        string runtimeDll = Path.Combine(pluginsDir, "DINOForge.Runtime.dll");
+        File.WriteAllBytes(runtimeDll, new byte[] { 0, 1, 2, 3 });
+        // Create manifest with the runtime file
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, @"{
+    ""InstallerVersion"": ""1.0.0"",
+    ""InstalledAtUtc"": ""2026-03-30T00:00:00Z"",
+    ""Files"": [
+        { ""RelativePath"": ""BepInEx/plugins/DINOForge.Runtime.dll"", ""Size"": 4, ""Sha256"": ""abc123"" }
+    ]
+}");
+
+        try
+        {
+            int count = InstallLifecycle.RemoveManagedFiles(tempDir);
+
+            count.Should().BeGreaterOrEqualTo(1);
+            File.Exists(runtimeDll).Should().BeFalse();
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void RemoveManagedFiles_WithUiAssetsDirectory_DeletesManifestFiles()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+        string uiAssetsDir = Path.Combine(pluginsDir, "dinoforge-ui-assets");
+        Directory.CreateDirectory(uiAssetsDir);
+        string uiFile = Path.Combine(uiAssetsDir, "test.json");
+        File.WriteAllText(uiFile, "{}");
+        // Create manifest that includes UI assets
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, @"{
+    ""InstallerVersion"": ""1.0.0"",
+    ""InstalledAtUtc"": ""2026-03-30T00:00:00Z"",
+    ""Files"": [
+        { ""RelativePath"": ""BepInEx/plugins/dinoforge-ui-assets/test.json"", ""Size"": 2, ""Sha256"": ""abc123"" }
+    ]
+}");
+
+        try
+        {
+            int count = InstallLifecycle.RemoveManagedFiles(tempDir);
+
+            count.Should().BeGreaterOrEqualTo(1);
+            File.Exists(uiFile).Should().BeFalse();
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator GetLibraryFolders with config VDF ────────────────────────
+
+    [Fact]
+    public void GetLibraryFolders_WithConfigLibraryFolders_ReturnsParsedFolders()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string configDir = Path.Combine(tempDir, "config");
+        Directory.CreateDirectory(configDir);
+        string vdfFile = Path.Combine(configDir, "libraryfolders.vdf");
+        string vdfContent = @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""D:\\SteamLibrary""
+    }
+    ""1""
+    {
+        ""path""		""E:\\Games\\Steam""
+    }
+}";
+        File.WriteAllText(vdfFile, vdfContent);
+
+        try
+        {
+            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
+
+            folders.Should().HaveCount(3); // Steam root + 2 from config
+            folders.Should().Contain("D:\\SteamLibrary");
+            folders.Should().Contain("E:\\Games\\Steam");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void GetLibraryFolders_WithBothVdfLocations_UsesSteamAppsFirst()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string configDir = Path.Combine(tempDir, "config");
+        Directory.CreateDirectory(configDir);
+        // Create VDF in both locations
+        File.WriteAllText(Path.Combine(steamAppsDir, "libraryfolders.vdf"), @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""C:\\Library1""
+    }
+}");
+        File.WriteAllText(Path.Combine(configDir, "libraryfolders.vdf"), @"
+""libraryfolders""
+{
+    ""0""
+    {
+        ""path""		""D:\\Library2""
+    }
+}");
+
+        try
+        {
+            IReadOnlyList<string> folders = SteamLocator.GetLibraryFolders(tempDir);
+
+            // Should use steamapps location first (found first)
+            folders.Should().Contain("C:\\Library1");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── SteamLocator ParseInstallDirFromAcf edge cases ────────────────────────
+
+    [Fact]
+    public void FindGameInLibrary_WithEmptyAcf_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string acfFile = Path.Combine(steamAppsDir, $"appmanifest_{SteamLocator.DinoAppId}.acf");
+        File.WriteAllText(acfFile, "");
+
+        try
+        {
+            string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
+
+            result.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void FindGameInLibrary_WithMissingInstalldir_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string steamAppsDir = Path.Combine(tempDir, "steamapps");
+        Directory.CreateDirectory(steamAppsDir);
+        string acfFile = Path.Combine(steamAppsDir, $"appmanifest_{SteamLocator.DinoAppId}.acf");
+        File.WriteAllText(acfFile, @"
+""AppState""
+{
+    ""appname""    ""Test Game""
+}");
+
+        try
+        {
+            string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
+
+            result.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
         }
     }
 }

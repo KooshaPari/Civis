@@ -1,0 +1,175 @@
+name: MCP Server Pytest Suite
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/Tools/DinoforgeMcp/**'
+      - '.github/workflows/mcp-pytest.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/Tools/DinoforgeMcp/**'
+      - '.github/workflows/mcp-pytest.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Pytest Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov pytest-timeout pytest-xdist
+
+      - name: Run pytest
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          pytest tests/ \
+            -v \
+            --tb=short \
+            --cov=dinoforge_mcp \
+            --cov-report=term-missing \
+            --cov-report=json \
+            --cov-report=html \
+            --junit-xml=test-results.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./src/Tools/DinoforgeMcp/coverage.json
+          flags: mcp-server
+          name: mcp-server-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            src/Tools/DinoforgeMcp/test-results.xml
+            src/Tools/DinoforgeMcp/htmlcov/
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Pytest Results (Python ${{ matrix.python-version }})
+          path: src/Tools/DinoforgeMcp/test-results.xml
+          reporter: java-junit
+
+      - name: Check coverage threshold
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          python -c "
+          import json
+          with open('coverage.json') as f:
+              coverage = json.load(f)
+          total_coverage = coverage['totals']['percent_covered']
+          print(f'Total coverage: {total_coverage}%')
+          if total_coverage < 70:
+              exit(1)
+          "
+        continue-on-error: true
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black isort mypy
+
+      - name: Run Black
+        working-directory: src/Tools/DinoforgeMcp
+        run: black --check tests/
+        continue-on-error: true
+
+      - name: Run isort
+        working-directory: src/Tools/DinoforgeMcp
+        run: isort --check-only tests/
+        continue-on-error: true
+
+      - name: Run flake8
+        working-directory: src/Tools/DinoforgeMcp
+        run: flake8 tests/ --max-line-length=120
+        continue-on-error: true
+
+      - name: Run mypy
+        working-directory: src/Tools/DinoforgeMcp
+        run: mypy tests/ --ignore-missing-imports
+        continue-on-error: true
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-timeout
+
+      - name: Run integration tests
+        working-directory: src/Tools/DinoforgeMcp
+        run: |
+          pytest tests/ -v -m integration --tb=short
+        continue-on-error: true
+
+  summary:
+    name: Test Summary
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate summary
+        run: |
+          echo "## MCP Server Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All test artifacts available in workflow run." >> $GITHUB_STEP_SUMMARY

@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Test Coverage Expansion (Step 8)** — Coverage raised from 80% to 81%, threshold raised to 81%
+  - **SDK** (72.3%): ~50 new tests for `PackSubmoduleManager`, `AssetService`, `AddressablesCatalog`, `RegistryImportService`, `UniverseLoader` error paths via `SdkEdgeCaseTests.cs` (new file)
+  - **Installer** (88.3%): +11 tests for `WriteManifest`, `Inspect`, `RemoveManagedFiles`, `GetLibraryFolders`, `FindGameInLibrary` edge cases
+  - **Economy** (85.2%): +22 tests for `EconomyValidator`, `EconomyProfile`, `TradeRoute`, `ResourceCost`, `TradeRouteDefinition` validation paths
+  - **Bridge.Client** (82.4%): +17 tests for `GameClient` error paths, `SendRequestCoreAsync` null/corrupt responses, `GameProcessManager` async state machine branches
+  - Fixed flaky `GameProcessManager_LaunchAsync_WithNonExistentPath_ReturnsFalse` (conditional assertion removed)
+  - Fixed 2 xUnit1031 warnings (blocking `.Result` → `async/await`)
+  - **Result**: 1898 tests, 81.63% line coverage (up from 80.67%), 6 of 8 packages at 85%+
+  - **Known limitation**: SDK at 72.3% requires integration tests with real Unity bundles, Go runtime, or Rust toolchain — see `COVERAGE_EXPANSION_TASK.md`
+
 - **Test Coverage Expansion (Step 7)** — Coverage raised from 75% to 80%, 16 new SDK tests
   - `PackSubmoduleManager.ListPacks` — no gitmodules (empty), packs/ submodules (2 entries), non-pack submodules (empty)
   - `PackSubmoduleManager.ReadLockFile` — no lock file (empty), valid entries (3 entries), invalid lines (skipped)

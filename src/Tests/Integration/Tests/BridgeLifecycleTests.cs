@@ -65,7 +65,7 @@ public class BridgeLifecycleTests
     /// was cleared to -1 on world destroy but HandleStatus read it before
     /// OnUpdate could re-populate it.
     /// </summary>
-    [Fact(Skip = "Mock implementation incomplete")]
+    [Fact]
     public void Status_GivenWorldReady_MultipleRequestsReturnConsistentEntityCount()
     {
         var bridge = new FakeSceneTransitionBridge();
@@ -77,7 +77,10 @@ public class BridgeLifecycleTests
 
         counts.Should().NotContain(-1,
             because: "HandleStatus must never return -1 even under rapid polling");
-        counts.Should().OnlyHaveUniqueItems("EntityCount should be stable across rapid polls");
+        counts.Should().AllSatisfy(c => c.Should().Be(17),
+            because: "EntityCount should be stable across rapid polls. " +
+                     "If EntityCount differs between calls, the bridge is returning stale or flickering values. " +
+                     "All counts: " + string.Join(", ", counts.Select(c => c.ToString())));
         counts[0].Should().Be(17);
     }
 

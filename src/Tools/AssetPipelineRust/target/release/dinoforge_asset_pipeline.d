@@ -1,0 +1,1 @@
+C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\dinoforge_asset_pipeline.dll: C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\src\assimp_bind.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\src\lib.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\src\lod.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\src\mesh.rs

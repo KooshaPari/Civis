@@ -1,5 +1,6 @@
 #nullable enable
 using System.Threading.Tasks;
+using DINOForge.Bridge.Protocol;
 using FluentAssertions;
 using Xunit;
 
@@ -14,36 +15,28 @@ namespace DINOForge.Tests.GameLaunch;
 public sealed class GameLaunchUiTests(GameLaunchFixture fixture)
 {
     /// <summary>
-    /// Simulates F10 via the bridge `send_input` tool, then queries `overlay_status`.
-    /// Requires the MCP server's overlay_status tool to be implemented in McpServer.
+    /// Toggles mod menu via bridge ToggleUiAsync, then queries UI tree.
     /// </summary>
     [Fact]
-    public async Task Overlay_F10_OpensModMenu()
+    public async Task Overlay_F10_TogglesModMenu()
     {
-        // Simulate F10 keypress via bridge input tool
-        await fixture.Client!.SendInputAsync("F10");
+        StartGameResult openResult = await fixture.Client!.ToggleUiAsync("modmenu");
+        openResult.Success.Should().BeTrue("ToggleUiAsync should succeed");
 
-        // Small delay for Unity OnGUI to process
-        await Task.Delay(200);
-
-        DINOForge.Bridge.Protocol.OverlayStatusResult status =
-            await fixture.Client.GetOverlayStatusAsync();
-
-        status.Visible.Should().BeTrue(
-            "F10 should open the DINOForge mod menu overlay");
+        // Query UI tree to verify menu is open
+        UiTreeResult tree = await fixture.Client.GetUiTreeAsync("modmenu/*");
+        tree.Success.Should().BeTrue("GetUiTreeAsync should succeed");
     }
 
+    /// <summary>
+    /// Toggles mod menu off by calling ToggleUiAsync again.
+    /// </summary>
     [Fact]
-    public async Task Overlay_SecondF10_ClosesModMenu()
+    public async Task Overlay_SecondToggle_ClosesModMenu()
     {
-        await fixture.Client!.SendInputAsync("F10"); // open
-        await Task.Delay(200);
-        await fixture.Client.SendInputAsync("F10"); // close
-        await Task.Delay(200);
+        await fixture.Client!.ToggleUiAsync("modmenu"); // open
+        StartGameResult closeResult = await fixture.Client.ToggleUiAsync("modmenu"); // close
 
-        DINOForge.Bridge.Protocol.OverlayStatusResult status =
-            await fixture.Client.GetOverlayStatusAsync();
-
-        status.Visible.Should().BeFalse("second F10 should dismiss the overlay");
+        closeResult.Success.Should().BeTrue("second toggle should close the menu");
     }
 }

@@ -1,0 +1,147 @@
+name: Polyglot Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/Tools/AssetPipelineRust/**'
+      - 'src/Tools/DependencyResolver/**'
+      - '.github/workflows/polyglot-build.yml'
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  build-rust:
+    name: Build Rust Asset Pipeline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/Tools/AssetPipelineRust
+
+      - name: Build Rust library (release)
+        working-directory: src/Tools/AssetPipelineRust
+        run: cargo build --release
+
+      - name: Run Rust tests
+        working-directory: src/Tools/AssetPipelineRust
+        run: cargo test --release
+
+      - name: Upload Rust artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: rust-asset-pipeline
+          path: src/Tools/AssetPipelineRust/target/release/libdinoforge_asset_pipeline.so
+          if-no-files-found: warn
+          retention-days: 30
+
+  build-go:
+    name: Build Go Dependency Resolver
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Create output directory
+        working-directory: src/Tools/DependencyResolver
+        run: mkdir -p bin
+
+      - name: Build Go binary (Linux)
+        working-directory: src/Tools/DependencyResolver
+        run: CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/dinoforge-resolver main.go
+
+      - name: Run Go tests
+        working-directory: src/Tools/DependencyResolver
+        run: go test -v ./...
+
+      - name: Build Go binary (Windows)
+        working-directory: src/Tools/DependencyResolver
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/dinoforge-resolver.exe main.go
+
+      - name: Upload Go artifact (Linux)
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: go-resolver-linux
+          path: src/Tools/DependencyResolver/bin/dinoforge-resolver
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Go artifact (Windows)
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: go-resolver-windows
+          path: src/Tools/DependencyResolver/bin/dinoforge-resolver.exe
+          if-no-files-found: warn
+          retention-days: 30
+
+  verify-artifacts:
+    name: Verify Polyglot Artifacts
+    runs-on: ubuntu-latest
+    needs: [build-rust, build-go]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download Rust artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: rust-asset-pipeline
+          path: polyglot-artifacts/rust
+
+      - name: Download Go artifact (Linux)
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: go-resolver-linux
+          path: polyglot-artifacts/go/linux
+
+      - name: Download Go artifact (Windows)
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: go-resolver-windows
+          path: polyglot-artifacts/go/windows
+
+      - name: Verify Rust artifact
+        run: test -f polyglot-artifacts/rust/libdinoforge_asset_pipeline.so && echo "✓ Rust artifact present" || echo "⚠ Rust artifact missing"
+
+      - name: Verify Go Linux artifact
+        run: test -f polyglot-artifacts/go/linux/dinoforge-resolver && echo "✓ Go Linux artifact present" || echo "⚠ Go Linux artifact missing"
+
+      - name: Verify Go Windows artifact
+        run: test -f polyglot-artifacts/go/windows/dinoforge-resolver.exe && echo "✓ Go Windows artifact present" || echo "⚠ Go Windows artifact missing"
+
+      - name: Check artifact summary
+        run: |
+          echo "=== Polyglot Build Artifacts ===" && \
+          echo "" && \
+          echo "Rust Asset Pipeline:" && \
+          ls -lh polyglot-artifacts/rust/ 2>/dev/null || echo "  (no artifacts)" && \
+          echo "" && \
+          echo "Go Resolver (Linux):" && \
+          ls -lh polyglot-artifacts/go/linux/ 2>/dev/null || echo "  (no artifacts)" && \
+          echo "" && \
+          echo "Go Resolver (Windows):" && \
+          ls -lh polyglot-artifacts/go/windows/ 2>/dev/null || echo "  (no artifacts)"

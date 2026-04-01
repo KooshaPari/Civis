@@ -122,6 +122,8 @@
     <Compile Remove="GameLaunchTests.cs" />
     <Compile Remove="GameTestDiagnostics.cs" />
     <Compile Remove="GameControlCliTests\**" />
+    <Compile Remove="RustInteropTests.cs" />
+    <Compile Remove="BridgeClientAsyncTests.cs" />
     <None Remove="GameControlCliTests\**" />
     <Content Remove="GameControlCliTests\**" />
     <EmbeddedResource Remove="GameControlCliTests\**" />

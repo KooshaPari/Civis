@@ -29,7 +29,7 @@ public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
     [Fact]
     public async Task WarfareStarwars_IsListedInLoadedPacks()
     {
-        StatusResult status = await fixture.Client!.GetStatusAsync();
+        GameStatus status = await fixture.Client!.StatusAsync();
         status.LoadedPacks.Should().Contain("warfare-starwars",
             "the warfare-starwars pack should be active after bootstrap");
     }

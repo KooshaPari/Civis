@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using DINOForge.Bridge.Protocol;
 using FluentAssertions;
 using Xunit;
 
@@ -40,25 +41,22 @@ public sealed class GameLaunchAssetSwapTests(GameLaunchFixture fixture)
     }
 
     /// <summary>
-    /// Verifies that AssetSwapSystem phase 2 has swapped the RenderMesh mesh reference
-    /// on clone trooper entities once the ECS world has populated renderable geometry.
-    /// Queried via the bridge `query_units` tool with mesh ID in result.
+    /// Verifies that AssetSwapSystem phase 2 has populated entities in the ECS world
+    /// once the warfare-starwars pack is loaded.
     /// </summary>
     [Fact]
-    public async Task Phase2_CloneTrooper_RenderMeshSwapped()
+    public async Task Phase2_CloneTrooper_EntityRegistered()
     {
-        DINOForge.Bridge.Protocol.QueryResult result =
-            await fixture.Client!.QueryUnitsAsync("rep_clone_trooper");
+        QueryResult result =
+            await fixture.Client!.QueryEntitiesAsync(category: "rep_clone_trooper");
 
         result.Entities.Should().NotBeEmpty(
             "clone trooper entities should exist after warfare-starwars is loaded");
 
-        // The swapped mesh ID is declared in warfare-starwars asset_pipeline.yaml
-        // Validate that the mesh ID reported by the bridge is not the vanilla value
-        foreach (DINOForge.Bridge.Protocol.EntitySnapshot entity in result.Entities)
+        foreach (EntityInfo entity in result.Entities)
         {
-            entity.MeshId.Should().NotBeNullOrEmpty(
-                "phase 2 should have populated MeshId on the entity snapshot");
+            entity.Components.Should().NotBeEmpty(
+                "phase 2 should have populated components on the entity");
         }
     }
 

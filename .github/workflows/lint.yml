@@ -28,3 +28,19 @@ jobs:
 
       - name: Check formatting
         run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --verbosity diagnostic
+
+  sonarcloud:
+    name: SonarCloud Quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: SonarSource/sonarcloud-github-action@v3
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

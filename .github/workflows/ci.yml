@@ -108,3 +108,20 @@ jobs:
             **/*.trx
           check_name: test
           compare_to_earlier_commit: false
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # SonarCloud needs full history for blame analysis
+
+      - uses: SonarSource/sonarcloud-github-action@v3
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

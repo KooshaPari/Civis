@@ -6,6 +6,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.UI;
 using DINOForge.SDK;
+using DINOForge.SDK.Diagnostics;
 using HarmonyLib;
 using Unity.Entities;
 using UnityEngine;
@@ -97,6 +98,12 @@ namespace DINOForge.Runtime
             {
                 Log.LogError($"Harmony init/patch failed: {ex.Message}");
             }
+
+            // Sentry — initialize error tracking from SDK
+            Diagnostics.SentryInitializer.Initialize(
+                environment: Application.isPlaying ? "production" : "development",
+                releaseOverride: PluginInfo.VERSION);
+            SentryInitializer.AddBreadcrumb($"DINOForge Runtime v{PluginInfo.VERSION} initializing", "runtime");
 
             // Create a dedicated persistent GameObject that won't be destroyed.
             // The BepInEx-managed gameObject gets cleaned up during DINO's scene

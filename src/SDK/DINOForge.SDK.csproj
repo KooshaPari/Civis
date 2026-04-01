@@ -44,6 +44,8 @@
     <PackageReference Include="NJsonSchema" Version="10.*" />
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <PackageReference Include="System.Text.Json" Version="10.*" />
+    <!-- Sentry error tracking — graceful no-op if SENTRY_DSN is not set -->
+    <PackageReference Include="Sentry" Version="4.11.0" />
   </ItemGroup>
 
 </Project>

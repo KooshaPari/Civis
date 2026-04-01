@@ -1,0 +1,29 @@
+{
+  "Faction": {
+    "Id": "republic",
+    "DisplayName": "Galactic Republic",
+    "Description": "The republic forces",
+    "Theme": "starwars",
+    "Archetype": "order",
+    "Doctrine": "elite_discipline",
+    "Icon": "republic_icon"
+  },
+  "Economy": {
+    "GatherBonus": 1.1,
+    "UpkeepModifier": 0.9,
+    "ResearchSpeed": 1.2,
+    "BuildSpeed": 1.0
+  },
+  "Army": {
+    "MoraleStyle": "disciplined",
+    "UnitCapModifier": 1.2,
+    "EliteCostModifier": 0.9,
+    "SpawnRateModifier": 1.1
+  },
+  "Roster": {
+    "CheapInfantry": "clone-trooper",
+    "LineInfantry": "arc-trooper",
+    "EliteInfantry": "commander-trooper"
+  },
+  "Buildings": {}
+}

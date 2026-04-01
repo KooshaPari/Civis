@@ -1,0 +1,17 @@
+id: star-wars-clone-wars
+name: 'Star Wars: Clone Wars'
+description: Star Wars themed universe for DINOForge
+era: Clone Wars 22-19 BBY
+version: 0.1.0
+author: DINOForge Agents
+faction_taxonomy:
+  factions: []
+crosswalk:
+  entries: {}
+  patterns: []
+naming:
+  faction_rules: {}
+  global_rules: 
+style:
+  faction_styles: {}
+  global: 

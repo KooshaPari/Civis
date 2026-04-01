@@ -39,6 +39,10 @@ test-verbose:
 test-class class:
     dotnet test src/Tests/DINOForge.Tests.csproj --no-build --filter "FullyQualifiedName~{{class}}"
 
+# Run performance regression tests only
+test-performance:
+    dotnet test src/Tests/DINOForge.Tests.csproj --no-build --filter "Category=Performance"
+
 # ── Code Quality ──────────────────────────────────────
 
 # Check code formatting
@@ -128,3 +132,14 @@ log:
 # Show DINOForge debug log
 debug-log:
     @cat "{{game_dir}}/BepInEx/dinoforge_debug.log" 2>/dev/null | tail -30 || echo "No debug log found"
+
+# ── Mutation Testing ──────────────────────────────────
+
+# Run Stryker.NET mutation testing
+# Fails if mutation score < 70%
+mutation-test:
+    ./scripts/mutation-test.ps1
+
+# Run mutation testing on a specific project
+mutation-test-project project:
+    ./scripts/mutation-test.ps1 -Project {{project}}

@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 > **Note:** DesktopCompanion (WinUI 3) requires local build with VS 2022 + Windows SDK toolchain
+
+### Added
+
+- **Test Type Expansion (Step 9)** — All major test types now implemented and enforced
+  - **Mutation testing**: Stryker.NET integration (`StrykerConfig.json`, `scripts/mutation-test.ps1`)
+    - Targets SDK models and domain code, threshold 85%/70%
+    - Run via `just mutation-test`
+  - **Performance regression tests**: 7 new tests in `PerformanceRegressionTests.cs`
+    - PackLoader, Registry lookup, DependencyResolver, YamlLoader, SchemaValidator timing assertions
+    - Tagged `[Trait("Category", "Performance")]`, run via `just test-performance`
+  - **Snapshot/approval tests**: 10 golden-file tests in `ModelSnapshotTests.cs`
+    - JSON/YAML roundtrip tests for UnitDefinition, BuildingDefinition, FactionDefinition,
+      PackManifest, WaveDefinition, DoctrineDefinition, TradeRoute, EconomyProfile,
+      ScenarioDefinition, UniverseBible
+    - Golden files in `src/Tests/Snapshots/`
+  - **UiAutomation graceful skip**: `CompanionFixture` skips instead of throwing when `COMPANION_EXE` not set
+  - **GameLaunch graceful skip**: `GameLaunchFixture` skips instead of throwing when `DINO_GAME_PATH` not set and game not running
+  - **GameLaunch API fixes**: Updated to use named-pipes `GameClient` (was HTTP-based old API)
+  - **Result**: 1913 tests, 0 failures, 4 skipped
 > (XamlCompiler needs VC++ ATL/MFC). CI releases do not include the Companion zip — build it locally.
 
 ### Added

@@ -271,6 +271,29 @@
              Condition="'@(KenneyAssetFiles)' == ''" />
   </Target>
 
+  <!-- Deploy Rust asset pipeline DLL to output directory -->
+  <Target Name="DeployRustAssetPipelineDll" AfterTargets="Build">
+    <ItemGroup>
+      <!-- Search for dinoforge_asset_pipeline DLL/SO in common locations -->
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\src\Tools\AssetPipelineRust\target\release\*.dll" />
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\src\Tools\AssetPipelineRust\target\release\*.so" />
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\build\rust\*\dinoforge_asset_pipeline.*" />
+    </ItemGroup>
+
+    <!-- Copy Rust DLL to output if found -->
+    <Copy SourceFiles="@(RustAssetPipelineDll)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="'@(RustAssetPipelineDll)' != ''" />
+
+    <Message Text="[RustAssetPipeline] Deployed to $(OutputPath)"
+             Importance="low"
+             Condition="'@(RustAssetPipelineDll)' != ''" />
+    <Message Text="[RustAssetPipeline] DLL not found — P/Invoke will gracefully degrade"
+             Importance="low"
+             Condition="'@(RustAssetPipelineDll)' == ''" />
+  </Target>
+
   <!-- Deploy packs from repo to game directory -->
   <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)')">
     <ItemGroup>

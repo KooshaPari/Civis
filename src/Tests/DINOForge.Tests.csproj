@@ -72,6 +72,10 @@
     <Compile Include="..\Runtime\Bridge\ComponentMap.cs">
       <Link>RuntimeBridge\ComponentMap.cs</Link>
     </Compile>
+    <!-- Phase 3: Rust Interop Tests (11 tests for P/Invoke wrapper) -->
+    <Compile Include="..\Runtime\RustAssetPipelineInterop.cs">
+      <Link>RustInterop\RustAssetPipelineInterop.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <!-- Exclude sub-projects that have their own csproj -->

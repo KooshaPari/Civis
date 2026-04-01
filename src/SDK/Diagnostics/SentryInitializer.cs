@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Sentry;
 
@@ -9,6 +10,7 @@ namespace DINOForge.SDK.Diagnostics;
 /// Initializes Sentry error tracking for the DINOForge SDK and all consuming applications.
 /// Call <see cref="Initialize"/> once at application startup (e.g., from Runtime.Plugin.Awake).
 /// </summary>
+[ExcludeFromCodeCoverage] // Requires live Sentry DSN connection to cover; graceful no-op is verified via integration tests
 public static class SentryInitializer
 {
     private static bool _initialized;

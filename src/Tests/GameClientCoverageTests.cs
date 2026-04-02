@@ -2188,4 +2188,174 @@ public class GameClientCoverageTests
             // Ignore cleanup errors
         }
     }
+
+    // ──────────────────────── All remaining GameClient API methods ────────────────────────
+
+    private GameClient MakeConnectedClient(string responseJson)
+    {
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(responseJson + Environment.NewLine));
+        var requestStream = new MemoryStream();
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+        return client;
+    }
+
+    private async Task TestApiMethod<T>(Func<GameClient, Task<T>> methodCall) where T : class
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{}}");
+        T result = await methodCall(client);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task StatusAsync_DelegatesCorrectly() => await TestApiMethod(c => c.StatusAsync());
+
+    [Fact]
+    public async Task WaitForWorldAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"ready\":true}}");
+        WaitResult result = await client.WaitForWorldAsync(5000);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task QueryEntitiesAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"entities\":[]}}");
+        QueryResult result = await client.QueryEntitiesAsync("Unit");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"value\":100.0}}");
+        StatResult result = await client.GetStatAsync("unit.stats.hp", 0);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ApplyOverrideAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"applied\":true}}");
+        OverrideResult result = await client.ApplyOverrideAsync("unit.stats.hp", 150f, "set");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ReloadPacksAsync_DelegatesCorrectly() => await TestApiMethod(c => c.ReloadPacksAsync());
+
+    [Fact]
+    public async Task GetCatalogAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"units\":[],\"buildings\":[]}}");
+        CatalogSnapshot result = await client.GetCatalogAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DumpStateAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"entities\":0}}");
+        CatalogSnapshot result = await client.DumpStateAsync("units");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetResourcesAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"food\":1000}}");
+        ResourceSnapshot result = await client.GetResourcesAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ScreenshotAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"path\":\"screenshot.png\"}}");
+        ScreenshotResult result = await client.ScreenshotAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task LoadSceneAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"loaded\":true}}");
+        LoadSceneResult result = await client.LoadSceneAsync("gameplay");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task StartGameAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}");
+        StartGameResult result = await client.StartGameAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ToggleUiAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}");
+        StartGameResult result = await client.ToggleUiAsync("modmenu");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task VerifyModAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"valid\":true}}");
+        VerifyResult result = await client.VerifyModAsync("packs/my-pack");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetComponentMapAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"mappings\":[]}}");
+        ComponentMapResult result = await client.GetComponentMapAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetUiTreeAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"nodes\":[]}}");
+        UiTreeResult result = await client.GetUiTreeAsync();
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task QueryUiAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"found\":false}}");
+        UiActionResult result = await client.QueryUiAsync("Canvas/Button");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ClickUiAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"clicked\":true}}");
+        UiActionResult result = await client.ClickUiAsync("Canvas/Button");
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task WaitForUiAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"reached\":true}}");
+        UiWaitResult result = await client.WaitForUiAsync("Canvas/Panel", "visible", 5000);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ExpectUiAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"matched\":true}}");
+        UiExpectationResult result = await client.ExpectUiAsync("Canvas/Text", "text=Hello");
+        result.Should().NotBeNull();
+    }
 }

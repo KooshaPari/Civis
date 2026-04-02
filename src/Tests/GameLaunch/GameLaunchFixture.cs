@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
+using DINOForge.Bridge.Protocol;
 using Xunit;
 
 namespace DINOForge.Tests.GameLaunch;
@@ -24,7 +25,6 @@ namespace DINOForge.Tests.GameLaunch;
 /// </summary>
 public sealed class GameLaunchFixture : IAsyncLifetime
 {
-    private const int DefaultBridgePort = 7474;
     private const int BootstrapTimeoutMs = 30_000;
     private const int PollIntervalMs = 500;
     
@@ -55,26 +55,24 @@ public sealed class GameLaunchFixture : IAsyncLifetime
             return;
         }
         
-        int port = int.TryParse(
-            Environment.GetEnvironmentVariable("DINO_BRIDGE_PORT"), out int p) ? p : DefaultBridgePort;
-            
         _gameProcess = Process.Start(new ProcessStartInfo
         {
             FileName = gamePath,
             UseShellExecute = false,
             CreateNoWindow = true
         }) ?? throw new InvalidOperationException($"Failed to start game at: {gamePath}");
-        
-        Client = new GameClient($"http://localhost:{port}");
-        
+
+        Client = new GameClient(new GameClientOptions());
+
         // Poll until the bridge is healthy or timeout
         using CancellationTokenSource cts = new(BootstrapTimeoutMs);
         while (!cts.IsCancellationRequested)
         {
             try
             {
-                DINOForge.Bridge.Protocol.StatusResult status = await Client.GetStatusAsync();
-                if (status.Ready)
+                await Client.ConnectAsync(cts.Token);
+                WaitResult worldResult = await Client.WaitForWorldAsync(BootstrapTimeoutMs, cts.Token);
+                if (worldResult.Ready)
                 {
                     IsInitialized = true;
                     return;
@@ -84,10 +82,10 @@ public sealed class GameLaunchFixture : IAsyncLifetime
             {
                 // Bridge not up yet — keep polling
             }
-            
+
             await Task.Delay(PollIntervalMs, cts.Token).ConfigureAwait(false);
         }
-        
+
         IsInitialized = false;
     }
     

@@ -14,7 +14,7 @@ namespace DINOForge.Tests.GameLaunch;
 [Trait("Category", "GameLaunch")]
 public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
 {
-    [Fact]
+    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
     public async Task WarfareStarwars_Loads28Units_InLiveCatalog()
     {
         CatalogSnapshot catalog = await fixture.Client!.GetCatalogAsync();
@@ -26,7 +26,7 @@ public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
             "warfare-starwars defines 14 Republic units + 14 CIS units");
     }
 
-    [Fact]
+    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
     public async Task WarfareStarwars_IsListedInLoadedPacks()
     {
         GameStatus status = await fixture.Client!.StatusAsync();

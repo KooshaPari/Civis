@@ -8,8 +8,18 @@ namespace DINOForge.Tests.Integration.Tests;
 /// <summary>
 /// E2E tests for complete game workflows using FakeGameBridge.
 /// Tests simulate full user journeys without requiring live game.
+/// 
+/// Maps to user journeys:
+/// - Journey-InstallPlay: Pack loading and verification
+/// - Journey-CreateBalance: Stat overrides and hot reload
+/// - Journey-AutomateGame: MCP tool automation
 /// </summary>
 [Trait("Category", "E2E")]
+[Trait("Category", "Journey")]
+[Trait("Journey", "Journey-AutomateGame")]
+[Trait("Category", "UserStory")]
+[Trait("UserStory", "US-F1.1")]
+[Trait("UserStory", "US-F4.1")]
 public class WorkflowE2ETests
 {
     private readonly FakeGameBridge _bridge = new();

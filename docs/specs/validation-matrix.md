@@ -65,6 +65,39 @@
 | Override persists after reload | ✅ |
 | Full sequence (load→stat→override→verify→reload) | ✅ |
 
+### MCP Tool Coverage (InGameAutomationTests.cs)
+
+| MCP Tool | Test Method | Status |
+|----------|------------|--------|
+| `game_status` | `MCP_game_status_GameRunning_ReturnsStatus` | ✅ Test-backed |
+| `game_get_stat` | `MCP_game_get_stat_ValidPath_ReturnsValue` | ✅ Test-backed |
+| `game_apply_override` | `MCP_game_apply_override_ValidStat_Succeeds` | ✅ Test-backed |
+| `game_reload_packs` | `MCP_game_reload_packs_Succeeds` | ✅ Test-backed |
+| `game_verify_mod` | `MCP_game_verify_mod_DINOForge_Loaded` | ✅ Test-backed |
+| `game_resources` | `MCP_game_resources_ReturnsAllResourceTypes` | ✅ Test-backed |
+| `game_wait_for_world` | `MCP_game_wait_for_world_AlreadyReady_ReturnsImmediately` | ✅ Test-backed |
+| `game_query_entities` | `MCP_game_query_entities_ByType_ReturnsMatching` | ✅ Test-backed |
+| `game_get_component` | `MCP_game_get_component_ValidEntity_ReturnsComponents` | ✅ Test-backed |
+| `game_dump_state` | `MCP_game_dump_state_ReturnsCatalog` | ✅ Test-backed |
+| `game_screenshot` | `MCP_game_screenshot_Succeeds` | ✅ Test-backed |
+| `game_navigate_to` | Placeholder (Spectre bug in GameControlCli) | ⚠️ Known Gap |
+| `log_swap_status` | `MCP_log_swap_status_ReturnsSwapProgress` | ✅ Test-backed |
+| `log_debug_log` | Placeholder (not registered in MCP server) | ❌ Gap |
+| `log_packs_loaded` | Placeholder (not registered in MCP server) | ❌ Gap |
+
+### E2E User Journey Coverage
+
+| Journey | Test File | Status |
+|---------|-----------|--------|
+| Journey-InstallPlay | EndToEndUserJourneysTests.cs | ✅ 2 tests |
+| Journey-CreateBalance | EndToEndUserJourneysTests.cs + HotReloadTests.cs | ✅ 4 tests |
+| Journey-CreateTotalConversion | EndToEndUserJourneysTests.cs + WarfareTests.cs | ✅ 4 tests |
+| Journey-Debug | EndToEndUserJourneysTests.cs + PackCompilerCliTests.cs | ✅ 4 tests |
+| Journey-PackConflicts | EndToEndUserJourneysTests.cs | ✅ 1 test |
+| Journey-FrameworkVersion | EndToEndUserJourneysTests.cs | ✅ 1 test |
+| Journey-Registry | EndToEndUserJourneysTests.cs | ✅ 1 test |
+| Journey-AutomateGame | InGameAutomationTests.cs + WorkflowE2ETests.cs | ✅ 20+ tests |
+
 ---
 
 ## Agent / Dev-Facing Tooling

@@ -249,54 +249,98 @@ namespace DINOForge.SDK.NativeInterop
     }
 
     // Placeholder types (normally in SDK.Models)
+
+    /// <summary>
+    /// Represents an asset imported via the Rust pipeline, containing mesh, materials, skeleton, and metadata.
+    /// </summary>
     public class ImportedAsset
     {
-        public string AssetId { get; set; }
-        public string SourcePath { get; set; }
-        public MeshData Mesh { get; set; }
-        public List<MaterialData> Materials { get; set; }
+        /// <summary>The unique identifier for this asset.</summary>
+        public string AssetId { get; set; } = string.Empty;
+        /// <summary>Path to the source asset file.</summary>
+        public string SourcePath { get; set; } = string.Empty;
+        /// <summary>Mesh data (vertices, indices, triangles).</summary>
+        public MeshData Mesh { get; set; } = new();
+        /// <summary>List of materials used by this asset.</summary>
+        public List<MaterialData> Materials { get; set; } = new();
+        /// <summary>Optional skeleton data for rigged assets.</summary>
         public SkeletonData? Skeleton { get; set; }
-        public AssetMetadata Metadata { get; set; }
+        /// <summary>Asset metadata including polycount.</summary>
+        public AssetMetadata Metadata { get; set; } = new();
     }
 
+    /// <summary>
+    /// Mesh geometry data including vertices, indices, and triangle count.
+    /// </summary>
     public class MeshData
     {
-        public float[] Vertices { get; set; }
-        public uint[] Indices { get; set; }
+        /// <summary>Vertex positions as float array.</summary>
+        public float[] Vertices { get; set; } = Array.Empty<float>();
+        /// <summary>Triangle indices as unsigned int array.</summary>
+        public uint[] Indices { get; set; } = Array.Empty<uint>();
+        /// <summary>Total number of triangles in this mesh.</summary>
         public int TriangleCount { get; set; }
     }
 
+    /// <summary>
+    /// Material data including name and properties.
+    /// </summary>
     public class MaterialData
     {
-        public string Name { get; set; }
+        /// <summary>Name of this material.</summary>
+        public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// Skeleton data for rigged assets.
+    /// </summary>
     public class SkeletonData
     {
-        public string Name { get; set; }
+        /// <summary>Name of the skeleton.</summary>
+        public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// Metadata about an imported asset.
+    /// </summary>
     public class AssetMetadata
     {
+        /// <summary>Number of polygons in the original asset.</summary>
         public int PolyCount { get; set; }
     }
 
+    /// <summary>
+    /// Asset with pre-generated LOD (Level of Detail) meshes.
+    /// </summary>
     public class OptimizedAsset
     {
-        public string AssetId { get; set; }
-        public MeshData LOD0 { get; set; }
-        public MeshData LOD1 { get; set; }
-        public MeshData LOD2 { get; set; }
+        /// <summary>The unique identifier for this asset.</summary>
+        public string AssetId { get; set; } = string.Empty;
+        /// <summary>Highest-detail LOD mesh (100% polycount).</summary>
+        public MeshData LOD0 { get; set; } = new();
+        /// <summary>Medium-detail LOD mesh (typically 50% polycount).</summary>
+        public MeshData LOD1 { get; set; } = new();
+        /// <summary>Lowest-detail LOD mesh (typically 10% polycount).</summary>
+        public MeshData LOD2 { get; set; } = new();
     }
 
+    /// <summary>
+    /// Definition of an asset for registration in the asset registry.
+    /// </summary>
     public class AssetDefinition
     {
-        public string Id { get; set; }
+        /// <summary>Unique identifier for this asset.</summary>
+        public string Id { get; set; } = string.Empty;
+        /// <summary>Optional LOD configuration for this asset.</summary>
         public LODDefinition? LOD { get; set; }
     }
 
+    /// <summary>
+    /// LOD (Level of Detail) configuration specifying mesh reduction targets.
+    /// </summary>
     public class LODDefinition
     {
-        public int[] Levels { get; set; }
+        /// <summary>Polycount percentages for each LOD level (e.g., [100, 50, 10]).</summary>
+        public int[] Levels { get; set; } = Array.Empty<int>();
     }
 }

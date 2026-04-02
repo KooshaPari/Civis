@@ -233,10 +233,19 @@ namespace DINOForge.SDK.NativeInterop
     }
 
     /// <summary>
+    /// <summary>
     /// Interface for dependency resolvers (implemented by both C# and Go interop).
+    /// Allows swapping between C# fallback and high-performance Go implementation.
     /// </summary>
     public interface IPackDependencyResolver
     {
+        /// <summary>
+        /// Resolves dependencies for a target pack against a set of available packs.
+        /// Returns a load order that satisfies all transitive dependencies.
+        /// </summary>
+        /// <param name="available">All packs available for resolution.</param>
+        /// <param name="target">The target pack to resolve dependencies for.</param>
+        /// <returns>Result containing load order on success, or errors on failure.</returns>
         DependencyResult ResolveDependencies(IEnumerable<PackManifest> available, PackManifest target);
     }
 }

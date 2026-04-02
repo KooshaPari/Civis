@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using DINOForge.SDK.Dependencies;
 using FluentAssertions;
 using Xunit;
 
@@ -142,6 +144,120 @@ packs/scenario-tutorial 789def456abc789def456abc";
             entries["packs/warfare-modern"].Should().Be("abc123def456abc123def456");
             entries["packs/example-balance"].Should().Be("def456abc789def456abc789");
             entries["packs/scenario-tutorial"].Should().Be("789def456abc789def456abc");
+        }
+
+        // ── PackSubmoduleManager.ListPacks ─────────────────────────────────
+
+        [Fact]
+        public void PackSubmoduleManager_ListPacks_NoGitmodules_ReturnsEmpty()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var manager = new PackSubmoduleManager(tempDir);
+                List<PackSubmoduleEntry> result = manager.ListPacks();
+                result.Should().BeEmpty();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ListPacks_WithSubmodules_ReturnsEntries()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string gitmodulesPath = Path.Combine(tempDir, ".gitmodules");
+                File.WriteAllText(gitmodulesPath, @"[submodule ""packs/warfare-modern""]
+	path = packs/warfare-modern
+	url = https://github.com/KooshaPari/warfare-modern
+[submodule ""packs/example-balance""]
+	path = packs/example-balance
+	url = https://github.com/KooshaPari/example-balance
+[submodule ""external/tool""]
+	path = external/tool
+	url = https://github.com/KooshaPari/tool");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                List<PackSubmoduleEntry> result = manager.ListPacks();
+
+                result.Should().HaveCount(2);
+                result.Should().Contain(e => e.Path == "packs/warfare-modern");
+                result.Should().Contain(e => e.Path == "packs/example-balance");
+                result.Should().NotContain(e => e.Path == "external/tool");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_NoLockFile_ReturnsEmpty()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+                result.Should().BeEmpty();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_WithEntries_ReturnsEntries()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string lockPath = Path.Combine(tempDir, "packs.lock");
+                File.WriteAllText(lockPath, "# packs.lock\npacks/war1 abc123\npacks/war2 def456\n");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+
+                result.Should().HaveCount(2);
+                result["packs/war1"].Should().Be("abc123");
+                result["packs/war2"].Should().Be("def456");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_SkipsCommentsAndEmptyLines()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string lockPath = Path.Combine(tempDir, "packs.lock");
+                File.WriteAllText(lockPath, "# comment\n  # indented comment\n\n  \n packs/war1 abc123  \n\npacks/war2 def456 extra\n");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+
+                result.Should().HaveCount(2);
+                result["packs/war1"].Should().Be("abc123");
+                result["packs/war2"].Should().Be("def456");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
         }
     }
 }

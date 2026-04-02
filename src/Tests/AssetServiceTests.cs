@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using DINOForge.SDK.Assets;
 using FluentAssertions;
 using Xunit;
@@ -193,6 +195,97 @@ namespace DINOForge.Tests
             // Second dispose should not throw
             Action act = () => service.Dispose();
             act.Should().NotThrow();
+        }
+
+        // ── AddressablesCatalog.Load with valid JSON ──────────────────────────
+
+        [Fact]
+        public void AddressablesCatalog_Load_ValidCatalog_ParsesBundlePaths()
+        {
+            string tempPath = Path.GetTempFileName();
+            try
+            {
+                var catalog = new Dictionary<string, object>
+                {
+                    ["m_InternalIds"] = new[] { "bundle1.bundle", "bundle2.bundle", "key1" },
+                    ["m_KeyDataString"] = "",
+                    ["m_BucketDataString"] = "",
+                    ["m_EntryDataString"] = ""
+                };
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(catalog));
+
+                AddressablesCatalog result = AddressablesCatalog.Load(tempPath);
+
+                result.BundlePaths.Should().HaveCount(2);
+                result.InternalIds.Should().HaveCount(3);
+                result.KeyToBundleMap.Should().NotBeNull();
+            }
+            finally
+            {
+                File.Delete(tempPath);
+            }
+        }
+
+        [Fact]
+        public void AddressablesCatalog_Load_EmptyInternalIds_Throws()
+        {
+            string tempPath = Path.GetTempFileName();
+            try
+            {
+                var catalog = new Dictionary<string, object>
+                {
+                    ["m_InternalIds"] = new object[] { },
+                    ["m_KeyDataString"] = "",
+                    ["m_BucketDataString"] = "",
+                    ["m_EntryDataString"] = ""
+                };
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(catalog));
+
+                Action act = () => AddressablesCatalog.Load(tempPath);
+                act.Should().Throw<InvalidOperationException>().WithMessage("*m_InternalIds*");
+            }
+            finally
+            {
+                File.Delete(tempPath);
+            }
+        }
+
+        [Fact]
+        public void AddressablesCatalog_Load_MissingInternalIds_Throws()
+        {
+            string tempPath = Path.GetTempFileName();
+            try
+            {
+                var catalog = new Dictionary<string, object>
+                {
+                    ["m_KeyDataString"] = ""
+                };
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(catalog));
+
+                Action act = () => AddressablesCatalog.Load(tempPath);
+                act.Should().Throw<InvalidOperationException>();
+            }
+            finally
+            {
+                File.Delete(tempPath);
+            }
+        }
+
+        [Fact]
+        public void AddressablesCatalog_Load_InvalidJson_Throws()
+        {
+            string tempPath = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempPath, "{ invalid json }");
+
+                Action act = () => AddressablesCatalog.Load(tempPath);
+                act.Should().Throw<JsonException>();
+            }
+            finally
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 }

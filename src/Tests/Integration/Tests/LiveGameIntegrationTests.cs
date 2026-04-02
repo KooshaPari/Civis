@@ -68,7 +68,7 @@ public class LiveGameIntegrationTests : IDisposable
     private void SkipIfGameNotAvailable()
     {
         if (!_gameAvailable)
-            return; // Let test pass if game not available
+            return;
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

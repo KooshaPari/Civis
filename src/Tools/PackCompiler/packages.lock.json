@@ -121,6 +121,11 @@
           "Newtonsoft.Json": "9.0.1"
         }
       },
+      "Sentry": {
+        "type": "Transitive",
+        "resolved": "4.11.0",
+        "contentHash": "uIWfs/AH8lq2lW3P0K7oOvOoja1HZpKA7TIwWHdHDNq2fRV3I6AwIJQtOqrB61dXqI+7zwo6DCMkYF/vY9HZwA=="
+      },
       "System.Configuration.ConfigurationManager": {
         "type": "Transitive",
         "resolved": "4.4.0",
@@ -185,6 +190,7 @@
           "AssetsTools.NET": "[3.0.4, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
+          "Sentry": "[4.11.0, )",
           "YamlDotNet": "[16.*, )"
         }
       }

@@ -159,9 +159,9 @@ namespace DINOForge.Tests
         private static Process? LaunchGameProcess()
         {
             // Try to get game path from environment variable or default path
-            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH") 
+            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
                 ?? @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
-            
+
             // Check if game exists
             if (!System.IO.File.Exists(gamePath))
             {

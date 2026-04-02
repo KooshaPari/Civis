@@ -17,7 +17,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User queries stats, applies override, verifies change persists.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_OverrideStat_ChangePersists()
     {
         // Step 1: Load packs
@@ -40,7 +40,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User reloads packs, catalog is available.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_ReloadPacks_CatalogAvailable()
     {
         // Step 1: Reload packs
@@ -55,7 +55,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User queries entities by component type.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_QueryEntities_ReturnsEntities()
     {
         // Setup packs
@@ -69,7 +69,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User verifies mod is loaded.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_VerifyMod_ModLoaded()
     {
         // Reload packs to load mods
@@ -84,7 +84,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User takes screenshot of gameplay.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_Screenshot_Succeeds()
     {
         // Take screenshot
@@ -96,7 +96,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User waits for world to be ready.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_WaitForWorld_BecomesReady()
     {
         // Not ready initially
@@ -114,7 +114,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User queries resource snapshot.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_GetResources_ReturnsSnapshot()
     {
         var resources = _bridge.GetResources();
@@ -126,7 +126,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User dumps state for debugging.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_DumpState_ReturnsCatalog()
     {
         _bridge.ReloadPacks(null);
@@ -138,7 +138,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User pings bridge for health check.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_Ping_RespondsPong()
     {
         var pingResult = _bridge.Ping();
@@ -149,7 +149,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: User gets component map.
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_GetComponentMap_ReturnsMappings()
     {
         var result = _bridge.GetComponentMap(null);
@@ -160,7 +160,7 @@ public class WorkflowE2ETests
     /// <summary>
     /// E2E: Override persists across reload (hot reload scenario).
     /// </summary>
-    [Fact(Skip = "API mismatch - FakeGameBridge methods not implemented: SimulateMainMenu, LoadSave, SimulateGameplay, DismissLoadScreen, GetJsonStatus")]
+    [Fact]
     public void E2E_HotReload_OverridePersists()
     {
         // Load packs

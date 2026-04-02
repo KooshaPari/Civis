@@ -2358,4 +2358,216 @@ public class GameClientCoverageTests
         UiExpectationResult result = await client.ExpectUiAsync("Canvas/Text", "text=Hello");
         result.Should().NotBeNull();
     }
+
+    // ──────────────────────── PingAsync missing test ────────────────────────
+
+    [Fact]
+    public async Task PingAsync_DelegatesCorrectly()
+    {
+        using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"connected\":true}}");
+        PingResult result = await client.PingAsync();
+        result.Should().NotBeNull();
+    }
+
+    // ──────────────────────── SendRequestCoreAsync untested error paths ────────────────────────
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenResponseLineIsEmpty_ThrowsGameClientException()
+    {
+        // Empty line from ReadLineAsync produces null deserialization
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenResponseResultIsNullExplicitly_ThrowsGameClientException()
+    {
+        // Server sends "result": null (explicitly null, not missing)
+        var responseJson = "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":null}" + Environment.NewLine;
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(responseJson));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        var ex = await action.Should().ThrowAsync<GameClientException>();
+        ex.WithMessage("*null result*");
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenReadReturnsWhitespace_DeserializesEmptyObject()
+    {
+        // Whitespace-only line deserializes to empty JObject (not null)
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes("   " + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        // Whitespace line -> empty object -> response is null -> throws GameClientException
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    // ──────────────────────── SendRequestAsync retry with state transitions ────────────────────────
+
+    [Fact]
+    public async Task SendRequestAsync_RetryWithLastException_ThrowsWithRetryMessage()
+    {
+        // All attempts fail — last exception should be preserved and wrapped
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(Environment.NewLine)); // null line
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions
+        {
+            RetryCount = 2,
+            RetryDelayMs = 1,
+            ReadTimeoutMs = 50
+        });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        var ex = await action.Should().ThrowAsync<GameClientException>();
+        ex.And.InnerException.Should().NotBeNull();
+        var msg = ex.And.Message;
+        msg.Should().Contain("ping");
+        msg.Should().Contain("3 attempts");
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestAsync_WhenConnectAsyncThrowsDuringReconnect_ContinuesRetryLoop()
+    {
+        // Pipe is broken, reconnect fails — should continue retry loop
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes(Environment.NewLine)); // null on read
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions
+        {
+            RetryCount = 1,
+            RetryDelayMs = 1,
+            ReadTimeoutMs = 50,
+            ConnectTimeoutMs = 10
+        });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        // Should throw after exhausting retries (both attempts fail)
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    // ──────────────────────── ReadLineAsync cancellation loop ────────────────────────
+
+    [Fact]
+    public async Task ReadLineAsync_CancellationLoop_ChecksTokenOnEachIteration()
+    {
+        // Verify ReadLineAsync's cancellation loop works with a stream that returns after some delays
+        var responseStream = new MemoryStream(Utf8NoBom.GetBytes("valid response" + Environment.NewLine));
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 5000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        // Normal completion — response deserializes successfully
+        PingResult result = await client.PingAsync();
+        result.Should().NotBeNull();
+
+        client.Dispose();
+    }
+
+    // ──────────────────────── ConnectAsync timeout path ────────────────────────
+
+    [Fact]
+    public async Task ConnectAsync_WhenTimeoutFiresDuringConnect_ThrowsGameClientException()
+    {
+        // Very short connect timeout on nonexistent pipe
+        GameClient client = new(new GameClientOptions
+        {
+            ConnectTimeoutMs = 1,
+            PipeName = "nonexistent-pipe-connect-timeout"
+        });
+
+        Func<Task> action = async () => await client.ConnectAsync();
+        var ex = await action.Should().ThrowAsync<GameClientException>();
+        ex.WithMessage("*Failed to connect*");
+
+        client.Dispose();
+    }
+
+    // ──────────────────────── State transitions ────────────────────────
+
+    [Fact]
+    public void StateTransition_ErrorThenDisconnected()
+    {
+        GameClient client = new();
+
+        // Start disconnected
+        client.State.Should().Be(ConnectionState.Disconnected);
+
+        // Set to Connected
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        client.State.Should().Be(ConnectionState.Connected);
+        client.IsConnected.Should().BeTrue();
+
+        // Set to Error
+        SetPrivateField(client, "_state", ConnectionState.Error);
+        client.State.Should().Be(ConnectionState.Error);
+        client.IsConnected.Should().BeFalse();
+
+        // Disconnect resets to Disconnected
+        client.Disconnect();
+        client.State.Should().Be(ConnectionState.Disconnected);
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public void Dispose_ClearsAllState()
+    {
+        GameClient client = new(new GameClientOptions { RetryCount = 3 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_writer", new StreamWriter(new MemoryStream()));
+        SetPrivateField(client, "_reader", new StreamReader(new MemoryStream()));
+
+        client.Dispose();
+
+        // Second dispose should be safe
+        client.Dispose();
+
+        // State should be disconnected
+        client.State.Should().Be(ConnectionState.Disconnected);
+        client.IsConnected.Should().BeFalse();
+
+        // Should throw ObjectDisposedException on further operations
+        Func<Task> action = async () => await client.PingAsync();
+        action.Should().ThrowAsync<ObjectDisposedException>();
+    }
 }

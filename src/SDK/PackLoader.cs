@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -53,6 +56,43 @@ namespace DINOForge.SDK
                 throw new InvalidOperationException("Pack manifest missing required field: version");
 
             return manifest;
+        }
+
+        /// <summary>
+        /// Load all packs from a directory (scans subdirectories for pack.yaml files).
+        /// </summary>
+        /// <param name="directory">Root directory to scan for packs.</param>
+        /// <returns>List of loaded pack manifests.</returns>
+        public List<PackManifest> LoadPacksFromDirectory(string directory)
+        {
+            if (!Directory.Exists(directory))
+                return new List<PackManifest>();
+
+            var packs = new List<PackManifest>();
+            foreach (string subDir in Directory.GetDirectories(directory))
+            {
+                string packYaml = Path.Combine(subDir, "pack.yaml");
+                if (File.Exists(packYaml))
+                {
+                    try
+                    {
+                        packs.Add(LoadFromFile(packYaml));
+                    }
+                    catch
+                    {
+                        // Skip invalid packs
+                    }
+                }
+            }
+            return packs;
+        }
+
+        /// <summary>
+        /// Load all packs from a directory asynchronously.
+        /// </summary>
+        public Task<List<PackManifest>> LoadPacksFromDirectoryAsync(string directory)
+        {
+            return Task.Run(() => LoadPacksFromDirectory(directory));
         }
     }
 }

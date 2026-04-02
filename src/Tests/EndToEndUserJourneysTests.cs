@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DINOForge.SDK;
 using DINOForge.SDK.Dependencies;
+using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using FluentAssertions;
 using Xunit;
@@ -44,7 +45,7 @@ public class EndToEndUserJourneysTests : IDisposable
     // Path: Download pack → Extract → Launch → Pack loads → Play with mod
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-InstallPlay")]
     [Trait("UserStory", "US-F1.1")]
@@ -82,7 +83,7 @@ author: Test Author
         loadedPacks.Should().Contain(p => p.Id == "my-test-pack", "our test pack should be in the loaded list");
     }
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-InstallPlay")]
     [Trait("UserStory", "US-F1.1")]
@@ -95,7 +96,7 @@ author: Test Author
         var loader = new PackLoader();
 
         // ACT & ASSERT: Loading fails with clear error
-        Action act = () => loader.LoadPackFromDirectory(packDir);
+        Action act = () => loader.LoadPacksFromDirectory(packDir);
         act.Should().Throw<FileNotFoundException>(
             "pack.yaml is required for a valid pack");
     }
@@ -106,7 +107,7 @@ author: Test Author
     // Path: Create pack.yaml → Create units.yaml → Run deploy → Launch → Verify → Reload
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-CreateBalance")]
     [Trait("UserStory", "US-F1.1")]
@@ -156,7 +157,7 @@ units:
         balancePack.Type.Should().Be("balance");
     }
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-CreateBalance")]
     [Trait("UserStory", "US-F4.1")]
@@ -208,7 +209,7 @@ units:
     // Path: Create pack + factions → Define units → Add assets → Deploy → Test
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-CreateTotalConversion")]
     [Trait("UserStory", "US-F1.1")]
@@ -265,7 +266,7 @@ factions:
         conversion!.Type.Should().Be("total_conversion");
     }
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-CreateTotalConversion")]
     [Trait("UserStory", "US-F5.1")]
@@ -310,7 +311,7 @@ units:
     // Path: Check manifest → Check assets → Launch → F9 overlay → Query entities
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-Debug")]
     [Trait("UserStory", "US-F6.1")]
@@ -330,11 +331,11 @@ type: content
         var loader = new PackLoader();
 
         // ACT & ASSERT: Loading fails with clear error about version
-        Action act = () => loader.LoadPackFromDirectory(packDir);
+        Action act = () => loader.LoadPacksFromDirectory(packDir);
         act.Should().Throw<Exception>("invalid version format should cause clear error");
     }
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-Debug")]
     [Trait("UserStory", "US-F6.1")]
@@ -354,7 +355,7 @@ depends_on:
 ");
 
         var loader = new PackLoader();
-        var resolver = new DependencyResolver();
+        var resolver = new PackDependencyResolver();
 
         // ACT: Load packs
         var loadedPacks = await loader.LoadPacksFromDirectoryAsync(_tempPackDir);
@@ -366,7 +367,7 @@ depends_on:
         result.Errors.Should().NotBeEmpty("should have error about missing dependency");
     }
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-Debug")]
     [Trait("UserStory", "US-F6.1")]
@@ -380,7 +381,7 @@ depends_on:
             new PackManifest { Id = "pack-c", Name = "Pack C", Version = "1.0.0", DependsOn = new List<string> { "pack-b" } }
         };
 
-        var resolver = new DependencyResolver();
+        var resolver = new PackDependencyResolver();
 
         // ACT: Resolve dependencies
         var result = resolver.ResolveDependencies(available, available[0]);
@@ -397,7 +398,7 @@ depends_on:
     // ID: Journey-PackConflicts
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-PackConflicts")]
     [Trait("UserStory", "US-F6.1")]
@@ -441,7 +442,7 @@ conflicts_with:
     // ID: Journey-FrameworkVersion
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-FrameworkVersion")]
     [Trait("UserStory", "US-F1.1")]
@@ -465,7 +466,7 @@ framework_version: '>=0.1.0 <0.5.0'
         // ACT: Try to load pack
         Action act = () =>
         {
-            var pack = loader.LoadPackFromDirectory(packDir);
+            var pack = loader.LoadPacksFromDirectory(packDir);
             // Simulate version check
             var minVersion = "0.1.0";
             var maxVersion = "0.5.0";
@@ -485,28 +486,26 @@ framework_version: '>=0.1.0 <0.5.0'
     // ID: Journey-Registry
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = "API mismatch - PackLoader methods and DependencyResolver not implemented")]
+    [Fact]
     [Trait("Category", "Journey")]
     [Trait("Journey", "Journey-Registry")]
     [Trait("UserStory", "US-F1.1")]
     public void Journey7_Registry_ConflictDetection_Works()
     {
-        // ARRANGE: Two packs register same unit
-        var registry = new UnitRegistry();
+        // ARRANGE: Two packs register same unit ID
+        var registry = new Registry<UnitDefinition>();
         var pack1 = new PackManifest { Id = "pack-1", Name = "Pack 1", Version = "1.0.0" };
         var pack2 = new PackManifest { Id = "pack-2", Name = "Pack 2", Version = "1.0.0" };
 
         var unit1 = new UnitDefinition
         {
             Id = "infantry",
-            Name = "Infantry",
-            PackId = "pack-1"
+            DisplayName = "Infantry",
         };
         var unit2 = new UnitDefinition
         {
             Id = "infantry",
-            Name = "Infantry Override",
-            PackId = "pack-2"
+            DisplayName = "Infantry Override",
         };
 
         // ACT & ASSERT: First registration succeeds, second should be handled

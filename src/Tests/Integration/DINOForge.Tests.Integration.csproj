@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
   </ItemGroup>
 
   <ItemGroup>

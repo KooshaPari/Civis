@@ -13,13 +13,10 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
     <!-- Exclude SentryInitializer + SDK native interop — requires Go/Rust toolchain to test -->
-    <CoverletExcludes>**/Diagnostics/**;**/NativeInterop/**;**/GoDependencyResolver*;**/RustAssetPipeline*</CoverletExcludes>
+    <CoverletExcludes>**/Diagnostics/**</CoverletExcludes>
     <!-- Coverage gates enforced on every PR.
-         Current: 83.25% line coverage (165 SDK gap tests added in step 10).
-         Target: 85% - requires closing remaining gaps in AddressablesCatalog, RegistryImportService,
-         FileDiscoveryService, and async state machine coverage in Bridge.Client.
-         Native interop (Go/Rust P/Invoke) excluded — requires toolchain in CI.
-         See COVERAGE_EXPANSION_TASK.md for the full gap analysis. -->
+         Target 85%: NativeInterop coverage via process mocks (Go binary, Rust MCP).
+         Integration tests mock the external processes to test error handling paths. -->
     <Threshold>85</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>

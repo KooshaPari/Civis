@@ -80,7 +80,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we connect to the IPC bridge
     /// THEN the connection succeeds and we can ping the game
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public void LiveGame_ConnectToBridge_Succeeds()
     {
         // Skip if game not available - this is expected in CI
@@ -95,7 +95,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we ping the game
     /// THEN we get a valid pong response with game info
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_Ping_ReturnsPong()
     {
         SkipIfGameNotAvailable();
@@ -115,7 +115,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we get the game status
     /// THEN the status reflects the actual game state
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_GetStatus_ReturnsGameState()
     {
         SkipIfGameNotAvailable();
@@ -135,7 +135,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query the catalog
     /// THEN we get the full entity catalog
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_GetCatalog_ReturnsEntities()
     {
         SkipIfGameNotAvailable();
@@ -151,7 +151,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query for units
     /// THEN we get unit entities with stats
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_QueryUnits_ReturnsUnitData()
     {
         SkipIfGameNotAvailable();
@@ -171,7 +171,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we read a unit stat
     /// THEN we get a stat result (value may be 0 if unit not found)
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_ReadStat_ReturnsResult()
     {
         SkipIfGameNotAvailable();
@@ -187,7 +187,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we apply a stat override
     /// THEN the override is applied to matching entities
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_ApplyOverride_Succeeds()
     {
         SkipIfGameNotAvailable();
@@ -207,7 +207,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we reload packs
     /// THEN the reload succeeds and packs are reloaded
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_ReloadPacks_Succeeds()
     {
         SkipIfGameNotAvailable();
@@ -223,7 +223,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we verify DINOForge Runtime is loaded
     /// THEN we get a verify result (loaded may be false if mod not injected)
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_VerifyMod_ReturnsResult()
     {
         SkipIfGameNotAvailable();
@@ -244,7 +244,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query resources
     /// THEN we get the current resource state
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_GetResources_ReturnsResources()
     {
         SkipIfGameNotAvailable();
@@ -264,7 +264,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we get the component map
     /// THEN we get the SDK to ECS component mappings
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_GetComponentMap_ReturnsMappings()
     {
         SkipIfGameNotAvailable();
@@ -284,7 +284,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we wait for the world to be ready
     /// THEN the world is reported as ready
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_WaitForWorld_IsReady()
     {
         SkipIfGameNotAvailable();
@@ -300,7 +300,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query entities
     /// THEN we get entity counts
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_QueryEntities_ReturnsEntities()
     {
         SkipIfGameNotAvailable();
@@ -320,7 +320,7 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we take a screenshot
     /// THEN the screenshot is captured
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires live game")]
     public async Task LiveGame_Screenshot_Succeeds()
     {
         SkipIfGameNotAvailable();

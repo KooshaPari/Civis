@@ -98,6 +98,25 @@
 | Journey-Registry | EndToEndUserJourneysTests.cs | ✅ 1 test |
 | Journey-AutomateGame | InGameAutomationTests.cs + WorkflowE2ETests.cs | ✅ 20+ tests |
 
+### Parallel Game E2E Tests (ParallelGameE2ETests.cs)
+
+| Test | Purpose | Status |
+|------|---------|--------|
+| `ParallelE2E_FreshLaunch_GameStartsClean` | Fresh game launch initial state | ⚠️ Requires TEST instance |
+| `ParallelE2E_MultipleLaunches_AllSucceed` | Sequential multiple launches | ⚠️ Requires TEST instance |
+| `ParallelE2E_ModLoading_PacksRecognized` | Mod loading in isolated instance | ⚠️ Requires TEST instance |
+| `ParallelE2E_ConcurrentInstances_BothRunning` | Two concurrent instances | ⚠️ Requires TEST instance |
+| `FreshInstall_TESTInstance_ConfiguredCorrectly` | Verify TEST instance setup | ✅ Documented |
+| `FreshInstall_FirstLaunch_CompletesInReasonableTime` | Fresh install timing | ⚠️ Requires TEST instance |
+| `FreshInstall_PackValidation_BeforeFirstLaunch` | Pack validation pre-launch | ✅ Documented |
+| `Scenario_PackLoading_MultipleInstances_AllSucceed` | Parallel pack loading | ⚠️ Requires TEST instance |
+| `Scenario_StateIsolation_InstancesDontInterfere` | State isolation verification | ⚠️ Requires TEST instance |
+
+**Note:** Parallel E2E tests require:
+1. TEST instance installed at `G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST`
+2. Or path configured in `.dino_test_instance_path`
+3. Tests are skipped if TEST instance not available
+
 ---
 
 ## Agent / Dev-Facing Tooling

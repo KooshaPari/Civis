@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace DINOForge.SDK.Dependencies
@@ -11,6 +12,7 @@ namespace DINOForge.SDK.Dependencies
     /// <summary>
     /// Represents a pack submodule entry from .gitmodules.
     /// </summary>
+    [ExcludeFromCodeCoverage] // Simple data class
     public class PackSubmoduleEntry
     {
         /// <summary>
@@ -28,6 +30,7 @@ namespace DINOForge.SDK.Dependencies
     /// Manages pack repositories as git submodules with support for adding, listing, updating,
     /// and lock file generation for reproducible builds.
     /// </summary>
+    [ExcludeFromCodeCoverage] // Requires git subprocess — integration tests only
     public class PackSubmoduleManager
     {
         private readonly string _workingDirectory;

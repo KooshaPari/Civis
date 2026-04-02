@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -26,6 +27,7 @@ namespace DINOForge.SDK.NativeInterop
     /// - Process overhead: ~5-10ms (acceptable for load-time operation)
     /// - Suitable for 50+ pack graphs with deep dependencies
     /// </summary>
+    [ExcludeFromCodeCoverage] // Requires Go binary in PATH — integration tests only
     public class GoDependencyResolver : IPackDependencyResolver
     {
         /// <summary>

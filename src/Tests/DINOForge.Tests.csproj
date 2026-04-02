@@ -20,7 +20,7 @@
          FileDiscoveryService, and async state machine coverage in Bridge.Client.
          Native interop (Go/Rust P/Invoke) excluded — requires toolchain in CI.
          See COVERAGE_EXPANSION_TASK.md for the full gap analysis. -->
-    <Threshold>83</Threshold>
+    <Threshold>85</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>

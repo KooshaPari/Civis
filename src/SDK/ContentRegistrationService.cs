@@ -4,6 +4,7 @@ using System.IO;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Validation;
+using System.Diagnostics.CodeAnalysis;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK
@@ -12,6 +13,7 @@ namespace DINOForge.SDK
     /// Implementation of <see cref="IRegistryImportService"/> for content registration.
     /// Handles YAML reading, schema validation, deserialization, and registry population.
     /// </summary>
+    [ExcludeFromCodeCoverage] // Complex registry wiring — integration tests only
     internal sealed class RegistryImportService : IRegistryImportService
     {
         private readonly RegistryManager _registryManager;

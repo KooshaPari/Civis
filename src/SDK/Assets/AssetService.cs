@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AssetsTools.NET;
+using System.Diagnostics.CodeAnalysis;
 using AssetsTools.NET.Extra;
 
 namespace DINOForge.SDK.Assets
@@ -11,6 +12,7 @@ namespace DINOForge.SDK.Assets
     /// Service for reading and inspecting Unity asset bundles.
     /// Wraps AssetsTools.NET for DINOForge mod development.
     /// </summary>
+    [ExcludeFromCodeCoverage] // Requires AssetsTools.NET native runtime — integration tests only
     public class AssetService : IDisposable
     {
         /// <summary>Expected Unity version for DINO (2021.3.45f2).</summary>

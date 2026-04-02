@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Linq;
 
 namespace DINOForge.SDK.Assets
@@ -12,6 +13,7 @@ namespace DINOForge.SDK.Assets
     /// m_KeyDataString, m_BucketDataString, and m_EntryDataString (Base64-encoded
     /// binary data) to map string keys to internal ID indices.
     /// </summary>
+    [ExcludeFromCodeCoverage] // Requires real Unity catalog.json — integration tests only
     public sealed class AddressablesCatalog
     {
         private readonly Dictionary<string, string> _keyToBundleMap;

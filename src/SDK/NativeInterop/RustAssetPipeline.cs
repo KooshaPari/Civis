@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -21,6 +22,7 @@ namespace DINOForge.SDK.NativeInterop
     /// 1. Try PyO3 module via MCP server (seamless)
     /// 2. Fall back to C# AssimpNet wrapper
     /// </summary>
+    [ExcludeFromCodeCoverage] // Requires Rust/PyO3 toolchain — integration tests only
     public static class RustAssetPipeline
     {
         /// <summary>

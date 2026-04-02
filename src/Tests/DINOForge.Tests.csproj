@@ -15,9 +15,10 @@
     <!-- Exclude SentryInitializer + SDK native interop — requires Go/Rust toolchain to test -->
     <CoverletExcludes>**/Diagnostics/**</CoverletExcludes>
     <!-- Coverage gates enforced on every PR.
-         Target 85%: NativeInterop coverage via process mocks (Go binary, Rust MCP).
-         Integration tests mock the external processes to test error handling paths. -->
-    <Threshold>85</Threshold>
+         Current: 89.47% (30 tests skipped: 21 SchemaValidation, 5 flaky temp-file, 4 EnvironmentCompatibility).
+         Target 87%: ~2.5% headroom for normal variance.
+         Native interop (Go/Rust P/Invoke) excluded - requires toolchain in CI. -->
+    <Threshold>87</Threshold>
     <ThresholdType>line</ThresholdType>
     <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>

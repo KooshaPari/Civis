@@ -15,8 +15,14 @@ namespace DINOForge.Tests
     /// <summary>
     /// Smoke tests for PackCompiler CLI functionality.
     /// Tests invoke SDK validation functions directly (not subprocess) and verify outputs.
-    /// Covers: validate command, validate-tc command, build command, JSON output format.
+    /// Maps to: US-F6.1 Pack Validation & Compiler
     /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F6.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-PackSystem")]
+    [Trait("Category", "Journey")]
+    [Trait("Journey", "Journey-Debug")]
     public class PackCompilerCliTests : IDisposable
     {
         private readonly string _tempRoot;

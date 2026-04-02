@@ -5,11 +5,20 @@ using Xunit;
 
 namespace DINOForge.Tests
 {
+    /// <summary>
+    /// Tests for pack loading and manifest parsing.
+    /// Maps to: US-F1.1 Pack Manifest Loading
+    /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F1.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-PackSystem")]
     public class PackLoaderTests
     {
         private readonly PackLoader _loader = new();
 
         [Fact]
+        [Trait("Journey", "Journey-InstallPlay")]
         public void LoadFromString_ValidManifest_DeserializesCorrectly()
         {
             string yaml = @"

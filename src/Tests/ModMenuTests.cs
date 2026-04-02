@@ -6,11 +6,20 @@ using Xunit;
 
 namespace DINOForge.Tests
 {
+    /// <summary>
+    /// Tests for in-game mod menu (F10) and debug overlay (F9).
+    /// Maps to: US-F2.1 Debug Overlay, US-F3.1 Mod Menu Toggle
+    /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F2.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-RuntimeUI")]
     public class ModMenuTests
     {
         #region MenuManager Toggle Tests
 
         [Fact]
+        [Trait("UserStory", "US-F3.1")]
         public void MenuManager_InitialState_IsClosed()
         {
             var manager = new MenuManager();

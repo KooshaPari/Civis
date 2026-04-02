@@ -20,7 +20,22 @@ namespace DINOForge.Tests.Integration.Tests;
 /// 5. ReadStat   — verify hp changed to 999
 /// 6. ReloadPacks — verify reload succeeds and override persists
 /// </summary>
+/// <remarks>
+/// Maps to:
+/// - US-F1.1 Pack Manifest Loading
+/// - US-F4.1 Hot Module Reload
+/// - US-F5.1 Asset Swap System
+/// - Journey-CreateTotalConversion
+/// </remarks>
 [Trait("Category", "BridgeRoundTrip")]
+[Trait("Category", "Epic")]
+[Trait("Epic", "Epic-Integration")]
+[Trait("Category", "Journey")]
+[Trait("Journey", "Journey-CreateTotalConversion")]
+[Trait("Category", "UserStory")]
+[Trait("UserStory", "US-F1.1")]
+[Trait("UserStory", "US-F4.1")]
+[Trait("UserStory", "US-F5.1")]
 public class BridgeRoundTripTests
 {
     // ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +262,7 @@ public class BridgeRoundTripTests
 /// - Overrides: stored in a dictionary keyed by sdkPath; persist across reloads.
 /// - Stats: default values from a fixed table; overrides win over defaults.
 /// </summary>
-internal sealed class FakeGameBridge : IGameBridge
+public sealed class FakeGameBridge : IGameBridge
 {
     // ── Internal state ──────────────────────────────────────────────────────────
 

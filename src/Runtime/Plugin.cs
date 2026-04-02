@@ -100,7 +100,7 @@ namespace DINOForge.Runtime
             }
 
             // Sentry — initialize error tracking from SDK
-            Diagnostics.SentryInitializer.Initialize(
+            SentryInitializer.Initialize(
                 environment: Application.isPlaying ? "production" : "development",
                 releaseOverride: PluginInfo.VERSION);
             SentryInitializer.AddBreadcrumb($"DINOForge Runtime v{PluginInfo.VERSION} initializing", "runtime");

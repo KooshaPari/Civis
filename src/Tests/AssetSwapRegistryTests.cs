@@ -10,7 +10,14 @@ namespace DINOForge.Tests
     /// <summary>
     /// Tests for <see cref="AssetSwapRegistry"/> covering registration, retrieval,
     /// thread safety, and state management.
+    /// Maps to: US-F5.1 Asset Swap System
     /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F5.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-AssetManagement")]
+    [Trait("Category", "Journey")]
+    [Trait("Journey", "Journey-CreateTotalConversion")]
     [Collection(AssetSwapRegistryCollection.Name)]
     public class AssetSwapRegistryTests : IDisposable
     {

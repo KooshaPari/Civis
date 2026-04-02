@@ -154,12 +154,19 @@ namespace DINOForge.Tests
         }
 
         /// <summary>
-        /// Launches the game process.
+        /// Launches the game process if game path is configured.
         /// </summary>
         private static Process? LaunchGameProcess()
         {
-            const string gameExePath = @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
-            const string gameDir = @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option";
+            // Try to get game path from environment variable or default path
+            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH") 
+                ?? @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
+            
+            // Check if game exists
+            if (!System.IO.File.Exists(gamePath))
+            {
+                return null; // Skip if game not found
+            }
 
             try
             {
@@ -167,8 +174,8 @@ namespace DINOForge.Tests
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = gameExePath,
-                        WorkingDirectory = gameDir,
+                        FileName = gamePath,
+                        WorkingDirectory = System.IO.Path.GetDirectoryName(gamePath) ?? "",
                         UseShellExecute = false,
                         CreateNoWindow = false,
                     }

@@ -13,6 +13,14 @@ using Xunit;
 
 namespace DINOForge.Tests
 {
+    /// <summary>
+    /// Tests for Warfare domain (factions, archetypes, waves, balance).
+    /// Maps to: Journey-CreateTotalConversion
+    /// </summary>
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-Warfare")]
+    [Trait("Category", "Journey")]
+    [Trait("Journey", "Journey-CreateTotalConversion")]
     public class ArchetypeTests
     {
         private readonly ArchetypeRegistry _registry = new ArchetypeRegistry();

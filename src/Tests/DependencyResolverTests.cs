@@ -7,6 +7,16 @@ using Xunit;
 
 namespace DINOForge.Tests
 {
+    /// <summary>
+    /// Tests for pack dependency resolution including cycles and conflicts.
+    /// Maps to: US-F1.1 Pack Manifest Loading (dependency resolution)
+    /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F1.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-PackSystem")]
+    [Trait("Category", "Journey")]
+    [Trait("Journey", "Journey-Debug")]
     public class DependencyResolverTests
     {
         private readonly PackLoader _loader = new();

@@ -12,6 +12,16 @@ using Xunit;
 
 namespace DINOForge.Tests
 {
+    /// <summary>
+    /// Tests for hot module reload functionality.
+    /// Maps to: US-F4.1 Hot Module Reload
+    /// </summary>
+    [Trait("Category", "UserStory")]
+    [Trait("UserStory", "US-F4.1")]
+    [Trait("Category", "Epic")]
+    [Trait("Epic", "Epic-RuntimeUI")]
+    [Trait("Category", "Journey")]
+    [Trait("Journey", "Journey-CreateBalance")]
     public class HotReloadTests : IDisposable
     {
         private readonly string _tempDir;

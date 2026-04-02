@@ -230,15 +230,14 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Fresh game launch produces expected initial state.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires TEST instance with game installed - run manually")]
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_FreshLaunch_GameStartsClean()
     {
-        // This test requires actual game - skip in CI without TEST instance
+        // This test requires actual game - skip by default
         if (!File.Exists(_testExePath))
         {
-            // Document expected behavior when TEST instance not available
-            Assert.True(true, "TEST instance not available - document expected behavior");
+            Assert.True(true, "TEST instance not available");
             return;
         }
 
@@ -267,7 +266,7 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Game can be launched and stopped multiple times in sequence.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires TEST instance with game installed - run manually")]
     [Trait("Parallel", "Sequential")]
     public async Task ParallelE2E_MultipleLaunches_AllSucceed()
     {
@@ -292,7 +291,7 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Verify mod loading works in isolated instance.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires TEST instance with game installed - run manually")]
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_ModLoading_PacksRecognized()
     {
@@ -324,7 +323,7 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Two game instances can run concurrently on different desktops.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires TEST instance with game installed - run manually")]
     [Trait("Parallel", "Concurrent")]
     public async Task ParallelE2E_ConcurrentInstances_BothRunning()
     {

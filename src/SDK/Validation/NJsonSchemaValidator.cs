@@ -56,7 +56,23 @@ namespace DINOForge.SDK.Validation
             }
 
             // Convert YAML content to JSON
-            string jsonContent = YamlSchemaConverter.ConvertYamlToJson(yamlContent);
+            string jsonContent;
+            try
+            {
+                jsonContent = YamlSchemaConverter.ConvertYamlToJson(yamlContent);
+            }
+            catch (Exception ex)
+            {
+                // Return validation failure for malformed YAML instead of throwing
+                List<ValidationError> yamlErrors = new List<ValidationError>
+                {
+                    new ValidationError(
+                        path: "",
+                        message: $"Invalid YAML: {ex.Message}",
+                        rule: "yaml-parse-error")
+                };
+                return ValidationResult.Failure(yamlErrors.AsReadOnly());
+            }
 
             // Parse JSON for validation
             JToken jToken = JToken.Parse(jsonContent);

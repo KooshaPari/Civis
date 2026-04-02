@@ -29,7 +29,7 @@ namespace DINOForge.Tests
             _validator = new NJsonSchemaValidator(schemas);
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidManifest_PassesValidation()
         {
             string yaml = @"
@@ -49,7 +49,7 @@ conflicts_with: []
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidManifest_MissingRequiredFields_FailsValidation()
         {
             // Missing required fields: id, name, version, author, type
@@ -63,7 +63,7 @@ description: An incomplete manifest
             result.Errors.Should().NotBeEmpty();
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidUnit_PassesValidation()
         {
             string yaml = @"
@@ -99,7 +99,7 @@ behavior_tags:
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidUnit_MissingId_FailsValidation()
         {
             string yaml = @"
@@ -114,7 +114,7 @@ faction_id: test-faction
             result.Errors.Should().NotBeEmpty();
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidBuilding_PassesValidation()
         {
             string yaml = @"
@@ -134,7 +134,7 @@ health: 500
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidFaction_PassesValidation()
         {
             string yaml = @"
@@ -158,7 +158,7 @@ army:
 
         // ── Weapon Schema ─────────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidWeapon_PassesValidation()
         {
             string yaml = @"
@@ -179,7 +179,7 @@ aoe_radius: 0
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidWeapon_MissingId_Fails()
         {
             string yaml = @"
@@ -192,7 +192,7 @@ display_name: No ID Weapon
 
         // ── Projectile Schema ────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidProjectile_PassesValidation()
         {
             string yaml = @"
@@ -209,7 +209,7 @@ aoe_radius: 0
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidProjectile_MissingDisplayName_Fails()
         {
             string yaml = @"
@@ -222,7 +222,7 @@ id: no-name-projectile
 
         // ── Doctrine Schema ──────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidDoctrine_PassesValidation()
         {
             string yaml = @"
@@ -241,7 +241,7 @@ modifiers:
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidDoctrine_MissingId_Fails()
         {
             string yaml = @"
@@ -254,7 +254,7 @@ display_name: No ID Doctrine
 
         // ── Skill Schema ────────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidSkill_PassesValidation()
         {
             string yaml = @"
@@ -276,7 +276,7 @@ effects:
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidSkill_MissingSkillClass_Fails()
         {
             string yaml = @"
@@ -291,7 +291,7 @@ target_type: self
 
         // ── Wave Schema ─────────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidWave_PassesValidation()
         {
             string yaml = @"
@@ -312,7 +312,7 @@ spawn_groups:
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidWave_MissingDisplayName_Fails()
         {
             string yaml = @"
@@ -325,7 +325,7 @@ id: bad-wave
 
         // ── Squad Schema ────────────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void ValidSquad_PassesValidation()
         {
             string yaml = @"
@@ -348,7 +348,7 @@ behavior_tags:
                 string.Join("; ", result.Errors));
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void InvalidSquad_MissingUnitId_Fails()
         {
             string yaml = @"
@@ -362,7 +362,7 @@ display_name: Test Squad
 
         // ── Boundary Value Tests ─────────────────────────────────────────
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void Unit_EmptyStringId_FailsValidation()
         {
             string yaml = @"
@@ -376,7 +376,7 @@ faction_id: test
             result.IsValid.Should().BeFalse();
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void Manifest_EmptyStringId_FailsValidation()
         {
             string yaml = @"
@@ -391,7 +391,7 @@ type: content
             result.IsValid.Should().BeFalse();
         }
 
-        [Fact(Skip = "Flaky - NJsonSchemaValidator throws on invalid YAML instead of returning result")]
+        [Fact]
         public void Building_ValidMinimal_PassesValidation()
         {
             string yaml = @"

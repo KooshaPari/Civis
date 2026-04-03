@@ -155,7 +155,7 @@ public class GameSandboxIntegrationTests : IDisposable
         // Skip if game wasn't launched (not available)
         if (!_launchedGame)
             return;
-            
+
         _processManager.IsRunning.Should().BeTrue("game should be running after launch");
     }
 

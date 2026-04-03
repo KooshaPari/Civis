@@ -47,10 +47,10 @@ public class ParallelGameE2ETests : IDisposable
     {
         // Read test instance path from config or use default
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
-        _testInstancePath = File.Exists(configFile) 
-            ? File.ReadAllText(configFile).Trim() 
+        _testInstancePath = File.Exists(configFile)
+            ? File.ReadAllText(configFile).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
-        
+
         _testExePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
         _gameControlCliPath = Path.Combine(GetRepoRoot(), "src", "Tools", "Cli", "bin", "Release", "net11.0", "GameControlCli.dll");
         _pipeName = $"dinoforge-game-bridge-test-{Process.GetCurrentProcess().Id}";
@@ -189,9 +189,9 @@ public class ParallelGameE2ETests : IDisposable
 
             if (output.Contains("\"running\": true"))
             {
-                return new GameStatus 
-                { 
-                    Running = true, 
+                return new GameStatus
+                {
+                    Running = true,
                     WorldReady = output.Contains("\"worldReady\": true"),
                     EntityCount = ExtractEntityCount(output)
                 };
@@ -245,7 +245,7 @@ public class ParallelGameE2ETests : IDisposable
         var process = LaunchGame();
         if (process == null)
         {
-            Assert.True(false, "Failed to launch game");
+            Assert.Fail("Failed to launch game");
             return;
         }
 
@@ -253,7 +253,7 @@ public class ParallelGameE2ETests : IDisposable
         {
             // Wait for world ready
             var worldReady = await WaitForWorldAsync(60);
-            
+
             // Verify world is ready
             worldReady.Should().BeTrue("game should start and create ECS world");
         }
@@ -281,7 +281,7 @@ public class ParallelGameE2ETests : IDisposable
         {
             var process = LaunchGame();
             process.Should().NotBeNull($"launch {i + 1} should succeed");
-            
+
             await Task.Delay(3000); // Give game time to start
             StopGame();
             await Task.Delay(1000); // Give time to cleanup
@@ -307,10 +307,10 @@ public class ParallelGameE2ETests : IDisposable
         try
         {
             await WaitForWorldAsync(60);
-            
+
             // Check that packs are loaded via bridge CLI
             var status = await GetGameStatusAsync();
-            
+
             // Document expected behavior
             status.Running.Should().BeTrue("game should be running");
         }
@@ -335,7 +335,7 @@ public class ParallelGameE2ETests : IDisposable
         }
 
         var processes = new List<Process>();
-        
+
         try
         {
             // Launch on two different desktops
@@ -390,10 +390,10 @@ public class ParallelGameHarness : IDisposable
     public ParallelGameHarness(int maxInstances = 4)
     {
         _maxInstances = Math.Min(maxInstances, Environment.ProcessorCount);
-        
+
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
-        _testInstancePath = File.Exists(configFile) 
-            ? File.ReadAllText(configFile).Trim() 
+        _testInstancePath = File.Exists(configFile)
+            ? File.ReadAllText(configFile).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -440,7 +440,7 @@ public class ParallelGameHarness : IDisposable
             if (instance.Process != null)
             {
                 _instances.Add(instance);
-                
+
                 // Wait for world to be ready
                 await instance.WaitForWorldAsync(60);
             }
@@ -598,8 +598,8 @@ public class FreshInstallTests : IDisposable
     public FreshInstallTests()
     {
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
-        _testInstancePath = File.Exists(configFile) 
-            ? File.ReadAllText(configFile).Trim() 
+        _testInstancePath = File.Exists(configFile)
+            ? File.ReadAllText(configFile).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -626,7 +626,7 @@ public class FreshInstallTests : IDisposable
     public async Task FreshInstall_FirstLaunch_CompletesInReasonableTime()
     {
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
-        
+
         if (!File.Exists(exePath))
         {
             Assert.True(true, "TEST instance not available");
@@ -634,7 +634,7 @@ public class FreshInstallTests : IDisposable
         }
 
         var sw = Stopwatch.StartNew();
-        
+
         var startInfo = new ProcessStartInfo
         {
             FileName = exePath,
@@ -647,7 +647,7 @@ public class FreshInstallTests : IDisposable
         using var process = Process.Start(startInfo);
         if (process == null)
         {
-            Assert.True(false, "Failed to start process");
+            Assert.Fail("Failed to start process");
             return;
         }
 
@@ -675,7 +675,7 @@ public class FreshInstallTests : IDisposable
     {
         // Validate packs exist before launching game
         var packsDir = Path.Combine(GetRepoRoot(), "packs");
-        
+
         if (!Directory.Exists(packsDir))
         {
             // Skip gracefully - packs may be in different location
@@ -706,7 +706,7 @@ public class FreshInstallTests : IDisposable
     public void FreshInstall_TESTInstance_ConfiguredCorrectly()
     {
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
-        
+
         // TEST instance should exist for parallel testing
         if (!File.Exists(exePath))
         {
@@ -719,7 +719,7 @@ public class FreshInstallTests : IDisposable
         var mainPath = @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
         if (File.Exists(mainPath))
         {
-            _testInstancePath.Should().NotBe(Path.GetDirectoryName(mainPath), 
+            _testInstancePath.Should().NotBe(Path.GetDirectoryName(mainPath),
                 "TEST instance should be at a different path");
         }
     }
@@ -747,10 +747,10 @@ public class ScenarioParallelTests : IDisposable
         {
             repoRoot = Directory.GetParent(repoRoot)?.FullName;
         }
-        
+
         var configFile = Path.Combine(repoRoot ?? "", ".dino_test_instance_path");
-        _testInstancePath = File.Exists(configFile) 
-            ? File.ReadAllText(configFile).Trim() 
+        _testInstancePath = File.Exists(configFile)
+            ? File.ReadAllText(configFile).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -775,14 +775,14 @@ public class ScenarioParallelTests : IDisposable
         }
 
         var harness = new ParallelGameHarness(2);
-        
+
         try
         {
             var results = await harness.RunParallelTestsAsync(async instance =>
             {
                 // Simulate pack loading test
                 await Task.Delay(1000);
-                
+
                 return new TestResult
                 {
                     Success = instance.IsHealthy,
@@ -816,17 +816,17 @@ public class ScenarioParallelTests : IDisposable
         }
 
         var harness = new ParallelGameHarness(2);
-        
+
         try
         {
             var results = await harness.RunParallelTestsAsync(async instance =>
             {
                 // Each instance gets unique ID
                 var instanceId = instance.DesktopName;
-                
+
                 // Simulate state modification
                 await Task.Delay(500);
-                
+
                 // Verify state is instance-local
                 return new TestResult
                 {
@@ -840,7 +840,7 @@ public class ScenarioParallelTests : IDisposable
             }, instanceCount: 2);
 
             results.Should().HaveCount(2);
-            
+
             // States should be different
             var states = results.Select(r => r.Metadata["state"].ToString()).ToList();
             states.Distinct().Should().HaveCount(2, "each instance should have independent state");

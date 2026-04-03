@@ -1065,6 +1065,23 @@ public class GameClientCoverageTests
     }
 
     /// <summary>
+    /// Stream that throws IOException on every Read/ReadAsync call — simulates a broken pipe.
+    /// </summary>
+    private sealed class BrokenPipeStream : MemoryStream
+    {
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new IOException("Pipe has been broken");
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            throw new IOException("Pipe has been broken");
+        }
+    }
+
+    /// <summary>
     /// MemoryStream that blocks indefinitely on Read operations - used for timeout testing.
     /// </summary>
     private sealed class BlockingMemoryStream : MemoryStream
@@ -1718,21 +1735,23 @@ public class GameClientCoverageTests
 
     // ──────────────────────── GameClient SendRequestAsync retry paths ────────────────────────
 
-    [Fact(Skip = "Flaky - empty stream behavior varies with coverage instrumentation")]
+    [Fact]
     public async Task SendRequestAsync_AllAttemptsFail_ThrowsAfterRetries()
     {
-        // Test that when all attempts fail, the final exception is thrown
+        // Test that when all attempts fail, the final exception is thrown.
+        // Use a stream that throws IOException on read (simulates broken connection).
         var requestStream = new MemoryStream();
-        var responseStream = new MemoryStream(); // Empty stream
+        var brokenStream = new BrokenPipeStream();
+        var reader = new StreamReader(brokenStream, Utf8NoBom, false, 1024, true);
 
-        GameClient client = new(new GameClientOptions { RetryCount = 2, RetryDelayMs = 10, ReadTimeoutMs = 1000 });
+        GameClient client = new(new GameClientOptions { RetryCount = 2, RetryDelayMs = 1, ReadTimeoutMs = 100 });
         SetPrivateField(client, "_state", ConnectionState.Connected);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
-        SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_reader", reader);
 
         Func<Task> action = async () => await client.PingAsync();
-
-        await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>();
+        ex.And.InnerException.Should().NotBeNull();
 
         client.Dispose();
     }
@@ -2694,3 +2713,4 @@ public class GameClientCoverageTests
         client.State.Should().Be(ConnectionState.Connected);
         client.Dispose();
     }
+}

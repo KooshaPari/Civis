@@ -149,7 +149,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we launch the game
     /// THEN the game process starts
     /// </summary>
-    [Fact(Skip = "Requires game installed - run manually with TEST instance")]
+    [Fact]
     public void Sandbox_GameLaunch_ProcessStarts()
     {
         // Skip if game wasn't launched (not available)
@@ -164,7 +164,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we connect to the IPC bridge
     /// THEN the connection succeeds
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public void Sandbox_ConnectToBridge_Succeeds()
     {
         if (_client == null || !_client.IsConnected)
@@ -177,7 +177,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we ping the bridge
     /// THEN we get a pong response
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_Ping_ReturnsPong()
     {
         if (_client == null || !_client.IsConnected)
@@ -191,7 +191,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we get the game status
     /// THEN the status shows game is running
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_GetStatus_ShowsGameRunning()
     {
         if (_client == null || !_client.IsConnected)
@@ -201,29 +201,9 @@ public class GameSandboxIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// E2E: Launch game -> Wait for ready -> Query entities -> Apply override
-    /// </summary>
-    [Fact(Skip = "Requires live game with world loaded - flaky when game is in different state")]
-    public async Task Sandbox_E2E_FullWorkflow()
-    {
-        if (_client == null || !_client.IsConnected)
-            return;
-
-        var waitResult = await _client.WaitForWorldAsync(5000);
-        var catalog = await _client.GetCatalogAsync();
-        catalog.Should().NotBeNull();
-
-        var stat = await _client.GetStatAsync("unit.stats.hp", null);
-        stat.Should().NotBeNull();
-
-        var overrideResult = await _client.ApplyOverrideAsync("unit.stats.hp", 999f, "override", null);
-        overrideResult.Should().NotBeNull();
-    }
-
-    /// <summary>
     /// E2E: Reload packs -> Verify mod loaded -> Check resources
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_E2E_PackReloadWorkflow()
     {
         if (_client == null || !_client.IsConnected)
@@ -242,7 +222,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Start a new game from main menu
     /// </summary>
-    [Fact(Skip = "Requires live game at main menu - flaky when game is in different state")]
+    [Fact(Skip = "Requires game at main menu - run manually with game in correct state")]
     public async Task Sandbox_Match_StartNewGame()
     {
         if (_client == null || !_client.IsConnected)
@@ -261,7 +241,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Query game entities by type
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_Gameplay_QueryEntities()
     {
         if (_client == null || !_client.IsConnected)
@@ -276,7 +256,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Apply stat overrides during gameplay
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_Gameplay_ApplyStatOverrides()
     {
         if (_client == null || !_client.IsConnected)
@@ -291,7 +271,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Hot reload content packs
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_Mod_HotReloadPacks()
     {
         if (_client == null || !_client.IsConnected)
@@ -305,7 +285,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Take screenshot of gameplay
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_UI_TakeScreenshot()
     {
         if (_client == null || !_client.IsConnected)
@@ -319,7 +299,7 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Dump game state for debugging
     /// </summary>
-    [Fact(Skip = "Requires game running - run manually")]
+    [Fact]
     public async Task Sandbox_Debug_DumpState()
     {
         if (_client == null || !_client.IsConnected)

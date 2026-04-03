@@ -1042,6 +1042,29 @@ public class GameClientCoverageTests
     }
 
     /// <summary>
+    /// A MemoryStream that throws IOException on Write operations.
+    /// Used to test the WriteLineAsync throw path in SendRequestAsync.
+    /// </summary>
+    private sealed class ThrowingMemoryStream : MemoryStream
+    {
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new IOException("Simulated write failure");
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            throw new IOException("Simulated write failure");
+        }
+
+        public override void WriteByte(byte value)
+        {
+            throw new IOException("Simulated write failure");
+        }
+    }
+
+    /// <summary>
     /// MemoryStream that blocks indefinitely on Read operations - used for timeout testing.
     /// </summary>
     private sealed class BlockingMemoryStream : MemoryStream
@@ -2590,4 +2613,84 @@ public class GameClientCoverageTests
         Func<Task> action = async () => await client.PingAsync();
         action.Should().ThrowAsync<ObjectDisposedException>();
     }
-}
+
+    // ──────────────────────── Remaining uncovered paths ────────────────────────
+
+    [Fact]
+    public async Task SendRequestCoreAsync_WhenDeserializationSucceeds_ReturnsResult()
+    {
+        // Verify the non-null deserialization path (branch coverage: result is NOT null)
+        var responseJson = "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"connected\":true,\"latencyMs\":5}}" + Environment.NewLine;
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes(responseJson)), Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        PingResult result = await client.PingAsync();
+        result.Should().NotBeNull();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestAsync_WithParameters_PassesCorrectJsonRpc()
+    {
+        // Verify parameters != null path in SendRequestCoreAsync
+        // QueryEntitiesAsync passes a non-null parameters object
+        var responseJson = "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"entities\":[]}}" + Environment.NewLine;
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes(responseJson)), Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        QueryResult result = await client.QueryEntitiesAsync("Unit", "infantry");
+
+        result.Should().NotBeNull();
+        requestStream.Position = 0;
+        using var reader = new StreamReader(requestStream);
+        string requestJson = await reader.ReadToEndAsync();
+        requestJson.Should().Contain("\"method\":\"queryEntities\"");
+        requestJson.Should().Contain("\"componentType\":\"Unit\"");
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task SendRequestAsync_WhenWriteFails_ThrowsAfterRetries()
+    {
+        // When WriteLineAsync throws IOException, the retry loop catches it and retries.
+        // With RetryCount=0, only one attempt is made before throwing.
+        var throwingStream = new ThrowingMemoryStream();
+        var requestStream = new MemoryStream();
+
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes("{}" + Environment.NewLine)), Utf8NoBom, false, 1024, true));
+        SetPrivateField(client, "_writer", new StreamWriter(throwingStream, Utf8NoBom, 1024, true) { AutoFlush = true });
+
+        Func<Task> action = async () => await client.PingAsync();
+        await action.Should().ThrowAsync<GameClientException>();
+
+        client.Dispose();
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenAlreadyConnected_ReturnsImmediately()
+    {
+        // Set state to Connected directly - ConnectAsync should return without doing anything
+        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 5000 });
+        SetPrivateField(client, "_state", ConnectionState.Connected);
+        SetPrivateField(client, "_writer", new StreamWriter(new MemoryStream()));
+        SetPrivateField(client, "_reader", new StreamReader(new MemoryStream()));
+
+        // Should not throw - early return when already connected
+        Func<Task> action = async () => await client.ConnectAsync();
+        await action.Should().NotThrowAsync();
+
+        client.State.Should().Be(ConnectionState.Connected);
+        client.Dispose();
+    }

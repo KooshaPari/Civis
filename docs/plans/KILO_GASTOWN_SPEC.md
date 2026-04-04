@@ -34,8 +34,8 @@ A **town** (rig) is a persistent containerized environment hosting multiple conc
 
 A **bead** is the atomic unit of work in Gastown. Each bead has:
 - `bead_id` — unique identifier
-- `type` — `issue`, `merge_request`, `convoy`, or `triage`
-- `status` — `open`, `in_progress`, `in_review`, `completed`, `cancelled`
+- `type` — `issue`, `task`, or `escalation`
+- `status` — `open`, `in_progress`, `in_review`, `closed`
 - `title` / `body` — description
 - `assignee_agent_bead_id` — which agent owns it
 - `priority` — `low`, `medium`, `high`, `critical`
@@ -44,9 +44,13 @@ A **bead** is the atomic unit of work in Gastown. Each bead has:
 
 **Bead Types:**
 - `issue` — Feature request, bug, or task
-- `merge_request` — Review submission from an agent
-- `convoy` — Feature branch grouping multiple related beads
-- `triage` — System health check (e.g., stuck agent detection)
+- `task` — Actionable work item
+- `escalation` — Blocked/stuck issue requiring supervisor intervention
+
+**Special Bead Labels:**
+- `gt:pr-fixup` — existing PR needs fixes from review comments
+- `gt:escalation` — escalation bead
+- `gt:triage-request` — triage request for system health
 
 ### Convoys (Feature Branches)
 
@@ -57,7 +61,12 @@ convoy_id: 381d5195-27f8-4843-9efe-62f11234815e
 feature_branch: convoy/agileplus-kilo-specs-dino/381d5195/head
 ```
 
+**DINOForge active convoy:**
+- `convoy/methodology-dino/c61d464c/head` — methodology propagation train
+
 Agents working on convoy beads branch from the convoy's feature branch, not from `main`.
+
+Use `gt_list_convoys` to track convoy progress across the rig.
 
 ### Agent Roles
 
@@ -297,6 +306,35 @@ When completing work:
 
 ---
 
+## PR Fixup Workflow
+
+When a bead carries the `gt:pr-fixup` label, the agent must fix an existing PR rather than create new work:
+
+1. Fetch and check out the PR branch from bead metadata (overrides default worktree branch)
+2. Review all comments: `gh pr view <number> --comments`
+3. For each review thread:
+   - Actionable → fix the issue, push, reply explaining fix, resolve thread
+   - Not relevant/incorrect → reply explaining why, resolve thread
+4. Push fixes and call `gt_done`
+
+---
+
+## Escalation Beads
+
+Escalation beads (`type: escalation`) are auto-generated when:
+- A review fails (branch not found, no diff, commits not from main)
+- An agent is blocked for more than a few attempts
+
+Triage request beads (`gt:triage-request`) accompany escalations with these options:
+- `ESCALATE_TO_MAYOR` — escalate to human supervisor
+- `RESTART` — restart the agent
+- `CLOSE_BEAD` — close the bead
+- `REASSIGN_BEAD` — reassign to another agent
+
+Resolve triage requests with `gt_triage_resolve`.
+
+---
+
 ## References
 
 - **AGENTS.md** — DINOForge agent collaboration guide (roles, roster, coordination)
@@ -307,5 +345,5 @@ When completing work:
 ---
 
 **Spec Owner:** docs-curator
-**Last Updated:** 2026-03-31
+**Last Updated:** 2026-04-04
 **Used By:** All DINOForge polecat agents

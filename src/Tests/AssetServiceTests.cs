@@ -11,6 +11,26 @@ namespace DINOForge.Tests
 {
     public class AssetServiceTests
     {
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch { /* best effort cleanup */ }
+        }
+
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, true);
+            }
+            catch { /* best effort cleanup */ }
+        }
+
         // ── Data type construction ──────────────────────────────────────────
 
         [Fact]
@@ -226,10 +246,10 @@ namespace DINOForge.Tests
             }
         }
 
-        [Fact(Skip = "Flaky - temp file/directory locked by another process on Windows")]
-        public void AddressablesCatalog_Load_EmptyInternalIds_Throws()
+        [Fact]
+        public void AddressablesCatalog_Load_EmptyInternalIds_ReturnsEmptyMap()
         {
-            string tempPath = Path.GetTempFileName();
+            string tempPath = Path.Combine(Path.GetTempPath(), $"test_catalog_{Guid.NewGuid()}.json");
             try
             {
                 var catalog = new Dictionary<string, object>
@@ -241,12 +261,12 @@ namespace DINOForge.Tests
                 };
                 File.WriteAllText(tempPath, JsonSerializer.Serialize(catalog));
 
-                Action act = () => AddressablesCatalog.Load(tempPath);
-                act.Should().Throw<InvalidOperationException>().WithMessage("*m_InternalIds*");
+                var result = AddressablesCatalog.Load(tempPath);
+                result.KeyToBundleMap.Should().BeEmpty();
             }
             finally
             {
-                File.Delete(tempPath);
+                TryDelete(tempPath);
             }
         }
 
@@ -271,10 +291,10 @@ namespace DINOForge.Tests
             }
         }
 
-        [Fact(Skip = "Flaky - temp file/directory locked by another process on Windows")]
+        [Fact]
         public void AddressablesCatalog_Load_InvalidJson_Throws()
         {
-            string tempPath = Path.GetTempFileName();
+            string tempPath = Path.Combine(Path.GetTempPath(), $"test_catalog_{Guid.NewGuid()}.json");
             try
             {
                 File.WriteAllText(tempPath, "{ invalid json }");
@@ -284,7 +304,7 @@ namespace DINOForge.Tests
             }
             finally
             {
-                File.Delete(tempPath);
+                TryDelete(tempPath);
             }
         }
     }

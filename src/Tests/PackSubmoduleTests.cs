@@ -15,6 +15,16 @@ namespace DINOForge.Tests
     /// </summary>
     public class PackSubmoduleTests
     {
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, true);
+            }
+            catch { /* best effort cleanup */ }
+        }
+
         [Fact]
         public void PacksLock_Format_IsReadable()
         {
@@ -237,13 +247,13 @@ packs/scenario-tutorial 789def456abc789def456abc";
             }
         }
 
-        [Fact(Skip = "Flaky - temp file/directory locked by another process on Windows")]
+        [Fact]
         public void PackSubmoduleManager_ReadLockFile_SkipsCommentsAndEmptyLines()
         {
-            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempDir);
+            string tempDir = Path.Combine(Path.GetTempPath(), $"test_pack_{Guid.NewGuid()}");
             try
             {
+                Directory.CreateDirectory(tempDir);
                 string lockPath = Path.Combine(tempDir, "packs.lock");
                 File.WriteAllText(lockPath, "# comment\n  # indented comment\n\n  \n packs/war1 abc123  \n\npacks/war2 def456\n");
 
@@ -256,7 +266,7 @@ packs/scenario-tutorial 789def456abc789def456abc";
             }
             finally
             {
-                Directory.Delete(tempDir, true);
+                TryDeleteDirectory(tempDir);
             }
         }
     }

@@ -1175,11 +1175,11 @@ public class GameClientCoverageTests
         }
     }
 
-    [Fact(Skip = "Flaky - temp file/directory locked by another process on Windows")]
+    [Fact]
     public async Task GameProcessManager_LaunchAsync_WithNonExistentGamePath_ReturnsExpectedResult()
     {
         var manager = new GameProcessManager();
-        string nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "game.exe");
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"test_game_{Guid.NewGuid()}", "game.exe");
 
         bool result = await manager.LaunchAsync(nonExistentPath);
 

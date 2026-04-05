@@ -19,9 +19,14 @@ namespace DINOForge.Tests
         /// When: The game is launched via standard method
         /// Then: The game should start successfully
         /// </summary>
-        [Fact(Skip = "Requires manual environment setup")]
+        [Fact]
         public async Task TestDesktopLaunchSucceeds()
         {
+            // Skip if game not installed
+            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
+                ?? @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
+            if (!System.IO.File.Exists(gamePath)) return;
+
             // Log environment information
             var environmentInfo = new
             {
@@ -50,18 +55,17 @@ namespace DINOForge.Tests
         /// When: The game is launched
         /// Then: Game should handle RDP-specific window rendering
         /// </summary>
-        [Fact(Skip = "Requires RDP environment")]
+        [Fact]
         public async Task TestRdpCompatibility()
         {
-            // Log RDP environment detection
+            // Skip if not in RDP session or game not installed
             var isRdp = Environment.GetEnvironmentVariable("SESSIONNAME") == "RDP-Tcp";
+            if (!isRdp) return;
+            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
+                ?? @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
+            if (!System.IO.File.Exists(gamePath)) return;
 
-            if (!isRdp)
-            {
-                // Not an RDP session, skip
-                return;
-            }
-
+            // Log RDP environment detection
             var sessionInfo = new
             {
                 IsRdpSession = isRdp,
@@ -91,11 +95,12 @@ namespace DINOForge.Tests
         /// When: The game is launched with sandbox restrictions
         /// Then: Game should handle sandbox constraints gracefully
         /// </summary>
-        [Fact(Skip = "Requires sandbox environment")]
+        [Fact]
         public async Task TestSandboxEnvironmentHandling()
         {
             // Detect if running in sandbox
             var isSandboxed = CheckIfSandboxed();
+            if (!isSandboxed) return;
 
             var sandboxInfo = new
             {
@@ -104,11 +109,9 @@ namespace DINOForge.Tests
                 AvailableResources = "Reduced (memory, disk, network)"
             };
 
-            if (!isSandboxed)
-            {
-                // Not sandboxed, skip
-                return;
-            }
+            var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
+                ?? @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe";
+            if (!System.IO.File.Exists(gamePath)) return;
 
             // When: Launch game in sandbox
             var process = LaunchGameProcess();
@@ -129,7 +132,7 @@ namespace DINOForge.Tests
         /// When: Game starts
         /// Then: Log environment details for diagnostic purposes
         /// </summary>
-        [Fact(Skip = "Informational only")]
+        [Fact]
         public void LogEnvironmentDetails()
         {
             var details = new

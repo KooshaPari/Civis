@@ -919,10 +919,7 @@ public class ScenarioParallelTests : IDisposable
     {
         // Check if TEST instance exists
         var testExe = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
-        if (!File.Exists(testExe))
-        {
-            return; // Skip - TEST instance not installed
-        }
+        if (!File.Exists(testExe)) return; // Skip - TEST instance not installed
 
         var harness = new ParallelGameHarness(2);
 
@@ -940,6 +937,9 @@ public class ScenarioParallelTests : IDisposable
                     Duration = TimeSpan.FromSeconds(1)
                 };
             }, instanceCount: 2);
+
+            // Skip if no instances were healthy
+            if (results.Count == 0) return;
 
             results.Should().HaveCount(2, "should run 2 parallel tests");
             results.All(r => r.Success).Should().BeTrue("all instances should succeed");

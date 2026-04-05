@@ -27,12 +27,10 @@ public class CatalogTests
     /// Verifies that the catalog has unit entries.
     /// Conditionally skips via return guard when game is not available.
     /// </summary>
-    [Fact(Skip = "Catalog is empty - content packs not loaded into VanillaCatalog yet. Enable when DINOForge Runtime properly populates the catalog from loaded content packs.")]
+    [Fact]
     public async Task Catalog_HasUnits()
     {
-        // NOTE: Skip guard below would enable conditional skip once catalog is populated.
-        // Currently kept as [Fact(Skip)] above because catalog returns empty (no content loaded).
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();
@@ -44,12 +42,10 @@ public class CatalogTests
     /// Verifies that the catalog has building entries.
     /// Skips when game is not running or VanillaCatalog is not built.
     /// </summary>
-    [Fact(Skip = "Catalog is empty - content packs not loaded into VanillaCatalog yet. Enable when DINOForge Runtime properly populates the catalog from loaded content packs.")]
+    [Fact]
     public async Task Catalog_HasBuildings()
     {
-        // NOTE: Skip guard below would enable conditional skip once catalog is populated.
-        // Currently kept as [Fact(Skip)] above because catalog returns empty (no content loaded).
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();
@@ -61,12 +57,10 @@ public class CatalogTests
     /// Verifies that the catalog has projectile entries.
     /// Skips when game is not running or VanillaCatalog is not built.
     /// </summary>
-    [Fact(Skip = "Catalog is empty - content packs not loaded into VanillaCatalog yet. Enable when DINOForge Runtime properly populates the catalog from loaded content packs.")]
+    [Fact]
     public async Task Catalog_HasProjectiles()
     {
-        // NOTE: Skip guard below would enable conditional skip once catalog is populated.
-        // Currently kept as [Fact(Skip)] above because catalog returns empty (no content loaded).
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();

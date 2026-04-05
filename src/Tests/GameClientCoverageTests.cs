@@ -1356,18 +1356,21 @@ public class GameClientCoverageTests
         action.Should().NotThrowAsync();
     }
 
-    [Fact(Skip = "Environment-dependent: fails when game is already running")]
+    [Fact]
     public async Task GameProcessManager_LaunchAsync_WithNonExistentPath_ReturnsFalse()
     {
         var manager = new GameProcessManager();
         string nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "game.exe");
+
+        // Capture state before call
+        bool wasRunning = manager.IsRunning;
 
         // LaunchAsync returns false when game not running and path doesn't exist
         // Returns true if game is already running (even with non-existent path)
         bool result = await manager.LaunchAsync(nonExistentPath);
 
         // Result should match whether game was running before the call
-        result.Should().Be(manager.IsRunning);
+        result.Should().Be(wasRunning);
     }
 
     [Fact]

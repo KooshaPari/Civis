@@ -17,9 +17,11 @@ public sealed class GameLaunchUiTests(GameLaunchFixture fixture)
     /// <summary>
     /// Toggles mod menu via bridge ToggleUiAsync, then queries UI tree.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Overlay_F10_TogglesModMenu()
     {
+        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        
         StartGameResult openResult = await fixture.Client!.ToggleUiAsync("modmenu");
         openResult.Success.Should().BeTrue("ToggleUiAsync should succeed");
 
@@ -31,7 +33,7 @@ public sealed class GameLaunchUiTests(GameLaunchFixture fixture)
     /// <summary>
     /// Toggles mod menu off by calling ToggleUiAsync again.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Overlay_SecondToggle_ClosesModMenu()
     {
         await fixture.Client!.ToggleUiAsync("modmenu"); // open

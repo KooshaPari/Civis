@@ -13,7 +13,7 @@ namespace DINOForge.Tests.GameLaunch;
 [Trait("Category", "GameLaunch")]
 public sealed class GameLaunchStatTests(GameLaunchFixture fixture)
 {
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task StatOverride_HP_PersistsAfterReload()
     {
         const string sdkPath = "units/rep_clone_trooper/stats/hp";

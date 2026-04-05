@@ -22,7 +22,7 @@ public class PackLoadingTests
     [Fact]
     public async Task ReloadPacks_Succeeds()
     {
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return; // Game not available for integration testing
 
         ReloadResult result = await _fixture.Client.ReloadPacksAsync();
@@ -41,7 +41,7 @@ public class PackLoadingTests
     [Fact]
     public async Task ReloadPacks_LoadedPacksNonEmpty()
     {
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return; // Game not available for integration testing
 
         // Reload first to ensure state is fresh

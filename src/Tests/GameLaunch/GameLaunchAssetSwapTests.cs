@@ -22,9 +22,11 @@ public sealed class GameLaunchAssetSwapTests(GameLaunchFixture fixture)
     /// Verifies that AssetSwapSystem phase 1 writes patched bundles to disk
     /// shortly after pack load (does not require RenderMesh entities to exist).
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad()
     {
+        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+
         string? gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
         gamePath.Should().NotBeNull("DINO_GAME_PATH must be set");
 
@@ -44,7 +46,7 @@ public sealed class GameLaunchAssetSwapTests(GameLaunchFixture fixture)
     /// Verifies that AssetSwapSystem phase 2 has populated entities in the ECS world
     /// once the warfare-starwars pack is loaded.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Phase2_CloneTrooper_EntityRegistered()
     {
         QueryResult result =

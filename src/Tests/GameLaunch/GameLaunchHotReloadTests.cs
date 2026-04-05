@@ -9,7 +9,7 @@ namespace DINOForge.Tests.GameLaunch;
 
 /// <summary>
 /// GL-007: Hot reload triggers when pack YAML files are modified.
-/// Uses [Fact(Skip)] - skips on CI where DINO_GAME_PATH is not set.
+/// Conditionally skips on CI where DINO_GAME_PATH is not set.
 /// On a self-hosted Windows runner with the game installed, these tests run.
 /// </summary>
 [Collection(GameLaunchCollection.Name)]
@@ -19,7 +19,7 @@ public sealed class GameLaunchHotReloadTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-007: Modifying a pack YAML file triggers reload within 5 seconds.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task HotReload_PackYamlChange_TriggersReloadWithin5Seconds()
     {
         GameStatus initialStatus = await fixture.Client.StatusAsync();

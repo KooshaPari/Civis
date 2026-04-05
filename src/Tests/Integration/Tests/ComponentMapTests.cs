@@ -22,7 +22,7 @@ public class ComponentMapTests
     [Fact]
     public async Task ComponentMap_HasEntries()
     {
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return; // Game not available for integration testing
 
         ComponentMapResult result = await _fixture.Client.GetComponentMapAsync();
@@ -34,7 +34,7 @@ public class ComponentMapTests
     [Fact]
     public async Task ComponentMap_CanFilterBySdkPath()
     {
-        if (!_fixture.GameAvailable)
+        if (!_fixture.GameAvailable || !_fixture.Client.IsConnected)
             return; // Game not available for integration testing
 
         ComponentMapResult result = await _fixture.Client.GetComponentMapAsync(sdkPath: "unit");

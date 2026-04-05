@@ -11,7 +11,7 @@ namespace DINOForge.Tests.GameLaunch;
 /// These tests verify that the overlay system survives ECS frame ticks and
 /// responds to input correctly.
 ///
-/// Uses [Fact(Skip)] - skips on CI where DINO_GAME_PATH is not set.
+/// Conditionally skips on CI where DINO_GAME_PATH is not set.
 /// On a self-hosted Windows runner with the game installed, these tests run.
 /// </summary>
 [Collection(GameLaunchCollection.Name)]
@@ -21,10 +21,12 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     /// <summary>
     /// RT-003: F9 overlay toggles visibility and persists across frames.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Overlay_F9_TogglesPersistentDebugOverlay()
     {
-        await fixture.Client.ToggleUiAsync("debugoverlay");
+        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        
+        await fixture.Client!.ToggleUiAsync("debugoverlay");
         await Task.Delay(300);
 
         GameStatus statusAfterToggle = await fixture.Client.StatusAsync();
@@ -42,10 +44,12 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     /// <summary>
     /// RT-004: F10 mod menu opens and closes without losing entity state.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task Overlay_F10_ModMenuToggle_PreservesRuntime()
     {
-        GameStatus initialStatus = await fixture.Client.StatusAsync();
+        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        
+        GameStatus initialStatus = await fixture.Client!.StatusAsync();
         int initialEntityCount = initialStatus.EntityCount;
         initialEntityCount.Should().BeGreaterThan(0,
             "ECS world should have entities at baseline");
@@ -69,7 +73,7 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     /// RT-005: RuntimeDriver survives 600+ frames (10 seconds) of gameplay.
     /// Verifies that the persistent root GameObject does not get destroyed.
     /// </summary>
-    [Fact(Skip = "Game not available - DINO_GAME_PATH not set or game failed to launch. Run on self-hosted runner with DINO installed.")]
+    [Fact]
     public async Task RuntimeDriver_Survives600FramesAndBeyond()
     {
         GameStatus initialStatus = await fixture.Client.StatusAsync();

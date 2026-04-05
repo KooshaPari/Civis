@@ -16,6 +16,7 @@ public sealed class GameFixture : IAsyncLifetime
         @"C:\Program Files\Steam\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
         @"D:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
         @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
+        // Also check DINO_GAME_PATH environment variable
     ];
 
     /// <summary>Gets the connected game client.</summary>
@@ -34,8 +35,17 @@ public sealed class GameFixture : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
-        // Check if the game executable exists anywhere
-        bool gameInstalled = KnownGamePaths.Any(File.Exists) || ProcessManager.IsRunning;
+        // Check if the game executable exists anywhere (including DINO_GAME_PATH env var)
+        var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
+        var allGamePaths = KnownGamePaths.ToList();
+        if (!string.IsNullOrEmpty(gamePath))
+        {
+            var exePath = Path.Combine(gamePath, "Diplomacy is Not an Option.exe");
+            if (File.Exists(exePath))
+                allGamePaths.Add(exePath);
+        }
+
+        bool gameInstalled = allGamePaths.Any(File.Exists) || ProcessManager.IsRunning;
         if (!gameInstalled)
         {
             GameAvailable = false;
@@ -56,15 +66,30 @@ public sealed class GameFixture : IAsyncLifetime
             using CancellationTokenSource connectCts = new(TimeSpan.FromSeconds(15));
             await Client.ConnectAsync(connectCts.Token);
 
+            // Check if connected before proceeding
+            if (!Client.IsConnected)
+            {
+                GameAvailable = false;
+                return;
+            }
+
             // Wait for the ECS world to be ready (up to 60 seconds)
             using CancellationTokenSource worldCts = new(TimeSpan.FromSeconds(60));
             Bridge.Protocol.WaitResult waitResult = await Client.WaitForWorldAsync(60000, worldCts.Token);
 
-            GameAvailable = waitResult.Ready;
+            GameAvailable = waitResult.Ready && Client.IsConnected;
         }
         catch
         {
             GameAvailable = false;
+        }
+        finally
+        {
+            // If game is not available, disconnect the client to avoid stale connections
+            if (!GameAvailable)
+            {
+                try { Client.Disconnect(); } catch { /* best effort */ }
+            }
         }
     }
 

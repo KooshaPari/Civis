@@ -195,6 +195,16 @@ public sealed class GameClient : IGameClient
         SendRequestAsync<ComponentMapResult>("getComponentMap", sdkPath != null ? new { sdkPath } : null, ct);
 
     /// <summary>
+    /// Invokes an arbitrary bridge method and returns the raw JSON result.
+    /// Useful for debugging or calling methods not yet wrapped.
+    /// </summary>
+    /// <param name="method">The JSON-RPC method name.</param>
+    /// <param name="parameters">Method parameters as an anonymous object.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<JObject> InvokeBridgeMethodAsync(string method, object? parameters = null, CancellationToken ct = default) =>
+        SendRequestAsync<JObject>(method, parameters, ct);
+
+    /// <summary>
     /// Captures a live snapshot of the active Unity UI hierarchy.
     /// </summary>
     /// <param name="selector">Optional selector string for future filtering.</param>

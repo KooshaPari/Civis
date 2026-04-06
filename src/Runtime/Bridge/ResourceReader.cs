@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using DINOForge.Bridge.Protocol;
 using Unity.Collections;
@@ -32,76 +34,100 @@ namespace DINOForge.Runtime.Bridge
         // ---------------------------------------------------------------------------
         private static readonly (string EcsType, string[] FieldPaths)[] FoodAlternatives =
         {
-            ("Components.RawComponents.CurrentFood",   new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentFood",                  new[] { "value", "amount", "current", "count" }),
+            // Primary guesses (unverified)
+            ("Components.RawComponents.CurrentFood",   new[] { "value", "amount", "current", "count", "_value", "stored", "total" }),
+            ("Components.CurrentFood",                  new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.FoodAmount",                   new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "food", "foodAmount", "currentFood"   }),
+            // Fallback: ResourceData singleton
+            ("Components.ResourceData",                 new[] { "food", "foodAmount", "currentFood", "_food", "_currentFood" }),
+            // Fallback: singleton patterns
+            ("Components.SingletonComponents.FoodStorage", new[] { "stored", "value", "amount", "current" }),
+            ("Components.SingletonComponents.CurrentFood", new[] { "value", "stored", "amount", "current" }),
+            // Fallback: generic patterns
+            ("Components.SingletonResources",           new[] { "food", "storedFood", "_food" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] WoodAlternatives =
         {
-            ("Components.RawComponents.CurrentWood",   new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentWood",                  new[] { "value", "amount", "current", "count" }),
+            ("Components.RawComponents.CurrentWood",   new[] { "value", "amount", "current", "count", "_value", "stored", "total" }),
+            ("Components.CurrentWood",                  new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.WoodAmount",                   new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "wood", "woodAmount", "currentWood"   }),
+            ("Components.ResourceData",                 new[] { "wood", "woodAmount", "currentWood", "_wood", "_currentWood" }),
+            ("Components.SingletonComponents.WoodStorage", new[] { "stored", "value", "amount", "current" }),
+            ("Components.SingletonComponents.CurrentWood", new[] { "value", "stored", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] StoneAlternatives =
         {
-            ("Components.RawComponents.CurrentStone",  new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentStone",                 new[] { "value", "amount", "current", "count" }),
+            ("Components.RawComponents.CurrentStone",  new[] { "value", "amount", "current", "count", "_value", "stored" }),
+            ("Components.CurrentStone",                 new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.StoneAmount",                  new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "stone", "stoneAmount", "currentStone" }),
+            ("Components.ResourceData",                 new[] { "stone", "stoneAmount", "currentStone", "_stone" }),
+            ("Components.SingletonComponents.StoneStorage", new[] { "stored", "value", "amount", "current" }),
+            ("Components.SingletonComponents.CurrentStone", new[] { "value", "stored", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] IronAlternatives =
         {
-            ("Components.RawComponents.CurrentIron",   new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentIron",                  new[] { "value", "amount", "current", "count" }),
+            ("Components.RawComponents.CurrentIron",   new[] { "value", "amount", "current", "count", "_value", "stored" }),
+            ("Components.CurrentIron",                  new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.IronAmount",                   new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "iron", "ironAmount", "currentIron"   }),
+            ("Components.ResourceData",                 new[] { "iron", "ironAmount", "currentIron", "_iron" }),
+            ("Components.SingletonComponents.IronStorage", new[] { "stored", "value", "amount", "current" }),
+            ("Components.SingletonComponents.CurrentIron", new[] { "value", "stored", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] MoneyAlternatives =
         {
-            ("Components.RawComponents.CurrentMoney",  new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentMoney",                 new[] { "value", "amount", "current", "count" }),
+            ("Components.RawComponents.CurrentMoney",  new[] { "value", "amount", "current", "count", "_value", "stored" }),
+            ("Components.CurrentMoney",                 new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.MoneyAmount",                  new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "money", "gold", "currentMoney"        }),
+            ("Components.ResourceData",                 new[] { "money", "gold", "currentMoney", "_money", "_gold" }),
+            ("Components.SingletonComponents.MoneyStorage", new[] { "stored", "value", "amount", "current" }),
+            ("Components.SingletonComponents.CurrentMoney", new[] { "value", "stored", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] SoulsAlternatives =
         {
-            ("Components.RawComponents.CurrentSouls",  new[] { "value", "amount", "current", "count" }),
-            ("Components.CurrentSouls",                 new[] { "value", "amount", "current", "count" }),
+            ("Components.RawComponents.CurrentSouls",  new[] { "value", "amount", "current", "count", "_value", "stored" }),
+            ("Components.CurrentSouls",                 new[] { "value", "amount", "current", "count", "_value", "stored" }),
             ("Components.SoulAmount",                   new[] { "value", "amount", "current", "count" }),
-            ("Components.ResourceData",                 new[] { "souls", "soulAmount", "currentSouls"  }),
+            ("Components.ResourceData",                 new[] { "souls", "soulAmount", "currentSouls", "_souls" }),
+            ("Components.SingletonComponents.SoulStorage", new[] { "stored", "value", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] BonesAlternatives =
         {
             // Primary uses "valueContainer.value" path (nested struct) — try flat paths too
-            ("Components.RawComponents.CurrentBones",  new[] { "valueContainer.value", "value", "amount", "current" }),
-            ("Components.CurrentBones",                 new[] { "value", "amount", "current"                        }),
-            ("Components.ResourceData",                 new[] { "bones", "bonesAmount", "currentBones"              }),
+            ("Components.RawComponents.CurrentBones",  new[] { "valueContainer.value", "value", "amount", "current", "_value", "stored" }),
+            ("Components.CurrentBones",                 new[] { "value", "amount", "current", "_value", "stored" }),
+            ("Components.ResourceData",                 new[] { "bones", "bonesAmount", "currentBones", "_bones" }),
+            ("Components.SingletonComponents.BonesStorage", new[] { "stored", "value", "amount", "current" }),
         };
 
         private static readonly (string EcsType, string[] FieldPaths)[] SpiritAlternatives =
         {
-            ("Components.RawComponents.CurrentSpirit", new[] { "valueContainer.value", "value", "amount", "current" }),
-            ("Components.CurrentSpirit",                new[] { "value", "amount", "current"                        }),
-            ("Components.ResourceData",                 new[] { "spirit", "spiritAmount", "currentSpirit"           }),
+            ("Components.RawComponents.CurrentSpirit", new[] { "valueContainer.value", "value", "amount", "current", "_value", "stored" }),
+            ("Components.CurrentSpirit",                new[] { "value", "amount", "current", "_value", "stored" }),
+            ("Components.ResourceData",                 new[] { "spirit", "spiritAmount", "currentSpirit", "_spirit" }),
+            ("Components.SingletonComponents.SpiritStorage", new[] { "stored", "value", "amount", "current" }),
         };
 
         /// <summary>
         /// Reads all known resource stockpile values from the entity manager.
         /// Uses a primary mapping with automatic fallback to alternative component
         /// type names and field paths to tolerate game version differences.
+        /// 
+        /// Auto-discovery: First time called, scans for resource-related component types
+        /// from EcsTypeDiscovery cache and adds any found types to the fallback chain.
         /// </summary>
         /// <param name="em">The EntityManager to query.</param>
         /// <returns>A snapshot of current resource values.</returns>
         public static ResourceSnapshot ReadResources(EntityManager em)
         {
+            // Auto-discover resource types on first call
+            AutoDiscoverResourceTypes();
+
             ResourceSnapshot snapshot = new ResourceSnapshot();
 
             snapshot.Food = ReadWithFallback(em, FoodAlternatives, "food");
@@ -248,6 +274,56 @@ namespace DINOForge.Runtime.Bridge
             {
                 WriteDebug($"[ResourceReader] Exception reading {ecsTypeName}.{fieldPath}: {ex.Message}");
                 return 0;
+            }
+        }
+
+        private static bool _autoDiscoveryDone;
+
+        /// <summary>
+        /// Auto-discovers resource-related component types from EcsTypeDiscovery cache.
+        /// Adds any found types to the fallback chains for better compatibility.
+        /// </summary>
+        private static void AutoDiscoverResourceTypes()
+        {
+            if (_autoDiscoveryDone) return;
+            _autoDiscoveryDone = true;
+
+            try
+            {
+                var discovered = EcsTypeDiscovery.GetDiscoveredTypes();
+                if (discovered == null || discovered.Count == 0)
+                {
+                    WriteDebug("[ResourceReader] AutoDiscovery: no types discovered yet");
+                    return;
+                }
+
+                WriteDebug($"[ResourceReader] AutoDiscovery: scanning {discovered.Count} discovered types for resources");
+
+                // Find resource-related types
+                var resourceTypes = discovered
+                    .Where(t => t.Contains("Food") || t.Contains("Wood") || t.Contains("Stone") ||
+                                t.Contains("Iron") || t.Contains("Money") || t.Contains("Soul") ||
+                                t.Contains("Bone") || t.Contains("Spirit") || t.Contains("Resource"))
+                    .ToList();
+
+                if (resourceTypes.Any())
+                {
+                    WriteDebug("[ResourceReader] AutoDiscovery found resource types:");
+                    foreach (var t in resourceTypes.Take(20))
+                    {
+                        WriteDebug($"  - {t}");
+                    }
+                    if (resourceTypes.Count > 20)
+                        WriteDebug($"  ... and {resourceTypes.Count - 20} more");
+                }
+                else
+                {
+                    WriteDebug("[ResourceReader] AutoDiscovery: no resource types found in scanned assemblies");
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[ResourceReader] AutoDiscovery failed: {ex.Message}");
             }
         }
 

@@ -53,6 +53,13 @@ namespace DINOForge.Runtime
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
 
+        // Deferred TryResurrect: set by OnSceneLoaded or KeyInputSystem.OnCreate when a scene
+        // transition or ECS world creation is detected. Checked by the background polling thread
+        // which runs AFTER Plugin.Awake() completes. This prevents TryResurrect from racing
+        // with Plugin.Awake() on a new RuntimeDriver.
+        internal static volatile bool NeedsDeferredResurrection;
+        internal static string? LastSceneNameForResurrection;
+
         /// <summary>
         /// Static singleton bridge server that survives RuntimeDriver destruction.
         /// Created once, thread owned by Plugin class (not by any MonoBehaviour).
@@ -82,6 +89,17 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 Log.LogWarning($"Version detection failed: {ex.Message}");
+            }
+
+            // ECS Type Discovery - log all available component types for diagnostics
+            try
+            {
+                Bridge.EcsTypeDiscovery.DiscoverAndLog();
+                Log.LogInfo("[Plugin] ECS type discovery complete - check dinoforge_debug.log for details");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] ECS type discovery failed: {ex.Message}");
             }
 
             // Harmony — apply patches from this assembly
@@ -167,16 +185,61 @@ namespace DINOForge.Runtime
             // RuntimeDriver may have been destroyed when DINO destroyed our root.
             // Trigger resurrection here so TryResurrect fires even if KeyInputSystem.OnCreate
             // doesn't fire (e.g. when RecreateInCurrentWorld finds no valid world).
+            //
+            // IMPORTANT: We defer TryResurrect to the background polling thread (via _needsDeferredResurrection)
+            // instead of calling it directly. This is because:
+            // 1. When a new RuntimeDriver is created during scene transition, its Plugin.Awake() hasn't completed yet
+            // 2. Calling TryResurrect directly would fail because _resurrectionLog/_resurrectionConfig are null
+            // 3. The background polling thread runs AFTER Plugin.Awake() completes, so TryResurrect will succeed
             if (NeedsResurrection || PersistentRoot == null)
             {
                 WriteDebug($"[Plugin] OnSceneLoaded: resurrection needed - NeedsRes={NeedsResurrection} rootNull={PersistentRoot == null}");
-                TryResurrect(scene.name, "OnSceneLoaded");
+                // Mark that we need resurrection — the background polling thread will call TryResurrect
+                // on the NEXT iteration, after Plugin.Awake() has had time to complete.
+                LastSceneNameForResurrection = scene.name;
+                NeedsDeferredResurrection = true;
             }
+        }
+
+        /// <summary>
+        /// Marks that TryResurrect should be called from the background polling thread.
+        /// Called by KeyInputSystem.OnCreate when the ECS world is created during scene transition.
+        /// The background thread will call TryResurrect after Plugin.Awake() has completed,
+        /// ensuring resurrection parameters are available.
+        /// </summary>
+        internal static void MarkNeedsDeferredResurrection(string trigger)
+        {
+            if (NeedsDeferredResurrection) return; // Already set
+            WriteDebug($"[Plugin] MarkNeedsDeferredResurrection via {trigger}");
+            NeedsDeferredResurrection = true;
         }
 
         internal static void TryResurrect(string sceneName, string trigger)
         {
-            if (PersistentRoot != null) return;
+            // If PersistentRoot exists, RuntimeDriver is already running. But check if it was
+            // initialized — if not (Plugin.Awake() crashed before completing), initialize it.
+            if (PersistentRoot != null)
+            {
+                // Check if RuntimeDriver component exists and is initialized
+                RuntimeDriver? existing = PersistentRoot.GetComponent<RuntimeDriver>();
+                if (existing != null && existing.IsInitialized)
+                {
+                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, skipping.");
+                    return;
+                }
+                // RuntimeDriver exists but wasn't initialized — initialize it
+                if (existing != null)
+                {
+                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver exists but not initialized, initializing...");
+                    existing.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
+                    return;
+                }
+                // No RuntimeDriver component — create one
+                WriteDebug($"[Plugin] TryResurrect ({trigger}): PersistentRoot exists but no RuntimeDriver, adding component...");
+                RuntimeDriver driver = PersistentRoot.AddComponent<RuntimeDriver>();
+                driver.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
+                return;
+            }
 
             WriteDebug($"[Plugin] PersistentRoot null via {trigger} on '{sceneName}' — resurrecting...");
             try
@@ -336,6 +399,9 @@ namespace DINOForge.Runtime
 
         private bool _worldFound;
         private bool _initialized;
+
+        /// <summary>Public accessor for TryResurrect to check if RuntimeDriver is initialized.</summary>
+        internal bool IsInitialized => _initialized;
         private bool _catalogRebuilt;
         private float _worldPollTimer;
         // Tracks the ECS world instance that KeyInputSystem was registered in.
@@ -650,6 +716,24 @@ namespace DINOForge.Runtime
                         if (earlyHeartbeat || laterHeartbeat)
                         {
                             _log?.LogDebug($"[RuntimeDriver] Background poll heartbeat #{heartbeatCounter} worldFound={_worldFound}");
+                        }
+
+                        // ── Deferred TryResurrect ───────────────────────────────────
+                        // If OnSceneLoaded or KeyInputSystem.OnCreate set NeedsDeferredResurrection,
+                        // call TryResurrect now. The background thread runs AFTER Plugin.Awake() completes,
+                        // so TryResurrect will succeed (Plugin.Awake() sets _resurrectionLog and _resurrectionConfig).
+                        if (Plugin.NeedsDeferredResurrection)
+                        {
+                            Plugin.NeedsDeferredResurrection = false;
+                            try
+                            {
+                                WriteDebug("[RuntimeDriver] Background poll: calling TryResurrect (deferred)");
+                                Plugin.TryResurrect(Plugin.LastSceneNameForResurrection ?? "unknown", "BackgroundPoll_Deferred");
+                            }
+                            catch (Exception ex)
+                            {
+                                WriteDebug($"[RuntimeDriver] Deferred TryResurrect failed: {ex.Message}");
+                            }
                         }
 
                         // ── F9/F10 key polling DISABLED ───────────────────────────────

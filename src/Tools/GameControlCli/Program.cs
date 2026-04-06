@@ -74,6 +74,7 @@ public static class Program
             "get-stat" => await HandleGetStatCommand(remainingArgs.Skip(1).ToArray()),
             "apply-override" => await HandleApplyOverrideCommand(remainingArgs.Skip(1).ToArray()),
             "get-component-map" => await HandleGetComponentMapCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "discover-types" => await HandleDiscoverTypesCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "reload-packs" => await HandleReloadPacksCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "verify-mod" => await HandleVerifyModCommand(remainingArgs.Skip(1).FirstOrDefault()),
             "dump-state" => await HandleDumpStateJsonCommand(remainingArgs.Skip(1).FirstOrDefault()),
@@ -112,6 +113,7 @@ public static class Program
         AnsiConsole.MarkupLine("  get-stat <sdk_path> <idx>            - Read stat value by SDK path (JSON)");
         AnsiConsole.MarkupLine("  apply-override <sdk_path> <value> <mode> <filter> - Apply stat override (JSON)");
         AnsiConsole.MarkupLine("  get-component-map <sdk_path>         - SDK-to-ECS component mappings (JSON)");
+        AnsiConsole.MarkupLine("  discover-types [pattern]              - Dump all ECS component types (JSON)");
         AnsiConsole.MarkupLine("  reload-packs <path>                  - Reload content packs from disk (JSON)");
         AnsiConsole.MarkupLine("  verify-mod <pack_path>               - End-to-end mod verification (JSON)");
         AnsiConsole.MarkupLine("  dump-state <category>                - ECS state snapshot as JSON");
@@ -899,6 +901,25 @@ public static class Program
         catch (Exception ex)
         {
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleDiscoverTypesCommand(string? pattern)
+    {
+        using var client = new GameClient();
+        try
+        {
+            await client.ConnectAsync();
+            var result = await client.InvokeBridgeMethodAsync("discover-types", 
+                pattern != null ? new { pattern } : new { });
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            client.Disconnect();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = ex.Message }));
             return 1;
         }
     }

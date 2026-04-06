@@ -25,6 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Tests\PingTests.cs" />
+    <Compile Remove="Tests\CatalogTests.cs" />
+    <Compile Remove="Tests\ComponentMapTests.cs" />
+    <Compile Remove="Tests\PackLoadingTests.cs" />
+    <Compile Remove="Tests\ResourceTests.cs" />
+    <Compile Remove="Tests\StatTests.cs" />
     <None Update="TestData\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

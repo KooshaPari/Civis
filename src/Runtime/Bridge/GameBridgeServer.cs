@@ -425,6 +425,8 @@ namespace DINOForge.Runtime.Bridge
                     return HandleGetCatalog();
                 case "getComponentMap":
                     return HandleGetComponentMap(parameters);
+                case "discoverTypes":
+                    return HandleDiscoverTypes(parameters);
                 case "getUiTree":
                     return HandleGetUiTree(parameters);
                 case "queryUi":
@@ -628,6 +630,32 @@ namespace DINOForge.Runtime.Bridge
             }
 
             return JToken.FromObject(result);
+        }
+
+        /// <summary>
+        /// Discovers and returns ECS component types from loaded game assemblies.
+        /// Useful for identifying correct type names when game version changes.
+        /// </summary>
+        private JToken HandleDiscoverTypes(JObject? parameters)
+        {
+            string? pattern = parameters?.Value<string>("pattern");
+
+            EcsTypeDiscovery.DiscoverAndLog();
+
+            var assemblies = EcsTypeDiscovery.GetDiscoveredAssemblies() ?? new List<string>();
+            var types = pattern != null
+                ? EcsTypeDiscovery.FindTypes(pattern).ToList()
+                : EcsTypeDiscovery.GetDiscoveredTypes()?.ToList() ?? new List<string>();
+
+            return JToken.FromObject(new
+            {
+                success = true,
+                assemblies = assemblies,
+                typesFound = types.Count,
+                types = types.Take(200).ToList(),
+                pattern = pattern ?? "(all)",
+                logMessage = "Full type list written to dinoforge_debug.log"
+            });
         }
 
         private JToken HandleGetUiTree(JObject? parameters)

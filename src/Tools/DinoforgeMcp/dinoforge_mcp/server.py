@@ -39,12 +39,17 @@ from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 from starlette.requests import Request
 
+from .vision import VisualValidator
+
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG if os.getenv("DINOFORGE_MCP_DEBUG") else logging.WARNING)
 logger = logging.getLogger("dinoforge_mcp")
 
 # HMR event — set when game reloads to clear cached pack state
 _reload_event = threading.Event()
+
+# Global VisualValidator instance (lazy-loaded on first use)
+_visual_validator: VisualValidator | None = None
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -746,18 +751,66 @@ async def game_ui_automation(ctx: Context, action: str, target: str | None = Non
 
 
 @mcp.tool()
-async def game_analyze_screen(ctx: Context, screenshot_path: str | None = None) -> dict:
+async def game_analyze_screen(
+    ctx: Context,
+    screenshot_path: str | None = None,
+    golden_key: str | None = None,
+    prompts: list[str] | None = None
+) -> dict:
     """
-    Capture a screenshot and detect UI elements via OmniParser (health bars, unit portraits,
-    buttons, faction indicators).
+    Analyze a screenshot using two-tier visual validation (pHash + CLIP).
+
+    Implements graceful degradation:
+    - Tier 1: pHash golden reference matching (1ms, requires imagehash)
+    - Tier 2: CLIP zero-shot classification (200ms, requires transformers)
+    - Tier 3: OpenCV contour analysis (100ms, requires cv2)
 
     Args:
-        screenshot_path: Optional path to existing screenshot (takes new one if omitted).
+        screenshot_path: Optional path to existing screenshot (captures new one if omitted).
+        golden_key: Optional golden reference key (e.g., "cp2_f9_overlay") for pHash comparison.
+        prompts: Optional list of text prompts for CLIP classification (e.g., ["overlay visible", "menu open"]).
+
+    Returns:
+        {
+            "method": "phash" | "clip" | "opencv" | "none",
+            "passed": bool (for pHash),
+            "distance": float (for pHash),
+            "confidence": float (for CLIP),
+            "prompts": dict (for CLIP),
+            "regions": list (for OpenCV),
+            "error": str (if analysis failed)
+        }
     """
-    args = ["analyze-screen"]
-    if screenshot_path:
-        args += ["--input", screenshot_path]
-    return _run_game_cli(*args)
+    global _visual_validator
+
+    # Initialize validator on first use
+    if _visual_validator is None:
+        _visual_validator = VisualValidator(fallback_to_opencv=True)
+        # Register golden references
+        golden_dir = REPO_ROOT / "docs" / "proof" / "golden"
+        if golden_dir.exists():
+            for img_file in golden_dir.glob("*.png"):
+                key = img_file.stem
+                _visual_validator.register_golden(key, str(img_file))
+                logger.info(f"Registered golden: {key}")
+
+    # Capture screenshot if not provided
+    if screenshot_path is None:
+        temp_dir = Path(os.getenv("TEMP", "/tmp")) / "DINOForge"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_path = str(temp_dir / "screenshot.png")
+        cap_result = _run_game_cli("screenshot", screenshot_path)
+        if not cap_result.get("success"):
+            return {"success": False, "error": f"Failed to capture screenshot: {cap_result}"}
+
+    # Perform two-tier analysis
+    result = _visual_validator.analyze_screenshot(
+        screenshot_path,
+        golden_key=golden_key,
+        prompts=prompts
+    )
+
+    return {"success": True, **result}
 
 
 def _analyze_screenshot_cv(screenshot_path: str | None) -> dict:
@@ -894,17 +947,6 @@ def _analyze_screenshot_cv(screenshot_path: str | None) -> dict:
     }
 
 
-@mcp.tool()
-async def game_analyze_screen(ctx: Context, screenshot_path: str | None = None) -> dict:
-    """
-    Capture a screenshot and detect UI elements via OpenCV color/contour analysis
-    (health bars, unit portraits, buttons, faction indicators).
-    Falls back to VLM (transformers + vit-base) if available.
-
-    Args:
-        screenshot_path: Optional path to existing screenshot (takes new one if omitted).
-    """
-    return _analyze_screenshot_cv(screenshot_path)
 
 
 @mcp.tool()

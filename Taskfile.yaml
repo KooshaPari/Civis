@@ -1,0 +1,122 @@
+version: '3'
+
+env:
+  RUST_BACKTRACE: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+tasks:
+  default:
+    cmds:
+      - task: build:all
+
+  build:all:
+    desc: "Build all polyglot components"
+    cmds:
+      - task: build:csharp
+      - task: build:python
+
+  test:all:
+    desc: "Test all polyglot components"
+    cmds:
+      - task: test:csharp
+      - task: test:python
+
+  # C#
+  build:csharp:
+    desc: "Build DINOForge C# solution (Release)"
+    cmds:
+      - dotnet build src/DINOForge.sln -c Release
+
+  test:csharp:
+    desc: "Run C# unit and integration tests"
+    cmds:
+      - dotnet test src/DINOForge.sln -c Release --collect:"XPlat Code Coverage"
+
+  # Python MCP Server
+  build:python:
+    desc: "Install Python MCP server in editable mode"
+    dir: src/Tools/DinoforgeMcp
+    cmds:
+      - pip install -e .
+
+  test:python:
+    desc: "Run Python tests (pytest)"
+    dir: src/Tools/DinoforgeMcp
+    cmds:
+      - pip install -e .[dev]
+      - pytest -v tests/
+
+  # Unified Development Tasks
+  dev:install:
+    desc: "Install all development dependencies"
+    cmds:
+      - dotnet restore src/DINOForge.sln
+      - task: build:python
+
+  lint:
+    desc: "Lint all code (format check + static analysis)"
+    cmds:
+      - dotnet format src/DINOForge.sln --verify-no-changes
+
+  clean:
+    desc: "Clean all build artifacts"
+    cmds:
+      - dotnet clean src/DINOForge.sln
+      - find . -type d -name bin -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name obj -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+  precommit:
+    desc: "Run pre-commit checks (format, lint, build, test)"
+    cmds:
+      - task: lint
+      - task: build:all
+      - task: test:all
+
+  docs:
+    desc: "Build documentation (VitePress)"
+    dir: docs
+    cmds:
+      - npm install
+      - npm run build
+
+  docs:dev:
+    desc: "Start documentation dev server"
+    dir: docs
+    cmds:
+      - npm install
+      - npm run dev
+
+  # Pack commands
+  pack:validate:
+    desc: "Validate all content packs"
+    cmds:
+      - dotnet run --project src/Tools/PackCompiler -- validate packs/
+
+  pack:build:
+    desc: "Build a specific pack (requires PACK_NAME)"
+    cmds:
+      - dotnet run --project src/Tools/PackCompiler -- build packs/{{.PACK_NAME}}
+    vars:
+      PACK_NAME: "{{or .PACK_NAME (fail \"PACK_NAME required, e.g. task pack:build PACK_NAME=example-balance\")}}"
+
+  # Game automation
+  game:launch:
+    desc: "Launch game instance"
+    cmds:
+      - powershell -c "Write-Host 'Launching game...' -ForegroundColor Green; & 'G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe'"
+
+  game:kill:
+    desc: "Kill all game instances"
+    cmds:
+      - powershell -c "Stop-Process -Name 'Diplomacy is Not an Option' -Force -ErrorAction SilentlyContinue; Write-Host 'Game processes killed.' -ForegroundColor Green"
+
+  deploy:runtime:
+    desc: "Deploy Runtime to game (Release, MAIN instance)"
+    cmds:
+      - dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true
+
+  deploy:runtime:test:
+    desc: "Deploy Runtime to TEST instance"
+    cmds:
+      - dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true -p:GameInstallPath="G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST"

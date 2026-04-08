@@ -67,16 +67,16 @@ namespace DINOForge.Runtime.Bridge
                     foreach (Type type in asm.GetTypes())
                     {
                         if (type == null) continue;
-                        
+
                         // Check if it's a struct (ECS components are structs)
                         if (!type.IsValueType || type.IsPrimitive) continue;
-                        
+
                         // Skip generic types (except Nullable<T>)
                         if (type.IsGenericType && !type.IsGenericTypeDefinition) continue;
 
                         string fullName = type.FullName ?? type.Name;
                         allTypes.Add(fullName);
-                        
+
                         // Categorize by namespace
                         if (fullName.StartsWith("Components.") ||
                             fullName.StartsWith("Utility.") ||
@@ -172,7 +172,7 @@ namespace DINOForge.Runtime.Bridge
         public static IEnumerable<string> FindTypes(string pattern)
         {
             if (_discoveredTypes == null) DiscoverAndLog();
-            
+
             pattern = pattern.ToLowerInvariant();
             return _discoveredTypes?
                 .Where(t => t.ToLowerInvariant().Contains(pattern))
@@ -185,7 +185,7 @@ namespace DINOForge.Runtime.Bridge
         public static void DumpAllTypes()
         {
             if (_discoveredTypes == null) DiscoverAndLog();
-            
+
             var sb = new StringBuilder();
             sb.AppendLine("=== All Discovered Types ===");
             foreach (var type in _discoveredTypes?.OrderBy(t => t) ?? Enumerable.Empty<string>())
@@ -244,7 +244,7 @@ namespace DINOForge.Runtime.Bridge
         private static bool IsGameAssembly(string assemblyName)
         {
             if (string.IsNullOrEmpty(assemblyName)) return false;
-            
+
             // DINO game assemblies typically start with these patterns
             string[] gameAssemblyPrefixes = new[]
             {

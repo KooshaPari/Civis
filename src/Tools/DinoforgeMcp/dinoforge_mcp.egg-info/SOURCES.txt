@@ -8,3 +8,11 @@ dinoforge_mcp.egg-info/dependency_links.txt
 dinoforge_mcp.egg-info/entry_points.txt
 dinoforge_mcp.egg-info/requires.txt
 dinoforge_mcp.egg-info/top_level.txt
+tests/__init__.py
+tests/conftest.py
+tests/test_asset_pack_tools.py
+tests/test_error_handling.py
+tests/test_game_bridge_tools.py
+tests/test_game_launch_tools.py
+tests/test_game_tools.py
+tests/test_log_analysis_tools.py

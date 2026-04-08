@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/Tools/AssetPipelineRust/**'
       - 'src/Tools/DependencyResolver/**'
+      - 'src/Tools/AssetPipelineZig/**'
       - '.github/workflows/polyglot-build.yml'
   pull_request:
     branches: [main]
@@ -97,10 +98,58 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  build-zig:
+    name: Build Zig Asset Pipeline
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: master
+
+      - name: Run Zig tests
+        working-directory: src/Tools/AssetPipelineZig
+        run: zig test src/root.zig
+
+      - name: Build Zig library (release)
+        working-directory: src/Tools/AssetPipelineZig
+        run: zig build-lib -O ReleaseFast -dynamic src/root.zig
+
+      - name: Create output directory
+        working-directory: src/Tools/AssetPipelineZig
+        run: mkdir -p zig-out/lib
+
+      - name: Prepare artifact (Windows)
+        if: runner.os == 'Windows'
+        working-directory: src/Tools/AssetPipelineZig
+        run: mv root.dll zig-out/lib/dinoforge_asset_pipeline_zig.dll
+
+      - name: Prepare artifact (Linux)
+        if: runner.os == 'Linux'
+        working-directory: src/Tools/AssetPipelineZig
+        run: mv root.so zig-out/lib/dinoforge_asset_pipeline_zig.so
+
+      - name: Upload Zig artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: zig-asset-pipeline-${{ runner.os }}
+          path: src/Tools/AssetPipelineZig/zig-out/lib/
+          if-no-files-found: warn
+          retention-days: 30
+
   verify-artifacts:
     name: Verify Polyglot Artifacts
     runs-on: ubuntu-latest
-    needs: [build-rust, build-go]
+    needs: [build-rust, build-go, build-zig]
     if: always()
     permissions:
       contents: read
@@ -124,6 +173,18 @@ jobs:
           name: go-resolver-windows
           path: polyglot-artifacts/go/windows
 
+      - name: Download Zig artifact (Windows)
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: zig-asset-pipeline-Windows
+          path: polyglot-artifacts/zig/windows
+
+      - name: Download Zig artifact (Linux)
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: zig-asset-pipeline-Linux
+          path: polyglot-artifacts/zig/linux
+
       - name: Verify Rust artifact
         run: test -f polyglot-artifacts/rust/libdinoforge_asset_pipeline.so && echo "✓ Rust artifact present" || echo "⚠ Rust artifact missing"
 
@@ -132,6 +193,12 @@ jobs:
 
       - name: Verify Go Windows artifact
         run: test -f polyglot-artifacts/go/windows/dinoforge-resolver.exe && echo "✓ Go Windows artifact present" || echo "⚠ Go Windows artifact missing"
+
+      - name: Verify Zig Windows artifact
+        run: test -f polyglot-artifacts/zig/windows/dinoforge_asset_pipeline_zig.dll && echo "✓ Zig Windows artifact present" || echo "⚠ Zig Windows artifact missing"
+
+      - name: Verify Zig Linux artifact
+        run: test -f polyglot-artifacts/zig/linux/dinoforge_asset_pipeline_zig.so && echo "✓ Zig Linux artifact present" || echo "⚠ Zig Linux artifact missing"
 
       - name: Check artifact summary
         run: |
@@ -144,4 +211,10 @@ jobs:
           ls -lh polyglot-artifacts/go/linux/ 2>/dev/null || echo "  (no artifacts)" && \
           echo "" && \
           echo "Go Resolver (Windows):" && \
-          ls -lh polyglot-artifacts/go/windows/ 2>/dev/null || echo "  (no artifacts)"
+          ls -lh polyglot-artifacts/go/windows/ 2>/dev/null || echo "  (no artifacts)" && \
+          echo "" && \
+          echo "Zig Asset Pipeline (Windows):" && \
+          ls -lh polyglot-artifacts/zig/windows/ 2>/dev/null || echo "  (no artifacts)" && \
+          echo "" && \
+          echo "Zig Asset Pipeline (Linux):" && \
+          ls -lh polyglot-artifacts/zig/linux/ 2>/dev/null || echo "  (no artifacts)"

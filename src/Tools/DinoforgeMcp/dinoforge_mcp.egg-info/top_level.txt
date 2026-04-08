@@ -1,1 +1,2 @@
 dinoforge_mcp
+tests

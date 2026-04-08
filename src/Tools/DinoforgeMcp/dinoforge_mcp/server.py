@@ -12,6 +12,12 @@ The C# McpServer (src/Tools/McpServer) handles the same game bridge tools via
 the ModelContextProtocol NuGet. This Python server is the preferred one for
 non-game-bridge tasks (asset pipeline, catalog inspection, log analysis) and
 wraps game bridge commands via the lightweight GameControlCli binary.
+
+TODO(mojo): Replace _clip_classify() with Mojo kernel when Mojo v1.0 released
+  - Mojo target: ~10x faster CLIP inference for batch screenshot analysis
+  - Blocking: Mojo stdlib stability (currently v0.5.0, needs v1.0+ with full stdlib)
+  - Estimated timeline: Late 2026 / Q1 2027
+  - Current impl: CLIP via openai/clip-vit-base-patch32 (~1.3s cached)
 """
 from __future__ import annotations
 

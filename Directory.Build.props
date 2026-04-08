@@ -17,6 +17,10 @@
     <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
     <EcsPluginsDir>$(BepInExDir)\ecs_plugins</EcsPluginsDir>
 
+    <!-- DINOBox pool configuration for parallel testing -->
+    <DINOBoxBaseDir Condition="'$(DINOBoxBaseDir)' == ''">G:\dino_boxes</DINOBoxBaseDir>
+    <GameInstallPath_Test Condition="'$(GameInstallPath_Test)' == ''">G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST</GameInstallPath_Test>
+
     <!-- Common settings -->
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

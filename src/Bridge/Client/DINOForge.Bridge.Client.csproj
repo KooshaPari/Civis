@@ -2,10 +2,26 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <AssemblyName>DINOForge.Bridge.Client</AssemblyName>
     <RootNamespace>DINOForge.Bridge.Client</RootNamespace>
+    <AssemblyVersion>0.18.0</AssemblyVersion>
+    <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Description>DINOForge Bridge Client - out-of-process game bridge communication for Diplomacy is Not an Option mods</Description>
+    <PackageId>DINOForge.Bridge.Client</PackageId>
+    <PackageVersion>0.18.0</PackageVersion>
+    <Version>0.18.0</Version>
+    <Authors>KooshaPari</Authors>
+    <PackageTags>dinoforge;bridge;client;json-rpc;bepinex;game-modding</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

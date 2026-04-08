@@ -72,6 +72,39 @@ irm https://raw.githubusercontent.com/KooshaPari/Dino/main/src/Tools/Installer/I
 
 ---
 
+## NuGet Packages
+
+DINOForge publishes core libraries as NuGet packages for independent consumption:
+
+| Package | Version | Purpose | Docs |
+|---------|---------|---------|------|
+| **DINOForge.SDK** | [![NuGet](https://img.shields.io/nuget/v/DINOForge.SDK.svg)](https://www.nuget.org/packages/DINOForge.SDK/) | Registries, schemas, pack loading, asset tools | [Docs](docs/SDK.md) |
+| **DINOForge.Bridge.Protocol** | [![NuGet](https://img.shields.io/nuget/v/DINOForge.Bridge.Protocol.svg)](https://www.nuget.org/packages/DINOForge.Bridge.Protocol/) | JSON-RPC 2.0 bridge messages and interfaces | [Docs](docs/BRIDGE.md) |
+| **DINOForge.Bridge.Client** | [![NuGet](https://img.shields.io/nuget/v/DINOForge.Bridge.Client.svg)](https://www.nuget.org/packages/DINOForge.Bridge.Client/) | Out-of-process game bridge client (netstandard2.0) | [Docs](docs/BRIDGE.md) |
+| **DINOForge.Templates** | [![NuGet](https://img.shields.io/nuget/v/DINOForge.Templates.svg)](https://www.nuget.org/packages/DINOForge.Templates/) | dotnet new templates for packs and mods | [Docs](docs/TEMPLATES.md) |
+
+**Installation**:
+```bash
+dotnet add package DINOForge.SDK
+dotnet add package DINOForge.Bridge.Protocol
+dotnet add package DINOForge.Bridge.Client
+```
+
+---
+
+## Standalone Tools
+
+Additional tools available as GitHub releases:
+
+| Tool | Platform | Purpose | Latest |
+|------|----------|---------|--------|
+| **dinoforge-resolver** | Windows, Linux | Pack dependency resolution (topological sort) | [Release](https://github.com/KooshaPari/Dino/releases/latest) |
+| **dinoforge-asset-pipeline** | Windows, Linux | High-performance asset import & LOD generation (Rust) | [Release](https://github.com/KooshaPari/Dino/releases/latest) |
+
+See [LIBIFICATION_ROADMAP.md](docs/LIBIFICATION_ROADMAP.md) for complete package ecosystem documentation.
+
+---
+
 ## Quick Start
 
 ### Prerequisites

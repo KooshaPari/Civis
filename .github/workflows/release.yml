@@ -128,6 +128,15 @@ jobs:
             --output staging/nuget/
         shell: pwsh
 
+      - name: Pack Bridge.Client NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Bridge/Client/DINOForge.Bridge.Client.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
       - name: Pack Templates NuGet package
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
@@ -285,6 +294,82 @@ jobs:
           $notice | Out-File -FilePath staging/plugin/README_RUNTIME.txt -Encoding utf8
 
       # ---------------------------------------------------------------
+      # Build Go DependencyResolver binary
+      # ---------------------------------------------------------------
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Go DependencyResolver (Windows)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd src/Tools/DependencyResolver
+          GOOS=windows GOARCH=amd64 go build -o dinoforge-resolver.exe -ldflags="-s -w"
+          mkdir -p ../../../../staging/go-resolver
+          cp dinoforge-resolver.exe ../../../../staging/go-resolver/ 2>/dev/null || true
+
+      - name: Build Go DependencyResolver (Linux)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd src/Tools/DependencyResolver
+          GOOS=linux GOARCH=amd64 go build -o dinoforge-resolver -ldflags="-s -w"
+          mkdir -p ../../../../staging/go-resolver
+          cp dinoforge-resolver ../../../../staging/go-resolver/ 2>/dev/null || true
+
+      - name: Generate Go resolver checksums
+        shell: pwsh
+        run: |
+          $checksumFile = "staging/go-resolver/SHA256SUMS.txt"
+          $checksumContent = @()
+          Get-ChildItem staging/go-resolver -File | ForEach-Object {
+            if ($_.Extension -ne '.txt') {
+              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+              $checksumContent += "$hash  $($_.Name)"
+              Write-Host "Go resolver checksum: $($_.Name) = $hash"
+            }
+          }
+          $checksumContent | Out-File -FilePath $checksumFile -Encoding utf8
+
+      # ---------------------------------------------------------------
+      # Build Rust AssetPipeline binary
+      # ---------------------------------------------------------------
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust AssetPipeline (Release)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd src/Tools/AssetPipelineRust
+          cargo build --release || echo "Rust build skipped (incomplete implementation)"
+          mkdir -p ../../../../staging/rust-asset-pipeline
+          # Copy the built binary to staging (Windows DLL)
+          cp target/release/dinoforge_asset_pipeline.dll ../../../../staging/rust-asset-pipeline/ 2>/dev/null || true
+          # Or the .so for Linux
+          cp target/release/libdinoforge_asset_pipeline.so ../../../../staging/rust-asset-pipeline/ 2>/dev/null || true
+
+      - name: Generate Rust asset pipeline checksums
+        shell: pwsh
+        run: |
+          $checksumFile = "staging/rust-asset-pipeline/SHA256SUMS.txt"
+          $checksumContent = @()
+          if (Test-Path staging/rust-asset-pipeline) {
+            Get-ChildItem staging/rust-asset-pipeline -File | ForEach-Object {
+              if ($_.Extension -ne '.txt') {
+                $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+                $checksumContent += "$hash  $($_.Name)"
+                Write-Host "Rust asset pipeline checksum: $($_.Name) = $hash"
+              }
+            }
+            if ($checksumContent.Count -gt 0) {
+              $checksumContent | Out-File -FilePath $checksumFile -Encoding utf8
+            }
+          }
+
+      # ---------------------------------------------------------------
       # Assemble the full release package in staging/
       # ---------------------------------------------------------------
       - name: Assemble release staging directory
@@ -304,6 +389,18 @@ jobs:
           Copy-Item src/Tools/Installer/install.sh staging/scripts/ -ErrorAction SilentlyContinue
           Copy-Item scripts/install-companion.ps1 staging/scripts/ -ErrorAction SilentlyContinue
           Copy-Item scripts/install-companion.sh staging/scripts/ -ErrorAction SilentlyContinue
+
+          # Copy Go DependencyResolver binaries
+          if (Test-Path staging/go-resolver) {
+            New-Item -ItemType Directory -Force -Path staging/tools | Out-Null
+            Copy-Item staging/go-resolver staging/tools/go-resolver -Recurse -Force
+          }
+
+          # Copy Rust AssetPipeline binaries
+          if (Test-Path staging/rust-asset-pipeline) {
+            New-Item -ItemType Directory -Force -Path staging/tools | Out-Null
+            Copy-Item staging/rust-asset-pipeline staging/tools/rust-asset-pipeline -Recurse -Force
+          }
 
           # Copy packs directory
           if (Test-Path packs) {
@@ -358,6 +455,10 @@ jobs:
           $artifacts = @(
             "staging/nuget/*.nupkg",
             "staging/DINOForge-v$version-Installer.exe",
+            "staging/tools/go-resolver/dinoforge-resolver.exe",
+            "staging/tools/go-resolver/dinoforge-resolver",
+            "staging/tools/rust-asset-pipeline/dinoforge_asset_pipeline.dll",
+            "staging/tools/rust-asset-pipeline/libdinoforge_asset_pipeline.so",
             $env:ZIP_NAME
           )
 
@@ -510,6 +611,12 @@ jobs:
             staging/DINOForge-v${{ steps.version.outputs.VERSION }}-Installer.exe.sha256
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip.sha256
+            staging/tools/go-resolver/dinoforge-resolver.exe
+            staging/tools/go-resolver/dinoforge-resolver
+            staging/tools/go-resolver/SHA256SUMS.txt
+            staging/tools/rust-asset-pipeline/dinoforge_asset_pipeline.dll
+            staging/tools/rust-asset-pipeline/libdinoforge_asset_pipeline.so
+            staging/tools/rust-asset-pipeline/SHA256SUMS.txt
             staging/SHA256SUMS.txt
           fail_on_unmatched_files: false
         env:

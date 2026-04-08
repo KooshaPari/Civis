@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Sentry;
 
-namespace DINOForge.SDK.Diagnostics;
+namespace DINOForge.Runtime.Diagnostics;
 
 /// <summary>
 /// Initializes Sentry error tracking for the DINOForge SDK and all consuming applications.

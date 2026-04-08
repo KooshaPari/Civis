@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,8 +110,11 @@ public sealed class GameProcessManager
 
         try
         {
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            // netstandard2.0: Kill(bool) does not exist, use Kill() only
+            process.Kill();
+
+            // Wait for process exit using polling (netstandard2.0 compatible)
+            await WaitForProcessExitAsync(process).ConfigureAwait(false);
         }
         catch (InvalidOperationException)
         {
@@ -132,7 +136,8 @@ public sealed class GameProcessManager
 
             try
             {
-                await process.WaitForExitAsync(ct).ConfigureAwait(false);
+                // netstandard2.0: Use polling to wait for process exit
+                await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
                 return;
             }
             catch (OperationCanceledException)
@@ -185,6 +190,24 @@ public sealed class GameProcessManager
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Waits for a specific process to exit (netstandard2.0 compatible).
+    /// </summary>
+    private static async Task WaitForProcessExitAsync(Process process, CancellationToken ct = default)
+    {
+        const int pollIntervalMs = 100;
+
+        while (!ct.IsCancellationRequested)
+        {
+            if (process.HasExited)
+                return;
+
+            await Task.Delay(pollIntervalMs, ct).ConfigureAwait(false);
+        }
+
+        ct.ThrowIfCancellationRequested();
     }
 
     private static string? FindGameExe()

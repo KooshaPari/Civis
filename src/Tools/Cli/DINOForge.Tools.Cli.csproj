@@ -31,6 +31,9 @@
 
     <!-- SQLite for asset catalog store -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.*" />
+
+    <!-- Error tracking -->
+    <PackageReference Include="Sentry" Version="4.11.0" />
   </ItemGroup>
 
   <PropertyGroup>

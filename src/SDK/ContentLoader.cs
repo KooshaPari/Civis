@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DINOForge.SDK.Dependencies;
-using DINOForge.SDK.Diagnostics;
 using DINOForge.SDK.HotReload;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
@@ -116,8 +115,6 @@ namespace DINOForge.SDK
                 throw new ArgumentNullException(nameof(packDirectory));
             }
 
-            SentryInitializer.AddBreadcrumb($"Loading pack from: {packDirectory}", "pack");
-
             string manifestPath = Path.Combine(packDirectory, "pack.yaml");
             if (!File.Exists(manifestPath))
             {
@@ -133,7 +130,6 @@ namespace DINOForge.SDK
             }
             catch (Exception ex)
             {
-                SentryInitializer.CaptureException(ex, context: "ContentLoader.LoadPack");
                 List<string> errors = new List<string> { $"Failed to parse manifest at {manifestPath}: {ex.Message}" };
                 LastLoadErrors = errors.AsReadOnly();
                 return ContentLoadResult.Failure(LastLoadErrors);
@@ -147,7 +143,6 @@ namespace DINOForge.SDK
 
             LastLoadErrors = loadErrors.AsReadOnly();
             IReadOnlyList<string> loadedPackIds = new List<string> { manifest.Id }.AsReadOnly();
-            SentryInitializer.AddBreadcrumb($"Pack loaded: {manifest.Id} ({loadErrors.Count} errors)", "pack");
 
             return loadErrors.Count > 0
                 ? ContentLoadResult.Partial(loadedPackIds, LastLoadErrors)

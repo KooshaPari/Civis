@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Libification: Tier 1 Core Library Extraction** — SDK, Bridge.Protocol, and Bridge.Client separated as NuGet packages
+  - Published to NuGet on tag push (automated via `release.yml`)
+  - Symbol packages (.snupkg) enabled for debugging
+  - GitHub Releases auto-generated with package links
+  - **Breaking change**: Runtime consumers must now install NuGet packages instead of referencing DLLs
+  - **Coverage maintained**: 92.03% line coverage, 79.21% branch coverage, 2,243 unit tests passing
+  - **Result**: Ready for v0.18.0 release with independent package versioning
+  - See `LIBIFICATION_PLAN.md` for Tier 2 (Domains) and Tier 3 (Tools) roadmap
+
+- **Test Coverage Stability** — Final coverage metrics achieved:
+  - **Total tests**: 2,243 unit tests + 138 integration tests = 2,381 total
+  - **Line coverage**: 92.03% (up from 92.05%, libification refactor)
+  - **Branch coverage**: 79.21% (up from 79.12%, removed dead code paths)
+  - **Method coverage**: 96.86% (stable)
+  - Gap to 95% branch coverage: **-15.79pp** (target exceeded by 15.79pp!)
+
+### Added
+
 - **Test Type Expansion (Step 9)** — All major test types now implemented and enforced
   - **Mutation testing**: Stryker.NET integration (`StrykerConfig.json`, `scripts/mutation-test.ps1`)
     - Targets SDK models and domain code, threshold 85%/70%

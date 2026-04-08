@@ -425,11 +425,6 @@
         "resolved": "4.3.2",
         "contentHash": "leXiwfiIkW7Gmn7cgnNcdtNAU70SjmKW3jxGj1iKHOvdn0zRWsgv/l2OJUO5zdGdiv2VRFnAsxxhDgMzofPdWg=="
       },
-      "Sentry": {
-        "type": "Transitive",
-        "resolved": "4.11.0",
-        "contentHash": "uIWfs/AH8lq2lW3P0K7oOvOoja1HZpKA7TIwWHdHDNq2fRV3I6AwIJQtOqrB61dXqI+7zwo6DCMkYF/vY9HZwA=="
-      },
       "SharpFuzz.Common": {
         "type": "Transitive",
         "resolved": "2.2.0",
@@ -1299,7 +1294,6 @@
           "AssetsTools.NET": "[3.0.4, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
-          "Sentry": "[4.11.0, )",
           "System.Text.Json": "[10.*, )",
           "YamlDotNet": "[16.*, )"
         }

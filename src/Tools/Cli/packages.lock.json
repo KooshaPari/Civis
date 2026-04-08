@@ -97,6 +97,12 @@
         "resolved": "6.6.0",
         "contentHash": "u4//jvO39tRXRNqg6/1Ky+KWPmxGdBsJOfp0A1tz6jnJosozzUSYPM0eu3LzeHwZYXeBMJBhVTRLJJBM6CVNng=="
       },
+      "Sentry": {
+        "type": "Direct",
+        "requested": "[4.11.0, )",
+        "resolved": "4.11.0",
+        "contentHash": "uIWfs/AH8lq2lW3P0K7oOvOoja1HZpKA7TIwWHdHDNq2fRV3I6AwIJQtOqrB61dXqI+7zwo6DCMkYF/vY9HZwA=="
+      },
       "SketchFabApi.Net": {
         "type": "Direct",
         "requested": "[1.0.4, )",
@@ -279,11 +285,6 @@
           "Newtonsoft.Json": "9.0.1"
         }
       },
-      "Sentry": {
-        "type": "Transitive",
-        "resolved": "4.11.0",
-        "contentHash": "uIWfs/AH8lq2lW3P0K7oOvOoja1HZpKA7TIwWHdHDNq2fRV3I6AwIJQtOqrB61dXqI+7zwo6DCMkYF/vY9HZwA=="
-      },
       "Spectre.Console.Ansi": {
         "type": "Transitive",
         "resolved": "0.55.0",
@@ -340,7 +341,6 @@
           "AssetsTools.NET": "[3.0.4, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
-          "Sentry": "[4.11.0, )",
           "YamlDotNet": "[16.*, )"
         }
       },

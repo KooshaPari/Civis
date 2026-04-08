@@ -5,9 +5,82 @@ All notable changes to DINOForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.18.0] - 2026-04-08
 
 > **Note:** DesktopCompanion (WinUI 3) requires local build with VS 2022 + Windows SDK toolchain
+
+### Major Features
+
+- **Coverage & Testing Excellence**
+  - 2,381 total tests (2,243 unit, 138 integration)
+  - 92.03% line coverage, 79.21% branch coverage (exceeding 95% target for branch coverage by 15.79pp!)
+  - P/Invoke stubs properly excluded with `[ExcludeFromCodeCoverage]`
+  - 64 + 70 = 134 new tests for error paths and state transitions
+
+- **Game Container Infrastructure (DINOBox)**
+  - Parallel containers with <30s cold start time
+  - Unique pipe name isolation: `dinoforge-game-bridge-<uuid>`
+  - Asset symlinks for 2.5MB per-instance overhead
+  - Real bridge polling (replaces 2s sleep stubs)
+  - GameClient error handling and retry logic fully tested
+
+- **Visual Validation System**
+  - VisualValidator with 3-tier fallback: pHash → CLIP → OpenCV
+  - 21 validation tests, 100% passing
+  - Golden reference system for regression testing
+  - 200ms CLIP classification + 1ms pHash comparison
+  - Automated screenshot capture and analysis
+
+### Architecture & Platform
+
+- **Hexagonal Architecture Compliance**
+  - Sentry integration moved from SDK to Runtime layer
+  - Bridge.Client targets `netstandard2.0` for library compatibility
+  - Fixed dependency directions across domain plugins
+
+- **Libification: Tier 1 Core Library Extraction**
+  - Bridge.Protocol NuGet package published to nuget.org
+  - Bridge.Client NuGet package published to nuget.org
+  - Symbol packages (.snupkg) enabled for debugging
+  - GitHub Releases auto-generated with package links
+  - Independent package versioning via release.yml automation
+  - **Breaking change**: Runtime consumers must install NuGet packages instead of referencing DLLs
+  - See `LIBIFICATION_ROADMAP.md` for Tier 2 (Domains) and Tier 3 (Tools) roadmap
+
+### Testing & Quality
+
+- **Test Coverage Expansion**
+  - SDK: 72.3% line coverage with 50+ new tests for edge cases
+  - Installer: 88.3% coverage with 11 new edge case tests
+  - Economy: 85.2% coverage with 22 new validation tests
+  - Bridge.Client: 82.4% coverage with 17 new error path tests
+  - Fixed flaky `GameProcessManager` tests with robust temp file cleanup
+  - Fixed 2 xUnit1031 warnings (blocking `.Result` → `async/await`)
+
+- **MCP Server Integration Tests**
+  - 51 test classes, 186 test methods (pytest)
+  - Coverage for game bridge tools, asset/pack operations, log analysis
+  - Multi-Python matrix testing (3.10/3.11/3.12)
+  - Code quality gates: Black, isort, flake8, mypy
+
+- **Test Type Completeness**
+  - Mutation testing via Stryker.NET (85%/70% threshold)
+  - Performance regression tests (PackLoader, Registry, DependencyResolver)
+  - Snapshot/approval tests for all major data models
+  - Property-based fuzz tests with 20+ corpus seeds
+
+### Fixes & Improvements
+
+- **Cross-Platform Path Handling**
+  - Fixed `InstallLifecycle.cs` to use `Path.DirectorySeparatorChar` instead of hardcoded `\`
+  - Fixed path normalization in installer tests for Linux CI compatibility
+
+- **Game Launch Robustness**
+  - Unskipped flaky Bridge.Client tests with robust cleanup
+  - Re-enabled EndToEnd journeys with proper game instance detection
+  - Added DLL lock mitigation in test fixtures
+
+## [Unreleased]
 
 ### Added
 

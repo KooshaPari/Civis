@@ -25,11 +25,11 @@ features:
     details: "Warfare (factions, doctrines, combat), Economy (rates, trade), Scenario (scripting, conditions), and UI (HUD injection, menus)."
   - icon: "\u2705"
     title: Schema Validation
-    details: "17 JSON/YAML schemas validate packs, dependency graphs, asset references, and ECS registration conflicts. 342 tests passing."
+    details: "17 JSON/YAML schemas validate packs, dependency graphs, asset references, and ECS registration conflicts. 1,269 tests passing."
   - icon: "\uD83E\uDDE9"
     title: ECS Bridge
     details: Maps cleanly to DINO's full Unity ECS (DOTS) architecture. ECS-native modding over Harmony patches for performance.
   - icon: "\uD83E\uDD16"
     title: Agent Tooling
-    details: "MCP server with 17 game interaction tools for Claude Code. CLI with 11 commands. Hot reload. Full agent-driven development pipeline."
+    details: "MCP server with 21 game interaction tools for Claude Code. CLI with 11 commands. Hot reload. Full agent-driven development pipeline."
 ---

@@ -15,7 +15,7 @@ export default withMermaid(
     cleanUrls: true,
     appearance: 'dark',
     ignoreDeadLinks: true,
-    srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**'],
+    srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**', 'game-launch-dashboard.md'],
 
     vite: {
       build: {
@@ -27,6 +27,7 @@ export default withMermaid(
 
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+      ['link', { rel: 'stylesheet', href: '/.vitepress/theme/custom.css' }],
     ],
 
     themeConfig: {
@@ -75,8 +76,20 @@ export default withMermaid(
         {
           text: 'API Reference',
           items: [
+            { text: 'Interactive Examples', link: '/guide/api-reference-interactive' },
             { text: 'Registry API', link: '/api/registry' },
             { text: 'Content Loader API', link: '/api/content-loader' },
+          ],
+        },
+        {
+          text: 'Deployment',
+          collapsed: false,
+          items: [
+            { text: 'Windows', link: '/deploy/windows-deployment' },
+            { text: 'Linux', link: '/deploy/linux-deployment' },
+            { text: 'macOS', link: '/deploy/macos-deployment' },
+            { text: 'Docker', link: '/deploy/docker-deployment' },
+            { text: 'Troubleshooting', link: '/deploy/troubleshooting' },
           ],
         },
         {

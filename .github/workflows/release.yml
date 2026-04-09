@@ -146,6 +146,42 @@ jobs:
             --output staging/nuget/
         shell: pwsh
 
+      - name: Pack Warfare Domain NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Domains/Warfare/DINOForge.Domains.Warfare.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
+      - name: Pack Economy Domain NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Domains/Economy/DINOForge.Domains.Economy.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
+      - name: Pack Scenario Domain NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Domains/Scenario/DINOForge.Domains.Scenario.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
+      - name: Pack UI Domain NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Domains/UI/DINOForge.Domains.UI.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
       - name: Publish to NuGet.org
         if: ${{ !steps.version.outputs.IS_PRERELEASE == 'true' }}
         env:
@@ -569,11 +605,15 @@ jobs:
             $sha256File = "$companionZip.sha256"
             if (Test-Path $sha256File) { $required += $sha256File }
           }
-          # NuGet packages — at least one SDK, Bridge.Protocol, and Templates nupkg must exist
+          # NuGet packages — at least one SDK, Bridge.Protocol, Templates, and domain nupkgs must exist
           $nugetFiles = Get-ChildItem "staging/nuget/*.nupkg" -ErrorAction SilentlyContinue
           $hasSdk       = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.SDK\." }
           $hasProtocol  = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Bridge\.Protocol\." }
           $hasTemplates = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Templates\." }
+          $hasWarfare   = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.Warfare\." }
+          $hasEconomy   = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.Economy\." }
+          $hasScenario  = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.Scenario\." }
+          $hasUI        = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.UI\." }
 
           $missing = @()
           foreach ($path in $required) {
@@ -582,6 +622,10 @@ jobs:
           if (-not $hasSdk)       { $missing += "staging/nuget/DINOForge.SDK.*.nupkg" }
           if (-not $hasProtocol)  { $missing += "staging/nuget/DINOForge.Bridge.Protocol.*.nupkg" }
           if (-not $hasTemplates) { $missing += "staging/nuget/DINOForge.Templates.*.nupkg" }
+          if (-not $hasWarfare)   { $missing += "staging/nuget/DINOForge.Domains.Warfare.*.nupkg" }
+          if (-not $hasEconomy)   { $missing += "staging/nuget/DINOForge.Domains.Economy.*.nupkg" }
+          if (-not $hasScenario)  { $missing += "staging/nuget/DINOForge.Domains.Scenario.*.nupkg" }
+          if (-not $hasUI)        { $missing += "staging/nuget/DINOForge.Domains.UI.*.nupkg" }
 
           if ($missing.Count -gt 0) {
             Write-Host "::error::Release artifact check FAILED. Missing files:"

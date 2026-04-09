@@ -38,14 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Bridge.Client targets `netstandard2.0` for library compatibility
   - Fixed dependency directions across domain plugins
 
-- **Libification: Tier 1 Core Library Extraction**
-  - Bridge.Protocol NuGet package published to nuget.org
-  - Bridge.Client NuGet package published to nuget.org
-  - Symbol packages (.snupkg) enabled for debugging
-  - GitHub Releases auto-generated with package links
-  - Independent package versioning via release.yml automation
-  - **Breaking change**: Runtime consumers must install NuGet packages instead of referencing DLLs
-  - See `LIBIFICATION_ROADMAP.md` for Tier 2 (Domains) and Tier 3 (Tools) roadmap
+- **Libification: Tier 1 & 2 Core Library + Domain Extraction**
+  - **Tier 1**: Bridge.Protocol, Bridge.Client, Templates NuGet packages published
+  - **Tier 2**: 4 domain plugins now available as independent NuGet packages:
+    - DINOForge.Domains.Warfare (archetypes, doctrines, combat balance)
+    - DINOForge.Domains.Economy (trade, production, resources)
+    - DINOForge.Domains.Scenario (scripting, victory conditions, campaigns)
+    - DINOForge.Domains.UI (HUD elements, menus, themes)
+  - All packages include XML documentation + symbol packages (.snupkg)
+  - All packages include comprehensive README.md for consumption
+  - release.yml now packs all 4 domain packages automatically
+  - Verified build process: dotnet pack succeeds for all domains
+  - Target framework: netstandard2.0 for maximum compatibility
+  - See `LIBIFICATION_ROADMAP.md` for migration path and Tier 3 (Tools) roadmap
 
 ### Testing & Quality
 

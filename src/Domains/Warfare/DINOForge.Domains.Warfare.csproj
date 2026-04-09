@@ -6,8 +6,27 @@
     <RootNamespace>DINOForge.Domains.Warfare</RootNamespace>
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
-    <Description>DINOForge Warfare Domain Plugin - faction archetypes, doctrines, combat balance, wave composition</Description>
+    <Description>Combat simulation, factions, doctrines, combat roles for game modding</Description>
+    <Version>0.18.0</Version>
+    <AssemblyVersion>0.18.0</AssemblyVersion>
+    <PackageVersion>0.18.0</PackageVersion>
+    <PackageId>DINOForge.Domains.Warfare</PackageId>
+    <Authors>DINOForge Agents</Authors>
+    <PackageTags>game-modding;combat;warfare;dinoforge</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />

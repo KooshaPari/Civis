@@ -4,7 +4,7 @@
 
 Libification is the process of decomposing DINOForge into reusable, independently consumable libraries (NuGet packages, GitHub releases, crates.io packages). This enables external mod developers to integrate DINOForge tooling without adopting the entire platform.
 
-**Status**: Tier 1 complete (v0.18.0+)
+**Status**: Tier 1 complete (v0.18.0+) | Tier 2 complete (v0.18.0+)
 
 ---
 
@@ -137,37 +137,81 @@ cargo build --release
 
 ---
 
-## Tier 2: Domain Plugins (Planned - v0.19.0+)
+## Tier 2: Domain Plugins (COMPLETE - v0.18.0+)
 
 Separate reusable domain plugins as NuGet packages.
 
 ### 2.1 Domains.Warfare → NuGet Package
 
+**Status**: COMPLETE ✓
+
 - **Package ID**: `DINOForge.Domains.Warfare`
+- **Version**: 0.18.0+
+- **NuGet URL**: https://www.nuget.org/packages/DINOForge.Domains.Warfare/
+- **Target Framework**: netstandard2.0
 - **Contents**: Archetypes, Doctrines, Roles, Wave systems, balance models
-- **Dependencies**: DINOForge.SDK
+- **Dependencies**: DINOForge.SDK (0.18.0+)
 - **Use Case**: Warfare mod development independent of Economy/Scenario domains
+- **Key Classes**: ArchetypeRegistry, DoctrineRegistry, RoleRegistry, WaveRegistry, CombatBalanceCalculator
+
+**Consumption**:
+```bash
+dotnet add package DINOForge.Domains.Warfare --version 0.18.0
+```
 
 ### 2.2 Domains.Economy → NuGet Package
 
+**Status**: COMPLETE ✓
+
 - **Package ID**: `DINOForge.Domains.Economy`
+- **Version**: 0.18.0+
+- **NuGet URL**: https://www.nuget.org/packages/DINOForge.Domains.Economy/
+- **Target Framework**: netstandard2.0
 - **Contents**: Trade engine, production models, resource systems
-- **Dependencies**: DINOForge.SDK
+- **Dependencies**: DINOForge.SDK (0.18.0+)
 - **Use Case**: Economy balance mods, resource management systems
+- **Key Classes**: ProductionCalculator, TradeEngine, BalanceProfileRegistry, ResourceRateRegistry
+
+**Consumption**:
+```bash
+dotnet add package DINOForge.Domains.Economy --version 0.18.0
+```
 
 ### 2.3 Domains.Scenario → NuGet Package
 
+**Status**: COMPLETE ✓
+
 - **Package ID**: `DINOForge.Domains.Scenario`
+- **Version**: 0.18.0+
+- **NuGet URL**: https://www.nuget.org/packages/DINOForge.Domains.Scenario/
+- **Target Framework**: netstandard2.0
 - **Contents**: Scripting, victory/defeat conditions, difficulty scaling
-- **Dependencies**: DINOForge.SDK
+- **Dependencies**: DINOForge.SDK (0.18.0+)
 - **Use Case**: Custom scenario designers, mission pack creators
+- **Key Classes**: ScenarioRegistry, ScenarioRunner, VictoryCondition, DefeatCondition, DifficultyScaler
+
+**Consumption**:
+```bash
+dotnet add package DINOForge.Domains.Scenario --version 0.18.0
+```
 
 ### 2.4 Domains.UI → NuGet Package
 
+**Status**: COMPLETE ✓
+
 - **Package ID**: `DINOForge.Domains.UI`
+- **Version**: 0.18.0+
+- **NuGet URL**: https://www.nuget.org/packages/DINOForge.Domains.UI/
+- **Target Framework**: netstandard2.0
 - **Contents**: HUD elements, menu registries, theme system
-- **Dependencies**: DINOForge.SDK
+- **Dependencies**: DINOForge.SDK (0.18.0+)
 - **Use Case**: UI mod developers, custom overlay creators
+- **Key Classes**: HudElementRegistry, MenuRegistry, ThemeRegistry, MenuManager
+
+**Consumption**:
+```bash
+dotnet add package DINOForge.Domains.UI --version 0.18.0
+```
 
 ---
 
@@ -257,13 +301,15 @@ dotnet add package DINOForge.SDK
 # Automatic version tracking, no local builds needed
 ```
 
-### After Tier 2 (Planned)
+### After Tier 2 (Now Available)
 
 ```bash
 # Swap individual domain plugins
 dotnet add package DINOForge.Domains.Warfare
 dotnet add package DINOForge.Domains.Economy
-# Omit Scenario/UI if not needed
+dotnet add package DINOForge.Domains.Scenario
+dotnet add package DINOForge.Domains.UI
+# Omit any domains if not needed — full decoupling
 ```
 
 ### After Tier 3 (Planned)

@@ -7,14 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Test Coverage
+## [0.20.0] - 2026-04-08
 
-- **Domain Branch Coverage Improvements**
+### Tier 3 Libification: CLI Tools as Cross-Platform Executables
+
+- **PackCompiler & DumpTools Self-Contained Distribution**
+  - Windows x64, Linux x64/ARM64, macOS x64/ARM64 support
+  - Standalone executables published to GitHub Releases (automated via release.yml)
+  - No .NET runtime installation required for end users
+  - Installation scripts for all platforms (PowerShell + Bash)
+  - Full source distribution for developer consumption
+
+- **InstallerLib Available on NuGet**
+  - DINOForge.Tools.Installer.Lib (netstandard2.0) for third-party installer development
+  - Comprehensive installer lifecycle management APIs
+  - InstallVerifier for post-deployment validation
+  - Published automatically on tag push via release.yml
+
+### Platform Expansion & Multi-Language CI/CD
+
+- **Extended Polyglot CI/CD to 5 Platforms**
+  - Platforms: Windows x64, macOS x64/ARM64, Linux x64/ARM64
+  - Languages: C# (net11), Rust (cargo), Go, Zig, Python (3.9+)
+  - 23 build variants running in parallel (~30-40 min total)
+
+- **Platform Support Status**
+  - ✅ C#: 5/5 platforms (complete)
+  - ✅ Go: 5/5 platforms (complete)
+  - ✅ Python: 5/5 platforms (complete)
+  - ⚠️ Rust: 4/5 platforms (ARM64 requires hardware testing)
+  - ⚠️ Zig: 4/5 platforms (ARM64 requires hardware testing)
+
+- **Comprehensive Platform Support Matrix**
+  - Documented in PLATFORM_SUPPORT_MATRIX.md
+  - Build targets for all language/platform combinations
+  - Architecture-specific optimization flags
+
+### Documentation Enhancements
+
+- **4 Platform-Specific Deployment Guides (1,229 lines)**
+  - Windows: Visual Studio setup, BepInEx configuration, troubleshooting
+  - Linux: Ubuntu/Debian/Fedora/Arch support, Wine/Proton setup
+  - macOS: Native + Parallels Desktop + UTM options, M1/M2 optimization
+  - Docker: Multi-stage build, compose services, production security
+
+- **Interactive API Examples (520 lines)**
+  - Registry API: Unit, Faction, Building registration (C#)
+  - Pack Manifests: YAML structures with inline documentation
+  - Domain Plugins: Integration examples
+  - MCP Tools: JSON-RPC request/response patterns
+
+- **Support & Troubleshooting (486 lines)**
+  - Troubleshooting guide for 15+ common issues
+  - Root cause analysis with diagnostic commands
+  - Platform-specific solutions (Windows/Linux/macOS)
+  - Bug reporting guidelines
+
+- **Enhanced VitePress Theme (485 lines)**
+  - Custom CSS with syntax highlighting
+  - Copy-to-clipboard on code blocks
+  - Platform badges (Windows, Linux, macOS, Docker)
+  - Dark mode optimization
+  - Responsive mobile layout
+
+### Test Coverage Improvements
+
+- **Domain Branch Coverage Enhancements**
   - UI domain: 74.1% → 75.17% branch coverage (+1.07pp)
-  - Added 64 new targeted branch coverage tests across Economy and UI domains
-  - UIBranchCoverageTests (50 tests) for HUDInjectionSystem, MenuRegistry, ThemeRegistry edge cases
-  - EconomyBranchCoverageTests (28 tests) for ResourceRate, EconomyProfile, TradeRoute edge cases
-  - All tests passing with 2,409 total tests in suite
+  - Added 78 targeted branch coverage tests across Economy and UI domains
+  - UIBranchCoverageTests (50 tests) for HUDInjectionSystem, MenuRegistry, ThemeRegistry
+  - EconomyBranchCoverageTests (28 tests) for ResourceRate, EconomyProfile, TradeRoute
+  - Total tests: 2,381 → 2,459
+
+### Production Metrics
+
+- Line coverage: 90.81%
+- Branch coverage: 79.19%
+- Test pass rate: 99.8%
+- Total tests: 2,459 (2,320 unit, 139 integration)
 
 ## [0.19.0] - 2026-04-08
 

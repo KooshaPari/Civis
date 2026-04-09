@@ -7,6 +7,7 @@ on:
       - 'src/Tools/AssetPipelineRust/**'
       - 'src/Tools/DependencyResolver/**'
       - 'src/Tools/AssetPipelineZig/**'
+      - 'src/Tools/DinoforgeMcp/**'
       - '.github/workflows/polyglot-build.yml'
   pull_request:
     branches: [main]
@@ -15,8 +16,31 @@ permissions: {}
 
 jobs:
   build-rust:
-    name: Build Rust Asset Pipeline
-    runs-on: ubuntu-latest
+    name: Build Rust Asset Pipeline - ${{ matrix.runner }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runner: linux-x64
+            rust-target: x86_64-unknown-linux-gnu
+            artifact-name: libdinoforge_asset_pipeline.so
+          - os: ubuntu-24.04-arm64
+            runner: linux-arm64
+            rust-target: aarch64-unknown-linux-gnu
+            artifact-name: libdinoforge_asset_pipeline.so
+          - os: windows-latest
+            runner: windows-x64
+            rust-target: x86_64-pc-windows-msvc
+            artifact-name: dinoforge_asset_pipeline.dll
+          - os: macos-latest
+            runner: macos-arm64
+            rust-target: aarch64-apple-darwin
+            artifact-name: libdinoforge_asset_pipeline.dylib
+          - os: macos-13
+            runner: macos-x64
+            rust-target: x86_64-apple-darwin
+            artifact-name: libdinoforge_asset_pipeline.dylib
     permissions:
       contents: read
 
@@ -27,7 +51,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu
+          targets: ${{ matrix.rust-target }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -36,23 +60,51 @@ jobs:
 
       - name: Build Rust library (release)
         working-directory: src/Tools/AssetPipelineRust
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.rust-target }}
 
       - name: Run Rust tests
         working-directory: src/Tools/AssetPipelineRust
-        run: cargo test --release
+        run: cargo test --release --target ${{ matrix.rust-target }}
 
       - name: Upload Rust artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: rust-asset-pipeline
-          path: src/Tools/AssetPipelineRust/target/release/libdinoforge_asset_pipeline.so
+          name: rust-asset-pipeline-${{ matrix.runner }}
+          path: src/Tools/AssetPipelineRust/target/${{ matrix.rust-target }}/release/${{ matrix.artifact-name }}
           if-no-files-found: warn
           retention-days: 30
 
   build-go:
-    name: Build Go Dependency Resolver
-    runs-on: ubuntu-latest
+    name: Build Go Dependency Resolver - ${{ matrix.runner }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runner: linux-x64
+            go-os: linux
+            go-arch: amd64
+            binary-name: dinoforge-resolver
+          - os: ubuntu-24.04-arm64
+            runner: linux-arm64
+            go-os: linux
+            go-arch: arm64
+            binary-name: dinoforge-resolver
+          - os: windows-latest
+            runner: windows-x64
+            go-os: windows
+            go-arch: amd64
+            binary-name: dinoforge-resolver.exe
+          - os: macos-latest
+            runner: macos-arm64
+            go-os: darwin
+            go-arch: arm64
+            binary-name: dinoforge-resolver
+          - os: macos-13
+            runner: macos-x64
+            go-os: darwin
+            go-arch: amd64
+            binary-name: dinoforge-resolver
     permissions:
       contents: read
 
@@ -64,46 +116,59 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache: false
+          cache: true
+          cache-dependency-path: src/Tools/DependencyResolver/go.sum
 
       - name: Create output directory
         working-directory: src/Tools/DependencyResolver
         run: mkdir -p bin
 
-      - name: Build Go binary (Linux)
+      - name: Build Go binary
         working-directory: src/Tools/DependencyResolver
-        run: CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/dinoforge-resolver main.go
+        env:
+          GOOS: ${{ matrix.go-os }}
+          GOARCH: ${{ matrix.go-arch }}
+          CGO_ENABLED: 0
+        run: go build -ldflags="-s -w" -o bin/${{ matrix.binary-name }} main.go
 
       - name: Run Go tests
         working-directory: src/Tools/DependencyResolver
         run: go test -v ./...
 
-      - name: Build Go binary (Windows)
-        working-directory: src/Tools/DependencyResolver
-        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/dinoforge-resolver.exe main.go
-
-      - name: Upload Go artifact (Linux)
+      - name: Upload Go artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: go-resolver-linux
-          path: src/Tools/DependencyResolver/bin/dinoforge-resolver
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Upload Go artifact (Windows)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: go-resolver-windows
-          path: src/Tools/DependencyResolver/bin/dinoforge-resolver.exe
+          name: go-resolver-${{ matrix.runner }}
+          path: src/Tools/DependencyResolver/bin/${{ matrix.binary-name }}
           if-no-files-found: warn
           retention-days: 30
 
   build-zig:
-    name: Build Zig Asset Pipeline
+    name: Build Zig Asset Pipeline - ${{ matrix.runner }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            runner: linux-x64
+            zig-target: x86_64-linux-gnu
+            artifact-name: dinoforge_asset_pipeline_zig.so
+          - os: ubuntu-24.04-arm64
+            runner: linux-arm64
+            zig-target: aarch64-linux-gnu
+            artifact-name: dinoforge_asset_pipeline_zig.so
+          - os: windows-latest
+            runner: windows-x64
+            zig-target: x86_64-windows-gnu
+            artifact-name: dinoforge_asset_pipeline_zig.dll
+          - os: macos-latest
+            runner: macos-arm64
+            zig-target: aarch64-macos-gnu
+            artifact-name: dinoforge_asset_pipeline_zig.dylib
+          - os: macos-13
+            runner: macos-x64
+            zig-target: x86_64-macos-gnu
+            artifact-name: dinoforge_asset_pipeline_zig.dylib
     permissions:
       contents: read
 
@@ -122,7 +187,7 @@ jobs:
 
       - name: Build Zig library (release)
         working-directory: src/Tools/AssetPipelineZig
-        run: zig build-lib -O ReleaseFast -dynamic src/root.zig
+        run: zig build-lib -O ReleaseFast -dynamic -target ${{ matrix.zig-target }} src/root.zig
 
       - name: Create output directory
         working-directory: src/Tools/AssetPipelineZig
@@ -131,90 +196,122 @@ jobs:
       - name: Prepare artifact (Windows)
         if: runner.os == 'Windows'
         working-directory: src/Tools/AssetPipelineZig
-        run: mv root.dll zig-out/lib/dinoforge_asset_pipeline_zig.dll
+        shell: pwsh
+        run: Move-Item -Path root.dll -Destination zig-out/lib/dinoforge_asset_pipeline_zig.dll -Force
 
-      - name: Prepare artifact (Linux)
-        if: runner.os == 'Linux'
+      - name: Prepare artifact (Unix)
+        if: runner.os != 'Windows'
         working-directory: src/Tools/AssetPipelineZig
-        run: mv root.so zig-out/lib/dinoforge_asset_pipeline_zig.so
+        run: |
+          if [ -f root.so ]; then
+            mv root.so zig-out/lib/dinoforge_asset_pipeline_zig.so
+          elif [ -f root.dylib ]; then
+            mv root.dylib zig-out/lib/dinoforge_asset_pipeline_zig.dylib
+          fi
 
       - name: Upload Zig artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: zig-asset-pipeline-${{ runner.os }}
+          name: zig-asset-pipeline-${{ matrix.runner }}
           path: src/Tools/AssetPipelineZig/zig-out/lib/
+          if-no-files-found: warn
+          retention-days: 30
+
+  build-python:
+    name: Build Python MCP Server - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.11', '3.12']
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: 'src/Tools/DinoforgeMcp/pyproject.toml'
+
+      - name: Install dependencies
+        working-directory: src/Tools/DinoforgeMcp
+        run: pip install -e .[dev]
+
+      - name: Run Python tests
+        working-directory: src/Tools/DinoforgeMcp
+        run: pytest tests/ -v --cov=dinoforge_mcp --cov-report=xml
+
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: python-coverage-${{ matrix.python-version }}
+          path: src/Tools/DinoforgeMcp/coverage.xml
           if-no-files-found: warn
           retention-days: 30
 
   verify-artifacts:
     name: Verify Polyglot Artifacts
     runs-on: ubuntu-latest
-    needs: [build-rust, build-go, build-zig]
+    needs: [build-rust, build-go, build-zig, build-python]
     if: always()
     permissions:
       contents: read
 
     steps:
-      - name: Download Rust artifact
+      - name: Download all artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: rust-asset-pipeline
-          path: polyglot-artifacts/rust
+          path: polyglot-artifacts
 
-      - name: Download Go artifact (Linux)
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: go-resolver-linux
-          path: polyglot-artifacts/go/linux
-
-      - name: Download Go artifact (Windows)
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: go-resolver-windows
-          path: polyglot-artifacts/go/windows
-
-      - name: Download Zig artifact (Windows)
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: zig-asset-pipeline-Windows
-          path: polyglot-artifacts/zig/windows
-
-      - name: Download Zig artifact (Linux)
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: zig-asset-pipeline-Linux
-          path: polyglot-artifacts/zig/linux
-
-      - name: Verify Rust artifact
-        run: test -f polyglot-artifacts/rust/libdinoforge_asset_pipeline.so && echo "✓ Rust artifact present" || echo "⚠ Rust artifact missing"
-
-      - name: Verify Go Linux artifact
-        run: test -f polyglot-artifacts/go/linux/dinoforge-resolver && echo "✓ Go Linux artifact present" || echo "⚠ Go Linux artifact missing"
-
-      - name: Verify Go Windows artifact
-        run: test -f polyglot-artifacts/go/windows/dinoforge-resolver.exe && echo "✓ Go Windows artifact present" || echo "⚠ Go Windows artifact missing"
-
-      - name: Verify Zig Windows artifact
-        run: test -f polyglot-artifacts/zig/windows/dinoforge_asset_pipeline_zig.dll && echo "✓ Zig Windows artifact present" || echo "⚠ Zig Windows artifact missing"
-
-      - name: Verify Zig Linux artifact
-        run: test -f polyglot-artifacts/zig/linux/dinoforge_asset_pipeline_zig.so && echo "✓ Zig Linux artifact present" || echo "⚠ Zig Linux artifact missing"
-
-      - name: Check artifact summary
+      - name: Generate artifact inventory
         run: |
-          echo "=== Polyglot Build Artifacts ===" && \
-          echo "" && \
-          echo "Rust Asset Pipeline:" && \
-          ls -lh polyglot-artifacts/rust/ 2>/dev/null || echo "  (no artifacts)" && \
-          echo "" && \
-          echo "Go Resolver (Linux):" && \
-          ls -lh polyglot-artifacts/go/linux/ 2>/dev/null || echo "  (no artifacts)" && \
-          echo "" && \
-          echo "Go Resolver (Windows):" && \
-          ls -lh polyglot-artifacts/go/windows/ 2>/dev/null || echo "  (no artifacts)" && \
-          echo "" && \
-          echo "Zig Asset Pipeline (Windows):" && \
-          ls -lh polyglot-artifacts/zig/windows/ 2>/dev/null || echo "  (no artifacts)" && \
-          echo "" && \
-          echo "Zig Asset Pipeline (Linux):" && \
-          ls -lh polyglot-artifacts/zig/linux/ 2>/dev/null || echo "  (no artifacts)"
+          echo "=== Polyglot Build Artifacts Inventory ===" > artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "Build Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          find polyglot-artifacts -type f -exec ls -lh {} \; | awk '{print $9, "(" $5 ")"}' >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "=== Platform Coverage ===" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "Rust:" >> artifact-summary.txt
+          ls -1 polyglot-artifacts/rust-asset-pipeline-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "Go:" >> artifact-summary.txt
+          ls -1 polyglot-artifacts/go-resolver-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "Zig:" >> artifact-summary.txt
+          ls -1 polyglot-artifacts/zig-asset-pipeline-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "Python:" >> artifact-summary.txt
+          ls -1 polyglot-artifacts/python-coverage-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
+          cat artifact-summary.txt
+
+      - name: Upload artifact summary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: polyglot-artifact-summary
+          path: artifact-summary.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Verify artifact count
+        run: |
+          RUST_COUNT=$(find polyglot-artifacts -path "*rust-asset-pipeline-*" -type d | wc -l)
+          GO_COUNT=$(find polyglot-artifacts -path "*go-resolver-*" -type d | wc -l)
+          ZIG_COUNT=$(find polyglot-artifacts -path "*zig-asset-pipeline-*" -type d | wc -l)
+          PYTHON_COUNT=$(find polyglot-artifacts -path "*python-coverage-*" -type d | wc -l)
+          TOTAL=$((RUST_COUNT + GO_COUNT + ZIG_COUNT + PYTHON_COUNT))
+          echo "Rust artifacts: $RUST_COUNT"
+          echo "Go artifacts: $GO_COUNT"
+          echo "Zig artifacts: $ZIG_COUNT"
+          echo "Python artifacts: $PYTHON_COUNT"
+          echo "Total artifacts: $TOTAL"
+          if [ "$TOTAL" -lt 15 ]; then
+            echo "⚠ Warning: Expected at least 15 artifacts (5 Rust × 5 platforms not all available)"
+          else
+            echo "✓ Good: Artifact collection complete"
+          fi

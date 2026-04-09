@@ -5,6 +5,17 @@ All notable changes to DINOForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Test Coverage
+
+- **Domain Branch Coverage Improvements**
+  - UI domain: 74.1% → 75.17% branch coverage (+1.07pp)
+  - Added 64 new targeted branch coverage tests across Economy and UI domains
+  - UIBranchCoverageTests (50 tests) for HUDInjectionSystem, MenuRegistry, ThemeRegistry edge cases
+  - EconomyBranchCoverageTests (28 tests) for ResourceRate, EconomyProfile, TradeRoute edge cases
+  - All tests passing with 2,409 total tests in suite
+
 ## [0.19.0] - 2026-04-08
 
 ### Major Features

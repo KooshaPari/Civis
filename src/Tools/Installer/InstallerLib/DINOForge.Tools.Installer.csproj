@@ -7,6 +7,18 @@
     <Description>Installer library for detecting Steam/DINO paths and verifying DINOForge installations</Description>
     <!-- Suppress platform compatibility warning: Steam/registry detection is guarded by RuntimeInformation checks -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
+      <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>DINOForge.Tools.Installer</PackageId>
+    <Title>DINOForge Installer Library</Title>
+    <Authors>KooshaPari</Authors>
+    <Description>Library for detecting Steam/DINO installation paths and verifying DINOForge installations</Description>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Version>0.20.0</Version>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
 </Project>

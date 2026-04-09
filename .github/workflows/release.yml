@@ -106,10 +106,47 @@ jobs:
           retention-days: 14
 
       # ---------------------------------------------------------------
+      # Build and publish CLI tools (PackCompiler, DumpTools)
+      # All platforms: win-x64, linux-x64, linux-arm64, osx-x64, osx-arm64
+      # ---------------------------------------------------------------
+      - name: Publish PackCompiler (all platforms)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $rids = @('win-x64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')
+          foreach ($rid in $rids) {
+            Write-Host "Publishing PackCompiler-$rid..."
+            dotnet publish src/Tools/PackCompiler -c Release -r $rid `
+              -o "staging/cli-tools/PackCompiler-$rid" `
+              --no-restore --verbosity minimal || Write-Warning "PackCompiler-$rid publish failed"
+          }
+
+      - name: Publish DumpTools (all platforms)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $rids = @('win-x64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')
+          foreach ($rid in $rids) {
+            Write-Host "Publishing DumpTools-$rid..."
+            dotnet publish src/Tools/DumpTools -c Release -r $rid `
+              -o "staging/cli-tools/DumpTools-$rid" `
+              --no-restore --verbosity minimal || Write-Warning "DumpTools-$rid publish failed"
+          }
+
+      # ---------------------------------------------------------------
       # Pack and publish NuGet packages
       # SETUP REQUIRED: Add NUGET_API_KEY secret in GitHub repo Settings → Secrets
       # Get your API key from https://www.nuget.org/account/apikeys
       # ---------------------------------------------------------------
+      - name: Pack InstallerLib NuGet package
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          dotnet pack src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj -c Release `
+            -p:PackageVersion=$env:PACKAGE_VERSION `
+            --output staging/nuget/
+        shell: pwsh
+
       - name: Pack SDK NuGet package
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.VERSION }}
@@ -425,6 +462,14 @@ jobs:
           Copy-Item src/Tools/Installer/install.sh staging/scripts/ -ErrorAction SilentlyContinue
           Copy-Item scripts/install-companion.ps1 staging/scripts/ -ErrorAction SilentlyContinue
           Copy-Item scripts/install-companion.sh staging/scripts/ -ErrorAction SilentlyContinue
+          Copy-Item scripts/install/*.ps1 staging/scripts/ -ErrorAction SilentlyContinue
+          Copy-Item scripts/install/*.sh staging/scripts/ -ErrorAction SilentlyContinue
+
+          # Copy CLI tools (PackCompiler, DumpTools)
+          if (Test-Path staging/cli-tools) {
+            New-Item -ItemType Directory -Force -Path staging/tools | Out-Null
+            Copy-Item staging/cli-tools staging/tools/cli-tools -Recurse -Force
+          }
 
           # Copy Go DependencyResolver binaries
           if (Test-Path staging/go-resolver) {
@@ -491,6 +536,7 @@ jobs:
           $artifacts = @(
             "staging/nuget/*.nupkg",
             "staging/DINOForge-v$version-Installer.exe",
+            "staging/tools/cli-tools/**/*",
             "staging/tools/go-resolver/dinoforge-resolver.exe",
             "staging/tools/go-resolver/dinoforge-resolver",
             "staging/tools/rust-asset-pipeline/dinoforge_asset_pipeline.dll",
@@ -655,6 +701,16 @@ jobs:
             staging/DINOForge-v${{ steps.version.outputs.VERSION }}-Installer.exe.sha256
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip.sha256
+            staging/tools/cli-tools/PackCompiler-win-x64/**
+            staging/tools/cli-tools/PackCompiler-linux-x64/**
+            staging/tools/cli-tools/PackCompiler-linux-arm64/**
+            staging/tools/cli-tools/PackCompiler-osx-x64/**
+            staging/tools/cli-tools/PackCompiler-osx-arm64/**
+            staging/tools/cli-tools/DumpTools-win-x64/**
+            staging/tools/cli-tools/DumpTools-linux-x64/**
+            staging/tools/cli-tools/DumpTools-linux-arm64/**
+            staging/tools/cli-tools/DumpTools-osx-x64/**
+            staging/tools/cli-tools/DumpTools-osx-arm64/**
             staging/tools/go-resolver/dinoforge-resolver.exe
             staging/tools/go-resolver/dinoforge-resolver
             staging/tools/go-resolver/SHA256SUMS.txt

@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net11.0": {
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[11.0.0-preview.2.26159.112, )",
+        "resolved": "11.0.0-preview.2.26159.112",
+        "contentHash": "TnwQtmgvXJ+Moj8F0X41gNiLvXvBjYuWycwC0BUlYM3NHP0jzBAe8jWGuxlPNxh/XGDA7oOcwcpTLGcVJNwOYQ=="
+      },
       "Newtonsoft.Json": {
         "type": "Direct",
         "requested": "[13.*, )",
@@ -22,6 +28,11 @@
         "resolved": "0.55.0",
         "contentHash": "GIfgOvuF8MpU52bprhwtDEtx0gmVIGOepM8bw0lH/TSMD0rg1Xp+5Y53kPG8rFVdcpbNANlhDQ5mEVVPO3/2Tg=="
       }
-    }
+    },
+    "net11.0/linux-arm64": {},
+    "net11.0/linux-x64": {},
+    "net11.0/osx-arm64": {},
+    "net11.0/osx-x64": {},
+    "net11.0/win-x64": {}
   }
 }

@@ -94,7 +94,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
     /// <summary>
     /// Verify pipe name isolation - each instance has a unique pipe.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires DINOBox infrastructure at G:\\dino_boxes")]
     public void PipeNameIsolationTest_UniqueNamesPerInstance()
     {
         _pool.Should().NotBeNull();
@@ -113,7 +113,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
     /// <summary>
     /// Verify symlink structure - no asset duplication.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires DINOBox infrastructure at G:\\dino_boxes")]
     public void SymlinkValidationTest_NoAssetDuplication()
     {
         _pool.Should().NotBeNull();
@@ -135,7 +135,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
     /// <summary>
     /// Verify box structure and configuration files.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires DINOBox infrastructure at G:\\dino_boxes")]
     public void BoxStructureTest_AllRequiredFilesPresent()
     {
         _pool.Should().NotBeNull();
@@ -195,7 +195,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
     /// <summary>
     /// Concurrent box operations test - create and manage multiple boxes simultaneously.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Requires DINOBox infrastructure at G:\\dino_boxes")]
     public async Task ConcurrentOperationsTest_MultipleContainersWorkIndependently()
     {
         _pool.Should().NotBeNull();

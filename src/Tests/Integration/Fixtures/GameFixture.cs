@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using DINOForge.Bridge.Client;
 using Xunit;
 
@@ -16,8 +17,11 @@ public sealed class GameFixture : IAsyncLifetime
         @"C:\Program Files\Steam\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
         @"D:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
         @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\Diplomacy is Not an Option.exe",
-        // Also check DINO_GAME_PATH environment variable
     ];
+
+    private Process? _gameProcess;
+    private const int ConnectTimeoutMs = 30_000;
+    private const int PollIntervalMs = 500;
 
     /// <summary>Gets the connected game client.</summary>
     public GameClient Client { get; } = new();
@@ -35,18 +39,21 @@ public sealed class GameFixture : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
-        // Check if the game executable exists anywhere (including DINO_GAME_PATH env var)
-        var gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
+        // Build list of possible game paths including DINO_GAME_PATH env var
         var allGamePaths = KnownGamePaths.ToList();
-        if (!string.IsNullOrEmpty(gamePath))
+        var gamePathEnv = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
+        if (!string.IsNullOrEmpty(gamePathEnv))
         {
-            var exePath = Path.Combine(gamePath, "Diplomacy is Not an Option.exe");
+            var exePath = Path.Combine(gamePathEnv, "Diplomacy is Not an Option.exe");
             if (File.Exists(exePath))
                 allGamePaths.Add(exePath);
         }
 
-        bool gameInstalled = allGamePaths.Any(File.Exists) || ProcessManager.IsRunning;
-        if (!gameInstalled)
+        // Find existing game or check if already running
+        string? gameExePath = allGamePaths.FirstOrDefault(File.Exists);
+        bool isRunning = ProcessManager.IsRunning;
+
+        if (gameExePath == null && !isRunning)
         {
             GameAvailable = false;
             return;
@@ -54,19 +61,33 @@ public sealed class GameFixture : IAsyncLifetime
 
         try
         {
-            // Launch or detect the game
-            bool launched = await ProcessManager.LaunchAsync();
-            if (!launched)
+            // Launch game if not already running
+            if (!isRunning && gameExePath != null)
             {
-                GameAvailable = false;
-                return;
+                _gameProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = gameExePath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
             }
 
-            // Connect the client
-            using CancellationTokenSource connectCts = new(TimeSpan.FromSeconds(15));
-            await Client.ConnectAsync(connectCts.Token);
+            // Poll until bridge is connected (up to ConnectTimeoutMs)
+            using CancellationTokenSource cts = new(ConnectTimeoutMs);
+            while (!cts.Token.IsCancellationRequested && !Client.IsConnected)
+            {
+                try
+                {
+                    await Client.ConnectAsync(cts.Token);
+                    if (Client.IsConnected) break;
+                }
+                catch
+                {
+                    // Bridge not up yet - keep polling
+                }
+                await Task.Delay(PollIntervalMs, cts.Token).ConfigureAwait(false);
+            }
 
-            // Check if connected before proceeding
             if (!Client.IsConnected)
             {
                 GameAvailable = false;
@@ -94,13 +115,14 @@ public sealed class GameFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Disconnects the client. Does not kill the game process
-    /// to avoid disrupting interactive sessions.
+    /// Disconnects the client and kills the launched game process.
     /// </summary>
     public Task DisposeAsync()
     {
-        Client.Disconnect();
+        try { Client.Disconnect(); } catch { /* best effort */ }
         Client.Dispose();
+        try { _gameProcess?.Kill(entireProcessTree: true); } catch { /* best effort */ }
+        _gameProcess?.Dispose();
         return Task.CompletedTask;
     }
 }

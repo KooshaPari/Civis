@@ -117,7 +117,8 @@ function Start-ProcessDetached {
         [string]$LogFile
     )
 
-    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -WorkingDirectory $WorkingDirectory -PassThru -WindowStyle Hidden -RedirectStandardOutput $LogFile -RedirectStandardError $LogFile
+    # Redirect both stdout and stderr to same file by using FileStream
+    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -WorkingDirectory $WorkingDirectory -PassThru -WindowStyle Hidden -RedirectStandardOutput $LogFile
     $process.Id | Set-Content -Path $PidFile
     Write-Host "[MCP] Started detached process PID=$($process.Id)" -ForegroundColor Cyan
     return $process
@@ -166,7 +167,9 @@ if (-not $env:BARE_CUA_NATIVE) {
     $env:BARE_CUA_NATIVE = "C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe"
 }
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+# Get repo root: scripts/start-mcp.ps1 → scripts dir → repo root (1 level up)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent $scriptDir
 $mcpDir = Join-Path $repoRoot "src\Tools\DinoforgeMcp"
 $runtimeStateDir = Join-Path $env:TEMP "DINOForge"
 $mcpPidFile = Join-Path $runtimeStateDir "mcp-server.pid"
@@ -263,6 +266,7 @@ Write-Host "[MCP] Starting DINOForge MCP server (HTTP/SSE)..." -ForegroundColor 
 Write-Host "[MCP] Port: $Port" -ForegroundColor Cyan
 Write-Host "[MCP] Host: $McpHost" -ForegroundColor Cyan
 Write-Host "[MCP] Game dir: $env:DINO_GAME_DIR" -ForegroundColor Cyan
+Write-Host "[MCP] Working dir: $mcpDir" -ForegroundColor Cyan
 
 $arguments = @(
     "-m", "dinoforge_mcp.server",
@@ -272,6 +276,11 @@ $arguments = @(
 )
 
 if ($Detached) {
+    # Ensure mcpDir exists before trying to use it
+    if (-not (Test-Path $mcpDir)) {
+        Write-Host "[MCP] ERROR: Working directory does not exist: $mcpDir" -ForegroundColor Red
+        exit 1
+    }
     $mcpProcess = Start-ProcessDetached -FilePath $pythonExe -ArgumentList $arguments -WorkingDirectory $mcpDir -PidFile $mcpPidFile -LogFile $mcpLogFile
     Start-Sleep -Seconds 1
     if (-not (Wait-ForTcpPort -ServerHost $McpHost -Port $Port -TimeoutSeconds 15)) {

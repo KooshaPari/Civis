@@ -190,8 +190,8 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
             }
         }
 
-        # Test 2: Query entities via GameControlCli with instance-specific pipe
-        # Corresponds to JSON-RPC: {"jsonrpc":"2.0","id":"X","method":"tools/call","params":{"name":"game_query_entities","arguments":{"component_type":"Health","limit":10}}}
+        # Test 2: Check entity count via status (verifies ECS world is active)
+        # Corresponds to JSON-RPC: {"jsonrpc":"2.0","id":"X","method":"tools/call","params":{"name":"game_status","arguments":{}}}
         try {
             $testStart = Get-Date
 
@@ -199,33 +199,33 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
                 --project "$PSScriptRoot/../../src/Tools/GameControlCli/GameControlCli.csproj" `
                 --no-build `
                 -c Release `
-                -- query Health `
+                -- status `
                 --pipe-name "$pipeName" `
                 --format=json `
-                --limit 10 `
                 2>$null | ConvertFrom-Json -ErrorAction Stop
 
             $responseTime = ((Get-Date) - $testStart).TotalMilliseconds
             $totalTime += $responseTime
 
-            if ($result.success -or $result.entities) {
+            # Verify entity count is > 0 (indicates ECS world is ready)
+            if ($result.success -and $result.EntityCount -gt 0) {
                 $testsPassed++
                 $perInstanceStats[$instIdx].Passed++
                 if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instNum : game_query_entities OK (${responseTime}ms)" -ForegroundColor Green
+                    Write-Host "  [PASS] Instance $instNum : entity_count=$($result.EntityCount) OK (${responseTime}ms)" -ForegroundColor Green
                 }
             } else {
                 $testsFailed++
                 $perInstanceStats[$instIdx].Failed++
                 if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instNum : game_query_entities failed" -ForegroundColor Red
+                    Write-Host "  [FAIL] Instance $instNum : entity_count check failed (count=$($result.EntityCount))" -ForegroundColor Red
                 }
             }
         } catch {
             $testsFailed++
             $perInstanceStats[$instIdx].Failed++
             if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instNum : game_query_entities error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  [FAIL] Instance $instNum : entity_count error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
 

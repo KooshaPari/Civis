@@ -1,0 +1,13 @@
+=== DINOForge Parallel Automation Infrastructure Test ===
+Test execution time: 4/11/2026 11:18:02 AM
+
+=== 1. Game Instance Status ===
+Running instances: 1
+Instance Details:
+  Process: Diplomacy is Not an Option
+    PID: 491580
+    Memory: 39.31 MB
+
+=== 2. MCP Server Status ===
+Status: OPERATIONAL
+Response: {"status":"ok","server":"dinoforge-mcp","version":"0.13.0"}

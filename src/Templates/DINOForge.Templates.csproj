@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageType>Template</PackageType>
-    <PackageVersion>0.3.0</PackageVersion>
+    <PackageVersion>0.18.0</PackageVersion>
     <PackageId>DINOForge.Templates</PackageId>
     <Title>DINOForge Templates</Title>
     <Authors>DINOForge</Authors>

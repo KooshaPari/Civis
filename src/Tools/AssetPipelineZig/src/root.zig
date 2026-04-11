@@ -182,3 +182,28 @@ test "Mesh decimator decimate" {
     decimator.decimate(0.5);
     try std.testing.expectEqual(decimator.indices_count, 50);
 }
+
+// --- C Interop Exports (P/Invoke from C#) ---
+
+/// Compute target LOD level based on vertex count and target reduction ratio.
+/// C# calling convention: uint ComputeLodLevel(uint vertexCount, float targetRatio)
+pub export fn ComputeLodLevel(vertex_count: u32, target_ratio: f32) u32 {
+    const current = @as(f32, @floatFromInt(vertex_count));
+    const target = current * target_ratio;
+    const result = @as(u32, @intFromFloat(@max(target, 4.0))); // Minimum 4 vertices
+    return result;
+}
+
+/// Validate mesh geometry (vertex and triangle counts).
+/// C# calling convention: bool ValidateMesh(uint vertexCount, uint triangleCount)
+pub export fn ValidateMesh(vertex_count: u32, triangle_count: u32) bool {
+    return vertex_count >= 3 and triangle_count >= 1;
+}
+
+/// Decimate mesh to target polycount percentage.
+/// C# calling convention: uint DecimateToTarget(uint currentPolycount, float targetRatio)
+pub export fn DecimateToTarget(current_polycount: u32, target_ratio: f32) u32 {
+    const current = @as(f32, @floatFromInt(current_polycount));
+    const target = current * target_ratio;
+    return @as(u32, @intFromFloat(@max(target, 1.0))); // Minimum 1 triangle
+}

@@ -230,5 +230,22 @@ Write-Host ""
 Write-Host "[OK] DINOBox pool created successfully"
 Write-Host ""
 
-# Return pool hashtable for use in scripts
-$pool
+# Convert pool hashtable to array of PSCustomObjects for JSON serialization
+# (ConvertTo-Json cannot serialize hashtables with integer keys)
+$poolArray = @()
+foreach ($i in $pool.Keys | Sort-Object) {
+    $box = $pool[$i]
+    $poolArray += [PSCustomObject]@{
+        Index        = $box.Index
+        BoxPath      = $box.BoxPath
+        PipeName     = $box.PipeName
+        Uuid         = $box.Uuid
+        ExePath      = $box.ExePath
+        BepInExDir   = $box.BepInExDir
+        SaveDir      = $box.SaveDir
+        DebugLogPath = $box.DebugLogPath
+    }
+}
+
+# Return pool as array of objects
+$poolArray

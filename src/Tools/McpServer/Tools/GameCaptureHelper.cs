@@ -3,17 +3,19 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using ScreenCapture.NET;
 using ScreenRecorderLib;
-using BareCua;
+using DINOForge.Tools.McpServer.PlayCua;
 
 namespace DINOForge.Tools.McpServer.Tools;
 
 /// <summary>
 /// Shared screenshot capture logic used by multiple MCP tools.
-/// Primary: bare-cua-native (optional fast path using JSON-RPC).
-/// Secondary: Unity ScreenCapture.CaptureScreenshot() via file-signal — works on Parsec/virtual displays.
-/// Tertiary: ScreenCapture.NET DXGI Desktop Duplication — works for exclusive DX11 fullscreen on physical displays.
-/// Quaternary: ScreenRecorderLib (Windows.Graphics.Capture) — per-window capture fallback.
-/// Last resort: ffmpeg gdigrab — GDI desktop capture (fails for exclusive fullscreen/Parsec).
+/// Cascade (in priority order):
+/// 1. PlayCUA (playcua-native) — GPU-accelerated, if available
+/// 2. bare-cua-native — fast native capture via JSON-RPC
+/// 3. Unity ScreenCapture.CaptureScreenshot() via file-signal — works on Parsec/virtual displays
+/// 4. ScreenCapture.NET DXGI Desktop Duplication — works for exclusive DX11 fullscreen on physical displays
+/// 5. ScreenRecorderLib (Windows.Graphics.Capture) — per-window capture fallback
+/// 6. ffmpeg gdigrab — GDI desktop capture (last resort, fails on Parsec)
 /// </summary>
 internal static class GameCaptureHelper
 {
@@ -32,23 +34,28 @@ internal static class GameCaptureHelper
 
     /// <summary>
     /// Captures the game window to a PNG file. Returns the output path on success, null on failure.
+    /// Cascade: PlayCUA → bare-cua → Unity ScreenCapture → DXGI → ScreenRecorderLib → ffmpeg gdigrab.
     /// </summary>
     internal static async Task<string?> CaptureAsync(string outputPath, CancellationToken ct = default)
     {
-        // Primary: bare-cua-native (optional, fast native capture)
+        // Primary: playcua-native (GPU-accelerated, optional fast native capture)
+        if (await TryPlayCuaAsync(outputPath, ct).ConfigureAwait(false))
+            return outputPath;
+
+        // Secondary: bare-cua-native (optional, fast native capture)
         if (await TryBareCuaAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
-        // Secondary: Unity ScreenCapture.CaptureScreenshot() via file-signal
+        // Tertiary: Unity ScreenCapture.CaptureScreenshot() via file-signal
         // Works for exclusive fullscreen on Parsec/virtual displays — reads directly from GPU backbuffer.
         if (await TryUnityScreenCaptureAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
-        // Tertiary: DXGI Desktop Duplication (works for exclusive DX11 on physical displays)
+        // Quaternary: DXGI Desktop Duplication (works for exclusive DX11 on physical displays)
         if (OperatingSystem.IsWindows() && await TryDxgiCaptureAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
-        // Quaternary: Windows.Graphics.Capture via ScreenRecorderLib
+        // Quinary: Windows.Graphics.Capture via ScreenRecorderLib
         if (await TryScreenRecorderLibAsync(outputPath, ct).ConfigureAwait(false))
             return outputPath;
 
@@ -88,6 +95,59 @@ internal static class GameCaptureHelper
             // bare-cua not available or startup failed; fall through to next method
             return false;
         }
+    }
+
+    /// <summary>
+    /// Attempts to use playcua-native.exe for screenshot capture (optional, GPU-accelerated).
+    /// Looks for binary at: PLAYCUA_NATIVE_EXE env var, BARE_CUA_NATIVE fallback, same directory as this DLL, or hardcoded path.
+    /// PlayCUA is the primary method when available (tried before bare-cua).
+    /// </summary>
+    private static async Task<bool> TryPlayCuaAsync(string outputPath, CancellationToken ct)
+    {
+        try
+        {
+            string? nativePath = FindPlayCuaNative();
+            if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
+                return false;
+
+            // Start the native process
+            await using var computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+
+            // Capture screenshot by window title
+            byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
+            if (pngBytes.Length == 0)
+                return false;
+
+            // Write to output path
+            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+        }
+        catch
+        {
+            // playcua not available or startup failed; fall through to next method
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Finds playcua-native.exe by checking (in order):
+    /// 1. PLAYCUA_NATIVE_EXE environment variable (CI builds)
+    /// 2. BARE_CUA_NATIVE environment variable (legacy fallback)
+    /// 3. Same directory as this DLL (bin/)
+    /// 4. Hardcoded dev path C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe
+    /// </summary>
+    private static string? FindPlayCuaNative()
+    {
+        string[] candidatePaths =
+        [
+            Environment.GetEnvironmentVariable("PLAYCUA_NATIVE_EXE") ?? string.Empty,
+            Environment.GetEnvironmentVariable("BARE_CUA_NATIVE") ?? string.Empty,
+            Path.Combine(AppContext.BaseDirectory, "playcua-native.exe"),
+            Path.Combine(AppContext.BaseDirectory, "bare-cua-native.exe"),
+            "C:\\Users\\koosh\\bare-cua\\target\\release\\bare-cua-native.exe"
+        ];
+
+        return candidatePaths.FirstOrDefault(p => !string.IsNullOrEmpty(p) && File.Exists(p));
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using DINOForge.SDK.Assets;
+using DINOForge.Runtime.Assets;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;

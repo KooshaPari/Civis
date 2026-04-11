@@ -325,7 +325,7 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.3.0, )",
+          "DINOForge.Bridge.Protocol": "[0.18.0, )",
           "Newtonsoft.Json": "[13.*, )"
         }
       },

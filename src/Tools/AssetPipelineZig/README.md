@@ -50,17 +50,27 @@ Axis-Aligned Bounding Box Bounding Volume Hierarchy for fast spatial queries.
 
 ## Integration
 
-P/Invoke bindings: `src/SDK/NativeInterop/ZigAssetPipeline.cs`
+P/Invoke bindings: `src/Tools/AssetPipelineZig/bindings/ZigLodPipeline.cs`
 
 Call native functions from C# at runtime:
 
 ```csharp
-[DllImport("dinoforge_asset_pipeline_zig.dll")]
-private static extern void DecimateMultiple(
-    IntPtr meshes, 
-    int count, 
-    float targetPolycount);
+using DINOForge.NativeInterop;
+
+// Compute target LOD level
+uint targetVerts = ZigLodPipeline.ComputeLodLevel(10000, 0.5f);  // 50% reduction
+
+// Validate mesh before decimation
+bool isValid = ZigLodPipeline.ValidateMesh(10000, 5000);
+
+// Decimate to target polycount
+uint decimated = ZigLodPipeline.DecimateToTarget(5000, 0.5f);
 ```
+
+Exported functions:
+- `ComputeLodLevel(uint vertexCount, float targetRatio) -> uint` — Calculate target vertex count
+- `ValidateMesh(uint vertexCount, uint triangleCount) -> bool` — Validate mesh geometry
+- `DecimateToTarget(uint currentPolycount, float targetRatio) -> uint` — Compute decimated polycount
 
 ## Testing
 

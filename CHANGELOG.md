@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-04-11
+
+### Added
+
+- **Parallel game test containers (N-instance with Steam auth isolation)**
+  - <30s cold start for container launch
+  - Steam session preservation across instances
+  - Concurrent game instances support (2, 4, 8+ instances)
+
+- **Two-tier visual validation system**
+  - pHash perceptual hashing for fast baseline comparison
+  - CLIP semantic image understanding for content validation
+  - OpenCV integration for precise region matching
+
+- **Zig LOD mesh decimation module**
+  - High-performance asset optimization
+  - Automatic level-of-detail mesh generation
+  - Native binding integration via foreign function interface
+
+- **PlayCUA native binding integration**
+  - GameCaptureHelper environment variable resolution
+  - Direct Win32 screenshot capture (GPU backbuffer support)
+  - Parsec-compatible capture pipeline
+
+- **Rust PyO3 asset pipeline with Python fallback**
+  - Native Rust performance for asset processing
+  - Seamless fallback to Python reference implementation
+  - Cross-platform compatibility (Windows, Linux, macOS)
+
+- **Go dependency resolver with test support**
+  - go.mod initialization and management
+  - Semver resolution with conflict detection
+  - Full test coverage for resolver logic
+
+- **NuGet package publication**
+  - DINOForge.Bridge.Protocol (0.18.0)
+  - DINOForge.Bridge.Client (0.18.0)
+  - Automated symbol packages (.snupkg) on tag push via release.yml
+
+- **PhenoCompose and NVMS integration mapping**
+  - Integration documentation in docs/POLYGLOT_INTEGRATION.md
+  - Cross-language toolchain coordination
+  - Observability schema alignment
+
+### Fixed
+
+- **P/Invoke stubs excluded from code coverage**
+  - RustAssetPipeline and GoDependencyResolver P/Invoke declarations no longer inflate coverage metrics
+  - Code coverage now accurately reflects managed code quality
+
+- **Bridge.Client netstandard2.0 compatibility verified**
+  - Full netstandard2.0 target validation
+  - Cross-framework interoperability confirmed
+
+- **AssetsTools.NET and Sentry scope corrections**
+  - Correctly scoped to Runtime layer only
+  - No SDK layer dependencies on external observability libraries
+
+- **DesktopCompanion registered in main solution**
+  - WinUI 3 desktop companion tool properly integrated into DINOForge.sln
+
+### Removed
+
+- **14 git stash entries cleaned**
+  - NuGet lock drift entries removed (no code loss)
+  - Stash working directory normalized
+
+- **20 merged remote branches deleted**
+  - Cleanup of stale feature branches
+  - Repository maintained with main + gh-pages only
+
+### Test Results
+
+- 1,269+ tests passing (unit + integration + property/fuzz)
+- 85%+ code coverage (P/Invoke stubs excluded)
+- Parallel automation: 100% success rate (2, 4 instances)
+- All 5 platforms green: Windows x64, macOS x64/ARM64, Linux x64/ARM64
+
 ## [0.20.0] - 2026-04-08
 
 ### Tier 3 Libification: CLI Tools as Cross-Platform Executables

@@ -1,36 +1,56 @@
 #!/usr/bin/env powershell
 <#
 .SYNOPSIS
-Launch N game instances in parallel with unique pipe names and isolated configs.
+Launch N game instances in parallel from isolated sandbox containers (DINOBox).
+
+.DESCRIPTION
+Creates isolated temporary game instances using symlinks and isolated LocalAppData,
+then launches games from sandbox directories. Each instance has its own:
+- Save files and settings
+- Log files (dinoforge_debug.log)
+- Unique pipe name for MCP bridge
+- Independent Steam auth (optional)
 
 .PARAMETER InstanceCount
 Number of game instances to launch (default: 4)
 
+.PARAMETER OutputDir
+Base directory for sandbox containers (default: G:\dino_boxes)
+Falls back to $env:TEMP\DINOForge\instances if unavailable
+
 .PARAMETER GamePath
-Path to DINO game executable directory.
+Path to main DINO game directory (not sandbox).
 If not specified, reads GameInstallPath from src/Directory.Build.props
+
+.PARAMETER CopySteamAuth
+Copy Steam auth files to each sandbox for authenticated testing
 
 .PARAMETER Verbose
 Enable verbose logging
 
 .EXAMPLE
 .\Launch-ParallelGames.ps1 -InstanceCount 2
-Launch 2 game instances
+Launch 2 sandboxed instances (uses G:\dino_boxes or temp fallback)
 
-.\Launch-ParallelGames.ps1 -InstanceCount 4 -Verbose
-Launch 4 instances with detailed logging
+.\Launch-ParallelGames.ps1 -InstanceCount 4 -CopySteamAuth -Verbose
+Launch 4 instances with Steam auth and detailed logging
+
+.\Launch-ParallelGames.ps1 -InstanceCount 3 -OutputDir "D:\temp_games" -Verbose
+Launch 3 instances in custom output directory
 #>
 
 param(
     [int]$InstanceCount = 4,
     [string]$GamePath,
+    [string]$OutputDir = "G:\dino_boxes",
+    [switch]$CopySteamAuth,
     [switch]$Verbose
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Resolve game path from Directory.Build.props if not provided
+# Resolve main game path from Directory.Build.props if not provided
 if (-not $GamePath) {
     # Check both root and src locations for props file
     $propsFile = if (Test-Path "Directory.Build.props") {
@@ -59,16 +79,17 @@ if (-not $GamePath) {
     }
 }
 
-# Validate game path
-$gameExe = Join-Path $GamePath "Diplomacy is Not an Option.exe"
-if (-not (Test-Path $gameExe)) {
-    Write-Error "Game executable not found: $gameExe"
+# Validate main game path (source, not sandbox)
+$mainGameExe = Join-Path $GamePath "Diplomacy is Not an Option.exe"
+if (-not (Test-Path $mainGameExe)) {
+    Write-Error "Main game executable not found: $mainGameExe"
     exit 1
 }
 
-Write-Host "=== DINOForge Parallel Game Launcher ===" -ForegroundColor Cyan
+Write-Host "=== DINOForge Parallel Game Launcher (Sandboxed) ===" -ForegroundColor Cyan
 Write-Host "Instance count: $InstanceCount"
-Write-Host "Game path: $GamePath"
+Write-Host "Main game path: $GamePath"
+Write-Host "Sandbox output: $OutputDir"
 Write-Host ""
 
 # Kill any existing game processes
@@ -77,22 +98,56 @@ Get-Process -Name "Diplomacy is Not an Option" -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 
-# Launch parallel instances
+# Create sandbox pool using DINOBox infrastructure
+Write-Host ""
+Write-Host "Creating isolated sandbox containers..." -ForegroundColor Cyan
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$newTempInstanceScript = Join-Path $scriptDir "..\game\New-TempGameInstance.ps1"
+
+if (-not (Test-Path $newTempInstanceScript)) {
+    Write-Error "New-TempGameInstance.ps1 not found at: $newTempInstanceScript"
+    exit 1
+}
+
+try {
+    $boxPool = & $newTempInstanceScript `
+        -InstanceCount $InstanceCount `
+        -OutputDir $OutputDir `
+        -GameExePath $mainGameExe `
+        -CopySteamAuth:$CopySteamAuth `
+        -Verbose:$Verbose
+} catch {
+    Write-Error "Failed to create sandbox pool: $_"
+    exit 1
+}
+
+if (-not $boxPool -or -not $boxPool.Instances) {
+    Write-Error "Sandbox pool creation returned empty results"
+    exit 1
+}
+
+Write-Host ""
+Write-Host "Launching game instances from sandbox containers..." -ForegroundColor Cyan
+
+# Launch game instances FROM sandbox directories
 $processes = @()
-$pipeNames = @()
-$instanceIds = @()
+$sandboxInstances = @()
 
-Write-Host "Launching $InstanceCount game instances..." -ForegroundColor Cyan
+for ($i = 0; $i -lt $boxPool.Instances.Count; $i++) {
+    $instance = $boxPool.Instances[$i]
+    $sandboxGameExe = $instance.GameExePath
+    $sandboxWorkDir = $instance.WorkingDirectory
+    $instanceNum = $i + 1
 
-for ($i = 1; $i -le $InstanceCount; $i++) {
-    $pipeName = "dinoforge-game-bridge-instance-$i-$(Get-Random -Minimum 1000 -Maximum 9999)"
-    $pipeNames += $pipeName
-    $instanceIds += $i
+    if (-not (Test-Path $sandboxGameExe)) {
+        Write-Error "Sandbox game executable not found at: $sandboxGameExe"
+        exit 1
+    }
 
-    # Create process arguments
+    # Create process arguments for sandbox instance
     $processArgs = @{
-        FilePath = $gameExe
-        WorkingDirectory = $GamePath
+        FilePath = $sandboxGameExe
+        WorkingDirectory = $sandboxWorkDir
         WindowStyle = "Hidden"
         PassThru = $true
     }
@@ -100,17 +155,18 @@ for ($i = 1; $i -le $InstanceCount; $i++) {
     try {
         $proc = Start-Process @processArgs
         $processes += $proc
+        $sandboxInstances += $instance
 
         if ($Verbose) {
-            Write-Host "  [Instance $i] PID=$($proc.Id) Pipe=$pipeName" -ForegroundColor Green
+            Write-Host "  [Sandbox $instanceNum] PID=$($proc.Id) Box=$($instance.Directory) Pipe=$($instance.PipeName)" -ForegroundColor Green
         } else {
-            Write-Host "  [Instance $i] Started (PID=$($proc.Id))" -ForegroundColor Green
+            Write-Host "  [Sandbox $instanceNum] Launched from $($instance.Directory) (PID=$($proc.Id))" -ForegroundColor Green
         }
 
         # Stagger launch slightly to avoid race conditions
         Start-Sleep -Milliseconds 300
     } catch {
-        Write-Error "Failed to launch instance $i : $_"
+        Write-Error "Failed to launch sandbox instance $instanceNum : $_"
         # Kill successful instances on failure
         $processes | Stop-Process -Force -ErrorAction SilentlyContinue
         exit 1
@@ -129,31 +185,39 @@ $runningCount = @($running).Count
 $totalCount = @($processes).Count
 
 if ($runningCount -eq 0) {
-    Write-Error "All instances exited immediately. Check game logs."
+    Write-Error "All instances exited immediately. Check sandbox logs at $($boxPool.OutputDir)"
     exit 1
 }
 
 Write-Host "[PASS] Running instances: $runningCount/$totalCount" -ForegroundColor Green
 
 if ($runningCount -lt $totalCount) {
-    Write-Warning "Some instances crashed. Check game logs."
+    Write-Warning "Some instances crashed. Check logs in sandbox directories."
 }
 
 # Output summary
 Write-Host ""
 Write-Host "=== Launch Summary ===" -ForegroundColor Cyan
-Write-Host "Instances: $runningCount running"
-Write-Host "Pipe names:"
-for ($i = 0; $i -lt $pipeNames.Count; $i++) {
-    Write-Host "  Instance $($i+1): $($pipeNames[$i])" -ForegroundColor DarkCyan
+Write-Host "Instances: $runningCount running (from $totalCount created)"
+Write-Host "Sandbox location: $($boxPool.OutputDir)"
+Write-Host ""
+Write-Host "Sandbox Details:"
+for ($i = 0; $i -lt $sandboxInstances.Count; $i++) {
+    $inst = $sandboxInstances[$i]
+    Write-Host "  Sandbox $($i+1):" -ForegroundColor DarkCyan
+    Write-Host "    Directory: $($inst.Directory)" -ForegroundColor DarkGray
+    Write-Host "    Exe:       $($inst.GameExePath)" -ForegroundColor DarkGray
+    Write-Host "    Pipe:      $($inst.PipeName)" -ForegroundColor DarkGray
+    Write-Host "    Log:       $($inst.DebugLogPath)" -ForegroundColor DarkGray
 }
 Write-Host ""
-Write-Host "[PASS] Parallel game launcher complete" -ForegroundColor Green
+Write-Host "[PASS] Parallel sandboxed launcher complete" -ForegroundColor Green
 
-# Return running processes
+# Return pool and process information
 return @{
     Processes = $running
     Count = $runningCount
-    PipeNames = $pipeNames
-    GamePath = $GamePath
+    Pool = $boxPool
+    Instances = $sandboxInstances
+    MainGamePath = $GamePath
 }

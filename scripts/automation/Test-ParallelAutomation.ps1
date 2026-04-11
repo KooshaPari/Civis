@@ -53,6 +53,7 @@ Implementation Notes:
   - This script uses GameControlCli directly, which wraps the MCP tools
   - GameControlCli bypasses HTTP transport entirely, using named pipes to game bridge
   - For true HTTP testing, an SSE client library (Node.js, Python) is required
+  - Instance-specific routing: Pipes extracted from launcher output are passed to GameClient via --pipe-name
 #>
 
 param(
@@ -119,7 +120,12 @@ if (-not $launchResult.Processes -or @($launchResult.Processes).Count -eq 0) {
 }
 
 $runningInstances = @($launchResult.Processes)
+$pipenames = $launchResult.PipeNames
 Write-Host "Launched: $($runningInstances.Count) instances" -ForegroundColor Green
+Write-Host "Instance pipe names:" -ForegroundColor Cyan
+for ($i = 0; $i -lt $pipenames.Count; $i++) {
+    Write-Host "  Instance $($i+1): $($pipenames[$i])" -ForegroundColor DarkCyan
+}
 
 # Test metrics
 Write-Host ""
@@ -129,6 +135,12 @@ $testsPassed = 0
 $testsFailed = 0
 $iterationCount = 0
 $totalTime = 0
+$perInstanceStats = @{}
+
+# Initialize per-instance counters
+for ($i = 0; $i -lt $InstanceCount; $i++) {
+    $perInstanceStats[$i] = @{ Passed = 0; Failed = 0 }
+}
 
 # Poll until duration expires
 while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
@@ -136,8 +148,11 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
     $iterationStart = Get-Date
 
     # Test each instance
-    for ($instIdx = 1; $instIdx -le $InstanceCount; $instIdx++) {
-        # Test 1: Check game status via GameControlCli
+    for ($instIdx = 0; $instIdx -lt $InstanceCount; $instIdx++) {
+        $instNum = $instIdx + 1
+        $pipeName = $pipenames[$instIdx]
+
+        # Test 1: Check game status via GameControlCli with instance-specific pipe
         # Corresponds to JSON-RPC: {"jsonrpc":"2.0","id":"X","method":"tools/call","params":{"name":"game_status","arguments":{}}}
         try {
             $testStart = Get-Date
@@ -147,6 +162,7 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
                 --no-build `
                 -c Release `
                 -- status `
+                --pipe-name "$pipeName" `
                 --format=json `
                 2>$null | ConvertFrom-Json -ErrorAction Stop
 
@@ -155,23 +171,26 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
 
             if ($result.success) {
                 $testsPassed++
+                $perInstanceStats[$instIdx].Passed++
                 if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instIdx : game_status OK (${responseTime}ms)" -ForegroundColor Green
+                    Write-Host "  [PASS] Instance $instNum : game_status OK (${responseTime}ms)" -ForegroundColor Green
                 }
             } else {
                 $testsFailed++
+                $perInstanceStats[$instIdx].Failed++
                 if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instIdx : game_status failed - $($result.error)" -ForegroundColor Red
+                    Write-Host "  [FAIL] Instance $instNum : game_status failed - $($result.error)" -ForegroundColor Red
                 }
             }
         } catch {
             $testsFailed++
+            $perInstanceStats[$instIdx].Failed++
             if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instIdx : game_status error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  [FAIL] Instance $instNum : game_status error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
 
-        # Test 2: Query entities via GameControlCli
+        # Test 2: Query entities via GameControlCli with instance-specific pipe
         # Corresponds to JSON-RPC: {"jsonrpc":"2.0","id":"X","method":"tools/call","params":{"name":"game_query_entities","arguments":{"component_type":"Health","limit":10}}}
         try {
             $testStart = Get-Date
@@ -181,6 +200,7 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
                 --no-build `
                 -c Release `
                 -- query Health `
+                --pipe-name "$pipeName" `
                 --format=json `
                 --limit 10 `
                 2>$null | ConvertFrom-Json -ErrorAction Stop
@@ -190,23 +210,26 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
 
             if ($result.success -or $result.entities) {
                 $testsPassed++
+                $perInstanceStats[$instIdx].Passed++
                 if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instIdx : game_query_entities OK (${responseTime}ms)" -ForegroundColor Green
+                    Write-Host "  [PASS] Instance $instNum : game_query_entities OK (${responseTime}ms)" -ForegroundColor Green
                 }
             } else {
                 $testsFailed++
+                $perInstanceStats[$instIdx].Failed++
                 if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instIdx : game_query_entities failed" -ForegroundColor Red
+                    Write-Host "  [FAIL] Instance $instNum : game_query_entities failed" -ForegroundColor Red
                 }
             }
         } catch {
             $testsFailed++
+            $perInstanceStats[$instIdx].Failed++
             if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instIdx : game_query_entities error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  [FAIL] Instance $instNum : game_query_entities error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
 
-        # Test 3: Verify mod is loaded via GameControlCli
+        # Test 3: Verify mod is loaded via GameControlCli with instance-specific pipe
         # Corresponds to JSON-RPC: {"jsonrpc":"2.0","id":"X","method":"tools/call","params":{"name":"game_verify_mod","arguments":{}}}
         try {
             $testStart = Get-Date
@@ -217,6 +240,7 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
                 --no-build `
                 -c Release `
                 -- status `
+                --pipe-name "$pipeName" `
                 --format=json `
                 2>$null | ConvertFrom-Json -ErrorAction Stop
 
@@ -225,19 +249,22 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
 
             if ($result.runtime_loaded -or $result.success) {
                 $testsPassed++
+                $perInstanceStats[$instIdx].Passed++
                 if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instIdx : game_verify_mod OK (${responseTime}ms)" -ForegroundColor Green
+                    Write-Host "  [PASS] Instance $instNum : game_verify_mod OK (${responseTime}ms)" -ForegroundColor Green
                 }
             } else {
                 $testsFailed++
+                $perInstanceStats[$instIdx].Failed++
                 if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instIdx : game_verify_mod failed" -ForegroundColor Red
+                    Write-Host "  [FAIL] Instance $instNum : game_verify_mod failed" -ForegroundColor Red
                 }
             }
         } catch {
             $testsFailed++
+            $perInstanceStats[$instIdx].Failed++
             if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instIdx : game_verify_mod error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  [FAIL] Instance $instNum : game_verify_mod error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
     }
@@ -267,6 +294,16 @@ Write-Host "Passed: $testsPassed"
 Write-Host "Failed: $testsFailed"
 Write-Host "Success rate: $([Math]::Round($successRate, 2))%"
 Write-Host "Average response time: ${avgResponseTime}ms"
+
+# Per-instance breakdown
+Write-Host ""
+Write-Host "=== Per-Instance Statistics ===" -ForegroundColor Cyan
+for ($i = 0; $i -lt $InstanceCount; $i++) {
+    $stats = $perInstanceStats[$i]
+    $instTests = $stats.Passed + $stats.Failed
+    $instRate = if ($instTests -gt 0) { [Math]::Round(($stats.Passed / $instTests) * 100, 2) } else { 0 }
+    Write-Host "Instance $($i+1): Passed=$($stats.Passed) Failed=$($stats.Failed) Rate=${instRate}%" -ForegroundColor DarkCyan
+}
 Write-Host ""
 
 # Status indicator

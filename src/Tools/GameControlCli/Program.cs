@@ -17,6 +17,8 @@ public static class Program
     /// <summary>When true, commands output machine-readable JSON instead of human-readable text.</summary>
     public static bool JsonOutput { get; set; }
 
+    public static string? GlobalPipeName { get; set; }
+
     public static async Task<int> Main(string[] args)
     {
         if (args.Length == 0)
@@ -25,7 +27,7 @@ public static class Program
             return 0;
         }
 
-        // Global --format json flag (accepted before the command)
+        // Global --format json and --pipe-name flags (accepted before the command)
         var remainingArgs = args;
         if (args.Length > 1 && args[0] == "--format" && args[1] == "json")
         {
@@ -41,6 +43,23 @@ public static class Program
         {
             JsonOutput = true;
             remainingArgs = args.Where(a => a != "--format=json").ToArray();
+        }
+
+        // Extract --pipe-name global option
+        if (args.Contains("--pipe-name"))
+        {
+            int pipeIdx = Array.IndexOf(args, "--pipe-name");
+            if (pipeIdx >= 0 && pipeIdx + 1 < args.Length)
+            {
+                GlobalPipeName = args[pipeIdx + 1];
+                remainingArgs = args.Where((a, i) => i != pipeIdx && i != pipeIdx + 1).ToArray();
+            }
+        }
+        else if (args.Any(a => a.StartsWith("--pipe-name=")))
+        {
+            var pipeArg = args.First(a => a.StartsWith("--pipe-name="));
+            GlobalPipeName = pipeArg.Substring("--pipe-name=".Length);
+            remainingArgs = args.Where(a => !a.StartsWith("--pipe-name")).ToArray();
         }
 
         if (remainingArgs.Length == 0)
@@ -83,10 +102,22 @@ public static class Program
         };
     }
 
+    private static GameClientOptions CreateClientOptions(int readTimeoutMs = 30000)
+    {
+        var options = new GameClientOptions { ReadTimeoutMs = readTimeoutMs };
+        if (!string.IsNullOrEmpty(GlobalPipeName))
+            options.PipeName = GlobalPipeName;
+        return options;
+    }
+
     private static void ShowHelp()
     {
         AnsiConsole.MarkupLine("[cyan bold]DINOForge Game Control CLI[/]");
         AnsiConsole.MarkupLine("[yellow]Direct game process communication via named pipes[/]");
+        AnsiConsole.MarkupLine("");
+        AnsiConsole.MarkupLine("[green]Global Options:[/]");
+        AnsiConsole.MarkupLine("  --pipe-name <name>  - Named pipe to connect to (default: dinoforge-game-bridge)");
+        AnsiConsole.MarkupLine("  --format json        - Output in JSON format");
         AnsiConsole.MarkupLine("");
         AnsiConsole.MarkupLine("[green]Commands:[/]");
         AnsiConsole.MarkupLine("  status           - Check game connection and status");
@@ -130,7 +161,7 @@ public static class Program
     {
         // Short read timeout — bridge may be restarting after scene transition abort.
         // If first attempt fails, retry with a fresh connection.
-        using var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 5000 });
+        using var client = new GameClient(CreateClientOptions(5000));
         try
         {
             await client.ConnectAsync();
@@ -209,7 +240,7 @@ public static class Program
 
     private static async Task<int> HandlePingCommand()
     {
-        using var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 5000 });
+        using var client = new GameClient(CreateClientOptions(5000));
         try
         {
             await client.ConnectAsync();
@@ -253,7 +284,7 @@ public static class Program
 
     private static async Task<int> HandleWaitWorldCommand()
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -279,7 +310,7 @@ public static class Program
 
     private static async Task<int> HandleResourcesCommand()
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -307,7 +338,7 @@ public static class Program
 
     private static async Task<int> HandleScreenshotCommand(string? outputPath)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -334,7 +365,7 @@ public static class Program
 
     private static async Task<int> HandleCatalogCommand(string? category)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -377,7 +408,7 @@ public static class Program
 
     private static async Task<int> HandleEntitiesCommand(string? componentType)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -398,7 +429,7 @@ public static class Program
     private static async Task<int> HandleLoadSceneCommand(string? sceneName)
     {
         sceneName ??= "Sandbox";
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -424,7 +455,7 @@ public static class Program
 
     private static async Task<int> HandleStartGameCommand()
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -446,7 +477,7 @@ public static class Program
 
     private static async Task<int> HandleDismissCommand()
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -469,7 +500,7 @@ public static class Program
 
     private static async Task<int> HandleListSavesCommand()
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -496,7 +527,7 @@ public static class Program
     private static async Task<int> HandleLoadSaveCommand(string? saveName)
     {
         saveName ??= "AUTOSAVE_1";
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -520,7 +551,7 @@ public static class Program
     private static async Task<int> HandleClickButtonCommand(string? buttonName)
     {
         buttonName ??= "";
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -547,7 +578,7 @@ public static class Program
     private static async Task<int> HandleToggleUiCommand(string? target)
     {
         target ??= "modmenu";
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -571,7 +602,7 @@ public static class Program
     private static async Task<int> HandleScanSceneCommand(string? filter)
     {
         filter ??= "";
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -600,7 +631,7 @@ public static class Program
         }
         string target = args[0];
         string method = args[1];
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -623,7 +654,7 @@ public static class Program
 
     private static async Task<int> HandleUiTreeCommand(string? selector)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -678,7 +709,7 @@ public static class Program
         AnsiConsole.MarkupLine("[cyan bold]  DINOForge End-to-End Demo            [/]");
         AnsiConsole.MarkupLine("[cyan bold]═══════════════════════════════════════[/]");
 
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             // ── Step 1: Connect ───────────────────────────────────────────────
@@ -821,7 +852,7 @@ public static class Program
         }
         string sdkPath = args[0];
         int? entityIndex = args.Length > 1 && int.TryParse(args[1], out int idx) ? idx : (int?)null;
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -855,7 +886,7 @@ public static class Program
         string sdkPath = args[0];
         string? mode = args.Length > 2 ? args[2] : null;
         string? filter = args.Length > 3 ? args[3] : null;
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -879,7 +910,7 @@ public static class Program
 
     private static async Task<int> HandleGetComponentMapCommand(string? sdkPathFilter)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -907,7 +938,7 @@ public static class Program
 
     private static async Task<int> HandleDiscoverTypesCommand(string? pattern)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -926,7 +957,7 @@ public static class Program
 
     private static async Task<int> HandleReloadPacksCommand(string? path)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -954,7 +985,7 @@ public static class Program
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { error = "Usage: verify-mod <pack_path>" }));
             return 1;
         }
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();
@@ -979,7 +1010,7 @@ public static class Program
 
     private static async Task<int> HandleDumpStateJsonCommand(string? category)
     {
-        using var client = new GameClient();
+        using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync();

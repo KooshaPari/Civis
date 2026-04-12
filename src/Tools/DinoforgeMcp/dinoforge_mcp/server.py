@@ -52,6 +52,10 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG if os.getenv("DINOFORGE_MCP_DEBUG") else logging.WARNING)
 logger = logging.getLogger("dinoforge_mcp")
 
+# Log polyglot availability on startup
+if _RUST_AVAILABLE:
+    logger.info("✓ Rust asset pipeline (PyO3) available — using for SIMD-optimized imports/optimization")
+
 # HMR event — set when game reloads to clear cached pack state
 _reload_event = threading.Event()
 

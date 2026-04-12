@@ -76,11 +76,8 @@
       },
       "AssetsTools.NET": {
         "type": "Transitive",
-        "resolved": "2.0.12",
-        "contentHash": "lhWGJ3/UIww9AfBj0ZNTc6pqNJD2kofuc24cam/N5VM+EUDiZYCuDfA5/DuhAUOVylTGRr1HGG0zjMieGqqvcw==",
-        "dependencies": {
-          "Mono.Cecil": "0.11.3"
-        }
+        "resolved": "3.0.4",
+        "contentHash": "NqYy5UIucwKwdkpamFTi8lr53hD+V8qQmbHzztQj1v4Pq1G4TjNlpkUWOhktTLBqBm4aPRaAkpFgB+3TDEuomw=="
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
@@ -105,11 +102,6 @@
           "Microsoft.TestPlatform.ObjectModel": "17.9.0",
           "Newtonsoft.Json": "13.0.1"
         }
-      },
-      "Mono.Cecil": {
-        "type": "Transitive",
-        "resolved": "0.11.3",
-        "contentHash": "DNYE+io5XfEE8+E+5padThTPHJARJHbz1mhbhMPNrrWGKVKKqj/KEeLvbawAmbIcT73NuxLV7itHZaYCZcVWGg=="
       },
       "Namotion.Reflection": {
         "type": "Transitive",
@@ -204,7 +196,7 @@
       "dinoforge.sdk": {
         "type": "Project",
         "dependencies": {
-          "AssetsTools.NET": "[2.*, )",
+          "AssetsTools.NET": "[3.0.4, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
           "YamlDotNet": "[16.*, )"

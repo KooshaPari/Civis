@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Mocks;
 using FluentAssertions;
 using Xunit;
 

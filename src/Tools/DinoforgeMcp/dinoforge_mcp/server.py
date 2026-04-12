@@ -90,17 +90,30 @@ _TEST_INSTANCE_PATH_FILE = REPO_ROOT / ".dino_test_instance_path"
 # by using --no-build; caller should run `dotnet build` once before first use)
 # ---------------------------------------------------------------------------
 
-def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True) -> dict[str, Any]:
-    """Invoke GameControlCli synchronously and return parsed JSON."""
+def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_name: str | None = None) -> dict[str, Any]:
+    """
+    Invoke GameControlCli synchronously and return parsed JSON.
+
+    Args:
+        *args: Command and arguments to pass to GameControlCli
+        timeout: Command timeout in seconds
+        json_output: Whether to parse output as JSON
+        pipe_name: Optional named pipe name (defaults to "dinoforge-game-bridge" in GameControlCli)
+    """
     cmd = [
         "dotnet", "run",
         "--project", str(GAME_CONTROL_PROJ),
         "--no-build",
         "-c", "Release",
         "--",
-        *args,
-        "--format=json",
     ]
+
+    # Add pipe_name as global option if specified
+    if pipe_name:
+        cmd.extend(["--pipe-name", pipe_name])
+
+    cmd.extend([*args, "--format=json"])
+
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT)
         if r.returncode != 0:
@@ -272,51 +285,79 @@ mcp = FastMCP(
 # ===========================================================================
 
 @mcp.tool()
-async def game_status(ctx: Context) -> dict:
-    """Get game connection status, world readiness, entity count, and loaded packs."""
-    return _run_game_cli("status")
+async def game_status(ctx: Context, pipe_name: str | None = None) -> dict:
+    """
+    Get game connection status, world readiness, entity count, and loaded packs.
+
+    Args:
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("status", pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_wait_world(ctx: Context, timeout_seconds: int = 60) -> dict:
-    """Wait until the ECS game world is ready (up to timeout_seconds)."""
-    return _run_game_cli("wait-world", timeout=timeout_seconds + 5)
+async def game_wait_world(ctx: Context, timeout_seconds: int = 60, pipe_name: str | None = None) -> dict:
+    """
+    Wait until the ECS game world is ready (up to timeout_seconds).
+
+    Args:
+        timeout_seconds: Maximum seconds to wait.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("wait-world", timeout=timeout_seconds + 5, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_wait_for_world(ctx: Context, timeout_seconds: int = 60) -> dict:
-    """Wait until the ECS game world is ready (up to timeout_seconds). Alias for game_wait_world."""
-    return _run_game_cli("wait-world", timeout=timeout_seconds + 5)
+async def game_wait_for_world(ctx: Context, timeout_seconds: int = 60, pipe_name: str | None = None) -> dict:
+    """
+    Wait until the ECS game world is ready (up to timeout_seconds). Alias for game_wait_world.
+
+    Args:
+        timeout_seconds: Maximum seconds to wait.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("wait-world", timeout=timeout_seconds + 5, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_resources(ctx: Context) -> dict:
-    """Get current in-game resources (gold, wood, food, etc.)."""
-    return _run_game_cli("resources")
+async def game_resources(ctx: Context, pipe_name: str | None = None) -> dict:
+    """
+    Get current in-game resources (gold, wood, food, etc.).
+
+    Args:
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("resources", pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_get_resources(ctx: Context) -> dict:
-    """Get current in-game resources (gold, wood, food, etc.). Alias for game_resources."""
-    return _run_game_cli("resources")
+async def game_get_resources(ctx: Context, pipe_name: str | None = None) -> dict:
+    """
+    Get current in-game resources (gold, wood, food, etc.). Alias for game_resources.
+
+    Args:
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("resources", pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_screenshot(ctx: Context, output_path: str | None = None) -> dict:
+async def game_screenshot(ctx: Context, output_path: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Capture a screenshot of the game window.
 
     Args:
         output_path: Optional file path to save the PNG. Defaults to a temp path.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["screenshot"]
     if output_path:
         args += ["--output", output_path]
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_query_entities(ctx: Context, component_type: str = "") -> dict:
+async def game_query_entities(ctx: Context, component_type: str = "", pipe_name: str | None = None) -> dict:
     """
     Query ECS entities by component type.
 
@@ -324,70 +365,85 @@ async def game_query_entities(ctx: Context, component_type: str = "") -> dict:
         component_type: Full ECS component type name, e.g. 'Components.Unit',
                         'Components.BuildingBase', 'Unity.Rendering.RenderMesh'.
                         Empty string returns all entities.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
-    return _run_game_cli("entities", component_type)
+    return _run_game_cli("entities", component_type, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_ui_tree(ctx: Context, selector: str | None = None) -> dict:
+async def game_ui_tree(ctx: Context, selector: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Snapshot the live Unity UI hierarchy (Playwright-style DOM).
 
     Args:
         selector: Optional CSS-like selector to filter results.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["ui-tree"]
     if selector:
         args.append(selector)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_click_button(ctx: Context, button_name: str) -> dict:
+async def game_click_button(ctx: Context, button_name: str, pipe_name: str | None = None) -> dict:
     """
     Click a named Unity UI button.
 
     Args:
         button_name: Unity UI button name (e.g. 'DINOForge_ModsButton', 'PlayButton').
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
-    return _run_game_cli("click-button", button_name)
+    return _run_game_cli("click-button", button_name, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_load_scene(ctx: Context, scene_name: str) -> dict:
+async def game_load_scene(ctx: Context, scene_name: str, pipe_name: str | None = None) -> dict:
     """
     Load a game scene by name. Available: level0–level9 and others.
 
     Args:
         scene_name: Scene name or index.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
-    return _run_game_cli("load-scene", scene_name)
+    return _run_game_cli("load-scene", scene_name, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_start(ctx: Context) -> dict:
-    """Trigger game world load via ECS singleton (bypasses the main menu)."""
-    return _run_game_cli("start-game")
+async def game_start(ctx: Context, pipe_name: str | None = None) -> dict:
+    """
+    Trigger game world load via ECS singleton (bypasses the main menu).
+
+    Args:
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("start-game", pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_dismiss(ctx: Context) -> dict:
-    """Dismiss a 'Press Any Key to Continue' loading screen."""
-    return _run_game_cli("dismiss")
+async def game_dismiss(ctx: Context, pipe_name: str | None = None) -> dict:
+    """
+    Dismiss a 'Press Any Key to Continue' loading screen.
+
+    Args:
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
+    return _run_game_cli("dismiss", pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_catalog(ctx: Context, category: str | None = None) -> dict:
+async def game_catalog(ctx: Context, category: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Dump the game's content catalog (units, buildings, projectiles).
 
     Args:
         category: Optional filter: 'units', 'buildings', 'projectiles'.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["catalog"]
     if category:
         args.append(category)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
@@ -606,18 +662,19 @@ async def pack_list(ctx: Context) -> dict:
 # ===========================================================================
 
 @mcp.tool()
-async def game_get_stat(ctx: Context, sdk_path: str, entity_index: int | None = None) -> dict:
+async def game_get_stat(ctx: Context, sdk_path: str, entity_index: int | None = None, pipe_name: str | None = None) -> dict:
     """
     Read a stat value from ECS entities by SDK model path.
 
     Args:
         sdk_path: Dot-separated SDK path (e.g. 'unit.stats.hp').
         entity_index: Optional specific entity index.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["get-stat", sdk_path]
     if entity_index is not None:
         args.append(str(entity_index))
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
@@ -627,6 +684,7 @@ async def game_apply_override(
     value: float,
     mode: str | None = None,
     filter_component: str | None = None,
+    pipe_name: str | None = None,
 ) -> dict:
     """
     Apply a stat override to matching ECS entities.
@@ -636,66 +694,71 @@ async def game_apply_override(
         value: The numeric value to apply.
         mode: 'override' (default), 'add', or 'multiply'.
         filter_component: Optional ECS component type to narrow affected entities.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["apply-override", sdk_path, str(value)]
     if mode:
         args.append(mode)
     if filter_component:
         args.append(filter_component)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_get_component_map(ctx: Context, sdk_path: str | None = None) -> dict:
+async def game_get_component_map(ctx: Context, sdk_path: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Return SDK-to-ECS component type mappings.
 
     Args:
         sdk_path: Optional filter — omit to return all 30+ mappings.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["get-component-map"]
     if sdk_path:
         args.append(sdk_path)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_reload_packs(ctx: Context, path: str | None = None) -> dict:
+async def game_reload_packs(ctx: Context, path: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Hot-reload content packs from disk without restarting the game.
 
     Args:
         path: Optional packs directory path override.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["reload-packs"]
     if path:
         args.append(path)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_verify_mod(ctx: Context, pack_path: str) -> dict:
+async def game_verify_mod(ctx: Context, pack_path: str, pipe_name: str | None = None) -> dict:
     """
     End-to-end mod verification: load a pack into the running game, verify entity changes.
 
     Args:
         pack_path: Path to the pack directory or manifest file.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
-    return _run_game_cli("verify-mod", pack_path)
+    return _run_game_cli("verify-mod", pack_path, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_dump_state(ctx: Context, category: str | None = None) -> dict:
+async def game_dump_state(ctx: Context, category: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Dump ECS game state as structured JSON.
 
     Args:
         category: 'unit', 'building', 'projectile', or omit for all.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["dump-state"]
     if category:
         args.append(category)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
@@ -798,18 +861,19 @@ async def game_input(
 
 
 @mcp.tool()
-async def game_ui_automation(ctx: Context, action: str, target: str | None = None) -> dict:
+async def game_ui_automation(ctx: Context, action: str, target: str | None = None, pipe_name: str | None = None) -> dict:
     """
     Automate game UI interactions (click, hover, type, screenshot).
 
     Args:
         action: Action to perform: 'click', 'hover', 'type', 'snapshot'.
         target: Target button/element name or selector.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = ["ui-automation", action]
     if target:
         args.append(target)
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
@@ -817,7 +881,8 @@ async def game_analyze_screen(
     ctx: Context,
     screenshot_path: str | None = None,
     golden_key: str | None = None,
-    prompts: list[str] | None = None
+    prompts: list[str] | None = None,
+    pipe_name: str | None = None
 ) -> dict:
     """
     Analyze a screenshot using two-tier visual validation (pHash + CLIP).
@@ -831,6 +896,7 @@ async def game_analyze_screen(
         screenshot_path: Optional path to existing screenshot (captures new one if omitted).
         golden_key: Optional golden reference key (e.g., "cp2_f9_overlay") for pHash comparison.
         prompts: Optional list of text prompts for CLIP classification (e.g., ["overlay visible", "menu open"]).
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
 
     Returns:
         {
@@ -861,7 +927,7 @@ async def game_analyze_screen(
         temp_dir = Path(os.getenv("TEMP", "/tmp")) / "DINOForge"
         temp_dir.mkdir(parents=True, exist_ok=True)
         screenshot_path = str(temp_dir / "screenshot.png")
-        cap_result = _run_game_cli("screenshot", screenshot_path)
+        cap_result = _run_game_cli("screenshot", screenshot_path, pipe_name=pipe_name)
         if not cap_result.get("success"):
             return {"success": False, "error": f"Failed to capture screenshot: {cap_result}"}
 
@@ -1017,6 +1083,7 @@ async def game_wait_and_screenshot(
     timeout_seconds: int = 30,
     interval_seconds: float = 1.0,
     change_threshold: float = 0.05,
+    pipe_name: str | None = None,
 ) -> dict:
     """
     Poll for a visual change in the game window, then capture a screenshot.
@@ -1025,6 +1092,7 @@ async def game_wait_and_screenshot(
         timeout_seconds: Max time to wait for visual change.
         interval_seconds: How often to check for change (seconds).
         change_threshold: Minimum pixel-change fraction to count as a change (0.0–1.0).
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     args = [
         "wait-and-screenshot",
@@ -1032,16 +1100,17 @@ async def game_wait_and_screenshot(
         "--interval", str(interval_seconds),
         "--threshold", str(change_threshold),
     ]
-    return _run_game_cli(*args)
+    return _run_game_cli(*args, pipe_name=pipe_name)
 
 
 @mcp.tool()
-async def game_navigate_to(ctx: Context, state: str) -> dict:
+async def game_navigate_to(ctx: Context, state: str, pipe_name: str | None = None) -> dict:
     """
     Navigate to a game state via input sequences.
 
     Args:
         state: Target state — 'main_menu', 'gameplay', or 'pause_menu'.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
     # Validate state
     if state not in ("main_menu", "gameplay", "pause_menu"):
@@ -1051,7 +1120,7 @@ async def game_navigate_to(ctx: Context, state: str) -> dict:
         }
 
     # Check current state via status
-    status_result = _run_game_cli("status")
+    status_result = _run_game_cli("status", pipe_name=pipe_name)
     if not status_result.get("Running"):
         return {"success": False, "error": "Game is not running."}
 
@@ -1095,12 +1164,12 @@ async def game_navigate_to(ctx: Context, state: str) -> dict:
         }
 
     # Load AUTOSAVE_1 to enter gameplay
-    save_result = _run_game_cli("load-save", "AUTOSAVE_1")
+    save_result = _run_game_cli("load-save", "AUTOSAVE_1", pipe_name=pipe_name)
     if not save_result.get("success") and "already" not in save_result.get("error", "").lower():
         return save_result
 
     # Dismiss loading screen if present
-    dismiss_result = _run_game_cli("dismiss")
+    dismiss_result = _run_game_cli("dismiss", pipe_name=pipe_name)
     return {
         "success": True,
         "message": "Navigated to gameplay.",

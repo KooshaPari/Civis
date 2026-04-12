@@ -11,6 +11,7 @@ using DINOForge.SDK.Assets;
 using DINOForge.SDK.Dependencies;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Universe;
+using DINOForge.Runtime.Assets;
 using FluentAssertions;
 using Xunit;
 
@@ -1613,107 +1614,9 @@ packs/three parts extra
         lockEntries["packs/valid-parts"].Should().Be("abc123");
     }
 
-    // ──────────────────────── AssetService coverage ────────────────────────
-
-    [Fact]
-    public void AssetService_Constructor_WithNullGameDir_ThrowsArgumentNullException()
-    {
-        Action action = () => new AssetService(null!);
-
-        action.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void AssetService_Constructor_WithValidPath_SetsGameDir()
-    {
-        using var tempDir = new TempDirectory();
-
-        var service = new AssetService(tempDir.Path);
-
-        service.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void AssetService_ExpectedUnityVersion_IsCorrect()
-    {
-        AssetService.ExpectedUnityVersion.Should().Be("2021.3");
-    }
-
-    [Fact]
-    public void AssetService_ListBundles_WithNoStreamingAssetsDir_ReturnsEmpty()
-    {
-        using var tempDir = new TempDirectory();
-
-        var service = new AssetService(tempDir.Path);
-
-        IReadOnlyList<BundleInfo> bundles = service.ListBundles();
-
-        bundles.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void AssetService_ListAssets_WithNonExistentBundle_ThrowsFileNotFoundException()
-    {
-        using var tempDir = new TempDirectory();
-        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
-
-        var service = new AssetService(tempDir.Path);
-
-        Action action = () => service.ListAssets(nonexistentBundle);
-
-        action.Should().Throw<FileNotFoundException>();
-    }
-
-    [Fact]
-    public void AssetService_ExtractAsset_WithNonExistentBundle_ReturnsNull()
-    {
-        using var tempDir = new TempDirectory();
-        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
-
-        var service = new AssetService(tempDir.Path);
-
-        byte[]? result = service.ExtractAsset(nonexistentBundle, "some-asset");
-
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public void AssetService_ValidateModBundle_WithNonExistentFile_ReturnsErrorResult()
-    {
-        using var tempDir = new TempDirectory();
-        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
-
-        var service = new AssetService(tempDir.Path);
-
-        AssetValidationResult result = service.ValidateModBundle(nonexistentBundle);
-
-        result.IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void AssetService_ReplaceAsset_WithNonExistentBundle_ReturnsFalse()
-    {
-        using var tempDir = new TempDirectory();
-        string nonexistentBundle = Path.Combine(tempDir.Path, "nonexistent.bundle");
-
-        var service = new AssetService(tempDir.Path);
-
-        bool result = service.ReplaceAsset(nonexistentBundle, "asset", new byte[] { 1, 2, 3 }, Path.Combine(tempDir.Path, "out.bundle"));
-
-        result.Should().BeFalse();
-    }
-
-    [Fact]
-    public void AssetService_FindBundlesWithType_WithNoBundles_ReturnsEmpty()
-    {
-        using var tempDir = new TempDirectory();
-
-        var service = new AssetService(tempDir.Path);
-
-        IReadOnlyList<BundleInfo> bundles = service.FindBundlesWithType("Texture2D");
-
-        bundles.Should().BeEmpty();
-    }
+    // NOTE: AssetService tests removed - AssetService moved to DINOForge.Runtime.Assets
+    // AssetService requires AssetsTools.NET native interop and is marked [ExcludeFromCodeCoverage]
+    // Integration tests for asset operations belong in DINOForge.Tests.Integration
 
     // ──────────────────────── AddressablesCatalog ParseEntryData coverage ────────────────────────
 

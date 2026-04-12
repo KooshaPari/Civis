@@ -1,6 +1,7 @@
 #nullable enable
 using System.Diagnostics;
 using DINOForge.Bridge.Client;
+using DINOForge.Bridge.Protocol;
 using Xunit;
 
 namespace DINOForge.Tests.Integration.Fixtures;
@@ -96,7 +97,7 @@ public sealed class GameFixture : IAsyncLifetime
 
             // Wait for the ECS world to be ready (up to 60 seconds)
             using CancellationTokenSource worldCts = new(TimeSpan.FromSeconds(60));
-            Bridge.Protocol.WaitResult waitResult = await Client.WaitForWorldAsync(60000, worldCts.Token);
+            WaitResult waitResult = await Client.WaitForWorldAsync(60000, worldCts.Token);
 
             GameAvailable = waitResult.Ready && Client.IsConnected;
         }

@@ -102,11 +102,17 @@ namespace DINOForge.Runtime.Bridge
             Enabled = true;
             // Attempt resurrection in OnCreate — this fires when a new ECS world starts,
             // which happens after DINO tears down the previous world (and our RuntimeDriver).
+            //
+            // IMPORTANT: We defer TryResurrect to the background polling thread instead of calling
+            // it directly. This is because when a new RuntimeDriver is created during scene
+            // transition, its Plugin.Awake() hasn't completed yet. Calling TryResurrect directly
+            // would fail because _resurrectionLog/_resurrectionConfig are null.
             if (Plugin.NeedsResurrection || ReferenceEquals(Plugin.PersistentRoot, null))
             {
                 WriteDebug($"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))}");
                 Plugin.NeedsResurrection = false;
-                Plugin.TryResurrect("(ECS OnCreate)", "KeyInputSystem.OnCreate");
+                // Defer to background thread which runs after Plugin.Awake() completes
+                Plugin.NeedsDeferredResurrection = true;
             }
 
             // Key insight: OnCreate fires BEFORE World.DefaultGameObjectInjectionWorld is set,

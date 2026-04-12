@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hex architecture violation: moved AssetsTools.NET from SDK → Runtime**
+  - SDK is domain-independent; AssetsTools.NET is runtime-specific dependency
+  - Moved `AssetService.cs` from `src/SDK/Assets/` to `src/Runtime/Assets/`
+  - Updated namespace from `DINOForge.SDK.Assets` to `DINOForge.Runtime.Assets`
+  - Fixed AssetSwapSystem.cs and all test files to import from Runtime
+  - All 2,453 tests pass; solution builds cleanly
+
 ## [0.21.0] — 2026-04-11
 
 ### Added

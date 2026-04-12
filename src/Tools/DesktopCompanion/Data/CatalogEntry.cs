@@ -44,11 +44,11 @@ namespace DINOForge.DesktopCompanion.Data
 
         /// <summary>Whether this pack is already installed locally.</summary>
         [ObservableProperty]
-        private bool _isInstalled;
+        public partial bool IsInstalled { get; set; }
 
         /// <summary>Whether an update is available for this pack.</summary>
         [ObservableProperty]
-        private bool _hasUpdate;
+        public partial bool HasUpdate { get; set; }
 
         /// <summary>The installed version, if applicable.</summary>
         public string InstalledVersion { get; init; } = "";

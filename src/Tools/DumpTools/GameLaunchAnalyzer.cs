@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -36,6 +37,7 @@ namespace DINOForge.Tools.DumpTools
         /// Analyzes the most recent failure manifest and generates a markdown report.
         /// </summary>
         /// <returns>Path to generated report file, or empty string if no failure found</returns>
+        [RequiresUnreferencedCode()]
         public async Task<string> GenerateFailureReportAsync()
         {
             try

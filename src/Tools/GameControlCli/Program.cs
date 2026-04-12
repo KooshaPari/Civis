@@ -942,7 +942,7 @@ public static class Program
         try
         {
             await client.ConnectAsync();
-            var result = await client.InvokeBridgeMethodAsync("discover-types", 
+            var result = await client.InvokeBridgeMethodAsync("discover-types",
                 pattern != null ? new { pattern } : new { });
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
             client.Disconnect();

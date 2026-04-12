@@ -31,7 +31,7 @@ namespace DINOForge.DesktopCompanion.Data
 
         /// <summary>Whether this pack is currently enabled (not in disabled_packs.json).</summary>
         [ObservableProperty]
-        private bool _enabled = true;
+        public partial bool Enabled { get; set; } = true;
 
         /// <summary>Number of validation errors detected for this pack.</summary>
         public int ErrorCount { get; init; } = 0;

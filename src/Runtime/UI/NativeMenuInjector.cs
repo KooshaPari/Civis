@@ -370,9 +370,11 @@ namespace DINOForge.Runtime.UI
                     if (hasInitialLoader)
                     {
                         _anyKeyPatchApplied = true;  // prevent re-triggering
-                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} — InitialGameLoader stuck. Loading scene 1 to skip splash screen.");
-                        WriteDebug($"[{_sessionId}] InitialGameLoader auto-advance: SceneManager.LoadScene(1)");
-                        SceneManager.LoadScene(1);
+                        // TEMPORARY: disabled to prevent RuntimeDriver destruction during scene transition.
+                        // When the deferred resurrection mechanism is fully verified, re-enable this.
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} — InitialGameLoader detected but auto-advance DISABLED (deferred resurrection debugging).");
+                        WriteDebug($"[{_sessionId}] InitialGameLoader auto-advance: DISABLED");
+                        // SceneManager.LoadScene(1); // <-- RE-ENABLE ONCE RUNTIME DRIVER SURVIVES SCENE TRANSITIONS
                         return;  // IMPORTANT: return immediately; OnActiveSceneChanged will re-trigger scan
                     }
                 }

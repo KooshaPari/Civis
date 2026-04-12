@@ -54,6 +54,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\Runtime\DINOForge.Runtime.csproj" />
     <ProjectReference Include="..\Domains\Warfare\DINOForge.Domains.Warfare.csproj" />
     <ProjectReference Include="..\Domains\UI\DINOForge.Domains.UI.csproj" />
     <ProjectReference Include="..\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" />

@@ -129,11 +129,6 @@
         "resolved": "2.0.5",
         "contentHash": "2XtWAPk1G6arpe3OCFNrYYuf6iIboznxs2elJSGgd8e0euou7LfGYFon6hBEfDWNtOLr0M3+oUVgy1a5EGa41A=="
       },
-      "AssetsTools.NET": {
-        "type": "Transitive",
-        "resolved": "3.0.4",
-        "contentHash": "NqYy5UIucwKwdkpamFTi8lr53hD+V8qQmbHzztQj1v4Pq1G4TjNlpkUWOhktTLBqBm4aPRaAkpFgB+3TDEuomw=="
-      },
       "Microsoft.Data.Sqlite.Core": {
         "type": "Transitive",
         "resolved": "8.0.25",
@@ -338,7 +333,6 @@
       "dinoforge.sdk": {
         "type": "Project",
         "dependencies": {
-          "AssetsTools.NET": "[3.0.4, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
           "YamlDotNet": "[16.*, )"

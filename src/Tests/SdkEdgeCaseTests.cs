@@ -6,6 +6,7 @@ using System.Linq;
 using DINOForge.SDK;
 using DINOForge.SDK.Assets;
 using DINOForge.SDK.Dependencies;
+using DINOForge.Runtime.Assets;
 using FluentAssertions;
 using Xunit;
 

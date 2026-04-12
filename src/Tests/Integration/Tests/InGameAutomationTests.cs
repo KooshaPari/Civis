@@ -1,6 +1,7 @@
 #nullable enable
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Mocks;
 using FluentAssertions;
 using Xunit;
 

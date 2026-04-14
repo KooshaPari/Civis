@@ -1,12 +1,17 @@
 #nullable enable
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
+using Serilog.Events;
 
 namespace DINOForge.Bridge.Client;
 
@@ -23,6 +28,7 @@ public sealed class GameClient : IGameClient
     private readonly GameClientOptions _options;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly object _stateLock = new();
+    private readonly ILogger _logger;
 
     private NamedPipeClientStream? _pipe;
     private StreamReader? _reader;
@@ -42,6 +48,31 @@ public sealed class GameClient : IGameClient
     public GameClient(GameClientOptions options)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _logger = InitializeLogger();
+    }
+
+    /// <summary>
+    /// Initializes the Serilog logger for structured logging to JSON/JSONL.
+    /// </summary>
+    private static ILogger InitializeLogger()
+    {
+        // Read request ID from environment variable (set by automation scripts)
+        var requestId = Environment.GetEnvironmentVariable("DINO_REQUEST_ID") ?? "no-request-id";
+
+        var logConfig = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("ProcessName", Process.GetCurrentProcess().ProcessName)
+            .Enrich.WithProperty("ProcessId", Process.GetCurrentProcess().Id)
+            .Enrich.WithProperty("MachineName", Environment.MachineName)
+            .Enrich.WithProperty("RequestId", requestId)
+            .WriteTo.Console()
+            .WriteTo.File(
+                path: "logs/dinoforge-.jsonl",
+                outputTemplate: "{Timestamp:u} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                rollingInterval: RollingInterval.Day);
+
+        return logConfig.CreateLogger();
     }
 
     /// <summary>Gets the current connection state.</summary>
@@ -61,26 +92,57 @@ public sealed class GameClient : IGameClient
     /// <exception cref="GameClientException">Thrown when the connection fails.</exception>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
+        await ConnectAsync(connectTimeout: null, ct);
+    }
+
+    /// <summary>
+    /// Connects to the game bridge named pipe server with optional custom timeout.
+    /// </summary>
+    /// <param name="connectTimeout">Optional timeout override. If null, uses options default.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="GameClientException">Thrown when the connection fails.</exception>
+    public async Task ConnectAsync(TimeSpan? connectTimeout, CancellationToken ct = default)
+    {
         ThrowIfDisposed();
 
         if (IsConnected)
+        {
+            _logger.Debug("Already connected to pipe '{PipeName}'", _options.PipeName);
             return;
+        }
 
         State = ConnectionState.Connecting;
+        var timeout = connectTimeout ?? TimeSpan.FromMilliseconds(_options.ConnectTimeoutMs);
+        _logger.Information("Connecting to pipe '{PipeName}' with timeout {TimeoutMs}ms",
+            _options.PipeName, timeout.TotalMilliseconds);
+
         try
         {
             _pipe = new NamedPipeClientStream(".", _options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            await _pipe.ConnectAsync(_options.ConnectTimeoutMs, ct).ConfigureAwait(false);
+
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+            try
+            {
+                await _pipe.ConnectAsync(linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested)
+            {
+                throw new TimeoutException($"Connection timeout after {timeout.TotalSeconds}s", ex);
+            }
 
             _reader = new StreamReader(_pipe);
             _writer = new StreamWriter(_pipe) { AutoFlush = true };
 
             State = ConnectionState.Connected;
+            _logger.Information("Successfully connected to pipe '{PipeName}'", _options.PipeName);
         }
         catch (Exception ex)
         {
             State = ConnectionState.Error;
             CleanupPipe();
+            _logger.Error(ex, "Failed to connect to pipe '{PipeName}'", _options.PipeName);
             if (ex is OperationCanceledException)
                 throw;
             throw new GameClientException($"Failed to connect to pipe '{_options.PipeName}'.", ex);
@@ -92,8 +154,10 @@ public sealed class GameClient : IGameClient
     /// </summary>
     public void Disconnect()
     {
+        _logger.Information("Disconnecting from pipe '{PipeName}'", _options.PipeName);
         CleanupPipe();
         State = ConnectionState.Disconnected;
+        _logger.Debug("Disconnection complete");
     }
 
     /// <inheritdoc />
@@ -256,11 +320,14 @@ public sealed class GameClient : IGameClient
         {
             if (attempt > 0)
             {
+                _logger.Warning("Retrying request '{Method}' (attempt {Attempt}/{MaxAttempts})", method, attempt + 1, _options.RetryCount + 1);
                 await Task.Delay(_options.RetryDelayMs, ct).ConfigureAwait(false);
             }
 
             try
             {
+                _logger.Debug("Sending request '{Method}' to pipe '{PipeName}' (attempt {Attempt}/{MaxAttempts})",
+                    method, _options.PipeName, attempt + 1, _options.RetryCount + 1);
                 return await SendRequestCoreAsync<T>(method, parameters, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -270,6 +337,8 @@ public sealed class GameClient : IGameClient
             catch (Exception ex)
             {
                 lastException = ex;
+                _logger.Warning(ex, "Request '{Method}' failed on attempt {Attempt}: {ErrorMessage}",
+                    method, attempt + 1, ex.Message);
                 // If the pipe broke, try to reconnect
                 if (!IsConnected)
                 {
@@ -285,15 +354,21 @@ public sealed class GameClient : IGameClient
             }
         }
 
+        _logger.Error(lastException, "Failed to execute '{Method}' after {RetryCount} attempts",
+            method, _options.RetryCount + 1);
         throw new GameClientException(
             $"Failed to execute '{method}' after {_options.RetryCount + 1} attempts.",
             lastException!);
     }
 
-    private async Task<T> SendRequestCoreAsync<T>(string method, object? parameters, CancellationToken ct)
+    private async Task<T> SendRequestCoreAsync<T>(string method, object? parameters, CancellationToken ct,
+        TimeSpan? sendTimeout = null, TimeSpan? readTimeout = null)
     {
-        if (!IsConnected || _writer is null || _reader is null)
+        if (!IsConnected || (_writer is null && !_options.UseMessageFraming) || (_pipe is null && _options.UseMessageFraming))
+        {
+            _logger.Error("Cannot send request - not connected to pipe '{PipeName}'", _options.PipeName);
             throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.");
+        }
 
         JsonRpcRequest request = new()
         {
@@ -308,38 +383,95 @@ public sealed class GameClient : IGameClient
         await _sendLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await _writer.WriteLineAsync(requestJson).ConfigureAwait(false);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            using CancellationTokenSource timeoutCts = new(_options.ReadTimeoutMs);
-            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            // Send request with configurable timeout
+            var effectiveSendTimeout = sendTimeout ?? TimeSpan.FromMilliseconds(_options.SendTimeoutMs);
+            using var sendTimeoutCts = new CancellationTokenSource(effectiveSendTimeout);
+            using var sendLinkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, sendTimeoutCts.Token);
 
-            string? responseLine = await ReadLineAsync(_reader, linkedCts.Token).ConfigureAwait(false);
+            try
+            {
+                if (_options.UseMessageFraming)
+                {
+                    await WriteFramedMessageAsync(requestJson, sendLinkedCts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    await _writer!.WriteLineAsync(requestJson).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException ex) when (sendTimeoutCts.Token.IsCancellationRequested)
+            {
+                _logger.Error(ex, "Send timeout for request '{Method}' after {TimeoutMs}ms",
+                    method, effectiveSendTimeout.TotalMilliseconds);
+                throw new GameClientException(
+                    $"Send timeout for request '{method}' after {effectiveSendTimeout.TotalMilliseconds}ms", ex);
+            }
+
+            // Read response with configurable timeout
+            var effectiveReadTimeout = readTimeout ?? TimeSpan.FromMilliseconds(_options.ReadTimeoutMs);
+            using var readTimeoutCts = new CancellationTokenSource(effectiveReadTimeout);
+            using var readLinkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, readTimeoutCts.Token);
+
+            string? responseLine;
+            try
+            {
+                if (_options.UseMessageFraming)
+                {
+                    responseLine = await ReadFramedMessageAsync(readLinkedCts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    responseLine = await ReadLineAsync(_reader!, readLinkedCts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException ex) when (readTimeoutCts.Token.IsCancellationRequested)
+            {
+                _logger.Error(ex, "Read timeout for request '{Method}' after {TimeoutMs}ms",
+                    method, effectiveReadTimeout.TotalMilliseconds);
+                State = ConnectionState.Error;
+                throw new GameClientException(
+                    $"Read timeout for request '{method}' after {effectiveReadTimeout.TotalMilliseconds}ms", ex);
+            }
 
             if (responseLine is null)
             {
                 State = ConnectionState.Error;
+                _logger.Error("Connection closed by game bridge server for request '{Method}'", method);
                 throw new GameClientException("Connection closed by the game bridge server.");
             }
 
             JsonRpcResponse? response = JsonConvert.DeserializeObject<JsonRpcResponse>(responseLine);
             if (response is null)
+            {
+                _logger.Error("Received invalid JSON-RPC response for request '{Method}': {Response}", method, responseLine);
                 throw new GameClientException("Received invalid JSON-RPC response.");
+            }
 
             if (response.Error is not null)
+            {
+                _logger.Error("Server returned error for request '{Method}': [{ErrorCode}] {ErrorMessage}",
+                    method, response.Error.Code, response.Error.Message);
                 throw new GameClientException($"Server error [{response.Error.Code}]: {response.Error.Message}");
+            }
 
             if (response.Result is null)
+            {
+                _logger.Warning("Server returned null result for request '{Method}'", method);
                 throw new GameClientException($"Server returned null result for '{method}'.");
+            }
 
             T? result = JsonConvert.DeserializeObject<T>(response.Result.ToString()!);
             if (result is null)
+            {
+                _logger.Error("Failed to deserialize result for request '{Method}'", method);
                 throw new GameClientException($"Failed to deserialize result for '{method}'.");
+            }
 
+            sw.Stop();
+            _logger.Information("Request '{Method}' completed successfully in {ElapsedMs}ms", method, sw.ElapsedMilliseconds);
             return result;
-        }
-        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
-        {
-            throw new GameClientException($"Request '{method}' timed out after {_options.ReadTimeoutMs}ms.", ex);
         }
         finally
         {
@@ -362,6 +494,96 @@ public sealed class GameClient : IGameClient
         }
 
         return readTask.Result;
+    }
+
+    /// <summary>
+    /// Writes a framed message to the pipe with a 4-byte big-endian length prefix.
+    /// </summary>
+    /// <param name="message">The message content (JSON string).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="IOException">Thrown on write failure.</exception>
+    /// <exception cref="ProtocolException">Thrown on protocol violations.</exception>
+    private async Task WriteFramedMessageAsync(string message, CancellationToken ct)
+    {
+        if (_pipe is null || !_pipe.IsConnected)
+            throw new IOException("Pipe not connected");
+
+        var messageBytes = Encoding.UTF8.GetBytes(message);
+
+        if (messageBytes.Length > _options.MaxMessageSizeBytes)
+            throw new ProtocolException(
+                $"Message size {messageBytes.Length} bytes exceeds maximum {_options.MaxMessageSizeBytes}");
+
+        // Write 4-byte length prefix (big-endian)
+        var lengthBytes = BitConverter.GetBytes((uint)messageBytes.Length);
+        if (BitConverter.IsLittleEndian)
+            Array.Reverse(lengthBytes);
+
+        await _pipe.WriteAsync(lengthBytes, 0, 4, ct).ConfigureAwait(false);
+        await _pipe.WriteAsync(messageBytes, 0, messageBytes.Length, ct).ConfigureAwait(false);
+
+        _logger.Debug("Wrote framed message: {LengthBytes} byte header + {MessageLengthBytes} byte payload",
+            4, messageBytes.Length);
+    }
+
+    /// <summary>
+    /// Reads a framed message from the pipe with a 4-byte big-endian length prefix.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The decoded message content.</returns>
+    /// <exception cref="IOException">Thrown on read failure or connection closed.</exception>
+    /// <exception cref="ProtocolException">Thrown on protocol violations (bad frame size, incomplete data).</exception>
+    private async Task<string> ReadFramedMessageAsync(CancellationToken ct)
+    {
+        if (_pipe is null || !_pipe.IsConnected)
+            throw new IOException("Pipe not connected");
+
+        // Read 4-byte frame length header
+        var lengthBuffer = new byte[4];
+        int headerRead = await _pipe.ReadAsync(lengthBuffer, 0, 4, ct).ConfigureAwait(false);
+
+        if (headerRead == 0)
+            throw new IOException("Connection closed by peer while reading frame header");
+
+        if (headerRead != 4)
+            throw new ProtocolException(
+                $"Expected 4-byte frame header, received {headerRead} bytes");
+
+        // Decode length (big-endian)
+        uint frameLength = BitConverter.ToUInt32(lengthBuffer, 0);
+        if (BitConverter.IsLittleEndian)
+            frameLength = (uint)IPAddress.NetworkToHostOrder((int)frameLength);
+
+        if (frameLength == 0)
+            throw new ProtocolException("Frame length cannot be zero");
+
+        if (frameLength > _options.MaxMessageSizeBytes)
+            throw new ProtocolException(
+                $"Frame size {frameLength} bytes exceeds maximum {_options.MaxMessageSizeBytes}");
+
+        // Read message payload
+        var messageBuffer = new byte[frameLength];
+        int messageRead = 0;
+        int offset = 0;
+
+        while (offset < frameLength)
+        {
+            int bytesRead = await _pipe.ReadAsync(messageBuffer, offset, (int)(frameLength - offset), ct)
+                .ConfigureAwait(false);
+
+            if (bytesRead == 0)
+                throw new ProtocolException(
+                    $"Incomplete frame: expected {frameLength} bytes, got {offset} bytes before EOF");
+
+            messageRead += bytesRead;
+            offset += bytesRead;
+        }
+
+        string message = Encoding.UTF8.GetString(messageBuffer);
+        _logger.Debug("Read framed message: {LengthBytes} byte header + {MessageLengthBytes} byte payload",
+            4, messageRead);
+
+        return message;
     }
 
     private void CleanupPipe()

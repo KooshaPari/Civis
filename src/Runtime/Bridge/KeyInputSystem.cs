@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Unity.Entities;
 using UnityEngine;
 using DINOForge.Runtime;
@@ -23,6 +24,15 @@ namespace DINOForge.Runtime.Bridge
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class KeyInputSystem : SystemBase
     {
+        // Win32 P/Invoke for key detection
+        // Input.GetKey() relies on MonoBehaviour.Update() polling, which NEVER fires in DINO.
+        // We must use GetAsyncKeyState() directly to work with DINO's custom PlayerLoop.
+        [DllImport("user32.dll")]
+        private static extern ushort GetAsyncKeyState(int vKey);
+
+        private const int VK_F9 = 0x78;
+        private const int VK_F10 = 0x79;
+        private const ushort KEY_PRESSED = 0x8000;
         /// <summary>
         /// Caches the world that KeyInputSystem lives in. Updated on every OnCreate.
         /// Used by GameBridgeServer to always query the correct world after scene transitions.
@@ -138,8 +148,8 @@ namespace DINOForge.Runtime.Bridge
             try
             {
                 _updateFrame++;
-                // Log every frame for first 5 frames, then every 600
-                if (_updateFrame <= 5 || _updateFrame % 600 == 0)
+                // Log every 600 frames (once per ~10 seconds at 60 FPS)
+                if (_updateFrame % 600 == 0)
                     WriteDebug($"[KeyInputSystem.OnUpdate] frame={_updateFrame} enabled={Enabled} overlayEnsured={_overlayEnsured} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
 
                 // Drain the MainThreadDispatcher queue from ECS OnUpdate.
@@ -192,9 +202,11 @@ namespace DINOForge.Runtime.Bridge
                 if (!_overlayEnsured)
                     EnsureOverlay();
 
-                // Poll Unity Input for F9/F10 — detect PRESS (key goes from up to down), not hold
-                bool f9Current = Input.GetKey(KeyCode.F9);
-                bool f10Current = Input.GetKey(KeyCode.F10);
+                // Poll Win32 key state for F9/F10 — detect PRESS (key goes from up to down), not hold
+                // NOTE: Input.GetKey() uses MonoBehaviour.Update() which NEVER fires in DINO.
+                // GetAsyncKeyState() works with DINO's custom PlayerLoop.
+                bool f9Current = (GetAsyncKeyState(VK_F9) & KEY_PRESSED) != 0;
+                bool f10Current = (GetAsyncKeyState(VK_F10) & KEY_PRESSED) != 0;
 
                 // F9: trigger on transition from not-pressed to pressed
                 if (f9Current && !_f9PreviousState)

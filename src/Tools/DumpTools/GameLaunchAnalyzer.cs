@@ -37,7 +37,7 @@ namespace DINOForge.Tools.DumpTools
         /// Analyzes the most recent failure manifest and generates a markdown report.
         /// </summary>
         /// <returns>Path to generated report file, or empty string if no failure found</returns>
-        [RequiresUnreferencedCode()]
+        [RequiresUnreferencedCode("Dynamic JSON deserialization requires reflection")]
         public async Task<string> GenerateFailureReportAsync()
         {
             try

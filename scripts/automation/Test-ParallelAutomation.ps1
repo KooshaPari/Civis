@@ -67,16 +67,31 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Continue"
 
+# Generate request ID for tracing this test run
+$requestId = [guid]::NewGuid().ToString()
+$env:DINO_REQUEST_ID = $requestId
+
+# Import logging module
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$loggingModule = Join-Path $scriptDir "..\shared\Logging.psm1"
+if (Test-Path $loggingModule) {
+    Import-Module $loggingModule -Force
+} else {
+    Write-Warning "Logging module not found at $loggingModule - falling back to Write-Host"
+}
+
 Write-Host "=== DINOForge Parallel Automation Test ===" -ForegroundColor Cyan
-Write-Host "Instance count: $InstanceCount"
-Write-Host "Test duration: ${TestDurationSeconds}s"
-Write-Host "Protocol: JSON-RPC 2.0 (via GameControlCli)"
-Write-Host "MCP Health Check URL: $McpUrl/health"
-Write-Host ""
+Write-LogInfo "Starting parallel automation test" @{
+    instanceCount = $InstanceCount
+    testDurationSeconds = $TestDurationSeconds
+    mcpUrl = $McpUrl
+    skipMcpCheck = $SkipMcpCheck
+    requestId = $requestId
+} -RequestId $requestId
 
 # Check MCP server health (HTTP health endpoint)
 if (-not $SkipMcpCheck) {
-    Write-Host "Checking MCP server health..." -ForegroundColor Yellow
+    Write-LogInfo "Checking MCP server health" @{ mcpUrl = $McpUrl } -RequestId $requestId
     try {
         $health = Invoke-WebRequest `
             -Uri "$McpUrl/health" `
@@ -86,50 +101,52 @@ if (-not $SkipMcpCheck) {
         if ($health.StatusCode -eq 200) {
             $respObj = $health.Content | ConvertFrom-Json
             if ($respObj.status -eq "ok") {
-                Write-Host "[PASS] MCP server is running (FastMCP $($respObj.version))" -ForegroundColor Green
+                Write-LogInfo "MCP server health check passed" @{
+                    status = $respObj.status
+                    version = $respObj.version
+                } -RequestId $requestId
             } else {
-                Write-Error "MCP health check failed: $($respObj.status)"
+                Write-LogError "MCP health check failed" @{ status = $respObj.status } -RequestId $requestId
                 exit 1
             }
         } else {
-            Write-Error "MCP health check failed: $($health.StatusCode)"
+            Write-LogError "MCP health check failed" @{ statusCode = $health.StatusCode } -RequestId $requestId
             exit 1
         }
     } catch {
-        Write-Error "Cannot reach MCP server at $McpUrl. Is it running?"
-        Write-Host "  Start MCP with: pwsh .\scripts\start-mcp.ps1 --http"
-        Write-Host "  Or skip check with: -SkipMcpCheck"
+        Write-LogError "Cannot reach MCP server" @{ mcpUrl = $McpUrl; error = $_ } -RequestId $requestId
         exit 1
     }
 }
 
 # First, launch the game instances
-Write-Host ""
-Write-Host "Launching $InstanceCount game instances..." -ForegroundColor Cyan
+Write-LogInfo "Launching game instances" @{ instanceCount = $InstanceCount } -RequestId $requestId
 
 $launcherPath = Join-Path $PSScriptRoot "Launch-ParallelGames.ps1"
 if (-not (Test-Path $launcherPath)) {
-    Write-Error "Cannot find launcher: $launcherPath"
+    Write-LogError "Cannot find launcher script" @{ launcherPath = $launcherPath } -RequestId $requestId
     exit 1
 }
 
 $launchResult = & $launcherPath -InstanceCount $InstanceCount -Verbose:$Verbose
 if (-not $launchResult.Processes -or @($launchResult.Processes).Count -eq 0) {
-    Write-Error "Failed to launch game instances"
+    Write-LogError "Failed to launch game instances" @{ launchResult = $launchResult } -RequestId $requestId
     exit 1
 }
 
 $runningInstances = @($launchResult.Processes)
 $pipenames = $launchResult.PipeNames
-Write-Host "Launched: $($runningInstances.Count) instances" -ForegroundColor Green
-Write-Host "Instance pipe names:" -ForegroundColor Cyan
-for ($i = 0; $i -lt $pipenames.Count; $i++) {
-    Write-Host "  Instance $($i+1): $($pipenames[$i])" -ForegroundColor DarkCyan
-}
+Write-LogInfo "Game instances launched successfully" @{
+    runningCount = $runningInstances.Count
+    pipeNames = $pipenames
+} -RequestId $requestId
 
 # Test metrics
-Write-Host ""
-Write-Host "Running test suite..." -ForegroundColor Cyan
+Write-LogInfo "Starting test suite execution" @{
+    testDurationSeconds = $TestDurationSeconds
+    instanceCount = $InstanceCount
+} -RequestId $requestId
+
 $startTime = Get-Date
 $testsPassed = 0
 $testsFailed = 0
@@ -172,22 +189,25 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
             if ($result.success) {
                 $testsPassed++
                 $perInstanceStats[$instIdx].Passed++
-                if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instNum : game_status OK (${responseTime}ms)" -ForegroundColor Green
-                }
+                Write-LogDebug "Game status test passed" @{
+                    instanceNum = $instNum
+                    responseTime = $responseTime
+                } -RequestId $requestId
             } else {
                 $testsFailed++
                 $perInstanceStats[$instIdx].Failed++
-                if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instNum : game_status failed - $($result.error)" -ForegroundColor Red
-                }
+                Write-LogWarn "Game status test failed" @{
+                    instanceNum = $instNum
+                    error = $result.error
+                } -RequestId $requestId
             }
         } catch {
             $testsFailed++
             $perInstanceStats[$instIdx].Failed++
-            if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instNum : game_status error: $($_.Exception.Message)" -ForegroundColor Red
-            }
+            Write-LogError "Game status test error" @{
+                instanceNum = $instNum
+                error = $_.Exception.Message
+            } -RequestId $requestId
         }
 
         # Test 2: Check entity count via status (verifies ECS world is active)
@@ -211,22 +231,26 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
             if ($result.success -and $result.EntityCount -gt 0) {
                 $testsPassed++
                 $perInstanceStats[$instIdx].Passed++
-                if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instNum : entity_count=$($result.EntityCount) OK (${responseTime}ms)" -ForegroundColor Green
-                }
+                Write-LogDebug "Entity count test passed" @{
+                    instanceNum = $instNum
+                    entityCount = $result.EntityCount
+                    responseTime = $responseTime
+                } -RequestId $requestId
             } else {
                 $testsFailed++
                 $perInstanceStats[$instIdx].Failed++
-                if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instNum : entity_count check failed (count=$($result.EntityCount))" -ForegroundColor Red
-                }
+                Write-LogWarn "Entity count check failed" @{
+                    instanceNum = $instNum
+                    entityCount = $result.EntityCount
+                } -RequestId $requestId
             }
         } catch {
             $testsFailed++
             $perInstanceStats[$instIdx].Failed++
-            if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instNum : entity_count error: $($_.Exception.Message)" -ForegroundColor Red
-            }
+            Write-LogError "Entity count test error" @{
+                instanceNum = $instNum
+                error = $_.Exception.Message
+            } -RequestId $requestId
         }
 
         # Test 3: Verify mod is loaded via GameControlCli with instance-specific pipe
@@ -250,28 +274,35 @@ while ((Get-Date) -lt $startTime.AddSeconds($TestDurationSeconds)) {
             if ($result.runtime_loaded -or $result.success) {
                 $testsPassed++
                 $perInstanceStats[$instIdx].Passed++
-                if ($Verbose) {
-                    Write-Host "  [PASS] Instance $instNum : game_verify_mod OK (${responseTime}ms)" -ForegroundColor Green
-                }
+                Write-LogDebug "Runtime verification test passed" @{
+                    instanceNum = $instNum
+                    responseTime = $responseTime
+                } -RequestId $requestId
             } else {
                 $testsFailed++
                 $perInstanceStats[$instIdx].Failed++
-                if ($Verbose) {
-                    Write-Host "  [FAIL] Instance $instNum : game_verify_mod failed" -ForegroundColor Red
-                }
+                Write-LogWarn "Runtime verification test failed" @{
+                    instanceNum = $instNum
+                } -RequestId $requestId
             }
         } catch {
             $testsFailed++
             $perInstanceStats[$instIdx].Failed++
-            if ($Verbose) {
-                Write-Host "  [FAIL] Instance $instNum : game_verify_mod error: $($_.Exception.Message)" -ForegroundColor Red
-            }
+            Write-LogError "Runtime verification test error" @{
+                instanceNum = $instNum
+                error = $_.Exception.Message
+            } -RequestId $requestId
         }
     }
 
     $iterationTime = ((Get-Date) - $iterationStart).TotalMilliseconds
-    if ($Verbose -and $iterationCount % 2 -eq 0) {
-        Write-Host "[Iteration $iterationCount] Passed: $testsPassed | Failed: $testsFailed | Iteration Time: ${iterationTime}ms" -ForegroundColor DarkCyan
+    if ($iterationCount % 5 -eq 0) {
+        Write-LogDebug "Test iteration progress" @{
+            iterationCount = $iterationCount
+            testsPassed = $testsPassed
+            testsFailed = $testsFailed
+            iterationTime = [Math]::Round($iterationTime, 2)
+        } -RequestId $requestId
     }
 
     $sleepTime = [Math]::Max(100, 500 - $iterationTime)
@@ -284,48 +315,50 @@ $successRate = if ($totalTests -gt 0) { ($testsPassed / $totalTests) * 100 } els
 $avgResponseTime = if ($totalTests -gt 0) { [Math]::Round($totalTime / $totalTests, 2) } else { 0 }
 
 # Output results
-Write-Host ""
-Write-Host "=== Test Results ===" -ForegroundColor Cyan
 $duration = ((Get-Date) - $startTime).TotalSeconds
-Write-Host "Duration: $([Math]::Round($duration, 1)) seconds"
-Write-Host "Iterations: $iterationCount"
-Write-Host "Total tests: $totalTests"
-Write-Host "Passed: $testsPassed"
-Write-Host "Failed: $testsFailed"
-Write-Host "Success rate: $([Math]::Round($successRate, 2))%"
-Write-Host "Average response time: ${avgResponseTime}ms"
+
+Write-LogInfo "Test execution completed" @{
+    duration = [Math]::Round($duration, 1)
+    iterations = $iterationCount
+    totalTests = $totalTests
+    testsPassed = $testsPassed
+    testsFailed = $testsFailed
+    successRate = [Math]::Round($successRate, 2)
+    avgResponseTime = $avgResponseTime
+} -RequestId $requestId
 
 # Per-instance breakdown
-Write-Host ""
-Write-Host "=== Per-Instance Statistics ===" -ForegroundColor Cyan
 for ($i = 0; $i -lt $InstanceCount; $i++) {
     $stats = $perInstanceStats[$i]
     $instTests = $stats.Passed + $stats.Failed
     $instRate = if ($instTests -gt 0) { [Math]::Round(($stats.Passed / $instTests) * 100, 2) } else { 0 }
-    Write-Host "Instance $($i+1): Passed=$($stats.Passed) Failed=$($stats.Failed) Rate=${instRate}%" -ForegroundColor DarkCyan
+    Write-LogDebug "Per-instance statistics" @{
+        instanceNum = $i + 1
+        passed = $stats.Passed
+        failed = $stats.Failed
+        rate = $instRate
+    } -RequestId $requestId
 }
-Write-Host ""
 
 # Status indicator
 if ($successRate -ge 95) {
-    Write-Host "[PASS] Test PASSED (95%+ success rate)" -ForegroundColor Green
+    Write-LogInfo "Test PASSED (95%+ success rate)" @{ successRate = $successRate } -RequestId $requestId
     $exitCode = 0
 } elseif ($successRate -ge 80) {
-    Write-Host "[WARN] Test DEGRADED (80-95% success rate)" -ForegroundColor Yellow
+    Write-LogWarn "Test DEGRADED (80-95% success rate)" @{ successRate = $successRate } -RequestId $requestId
     $exitCode = 1
 } else {
-    Write-Host "[FAIL] Test FAILED (below 80% success rate)" -ForegroundColor Red
+    Write-LogError "Test FAILED (below 80% success rate)" @{ successRate = $successRate } -RequestId $requestId
     $exitCode = 2
 }
 
 # Cleanup
-Write-Host ""
-Write-Host "Cleaning up..." -ForegroundColor Yellow
+Write-LogInfo "Cleaning up test resources" @{ } -RequestId $requestId
 $runningInstances | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
-Write-Host "[PASS] Cleanup complete" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "=== Test Complete ===" -ForegroundColor Cyan
+Write-LogInfo "Test run completed and cleanup finished" @{
+    exitCode = $exitCode
+    totalDuration = [Math]::Round($duration, 1)
+} -RequestId $requestId
 
 exit $exitCode

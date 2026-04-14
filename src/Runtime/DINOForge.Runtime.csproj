@@ -163,7 +163,6 @@
     </Reference>
 
     <!-- Newtonsoft.Json (bundled with game) -->
-    <PackageReference Include="Sentry" Version="4.11.0" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath>
       <Private>false</Private>

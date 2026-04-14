@@ -4,19 +4,20 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>DINOForge.Bridge.Protocol</AssemblyName>
     <RootNamespace>DINOForge.Bridge.Protocol</RootNamespace>
-    <AssemblyVersion>0.18.0</AssemblyVersion>
+    <AssemblyVersion>0.22.0</AssemblyVersion>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <Description>DINOForge Bridge Protocol - JSON-RPC 2.0 messages and interfaces for game bridge communication</Description>
     <PackageId>DINOForge.Bridge.Protocol</PackageId>
-    <PackageVersion>0.18.0</PackageVersion>
-    <Version>0.18.0</Version>
+    <PackageVersion>0.22.0</PackageVersion>
+    <Version>0.22.0</Version>
     <Authors>KooshaPari</Authors>
     <PackageTags>dinoforge;bridge;protocol;json-rpc;bepinex;game-modding</PackageTags>
     <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -25,6 +26,10 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

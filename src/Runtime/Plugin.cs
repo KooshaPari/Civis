@@ -5,7 +5,6 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.UI;
-using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK;
 using HarmonyLib;
 using Unity.Entities;
@@ -117,12 +116,6 @@ namespace DINOForge.Runtime
                 Log.LogError($"Harmony init/patch failed: {ex.Message}");
             }
 
-            // Sentry — initialize error tracking from SDK
-            SentryInitializer.Initialize(
-                environment: Application.isPlaying ? "production" : "development",
-                releaseOverride: PluginInfo.VERSION);
-            SentryInitializer.AddBreadcrumb($"DINOForge Runtime v{PluginInfo.VERSION} initializing", "runtime");
-
             // Create a dedicated persistent GameObject that won't be destroyed.
             // The BepInEx-managed gameObject gets cleaned up during DINO's scene
             // transitions. A separate object with HideAndDontSave survives.
@@ -224,7 +217,11 @@ namespace DINOForge.Runtime
                 RuntimeDriver? existing = PersistentRoot.GetComponent<RuntimeDriver>();
                 if (existing != null && existing.IsInitialized)
                 {
-                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, skipping.");
+                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, ensuring KeyInputSystem is registered...");
+                    // CRITICAL: Always ensure KeyInputSystem is registered in the current world,
+                    // even if RuntimeDriver is already initialized. Scene transitions may have
+                    // created a new world that KeyInputSystem needs to be registered in.
+                    Bridge.KeyInputSystem.RecreateInCurrentWorld();
                     return;
                 }
                 // RuntimeDriver exists but wasn't initialized — initialize it
@@ -504,7 +501,10 @@ namespace DINOForge.Runtime
                     if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
                     else _debugOverlay?.Toggle();
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    WriteDebug($"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                }
             };
             Bridge.KeyInputSystem.OnF10Pressed = () =>
             {
@@ -514,7 +514,10 @@ namespace DINOForge.Runtime
                     if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
                     else _modMenuHost?.Toggle();
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    WriteDebug($"[RuntimeDriver] F10 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                }
             };
 
             // ── Wire HMR pack reload callback (can be invoked from background thread) ──

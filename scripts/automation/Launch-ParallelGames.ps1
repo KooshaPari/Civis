@@ -50,6 +50,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Generate request ID for tracing this entire operation
+$requestId = [guid]::NewGuid().ToString()
+$env:DINO_REQUEST_ID = $requestId
+
+# Import logging module
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$loggingModule = Join-Path $scriptDir "..\shared\Logging.psm1"
+if (Test-Path $loggingModule) {
+    Import-Module $loggingModule -Force
+} else {
+    Write-Warning "Logging module not found at $loggingModule - falling back to Write-Host"
+}
+
 # Resolve main game path from Directory.Build.props if not provided
 if (-not $GamePath) {
     # Check both root and src locations for props file
@@ -87,20 +100,28 @@ if (-not (Test-Path $mainGameExe)) {
 }
 
 Write-Host "=== DINOForge Parallel Game Launcher (Sandboxed) ===" -ForegroundColor Cyan
-Write-Host "Instance count: $InstanceCount"
-Write-Host "Main game path: $GamePath"
-Write-Host "Sandbox output: $OutputDir"
-Write-Host ""
+Write-LogInfo "Starting parallel game launcher" @{
+    instanceCount = $InstanceCount
+    gamePath = $GamePath
+    outputDir = $OutputDir
+    copySteamAuth = $CopySteamAuth
+    requestId = $requestId
+} -RequestId $requestId
+
+# Trap: ensure cleanup always happens on any unhandled error
+trap {
+    Write-LogError "Unhandled error in launcher: $_" @{ error = $_.Exception.Message } -RequestId $requestId
+    # Continue to finally block (implicit)
+}
 
 # Kill any existing game processes
-Write-Host "Cleaning up existing game processes..." -ForegroundColor Yellow
+Write-LogInfo "Cleaning up existing game processes" @{ } -RequestId $requestId
 Get-Process -Name "Diplomacy is Not an Option" -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 
 # Create sandbox pool using DINOBox infrastructure
-Write-Host ""
-Write-Host "Creating isolated sandbox containers..." -ForegroundColor Cyan
+Write-LogInfo "Creating isolated sandbox containers" @{ instanceCount = $InstanceCount } -RequestId $requestId
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $newTempInstanceScript = Join-Path $scriptDir "..\game\New-TempGameInstance.ps1"
 
@@ -117,21 +138,38 @@ try {
         -CopySteamAuth:$CopySteamAuth `
         -Verbose:$Verbose
 } catch {
-    Write-Error "Failed to create sandbox pool: $_"
+    Write-LogError "Failed to create sandbox pool: $_" @{
+        error = $_.Exception.Message
+        instanceCount = $InstanceCount
+    } -RequestId $requestId
     exit 1
 }
 
-if (-not $boxPool -or -not $boxPool.Instances) {
-    Write-Error "Sandbox pool creation returned empty results"
+# Allow partial pools (some instances may have failed to create)
+if (-not $boxPool) {
+    Write-LogError "Sandbox pool creation returned no instances" @{ boxPool = $null } -RequestId $requestId
     exit 1
 }
 
-Write-Host ""
-Write-Host "Launching game instances from sandbox containers..." -ForegroundColor Cyan
+if (-not $boxPool.Instances -or $boxPool.Instances.Count -eq 0) {
+    Write-LogError "Sandbox pool has no valid instances" @{ count = 0 } -RequestId $requestId
+    exit 1
+}
+
+# Warn if partial pool, but continue with what we have
+if ($boxPool.Count -lt $InstanceCount) {
+    Write-LogWarn "Using partial sandbox pool ($($boxPool.Count)/$InstanceCount instances)" @{
+        requested = $InstanceCount
+        created = $boxPool.Count
+    } -RequestId $requestId
+}
+
+Write-LogInfo "Launching game instances from sandbox containers" @{ instanceCount = $InstanceCount } -RequestId $requestId
 
 # Launch game instances FROM sandbox directories
 $processes = @()
 $sandboxInstances = @()
+$launchFailureFlag = $false
 
 for ($i = 0; $i -lt $boxPool.Instances.Count; $i++) {
     $instance = $boxPool.Instances[$i]
@@ -140,8 +178,12 @@ for ($i = 0; $i -lt $boxPool.Instances.Count; $i++) {
     $instanceNum = $i + 1
 
     if (-not (Test-Path $sandboxGameExe)) {
-        Write-Error "Sandbox game executable not found at: $sandboxGameExe"
-        exit 1
+        Write-LogError "Sandbox game executable not found" @{
+            instanceNum = $instanceNum
+            exePath = $sandboxGameExe
+        } -RequestId $requestId
+        $launchFailureFlag = $true
+        break
     }
 
     # Create process arguments for sandbox instance
@@ -157,61 +199,106 @@ for ($i = 0; $i -lt $boxPool.Instances.Count; $i++) {
         $processes += $proc
         $sandboxInstances += $instance
 
-        if ($Verbose) {
-            Write-Host "  [Sandbox $instanceNum] PID=$($proc.Id) Box=$($instance.Directory) Pipe=$($instance.PipeName)" -ForegroundColor Green
-        } else {
-            Write-Host "  [Sandbox $instanceNum] Launched from $($instance.Directory) (PID=$($proc.Id))" -ForegroundColor Green
-        }
+        Write-LogInfo "Sandbox instance launched" @{
+            instanceNum = $instanceNum
+            pid = $proc.Id
+            boxDir = $instance.Directory
+            pipeName = $instance.PipeName
+        } -RequestId $requestId
 
         # Stagger launch slightly to avoid race conditions
         Start-Sleep -Milliseconds 300
     } catch {
-        Write-Error "Failed to launch sandbox instance $instanceNum : $_"
-        # Kill successful instances on failure
-        $processes | Stop-Process -Force -ErrorAction SilentlyContinue
-        exit 1
+        Write-LogError "Failed to launch sandbox instance" @{
+            instanceNum = $instanceNum
+            error = $_.ToString()
+            exePath = $sandboxGameExe
+        } -RequestId $requestId
+        $launchFailureFlag = $true
+        break
     }
 }
 
-Write-Host ""
-Write-Host "Waiting for instances to stabilize..." -ForegroundColor Yellow
+# If any launch failed, kill successful instances and cleanup
+if ($launchFailureFlag) {
+    Write-LogWarn "Launch failure detected, killing launched instances and cleaning up sandboxes" @{
+        launchedCount = @($processes).Count
+    } -RequestId $requestId
+
+    # Kill all launched processes
+    $processes | Stop-Process -Force -ErrorAction SilentlyContinue | Out-Null
+    Start-Sleep -Milliseconds 500
+
+    # Cleanup sandbox directories
+    if ($boxPool.CreatedDirs) {
+        foreach ($dir in $boxPool.CreatedDirs) {
+            try {
+                if (Test-Path $dir) {
+                    Write-LogInfo "Removing sandbox directory after launch failure" @{ directory = $dir } -RequestId $requestId
+                    Remove-Item -Path $dir -Recurse -Force -ErrorAction Stop
+                }
+            } catch {
+                Write-LogError "Failed to cleanup sandbox directory" @{
+                    directory = $dir
+                    error = $_.ToString()
+                } -RequestId $requestId
+            }
+        }
+    }
+
+    Write-LogError "Parallel launch operation failed" @{
+        launchedCount = @($processes).Count
+        requestedCount = $InstanceCount
+    } -RequestId $requestId
+    exit 1
+}
+
+Write-LogInfo "Waiting for instances to stabilize" @{ waitSeconds = 15 } -RequestId $requestId
 Start-Sleep -Seconds 15
 
 # Verify all instances are running
-Write-Host ""
-Write-Host "Verifying instances..." -ForegroundColor Cyan
+Write-LogInfo "Verifying instances" @{ } -RequestId $requestId
 $running = $processes | Where-Object { -not $_.HasExited }
 $runningCount = @($running).Count
 $totalCount = @($processes).Count
 
 if ($runningCount -eq 0) {
-    Write-Error "All instances exited immediately. Check sandbox logs at $($boxPool.OutputDir)"
+    Write-LogError "All instances exited immediately" @{
+        outputDir = $boxPool.OutputDir
+        totalLaunched = $totalCount
+    } -RequestId $requestId
     exit 1
 }
 
-Write-Host "[PASS] Running instances: $runningCount/$totalCount" -ForegroundColor Green
+Write-LogInfo "Instance verification complete" @{
+    runningCount = $runningCount
+    totalCount = $totalCount
+} -RequestId $requestId
 
 if ($runningCount -lt $totalCount) {
-    Write-Warning "Some instances crashed. Check logs in sandbox directories."
+    Write-LogWarn "Some instances crashed - check logs in sandbox directories" @{
+        runningCount = $runningCount
+        totalCount = $totalCount
+    } -RequestId $requestId
 }
 
 # Output summary
-Write-Host ""
-Write-Host "=== Launch Summary ===" -ForegroundColor Cyan
-Write-Host "Instances: $runningCount running (from $totalCount created)"
-Write-Host "Sandbox location: $($boxPool.OutputDir)"
-Write-Host ""
-Write-Host "Sandbox Details:"
+Write-LogInfo "Launch operation completed successfully" @{
+    runningCount = $runningCount
+    totalCount = $totalCount
+    sandboxLocation = $boxPool.OutputDir
+} -RequestId $requestId
+
 for ($i = 0; $i -lt $sandboxInstances.Count; $i++) {
     $inst = $sandboxInstances[$i]
-    Write-Host "  Sandbox $($i+1):" -ForegroundColor DarkCyan
-    Write-Host "    Directory: $($inst.Directory)" -ForegroundColor DarkGray
-    Write-Host "    Exe:       $($inst.GameExePath)" -ForegroundColor DarkGray
-    Write-Host "    Pipe:      $($inst.PipeName)" -ForegroundColor DarkGray
-    Write-Host "    Log:       $($inst.DebugLogPath)" -ForegroundColor DarkGray
+    Write-LogDebug "Sandbox instance details" @{
+        instanceNum = $i + 1
+        directory = $inst.Directory
+        exePath = $inst.GameExePath
+        pipeName = $inst.PipeName
+        debugLogPath = $inst.DebugLogPath
+    } -RequestId $requestId
 }
-Write-Host ""
-Write-Host "[PASS] Parallel sandboxed launcher complete" -ForegroundColor Green
 
 # Return pool and process information
 return @{

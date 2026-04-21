@@ -35,12 +35,12 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="6.*" />
-    <PackageReference Include="coverlet.collector" Version="8.*">
+    <PackageReference Include="coverlet.collector" Version="10.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <!-- coverlet.msbuild enforces the coverage threshold gate -->
-    <PackageReference Include="coverlet.msbuild" Version="6.*" />
+    <PackageReference Include="coverlet.msbuild" Version="10.*" />
     <PackageReference Include="NetArchTest.Rules" Version="1.*" />
     <PackageReference Include="AutoFixture" Version="4.*" />
     <PackageReference Include="AutoFixture.Xunit2" Version="4.*" />

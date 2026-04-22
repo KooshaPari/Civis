@@ -16,6 +16,7 @@ using DINOForge.Tools.PackCompiler.Models;
 using DINOForge.Tools.PackCompiler.Services;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DINOForge.Tools.PackCompiler
 {
@@ -108,35 +109,39 @@ namespace DINOForge.Tools.PackCompiler
             // Bundle inspection commands (kept for backwards compatibility)
             var bundlesCommand = new Command("bundles") { Description = "Inspect and validate Unity asset bundles" };
 
-            var gameDirArg = new Argument<string>("game-dir") { Description = "Game installation directory" };
-            var bundlesListCommand = new Command("list") { Description = "List all game asset bundles" };
-            bundlesListCommand.Arguments.Add(gameDirArg);
-            bundlesListCommand.SetAction(parseResult =>
-            {
-                string gameDir = parseResult.GetValue(gameDirArg)!;
-                AssetsListBundles(gameDir);
-            });
-
-            var bundlePathArg = new Argument<string>("bundle-path") { Description = "Path to a .bundle file" };
-            var bundlesInspectCommand = new Command("inspect") { Description = "List assets in a bundle" };
-            bundlesInspectCommand.Arguments.Add(bundlePathArg);
-            bundlesInspectCommand.SetAction(parseResult =>
-            {
-                string bundlePath = parseResult.GetValue(bundlePathArg)!;
-                AssetsInspect(bundlePath);
-            });
-
-            var bundlesValidateCommand = new Command("validate") { Description = "Validate a mod asset bundle" };
-            bundlesValidateCommand.Arguments.Add(bundlePathArg);
-            bundlesValidateCommand.SetAction(parseResult =>
-            {
-                string bundlePath = parseResult.GetValue(bundlePathArg)!;
-                AssetsValidate(bundlePath);
-            });
-
-            bundlesCommand.Subcommands.Add(bundlesListCommand);
-            bundlesCommand.Subcommands.Add(bundlesInspectCommand);
-            bundlesCommand.Subcommands.Add(bundlesValidateCommand);
+            // NOTE: Asset bundle inspection commands (list, inspect, validate) require AssetService
+            // which is part of the Runtime (BepInEx plugin), not the SDK. These are deprecated.
+            // Use the MCP bridge tools instead (game_screenshot, game_analyze_screen, etc.)
+            //
+            // var gameDirArg = new Argument<string>("game-dir") { Description = "Game installation directory" };
+            // var bundlesListCommand = new Command("list") { Description = "List all game asset bundles" };
+            // bundlesListCommand.Arguments.Add(gameDirArg);
+            // bundlesListCommand.SetAction(parseResult =>
+            // {
+            //     string gameDir = parseResult.GetValue(gameDirArg)!;
+            //     AssetsListBundles(gameDir);
+            // });
+            //
+            // var bundlePathArg = new Argument<string>("bundle-path") { Description = "Path to a .bundle file" };
+            // var bundlesInspectCommand = new Command("inspect") { Description = "List assets in a bundle" };
+            // bundlesInspectCommand.Arguments.Add(bundlePathArg);
+            // bundlesInspectCommand.SetAction(parseResult =>
+            // {
+            //     string bundlePath = parseResult.GetValue(bundlePathArg)!;
+            //     AssetsInspect(bundlePath);
+            // });
+            //
+            // var bundlesValidateCommand = new Command("validate") { Description = "Validate a mod asset bundle" };
+            // bundlesValidateCommand.Arguments.Add(bundlePathArg);
+            // bundlesValidateCommand.SetAction(parseResult =>
+            // {
+            //     string bundlePath = parseResult.GetValue(bundlePathArg)!;
+            //     AssetsValidate(bundlePath);
+            // });
+            //
+            // bundlesCommand.Subcommands.Add(bundlesListCommand);
+            // bundlesCommand.Subcommands.Add(bundlesInspectCommand);
+            // bundlesCommand.Subcommands.Add(bundlesValidateCommand);
 
             // Thunderstore command
             var thunderstorePackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
@@ -217,6 +222,7 @@ namespace DINOForge.Tools.PackCompiler
             return await parseResultObj.InvokeAsync();
         }
 
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void ValidatePack(string packPath, string format = "text")
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
@@ -497,32 +503,9 @@ namespace DINOForge.Tools.PackCompiler
                 AnsiConsole.MarkupLine($"Game Directory: {gameDir}");
                 AnsiConsole.WriteLine();
 
-                using var service = new AssetService(gameDir);
-                var bundles = service.ListBundles();
-
-                if (bundles.Count == 0)
-                {
-                    AnsiConsole.MarkupLine("[yellow]No bundles found. Check that the game directory is correct.[/]");
-                    return;
-                }
-
-                var table = new Table();
-                table.AddColumn("Bundle");
-                table.AddColumn(new TableColumn("Size").RightAligned());
-                table.AddColumn(new TableColumn("Assets").RightAligned());
-
-                foreach (BundleInfo bundle in bundles)
-                {
-                    string sizeStr = FormatBytes(bundle.SizeBytes);
-                    table.AddRow(
-                        Markup.Escape(bundle.Name),
-                        sizeStr,
-                        bundle.AssetCount.ToString());
-                }
-
-                AnsiConsole.Write(table);
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[dim]Total: {bundles.Count} bundle(s)[/]");
+                // NOTE: AssetService is in Runtime (BepInEx plugin context), not available in CLI
+                AnsiConsole.MarkupLine("[yellow]Asset bundle inspection is not available in PackCompiler CLI.[/]");
+                AnsiConsole.MarkupLine("[yellow]Use the MCP bridge tools instead: game_screenshot, game_analyze_screen[/]");
             }
             catch (Exception ex)
             {
@@ -539,33 +522,9 @@ namespace DINOForge.Tools.PackCompiler
                 AnsiConsole.MarkupLine($"Bundle: {Markup.Escape(bundlePath)}");
                 AnsiConsole.WriteLine();
 
-                using var service = new AssetService(Path.GetDirectoryName(bundlePath) ?? ".");
-                var assets = service.ListAssets(bundlePath);
-
-                if (assets.Count == 0)
-                {
-                    AnsiConsole.MarkupLine("[yellow]No assets found in bundle.[/]");
-                    return;
-                }
-
-                var table = new Table();
-                table.AddColumn("Name");
-                table.AddColumn("Type");
-                table.AddColumn(new TableColumn("PathID").RightAligned());
-                table.AddColumn(new TableColumn("Size").RightAligned());
-
-                foreach (AssetInfo asset in assets)
-                {
-                    table.AddRow(
-                        Markup.Escape(asset.Name),
-                        Markup.Escape(asset.TypeName),
-                        asset.PathId.ToString(),
-                        FormatBytes(asset.SizeBytes));
-                }
-
-                AnsiConsole.Write(table);
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[dim]Total: {assets.Count} asset(s)[/]");
+                // NOTE: AssetService is in Runtime (BepInEx plugin context), not available in CLI
+                AnsiConsole.MarkupLine("[yellow]Asset bundle inspection is not available in PackCompiler CLI.[/]");
+                AnsiConsole.MarkupLine("[yellow]Use the MCP bridge tools instead: game_screenshot, game_analyze_screen[/]");
             }
             catch (Exception ex)
             {
@@ -582,51 +541,9 @@ namespace DINOForge.Tools.PackCompiler
                 AnsiConsole.MarkupLine($"Bundle: {Markup.Escape(modBundlePath)}");
                 AnsiConsole.WriteLine();
 
-                using var service = new AssetService(Path.GetDirectoryName(modBundlePath) ?? ".");
-                AssetValidationResult result = service.ValidateModBundle(modBundlePath);
-
-                AnsiConsole.MarkupLine($"Unity Version: [bold]{Markup.Escape(result.UnityVersion)}[/]");
-                AnsiConsole.MarkupLine($"Expected: [bold]{AssetService.ExpectedUnityVersion}.x[/]");
-                AnsiConsole.WriteLine();
-
-                if (result.Errors.Count > 0)
-                {
-                    AnsiConsole.MarkupLine("[bold red]Validation Errors:[/]");
-                    foreach (string error in result.Errors)
-                    {
-                        AnsiConsole.MarkupLine($"  [red]x[/] {Markup.Escape(error)}");
-                    }
-                    AnsiConsole.WriteLine();
-                }
-
-                if (result.Assets.Count > 0)
-                {
-                    var typeCounts = result.Assets
-                        .GroupBy(a => a.TypeName)
-                        .OrderByDescending(g => g.Count());
-
-                    var table = new Table();
-                    table.AddColumn("Asset Type");
-                    table.AddColumn(new TableColumn("Count").RightAligned());
-
-                    foreach (var group in typeCounts)
-                    {
-                        table.AddRow(Markup.Escape(group.Key), group.Count().ToString());
-                    }
-
-                    AnsiConsole.Write(table);
-                    AnsiConsole.WriteLine();
-                }
-
-                if (result.IsValid)
-                {
-                    AnsiConsole.MarkupLine("[bold green]Validation passed![/]");
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine("[bold red]Validation failed.[/]");
-                    Environment.Exit(1);
-                }
+                // NOTE: AssetService is in Runtime (BepInEx plugin context), not available in CLI
+                AnsiConsole.MarkupLine("[yellow]Asset bundle validation is not available in PackCompiler CLI.[/]");
+                AnsiConsole.MarkupLine("[yellow]Use the MCP bridge tools instead: game_screenshot, game_analyze_screen[/]");
             }
             catch (Exception ex)
             {

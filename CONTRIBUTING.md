@@ -1,38 +1,49 @@
 # Contributing to DINOForge
 
-DINOForge is an agent-driven mod platform for **Diplomacy is Not an Option (DINO)**. We welcome contributions from developers, modders, and architects.
+Thank you for your interest in contributing to DINOForge! This document provides guidelines for contributing code, documentation, content packs, and domain plugins to our agent-driven mod platform for **Diplomacy is Not an Option (DINO)**.
 
-## Project Overview
+## Welcome
 
-**DINOForge** is a **mod operating system**, not a single mod. It provides:
+DINOForge is a **mod operating system**, not a single mod. It provides:
 
-- **Runtime**: BepInEx-compatible ECS plugin for DINO
-- **SDK**: Public mod API with registries, schemas, and content loaders
+- **Runtime**: BepInEx-compatible ECS plugin for DINO with component mapping
+- **SDK**: Public mod API with typed registries, schemas, and pack loading
 - **Domain Plugins**: Extensible systems (Warfare, Economy, Scenario, UI)
-- **Pack System**: Declarative mod content with validation and hot-reload
-- **Tooling**: CLI tools for pack compilation, validation, and debugging
+- **Pack System**: Declarative YAML content with validation, dependency resolution, and hot-reload
+- **Tooling**: CLI tools for pack compilation, asset pipelines, and debugging
+- **MCP Bridge**: Game automation and testing via Claude Code integration
+
+We believe modding should be declarative, composable, and agent-friendly. Every contribution — whether code, packs, tests, or documentation — helps us build a more robust ecosystem.
 
 **Key Design Principles**:
 - **Wrap, don't handroll** — Always prefer existing libraries over custom implementations
 - **Declarative before imperative** — YAML/JSON manifests over C# patches
 - **Framework before content** — Platform stability takes priority
 - **Agent-first** — Optimized for autonomous agent-driven development
+- **Schema-driven** — Schemas validate before runtime
 
 See [CLAUDE.md](./CLAUDE.md) for the full agent governance model and technical rules.
 
-## Prerequisites
+## System Requirements
 
 ### Required
-- **.NET 8.0 SDK** or later ([download](https://dotnet.microsoft.com/download))
+
+- **.NET 11 Preview SDK** (`11.0.100-preview.2.26159.112`) — For building tools and CLI
+  - [Download .NET 11](https://dotnet.microsoft.com/download/dotnet/11.0)
+  - Verify: `dotnet --version` should show `11.0.100-preview.2.26159.112`
+- **.NET 8.0 SDK** — For SDK/domain library builds (netstandard2.0 compat)
+  - [Download .NET 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **Git** 2.20+
-- **Windows** (DINO and BepInEx are Windows-only)
+- **Windows** (DINO and BepInEx are Windows-only; Linux/macOS via WSL supported)
 
 ### Optional but Recommended
-- **Diplomacy is Not an Option** (Steam) — for testing mods in-game
-- **Visual Studio Code** or **Visual Studio 2022** — for C# development
-- **pre-commit** — for automatic code checks (`pip install pre-commit && pre-commit install`)
 
-## Development Setup
+- **Diplomacy is Not an Option** (Steam) — For in-game mod testing
+- **Visual Studio Code** or **Visual Studio 2022** — For C# development
+- **BepInEx 5.4.x** — For testing mods in-game
+- **pre-commit** — For automatic code checks (`pip install pre-commit && pre-commit install`)
+
+## Getting Started
 
 ### 1. Clone the Repository
 
@@ -41,7 +52,20 @@ git clone https://github.com/KooshaPari/Dino.git
 cd Dino
 ```
 
-### 2. Restore Dependencies and Build
+### 2. Verify .NET Version
+
+```bash
+# Check your SDK versions
+dotnet --version
+# Should include: 11.0.100-preview.2.26159.112
+
+# List all SDKs
+dotnet --info
+```
+
+If .NET 11 preview is missing, [download it here](https://dotnet.microsoft.com/download/dotnet/11.0).
+
+### 3. Build the Solution
 
 ```bash
 # Build everything (excluding Runtime which requires game DLLs)
@@ -51,19 +75,27 @@ dotnet build src/DINOForge.CI.sln
 dotnet build src/DINOForge.sln
 ```
 
-### 3. Run Tests
-
-```bash
-# Run all tests (CI solution)
-dotnet test src/DINOForge.CI.sln --verbosity normal
-
-# Run tests from full solution (requires game DLLs)
-dotnet test src/DINOForge.sln --verbosity normal
-```
+### 4. Run Tests
 
 All tests must pass before submitting a PR.
 
-### 4. Code Formatting
+```bash
+# Run all tests (CI solution — no game dependencies)
+dotnet test src/DINOForge.CI.sln --verbosity normal
+
+# Run tests with coverage
+dotnet test src/DINOForge.CI.sln /p:CollectCoverage=true /p:CoverageFormat=opencover
+
+# Run tests from full solution (requires game DLLs)
+dotnet test src/DINOForge.sln --verbosity normal
+
+# Run specific test category
+dotnet test src/DINOForge.CI.sln --filter "Category=Unit"
+```
+
+### 5. Code Formatting
+
+DINOForge uses `dotnet format` to enforce consistent style.
 
 ```bash
 # Check formatting (fails if changes needed)
@@ -73,26 +105,30 @@ dotnet format src/DINOForge.CI.sln --verify-no-changes
 dotnet format src/DINOForge.CI.sln
 ```
 
-### 5. (Optional) Install Game and BepInEx
+### 6. (Optional) Install Game and BepInEx
 
 If you want to test mods in-game:
 
-1. Install [Diplomacy is Not an Option](https://store.steampowered.com/app/1302580/Diplomacy_is_Not_an_Option/) from Steam
-2. Install the **modified BepInEx 5 with ECS support** from [Nexus Mods](https://www.nexusmods.com/diplomacyisnotanoption/mods/1) (v5.4.23.2-ecs — custom Doorstop fork required for `ecs_plugins/` multi-assembly loading)
-3. Extract to your game root directory
+1. Install [Diplomacy is Not an Option](https://store.steampowered.com/app/1272320/) from Steam
+2. Install **BepInEx 5.4.x** with ECS support from [GitHub releases](https://github.com/BepInEx/BepInEx/releases)
+3. Extract to your game directory
 4. Set `single-instance=0` in `Diplomacy is Not an Option_Data/boot.config`
 5. Verify the structure:
    ```
-   DINO/
-     winhttp.dll            (modified Doorstop — ECS fork)
+   G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\
+     winhttp.dll                          (BepInEx loader)
+     Diplomacy is Not an Option.exe
      doorstop_config.ini
      Diplomacy is Not an Option_Data/
-       boot.config          (must contain: single-instance=0)
+       boot.config                        (must contain: single-instance=0)
      BepInEx/
-       ecs_plugins/         (where DINOForge.Runtime.dll goes)
+       plugins/
+       ecs_plugins/                       (where DINOForge.Runtime.dll goes)
        config/
+       dinoforge_packs/                   (pack directory)
+       dinoforge_debug.log                (runtime logs)
    ```
-5. Update `Directory.Build.props` with your DINO installation path if needed
+6. Update `Directory.Build.props` with your DINO installation path if deploying locally
 
 ## Build Commands Reference
 
@@ -164,23 +200,44 @@ packs/                  # Official and example packs
 schemas/                # JSON/YAML schema definitions (17 schemas)
 ```
 
-## Code Style Guide
+## Code Style & Conventions
 
-### C# Conventions
+DINOForge uses modern C# idioms enforced via `.editorconfig` and `dotnet format`.
 
-- **Target**: C# 12+ with nullable reference types enabled
-- **Async**: Prefer `async/await` over raw `Task`s
-- **Documentation**: XML doc comments on all public APIs
-- **Naming**:
-  - No `var` for non-obvious types (prefer explicit types)
+### C# Style Rules
+
+- **Language version**: C# 12+ with nullable reference types enabled
+- **Async/await**: Prefer `async/await` over raw `Task`s
+- **XML documentation**: Required on all public APIs
+- **Naming conventions**:
   - `PascalCase` for types, methods, properties
   - `camelCase` for parameters and local variables
   - `_camelCase` for private fields
-- **Immutability**: Prefer immutable data models where possible
-- **Patterns**:
-  - Registry pattern for all extensible domains
-  - Dependency injection for services
-  - Thin adapters around external libraries
+- **Type inference**: No `var` for non-obvious types
+  ```csharp
+  // Bad: type not immediately clear
+  var result = registry.Register(unit);
+
+  // Good: type explicit
+  bool registered = registry.Register(unit);
+  ```
+- **Immutability**: Prefer immutable data models via `record` or `init` properties
+  ```csharp
+  // Good: immutable record
+  public record Unit(string Id, string Name, int MaxHealth);
+
+  // Also good: init properties
+  public class Unit
+  {
+      public string Id { get; init; }
+      public string Name { get; init; }
+  }
+  ```
+- **Design patterns**:
+  - **Registry pattern** for all extensible domains (typed registries, conflict detection)
+  - **Dependency injection** for services and bridges
+  - **Thin adapters** around external libraries (wrap, don't fork)
+  - **Composition over inheritance** (interfaces + composition > deep hierarchies)
 
 ### Example Public API
 
@@ -190,14 +247,31 @@ schemas/                # JSON/YAML schema definitions (17 schemas)
 /// </summary>
 /// <param name="unitId">Unique identifier for the unit type.</param>
 /// <param name="config">Configuration specifying unit stats and abilities.</param>
-/// <exception cref="ArgumentException">Thrown if unitId is already registered.</exception>
-public async Task RegisterUnitAsync(string unitId, UnitConfig config)
+/// <returns>True if registration succeeded; false if ID already exists.</returns>
+/// <exception cref="ArgumentNullException">Thrown if unitId or config is null.</exception>
+/// <remarks>
+/// Units must have unique IDs. Attempting to register a duplicate ID returns false
+/// without modifying the existing entry.
+/// </remarks>
+public bool RegisterUnit(string unitId, UnitConfig config)
 {
     ArgumentNullException.ThrowIfNull(unitId);
     ArgumentNullException.ThrowIfNull(config);
 
-    // Implementation
+    return _units.TryAdd(unitId, config);
 }
+```
+
+### Formatting & Linting
+
+Formatting is enforced in CI. Run locally before committing:
+
+```bash
+# Check formatting (fails if changes needed)
+dotnet format src/DINOForge.sln --verify-no-changes
+
+# Apply fixes
+dotnet format src/DINOForge.sln
 ```
 
 ## Conventional Commits and SemVer
@@ -531,47 +605,111 @@ All contributions should map to one of these **legal move classes**:
 
 Reframe your work to fit one of these categories. See [CLAUDE.md](./CLAUDE.md) for details.
 
-## Testing Philosophy
+## Testing Requirements
 
-DINOForge uses **BDD + TDD + SDD**:
+DINOForge maintains **1,000+ tests** with **95%+ code coverage**. We use **BDD + TDD + SDD**:
 
 - **BDD** (Behavior-Driven Development): Test acceptance criteria first
-- **TDD** (Test-Driven Development): Test all public APIs
-- **SDD** (Spec-Driven Development): Schemas define structure before implementation
+- **TDD** (Test-Driven Development): All public APIs require unit tests
+- **SDD** (Spec-Driven Development): Schemas validate before runtime
+- **Property-based testing**: Validate invariants across random inputs (FsCheck)
+
+### Test Categories
+
+Tests are organized by category and tagged with attributes:
+
+| Category | Attribute | Purpose | Example |
+|----------|-----------|---------|---------|
+| **Unit** | `[Category("Unit")]` | Single function/class in isolation | Registry.Register() |
+| **Integration** | `[Category("Integration")]` | Component interactions, I/O, databases | ContentLoader + Registry |
+| **Property** | `[Category("Property")]` | Invariants across random inputs | Dependency resolution never cycles |
+| **GameAutomation** | `[Category("GameAutomation")]` | Tests against live/mocked game | Asset swap, stat modifiers |
 
 ### Writing Tests
 
 Use **xUnit** + **FluentAssertions** + **Moq**:
 
 ```csharp
-[Fact]
-public async Task RegisterUnit_WithValidConfig_SucceedsAndReturnsId()
+using Xunit;
+using FluentAssertions;
+
+public class UnitRegistryTests
 {
-    // Arrange
-    var config = new UnitConfig { /* ... */ };
+    private readonly UnitRegistry _registry = new();
 
-    // Act
-    var result = await _registry.RegisterUnitAsync("test-unit", config);
+    [Fact]
+    [Category("Unit")]
+    public void Register_WithUniqueId_Succeeds()
+    {
+        // Arrange
+        var unit = new Unit("warrior", "Warrior", maxHealth: 50);
 
-    // Assert
-    result.Should().Be("test-unit");
-    (await _registry.GetUnitAsync("test-unit")).Should().NotBeNull();
-}
+        // Act
+        bool registered = _registry.Register(unit);
 
-[Fact]
-public async Task RegisterUnit_WithDuplicateId_ThrowsArgumentException()
-{
-    // Arrange
-    var config = new UnitConfig { /* ... */ };
-    await _registry.RegisterUnitAsync("dup", config);
+        // Assert
+        registered.Should().BeTrue();
+        _registry.Get("warrior").Should().NotBeNull();
+        _registry.Get("warrior")!.MaxHealth.Should().Be(50);
+    }
 
-    // Act & Assert
-    await FluentActions
-        .Invoking(() => _registry.RegisterUnitAsync("dup", config))
-        .Should()
-        .ThrowAsync<ArgumentException>();
+    [Fact]
+    [Category("Unit")]
+    public void Register_WithDuplicateId_FailsSilently()
+    {
+        // Arrange
+        var unit1 = new Unit("warrior", "Warrior", maxHealth: 50);
+        var unit2 = new Unit("warrior", "Different", maxHealth: 60);
+        _registry.Register(unit1);
+
+        // Act
+        bool registered = _registry.Register(unit2);
+
+        // Assert
+        registered.Should().BeFalse();
+        _registry.Get("warrior")!.MaxHealth.Should().Be(50);  // Original unchanged
+    }
+
+    [Theory]
+    [Category("Property")]
+    [InlineData("unit-1")]
+    [InlineData("unit-2")]
+    [InlineData("long-unit-name-with-dashes")]
+    public void Register_WithValidId_NeverThrows(string unitId)
+    {
+        // Arrange
+        var unit = new Unit(unitId, "Name", maxHealth: 50);
+
+        // Act & Assert
+        var action = () => _registry.Register(unit);
+        action.Should().NotThrow();
+    }
 }
 ```
+
+### Coverage Requirements
+
+- **New public APIs**: 95%+ coverage required
+- **Modified code**: Coverage must not decrease
+- **Exclusions**: Model classes (records), auto-generated code, ECS glue
+
+Measure coverage locally:
+
+```bash
+dotnet test src/DINOForge.CI.sln /p:CollectCoverage=true /p:CoverageFormat=opencover
+# Look for: src/Tests/coverage.xml
+```
+
+GitHub will block merge if coverage drops below the baseline.
+
+### Testing Best Practices
+
+1. **Arrange-Act-Assert (AAA)** — Organize every test with clear setup, action, assertion phases
+2. **One assertion per behavior** — Test one thing per test (multiple assertions on same concept is OK)
+3. **Meaningful names** — Test name = "should X when Y given Z"
+4. **No test interdependencies** — Tests must run in any order
+5. **Avoid mocking registries** — Mock external services (HTTP, files), not domain logic
+6. **Use fixtures for reusable setup** — Don't repeat Arrange logic
 
 ## Code of Conduct
 

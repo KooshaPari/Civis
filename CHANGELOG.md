@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Build system**: Restored ProjectReference dependencies for SDK and Bridge.Protocol in Runtime.csproj
+  - Fixes cascading compilation errors when building from solution
+  - Ensures correct MSBuild project ordering
+  - Resolves metadata file generation issues in test projects
+
+### Added
+
+#### TITAN-Inspired Automated Game Testing Framework
+- **GameTestRunner** (`scripts/game_test_runner.py`): Coverage-driven test automation with state abstraction, stuck detection, and reflection
+  - `GameStateAbstractor`: Converts raw game state (entity counts, UI) to symbolic tokens for coverage tracking
+  - `CoverageMemory`: Persistent (state, action) coverage tracking with outcome recording and failure avoidance
+  - `GameTestRunner`: Main orchestrator with stuck detection (5+ consecutive unchanged states triggers reflection)
+  - Async/await integration with MCP tools (game_launch, game_screenshot, game_input, game_status, game_analyze_screen)
+  - Results serialization to `docs/test-results/` with coverage stats
+- **7 Predefined test scenarios** (`scripts/game_test_scenarios.py`):
+  - `smoke`: Basic game launch + mod menu toggle
+  - `unit_spawn`: Spawn units and verify visual asset swaps
+  - `modern_warfare`: Modern warfare pack units test
+  - `starwars`: Star Wars Clone Wars pack units test
+  - `debug_overlay`: Toggle debug overlay and entity count verification
+  - `pause_menu`: Navigate pause menu with arrow keys
+  - `stress`: Extended gameplay stress test (15 screenshots over 30 seconds)
+- **Updated `/game-test-task` command** with scenario selection and custom task support
+  - Usage: `/game-test-task --scenario smoke` or `/game-test-task --task "custom description"`
+  - Coverage memory persistence across test runs via `docs/sessions/coverage_memory.json`
+  - State abstraction config via `docs/sessions/dino_state_abstraction.yaml`
+
+#### Isolation Layer & Backend Abstraction (Phase 3-5)
+- **Isolation layer abstraction** for game capture/input operations over multiple backend implementations
+  - `IsolationBackend` abstract base class with 9 async methods (capture_window, capture_display, inject_key, type_text, mouse_click, mouse_scroll, list_windows, focus_window, launch_process)
+  - `HiddenDesktopBackend`: Win32 CreateDesktop backend (stable, Windows-only)
+  - `PlayCUABackend`: JSON-RPC client for playCUA stdio interface (cross-platform capable)
+  - `IsolationContextManager`: Singleton with auto-detection (tries playCUA, falls back to HiddenDesktop)
+- **playCUA JSON-RPC integration** via stdio NDJSON protocol
+  - `PlayCUAClient` for asynchronous bidirectional communication with bare-cua-native binary
+  - Base64-encoded screenshot responses from playCUA
+  - Request/response correlation with JSON-RPC 2.0 ID mapping
+- **Data models**: `Frame` (screenshot data) and `WindowInfo` (window metadata) dataclasses
+- **Test suite** for isolation layer (`scripts/test_isolation_layer.py`) with 8+ test cases covering backend instantiation, key injection, mouse operations, and dataclass validation
+
 ## [0.22.0] — 2026-04-12
 
 ### Added

@@ -23,6 +23,10 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 - **Dev Tooling** — PackCompiler CLI, DumpTools, in-game debug overlay, entity dumper
 - **MCP Server** — game automation and analysis tools (screenshot capture, UI automation, input injection, state and catalog queries)
 - **Schema Validation** — 24 JSON schemas catch errors before runtime
+- **Polyglot Build** — Rust, Go, and Zig optimization modules with seamless .NET integration
+- **Game Automation Framework** — Headless game testing, UI automation, and state validation
+- **95%+ Test Coverage** — 1,269+ passing tests (unit, integration, property-based, and E2E)
+- **20/20 CI Workflows** — Fully automated CI/CD with GitHub Actions, dependency scanning, and SBOM generation
 
 ## Milestone Status
 
@@ -105,11 +109,35 @@ See [LIBIFICATION_ROADMAP.md](docs/LIBIFICATION_ROADMAP.md) for complete package
 
 ---
 
+## Getting Started
+
+New to DINOForge? Start here:
+
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — Complete setup instructions, architecture overview, and development workflow
+- **[Contributing Guidelines](CONTRIBUTING.md)** — How to contribute, testing requirements, and release process
+
+### Using DINOForge as a Library
+
+If you're building a mod or integration using DINOForge packages:
+
+```bash
+# Core SDK (registries, schemas, content loading)
+dotnet add package DINOForge.SDK
+
+# Game bridge (JSON-RPC protocol and client)
+dotnet add package DINOForge.Bridge.Protocol
+dotnet add package DINOForge.Bridge.Client
+```
+
+See [NuGet Packages](#nuget-packages) below for full package list and documentation links.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (or .NET 11 preview for tool projects)
 - [Diplomacy is Not an Option](https://store.steampowered.com/app/1272320/) (for Runtime deployment)
 - [BepInEx 5.4.x](https://github.com/BepInEx/BepInEx/releases) (installed in game directory)
 
@@ -351,6 +379,18 @@ Visit [kooshapari.github.io/Dino](https://kooshapari.github.io/Dino) for full do
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Next Steps
+
+**For Project Planning & Roadmap:**
+
+- **[v0.24.0 Roadmap](docs/ROADMAP_v0.24.0.md)** — Planned features, milestones, and timeline for the next major release
+- **[Performance Baseline](docs/PERFORMANCE_BASELINE.md)** — Performance metrics, benchmarks, and optimization targets
+
+**Coming in v0.24.0:**
+- **phenocompose integration** — AI-assisted pack composition and content generation
+- **VDD (Virtual Display Driver)** — Tier 1 isolated headless game testing
+- **Docker backend** — Containerized game automation for CI/CD environments
 
 ## License
 

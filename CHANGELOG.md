@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Polyglot optimization finalization** (Sprint 1 completion)
+  - **RustAssetPipeline HTTP integration**: Replaced MCP call stubs with real HTTP POST/GET to `http://127.0.0.1:8765/api/tools/` endpoint
+    - Async `CallMcpAsync` for tool invocation with JSON serialization
+    - Sync `TryCallMpc` for MCP server health check (1-second timeout)
+    - Graceful fallback to C# AssimpNet if server unavailable
+    - Static HttpClient with 5-second timeout and cached availability flag
+  - **PlayCUA build job**: Added to `polyglot-build.yml` for automated Rust binary compilation
+    - Builds from `https://github.com/KooshaPari/playcua` on every polyglot workflow
+    - Uploads release artifact for multi-platform distribution
+    - Integrated into artifact verification pipeline
+
+### Documentation
+- **PhenoCompose integration roadmap** (Sprint 0.5 completion)
+  - Updated `CLAUDE.md` with phenocompose architecture overview
+  - Documented 3-tier isolation model (WASM/gVisor/Firecracker)
+  - Added integration strategy for parallel game testing (v0.24.0+)
+  - Reference documents in `docs/sessions/` for investigation details
+
 ## [0.23.0] - 2026-04-23
 
 ### Fixed

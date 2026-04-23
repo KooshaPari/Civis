@@ -5,13 +5,14 @@ description: Live test suite status from latest CI run
 
 # Test Results
 
-Test results from the latest CI run will appear here. The test suite includes:
+Test results from the latest CI run and TITAN-inspired game testing will appear here. The test suite includes:
 
 - **Unit Tests**: Core SDK, domain plugins, and bridge layer
 - **Integration Tests**: End-to-end gameplay validation
 - **Schema Tests**: Pack validation against JSON schemas
 - **Asset Tests**: Pipeline imports, optimizations, and bundles
 - **Fuzzing Tests**: Property-based testing and corpus analysis
+- **TITAN Game Tests**: Coverage-driven automated gameplay testing with stuck detection and reflection
 
 ## Current Status
 

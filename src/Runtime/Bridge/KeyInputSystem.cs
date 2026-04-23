@@ -161,8 +161,16 @@ namespace DINOForge.Runtime.Bridge
                 // scene transitions. Restart it if dead so CLI/MCP tools recover.
                 Plugin.SharedBridgeServer?.EnsureServerAlive();
 
-                // If PersistentRoot was destroyed by DINO, resurrect it via ECS
-                Plugin.TryResurrect("(ECS tick)", "KeyInputSystem");
+                // If PersistentRoot was destroyed by DINO, resurrect it via ECS.
+                // Only call TryResurrect when resurrection is actually needed to avoid
+                // spamming RecreateInCurrentWorld on every ECS tick.
+                if (Plugin.NeedsResurrection || Plugin.NeedsDeferredResurrection)
+                {
+                    bool wasDeferred = Plugin.NeedsDeferredResurrection;
+                    Plugin.NeedsResurrection = false;
+                    Plugin.NeedsDeferredResurrection = false;
+                    Plugin.TryResurrect(wasDeferred ? "(deferred)" : "(ECS tick)", "KeyInputSystem");
+                }
 
                 // Detect world changes (scene transitions) and re-register KeyInputSystem
                 // in DefaultGameObjectInjectionWorld if it changed. This fixes the bug where

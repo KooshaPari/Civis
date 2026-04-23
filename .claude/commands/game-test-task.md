@@ -6,35 +6,65 @@ description: Run an automated game test task using TITAN-inspired coverage-drive
 
 Runs an automated game test using a coverage-driven agent loop inspired by the TITAN paper.
 
-**Usage**: `/game-test-task <task_description>`
-
-**Arguments**: $ARGUMENTS
+**Usage**: `/game-test-task [--scenario SCENARIO] [--task DESCRIPTION] [--max-actions N]`
 
 ## What This Does
 
 Implements the TITAN testing framework (state abstraction, coverage memory, stuck detection, reflection) on top of DINOForge MCP tools.
 
 1. **Load coverage memory** from `docs/sessions/coverage_memory.json`
-2. **Take initial screenshot** via `game_screenshot`
-3. **Analyze screen state** via `game_analyze_screen` to identify UI elements
+2. **Take initial screenshot** via game automation
+3. **Analyze screen state** to identify UI elements
 4. **Abstract state** using DINO state config from `docs/sessions/dino_state_abstraction.yaml`
 5. **Main loop** (max 50 actions):
    - Check coverage memory — avoid recently-failed (state, action) pairs
    - Determine next action based on task description + current state
-   - Execute action via `game_input` or `game_navigate_to`
-   - Take screenshot and compare to previous (via `game_wait_and_screenshot`)
-   - If state unchanged for 5 consecutive actions → trigger reflection
+   - Execute action via game input
+   - Take screenshot and compare to previous
+   - If state unchanged for 5+ consecutive actions → trigger reflection
    - Update coverage memory with (state, action, outcome)
    - Check if task is complete → exit loop if so
 6. **Save final coverage memory** back to `docs/sessions/coverage_memory.json`
-7. **Report results**: task outcome, actions taken, any bugs/issues discovered, coverage achieved
+7. **Report results**: task outcome, actions taken, coverage achieved
+
+## Built-in Test Scenarios
+
+Run a predefined scenario with:
+
+```bash
+/game-test-task --scenario smoke
+/game-test-task --scenario unit_spawn
+/game-test-task --scenario modern_warfare
+/game-test-task --scenario starwars
+/game-test-task --scenario debug_overlay
+/game-test-task --scenario pause_menu
+/game-test-task --scenario stress
+```
+
+### Scenario Descriptions
+
+- **smoke**: Basic game launch + screenshot + mod menu toggle
+- **unit_spawn**: Spawn units and verify visual asset swaps
+- **modern_warfare**: Modern warfare pack units test
+- **starwars**: Star Wars Clone Wars pack units test
+- **debug_overlay**: Toggle debug overlay and verify entity counts
+- **pause_menu**: Navigate pause menu with arrow keys
+- **stress**: Extended gameplay stress test (15 screenshots)
+
+## Custom Task
+
+Run a custom task with:
+
+```bash
+/game-test-task --task "Verify game launches and mod menu opens" --max-actions 50
+```
 
 ## Stuck Detection + Reflection
 
 When stuck (5 actions without state change):
 
-1. Capture current screenshot via `game_screenshot`
-2. Analyze with `game_analyze_screen` to detect UI state
+1. Capture current screenshot
+2. Analyze UI state
 3. Issue structured reflection prompt
 4. Execute the chosen alternative action
 5. Continue loop
@@ -44,41 +74,40 @@ When stuck (5 actions without state change):
 **File**: `docs/sessions/coverage_memory.json`
 
 Fields in coverage entries:
-- `state_hash` — Abstract state token (concatenated from dino_state_abstraction.yaml)
+- `state_hash` — Abstract state token (e.g., `menu=gameplay_entities=medium_health=healthy`)
 - `action` — Action name (from action_bundles in dino_state_abstraction.yaml)
 - `outcome` — One of: `success`, `failed`, `unknown`
 - `times_tried` — How many times this pair has been attempted
+- `first_tried`, `last_tried` — ISO timestamps
 - `notes` — Optional notes about the outcome
 
 ## DINO State Abstraction
 
 Reads `docs/sessions/dino_state_abstraction.yaml` which maps raw game state to symbolic tokens.
 
-Default state dimensions if file missing:
-- wave_active: entity_count threshold
-- menu_state: screenshot UI detection
-- resource_level: resource entity aggregate
-- health_state: min entity health ratio
+State dimensions:
+- `menu_state`: main_menu, gameplay, pause_menu, loading
+- `entity_count`: low (< 50), medium (50-500), high (> 500)
+- `health`: critical, damaged, healthy (entity health ratio)
 
 ## Action Bundles
 
-Actions available depend on current menu_state. Check `dino_state_abstraction.yaml` for the complete list.
+Actions available depend on current menu_state:
 
-**Main Menu**: press_enter, press_escape
-**Gameplay**: press_f10, press_f9, press_escape, screenshot
-**Pause Menu**: press_escape, press_enter
+| Menu State | Available Actions |
+|------------|-------------------|
+| main_menu | press_enter, press_escape |
+| gameplay | press_f10, press_f9, press_escape, arrow_up/down/left/right |
+| pause_menu | press_escape, press_enter, arrow_up/down |
+| loading | press_escape |
 
-## Implementation Notes for Claude
+## Implementation Files
 
-When implementing this command:
-
-1. **Start simple**: Cover main_menu → gameplay → pause_menu flow first
-2. **Use game_analyze_screen heavily**: It's your primary sensor for state
-3. **Log every (state, action, outcome) triple**: This is the coverage memory
-4. **Reflection is key**: When stuck, always ask the LLM why before continuing
-5. **Save coverage memory after every action**: Enables session continuity
-6. **Never retry the same (state, action) pair twice without reflection**
-7. **Prefer game_wait_and_screenshot** over raw game_screenshot when polling for change
+- **GameTestRunner**: `scripts/game_test_runner.py` — Main test executor
+- **Scenarios**: `scripts/game_test_scenarios.py` — Predefined test scenarios
+- **State abstraction**: `docs/sessions/dino_state_abstraction.yaml` — State config
+- **Coverage memory**: `docs/sessions/coverage_memory.json` — Persistent coverage data
+- **Results**: `docs/test-results/` — Test results (JSON)
 
 ## See Also
 

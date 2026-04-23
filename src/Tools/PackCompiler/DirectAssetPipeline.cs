@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using DINOForge.SDK;
@@ -21,6 +22,7 @@ namespace DINOForge.Tools.PackCompiler
         /// </summary>
         /// <param name="packPath">Path to the pack directory containing asset_pipeline.yaml</param>
         /// <returns>Exit code: 0 on success, non-zero on failure</returns>
+        [RequiresUnreferencedCode()]
         public static async Task<int> RunPhase3A(string packPath)
         {
             var logPath = Path.Combine(packPath, "phase3a_execution.log");

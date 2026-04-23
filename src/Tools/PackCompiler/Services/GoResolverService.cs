@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using DINOForge.Tools.PackCompiler.Models;
 using DINOForge.SDK;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DINOForge.Tools.PackCompiler.Services
 {
@@ -63,6 +64,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         /// Invoke Go binary to resolve dependencies.
         /// Writes JSON input to temp file, invokes binary, reads JSON output.
         /// </summary>
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private async Task<List<string>> ResolveWithGoAsync(
             List<PackManifest> available,
             PackManifest target)

@@ -5,26 +5,108 @@ All notable changes to DINOForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.24.0-dev] - In Progress
 
 ### Added
-- **Polyglot optimization finalization** (Sprint 1 completion)
-  - **RustAssetPipeline HTTP integration**: Replaced MCP call stubs with real HTTP POST/GET to `http://127.0.0.1:8765/api/tools/` endpoint
-    - Async `CallMcpAsync` for tool invocation with JSON serialization
-    - Sync `TryCallMpc` for MCP server health check (1-second timeout)
-    - Graceful fallback to C# AssimpNet if server unavailable
-    - Static HttpClient with 5-second timeout and cached availability flag
-  - **PlayCUA build job**: Added to `polyglot-build.yml` for automated Rust binary compilation
-    - Builds from `https://github.com/KooshaPari/playcua` on every polyglot workflow
-    - Uploads release artifact for multi-platform distribution
-    - Integrated into artifact verification pipeline
+
+#### Documentation & Contributor Onboarding
+- **Comprehensive CONTRIBUTING.md**
+  - Code style guidelines (C# 12+, nullable reference types, naming conventions)
+  - Testing requirements (95%+ coverage, xUnit + FluentAssertions patterns)
+  - Pull request workflow and checklist
+  - Legal move classes (schema creation, registry extension, pack addition, etc.)
+  - Release process and versioning (Semantic Versioning, Keep a Changelog)
+
+- **Developer Guide (DEVELOPER_GUIDE.md)**
+  - Complete setup instructions (prerequisites, SDK installation)
+  - Architecture overview (layer stack, domain plugins, pack system)
+  - Development workflow (build, test, deploy, debug)
+  - Pack creation tutorial (step-by-step with examples)
+  - Domain plugin tutorial (Warfare domain walkthrough)
+  - Asset pipeline guide (import → optimize → build)
+
+- **v0.24.0 Roadmap (docs/ROADMAP.md)**
+  - Feature roadmap with timeline and dependencies
+  - PhenoCompose integration for parallel game testing
+  - Advanced observability and analytics features
+  - Planned domain plugins (advanced warfare, economy v2)
+
+- **NuGet Publishing Guide (docs/NUGET_PUBLISHING.md)**
+  - Package structure and naming conventions
+  - Symbol package (.snupkg) setup
+  - Local testing with dry-run script
+  - CI/CD integration (release.yml automation)
+  - Package management best practices
+
+- **GitHub Templates**
+  - Enhanced PR template with type, related issues, testing checklist, and compliance checks
+  - Improved bug report template with environment details, component selection, collapsible log sections
+  - Enhanced feature request template with acceptance criteria, agent move classes, and examples
+
+#### Infrastructure & Quality
+- **Security Scanning Configuration**
+  - gitleaks integration with 14 detection rules (API keys, OAuth tokens, credentials, SSH keys, AWS/GCP/Azure credentials)
+  - Pre-commit hook configuration for secret detection
+  - Documented in SECURITY.md with scanning procedures
+
+- **Test Parallelization Optimization**
+  - Enabled test parallelization in ci.yml for faster CI execution
+  - Performance improvement: 21.31s → 19.89s (6.7% faster)
+  - Maintains full coverage and deterministic test results
+
+- **NuGet Dry-Run Script (scripts/nuget-dry-run.ps1)**
+  - Local package validation without publishing
+  - Symbol package verification
+  - Dependency resolution checks
+  - Semver compliance validation
+
+#### Polyglot Integration (Sprint 1 Completion)
+- **RustAssetPipeline HTTP Integration**
+  - Replaced MCP call stubs with real HTTP POST/GET to `http://127.0.0.1:8765/api/tools/`
+  - Async `CallMcpAsync` for tool invocation with JSON serialization
+  - Sync `TryCallMpc` for MCP server health check (1-second timeout)
+  - Graceful fallback to C# AssimpNet if server unavailable
+  - Static HttpClient with 5-second timeout and cached availability flag
+
+- **PlayCUA Build Job Integration**
+  - Added to `polyglot-build.yml` for automated Rust binary compilation
+  - Builds from `https://github.com/KooshaPari/playcua` on every polyglot workflow
+  - Uploads release artifact for multi-platform distribution
+  - Integrated into artifact verification pipeline
 
 ### Documentation
-- **PhenoCompose integration roadmap** (Sprint 0.5 completion)
+
+- **PhenoCompose Integration Roadmap**
   - Updated `CLAUDE.md` with phenocompose architecture overview
   - Documented 3-tier isolation model (WASM/gVisor/Firecracker)
   - Added integration strategy for parallel game testing (v0.24.0+)
   - Reference documents in `docs/sessions/` for investigation details
+
+- **Updated README.md**
+  - Added NuGet package links with version badges
+  - Documented standalone tools and polyglot integration
+  - Added getting started section with developer guide link
+  - Enhanced features list with asset pipeline and automation framework details
+
+- **Enhanced SECURITY.md**
+  - Vulnerability reporting procedures and security contact email
+  - Dependency scanning and SBOM generation details
+  - gitleaks configuration and secret detection rules
+  - Security best practices for contributors
+
+### Performance
+
+- **Test Parallelization Baseline** (v0.24.0-dev)
+  - Measured test execution time: 19.89s (parallel) vs 21.31s (serial)
+  - Improvement: 6.7% faster CI execution
+  - Configuration: `--parallel=auto` in ci.yml
+  - Maintains 100% determinism and coverage accuracy
+
+### Changed
+
+- Updated version to 0.24.0-dev in `VERSION` file
+- Refined PR template with comprehensive testing and compliance sections
+- Improved issue templates with better categorization and helper text
 
 ## [0.23.0] - 2026-04-23
 

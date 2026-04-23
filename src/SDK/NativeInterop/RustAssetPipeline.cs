@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DINOForge.SDK.Models;
@@ -25,6 +27,10 @@ namespace DINOForge.SDK.NativeInterop
     [ExcludeFromCodeCoverage] // Requires Rust/PyO3 toolchain — integration tests only
     public static class RustAssetPipeline
     {
+        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        private static bool? _mcpAvailable;
+        private const string McpServerUrl = "http://127.0.0.1:8765";
+
         /// <summary>
         /// Check if Rust asset pipeline is available in this environment.
         /// Returns true if PyO3 module exists AND MCP server is running (or P/Invoke DLL available).
@@ -40,7 +46,7 @@ namespace DINOForge.SDK.NativeInterop
                 // Attempt to detect Python module
                 try
                 {
-                    // Try calling MCP server
+                    // Try calling MCP server health endpoint
                     var response = TryCallMcp("ping");
                     _mcpAvailable = response != null;
                     return _mcpAvailable.Value;
@@ -52,8 +58,6 @@ namespace DINOForge.SDK.NativeInterop
                 }
             }
         }
-
-        private static bool? _mcpAvailable;
 
         /// <summary>
         /// Import a 3D model asset (GLB, FBX, OBJ, etc.) using Rust pipeline for maximum performance.
@@ -189,21 +193,84 @@ namespace DINOForge.SDK.NativeInterop
 
         // ===== Private MCP Integration =====
 
+        /// <summary>
+        /// Call MCP server tool asynchronously.
+        /// </summary>
+        /// <param name="toolName">Name of the MCP tool (e.g., "asset_import", "asset_optimize")</param>
+        /// <param name="parameters">Tool parameters as object (will be serialized to JSON)</param>
+        /// <returns>Parsed JSON response from MCP server, or null on failure</returns>
         private static async Task<object?> CallMcpAsync(string toolName, object parameters)
         {
-            // Implementation: POST to http://127.0.0.1:8765/api/tools/{toolName}
-            // with parameters as JSON body
-            // Returns parsed JSON response
-            // For now, stub implementation
-            await Task.Delay(0);
-            return null;
+            try
+            {
+                var json = JsonSerializer.Serialize(parameters);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var url = $"{McpServerUrl}/api/tools/{toolName}";
+
+                var response = await _httpClient.PostAsync(url, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"MCP server returned {response.StatusCode} for tool {toolName}");
+                    return null;
+                }
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                // Parse as JSON and return the parsed object
+                using (JsonDocument doc = JsonDocument.Parse(responseBody))
+                {
+                    return doc.RootElement.Clone();
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MCP HTTP error: {ex.Message}");
+                return null;
+            }
+            catch (TaskCanceledException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MCP timeout: {ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MCP error: {ex.Message}");
+                return null;
+            }
         }
 
+        /// <summary>
+        /// Synchronous availability check to MCP server health endpoint.
+        /// Returns null if MCP server is not reachable.
+        /// </summary>
+        /// <param name="toolName">Tool name to check (currently unused, kept for compatibility)</param>
+        /// <returns>Non-null if server is reachable, null otherwise</returns>
         private static object? TryCallMcp(string toolName)
         {
-            // Non-async version for availability check
-            // Returns null if MCP server not reachable
-            return null;
+            try
+            {
+                var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var task = _httpClient.GetAsync($"{McpServerUrl}/health", cts.Token);
+
+                // Block synchronously for availability check (health check only)
+                task.Wait(cts.Token);
+
+                if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
+                {
+                    var response = task.Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return new object(); // Return non-null to indicate server is available
+                    }
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         // ===== P/Invoke Alternative (for low-latency paths) =====

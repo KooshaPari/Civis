@@ -253,10 +253,61 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  build-playcua:
+    name: Build PlayCUA (Rust isolation layer)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Clone PlayCUA repository
+        run: |
+          cd /tmp
+          git clone https://github.com/KooshaPari/playcua.git
+          cd playcua
+          echo "PlayCUA cloned to /tmp/playcua"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: /tmp/playcua
+
+      - name: Build PlayCUA (release)
+        working-directory: /tmp/playcua
+        run: cargo build --release
+
+      - name: Run PlayCUA tests
+        working-directory: /tmp/playcua
+        run: cargo test --release
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p playcua-release
+          if [ -f /tmp/playcua/target/release/playcua ]; then
+            cp /tmp/playcua/target/release/playcua playcua-release/
+          elif [ -f /tmp/playcua/target/release/playcua.exe ]; then
+            cp /tmp/playcua/target/release/playcua.exe playcua-release/
+          fi
+          ls -lh playcua-release/
+
+      - name: Upload PlayCUA artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: playcua-release-ubuntu
+          path: playcua-release/
+          if-no-files-found: warn
+          retention-days: 30
+
   verify-artifacts:
     name: Verify Polyglot Artifacts
     runs-on: ubuntu-latest
-    needs: [build-rust, build-go, build-zig, build-python]
+    needs: [build-rust, build-go, build-zig, build-python, build-playcua]
     if: always()
     permissions:
       contents: read
@@ -288,6 +339,9 @@ jobs:
           echo "" >> artifact-summary.txt
           echo "Python:" >> artifact-summary.txt
           ls -1 polyglot-artifacts/python-coverage-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
+          echo "" >> artifact-summary.txt
+          echo "PlayCUA:" >> artifact-summary.txt
+          ls -1 polyglot-artifacts/playcua-release-* 2>/dev/null | sed 's/polyglot-artifacts\//  /' >> artifact-summary.txt || echo "  (none)" >> artifact-summary.txt
           cat artifact-summary.txt
 
       - name: Upload artifact summary
@@ -304,14 +358,16 @@ jobs:
           GO_COUNT=$(find polyglot-artifacts -path "*go-resolver-*" -type d | wc -l)
           ZIG_COUNT=$(find polyglot-artifacts -path "*zig-asset-pipeline-*" -type d | wc -l)
           PYTHON_COUNT=$(find polyglot-artifacts -path "*python-coverage-*" -type d | wc -l)
-          TOTAL=$((RUST_COUNT + GO_COUNT + ZIG_COUNT + PYTHON_COUNT))
+          PLAYCUA_COUNT=$(find polyglot-artifacts -path "*playcua-release-*" -type d | wc -l)
+          TOTAL=$((RUST_COUNT + GO_COUNT + ZIG_COUNT + PYTHON_COUNT + PLAYCUA_COUNT))
           echo "Rust artifacts: $RUST_COUNT"
           echo "Go artifacts: $GO_COUNT"
           echo "Zig artifacts: $ZIG_COUNT"
           echo "Python artifacts: $PYTHON_COUNT"
+          echo "PlayCUA artifacts: $PLAYCUA_COUNT"
           echo "Total artifacts: $TOTAL"
-          if [ "$TOTAL" -lt 15 ]; then
-            echo "⚠ Warning: Expected at least 15 artifacts (5 Rust × 5 platforms not all available)"
+          if [ "$TOTAL" -lt 16 ]; then
+            echo "⚠ Warning: Expected at least 16 artifacts (5 Rust + 5 Go + 5 Zig + 3 Python + 1 PlayCUA)"
           else
             echo "✓ Good: Artifact collection complete"
           fi

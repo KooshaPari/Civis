@@ -228,27 +228,10 @@
     <Compile Remove="Aviation\**" />
   </ItemGroup>
 
-  <!--
-    Solution builds currently hit an opaque nested-MSBuild failure while resolving
-    Runtime's project references. Use direct assembly references in that path and
-    keep project references for standalone Runtime builds.
-  -->
-  <ItemGroup Condition="'$(SolutionPath)' != ''">
-    <Reference Include="DINOForge.SDK">
-      <HintPath>..\SDK\bin\$(Configuration)\netstandard2.0\DINOForge.SDK.dll</HintPath>
-    </Reference>
-    <Reference Include="DINOForge.Bridge.Protocol">
-      <HintPath>..\Bridge\Protocol\bin\$(Configuration)\netstandard2.0\DINOForge.Bridge.Protocol.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(SolutionPath)' == ''">
-    <ProjectReference Include="..\SDK\DINOForge.SDK.csproj"
-                      SetTargetFramework="TargetFramework=netstandard2.0"
-                      SkipGetTargetFrameworkProperties="true" />
-    <ProjectReference Include="..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj"
-                      SetTargetFramework="TargetFramework=netstandard2.0"
-                      SkipGetTargetFrameworkProperties="true" />
+  <!-- SDK and Bridge Protocol project references - always use ProjectReference for proper build ordering -->
+  <ItemGroup>
+    <ProjectReference Include="..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
   </ItemGroup>
 
   <!--

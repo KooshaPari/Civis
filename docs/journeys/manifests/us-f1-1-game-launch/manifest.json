@@ -1,52 +1,54 @@
 {
   "id": "us-f1-1-game-launch",
   "intent": "User launches game and verifies DINOForge mod is loaded",
-  "recording": "journeys/us-f1-1-game-launch/us-f1-1-game-launch.gif",
   "keyframe_count": 3,
-  "passed": true,
+  "passed": false,
   "steps": [
     {
       "index": 0,
       "slug": "launch-game",
       "intent": "Launch DINOForge + game",
-      "screenshot_path": "journeys/manifests/us-f1-1-game-launch/frame-000.png",
-      "description": "",
+      "screenshot_path": "docs\\journeys\\manifests\\us-f1-1-game-launch\\frame-000.png",
       "assertions": {
-        "must_contain": [],
-        "must_not_contain": [],
-        "ocr_required": false
-      },
-      "annotations": []
+        "must_contain": [
+          "Diplomacy"
+        ],
+        "must_not_contain": [
+          "Error"
+        ]
+      }
     },
     {
       "index": 1,
-      "slug": "wait-world",
-      "intent": "Wait for ECS world initialization",
-      "screenshot_path": "journeys/manifests/us-f1-1-game-launch/frame-001.png",
-      "description": "",
+      "slug": "mod-loaded",
+      "intent": "DINOForge runtime verified",
+      "screenshot_path": "docs\\journeys\\manifests\\us-f1-1-game-launch\\frame-001.png",
       "assertions": {
-        "must_contain": [],
-        "must_not_contain": [],
-        "ocr_required": false
-      },
-      "annotations": []
+        "must_contain": [
+          "DINOForge"
+        ],
+        "must_not_contain": [
+          "Failed"
+        ]
+      }
     },
     {
       "index": 2,
-      "slug": "verify-overlay",
-      "intent": "Verify debug overlay available",
-      "screenshot_path": "journeys/manifests/us-f1-1-game-launch/frame-002.png",
-      "description": "",
+      "slug": "world-ready",
+      "intent": "ECS world initialized",
+      "screenshot_path": "docs\\journeys\\manifests\\us-f1-1-game-launch\\frame-002.png",
       "assertions": {
-        "must_contain": [],
-        "must_not_contain": [],
-        "ocr_required": false
-      },
-      "annotations": []
+        "must_contain": [
+          "Entity"
+        ],
+        "must_not_contain": [
+          "Timeout"
+        ]
+      }
     }
   ],
   "verification": {
     "mode": "pending",
-    "timestamp": "2026-04-23T02:58:36.269710"
+    "timestamp": "2026-04-23T03:19:09.509049"
   }
 }

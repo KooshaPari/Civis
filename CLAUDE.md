@@ -494,6 +494,45 @@ Future: Install a dedicated DINOForge virtual display driver (IDD/WDDM) to provi
 - Tier 3: playCUA (cross-platform)
 - Tier 4 (future): Docker/Kubernetes (DockerBackend)
 
+#### PhenoCompose Integration (v0.24.0+)
+
+**PhenoCompose** (`https://github.com/KooshaPari/phenocompose`) is an external multi-tier virtualization platform by KooshaPari. It provides orchestration for game automation at scale:
+
+**3-Tier Architecture:**
+1. **Tier 1 (WASM)**: ~1ms startup, language-level isolation (Wasmtime)
+2. **Tier 2 (gVisor)**: ~90ms startup, syscall-filtered containers (100+ parallel)
+3. **Tier 3 (Firecracker)**: ~125ms startup, full VM isolation with GPU passthrough (VFIO)
+
+**Game Automation Features** (directly applicable to DINO):
+- Parallel game test fleet (100+ instances from snapshot)
+- GPU passthrough (VFIO) for visual asset validation
+- Snapshot-based cloning (<2s VM restore from baseline)
+- Native BepInEx plugin loader support
+- Steam integration (headless)
+- Cross-platform (Linux, macOS, Windows via WSL2)
+
+**Integration Strategy (Roadmap):**
+
+| Version | Feature | Effort |
+|---------|---------|--------|
+| v0.24.0 | Evaluate phenocompose as CLI tool for parallel game testing | 1 sprint |
+| v0.25.0 | Wrap nanovms CLI in MCP server (`game_launch_fleet`, `game_snapshot_template`) | 2 sprints |
+| v0.26.0+ | Adopt phenocompose's ADR pattern for DINOForge architecture decisions | Ongoing |
+
+**Do NOT:**
+- Fork phenocompose (maintain as external dependency)
+- Rewrite nanovms in C# (violates "wrap, don't handroll" rule)
+- Use for ML/Mojo inference (out of scope)
+
+**Reference Documents:**
+- `docs/sessions/phenocompose_nvms_investigation.md` — Full repository analysis
+- `docs/sessions/phenocompose_integration_technical.md` — Technical deep dive with workflow phases
+
+**Contact/Monitoring:**
+- Monitor upstream: `https://github.com/KooshaPari/phenocompose` (already yours, active development)
+- License: Apache-2.0 (compatible)
+- Primary languages: Go (nanovms) + Rust (pheno-compose-driver)
+
 ### Agent Slash Commands for Game Work
 
 | Command | Role |

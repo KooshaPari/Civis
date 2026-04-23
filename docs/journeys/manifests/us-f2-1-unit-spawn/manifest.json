@@ -1,0 +1,65 @@
+{
+  "id": "us-f2-1-unit-spawn",
+  "intent": "User spawns unit and verifies asset swap works",
+  "recording": "journeys/us-f2-1-unit-spawn/us-f2-1-unit-spawn.gif",
+  "keyframe_count": 4,
+  "passed": true,
+  "steps": [
+    {
+      "index": 0,
+      "slug": "launch",
+      "intent": "Launch game",
+      "screenshot_path": "journeys/manifests/us-f2-1-unit-spawn/frame-000.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 1,
+      "slug": "spawn-unit",
+      "intent": "Spawn Clone Trooper unit",
+      "screenshot_path": "journeys/manifests/us-f2-1-unit-spawn/frame-001.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 2,
+      "slug": "verify-swap",
+      "intent": "Verify asset swap applied",
+      "screenshot_path": "journeys/manifests/us-f2-1-unit-spawn/frame-002.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 3,
+      "slug": "verify-health",
+      "intent": "Verify unit health loaded",
+      "screenshot_path": "journeys/manifests/us-f2-1-unit-spawn/frame-003.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    }
+  ],
+  "verification": {
+    "mode": "pending",
+    "timestamp": "2026-04-23T02:58:36.270712"
+  }
+}

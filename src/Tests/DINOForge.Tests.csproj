@@ -6,6 +6,8 @@
     <IsTestProject>true</IsTestProject>
     <RootNamespace>DINOForge.Tests</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Explicit parallelization tuning: 4 threads for CI (4-core runners), scales to ProcessorCount locally -->
+    <MaxParallelThreads>4</MaxParallelThreads>
   </PropertyGroup>
 
     <!-- Code coverage configuration -->

@@ -17,6 +17,16 @@ export default withMermaid(
     ignoreDeadLinks: true,
     srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**', 'game-launch-dashboard.md'],
 
+    vue: {
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) =>
+            tag.startsWith('journey-') ||
+            tag === 'journey-viewer'
+        }
+      }
+    },
+
     vite: {
       build: {
         rollupOptions: {

@@ -1,6 +1,7 @@
 import { h } from 'vue'
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
+import JourneyViewer from './components/JourneyViewer.vue'
 import './custom.css'
 
 export default {
@@ -11,6 +12,7 @@ export default {
     })
   },
   enhanceApp({ app, router, siteData }) {
-    // Enhance as needed
+    // Register global components
+    app.component('JourneyViewer', JourneyViewer)
   }
 } satisfies Theme

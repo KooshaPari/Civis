@@ -1,6 +1,7 @@
 {
   "name": "civ-docs",
   "private": true,
+  "license": "MIT OR Apache-2.0",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev",

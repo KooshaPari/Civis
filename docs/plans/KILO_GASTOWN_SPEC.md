@@ -1,349 +1,239 @@
-# Kilo Gastown Methodology — DINOForge Rig Specification
+# Kilo Gastown Methodology Spec
 
-**Status:** Active
-**Town ID:** `78a8d430-a206-4a25-96c0-5cd9f5caf984`
+**Status:** ACTIVE
 **Rig ID:** `6c6d4555-91e8-4f06-a974-018cf3e766d2`
-**Stack:** DINO game mod, C#/.NET, .NET 11 preview
+**Town ID:** `78a8d430-a206-4a25-96c0-5cd9f5caf984`
+**Owner:** All DINOForge Agents
+**Applies to:** All bead and convoy operations in this rig
 
 ---
 
 ## Overview
 
-Kilo Gastown is a multi-agent orchestration system for coordinating parallel software engineering work across a shared git repository. It uses a "town" metaphor: a persistent rig where specialized agents ("polecats") work on independent beads (work items) simultaneously, coordinated through a shared bead pool and convoy-based feature branches.
+**Kilo Gastown** is the agent orchestration layer for this rig. It provides a structured system for distributing, tracking, and merging work across multiple autonomous agents operating in parallel. All methodology mechanics described here are powered by Gastown tooling (gt_* tools available in Claude Code).
 
-This document describes the Kilo Gastown methodology as implemented in the DINOForge rig.
+This document explains how Kilo Gastown mechanics apply specifically to the DINOForge project.
+
+---
+
+## Rig Topology
+
+| Field | Value |
+|-------|-------|
+| Rig ID | `6c6d4555-91e8-4f06-a974-018cf3e766d2` |
+| Town ID | `78a8d430-a206-4a25-96c0-5cd9f5caf984` |
+| Primary branch | `main` |
+| Agent identity format | `Polecat-<N>-polecat-<rig-id>@<town-id>` |
 
 ---
 
 ## Core Concepts
 
-### Town (Rig)
+### Beads
 
-A **town** (rig) is a persistent containerized environment hosting multiple concurrent agents. Each town has:
-- A unique `town_id` for routing
-- A shared git repository (worktree per agent)
-- A bead pool of work items
-- A set of specialized agent roles
+A **bead** is the atomic unit of work in Kilo Gastown. Each bead represents a single, focused task assigned to one agent.
 
-**DINOForge Town:**
-- Rig ID: `6c6d4555-91e8-4f06-a974-018cf3e766d2`
-- Town ID: `78a8d430-a206-4a25-96c0-5cd9f5caf984`
-- Stack: DINO game, C#/.NET, .NET 11 preview
+**Bead types:**
 
-### Beads (Work Items)
+| Type | Description |
+|------|-------------|
+| `issue` | A single task (one agent, one deliverable) |
+| `merge_request` | A review request for a completed branch |
+| `convoy` | A batch of related beads grouped under a feature umbrella |
 
-A **bead** is the atomic unit of work in Gastown. Each bead has:
-- `bead_id` — unique identifier
-- `type` — `issue`, `task`, or `escalation`
-- `status` — `open`, `in_progress`, `in_review`, `closed`
-- `title` / `body` — description
-- `assignee_agent_bead_id` — which agent owns it
-- `priority` — `low`, `medium`, `high`, `critical`
-- `metadata` — typed hash (convoy_id, feature_branch, etc.)
-- Timestamps: `created_at`, `updated_at`, `closed_at`
-
-**Bead Types:**
-- `issue` — Feature request, bug, or task
-- `task` — Actionable work item
-- `escalation` — Blocked/stuck issue requiring supervisor intervention
-
-**Special Bead Labels:**
-- `gt:pr-fixup` — existing PR needs fixes from review comments
-- `gt:escalation` — escalation bead
-- `gt:triage-request` — triage request for system health
-
-### Convoys (Feature Branches)
-
-A **convoy** groups related beads under a shared feature branch. Convoys ensure atomic delivery of multi-bead features and prevent merge conflicts by serializing dependent changes.
+**Bead lifecycle:**
 
 ```
-convoy_id: 381d5195-27f8-4843-9efe-62f11234815e
-feature_branch: convoy/agileplus-kilo-specs-dino/381d5195/head
+open → in_progress → in_review → closed
 ```
 
-**DINOForge active convoy:**
-- `convoy/methodology-dino/c61d464c/head` — methodology propagation train
+| State | Meaning |
+|-------|---------|
+| `open` | Queued, not yet started |
+| `in_progress` | An agent is actively working on it |
+| `in_review` | Work complete, pushed to review queue |
+| `closed` | Merged or rejected |
 
-Agents working on convoy beads branch from the convoy's feature branch, not from `main`.
+**Bead tools:**
 
-Use `gt_list_convoys` to track convoy progress across the rig.
+- `gt_sling` — Dispatch a single bead to an agent (creates `issue` bead)
+- `gt_bead_status` — Inspect current state of any bead by ID
+- `gt_bead_close` — Mark a bead as completed
 
-### Agent Roles
+### Convoys
 
-Each agent has a specialized domain:
+A **convoy** groups related beads under a shared feature branch. Convoys enable parallel agent work on a larger feature while maintaining a coherent merge target.
 
-| Role | Domain | Tools |
-|------|--------|-------|
-| `runtime-specialist` | ECS bridge, BepInEx | src/Runtime/ |
-| `sdk-architect` | Registry, SDK, schemas | src/SDK/ |
-| `warfare-designer` | Warfare domain, balance | src/Domains/Warfare/ |
-| `pack-builder` | Content packs, YAML | packs/ |
-| `toolsmith` | CLI tools, PackCompiler | src/Tools/ |
-| `qa-engineer` | Tests, CI/CD | src/Tests/ |
-| `docs-curator` | Documentation, VitePress | docs/ |
-
----
-
-## GUPP Principle
-
-**GUPP: Get Underway, Produce immediately, Pass the bead on.**
-
-> "Work is on your hook — execute immediately. Do not announce what you will do; just do it. When you receive a bead (work item), start working on it right away. No preamble, no status updates, no asking for permission. Produce code, commits, and results."
-
-GUPP is the core behavioral contract for every polecat:
-
-1. **Hooked bead arrives** → begin immediately, no confirmation needed
-2. **Produce** → write code, tests, commits; no status announcements
-3. **Pass on** → call `gt_done` to push branch and submit for review
-
----
-
-## Agent Lifecycle
-
-### 1. Prime (`gt_prime`)
-
-Called at session start to retrieve full context:
-- Agent identity and role
-- Hooked bead (current work item)
-- Undelivered mail
-- All open beads in the rig
-
-### 2. Work
-
-Execute the hooked bead's requirements:
-- Read relevant files
-- Implement changes
-- Write tests
-- Commit frequently (small, focused commits)
-
-### 3. Checkpoint (`gt_checkpoint`)
-
-Save crash-recovery state after significant milestones:
-```json
-{ "hooked_bead_id": "...", "status": "...", "file_created": "...", "commit_hash": "..." }
+**Convoy naming convention:**
+```
+convoy/<feature-name>/<convoy-id>/head
 ```
 
-### 4. Quality Gates (Pre-Submission)
+**Convoy tools:**
 
-Before calling `gt_done`, run all required gates:
-- `task quality` — code quality checks
-- `dotnet test src/DINOForge.sln` — all tests pass
-- `dotnet format --verify-no-changes` — no formatting issues
+- `gt_sling_batch` — Dispatch multiple beads at once (creates a convoy)
+- `gt_list_convoys` — List all convoys with their status and progress
+- Convoys track `ready_to_land` metadata — when set, the convoy branch can be merged
 
-### 5. Done (`gt_done`)
-
-Signal completion:
-1. Push branch to remote
-2. Call `gt_done` with branch name
-3. Bead transitions to `in_review`
-4. Refinery picks up for merge review
-
----
-
-## Coordination Tools
-
-### Message Passing
-
-| Tool | Purpose |
-|------|---------|
-| `gt_mail_send` | Send persistent typed message to another agent |
-| `gt_mail_check` | Read and acknowledge undelivered mail |
-| `gt_nudge` | Real-time wake-up signal (delivered at agent's next idle moment) |
-
-### Bead Management
-
-| Tool | Purpose |
-|------|---------|
-| `gt_bead_status` | Read full details of any bead by ID |
-| `gt_bead_close` | Mark a bead as completed (used by refinery) |
-| `gt_done` | Push branch + submit bead for review |
-
-### Work Delegation
-
-| Tool | Purpose |
-|------|---------|
-| `gt_sling` | Delegate a bead to another agent in the rig |
-| `gt_sling_batch` | Delegate multiple beads at once |
-
-### Escalation
-
-| Tool | Purpose |
-|------|---------|
-| `gt_escalate` | Create an escalation bead for blocked/stuck issues |
-| `gt_triage_resolve` | Resolve a triage request (restart, close, escalate) |
-
-### State
-
-| Tool | Purpose |
-|------|---------|
-| `gt_status` | Emit plain-language status update to dashboard |
-| `gt_checkpoint` | Write crash-recovery data to agent record |
-
----
-
-## Convoy Pattern
-
-Convoys group related beads under a single feature branch:
-
+**Example convoy for this rig:**
 ```
-convoy/convoy-name/convoy_id/head
+convoy/agileplus-kilo-specs-dino/381d5195/head
 ```
-
-**Convoy lifecycle:**
-1. Convoy bead created with `feature_branch` metadata
-2. Agents branch from the convoy feature branch
-3. All beads in convoy are developed in parallel
-4. Convoy merges atomically when all beads complete
-
-**Why convoys?**
-- Atomic multi-bead feature delivery
-- Prevents conflicting changes from parallel agents
-- Provides clear feature branch boundaries
 
 ---
 
 ## Merge Modes
 
-Agents have two merge strategies:
+Kilo Gastown supports two merge strategies:
 
-| Mode | Description |
-|------|-------------|
-| **Rebase** (default) | `git pull --rebase origin main` before starting; linear history |
-| **Merge** | `git pull origin main` with merge commit; preserved history |
+### Review-Then-Land (Default)
 
-The DINOForge rig uses **rebase** by default to maintain clean linear history.
+The agent pushes their branch and calls `gt_done`. The Refinery reviews the branch. If approved, it lands on `main`. If rework is needed, the bead returns to `in_progress` with feedback.
 
----
-
-## Progress Tracking
-
-### Dashboard Visibility
-
-`gt_status` emits plain-language updates:
-> "Writing unit tests for the API endpoints."
-> "Fixing 3 TypeScript errors before committing."
-
-These appear on the orchestration dashboard for teammates to follow.
-
-### Checkpoint Data
-
-`gt_checkpoint` stores JSON recovery data:
-```json
-{
-  "hooked_bead_id": "146575f3-6e40-47dc-9adc-4318f1aa7016",
-  "status": "in_progress",
-  "file_created": "docs/plans/KILO_GASTOWN_SPEC.md",
-  "commit_hash": "a1b2c3d"
-}
+```
+Agent pushes branch → gt_done → bead enters in_review → Refinery approves → lands on main
 ```
 
-On container restart, the next agent session reads this data and resumes from the checkpoint.
+### Review-and-Merge
+
+The Refinery reviews and merges in one step. Used when the branch is pre-verified (e.g., passing CI, following conventions).
+
+```
+ready_to_land=1 → Refinery merges without additional review cycle
+```
+
+**Who decides which mode applies:**
+- Beads with `ready_to_land: 1` metadata use review-and-merge
+- All other beads use review-then-land
 
 ---
 
-## DINOForge Integration
+## How Kilo Applies to DINOForge
 
-The DINOForge project uses Kilo Gastown for:
+### Agent Identity in This Rig
 
-### Content Development
-- **Pack authors** (pack-builder) create unit/building YAML definitions
-- **SDK validation** (sdk-architect) ensures schema compliance
-- **Integration tests** (qa-engineer) verify content loads in-game
+Every agent in this rig is a **polecat**:
 
-### Feature Development
-- **Domain specialists** implement new game systems
-- **CLI tools** (toolsmith) build automation
-- **MCP server** exposes 13 game tools to running game session
+```
+Polecat-<N>-polecat-<rig-id>@<town-id>
+```
 
-### Multi-Agent Scenarios
-- **Convoy**: `convoy/methodology-dino` groups methodology docs
-- **Convoy**: `convoy/agileplus-kilo-specs-dino` coordinates cross-repo spec work
-- **Parallel beads**: multiple agents work on different domains simultaneously
+Current hooked bead identifies you by your `agent_bead_id`. Use `gt_prime` to re-orient at the start of any session.
 
----
+### Dispatching Work
 
-## Anti-Patterns (Blacklist)
+When you receive a bead via `gt_prime`:
 
-These patterns are prohibited:
+1. **Claim it** — the bead is already hooked to you; do not re-assign
+2. **Explore** — read CLAUDE.md and relevant source files before writing
+3. **Implement** — make focused, working commits; push after each
+4. **Verify** — run `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`
+5. **Done** — call `gt_done` with your branch name
 
-| Pattern | Reason | Correct Approach |
-|---------|--------|-----------------|
-| "Please launch the game" | User interaction | Autonomous exe launch |
-| "Click the X button" | Manual interaction | GameClient API |
-| "Test it yourself" | No proof | Automated test + video |
-| "Let me know if it works" | Requires user | Auto health-check |
-| "Run this command manually" | User must act | Automate command |
+### Delegating Sub-Tasks
 
----
+If a bead requires work outside your domain, use `gt_mail_send` to notify the responsible agent. For batched work across multiple agents, use `gt_sling_batch` to create a convoy and sling individual beads to each agent.
 
-## File Ownership
+### Pre-Submission Gates
 
-To prevent conflicts, each file has a designated owner:
+Before calling `gt_done`, run all applicable quality gates:
 
-| Layer | Owner | Files |
-|-------|-------|-------|
-| Runtime | runtime-specialist | src/Runtime/ |
-| SDK | sdk-architect | src/SDK/ |
-| Domain | warfare-designer | src/Domains/Warfare/ |
-| Packs | pack-builder | packs/ |
-| Tools | toolsmith | src/Tools/ |
-| Tests | qa-engineer | src/Tests/ |
-| Docs | docs-curator | docs/, CHANGELOG.md |
+| Gate | Command |
+|------|---------|
+| Build | `dotnet build src/DINOForge.sln` |
+| Test | `dotnet test src/DINOForge.sln` |
+| Format check | `dotnet format src/DINOForge.sln --verify-no-changes` |
+| Pack validation | `dotnet run --project src/Tools/PackCompiler -- validate packs/` |
 
-Agents must not modify files outside their domain without permission.
+### Tracking Convoys
+
+To see all active convoys and their status:
+
+```
+gt_list_convoys
+```
+
+This returns all open convoys with their feature branch names, bead counts, and `ready_to_land` status.
 
 ---
 
-## Handoff Protocol
+## Bead-to-DINOForge Domain Mapping
 
-When completing work:
-1. Run `dotnet test src/DINOForge.sln` — verify 0 failures
-2. Run `dotnet format --verify-no-changes`
-3. Update CHANGELOG.md [Unreleased] section
-4. Commit with descriptive message + `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
-5. `git push origin <branch>`
-6. Call `gt_done` with branch name
+When slinging beads for DINOForge work, use the domain ownership map to route correctly:
 
----
-
-## PR Fixup Workflow
-
-When a bead carries the `gt:pr-fixup` label, the agent must fix an existing PR rather than create new work:
-
-1. Fetch and check out the PR branch from bead metadata (overrides default worktree branch)
-2. Review all comments: `gh pr view <number> --comments`
-3. For each review thread:
-   - Actionable → fix the issue, push, reply explaining fix, resolve thread
-   - Not relevant/incorrect → reply explaining why, resolve thread
-4. Push fixes and call `gt_done`
+| Domain | Agent Role | Files |
+|--------|-----------|-------|
+| ECS bridge, BepInEx | `runtime-specialist` | src/Runtime/ |
+| Registry, SDK, schemas | `sdk-architect` | src/SDK/ |
+| Warfare domain | `warfare-designer` | src/Domains/Warfare/ |
+| Content packs | `pack-builder` | packs/ |
+| CLI / tooling / MCP | `toolsmith` | src/Tools/ |
+| Tests, CI/CD | `qa-engineer` | src/Tests/ |
+| Documentation | `docs-curator` | docs/ |
 
 ---
 
-## Escalation Beads
+## Coordination Patterns
 
-Escalation beads (`type: escalation`) are auto-generated when:
-- A review fails (branch not found, no diff, commits not from main)
-- An agent is blocked for more than a few attempts
+### Starting a Session
 
-Triage request beads (`gt:triage-request`) accompany escalations with these options:
-- `ESCALATE_TO_MAYOR` — escalate to human supervisor
-- `RESTART` — restart the agent
-- `CLOSE_BEAD` — close the bead
-- `REASSIGN_BEAD` — reassign to another agent
+```
+gt_prime          # Get hooked bead, open beads, mail
+gt_status "..."   # Emit status to dashboard
+```
 
-Resolve triage requests with `gt_triage_resolve`.
+### Announcing Work
+
+```
+gt_status "Writing unit tests for PackCompiler"   # Phase transition
+gt_checkpoint      # After significant progress
+```
+
+### Requesting Help
+
+```
+gt_mail_send      # Send a typed message to another agent
+gt_escalate       # Create an escalation bead for blocked issues
+```
+
+### Finishing Work
+
+```
+git add . && git commit -m "feat(sdk): add UnitRegistry wildcard query
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git push origin <your-branch>
+gt_done --branch <your-branch>
+```
 
 ---
 
-## References
+## Integration with Existing AGENTS.md
 
-- **AGENTS.md** — DINOForge agent collaboration guide (roles, roster, coordination)
-- **CLAUDE.md** — Governance, build commands, architecture
-- **gt_prime** context — Full bead pool and agent state
-- **Kilo Gastown MCP Tools** — 13 game tools for runtime interaction
+Kilo Gastown mechanics are **orthogonal** to the domain ownership rules in `AGENTS.md`. The bead system provides the orchestration layer; the Agent Roster provides the ownership layer. When working a bead:
+
+1. Follow Kilo Gastown workflow (this spec) for dispatch, tracking, and merge
+2. Follow AGENTS.md ownership rules for what files you may modify
+3. Follow CLAUDE.md for code style, build commands, and governance
 
 ---
 
-**Spec Owner:** docs-curator
-**Last Updated:** 2026-04-04
-**Used By:** All DINOForge polecat agents
+## Quick Reference
+
+| Need | Tool |
+|------|------|
+| Get current context | `gt_prime` |
+| Check bead status | `gt_bead_status <bead_id>` |
+| Dispatch single bead | `gt_sling` |
+| Dispatch batch (convoy) | `gt_sling_batch` |
+| List all convoys | `gt_list_convoys` |
+| Send coordination message | `gt_mail_send` |
+| Emit status update | `gt_status "..."` |
+| Write crash-recovery data | `gt_checkpoint` |
+| Signal work complete | `gt_done --branch <name>` |
+| Report blocked issue | `gt_escalate` |
+
+---
+
+**Spec Owner:** Kilo Gastown (rig orchestration)
+**Last Updated:** 2026-03-31
+**Related:** `AGENTS.md`, `CLAUDE.md`, `docs/plans/PLAN-agent-tooling-evolution.md`

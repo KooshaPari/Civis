@@ -22,7 +22,7 @@ namespace DINOForge.Tools.PackCompiler
         /// </summary>
         /// <param name="packPath">Path to the pack directory containing asset_pipeline.yaml</param>
         /// <returns>Exit code: 0 on success, non-zero on failure</returns>
-        [RequiresUnreferencedCode()]
+        [RequiresUnreferencedCode("Asset pipeline uses reflection-based serialization for asset metadata")]
         public static async Task<int> RunPhase3A(string packPath)
         {
             var logPath = Path.Combine(packPath, "phase3a_execution.log");

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using DINOForge.SDK.Assets;
-using DINOForge.Runtime.Assets;
+using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -108,7 +108,7 @@ namespace DINOForge.Runtime.Bridge
             WriteDebug($"AssetSwapSystem: processing {pending.Count} pending swap(s)");
 
             string patchDir = Path.Combine(BepInEx.Paths.BepInExRootPath, PatchedBundlesDir);
-            AssetService assetService = new AssetService(BepInEx.Paths.GameRootPath);
+            RuntimeAssetService assetService = new RuntimeAssetService(BepInEx.Paths.GameRootPath);
 
             int succeeded = 0;
             int failed = 0;
@@ -162,7 +162,7 @@ namespace DINOForge.Runtime.Bridge
         /// if the mod bundle contains a Unity Mesh or Material, attempts a live
         /// RenderMesh swap on matched ECS entities.
         /// </summary>
-        private bool ApplySwap(AssetSwapRequest request, string patchDir, AssetService assetService)
+        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService)
         {
             // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
             string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);

@@ -40,6 +40,7 @@
   <!-- Wrapped dependencies (ADR-008: wrap, don't handroll) -->
   <!-- NOTE: AssetsTools.NET has been moved to Runtime where it is actually used (AssetService is now in Runtime.Assets) -->
   <ItemGroup>
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <PackageReference Include="YamlDotNet" Version="16.*" />
     <PackageReference Include="Newtonsoft.Json" Version="13.*" />
     <PackageReference Include="NJsonSchema" Version="10.*" />

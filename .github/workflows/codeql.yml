@@ -1,43 +1,21 @@
-name: codeql
+name: CodeQL
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
-    - cron: '0 6 * * 1'
-
-permissions:
-  actions: read
-  contents: read
-  security-events: write
+    - cron: '17 4 * * 1'
 
 jobs:
   analyze:
-    name: Analyze (Rust)
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [rust]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-      - name: Build
-        run: |
-          if ! cargo build --release; then
-            echo "Release build failed; attempting debug build fallback."
-            if ! cargo build; then
-              echo "ERROR: cargo build failed for all configurations."
-              exit 1
-            fi
-          fi
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:${{matrix.language}}"
+    uses: KooshaPari/phenoShared/.github/workflows/reusable/codeql.yml@30358ce629168f0e1ec3699706cb73d1f77cb751
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    with:
+      languages: '["rust"]'
+      build-mode: 'manual'
+      build-command: 'cargo build --release || cargo build'

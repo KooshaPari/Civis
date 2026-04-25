@@ -68,7 +68,7 @@ jobs:
             src/Tools/DinoforgeMcp/htmlcov/
 
       - name: Publish test report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Pytest Results (Python ${{ matrix.python-version }})

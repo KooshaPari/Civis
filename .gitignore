@@ -126,3 +126,19 @@ ui_test_run.log
 scripts/asset_download_web.log
 installer-gui.pp.xml
 src/Runtime/DINOForge.Runtime.pp.xml
+
+# Test results and coverage
+*.trx
+coverage.cobertura.xml
+
+# Rust build artifacts
+src/Tools/AssetPipelineRust/target/
+
+# Playwright artifacts
+.playwright-mcp/
+
+# NuGet package lock files ( regenerated on restore)
+packages.lock.json
+
+# Coverage reports
+src/Tests/coverage.cobertura.xml

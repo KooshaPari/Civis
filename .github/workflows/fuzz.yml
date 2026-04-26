@@ -10,10 +10,7 @@ jobs:
     name: FsCheck Property Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v5
-        with:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5with:
           dotnet-version: |
             8.0.x
           global-json-file: global.json
@@ -49,8 +46,7 @@ jobs:
 
       - name: Upload property test results
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4with:
           name: property-test-results
           path: TestResults/Property/
 
@@ -58,10 +54,7 @@ jobs:
     name: Fuzz Target Smoke Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v5
-        with:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5with:
           dotnet-version: |
             8.0.x
           global-json-file: global.json
@@ -97,8 +90,7 @@ jobs:
 
       - name: Upload fuzz smoke test results
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4with:
           name: fuzz-smoke-results
           path: TestResults/FuzzSmoke/
 
@@ -106,9 +98,7 @@ jobs:
     name: Validate Fuzz Corpus Files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Check corpus files exist
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- name: Check corpus files exist
         run: |
           set -e
           echo "Validating fuzz corpus structure..."

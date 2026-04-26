@@ -32,8 +32,7 @@ jobs:
 
       # Install all required SDKs: net8.0 (SDK/Domains/Tests) + net11.0 (Tools/CLI)
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5with:
           dotnet-version: |
             8.0.x
             11.0.x
@@ -370,8 +369,7 @@ jobs:
       # Build Go DependencyResolver binary
       # ---------------------------------------------------------------
       - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5with:
           go-version: '1.22'
 
       - name: Build Go DependencyResolver (Windows)
@@ -724,8 +722,7 @@ jobs:
 
       # Upload Desktop Companion (optional — skipped if VS Build Tools unavailable)
       - name: Upload Desktop Companion
-        uses: actions/upload-artifact@v4
-        with:
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4with:
           name: desktop-companion
           path: |
             staging/DINOForge.Companion-v${{ steps.version.outputs.VERSION }}-win-x64.zip

@@ -23,11 +23,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4with:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
@@ -51,16 +48,14 @@ jobs:
             --junit-xml=test-results.xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        with:
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6with:
           files: ./src/Tools/DinoforgeMcp/coverage.json
           flags: mcp-server
           name: mcp-server-coverage
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
-        if: always()
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3if: always()
         with:
           name: test-results-${{ matrix.python-version }}
           path: |
@@ -68,8 +63,7 @@ jobs:
             src/Tools/DinoforgeMcp/htmlcov/
 
       - name: Publish test report
-        uses: dorny/test-reporter@v3
-        if: always()
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3if: always()
         with:
           name: Pytest Results (Python ${{ matrix.python-version }})
           path: src/Tools/DinoforgeMcp/test-results.xml
@@ -95,11 +89,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4with:
           python-version: "3.11"
           cache: pip
 
@@ -137,11 +128,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4- name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4with:
           python-version: "3.11"
           cache: pip
 
@@ -166,9 +154,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
-
-      - name: Generate summary
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8- name: Generate summary
         run: |
           echo "## MCP Server Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

@@ -142,3 +142,11 @@ packages.lock.json
 
 # Coverage reports
 src/Tests/coverage.cobertura.xml
+
+# Rust build outputs (Scorecard BinaryArtifacts FP cleanup)
+target/
+
+# Python cache (Scorecard BinaryArtifacts FP cleanup)
+__pycache__/
+*.pyc
+*.pyo

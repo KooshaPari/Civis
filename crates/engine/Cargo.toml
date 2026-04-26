@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Random number generation with seeding
-rand = "0.8"
+rand = "0.8.6"
 rand_chacha = "0.3"
 
 # Entity Component System (ECS)

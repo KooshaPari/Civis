@@ -19,6 +19,9 @@ ADRs document significant architectural decisions made during DINOForge developm
 | [ADR-011](./ADR-011-desktop-companion.md) | WinUI 3 Desktop Companion App | Accepted |
 | [ADR-012](./ADR-012-fuzzing-strategy.md) | Fuzzing and Property-Based Testing Strategy | Accepted |
 | [ADR-019](./ADR-019-mod-manager-client.md) | Local Mod Manager Client (M12) | Accepted |
+| [ADR-020](./ADR-020-multi-instance-concurrency.md) | Multi-Instance Concurrency Architecture | Proposed |
+| [ADR-021](./ADR-021-neural-asset-pipeline.md) | Neural Asset Pipeline | Proposed |
+| [ADR-022](./ADR-022-mcp-orchestration.md) | MCP Orchestration Model | Proposed |
 
 ## Format
 

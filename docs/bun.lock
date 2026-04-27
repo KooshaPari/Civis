@@ -5,7 +5,6 @@
     "": {
       "name": "civ-docs",
       "devDependencies": {
-        "@phenotype/docs": "file:./vendor/phenotype-docs",
         "@playwright/test": "^1.49.0",
         "vitepress": "^1.6.3",
         "vue": "^3.5.0",
@@ -114,8 +113,6 @@
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
-
-    "@phenotype/docs": ["@phenotype/docs@file:vendor/phenotype-docs", { "dependencies": { "vue": "^3.5.0" }, "peerDependencies": { "vitepress": "^1.0.0" } }],
 
     "@playwright/test": ["@playwright/test@1.58.2", "", { "dependencies": { "playwright": "1.58.2" }, "bin": { "playwright": "cli.js" } }, "sha512-akea+6bHYBBfA9uQqSYmlJXn61cTa+jbO87xVLCWbTqbWadRVmhxlXATaOjOgcBaWU4ePo0wB41KMFv3o35IXA=="],
 

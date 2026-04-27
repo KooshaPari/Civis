@@ -11,13 +11,12 @@
     "build": "vitepress build",
     "preview": "vitepress preview",
     "docs:test:e2e": "playwright test --config tests/playwright.config.ts",
-    "docs:test": "npm run docs:test:unit && npm run docs:test:component && npm run docs:test:e2e",
-    "docs:check": "npm run docs:build && npm run docs:test"
+    "docs:test": "bun run docs:test:unit && bun run docs:test:component && bun run docs:test:e2e",
+    "docs:check": "bun run docs:build && bun run docs:test"
   },
   "devDependencies": {
     "vitepress": "^1.6.3",
     "vue": "^3.5.0",
-    "@playwright/test": "^1.49.0",
-    "@phenotype/docs": "file:./vendor/phenotype-docs"
+    "@playwright/test": "^1.49.0"
   }
 }

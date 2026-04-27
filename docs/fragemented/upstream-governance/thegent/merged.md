@@ -988,7 +988,7 @@ Idea/task prompts, quality green, and "next thing to do" are wired at multiple l
 | **MCP tool** | `thegent_do_next` | Find next actionable items from WORK_STREAM (canonical), PLAN_STATUS, FR_TRACKER, docs/plans/, escalation; returns prompt_suggestion for thegent_run/thegent_bg |
 | **CLI** | `thegent plan do-next` | Same as thegent_do_next |
 
-**Unified work stream**: Single source of truth is `docs/reference/WORK_STREAM.md`. All agents read it for work items; claim in CLAIMED before starting; update COMPLETED when done. Incorporator agent (`work-stream-incorporator`) merges fragments from plans, research, specs into the stream. See [UNIFIED_WORK_STREAM_DESIGN.md](docs/reference/UNIFIED_WORK_STREAM_DESIGN.md).
+**Unified work stream**: Single source of truth is `docs/reference/WORK_STREAM.md`. All agents read it for work items; claim in CLAIMED before starting; update COMPLETED when done. Incorporator agent (`work-stream-incorporator`) merges fragments from plans, research, specs into the stream. See [UNIFIED_WORK_STREAM_DESIGN.md](/reference/UNIFIED_WORK_STREAM_DESIGN).
 
 **Idea/task** → dump research to docs/research/, specs to docs/docset/, work items to unified stream. **Quality green** → `task quality`. **Next item** → `thegent_do_next` (or read WORK_STREAM.md), pick highest-priority, execute via `thegent_run`/`thegent_bg` with `prompt_suggestion`. **Gardening** → check gov traceability, tests, plan items; dispatch; converge to empty backlog and complete green (`thegent govern go health`, `go cycle`, `task quality`).
 

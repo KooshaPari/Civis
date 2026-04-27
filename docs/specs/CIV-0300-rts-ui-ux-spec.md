@@ -228,7 +228,7 @@ The tactical view zooms into a specific region, showing individual hex tiles wit
 │ CONSTRUCTION QUEUE         │                               │ COMMANDS       │
 │ ────────────────────       │   Fog-of-war active           │ [▶ Move]  (Q)  │
 │ 1. Barracks    [████░] 80% │                               │ [⚔ Attack] (W) │
-│ 2. Farm        [░░░░░]  0% │   Selection box drag          │ [⛏ Fortify](E) │
+│ 2. Farm        [░░░░░]  0% │   Selection box drag          │ ⛏ Fortify (E)  │
 │    (queued)               │   active                      │ [↩ Rally]  (R) │
 │ [+ Add Build]              │                               │ [📦 Resupply]  │
 │                            │                               │ [⏺ Queue Cmds] │

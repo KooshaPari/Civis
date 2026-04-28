@@ -111,7 +111,8 @@ tasks:
         elif [ -f Makefile ]; then
           make lint
         else
-          echo "No lint target detected."
+          task --list >/dev/null
+          echo "No lint target detected; Taskfile syntax is valid."
         fi
 
   clean:

@@ -161,7 +161,7 @@ CIV integrates with the Venture autonomous agent platform at these points:
 | **CIV-0102 Energy Accounting** | Venture Spend Quotas | Conservation equation maps to budget model | TRACK_B_TREASURY_COMPLIANCE_SPEC.md |
 | **CIV-0001 Policy.Evaluate** | Venture Tool Allowlist | Rate-limited tool calls with EAU budget | TRACK_C_CONTROL_PLANE.md |
 
-**Cross-Track Spec Index:** `/Users/kooshapari/temp-PRODVERCEL/485/kush/parpour/SPECS_INDEX.md`
+**Cross-Track Spec Index:** `../reference/INDEX.md`
 
 ### Planning Workspace
 
@@ -198,7 +198,7 @@ All implementation work tracked in:
 
 | File | Purpose |
 |------|---------|
-| `/Users/kooshapari/temp-PRODVERCEL/485/kush/parpour/SPECS_INDEX.md` | Master spec index (CIV + Venture) |
+| `../reference/INDEX.md` | Master spec index (CIV + Venture) |
 | `/Users/kooshapari/temp-PRODVERCEL/485/kush/parpour/NEXT_STEPS.md` | Cross-track implementation roadmap |
 
 ---

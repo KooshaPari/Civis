@@ -1,31 +1,92 @@
 version: "3"
 
-vars:
-  SOLUTION: src/DINOForge.sln
-  CONFIG: Release
-
 tasks:
   default:
-    desc: Build the solution
+    desc: Build the detected project
     cmds:
       - task: build
 
   build:
-    desc: Build the .NET solution
+    desc: Build the detected project
     cmds:
-      - dotnet build {{.SOLUTION}} -c {{.CONFIG}}
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet build
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+            bun run build
+          else
+            npm run build
+          fi
+        elif [ -f pyproject.toml ]; then
+          python -m build
+        elif [ -f go.mod ]; then
+          go build ./...
+        elif [ -f Cargo.toml ]; then
+          cargo build
+        else
+          echo "No build target detected."
+        fi
 
   test:
-    desc: Run the .NET test suite
+    desc: Run tests for the detected project
     cmds:
-      - dotnet test {{.SOLUTION}} -c {{.CONFIG}} --collect:"XPlat Code Coverage"
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet test
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+            bun test
+          else
+            npm test
+          fi
+        elif [ -f pyproject.toml ]; then
+          pytest
+        elif [ -f go.mod ]; then
+          go test ./...
+        elif [ -f Cargo.toml ]; then
+          cargo test
+        else
+          echo "No test target detected."
+        fi
 
   lint:
-    desc: Run formatting and analyzer checks
+    desc: Run lint checks for the detected project
     cmds:
-      - dotnet format {{.SOLUTION}} --verify-no-changes
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet format --verify-no-changes
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+            bun run lint
+          else
+            npm run lint
+          fi
+        elif [ -f pyproject.toml ]; then
+          ruff check .
+        elif [ -f go.mod ]; then
+          go vet ./...
+        elif [ -f Cargo.toml ]; then
+          cargo clippy --all-targets --all-features -- -D warnings
+        else
+          echo "No lint target detected."
+        fi
 
   clean:
     desc: Clean build outputs
     cmds:
-      - dotnet clean {{.SOLUTION}} -c {{.CONFIG}}
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet clean
+        elif [ -f package.json ]; then
+          rm -rf dist build .next coverage
+        elif [ -f pyproject.toml ]; then
+          rm -rf build dist *.egg-info .pytest_cache .ruff_cache
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+        elif [ -f go.mod ]; then
+          go clean
+        elif [ -f Cargo.toml ]; then
+          cargo clean
+        else
+          echo "No clean target detected."
+        fi

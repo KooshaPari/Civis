@@ -1,1 +1,0 @@
-{"success":false,"error":"Failed to connect to pipe \u0027dinoforge-game-bridge\u0027."}

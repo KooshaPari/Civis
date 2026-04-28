@@ -1,6 +1,0 @@
-id: max-version-pack
-name: Version Test
-version: 999.999.999-alpha.999+build.12345.abcdef.1234567890
-framework_version: ">=0.1.0-rc.1 <999.0.0+all-builds"
-author: Test
-type: balance

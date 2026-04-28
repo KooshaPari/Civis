@@ -1,0 +1,30 @@
+version: "3"
+
+vars:
+  SOLUTION: src/DINOForge.sln
+
+tasks:
+  default:
+    desc: Build the solution
+    cmds:
+      - task: build
+
+  build:
+    desc: Build the .NET solution
+    cmds:
+      - dotnet build {{.SOLUTION}}
+
+  test:
+    desc: Run the .NET test suite
+    cmds:
+      - dotnet test {{.SOLUTION}}
+
+  lint:
+    desc: Run formatting and analyzer checks
+    cmds:
+      - dotnet format {{.SOLUTION}} --verify-no-changes
+
+  clean:
+    desc: Clean build outputs
+    cmds:
+      - dotnet clean {{.SOLUTION}}

@@ -24,6 +24,8 @@ tasks:
           go build ./...
         elif [ -f Cargo.toml ]; then
           cargo build
+        elif [ -f Makefile ]; then
+          make build
         else
           echo "No build target detected."
         fi
@@ -46,6 +48,8 @@ tasks:
           go test ./...
         elif [ -f Cargo.toml ]; then
           cargo test
+        elif [ -f Makefile ]; then
+          make test
         else
           echo "No test target detected."
         fi
@@ -68,6 +72,8 @@ tasks:
           go vet ./...
         elif [ -f Cargo.toml ]; then
           cargo clippy --all-targets --all-features -- -D warnings
+        elif [ -f Makefile ]; then
+          make lint
         else
           echo "No lint target detected."
         fi
@@ -87,6 +93,8 @@ tasks:
           go clean
         elif [ -f Cargo.toml ]; then
           cargo clean
+        elif [ -f Makefile ]; then
+          make clean
         else
           echo "No clean target detected."
         fi

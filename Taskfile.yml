@@ -111,7 +111,7 @@ tasks:
         elif [ -f package.json ]; then
           rm -rf dist build .next coverage
         elif [ -f deno.json ] || [ -f deno.jsonc ]; then
-          deno clean
+          deno clean --quiet
         elif [ -f pyproject.toml ]; then
           rm -rf build dist *.egg-info .pytest_cache .ruff_cache
           find . -type d -name __pycache__ -prune -exec rm -rf {} +

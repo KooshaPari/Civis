@@ -18,6 +18,8 @@ tasks:
           else
             npm run build
           fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno task build
         elif [ -f pyproject.toml ]; then
           python -m build
         elif [ -f go.mod ]; then
@@ -48,6 +50,8 @@ tasks:
           else
             npm test
           fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno test
         elif [ -f pyproject.toml ]; then
           pytest
         elif [ -f go.mod ]; then
@@ -78,6 +82,8 @@ tasks:
           else
             npm run lint
           fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno lint
         elif [ -f pyproject.toml ]; then
           ruff check .
         elif [ -f go.mod ]; then
@@ -104,6 +110,8 @@ tasks:
           dotnet clean
         elif [ -f package.json ]; then
           rm -rf dist build .next coverage
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno clean
         elif [ -f pyproject.toml ]; then
           rm -rf build dist *.egg-info .pytest_cache .ruff_cache
           find . -type d -name __pycache__ -prune -exec rm -rf {} +

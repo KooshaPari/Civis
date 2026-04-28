@@ -22,4 +22,4 @@ All CIV specifications have been completed and are marked CLOSED in planning gap
 | CIV-0105 | CIV-0105-war-diplomacy-shadow-v1.md | War, Diplomacy, and Shadow Networks Spec v1 | CLOSED |
 | CIV-0106 | CIV-0106-social-ideology-health-insurgency-v1.md | Social, Ideology, Health, and Insurgency Spec v1 | CLOSED |
 
-For cross-track spec analysis and integration points, see `../../SPECS_INDEX.md`.
+For cross-track spec analysis and integration points, see `../../../SPEC.md`.

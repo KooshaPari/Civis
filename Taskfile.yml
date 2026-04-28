@@ -29,6 +29,8 @@ tasks:
           echo gradle
         elif [ -f Makefile ]; then
           echo make
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo taskfile
         else
           echo unknown
         fi
@@ -68,6 +70,8 @@ tasks:
           gradle build
         elif [ -f Makefile ]; then
           make build
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No build target detected beyond this Taskfile."
         else
           echo "No build target detected."
         fi
@@ -107,6 +111,8 @@ tasks:
           gradle test
         elif [ -f Makefile ]; then
           make test
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No test target detected beyond this Taskfile."
         else
           echo "No test target detected."
         fi
@@ -146,6 +152,9 @@ tasks:
           gradle check
         elif [ -f Makefile ]; then
           make lint
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          task --list >/dev/null
+          echo "Taskfile syntax is valid."
         else
           task --list >/dev/null
           echo "No lint target detected; Taskfile syntax is valid."
@@ -179,6 +188,8 @@ tasks:
           gradle clean
         elif [ -f Makefile ]; then
           make clean
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No clean target detected beyond this Taskfile."
         else
           echo "No clean target detected."
         fi

@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   SOLUTION: src/DINOForge.sln
+  CONFIG: Release
 
 tasks:
   default:
@@ -12,12 +13,12 @@ tasks:
   build:
     desc: Build the .NET solution
     cmds:
-      - dotnet build {{.SOLUTION}}
+      - dotnet build {{.SOLUTION}} -c {{.CONFIG}}
 
   test:
     desc: Run the .NET test suite
     cmds:
-      - dotnet test {{.SOLUTION}}
+      - dotnet test {{.SOLUTION}} -c {{.CONFIG}} --collect:"XPlat Code Coverage"
 
   lint:
     desc: Run formatting and analyzer checks
@@ -27,4 +28,4 @@ tasks:
   clean:
     desc: Clean build outputs
     cmds:
-      - dotnet clean {{.SOLUTION}}
+      - dotnet clean {{.SOLUTION}} -c {{.CONFIG}}

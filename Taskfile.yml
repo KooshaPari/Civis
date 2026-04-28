@@ -15,6 +15,10 @@ tasks:
         elif [ -f package.json ]; then
           if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
             bun run build
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm run build
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn build
           else
             npm run build
           fi
@@ -47,6 +51,10 @@ tasks:
         elif [ -f package.json ]; then
           if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
             bun test
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm test
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn test
           else
             npm test
           fi
@@ -79,6 +87,10 @@ tasks:
         elif [ -f package.json ]; then
           if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
             bun run lint
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm run lint
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn lint
           else
             npm run lint
           fi

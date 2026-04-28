@@ -1,6 +1,8 @@
 # Work Audit — Civis
 
-**Index:** See `/Users/kooshapari/CodeProjects/Phenotype/repos/worklogs/README.md`
+
+**Category: ARCHITECTURE**
+**Index:** See `../WORKLOG.md` for the active project log and this file for the category index.
 
 ## Purpose
 
@@ -54,4 +56,4 @@ Each entry should include:
 
 ---
 
-See parent worklog index at `/Users/kooshapari/CodeProjects/Phenotype/repos/worklogs/README.md` for aggregation tools and cross-project analysis.
+See `../WORKLOG.md` for the active log. For docs navigation, use `../README.md`.

@@ -24,6 +24,12 @@ tasks:
           go build ./...
         elif [ -f Cargo.toml ]; then
           cargo build
+        elif [ -f pom.xml ]; then
+          mvn package
+        elif [ -f gradlew ]; then
+          ./gradlew build
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle build
         elif [ -f Makefile ]; then
           make build
         else
@@ -48,6 +54,12 @@ tasks:
           go test ./...
         elif [ -f Cargo.toml ]; then
           cargo test
+        elif [ -f pom.xml ]; then
+          mvn test
+        elif [ -f gradlew ]; then
+          ./gradlew test
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle test
         elif [ -f Makefile ]; then
           make test
         else
@@ -72,6 +84,12 @@ tasks:
           go vet ./...
         elif [ -f Cargo.toml ]; then
           cargo clippy --all-targets --all-features -- -D warnings
+        elif [ -f pom.xml ]; then
+          mvn verify
+        elif [ -f gradlew ]; then
+          ./gradlew check
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle check
         elif [ -f Makefile ]; then
           make lint
         else
@@ -93,6 +111,12 @@ tasks:
           go clean
         elif [ -f Cargo.toml ]; then
           cargo clean
+        elif [ -f pom.xml ]; then
+          mvn clean
+        elif [ -f gradlew ]; then
+          ./gradlew clean
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle clean
         elif [ -f Makefile ]; then
           make clean
         else

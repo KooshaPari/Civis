@@ -13,7 +13,7 @@ tasks:
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet build
         elif [ -f package.json ]; then
-          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
             bun run build
           elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
             pnpm run build
@@ -49,7 +49,7 @@ tasks:
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet test
         elif [ -f package.json ]; then
-          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
             bun test
           elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
             pnpm test
@@ -85,7 +85,7 @@ tasks:
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet format --verify-no-changes
         elif [ -f package.json ]; then
-          if command -v bun >/dev/null 2>&1 && [ -f bun.lockb -o -f bun.lock ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
             bun run lint
           elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
             pnpm run lint

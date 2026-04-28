@@ -6,10 +6,39 @@ tasks:
     cmds:
       - task: build
 
+  detect:
+    desc: Detect the project language or build system
+    silent: true
+    cmds:
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          echo dotnet
+        elif [ -f package.json ]; then
+          echo javascript
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          echo deno
+        elif [ -f pyproject.toml ]; then
+          echo python
+        elif [ -f go.mod ]; then
+          echo go
+        elif [ -f Cargo.toml ]; then
+          echo rust
+        elif [ -f pom.xml ]; then
+          echo maven
+        elif [ -f gradlew ] || [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          echo gradle
+        elif [ -f Makefile ]; then
+          echo make
+        else
+          echo unknown
+        fi
+
   build:
     desc: Build the detected project
     cmds:
       - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet build
         elif [ -f package.json ]; then
@@ -46,6 +75,8 @@ tasks:
     desc: Run tests for the detected project
     cmds:
       - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet test
         elif [ -f package.json ]; then
@@ -82,6 +113,8 @@ tasks:
     desc: Run lint checks for the detected project
     cmds:
       - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet format --verify-no-changes
         elif [ -f package.json ]; then
@@ -119,6 +152,8 @@ tasks:
     desc: Clean build outputs
     cmds:
       - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
         if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
           dotnet clean
         elif [ -f package.json ]; then

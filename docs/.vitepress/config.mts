@@ -4,6 +4,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 const isPagesBuild = process.env.GITHUB_ACTIONS === 'true' || process.env.GITHUB_PAGES === 'true'
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'Dino'
 const docsBase = isPagesBuild ? `/${repoName}/` : '/'
+const assetPath = (path: string) => `${docsBase}${path}`.replace(/\/+/g, '/').replace(':/', '://')
 
 export default withMermaid(
   defineConfig({
@@ -36,12 +37,12 @@ export default withMermaid(
     },
 
     head: [
-      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
-      ['link', { rel: 'stylesheet', href: '/.vitepress/theme/custom.css' }],
+      ['link', { rel: 'icon', type: 'image/svg+xml', href: assetPath('favicon.svg') }],
+      ['link', { rel: 'stylesheet', href: assetPath('.vitepress/theme/custom.css') }],
     ],
 
     themeConfig: {
-      logo: '/favicon.svg',
+      logo: assetPath('favicon.svg'),
       siteTitle: 'DINOForge',
 
       nav: [

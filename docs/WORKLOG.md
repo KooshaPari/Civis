@@ -1,5 +1,7 @@
 # Worklog
 
+
+**Category: ARCHITECTURE**
 Active work tracking for **civ** project.
 
 ---

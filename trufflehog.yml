@@ -11,4 +11,3 @@ roots:
       - "**/.git/**"
     detectors:
       - allowlist: false
-

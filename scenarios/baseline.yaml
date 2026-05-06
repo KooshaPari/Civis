@@ -1,5 +1,0 @@
-name: baseline
-tick_start: 0
-population: 1000000
-base_consumption_joules: 5000000000
-scarcity_multiplier: 1.0

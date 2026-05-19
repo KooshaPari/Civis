@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Linq;
@@ -50,7 +51,7 @@ namespace DINOForge.SDK.Assets
                 throw new FileNotFoundException("Addressables catalog not found.", catalogPath);
             }
 
-            string json = File.ReadAllText(catalogPath);
+            string json = File.ReadAllText(catalogPath, Encoding.UTF8);
             JObject catalog = JObject.Parse(json);
 
             // Extract m_InternalIds — contains both bundle paths and asset paths

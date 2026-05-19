@@ -102,7 +102,7 @@ public class SdkCompatibilityEdgeCaseTests
         var result = CompatibilityChecker.CheckPack(manifest, "1.0.0");
 
         result.IsCompatible.Should().BeTrue();
-        result.Warnings.Should().NotBeEmpty();
+        result.Warnings.Should().NotBeEmpty(); // open-ended-count-ok: validation warning count is input-determined (fixture generates >=1 warnings)
     }
 
     [Fact]

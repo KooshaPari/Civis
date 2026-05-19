@@ -25,6 +25,11 @@ public sealed class GameAnalyzeScreenTool
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private static readonly HttpClient SharedHttp = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30)
+    };
+
     /// <summary>
     /// Captures a game screenshot and analyzes it with OmniParser to detect UI elements.
     /// Returns detected elements with bounding boxes. Gracefully degrades if OmniParser is unavailable.
@@ -117,11 +122,10 @@ public sealed class GameAnalyzeScreenTool
     {
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             string url = endpoint.TrimEnd('/') + "/parse/";
             string body = JsonSerializer.Serialize(new { image = base64Image }, JsonOptions);
             using var content = new StringContent(body, Encoding.UTF8, "application/json");
-            using var response = await http.PostAsync(url, content, ct).ConfigureAwait(false);
+            using var response = await SharedHttp.PostAsync(url, content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return null;
             string json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return ParseElements(json);
@@ -136,15 +140,13 @@ public sealed class GameAnalyzeScreenTool
             string? apiKey = Environment.GetEnvironmentVariable("REPLICATE_API_KEY");
             if (string.IsNullOrEmpty(apiKey)) return null;
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-            http.DefaultRequestHeaders.Add("Authorization", $"Token {apiKey}");
             string body = JsonSerializer.Serialize(new
             {
                 version = "latest",
                 input = new { image = $"data:image/png;base64,{base64Image}" }
             }, JsonOptions);
             using var content = new StringContent(body, Encoding.UTF8, "application/json");
-            using var response = await http.PostAsync("https://api.replicate.com/v1/predictions", content, ct).ConfigureAwait(false);
+            using var response = await SharedHttp.PostAsync("https://api.replicate.com/v1/predictions", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return null;
             string json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return ParseElements(json);

@@ -1,0 +1,31 @@
+{
+  "scan_utc": "2026-04-27T13:20:57.733793Z",
+  "scan_date": "2026-04-27",
+  "strict": true,
+  "allowlist_size": 76,
+  "nuget_floating": [],
+  "dependabot_unrationalized": [],
+  "gitignore_overbroad": [],
+  "tautological_predicate": [],
+  "vacuous_numeric_guard": [],
+  "unbounded_join_consumer": [],
+  "totals": {
+    "nuget_floating": 0,
+    "dependabot_unrationalized": 0,
+    "gitignore_overbroad": 0,
+    "tautological_predicate": 0,
+    "vacuous_numeric_guard": 0,
+    "unbounded_join_consumer": 0
+  },
+  "raw_totals": {
+    "nuget_floating": 69,
+    "dependabot_unrationalized": 1,
+    "gitignore_overbroad": 6,
+    "tautological_predicate": 0,
+    "vacuous_numeric_guard": 0,
+    "unbounded_join_consumer": 0
+  },
+  "exit_code": 0,
+  "repo_root": "C:/Users/koosh/Dino",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/unbounded-constraints-allowlist.txt"
+}

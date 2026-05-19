@@ -60,7 +60,7 @@ public class WorkflowE2ETests
 
         // Step 2: Get catalog
         var catalog = _bridge.GetCatalog();
-        catalog.Units.Should().NotBeEmpty("packs should contain units");
+        catalog.Units.Should().HaveCount(28, "warfare-starwars has 28 units (14 Republic + 14 CIS)");
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public class WorkflowE2ETests
 
         // Query units
         var allUnits = _bridge.QueryEntities("Unit", null);
-        allUnits.Count.Should().BeGreaterThan(0);
+        allUnits.Count.Should().Be(100);
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public class WorkflowE2ETests
     {
         var result = _bridge.GetComponentMap(null);
         result.Should().NotBeNull();
-        result.Mappings.Should().NotBeEmpty();
+        result.Mappings.Should().HaveCount(3);
     }
 
     /// <summary>

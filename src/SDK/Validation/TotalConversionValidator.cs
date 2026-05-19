@@ -84,7 +84,7 @@ namespace DINOForge.SDK.Validation
     }
 
     /// <summary>Result of a total conversion validation check.</summary>
-    public class TcValidationResult
+    public sealed class TcValidationResult
     {
         /// <summary>
         /// The identifier of the total conversion manifest being validated.
@@ -99,11 +99,11 @@ namespace DINOForge.SDK.Validation
         /// <summary>
         /// List of validation errors that prevent the total conversion from loading.
         /// </summary>
-        public List<string> Errors { get; set; } = new();
+        public List<string> Errors { get; set; } = new(); // public-mutable-ok: deserialization requires mutable List
 
         /// <summary>
         /// List of validation warnings that don't prevent loading but indicate issues.
         /// </summary>
-        public List<string> Warnings { get; set; } = new();
+        public List<string> Warnings { get; set; } = new(); // public-mutable-ok: deserialization requires mutable List
     }
 }

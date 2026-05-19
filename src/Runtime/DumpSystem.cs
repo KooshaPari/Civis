@@ -73,9 +73,9 @@ namespace DINOForge.Runtime
             try
             {
                 string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

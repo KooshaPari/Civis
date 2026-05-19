@@ -1,0 +1,44 @@
+# orphan-process-start allowlist — Pattern #102 detection gate
+#
+# Format: one entry per line. Two forms accepted:
+#
+#   1. Line-locked key:
+#        <SEVERITY>|<file>|<line>
+#      Example:
+#        HIGH|src/Bridge/Client/GameProcessManager.cs|65
+#
+#   2. Bare relative path (suppresses every hit in the file):
+#        src/Bridge/Client/GameProcessManager.cs
+#
+# Lines starting with `#` and blank lines are ignored.
+#
+# Severities:
+#   HIGH — Process.Start() in src/Bridge/, src/Runtime/, src/SDK/ as a
+#          fire-and-forget statement (handle leak in core code), or
+#          Process.Start() assigned to a field with an `await` between
+#          spawn and a try/catch wrapper (orphan-on-throw risk).
+#   MED  — Same fire-and-forget shape but in src/Tools/ or src/Tests/
+#          (not core; handle leak still undesirable but lower urgency).
+#   LOW  — Statement-level discard with no surrounding await/throw and
+#          no field assignment — a transient leak we record but don't
+#          gate on by default. ``--strict`` promotes LOW to fail.
+#
+# Skipped sites (do NOT need to be allowlisted):
+#   * `using var _ = Process.Start(...)` — intentional discard with
+#     deterministic dispose at scope-end.
+#   * Trailing comment `// pattern-102-allowed: <reason>` — rationale
+#     opt-out on the same line as the call.
+#   * src/Tests/Integration/ — process-orchestration tests legitimately
+#     spawn helpers without long-lived field ownership.
+#
+# Allowlisted entries should carry a comment explaining WHY the site
+# can't be wrapped yet (third-party shell-execute pattern, intentional
+# fire-and-forget for browser-open URLs, etc). Plain entries with no
+# rationale should be removed in the next sweep.
+#
+# See scripts/ci/detect_orphan_process_start.py for the full detection
+# spec (run with --self-test to verify the gate).
+#
+# Companion task: #295 (top-4 HIGH/MED sweep) / #296 (fire-and-forget
+# `using var _` wrap) / #297 (this gate) / #298 (CLAUDE.md doctrine +
+# Pattern Catalog entry).

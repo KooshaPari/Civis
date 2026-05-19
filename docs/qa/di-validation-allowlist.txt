@@ -1,0 +1,12 @@
+# Pattern #107: BuildServiceProvider Validation Allowlist
+#
+# Format: <file-path>:<line-num> <reason>
+# Example: src/Tools/Installer/InstallerService.cs:45 di-validation-deferred: validation at runtime
+#
+# Use this file to allowlist BuildServiceProvider() calls that:
+# - Use deferred validation (validated at service request time)
+# - Are in test contexts where validation is mocked
+# - Have explicit try-catch for DI validation errors
+#
+# NOTE: Every site is a real risk. Require strong justification.
+

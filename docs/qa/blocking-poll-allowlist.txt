@@ -1,0 +1,26 @@
+# Pattern #113 Blocking Poll Sleep Allowlist
+#
+# Format: <path>:<line>  # <reason>
+#
+# This allowlist documents Thread.Sleep() calls within loops that have been
+# reviewed and approved as safe. Entries are added when:
+# - The sleep is in dead code or disabled blocks
+# - The sleep is a one-shot synchronization point (not a polling loop)
+# - Proper guards exist but static analysis doesn't detect them
+# - The loop has alternative synchronization mechanisms
+#
+# To suppress a violation, add an entry below or mark the code with:
+# // pattern-113-ok: <reason>
+
+# Iter-79 D1 marked safe (dead code or one-shot sync):
+src/Runtime/Plugin.cs:776  # dead code in disabled block (F10 key release)
+src/Tools/McpServer/Tools/GameInputTool.cs:456  # one-shot focus settle for UI automation
+src/Tools/McpServer/Tools/GameInputTool.cs:466  # one-shot focus settle for UI automation
+src/Tools/McpServer/Tools/GameInputHelper.cs:232  # one-shot focus settle for UI automation
+src/Tools/McpServer/Tools/GameInputHelper.cs:242  # one-shot focus settle for UI automation
+
+# Iter-80 D2 analysis:
+src/Runtime/Plugin.cs:646  # HMR signal file watcher polling — guarded by File.Exists
+src/Runtime/Plugin.cs:755  # key event debounce sleep — one-shot wait within condition
+src/Runtime/Bridge/GameBridgeServer.cs:786  # awaiting MCP pipe connection setup — guarded timeout
+src/Runtime/Bridge/GameBridgeServer.cs:369  # guarded by thread-local state variable

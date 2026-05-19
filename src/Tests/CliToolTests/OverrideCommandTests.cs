@@ -71,7 +71,7 @@ public class OverrideCommandTests
         // Assert
         result.Success.Should().BeTrue();
         result.SdkPath.Should().NotBeNullOrEmpty();
-        result.ModifiedCount.Should().BeGreaterThan(0);
+        result.ModifiedCount.Should().Be(42);
         result.Message.Should().NotBeNullOrEmpty();
     }
 

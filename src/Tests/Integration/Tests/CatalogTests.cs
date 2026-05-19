@@ -34,7 +34,7 @@ public class CatalogTests
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();
-        catalog.Units.Should().NotBeEmpty(
+        catalog.Units.Should().NotBeEmpty( // open-ended-count-ok: catalog fixture unit count is deterministic but assertion is non-specific
             "the game should have unit archetypes");
     }
 
@@ -49,7 +49,7 @@ public class CatalogTests
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();
-        catalog.Buildings.Should().NotBeEmpty(
+        catalog.Buildings.Should().NotBeEmpty( // open-ended-count-ok: catalog fixture building count is deterministic but assertion is non-specific
             "the game should have building archetypes");
     }
 
@@ -64,7 +64,7 @@ public class CatalogTests
             return;
 
         CatalogSnapshot catalog = await _fixture.Client.GetCatalogAsync();
-        catalog.Projectiles.Should().NotBeEmpty(
+        catalog.Projectiles.Should().NotBeEmpty( // open-ended-count-ok: catalog fixture projectile count is deterministic but assertion is non-specific
             "the game should have projectile archetypes");
     }
 }

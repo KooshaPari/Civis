@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Economy.Trade
     /// <summary>
     /// Result of evaluating a trade route's profitability and efficiency.
     /// </summary>
-    public class TradeEvaluation
+    public sealed class TradeEvaluation
     {
         /// <summary>
         /// The trade route that was evaluated.
@@ -60,7 +60,7 @@ namespace DINOForge.Domains.Economy.Trade
     /// <summary>
     /// Suggestion for an optimal trade given current resource state.
     /// </summary>
-    public class TradeSuggestion
+    public sealed class TradeSuggestion
     {
         /// <summary>
         /// The recommended trade route.
@@ -100,7 +100,7 @@ namespace DINOForge.Domains.Economy.Trade
     /// In DINO, gold is obtained exclusively through trading, making this engine critical
     /// for late-game economy strategy.
     /// </summary>
-    public class TradeEngine
+    public sealed class TradeEngine
     {
         /// <summary>
         /// Calculates the effective exchange rate for trading between two resources,

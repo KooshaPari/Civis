@@ -438,7 +438,11 @@ namespace DINOForge.Runtime.Bridge
                     _renderMeshType = asm.GetType("Unity.Rendering.RenderMesh", throwOnError: false);
                     if (_renderMeshType != null) return _renderMeshType;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: type resolution failure is expected when assembly does not contain Unity.Rendering */
+                    System.Diagnostics.Debug.WriteLine($"RenderMesh type lookup in {asm.GetName().Name} failed: {ex.Message}");
+                }
             }
             return null;
         }
@@ -463,7 +467,11 @@ namespace DINOForge.Runtime.Bridge
                     found = asm.GetType(typeName, throwOnError: false);
                     if (found != null) break;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: type resolution failure is expected when assembly does not contain the target type */
+                    System.Diagnostics.Debug.WriteLine($"Type '{typeName}' lookup in {asm.GetName().Name} failed: {ex.Message}");
+                }
             }
 
             _resolvedTypeCache[typeName] = found;
@@ -529,9 +537,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now:u}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

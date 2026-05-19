@@ -6,7 +6,7 @@ namespace DINOForge.Domains.UI.Models
     /// Defines a single menu item that appears in a menu.
     /// Menu items can navigate to other menus, toggle packs, reload content, or execute custom actions.
     /// </summary>
-    public class MenuItemDefinition
+    public sealed class MenuItemDefinition
     {
         /// <summary>
         /// Unique identifier for this menu item within its parent menu.

@@ -1,5 +1,6 @@
 #nullable enable
 using System.IO;
+using DINOForge.SDK.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -45,7 +46,7 @@ namespace DINOForge.SDK
             if (!File.Exists(filePath))
                 return default;
 
-            string yaml = File.ReadAllText(filePath);
+            string yaml = SafeFileIO.ReadText(filePath);
             return Deserialize<T>(yaml);
         }
 

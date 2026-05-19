@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DINOForge.Installer.Services;
+using System;
+using System.ComponentModel;
 
 namespace DINOForge.Installer.ViewModels;
 
@@ -28,13 +30,14 @@ public enum WizardPage
 /// On startup, auto-detects the game path and — if DINOForge is already installed —
 /// routes directly to the Maintenance page instead of the normal install wizard.
 /// </summary>
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly WelcomePageViewModel _welcomeVm;
     private readonly GamePathPageViewModel _gamePathVm;
     private readonly OptionsPageViewModel _optionsVm;
     private readonly ProgressPageViewModel _progressVm;
     private readonly MaintenancePageViewModel _maintenanceVm;
+    private bool _disposed;
 
     [ObservableProperty]
     private WizardPage _currentPage = WizardPage.Welcome;
@@ -72,31 +75,65 @@ public partial class MainWindowViewModel : ObservableObject
 
         // Re-evaluate CanGoNext whenever GamePath changes so the Next button
         // enables/disables live as the user types or auto-detect resolves.
-        _gamePathVm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(GamePathPageViewModel.GamePath)
-                               or nameof(GamePathPageViewModel.IsPathValid)
-                               or nameof(GamePathPageViewModel.GameExeOk))
-            {
-                OnPropertyChanged(nameof(CanGoNext));
-                GoNextCommand.NotifyCanExecuteChanged();
-
-                // If the user changes the path, re-check for existing installation
-                CheckAndOfferMaintenance(_gamePathVm.GamePath);
-            }
-        };
+        // Pattern #105: named handler so Dispose can unsubscribe by reference.
+        _gamePathVm.PropertyChanged += OnGamePathPropertyChanged;
 
         // Auto-detect on first visit to game path page
         _gamePathVm.AutoDetect();
 
-        // Wire maintenance page events
+        // Wire maintenance page events (Pattern #105: stored references for Dispose).
         _maintenanceVm.RepairSelected += OnRepairSelected;
         _maintenanceVm.UpdateSelected += OnUpdateSelected;
         _maintenanceVm.UninstallSelected += OnUninstallSelected;
-        _maintenanceVm.Cancelled += () => System.Environment.Exit(0);
+        _maintenanceVm.Cancelled += OnMaintenanceCancelled;
 
         // After auto-detect, check if DINOForge is already present
         CheckAndOfferMaintenance(_gamePathVm.GamePath);
+    }
+
+    /// <summary>
+    /// Named handler for <see cref="_gamePathVm"/> PropertyChanged so it can be
+    /// unsubscribed by reference in <see cref="Dispose"/> (Pattern #105 — event
+    /// subscription lifecycle symmetry; lambda captures cannot be unsubscribed).
+    /// </summary>
+    private void OnGamePathPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(GamePathPageViewModel.GamePath)
+                           or nameof(GamePathPageViewModel.IsPathValid)
+                           or nameof(GamePathPageViewModel.GameExeOk))
+        {
+            OnPropertyChanged(nameof(CanGoNext));
+            GoNextCommand.NotifyCanExecuteChanged();
+
+            // If the user changes the path, re-check for existing installation
+            CheckAndOfferMaintenance(_gamePathVm.GamePath);
+        }
+    }
+
+    /// <summary>
+    /// Named handler for <see cref="MaintenancePageViewModel.Cancelled"/> so it
+    /// can be unsubscribed by reference in <see cref="Dispose"/>.
+    /// </summary>
+    private void OnMaintenanceCancelled()
+    {
+        System.Environment.Exit(0);
+    }
+
+    /// <summary>
+    /// Unsubscribes from all child ViewModel events to prevent leaks (Pattern #105).
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        _gamePathVm.PropertyChanged -= OnGamePathPropertyChanged;
+        _maintenanceVm.RepairSelected -= OnRepairSelected;
+        _maintenanceVm.UpdateSelected -= OnUpdateSelected;
+        _maintenanceVm.UninstallSelected -= OnUninstallSelected;
+        _maintenanceVm.Cancelled -= OnMaintenanceCancelled;
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

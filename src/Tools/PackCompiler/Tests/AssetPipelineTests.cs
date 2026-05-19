@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
@@ -276,7 +277,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
 
                 // Assert
                 File.Exists(outputPath).Should().BeTrue();
-                var content = File.ReadAllText(outputPath);
+                var content = File.ReadAllText(outputPath, Encoding.UTF8);
                 content.Should().Contain("%YAML");
                 content.Should().Contain("test-asset");
             }
@@ -335,7 +336,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
 
                 // Assert
                 File.Exists(catalogPath).Should().BeTrue();
-                var content = File.ReadAllText(catalogPath);
+                var content = File.ReadAllText(catalogPath, Encoding.UTF8);
                 content.Should().Contain("asset/test");
                 content.Should().Contain("infantry");
             }

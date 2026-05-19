@@ -289,9 +289,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] WaveInjector: {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] WaveInjector: {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 

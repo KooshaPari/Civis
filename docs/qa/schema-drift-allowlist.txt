@@ -1,0 +1,106 @@
+# schema-drift gate (Pattern #90) — allowlist file
+#
+# One entry per line. Bare schema filenames suppress missing-file errors
+# (e.g. xunit.runner.schema.json — shipped by NuGet, not in our schemas/).
+# Full URLs suppress $schema URL records. Lines starting with `#` are
+# comments. See scripts/ci/schema_drift_check.py for matcher rules.
+#
+# IMPORTANT: only add entries that are TRUE legitimate exceptions. Adding
+# an entry to silence drift that should be fixed defeats the gate.
+
+# ----------------------------------------------------------------------------
+# Test runner / NuGet-shipped schemas (not in repo schemas/)
+# ----------------------------------------------------------------------------
+xunit.runner.schema.json
+
+# ----------------------------------------------------------------------------
+# JSON Schema meta-schemas (externally hosted, draft URLs)
+# ----------------------------------------------------------------------------
+https://json-schema.org/draft/2020-12/schema
+https://json-schema.org/draft/2019-09/schema
+https://json-schema.org/draft-07/schema
+http://json-schema.org/draft-07/schema#
+
+# ----------------------------------------------------------------------------
+# Externally hosted schemas referenced from packs (sanity-only, no fetch)
+# ----------------------------------------------------------------------------
+# (none yet — add ``https://example.com/schemas/v1.json`` style entries here)
+
+# ----------------------------------------------------------------------------
+# Schemas that live OUTSIDE schemas/ on purpose
+# ----------------------------------------------------------------------------
+# proof-policy lives next to policies/proof-policy.yaml because the
+# smart-contract proof system (#191/#231) ships policies + their schema
+# as a co-located bundle (policies/proof-policy.{yaml,schema.json}).
+# Documented in docs/design/2026-04-25-smart-contract-proof-system.md.
+proof-policy.schema.json
+
+# ----------------------------------------------------------------------------
+# Historical / annotated references — schemas that USED to exist but were
+# renamed. Allowlisted because the doc retains the old name as a historical
+# claim (with annotation) rather than rewriting the original record.
+# ----------------------------------------------------------------------------
+# `pack.schema.json` was renamed to `pack-manifest.schema.json` pre-2026-04-20.
+# References in PROOF_OF_COMPLETION_20260420.md / TRACEABILITY_VERIFICATION_20260420.md
+# are dated session artifacts annotated per task #243.
+pack.schema.json
+# `asset_manifest.schema.json` (snake-case duplicate) was merged into the dash
+# variant in iter 56 (#244). References in TRUTH_TABLE.md (deletion record)
+# and docs/archive/ describe the historical filename.
+asset_manifest.schema.json
+# `units.schema.json` (plural) is a pre-rename name used in technical-spec.md
+# pseudocode walkthroughs. Canonical name is `unit.schema.json`.
+units.schema.json
+# `technology.schema.json` does NOT exist — only the collection variant
+# (`technology-collection.schema.json`) is shipped. Mention in TRUTH_TABLE.md
+# explicitly notes this absence as the rationale for inline-item routing.
+technology.schema.json
+# `hud-element.schema.json` is a future schema referenced in design doc
+# 2026-04-25-ui-registry-wiring-plan.md as out-of-scope follow-up (task #141).
+hud-element.schema.json
+# `-collection.schema.json` is a wildcard mention in TRUTH_TABLE.md naming
+# the collection-schema family (unit-, building-, weapon-, etc.) — not a
+# literal filename.
+-collection.schema.json
+
+# ----------------------------------------------------------------------------
+# YAML mirror schemas — published dual-format alongside the JSON variant
+# ----------------------------------------------------------------------------
+# These three `.schema.yaml` files are hand-maintained YAML mirrors of the
+# canonical `.schema.json` schemas of the same name. They are referenced
+# from:
+#   * C# XML doc comments (e.g. `src/SDK/Models/UnitDefinition.cs`)
+#   * `docs/reference/schemas.md` ("`unit.schema.yaml` / `.json`")
+#   * `docs/concepts/registry-system.md`
+#   * `manifests/EXTENSION-POINTS.md`
+# The schema-drift gate's filename regex only matches `*.schema.json`, so the
+# YAML siblings appear as orphans even though they ARE referenced. Published
+# intentionally so YAML-first agents/tooling can consume the schema in their
+# native format. Pattern #90 task #246 follow-up.
+faction.schema.yaml
+pack-manifest.schema.yaml
+unit.schema.yaml
+
+# ----------------------------------------------------------------------------
+# Total Conversion pack schema — runtime validated by C# code, not by file
+# ----------------------------------------------------------------------------
+# `total-conversion.schema.json` documents the on-disk shape of a
+# `total_conversion` pack manifest for pack authors / external tooling.
+# Runtime validation is performed by `src/SDK/Validation/TotalConversionValidator.cs`
+# operating on the deserialized `TotalConversionManifest` POCO — the schema
+# file itself is not loaded by `SchemaResolverService`. Three archived packs
+# (`packs/_archived/warfare-{modern,guerrilla,starwars}/pack.yaml`) declare
+# `type: total_conversion`. Schema retained as a published artifact for
+# external mod authors writing TC packs.
+total-conversion.schema.json
+
+# ----------------------------------------------------------------------------
+# Universe Bible schema — historical filename, validated via POCO
+# ----------------------------------------------------------------------------
+# `universe-bible.json` IS a JSON Schema (has `$schema`, `title`, `type`,
+# `properties`, `definitions`) but its filename pre-dates the
+# `*.schema.json` convention. `src/SDK/Universe/UniverseLoader.cs`
+# deserializes universe YAML into the `UniverseBible` POCO and never loads
+# this schema file at runtime. Kept under the historical name so external
+# tooling and prior CHANGELOG entries continue to resolve. Pattern #90.
+universe-bible.json

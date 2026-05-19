@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -103,7 +104,7 @@ public sealed class InstallDetector
         {
             try
             {
-                string text = File.ReadAllText(versionFile).Trim();
+                string text = File.ReadAllText(versionFile, Encoding.UTF8).Trim();
                 if (!string.IsNullOrEmpty(text))
                     return text;
             }

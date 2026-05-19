@@ -193,9 +193,12 @@ namespace DINOForge.Runtime.Bridge
             try
             {
                 string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [BuildingDestructionVFXSystem] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [BuildingDestructionVFXSystem] {msg}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BuildingDestructionVFXSystem debug log write failed: {ex.Message}");
+            }
         }
     }
 }

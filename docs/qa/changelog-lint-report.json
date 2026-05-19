@@ -1,0 +1,20 @@
+{
+  "scan_utc": "2026-04-27T12:41:22.828870Z",
+  "scan_date": "2026-04-27",
+  "duplicate_headers": [],
+  "missing_tags": [],
+  "non_keep_changelog_sections": [],
+  "duplicate_within_block_sections": [],
+  "stale_todos": [],
+  "strict": false,
+  "exit_code": 0,
+  "changelog_path": "C:/Users/koosh/Dino/CHANGELOG.md",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/changelog-lint-allowlist.txt",
+  "src_root": "C:/Users/koosh/Dino/src",
+  "closed_tasks_path": "C:/Users/koosh/Dino/docs/qa/closed-tasks.txt",
+  "closed_task_count": 0,
+  "allowlist_size": 0,
+  "blocks_seen": 27,
+  "tags_total": 23,
+  "tags_strict_semver": 22
+}

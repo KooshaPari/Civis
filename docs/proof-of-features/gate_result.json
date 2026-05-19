@@ -1,0 +1,8 @@
+{
+  "validation_failures": [
+    "Missing proof directory"
+  ],
+  "reason": "No proof generation output found",
+  "status": "FAILED",
+  "timestamp": "2026-04-26T18:02:44.8207568Z"
+}

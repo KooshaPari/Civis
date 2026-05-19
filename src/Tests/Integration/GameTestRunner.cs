@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,7 +86,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
         var configFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".dino_test_instance_path");
         if (File.Exists(configFile))
         {
-            var path = File.ReadAllText(configFile).Trim();
+            var path = File.ReadAllText(configFile, Encoding.UTF8).Trim();
             if (Directory.Exists(path)) return path;
         }
 
@@ -132,8 +133,22 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
         if (_gameProcess == null)
             throw new InvalidOperationException("Failed to start game process");
 
-        // Wait for game to initialize bridge
-        await Task.Delay(5000, ct); // Give game time to start BepInEx
+        // Wait for game to initialize bridge — poll for MainWindowHandle (or early exit) instead of fixed delay.
+        // Pattern #108 — sleep-based sync replaced with bounded poll; subsequent connect-retry loop covers any residual.
+        await Support.TestWait.UntilAsync(
+            () =>
+            {
+                try
+                {
+                    if (_gameProcess.HasExited) return true; // fail fast — connect loop will surface error
+                    _gameProcess.Refresh();
+                    return _gameProcess.MainWindowHandle != IntPtr.Zero;
+                }
+                catch { return false; }
+            },
+            TimeSpan.FromSeconds(10),
+            pollMs: 100,
+            ct).ConfigureAwait(false);
 
         // Connect to the bridge
         _client = new GameClient(new GameClientOptions

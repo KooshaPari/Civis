@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -16,6 +17,11 @@ namespace DINOForge.DesktopCompanion.Data
     /// </summary>
     public sealed class ModCatalogService : IModCatalogService
     {
+        private static readonly HttpClient SharedHttp = new()
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
         private readonly ILogger<ModCatalogService>? _logger;
         private readonly HttpClient _httpClient;
 
@@ -26,8 +32,7 @@ namespace DINOForge.DesktopCompanion.Data
         public ModCatalogService(ILogger<ModCatalogService>? logger = null)
         {
             _logger = logger;
-            _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _httpClient = SharedHttp;
         }
 
         /// <inheritdoc />
@@ -108,7 +113,7 @@ namespace DINOForge.DesktopCompanion.Data
 
                 try
                 {
-                    string yaml = File.ReadAllText(packYamlPath);
+                    string yaml = File.ReadAllText(packYamlPath, Encoding.UTF8);
                     CatalogEntry? entry = TryParseYamlPack(yaml, dirName);
                     if (entry != null)
                         entries.Add(entry);

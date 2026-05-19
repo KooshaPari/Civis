@@ -52,7 +52,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3B_Configuration_ContainsV0_9_0_CISDroids()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain("v0_9_0_cis_droids");
             yaml.Should().Contain("Phase 2B: CIS droid units");
         }
@@ -60,7 +60,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3B_Configuration_Has5Droids()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             // Parse YAML to count Phase 3B models
             var deserializer = YamlLoader.Deserializer;
@@ -89,7 +89,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_DroidUnit_ConfiguredCorrectly(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             // Verify unit exists in config
             yaml.Should().Contain($"- id: {unitId}", $"Unit {unitId} must be defined in asset_pipeline.yaml");
@@ -113,7 +113,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_DroidUnit_HasAddressableKey(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("addressable_key:", $"{unitId} must have addressable_key defined");
@@ -128,7 +128,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_DroidUnit_HasOutputPrefab(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("output_prefab:", $"{unitId} must have output_prefab defined");
@@ -143,7 +143,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_DroidUnit_ReferencesRawGlbPath_InConfiguration(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("file: raw/", $"{unitId} must point at a raw asset path in config");
@@ -154,7 +154,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3B_DroidUnits_UseDistinctRawGlbPaths()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitIds = new[]
             {
                 "cis_b1_battle_droid",
@@ -181,7 +181,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_DroidUnit_HasDefinitionUpdate(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("update_definition:", $"{unitId} must have update_definition");
@@ -195,7 +195,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3B_CISMaterial_Defined()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             yaml.Should().Contain("cis:", "CIS material must be defined");
             yaml.Should().Contain("faction: cis", "CIS material must specify faction");
@@ -216,11 +216,11 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3B_CISUnits_Has5Units()
         {
-            var yaml = File.ReadAllText(CISUnitsYamlPath);
+            var yaml = File.ReadAllText(CISUnitsYamlPath, System.Text.Encoding.UTF8);
 
             // Count units (lines starting with "- id:")
             var unitLines = yaml.Split('\n').Where(l => l.TrimStart().StartsWith("- id:")).ToList();
-            unitLines.Count.Should().BeGreaterThanOrEqualTo(5, "CIS units should have at least 5 units defined");
+            unitLines.Count.Should().Be(14, "CIS units should have exactly 14 units defined");
         }
 
         [Theory]
@@ -231,7 +231,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_CISUnit_Defined(string unitId)
         {
-            var yaml = File.ReadAllText(CISUnitsYamlPath);
+            var yaml = File.ReadAllText(CISUnitsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"- id: {unitId}", $"Unit {unitId} must be defined in cis_units.yaml");
         }
 
@@ -243,7 +243,7 @@ namespace DINOForge.Tests
         [InlineData("cis_probe_droid")]
         public void Phase3B_CISUnit_IsCISFaction(string unitId)
         {
-            var yaml = File.ReadAllText(CISUnitsYamlPath);
+            var yaml = File.ReadAllText(CISUnitsYamlPath, System.Text.Encoding.UTF8);
             var unitStart = yaml.IndexOf($"- id: {unitId}");
 
             if (unitStart == -1)
@@ -291,3 +291,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

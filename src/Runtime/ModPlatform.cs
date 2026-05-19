@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using BepInEx;
 using BepInEx.Configuration;
@@ -242,6 +243,7 @@ namespace DINOForge.Runtime
             // Build the vanilla entity catalog
             try
             {
+                // null-forgiveness-ok: _vanillaCatalog set in Initialize before any Build call
                 _vanillaCatalog!.Build(world.EntityManager);
                 _log.LogInfo($"[ModPlatform] VanillaCatalog built: " +
                     $"{_vanillaCatalog.Units.Count} units, " +
@@ -810,7 +812,7 @@ namespace DINOForge.Runtime
                 if (string.IsNullOrEmpty(packsDir)) return;
                 string filePath = Path.Combine(packsDir, DisabledPacksFile);
                 if (!File.Exists(filePath)) return;
-                string json = File.ReadAllText(filePath);
+                string json = File.ReadAllText(filePath, Encoding.UTF8);
                 List<string>? disabled = JsonConvert.DeserializeObject<List<string>>(json);
                 if (disabled != null)
                 {

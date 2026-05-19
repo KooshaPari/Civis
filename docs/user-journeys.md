@@ -4,7 +4,7 @@ description: Automated video proof of DINOForge features
 ---
 
 <script setup>
-import JourneyViewer from '../.vitepress/theme/components/JourneyViewer.vue'
+import JourneyViewer from './.vitepress/theme/components/JourneyViewer.vue'
 
 // US-F1.1: Game Launch Journey
 const gamelaunchJourney = {

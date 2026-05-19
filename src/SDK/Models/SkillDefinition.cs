@@ -1,14 +1,27 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
 {
     /// <summary>
+    /// Enum for skill modifier types.
+    /// </summary>
+    public enum SkillModifierType
+    {
+        /// <summary>Flat modifier value.</summary>
+        Flat,
+        /// <summary>Percent modifier value.</summary>
+        Percent
+    }
+
+
+    /// <summary>
     /// Strongly-typed representation of a DINOForge skill definition (skills/*.yaml).
     /// Maps to DINO's Components.Skills.* ECS components (HealSkillData, RageSkillData,
     /// MeteorCastSkillData, SummonSkillData, etc.).
     /// </summary>
-    public class SkillDefinition
+    public class SkillDefinition : IValidatable
     {
         /// <summary>Unique skill identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -64,6 +77,7 @@ namespace DINOForge.SDK.Models
         /// Stat effects applied by this skill.
         /// </summary>
         [YamlMember(Alias = "effects")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<SkillEffect> Effects { get; set; } = new List<SkillEffect>();
 
         /// <summary>
@@ -71,12 +85,39 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "vanilla_mapping")]
         public string? VanillaMapping { get; set; }
+
+        /// <summary>
+        /// Validates that the skill definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Id))
+            {
+                return ValidationResult.Failure("SkillDefinition id must not be empty");
+            }
+
+            if (Effects == null)
+            {
+                return ValidationResult.Success();
+            }
+
+            foreach (var effect in Effects)
+            {
+                var effectResult = effect.Validate();
+                if (!effectResult.IsValid)
+                {
+                    return effectResult;
+                }
+            }
+
+            return ValidationResult.Success();
+        }
     }
 
     /// <summary>
     /// A single stat modifier effect applied by a skill.
     /// </summary>
-    public class SkillEffect
+    public class SkillEffect : IValidatable
     {
         /// <summary>
         /// Stat to modify (e.g. health, speed, damage, armor).
@@ -85,15 +126,38 @@ namespace DINOForge.SDK.Models
         public string Stat { get; set; } = "";
 
         /// <summary>
-        /// Modifier type: flat or percent.
+        /// Modifier type: Flat or Percent.
         /// </summary>
         [YamlMember(Alias = "modifier_type")]
-        public string ModifierType { get; set; } = "flat";
+        public SkillModifierType ModifierType { get; set; } = SkillModifierType.Flat;
 
         /// <summary>
         /// Modifier value. Positive = buff, negative = debuff.
         /// </summary>
         [YamlMember(Alias = "value")]
         public float Value { get; set; } = 0f;
+
+        /// <summary>
+        /// Validates that the skill effect is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Stat))
+            {
+                return ValidationResult.Failure(new[] {
+                    new ValidationError("stat", "Stat is required", "required")
+                });
+            }
+
+            // Check ModifierType is a known enum value (Flat or Percent)
+            if (!System.Enum.IsDefined(typeof(SkillModifierType), ModifierType))
+            {
+                return ValidationResult.Failure(new[] {
+                    new ValidationError("modifier_type", "ModifierType must be a valid SkillModifierType (Flat or Percent)", "enum")
+                });
+            }
+
+            return ValidationResult.Success();
+        }
     }
 }

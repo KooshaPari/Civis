@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using DINOForge.SDK;
+using DINOForge.Tools.PackCompiler.Json;
 using DINOForge.Tools.PackCompiler.Models;
 using DINOForge.Tools.PackCompiler.Services;
 using YamlDotNet.Serialization;
@@ -49,7 +51,7 @@ namespace DINOForge.Tools.PackCompiler
 
                 var deserializer = YamlLoader.Deserializer;
 
-                var configYaml = File.ReadAllText(configPath);
+                var configYaml = File.ReadAllText(configPath, Encoding.UTF8);
                 var config = deserializer.Deserialize<AssetPipelineConfig>(configYaml);
 
                 if (config == null)
@@ -90,7 +92,7 @@ namespace DINOForge.Tools.PackCompiler
 
                             var imported = await importService.ImportAsync(asset.Id, assetPath);
                             var outputPath = Path.Combine(importedDir, $"{asset.Id}.json");
-                            var json = System.Text.Json.JsonSerializer.Serialize(imported, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                            var json = System.Text.Json.JsonSerializer.Serialize(imported, PackCompilerJsonOptions.Indented);
                             File.WriteAllText(outputPath, json);
 
                             logWriter.WriteLine($"  OK: {asset.Id} → {Path.GetFileName(outputPath)}");
@@ -123,7 +125,7 @@ namespace DINOForge.Tools.PackCompiler
                 {
                     try
                     {
-                        var importedJson = File.ReadAllText(importedFile);
+                        var importedJson = File.ReadAllText(importedFile, Encoding.UTF8);
                         var imported = System.Text.Json.JsonSerializer.Deserialize<ImportedAsset>(importedJson);
 
                         if (imported == null)
@@ -154,7 +156,7 @@ namespace DINOForge.Tools.PackCompiler
                         };
                         var optimized = await optimizeService.OptimizeAsync(imported, defaultDef);
                         var outputPath = Path.Combine(optimizedDir, $"{imported.AssetId}_optimized.json");
-                        var json = System.Text.Json.JsonSerializer.Serialize(optimized, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                        var json = System.Text.Json.JsonSerializer.Serialize(optimized, PackCompilerJsonOptions.Indented);
                         File.WriteAllText(outputPath, json);
 
                         logWriter.WriteLine($"  OK: {imported.AssetId} → {Path.GetFileName(outputPath)}");
@@ -186,7 +188,7 @@ namespace DINOForge.Tools.PackCompiler
                 {
                     try
                     {
-                        var optimizedJson = File.ReadAllText(optimizedFile);
+                        var optimizedJson = File.ReadAllText(optimizedFile, Encoding.UTF8);
                         var optimized = System.Text.Json.JsonSerializer.Deserialize<OptimizedAsset>(optimizedJson);
 
                         if (optimized == null)

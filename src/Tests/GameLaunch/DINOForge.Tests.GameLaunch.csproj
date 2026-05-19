@@ -3,7 +3,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <ImplicitUsings>disable</ImplicitUsings>
+    <ImplicitUsings>enable</ImplicitUsings>
     <!-- Excluded from CI.sln — only runs on self-hosted runners with DINO installed -->
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -15,10 +15,11 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="6.*" />
-    <PackageReference Include="coverlet.collector" Version="6.*">
+    <!-- DISABLED: Coverage gating via CI closure-gate.yml instead (consistent with net8.0 projects). -->
+    <!-- <PackageReference Include="coverlet.collector" Version="6.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    </PackageReference> -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />

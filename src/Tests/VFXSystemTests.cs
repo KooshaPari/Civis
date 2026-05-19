@@ -31,7 +31,7 @@ namespace DINOForge.Tests
         [Fact]
         public void LODManager_Source_DeclaresExpectedDistanceThresholds_AndTierNames()
         {
-            string source = File.ReadAllText(LodManagerSourcePath);
+            string source = File.ReadAllText(LodManagerSourcePath, System.Text.Encoding.UTF8);
 
             source.Should().Contain("private const float FullQualityDistance = 100f;");
             source.Should().Contain("private const float MediumQualityDistance = 200f;");
@@ -44,7 +44,7 @@ namespace DINOForge.Tests
         [Fact]
         public void LODManager_Source_DeclaresExpectedEmissionMultipliers_AndLookupHelpers()
         {
-            string source = File.ReadAllText(LodManagerSourcePath);
+            string source = File.ReadAllText(LodManagerSourcePath, System.Text.Encoding.UTF8);
 
             source.Should().Contain("LODTier.FULL => 1.0f");
             source.Should().Contain("LODTier.MEDIUM => 0.6f");
@@ -56,7 +56,7 @@ namespace DINOForge.Tests
         [Fact]
         public void VFXPoolManager_Source_PrewarmsExpectedCatalog_AndUsesQueuePools()
         {
-            string source = File.ReadAllText(VfxPoolManagerSourcePath);
+            string source = File.ReadAllText(VfxPoolManagerSourcePath, System.Text.Encoding.UTF8);
 
             source.Should().Contain("Dictionary<string, Queue<ParticleSystem>>");
             source.Should().Contain("AllocatePool(\"vfx/BlasterBolt_Rep.prefab\", 12)");
@@ -68,7 +68,7 @@ namespace DINOForge.Tests
         [Fact]
         public void VFXPoolManager_Source_DeclaresFallbackAndLifecycleOperations()
         {
-            string source = File.ReadAllText(VfxPoolManagerSourcePath);
+            string source = File.ReadAllText(VfxPoolManagerSourcePath, System.Text.Encoding.UTF8);
 
             source.Should().Contain("CreatePrefabFromDescriptor");
             source.Should().Contain("VFXPrefabCatalog.GetAllPrefabs()");
@@ -123,3 +123,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

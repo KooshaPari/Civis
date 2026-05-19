@@ -1,0 +1,7 @@
+- id: test-unit
+  display_name: Test Unit
+  unit_class: MilitiaLight
+  faction_id: test-faction
+  stats:
+    cost:
+      gold: 100

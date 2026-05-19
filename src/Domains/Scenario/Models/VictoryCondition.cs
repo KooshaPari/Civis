@@ -24,7 +24,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// <summary>
     /// Defines a condition that, when met, triggers victory for the player.
     /// </summary>
-    public class VictoryCondition
+    public sealed class VictoryCondition
     {
         /// <summary>
         /// The type of victory condition to evaluate.

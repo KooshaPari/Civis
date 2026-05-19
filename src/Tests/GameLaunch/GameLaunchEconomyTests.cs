@@ -21,7 +21,10 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     [Fact]
     public async Task EconomyPack_IsLoaded_AfterBootstrap()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         GameStatus status = await fixture.Client!.StatusAsync();
         status.LoadedPacks.Should().Contain("economy-balanced",
@@ -34,7 +37,10 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     [Fact]
     public async Task EconomyPack_Resources_AvailableViaSnapshot()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         ResourceSnapshot resources = await fixture.Client!.GetResourcesAsync();
         resources.Should().NotBeNull("resource snapshot should be queryable");
@@ -46,7 +52,10 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     [Fact]
     public async Task EconomyPack_ManifestIsValid_AndLoadable()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         CatalogSnapshot catalog = await fixture.Client!.GetCatalogAsync();
         catalog.Should().NotBeNull("catalog should be queryable");
@@ -64,7 +73,9 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     [Fact]
     public async Task EconomyPack_ResourceValues_AreReasonable()
     {
-        ResourceSnapshot resources = await fixture.Client.GetResourcesAsync();
+        if (!fixture.IsInitialized) return;
+
+        ResourceSnapshot resources = await fixture.Client!.GetResourcesAsync();
 
         resources.Food.Should().BeGreaterThanOrEqualTo(0, "Food stockpile should not be negative");
         resources.Wood.Should().BeGreaterThanOrEqualTo(0, "Wood stockpile should not be negative");

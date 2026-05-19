@@ -1,0 +1,18 @@
+# Pattern #120 Allowlist: JsonSerializer.Deserialize without JsonSerializerOptions
+#
+# Suppression mechanisms:
+# 1. HIGH|file|line — line-locked key. Copy from JSON report.
+# 2. relative/path.cs — suppress entire file.
+# 3. // json-deserialize-ok: <reason> — inline comment on source line.
+#
+# See: scripts/ci/detect_unguarded_json_deserialize.py
+#
+# HIGH (FFI-adjacent code MUST use options):
+# Format: HIGH|path|line
+#
+# MED (production code should use options, permitted with audit trail):
+# Format: MED|path|line
+#
+# Test fixtures (informational, --strict to fail):
+# Lines from RustAssetPipelineValidationTests, others exempt by default.
+#

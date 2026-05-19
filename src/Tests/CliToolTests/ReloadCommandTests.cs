@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using DINOForge.Bridge.Protocol;
 using FluentAssertions;
 using Xunit;
@@ -41,7 +42,7 @@ public class ReloadCommandTests
 
         // Assert
         reloadResult.Success.Should().BeFalse();
-        reloadResult.Errors.Should().NotBeEmpty();
+        reloadResult.Errors.Should().HaveCount(1);
     }
 
     [Fact]

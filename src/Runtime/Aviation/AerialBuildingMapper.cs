@@ -88,9 +88,12 @@ namespace DINOForge.Runtime.Aviation
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] AerialBuildingMapper: {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialBuildingMapper: {msg}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                BepInEx.Logging.Logger.CreateLogSource("AerialBuildingMapper").LogWarning($"Failed to write debug log: {ex.Message}");
+            }
         }
     }
 }

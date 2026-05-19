@@ -1,0 +1,10 @@
+<Project>
+  <!-- CI Gate: Prevent DINOForge.Runtime TFM drift -->
+  <!-- Background: Iter-97 found Runtime.csproj had netstandard2.0 instead of net8.0,
+       causing silent build-to-wrong-directory failure and stale DLL deployment. -->
+  <Target Name="EnsureRuntimeFrameworkTarget" BeforeTargets="Build" Condition="'$(MSBuildProjectName)' == 'DINOForge.Runtime'">
+    <Error
+      Condition="'$(TargetFramework)' != 'net8.0'"
+      Text="DINOForge.Runtime MUST target net8.0 (matches BepInEx/.NET 8 runtime in game). Found: $(TargetFramework). Do not change this without updating the DeployToGame pipeline and consulting CLAUDE.md .NET Version Policy." />
+  </Target>
+</Project>

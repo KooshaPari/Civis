@@ -31,7 +31,7 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>List of currently loaded pack IDs.</summary>
         [JsonProperty("loadedPacks")]
-        public List<string> LoadedPacks { get; set; } = new List<string>();
+        public List<string> LoadedPacks { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>DINOForge runtime version string.</summary>
         [JsonProperty("version")]

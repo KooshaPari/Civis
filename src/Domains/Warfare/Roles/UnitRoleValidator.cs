@@ -10,7 +10,7 @@ namespace DINOForge.Domains.Warfare.Roles
     /// Validates that a faction's roster fills all required unit role slots.
     /// Each faction should map its roster slots to real unit IDs in the unit registry.
     /// </summary>
-    public class UnitRoleValidator
+    public sealed class UnitRoleValidator
     {
         /// <summary>
         /// The required unit roles that every faction must fill.

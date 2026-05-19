@@ -1,0 +1,63 @@
+name: configureawait
+
+# Pattern #98 detection gate — fails CI when a C# library await is
+# missing the ``.ConfigureAwait(false)`` suffix. Library code that
+# captures a consumer's SynchronizationContext / TaskScheduler can
+# deadlock when consumed from a UI host (Avalonia GUI installer,
+# WinUI desktop companion) or thrash on context switches when
+# consumed from the Unity main thread.
+#
+# Companion: scripts/ci/detect_missing_configureawait.py (run with
+# --self-test for spec). Allowlist:
+# docs/qa/configureawait-allowlist.txt.
+# Cross-reference: tasks #274 (ConfigureAwait sweep) /
+# #275 (this gate) / #276 (enable CA2007 in
+# Directory.Build.props for library projects) / future Roslyn
+# analyzer for compile-time enforcement.
+
+on:
+  pull_request:
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_missing_configureawait.py"
+      - "docs/qa/configureawait-allowlist.txt"
+      - ".github/workflows/configureawait.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_missing_configureawait.py"
+      - "docs/qa/configureawait-allowlist.txt"
+      - ".github/workflows/configureawait.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configureawait-check:
+    name: Pattern #98 missing-configureawait
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_missing_configureawait.py --self-test
+
+      - name: Run configureawait gate
+        run: python scripts/ci/detect_missing_configureawait.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: configureawait-report
+          path: docs/qa/configureawait-report.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/technology-collection.schema.json",
+  "title": "Technology collection (list of technology definitions)",
+  "description": "Inline minimal item schema — base technology.schema.json does not yet exist (Phase 2 placeholder).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "display_name"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "display_name": { "type": "string", "minLength": 1 }
+    },
+    "additionalProperties": true
+  },
+  "minItems": 1
+}

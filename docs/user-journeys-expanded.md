@@ -4,7 +4,7 @@ description: Comprehensive journey collection demonstrating all DINOForge featur
 ---
 
 <script setup>
-import JourneyViewer from '../.vitepress/theme/components/JourneyViewer.vue'
+import JourneyViewer from './.vitepress/theme/components/JourneyViewer.vue'
 
 // Asset Import Journey
 const assetImportJourney = {

@@ -5,10 +5,10 @@
       "Microsoft.Data.Sqlite": {
         "type": "Direct",
         "requested": "[8.*, )",
-        "resolved": "8.0.25",
-        "contentHash": "KJD56XpbVy2adYLKnQI38E8+cclNTkMgYEokV/aLJRZshhYK9T6JvZgQp7XHpN4MEDwBNNTkOF3nJf7RoBBfEg==",
+        "resolved": "8.0.27",
+        "contentHash": "qlS+YrntAGokJdNNU9iEbf1cjhUw82xspqWq1J4haGrUk800HqHid5q9/dfkLGxNGYubT/MysPoIbo364et20Q==",
         "dependencies": {
-          "Microsoft.Data.Sqlite.Core": "8.0.25",
+          "Microsoft.Data.Sqlite.Core": "8.0.27",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.6"
         }
       },
@@ -117,22 +117,32 @@
       "Spectre.Console": {
         "type": "Direct",
         "requested": "[0.*, )",
-        "resolved": "0.55.0",
-        "contentHash": "2TVhUHFsDux0Z+y2Hv4bFsOMuON4SuotEEKkMparFkp5Rm259naaaEQrN4Sv6C1cbsiGKPjfkJDGgUp+hZPjTw==",
+        "resolved": "0.55.2",
+        "contentHash": "yc0g12YJpmZHofGJLTQX02/uqfzJ6XHRx6pe9rANNjleQptXMHPxD9KI2/DWkXiJWddc+4oizEdGox15c89hhw==",
         "dependencies": {
-          "Spectre.Console.Ansi": "0.55.0"
+          "Spectre.Console.Ansi": "0.55.2"
         }
       },
       "System.CommandLine": {
         "type": "Direct",
         "requested": "[2.*, )",
-        "resolved": "2.0.5",
-        "contentHash": "2XtWAPk1G6arpe3OCFNrYYuf6iIboznxs2elJSGgd8e0euou7LfGYFon6hBEfDWNtOLr0M3+oUVgy1a5EGa41A=="
+        "resolved": "2.0.8",
+        "contentHash": "FbpgF8p/ClXnoXEWLjQB34kNh5rsLewEgIgLyVzLDucAOQ4cNs7ec9Cam7gdKPruSb6zp4Mx8htZGTL4/5PJPg=="
+      },
+      "AssetsTools.NET": {
+        "type": "Transitive",
+        "resolved": "3.0.4",
+        "contentHash": "NqYy5UIucwKwdkpamFTi8lr53hD+V8qQmbHzztQj1v4Pq1G4TjNlpkUWOhktTLBqBm4aPRaAkpFgB+3TDEuomw=="
+      },
+      "Microsoft.Bcl.TimeProvider": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "f5Kr5JepAbiGo7uDmhgvMqhntwxqXNn6/IpTBSSI4cuHhgnJGrLxFRhMjVpRkLPp6zJXO0/G0l3j9p9zSJxa+w=="
       },
       "Microsoft.Data.Sqlite.Core": {
         "type": "Transitive",
-        "resolved": "8.0.25",
-        "contentHash": "L6Xt1GglbYsQP1Dm3eYUvu3KfYDVNhObON8s1MNMuTjvDOPPvcDmmICSIVPst2pkKQNmoOhptadP38037jIOHA==",
+        "resolved": "8.0.27",
+        "contentHash": "xdTCV/0Mmx1TV9O7gyvRtyQFBtoMVwVWUn6p4W++u2AENEOugIApAaCY6wYr894UPJBwIv3ChyVVOJ9joo9dXw==",
         "dependencies": {
           "SQLitePCLRaw.core": "2.1.6"
         }
@@ -280,6 +290,11 @@
           "Newtonsoft.Json": "9.0.1"
         }
       },
+      "Octokit": {
+        "type": "Transitive",
+        "resolved": "13.0.1",
+        "contentHash": "tjXTa2FXzbd3n17VWpi8UXe05EIJqHcWJW8C2kukftIve00duWiZL8x4i1vlZQ0zQ4RbRANbRc7J5K7Co/1spQ=="
+      },
       "Serilog": {
         "type": "Transitive",
         "resolved": "4.3.1",
@@ -303,8 +318,8 @@
       },
       "Spectre.Console.Ansi": {
         "type": "Transitive",
-        "resolved": "0.55.0",
-        "contentHash": "GIfgOvuF8MpU52bprhwtDEtx0gmVIGOepM8bw0lH/TSMD0rg1Xp+5Y53kPG8rFVdcpbNANlhDQ5mEVVPO3/2Tg=="
+        "resolved": "0.55.2",
+        "contentHash": "tN3KEJQQZwLW9HJnG5YTSAxfBwxsmg1wVuGvhGG2rM+pbl+NGaHU8pDcNofPlOXlgpkbpBMxI5t9o9qPfy3sHQ=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -341,10 +356,10 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.18.0, )",
+          "DINOForge.Bridge.Protocol": "[0.24.0, )",
+          "DINOForge.SDK": "[0.18.0, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
-          "Serilog.Formatting.Json": "[2.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
           "Serilog.Sinks.File": "[6.*, )"
         }
@@ -358,13 +373,19 @@
       "dinoforge.sdk": {
         "type": "Project",
         "dependencies": {
+          "AssetsTools.NET": "[3.0.4, )",
+          "Microsoft.Bcl.TimeProvider": "[8.0.0, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
           "YamlDotNet": "[16.*, )"
         }
       },
       "dinoforge.tools.installer": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "DINOForge.SDK": "[0.18.0, )",
+          "Octokit": "[13.*, )"
+        }
       }
     },
     "net11.0/win-x64": {

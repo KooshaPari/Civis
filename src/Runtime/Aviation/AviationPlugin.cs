@@ -32,9 +32,13 @@ namespace DINOForge.Runtime.Aviation
             try
             {
                 string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                /* safe-swallow: diagnostic log write failure is non-critical for aviation plugin */
+                System.Diagnostics.Debug.WriteLine($"AviationPlugin debug log write failed: {ex.Message}");
+            }
         }
     }
 }

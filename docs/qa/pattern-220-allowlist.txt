@@ -1,0 +1,5 @@
+# Pattern #220 allowlist — unsealed concrete classes intentionally not sealed.
+# Format: <file-path>:<line>:<classname>:<reason>
+# Added entries require justification.
+
+# (no entries — Pattern #220 is audit-only until DF1013 lands)

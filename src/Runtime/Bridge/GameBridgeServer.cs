@@ -32,10 +32,13 @@ namespace DINOForge.Runtime.Bridge
         private const int COR_E_THREADABORT = unchecked((int)0x80131623);
 
         private ModPlatform _platform;
-        private readonly DateTime _startTime;
+        private readonly DateTimeOffset _startTime;
+        private readonly TimeProvider _timeProvider;
         private Thread? _serverThread;
         private volatile bool _running;
         private NamedPipeServerStream? _currentPipe;
+        private readonly ManualResetEventSlim _shutdownEvent = new(false);
+        private SessionHmac? _session;
 
         /// <summary>
         /// True while the ModPlatform is alive (not destroyed during a scene transition).
@@ -53,10 +56,12 @@ namespace DINOForge.Runtime.Bridge
         /// Creates a new game bridge server.
         /// </summary>
         /// <param name="platform">The ModPlatform instance for accessing subsystems.</param>
-        public GameBridgeServer(ModPlatform platform)
+        /// <param name="timeProvider">Optional TimeProvider for testing. Defaults to <see cref="TimeProvider.System"/>.</param>
+        public GameBridgeServer(ModPlatform platform, TimeProvider? timeProvider = null)
         {
             _platform = platform ?? throw new ArgumentNullException(nameof(platform));
-            _startTime = DateTime.UtcNow;
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _startTime = _timeProvider.GetUtcNow();
         }
 
         /// <summary>
@@ -126,6 +131,7 @@ namespace DINOForge.Runtime.Bridge
         public void Stop()
         {
             _running = false;
+            _shutdownEvent.Set();  // Signal polling loop to wake up
 
             try
             {
@@ -134,6 +140,14 @@ namespace DINOForge.Runtime.Bridge
             catch { }
 
             _currentPipe = null;
+
+            try
+            {
+                _session?.Dispose();
+            }
+            catch { }
+
+            _session = null;
             WriteDebug("[GameBridgeServer] Stopped.");
         }
 
@@ -417,6 +431,8 @@ namespace DINOForge.Runtime.Bridge
             string m = method.StartsWith("game.") ? method.Substring(5) : method;
             switch (m)
             {
+                case "connect":
+                    return HandleConnect();
                 case "ping":
                     return HandlePing();
                 case "status":
@@ -482,13 +498,38 @@ namespace DINOForge.Runtime.Bridge
         //  Handler Implementations
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Handles the <c>connect</c> handshake request. Generates a fresh session
+        /// with a unique session_id and 32-byte ephemeral key for Phase 4a SessionHmac.
+        /// Returns a JSON object with snake_case fields: session_id, session_key_b64.
+        /// Per the mock server contract, replaces any prior session (reconnect semantics).
+        /// </summary>
+        private JToken HandleConnect()
+        {
+            // Dispose previous session if one exists (reconnect semantics)
+            _session?.Dispose();
+
+            // Mint a fresh session
+            _session = new SessionHmac();
+
+            // Return the handshake envelope with snake_case fields
+            var envelope = new JObject
+            {
+                ["session_id"] = _session.SessionId,
+                ["session_key_b64"] = _session.KeyMaterialB64(),
+            };
+
+            WriteDebug($"[GameBridgeServer] HandleConnect: minted session_id={_session.SessionId}");
+            return envelope;
+        }
+
         private JToken HandlePing()
         {
             PingResult result = new PingResult
             {
                 Pong = true,
                 Version = PluginInfo.VERSION,
-                UptimeSeconds = (DateTime.UtcNow - _startTime).TotalSeconds
+                UptimeSeconds = (_timeProvider.GetUtcNow() - _startTime).TotalSeconds
             };
             return JToken.FromObject(result);
         }
@@ -643,16 +684,18 @@ namespace DINOForge.Runtime.Bridge
             EcsTypeDiscovery.DiscoverAndLog();
 
             var assemblies = EcsTypeDiscovery.GetDiscoveredAssemblies() ?? new List<string>();
-            var types = pattern != null
-                ? EcsTypeDiscovery.FindTypes(pattern).ToList()
-                : EcsTypeDiscovery.GetDiscoveredTypes()?.ToList() ?? new List<string>();
+            var types = (pattern != null
+                ? EcsTypeDiscovery.FindTypes(pattern)
+                : EcsTypeDiscovery.GetDiscoveredTypes() ?? Enumerable.Empty<string>())
+                .Take(200)
+                .ToList();
 
             return JToken.FromObject(new
             {
                 success = true,
                 assemblies = assemblies,
                 typesFound = types.Count,
-                types = types.Take(200).ToList(),
+                types = types,
                 pattern = pattern ?? "(all)",
                 logMessage = "Full type list written to dinoforge_debug.log"
             });
@@ -663,6 +706,8 @@ namespace DINOForge.Runtime.Bridge
             string? selector = parameters?.Value<string>("selector");
 
             var result = MainThreadDispatcher.RunOnMainThread(() => UiTreeSnapshotBuilder.Capture(selector));
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required. MainThreadDispatcher.RunOnMainThread
+            // returns a Task that completes on main thread; RPC handler must wait synchronously to return response.
             bool completed = result.Wait(5000);
             UiTreeResult treeResult;
             if (!completed)
@@ -691,6 +736,7 @@ namespace DINOForge.Runtime.Bridge
             }
             else
             {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 treeResult = result.Result;
             }
 
@@ -702,6 +748,7 @@ namespace DINOForge.Runtime.Bridge
         {
             string selector = parameters?.Value<string>("selector") ?? string.Empty;
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Query(selector));
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             UiActionResult queryResult;
             if (!completed)
@@ -715,6 +762,7 @@ namespace DINOForge.Runtime.Bridge
             }
             else
             {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 queryResult = result.Result;
             }
 
@@ -726,6 +774,7 @@ namespace DINOForge.Runtime.Bridge
         {
             string selector = parameters?.Value<string>("selector") ?? string.Empty;
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Click(selector));
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             UiActionResult clickResult;
             if (!completed)
@@ -739,6 +788,7 @@ namespace DINOForge.Runtime.Bridge
             }
             else
             {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 clickResult = result.Result;
             }
 
@@ -751,12 +801,13 @@ namespace DINOForge.Runtime.Bridge
             string selector = parameters?.Value<string>("selector") ?? string.Empty;
             string? state = parameters?.Value<string>("state");
             int timeoutMs = parameters?.Value<int?>("timeoutMs") ?? 5000;
-            DateTime deadline = DateTime.UtcNow.AddMilliseconds(Math.Max(1, timeoutMs));
+            DateTimeOffset deadline = _timeProvider.GetUtcNow().AddMilliseconds(Math.Max(1, timeoutMs));
             UiWaitResult? lastResult = null;
 
-            while (DateTime.UtcNow <= deadline)
+            while (_timeProvider.GetUtcNow() <= deadline)
             {
                 var evalTask = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.EvaluateState(selector, state));
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 bool completed = evalTask.Wait(5000);
                 if (!completed)
                 {
@@ -771,6 +822,7 @@ namespace DINOForge.Runtime.Bridge
                     return JToken.FromObject(timeoutResult);
                 }
 
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 lastResult = evalTask.Result;
                 if (lastResult.Ready)
                 {
@@ -798,6 +850,7 @@ namespace DINOForge.Runtime.Bridge
             string condition = parameters?.Value<string>("condition") ?? "visible";
 
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Expect(selector, condition));
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             UiExpectationResult expectResult;
             if (!completed)
@@ -812,6 +865,7 @@ namespace DINOForge.Runtime.Bridge
             }
             else
             {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 expectResult = result.Result;
             }
 
@@ -832,6 +886,7 @@ namespace DINOForge.Runtime.Bridge
                 throw new ArgumentException($"Unknown SDK path: {sdkPath}");
 
             // Reading ECS data requires main thread
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             StatResult statResult = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 return ReadStatFromEcs(mapping, entityIndex);
@@ -868,6 +923,7 @@ namespace DINOForge.Runtime.Bridge
 
             // Apply immediately on the main thread so callers see the change reflected at once.
             // Also enqueue so the StatModifierSystem re-applies it after scene reloads.
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             OverrideResult result = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 World? world = GetActiveWorld();
@@ -898,6 +954,7 @@ namespace DINOForge.Runtime.Bridge
             string? componentType = parameters?.Value<string>("componentType");
             string? category = parameters?.Value<string>("category");
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             QueryResult queryResult = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 return QueryEntitiesOnMainThread(componentType, category);
@@ -922,6 +979,7 @@ namespace DINOForge.Runtime.Bridge
             try
             {
                 // Pack loading involves file IO and registry updates
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 SDK.ContentLoadResult loadResult = MainThreadDispatcher.RunOnMainThread(() =>
                 {
                     return _platform.LoadPacks();
@@ -958,7 +1016,9 @@ namespace DINOForge.Runtime.Bridge
                 return ResourceReader.ReadResources(world.EntityManager);
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = task.Wait(5000);
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             ResourceSnapshot snapshot = completed ? task.Result : new ResourceSnapshot();
 
             if (!completed)
@@ -995,8 +1055,11 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool timedOut = !loadResult.Wait(5000);
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool success = !timedOut && loadResult.Result.success;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             int sceneCount = timedOut ? -1 : loadResult.Result.sceneCount;
 
             return JToken.FromObject(new { success, scene = sceneName, buildIndex, sceneCount });
@@ -1010,9 +1073,10 @@ namespace DINOForge.Runtime.Bridge
                 path = Path.Combine(
                     BepInEx.Paths.BepInExRootPath,
                     "screenshots",
-                    $"dinoforge_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                    $"dinoforge_{DateTime.UtcNow:yyyyMMddTHHmmssZ}.png");
             }
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             ScreenshotResult ssResult = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 try
@@ -1031,8 +1095,14 @@ namespace DINOForge.Runtime.Bridge
                         Height = Screen.height
                     };
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    // Pattern #104 (Task #302): structured logging instead of catch-swallow-default.
+                    // Surface the failure path via WriteDebug (full Exception.ToString() per Pattern #96).
+                    // ScreenshotResult.Success=false is preserved as the wire signal; the DTO is shared
+                    // with Bridge.Protocol so we don't add a new field here, but the runtime log
+                    // captures the exception type, message, and stack for diagnosis.
+                    WriteDebug($"[GameBridgeServer] HandleScreenshot failed for '{path}' ({ex.GetType().Name}): {ex}");
                     return new ScreenshotResult
                     {
                         Success = false,
@@ -1049,6 +1119,7 @@ namespace DINOForge.Runtime.Bridge
             string? category = parameters?.Value<string>("category");
 
             // Rebuild the catalog for a fresh dump
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             CatalogSnapshot snapshot = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 World? world = GetActiveWorld();
@@ -1109,8 +1180,8 @@ namespace DINOForge.Runtime.Bridge
         {
             int timeoutMs = parameters?.Value<int?>("timeoutMs") ?? 30000;
 
-            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            while (DateTime.UtcNow < deadline && _running)
+            DateTimeOffset deadline = _timeProvider.GetUtcNow().AddMilliseconds(timeoutMs);
+            while (_timeProvider.GetUtcNow() < deadline && _running)
             {
                 if (IsPlatformAlive && _platform.IsWorldReady)
                 {
@@ -1133,7 +1204,8 @@ namespace DINOForge.Runtime.Bridge
                     return JToken.FromObject(readyResult);
                 }
 
-                Thread.Sleep(200);
+                if (_shutdownEvent.Wait(200))  // Signaled = shutdown
+                    break;
             }
 
             WaitResult timeoutResult = new WaitResult
@@ -1306,6 +1378,7 @@ namespace DINOForge.Runtime.Bridge
                 if (catalog != null && catalog.IsBuilt)
                 {
                     IReadOnlyList<VanillaEntityInfo> list;
+                    // null-forgiveness-ok: guarded by if (!string.IsNullOrEmpty(category)) above
                     switch (category!.ToLowerInvariant())
                     {
                         case "unit":
@@ -1546,7 +1619,9 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    return new { success = false, message = ex.Message };
+                    // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
+                    WriteDebug($"[GameBridgeServer] DismissDialog handler failed: {ex}");
+                    return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
 
@@ -1590,7 +1665,9 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    return new { success = false, message = ex.Message };
+                    // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
+                    WriteDebug($"[GameBridgeServer] PressKey/scanScene failed: {ex}");
+                    return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
 
@@ -1643,7 +1720,9 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    return new { success = false, message = ex.Message };
+                    // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
+                    WriteDebug($"[GameBridgeServer] InvokeMethod target='{target}' method='{method}' failed: {ex}");
+                    return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
 
@@ -1709,7 +1788,9 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    return new { success = false, message = ex.Message };
+                    // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
+                    WriteDebug($"[GameBridgeServer] ClickButton '{buttonName}' failed: {ex}");
+                    return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
 
@@ -1780,7 +1861,9 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    return new { success = false, message = ex.Message };
+                    // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
+                    WriteDebug($"[GameBridgeServer] ToggleUi target='{target}' failed: {ex}");
+                    return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
 
@@ -2189,7 +2272,7 @@ namespace DINOForge.Runtime.Bridge
             if (logPath == null) return;
             try
             {
-                File.AppendAllText(logPath, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(logPath, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
             catch (ThreadAbortException)
             {

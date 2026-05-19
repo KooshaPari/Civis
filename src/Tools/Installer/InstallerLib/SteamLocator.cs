@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DINOForge.Tools.Installer
@@ -188,7 +189,7 @@ namespace DINOForge.Tools.Installer
 
             try
             {
-                string content = File.ReadAllText(vdfPath);
+                string content = File.ReadAllText(vdfPath, Encoding.UTF8);
                 IReadOnlyList<string> parsed = ParseLibraryFoldersVdf(content);
                 foreach (string folder in parsed)
                 {
@@ -239,7 +240,7 @@ namespace DINOForge.Tools.Installer
         {
             try
             {
-                string content = File.ReadAllText(acfPath);
+                string content = File.ReadAllText(acfPath, Encoding.UTF8);
                 Regex regex = new Regex("\"installdir\"\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
                 Match match = regex.Match(content);
                 if (match.Success)

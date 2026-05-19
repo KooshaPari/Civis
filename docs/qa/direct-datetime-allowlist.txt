@@ -1,0 +1,73 @@
+# Pattern #100 — direct-DateTime allowlist (task #286).
+#
+# This file lists C# source sites where a direct
+# ``DateTime.UtcNow`` or ``DateTime.Now`` reference has been audited
+# and accepted, OR where the call site is grandfathered debt.
+#
+# The healthy library pattern is to inject ``TimeProvider`` (or an
+# equivalent ``IClock`` abstraction) so consumers can swap in a fake
+# clock for tests:
+#
+#     public sealed class MyService(TimeProvider time)
+#     {
+#         public bool IsExpired(DateTime t, TimeSpan ttl)
+#             => time.GetUtcNow() - t > ttl;
+#     }
+#
+# Direct ``DateTime.UtcNow`` / ``DateTime.Now`` is also a deadline-loop
+# bug magnet:
+#
+#     while (DateTime.UtcNow < deadline) { ... }   // wall-clock spin
+#
+# Wall-clock comparisons can spin forever on NTP step / DST drift / VM
+# resume. Use ``Stopwatch.GetTimestamp()`` or
+# ``TimeProvider.GetUtcNow()`` for monotonic deadlines.
+#
+# Two entry forms are accepted:
+#
+#   1. ``severity|file|line`` — line-locked allowlist key. Pull these
+#      directly from the ``allowlist_key`` field of
+#      ``docs/qa/direct-datetime-report.json``. Moving the line forces
+#      a fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every site in that file.
+#      Use sparingly, only for files where the testability concern has
+#      been fully addressed by an alternative mechanism (e.g. the file
+#      is a diagnostic surface and is documented as such).
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_direct_datetime.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_direct_datetime.py --self-test
+# CI workflow: .github/workflows/direct-datetime.yml
+#
+# Auto-skipped scopes (these never appear in the report):
+#   src/Tests/                           — test code (asserts real time)
+#
+# Auto-skipped expressions:
+#   ... // TimeProvider-deferred (netstandard2.0)
+#         — bless sites where the consuming TFM blocks migration
+#   ... // debug-log timestamp
+#         — bless sites where DateTime is purely cosmetic
+#   [ExcludeFromCodeCoverage] type
+#         — diagnostic / glue types
+#
+# Pairs with #285 (TimeProvider migration sweep) and a future Roslyn
+# analyzer for compile-time enforcement. Tracking task: #286.
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# (Empty initially — populate as residuals are triaged. Prefer fixing
+# the call site over allowlisting; per-line ``// TimeProvider-deferred``
+# or ``// debug-log timestamp`` comments are the preferred opt-outs for
+# a single legitimate site.)
+
+# pattern-103-allowed: user-visible TUI display
+src/Tools/Cli/Commands/WatchCommand.cs
+
+# pattern-103-allowed: WinUI display
+src/Tools/DesktopCompanion/App.xaml.cs

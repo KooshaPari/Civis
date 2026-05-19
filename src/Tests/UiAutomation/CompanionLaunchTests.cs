@@ -32,6 +32,6 @@ public sealed class CompanionLaunchTests(CompanionFixture fixture)
         listView.Should().NotBeNull("PackListView must be present in the main window");
 
         ListBox lb = listView!.AsListBox();
-        lb.Items.Should().NotBeEmpty("at least the example-balance pack should be present");
+        lb.Items.Should().HaveCount(1, "the example-balance pack should be present");
     }
 }

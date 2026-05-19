@@ -162,7 +162,7 @@ public class SandboxIsolationTests : IAsyncLifetime
             File.Exists(testFile2).Should().BeFalse("file should NOT exist in container 2 (isolated)");
 
             // Verify content
-            var content = File.ReadAllText(testFile1);
+            var content = File.ReadAllText(testFile1, System.Text.Encoding.UTF8);
             content.Should().Be("test data for container 1");
         }
         finally
@@ -196,8 +196,8 @@ public class SandboxIsolationTests : IAsyncLifetime
             File.WriteAllText(configFile2, "[TestSection]\nKey=Value2\n");
 
             // Assert - verify isolation
-            var content1 = File.ReadAllText(configFile1);
-            var content2 = File.ReadAllText(configFile2);
+            var content1 = File.ReadAllText(configFile1, System.Text.Encoding.UTF8);
+            var content2 = File.ReadAllText(configFile2, System.Text.Encoding.UTF8);
 
             content1.Should().Contain("Value1");
             content2.Should().Contain("Value2");
@@ -235,8 +235,8 @@ public class SandboxIsolationTests : IAsyncLifetime
             File.WriteAllText(saveFile2, "SAVE_DATA_CONTAINER_2");
 
             // Assert
-            var save1 = File.ReadAllText(saveFile1);
-            var save2 = File.ReadAllText(saveFile2);
+            var save1 = File.ReadAllText(saveFile1, System.Text.Encoding.UTF8);
+            var save2 = File.ReadAllText(saveFile2, System.Text.Encoding.UTF8);
 
             save1.Should().Be("SAVE_DATA_CONTAINER_1");
             save2.Should().Be("SAVE_DATA_CONTAINER_2");
@@ -363,8 +363,8 @@ public class SandboxIsolationTests : IAsyncLifetime
             File.WriteAllText(file2, "nested content 2");
 
             // Assert
-            var content1 = File.ReadAllText(file1);
-            var content2 = File.ReadAllText(file2);
+            var content1 = File.ReadAllText(file1, System.Text.Encoding.UTF8);
+            var content2 = File.ReadAllText(file2, System.Text.Encoding.UTF8);
 
             content1.Should().Be("nested content 1");
             content2.Should().Be("nested content 2");

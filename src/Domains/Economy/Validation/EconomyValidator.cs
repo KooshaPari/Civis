@@ -15,7 +15,7 @@ namespace DINOForge.Domains.Economy.Validation
     /// - No circular trade dependencies exist
     /// - Exchange rates are within reasonable bounds
     /// </summary>
-    public class EconomyValidator
+    public sealed class EconomyValidator
     {
         private static readonly HashSet<string> ValidResources = new HashSet<string>(
             ResourceRate.ValidResourceTypes, StringComparer.OrdinalIgnoreCase);

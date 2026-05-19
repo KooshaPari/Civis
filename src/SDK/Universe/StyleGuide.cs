@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Universe
@@ -7,7 +8,7 @@ namespace DINOForge.SDK.Universe
     /// Visual and audio style rules for a themed universe.
     /// Defines color palettes, audio themes, and architecture styles per faction.
     /// </summary>
-    public class StyleGuide
+    public sealed class StyleGuide : IValidatable
     {
         /// <summary>
         /// Per-faction visual/audio style definitions.
@@ -20,12 +21,38 @@ namespace DINOForge.SDK.Universe
         /// </summary>
         [YamlMember(Alias = "global")]
         public GlobalStyle? Global { get; set; }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UniverseLoader style.yaml deserialize site.
+        /// Rejects any FactionStyle.colors.primary that is blank (string-empty).
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            foreach (KeyValuePair<string, FactionStyle> kvp in FactionStyles)
+            {
+                FactionStyle? style = kvp.Value;
+                if (style?.Colors != null && string.IsNullOrWhiteSpace(style.Colors.Primary))
+                {
+                    errors.Add(new ValidationError(
+                        $"faction_styles.{kvp.Key}.colors.primary",
+                        "FactionStyle 'colors.primary' is required.",
+                        "non_empty"));
+                }
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// Style definition for a specific faction.
     /// </summary>
-    public class FactionStyle
+    public sealed class FactionStyle
     {
         /// <summary>
         /// Color palette for this faction.
@@ -55,7 +82,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// Color palette for a faction.
     /// </summary>
-    public class ColorPalette
+    public sealed class ColorPalette
     {
         /// <summary>
         /// Primary faction color (hex, e.g. "#FFFFFF").
@@ -85,7 +112,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// Audio theme for a faction.
     /// </summary>
-    public class AudioTheme
+    public sealed class AudioTheme
     {
         /// <summary>
         /// March/movement audio theme identifier.
@@ -121,7 +148,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// Global style properties shared across all factions.
     /// </summary>
-    public class GlobalStyle
+    public sealed class GlobalStyle
     {
         /// <summary>
         /// Overall visual tone (e.g. "gritty", "clean", "stylized").

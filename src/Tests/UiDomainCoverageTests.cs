@@ -69,7 +69,7 @@ public class UiDomainCoverageTests
         Directory.CreateDirectory(hudDir);
 
         string hudYaml = @"
-elements:
+hud_elements:
   - id: test-health-bar
     type: health_bar
     position: top_left
@@ -194,9 +194,9 @@ themes:
         string hudDir = Path.Combine(tempDir, "hud_elements");
         Directory.CreateDirectory(hudDir);
 
-        // Array format (elements)
+        // Array format (hud_elements)
         string hudYaml = @"
-elements:
+hud_elements:
   - id: single-element
     type: custom
     position: center
@@ -328,7 +328,7 @@ elements:
 
         var errors = palette.ValidateContrast();
 
-        errors.Should().NotBeEmpty();
+        errors.Should().HaveCount(1);
         errors.Should().Contain(e => e.Contains("WCAG AA"));
     }
 
@@ -551,8 +551,9 @@ elements:
 
         var errors = plugin.ValidatePack("test-pack");
 
-        errors.Should().NotBeEmpty();
-        errors.Should().Contain(e => e.Contains("invalid width") || e.Contains("invalid height"));
+        errors.Should().HaveCount(2);
+        errors.Should().Contain(e => e.Contains("invalid width"));
+        errors.Should().Contain(e => e.Contains("invalid height"));
     }
 
     [Fact]
@@ -569,7 +570,7 @@ elements:
 
         var errors = plugin.ValidatePack("test-pack");
 
-        errors.Should().NotBeEmpty();
+        errors.Should().HaveCount(1);
         errors.Should().Contain(e => e.Contains("empty title"));
     }
 
@@ -591,7 +592,7 @@ elements:
 
         var errors = plugin.ValidatePack("test-pack");
 
-        errors.Should().NotBeEmpty();
+        errors.Should().HaveCount(1);
         errors.Should().Contain(e => e.Contains("empty ID") || e.Contains("empty primary color"));
     }
 
@@ -847,7 +848,7 @@ elements:
     {
         var registry = new ThemeRegistry();
 
-        registry.Count.Should().BeGreaterThan(0);
+        registry.Count.Should().Be(2);
         registry.Contains("dark-theme").Should().BeTrue();
         registry.Contains("light-theme").Should().BeTrue();
     }

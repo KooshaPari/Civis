@@ -9,7 +9,7 @@ namespace DINOForge.Domains.UI.Registries
     /// Registry of UI theme definitions. Manages all themes registered across all packs,
     /// supporting theme selection and customization of UI appearance.
     /// </summary>
-    public class ThemeRegistry
+    public sealed class ThemeRegistry
     {
         private readonly Dictionary<string, ThemeDefinition> _themes =
             new Dictionary<string, ThemeDefinition>(StringComparer.OrdinalIgnoreCase);

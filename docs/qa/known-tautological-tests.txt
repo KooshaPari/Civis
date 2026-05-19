@@ -1,0 +1,74 @@
+# Pattern #91 known-debt list (iter-54 audit + iter-55 stricter sweep, set 2026-04-27)
+#
+# These tests were flagged by the iter-54/iter-55 Pattern #91 audits as
+# tautological: they assert literal-true / have no real assertion at all
+# beyond "the call did not throw". Each entry is grandfathered until #246
+# (cleanup task) migrates it to either:
+#   - [Fact(Skip = "<documented reason>")] — explicit placeholder
+#   - a real assertion (e.g. wrap call in FluentActions.Invoking().Should().NotThrow())
+#   - or deletion if the documented behavior is already covered elsewhere.
+#
+# Format: one fully-qualified test method name per line, "#" for comments.
+# FQN = <namespace>.<class>.<method>. Method-name globs like "*_DoesNotThrow",
+# "*_NoOp", "*_Smoke_*", "*_Compiles" are auto-allowlisted at the script level
+# and do NOT need entries here.
+#
+# DO NOT add new entries casually — each addition is technical debt that the
+# CI gate will not catch. Prefer fixing the test to widening this list.
+#
+# Audit cross-reference: #91/#246/#247/#248. Companion script:
+# scripts/ci/tautological_test_check.py (--self-test for spec).
+#
+# ---------------------------------------------------------------------------
+# === iter-54 Pattern #91 audit: 13 grandfathered placeholder tests ===
+# ---------------------------------------------------------------------------
+
+# VFXSystemTests — three documentation-only [Fact] tests with Assert.True(true).
+# They describe expected behavior but execute zero real assertions. #246 will
+# convert each to [Fact(Skip = "...")] and a paired integration test.
+DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_RegisterCorrectly_WithModPlatform
+DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_HandleMissingPoolManager_Gracefully
+DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_ScaleWithGameLoad_AsExpected
+
+# Integration — FreshInstallTests (ParallelGameE2ETests file). Assert.True(true)
+# placeholders when the TEST instance is unavailable. Migrate to skip-on-missing
+# pattern via [Fact(Skip)] guarded by the env-var WINDOWS_GAME_AVAILABLE.
+DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_FirstLaunch_CompletesInReasonableTime
+DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_TESTInstance_ConfiguredCorrectly
+DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_PackValidation_BeforeFirstLaunch
+
+# CliTools — three "AllPropertiesAccessible" tests with no assertion at all.
+# They merely read every property (Pattern #91 type C). Convert to
+# .Should().NotThrow() wrapped invocation per #246.
+DINOForge.Tests.CliTools.ProtocolTypeTests.GameStatus_AllPropertiesAccessible
+DINOForge.Tests.CliTools.ResourcesCommandTests.ResourcesCommand_AllPropertiesAccessible
+DINOForge.Tests.CliTools.StatusCommandTests.StatusCommand_AllPropertiesAccessible
+
+# Bridge — robustness suite. Two methods rely on implicit-no-throw semantics
+# but should explicitly assert via FluentActions.Invoking().Should().NotThrow().
+DINOForge.Tests.Bridge.BridgeClientRobustnessTests.Disconnect_WhenAlreadyDisconnected_Succeeds
+DINOForge.Tests.Bridge.BridgeClientRobustnessTests.Dispose_CanBeCalledMultipleTimes
+
+# Integration — Sandbox documentation-only test. Migrate to gated integration.
+DINOForge.Tests.Integration.Tests.GameSandboxIntegrationTests.Sandbox_Gameplay_ApplyStatOverrides
+
+# ---------------------------------------------------------------------------
+# === iter-55 stricter sweep: 11 additional debt entries ===
+# ---------------------------------------------------------------------------
+# Newly surfaced by the stricter "no Assert., no .Should(), no Mock.Verify"
+# detector. These are typically "construct + Dispose() should not throw"
+# style tests. #246 will fold them into the standard NotThrow wrapper.
+
+DINOForge.Tests.GameClientCoverageTests.StateProperty_IsThreadSafe
+DINOForge.Tests.GameClientCoverageTests.Dispose_CanBeCalledMultipleTimes
+DINOForge.Tests.GameClientCoverageTests.Dispose_AfterDisconnect_StillDisposes
+DINOForge.Tests.GameClientCoverageTests.Options_AreSetCorrectly
+DINOForge.Tests.GameClientCoverageTests.GameProcessManager_IsRunning_WhenGameNotRunning_ReturnsFalse
+DINOForge.Tests.GameClientCoverageTests.GameClient_Dispose_CanBeCalledMultipleTimes
+
+DINOForge.Tests.GoDependencyResolverTests.IsAvailable_WhenBinaryNotFound_ReturnsFalse
+DINOForge.Tests.RustAssetPipelineTests.IsAvailable_DocumentsCurrentState
+DINOForge.Tests.PackRegistryTests.PackRegistryClient_InvalidateCache_ResetsCache
+DINOForge.Tests.SDKCoverageTests.PackRegistryClient_InvalidateCache_ClearsCache
+DINOForge.Tests.ScenarioDomainCoverageTests.ScenarioValidator_MissingWinCondition_Fails
+DINOForge.Tests.SDK.UI.DFCanvasAdapterWireupTests.HudElementRendererAdapter_SetCanvasRoot_AcceptsNull

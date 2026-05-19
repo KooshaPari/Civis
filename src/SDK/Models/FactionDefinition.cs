@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -7,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// Strongly-typed representation of a DINOForge faction definition (factions/*.yaml).
     /// Corresponds to schemas/faction.schema.yaml.
     /// </summary>
-    public class FactionDefinition
+    public class FactionDefinition : IValidatable
     {
         /// <summary>Core faction identity (id, name, theme, archetype).</summary>
         [YamlMember(Alias = "faction")]
@@ -44,6 +45,41 @@ namespace DINOForge.SDK.Models
         /// <summary>Optional audio pack overrides (weapons, structures, ambient, music).</summary>
         [YamlMember(Alias = "audio")]
         public FactionAudio? Audio { get; set; }
+
+        /// <summary>
+        /// Validates that the faction definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (Faction == null || string.IsNullOrWhiteSpace(Faction.Id))
+                errors.Add(new ValidationError("faction.id", "Faction.Id is required.", "validation"));
+            if (Faction == null || string.IsNullOrWhiteSpace(Faction.DisplayName))
+                errors.Add(new ValidationError("faction.display_name", "Faction.DisplayName is required.", "validation"));
+            if (Visuals?.PrimaryColor != null && !IsValidHexColor(Visuals.PrimaryColor))
+                errors.Add(new ValidationError("visuals.primary_color", "PrimaryColor must be a valid hex color (e.g., #RRGGBB).", "validation"));
+            if (Visuals?.AccentColor != null && !IsValidHexColor(Visuals.AccentColor))
+                errors.Add(new ValidationError("visuals.accent_color", "AccentColor must be a valid hex color (e.g., #RRGGBB).", "validation"));
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
+
+        private static bool IsValidHexColor(string color)
+        {
+            if (string.IsNullOrEmpty(color))
+                return false;
+            if (!color.StartsWith("#"))
+                return false;
+            if (color.Length != 7)
+                return false;
+            for (int i = 1; i < color.Length; i++)
+            {
+                char c = color[i];
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                    return false;
+            }
+            return true;
+        }
     }
 
     /// <summary>

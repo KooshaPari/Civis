@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Economy.Registries
     /// <summary>
     /// Registry of trade route definitions. Supports custom trade route registration and lookup.
     /// </summary>
-    public class TradeRouteRegistry
+    public sealed class TradeRouteRegistry
     {
         private readonly Dictionary<string, TradeRouteDefinition> _routes =
             new Dictionary<string, TradeRouteDefinition>(StringComparer.OrdinalIgnoreCase);

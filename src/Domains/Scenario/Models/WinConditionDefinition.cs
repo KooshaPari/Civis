@@ -7,7 +7,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// Defines a winning condition for a scenario.
     /// Win conditions are evaluated each frame; the scenario ends when one is met.
     /// </summary>
-    public class WinConditionDefinition
+    public sealed class WinConditionDefinition
     {
         /// <summary>
         /// Unique identifier for this win condition.
@@ -42,7 +42,7 @@ namespace DINOForge.Domains.Scenario.Models
             Id = string.Empty;
             Type = string.Empty;
             Description = string.Empty;
-            Parameters = new Dictionary<string, object>();
+            Parameters = new Dictionary<string, object>(StringComparer.Ordinal);
         }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace DINOForge.Domains.Scenario.Models
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Type = type ?? throw new ArgumentNullException(nameof(type));
             Description = description ?? string.Empty;
-            Parameters = parameters ?? new Dictionary<string, object>();
+            Parameters = parameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
         }
     }
 }

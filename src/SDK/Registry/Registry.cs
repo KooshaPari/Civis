@@ -9,7 +9,7 @@ namespace DINOForge.SDK.Registry
     /// priority-based conflict resolution and multi-source registration.
     /// </summary>
     /// <typeparam name="T">The type of content stored in this registry.</typeparam>
-    public class Registry<T> : IRegistry<T>
+    public sealed class Registry<T> : IRegistry<T>
     {
         private readonly Dictionary<string, List<RegistryEntry<T>>> _entries =
             new Dictionary<string, List<RegistryEntry<T>>>(StringComparer.OrdinalIgnoreCase);

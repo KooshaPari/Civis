@@ -76,7 +76,7 @@ namespace DINOForge.DesktopCompanion
             services.AddTransient<DebugPanelViewModel>();
             services.AddTransient<SettingsViewModel>();
 
-            return services.BuildServiceProvider();
+            return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
         }
     }
 }

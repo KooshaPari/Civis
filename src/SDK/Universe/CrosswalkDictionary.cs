@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Universe
@@ -10,7 +11,7 @@ namespace DINOForge.SDK.Universe
     /// Maps vanilla DINO entities to themed equivalents and vice versa.
     /// Supports exact matches and wildcard patterns (e.g. "enemy_*" -> "cis_*").
     /// </summary>
-    public class CrosswalkDictionary
+    public sealed class CrosswalkDictionary : IValidatable
     {
         /// <summary>
         /// Exact crosswalk entries keyed by vanilla ID.
@@ -22,7 +23,7 @@ namespace DINOForge.SDK.Universe
         /// Wildcard pattern mappings (e.g. "enemy_*" -> "cis_*").
         /// </summary>
         [YamlMember(Alias = "patterns")]
-        public List<CrosswalkPattern> Patterns { get; set; } = new List<CrosswalkPattern>();
+        public List<CrosswalkPattern> Patterns { get; set; } = new List<CrosswalkPattern>(); // public-mutable-ok: YAML deserializer requires mutable List
 
         /// <summary>
         /// Looks up a themed entry by vanilla ID. Tries exact match first, then patterns.
@@ -128,12 +129,52 @@ namespace DINOForge.SDK.Universe
             Match match = Regex.Match(value, regexPattern, RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value : value;
         }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UniverseLoader crosswalk.yaml deserialize site.
+        /// Rejects any entry with a blank themed_id.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            foreach (KeyValuePair<string, CrosswalkEntry> kvp in Entries)
+            {
+                if (kvp.Value == null || string.IsNullOrWhiteSpace(kvp.Value.ThemedId))
+                {
+                    errors.Add(new ValidationError(
+                        $"entries.{kvp.Key}.themed_id",
+                        "CrosswalkDictionary entry 'themed_id' is required.",
+                        "non_empty"));
+                }
+            }
+
+            for (int i = 0; i < Patterns.Count; i++)
+            {
+                CrosswalkPattern pat = Patterns[i];
+                if (string.IsNullOrWhiteSpace(pat.VanillaPattern))
+                    errors.Add(new ValidationError(
+                        $"patterns[{i}].vanilla_pattern",
+                        "CrosswalkPattern 'vanilla_pattern' is required.",
+                        "non_empty"));
+                if (string.IsNullOrWhiteSpace(pat.ThemedPattern))
+                    errors.Add(new ValidationError(
+                        $"patterns[{i}].themed_pattern",
+                        "CrosswalkPattern 'themed_pattern' is required.",
+                        "non_empty"));
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// A single exact crosswalk mapping from a vanilla entity to a themed entity.
     /// </summary>
-    public class CrosswalkEntry
+    public sealed class CrosswalkEntry
     {
         /// <summary>
         /// The original vanilla DINO entity ID.
@@ -182,7 +223,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// A wildcard-based crosswalk pattern for batch-mapping entities.
     /// </summary>
-    public class CrosswalkPattern
+    public sealed class CrosswalkPattern
     {
         /// <summary>
         /// Vanilla ID pattern with * wildcard (e.g. "enemy_*").

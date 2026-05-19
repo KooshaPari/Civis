@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
@@ -30,7 +31,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// An action executed as part of a scripted event. Parameters are stored as
     /// key-value pairs to allow flexible, data-driven action configuration.
     /// </summary>
-    public class EventAction
+    public sealed class EventAction
     {
         /// <summary>
         /// The type of action to execute.
@@ -50,6 +51,6 @@ namespace DINOForge.Domains.Scenario.Models
         /// </list>
         /// </summary>
         [YamlMember(Alias = "parameters")]
-        public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 }

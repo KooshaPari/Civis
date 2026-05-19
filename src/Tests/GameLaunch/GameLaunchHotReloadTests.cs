@@ -22,7 +22,9 @@ public sealed class GameLaunchHotReloadTests(GameLaunchFixture fixture)
     [Fact]
     public async Task HotReload_PackYamlChange_TriggersReloadWithin5Seconds()
     {
-        GameStatus initialStatus = await fixture.Client.StatusAsync();
+        if (!fixture.IsInitialized) return;
+
+        GameStatus initialStatus = await fixture.Client!.StatusAsync();
         initialStatus.LoadedPacks.Should().NotBeEmpty(
             "at least one pack should be loaded at startup");
 

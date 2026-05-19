@@ -68,7 +68,14 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public IReadOnlyCollection<string> RegisteredFactions
         {
-            get { lock (_factions) return new ReadOnlyCollection<string>(_factions.Keys.ToList()); }
+            get
+            {
+                lock (_factions)
+                {
+                    // allocation-ok: snapshot required for thread-safe enumeration outside lock
+                    return new ReadOnlyCollection<string>(_factions.Keys.ToList());
+                }
+            }
         }
 
         protected override void OnCreate()
@@ -310,7 +317,7 @@ namespace DINOForge.Runtime.Bridge
             lock (_factions)
             {
                 return new ReadOnlyDictionary<string, FactionRuntime>(
-                    new Dictionary<string, FactionRuntime>(_factions)
+                    new Dictionary<string, FactionRuntime>(_factions, StringComparer.Ordinal)
                 );
             }
         }
@@ -321,9 +328,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = System.IO.Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [FactionSystem] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [FactionSystem] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

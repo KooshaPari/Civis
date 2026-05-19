@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using DINOForge.SDK.IO;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -10,7 +12,7 @@ namespace DINOForge.SDK.Universe
     /// Supports loading from a single universe.yaml or from a directory with
     /// separate crosswalk.yaml, factions.yaml, naming.yaml, and style.yaml files.
     /// </summary>
-    public class UniverseLoader
+    public sealed class UniverseLoader
     {
         private readonly IDeserializer _deserializer;
         private readonly Action<string> _log;
@@ -50,8 +52,10 @@ namespace DINOForge.SDK.Universe
             _log($"[UniverseLoader] Loading universe from {universeDirectory}");
 
             // Load base universe manifest
-            string universeYaml = File.ReadAllText(universePath);
+            string universeYaml = SafeFileIO.ReadText(universePath);
             UniverseBible bible = _deserializer.Deserialize<UniverseBible>(universeYaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(bible, universePath);
 
             // Load separate files if they exist and override the embedded data
             LoadCrosswalk(universeDirectory, bible);
@@ -70,7 +74,10 @@ namespace DINOForge.SDK.Universe
         /// <returns>The parsed UniverseBible.</returns>
         public UniverseBible LoadFromYaml(string yaml)
         {
-            return _deserializer.Deserialize<UniverseBible>(yaml);
+            UniverseBible bible = _deserializer.Deserialize<UniverseBible>(yaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(bible);
+            return bible;
         }
 
         private void LoadCrosswalk(string directory, UniverseBible bible)
@@ -79,8 +86,10 @@ namespace DINOForge.SDK.Universe
             if (!File.Exists(path))
                 return;
 
-            string yaml = File.ReadAllText(path);
+            string yaml = SafeFileIO.ReadText(path);
             CrosswalkDictionary crosswalk = _deserializer.Deserialize<CrosswalkDictionary>(yaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(crosswalk, path);
             bible.CrosswalkDictionary = crosswalk;
             _log($"[UniverseLoader] Loaded crosswalk with {crosswalk.Entries.Count} entries");
         }
@@ -91,8 +100,10 @@ namespace DINOForge.SDK.Universe
             if (!File.Exists(path))
                 return;
 
-            string yaml = File.ReadAllText(path);
+            string yaml = SafeFileIO.ReadText(path);
             FactionTaxonomy taxonomy = _deserializer.Deserialize<FactionTaxonomy>(yaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(taxonomy, path);
             bible.FactionTaxonomy = taxonomy;
             _log($"[UniverseLoader] Loaded {taxonomy.Factions.Count} factions");
         }
@@ -103,8 +114,10 @@ namespace DINOForge.SDK.Universe
             if (!File.Exists(path))
                 return;
 
-            string yaml = File.ReadAllText(path);
+            string yaml = SafeFileIO.ReadText(path);
             NamingGuide naming = _deserializer.Deserialize<NamingGuide>(yaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(naming, path);
             bible.NamingGuide = naming;
             _log("[UniverseLoader] Loaded naming guide");
         }
@@ -115,8 +128,10 @@ namespace DINOForge.SDK.Universe
             if (!File.Exists(path))
                 return;
 
-            string yaml = File.ReadAllText(path);
+            string yaml = SafeFileIO.ReadText(path);
             StyleGuide style = _deserializer.Deserialize<StyleGuide>(yaml);
+            // Task #319 — IValidatable semantic check at the deserialize site.
+            JsonGuard.ValidateOrThrow(style, path);
             bible.StyleGuide = style;
             _log("[UniverseLoader] Loaded style guide");
         }

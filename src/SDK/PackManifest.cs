@@ -8,7 +8,7 @@ namespace DINOForge.SDK
     /// Contains metadata about a content pack, including dependencies and version constraints.
     /// Corresponds to schemas/pack-manifest.schema.yaml.
     /// </summary>
-    public class PackManifest
+    public sealed class PackManifest
     {
         /// <summary>
         /// Unique identifier for the pack.
@@ -56,13 +56,13 @@ namespace DINOForge.SDK
         /// List of pack IDs that this pack depends on.
         /// </summary>
         [YamlMember(Alias = "depends_on")]
-        public List<string> DependsOn { get; set; } = new List<string>();
+        public List<string> DependsOn { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List
 
         /// <summary>
         /// List of pack IDs that conflict with this pack.
         /// </summary>
         [YamlMember(Alias = "conflicts_with")]
-        public List<string> ConflictsWith { get; set; } = new List<string>();
+        public List<string> ConflictsWith { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List
 
         /// <summary>
         /// Load order priority for the pack (higher loads later).
@@ -105,7 +105,7 @@ namespace DINOForge.SDK
     /// Specifies which content types to load from the pack.
     /// Each property lists file paths or directories to load.
     /// </summary>
-    public class PackLoads
+    public sealed class PackLoads
     {
         /// <summary>
         /// Paths to faction definition files.
@@ -183,7 +183,7 @@ namespace DINOForge.SDK
     /// <summary>
     /// Specifies vanilla game content to override with custom definitions.
     /// </summary>
-    public class PackOverrides
+    public sealed class PackOverrides
     {
         /// <summary>
         /// Paths to unit override definition files.

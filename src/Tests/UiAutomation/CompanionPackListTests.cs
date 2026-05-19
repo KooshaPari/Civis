@@ -41,7 +41,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
         listView.Should().NotBeNull();
 
         ListBox lb = listView!.AsListBox();
-        lb.Items.Should().NotBeEmpty("at least the example-balance pack must be discovered");
+        lb.Items.Should().HaveCount(1, "the example-balance pack must be discovered");
     }
 
     // ── COMP-PACK-003 ─────────────────────────────────────────────────────────

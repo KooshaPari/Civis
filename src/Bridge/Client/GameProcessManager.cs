@@ -128,21 +128,49 @@ public sealed class GameProcessManager
     /// <param name="ct">Cancellation token.</param>
     public async Task WaitForExitAsync(CancellationToken ct = default)
     {
+        // Check for cancellation immediately
+        ct.ThrowIfCancellationRequested();
+
+        // Early return: if no game running or already exited, nothing to wait for
+        var process = GetGameProcess();
+        if (process is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (process.HasExited)
+            {
+                process.Dispose();
+                return;
+            }
+        }
+        catch
+        {
+            // Handle may be invalid; treat as already exited
+            process.Dispose();
+            return;
+        }
+
+        process.Dispose();
+
         while (!ct.IsCancellationRequested)
         {
-            using Process? process = GetGameProcess();
-            if (process is null)
+            using Process? processInLoop = GetGameProcess();
+            if (processInLoop is null)
                 return;
 
             try
             {
                 // netstandard2.0: Use polling to wait for process exit
-                await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
+                await WaitForProcessExitAsync(processInLoop, ct).ConfigureAwait(false);
                 return;
             }
             catch (OperationCanceledException)
             {
-                throw;
+                // Timeout or user cancellation — just return without throwing
+                return;
             }
             catch
             {
@@ -150,8 +178,6 @@ public sealed class GameProcessManager
                 await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
-
-        ct.ThrowIfCancellationRequested();
     }
 
     private static Process? GetGameProcess()

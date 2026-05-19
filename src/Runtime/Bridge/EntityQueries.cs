@@ -249,9 +249,13 @@ namespace DINOForge.Runtime.Bridge
                 _typeCache[fullTypeName] = ct;
                 return ct;
             }
-            catch (Exception)
+            catch (ArgumentException ex)
             {
-                // Type exists but is not a valid ECS component
+                // Pattern #104 (Task #302): narrow catch to expected exception type
+                // (ComponentType.ReadOnly throws ArgumentException when the CLR type is not
+                // a valid ECS component). Unexpected exceptions now propagate so caller can
+                // diagnose. Log via Debug so the negative cache decision is visible.
+                System.Diagnostics.Debug.WriteLine($"[EntityQueries] '{fullTypeName}' is not a valid ECS component (cached null): {ex.Message}");
                 _typeCache[fullTypeName] = null;
                 return null;
             }

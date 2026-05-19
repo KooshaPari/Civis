@@ -43,7 +43,7 @@ namespace DINOForge.Tests
 
         private HashSet<string> LoadCatalogKeys()
         {
-            string content = File.ReadAllText(AddressablesPath);
+            string content = File.ReadAllText(AddressablesPath, System.Text.Encoding.UTF8);
             var keys = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match m in Regex.Matches(content, @"^  - key: (\S+)", RegexOptions.Multiline))
                 keys.Add(m.Groups[1].Value);
@@ -52,13 +52,13 @@ namespace DINOForge.Tests
 
         private List<UnitDefinition> LoadUnits(string yamlPath)
         {
-            string content = File.ReadAllText(yamlPath);
+            string content = File.ReadAllText(yamlPath, System.Text.Encoding.UTF8);
             return YamlLoader.Deserializer.Deserialize<List<UnitDefinition>>(content) ?? new List<UnitDefinition>();
         }
 
         private List<BuildingDefinition> LoadBuildings(string yamlPath)
         {
-            string content = File.ReadAllText(yamlPath);
+            string content = File.ReadAllText(yamlPath, System.Text.Encoding.UTF8);
             return YamlLoader.Deserializer.Deserialize<List<BuildingDefinition>>(content) ?? new List<BuildingDefinition>();
         }
 
@@ -74,13 +74,13 @@ namespace DINOForge.Tests
         public void Addressables_CatalogHasAtLeast50Entries()
         {
             var keys = LoadCatalogKeys();
-            keys.Should().HaveCountGreaterThanOrEqualTo(50, "catalog should cover all units and buildings");
+            keys.Should().HaveCountGreaterThanOrEqualTo(50); // open-ended-count-ok: catalog key count has known >= 50 bound per test design (file-based fixture)
         }
 
         [Fact]
         public void Addressables_CatalogVersionIs11()
         {
-            string content = File.ReadAllText(AddressablesPath);
+            string content = File.ReadAllText(AddressablesPath, System.Text.Encoding.UTF8);
             content.Should().Contain("version: \"1.1\"", "catalog should be at version 1.1");
         }
 
@@ -260,3 +260,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

@@ -15,10 +15,10 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>List of pack IDs that were loaded.</summary>
         [JsonProperty("loadedPacks")]
-        public List<string> LoadedPacks { get; set; } = new List<string>();
+        public List<string> LoadedPacks { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>Any errors encountered during the reload.</summary>
         [JsonProperty("errors")]
-        public List<string> Errors { get; set; } = new List<string>();
+        public List<string> Errors { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 }

@@ -40,7 +40,7 @@ namespace DINOForge.Tests
         [Fact]
         public void VfxPoolManager_RetainsDescriptorFallback_AndCatalogDependency()
         {
-            string source = File.ReadAllText(VfxPoolManagerSourcePath);
+            string source = File.ReadAllText(VfxPoolManagerSourcePath, System.Text.Encoding.UTF8);
 
             source.Should().Contain("CreatePrefabFromDescriptor");
             source.Should().Contain("VFXPrefabCatalog.GetAllPrefabs()");
@@ -51,8 +51,8 @@ namespace DINOForge.Tests
         [Fact]
         public void VfxStack_RetainsExpectedLodAndFactionContracts()
         {
-            string lodSource = File.ReadAllText(LodManagerSourcePath);
-            string descriptorSource = File.ReadAllText(VfxPrefabDescriptorSourcePath);
+            string lodSource = File.ReadAllText(LodManagerSourcePath, System.Text.Encoding.UTF8);
+            string descriptorSource = File.ReadAllText(VfxPrefabDescriptorSourcePath, System.Text.Encoding.UTF8);
 
             lodSource.Should().Contain("FullQualityDistance = 100f");
             lodSource.Should().Contain("MediumQualityDistance = 200f");
@@ -64,3 +64,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

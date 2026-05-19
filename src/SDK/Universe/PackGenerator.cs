@@ -12,7 +12,7 @@ namespace DINOForge.SDK.Universe
     /// Produces pack.yaml manifest, unit definitions, faction definitions, and weapon definitions
     /// by applying crosswalk mappings to vanilla DINO entities.
     /// </summary>
-    public class PackGenerator
+    public sealed class PackGenerator
     {
         private readonly ISerializer _serializer;
         private readonly Action<string> _log;
@@ -121,9 +121,9 @@ namespace DINOForge.SDK.Universe
             FactionStyle? style = null;
             bible.StyleGuide.FactionStyles.TryGetValue(faction.Id, out style);
 
-            Dictionary<string, object> factionDef = new Dictionary<string, object>
+            Dictionary<string, object> factionDef = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                ["faction"] = new Dictionary<string, object?>
+                ["faction"] = new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["id"] = faction.Id,
                     ["display_name"] = faction.Name,
@@ -135,7 +135,7 @@ namespace DINOForge.SDK.Universe
 
             if (style != null)
             {
-                factionDef["visuals"] = new Dictionary<string, object?>
+                factionDef["visuals"] = new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["primary_color"] = style.Colors.Primary,
                     ["accent_color"] = style.Colors.Secondary
@@ -165,7 +165,7 @@ namespace DINOForge.SDK.Universe
             string displayName = entry.ThemedName
                 ?? bible.NamingGuide.ApplyNaming(factionId, "unit", entry.ThemedId);
 
-            Dictionary<string, object?> unitDef = new Dictionary<string, object?>
+            Dictionary<string, object?> unitDef = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["id"] = entry.ThemedId,
                 ["display_name"] = displayName,
@@ -181,7 +181,7 @@ namespace DINOForge.SDK.Universe
 
             if (entry.SpriteOverride != null)
             {
-                unitDef["visuals"] = new Dictionary<string, string?>
+                unitDef["visuals"] = new Dictionary<string, string?>(StringComparer.Ordinal)
                 {
                     ["icon"] = entry.SpriteOverride
                 };
@@ -198,7 +198,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// Result of a pack generation operation.
     /// </summary>
-    public class PackGeneratorResult
+    public sealed class PackGeneratorResult
     {
         /// <summary>
         /// List of all generated file paths.

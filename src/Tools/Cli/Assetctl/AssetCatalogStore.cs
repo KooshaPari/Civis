@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -411,7 +412,7 @@ public sealed class AssetCatalogStore : IDisposable
 
         try
         {
-            string json = File.ReadAllText(importPath);
+            string json = File.ReadAllText(importPath, Encoding.UTF8);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 

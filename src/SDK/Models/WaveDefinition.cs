@@ -45,6 +45,7 @@ namespace DINOForge.SDK.Models
         /// Groups of units to spawn in this wave.
         /// </summary>
         [YamlMember(Alias = "spawn_groups")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<SpawnGroup> SpawnGroups { get; set; } = new List<SpawnGroup>();
 
         /// <summary>
@@ -52,36 +53,6 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "difficulty_scaling")]
         public DifficultyScaling? DifficultyScaling { get; set; }
-    }
-
-    /// <summary>
-    /// A group of units spawned together within a wave.
-    /// </summary>
-    public class SpawnGroup
-    {
-        /// <summary>
-        /// Reference to a UnitDefinition ID.
-        /// </summary>
-        [YamlMember(Alias = "unit_id")]
-        public string UnitId { get; set; } = "";
-
-        /// <summary>
-        /// Number of units to spawn in this group.
-        /// </summary>
-        [YamlMember(Alias = "count")]
-        public int Count { get; set; } = 1;
-
-        /// <summary>
-        /// Stagger delay in seconds between individual unit spawns.
-        /// </summary>
-        [YamlMember(Alias = "spawn_delay")]
-        public float SpawnDelay { get; set; } = 0f;
-
-        /// <summary>
-        /// Optional spawn location identifier.
-        /// </summary>
-        [YamlMember(Alias = "spawn_point")]
-        public string? SpawnPoint { get; set; }
     }
 
     /// <summary>

@@ -85,7 +85,7 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>Child nodes in hierarchy order.</summary>
         [JsonProperty("children")]
-        public List<UiNode> Children { get; set; } = new List<UiNode>();
+        public List<UiNode> Children { get; set; } = new List<UiNode>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 
     /// <summary>

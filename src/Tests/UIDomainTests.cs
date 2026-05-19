@@ -430,7 +430,7 @@ namespace DINOForge.Tests
             ThemeRegistry registry = new ThemeRegistry();
 
             // Assert
-            registry.Count.Should().BeGreaterThanOrEqualTo(2);
+            registry.Count.Should().Be(2);
             registry.Contains("dark-theme").Should().BeTrue();
             registry.Contains("light-theme").Should().BeTrue();
         }

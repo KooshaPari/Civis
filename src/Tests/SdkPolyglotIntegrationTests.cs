@@ -192,7 +192,7 @@ loads:
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().HaveCount(1);
         result.Errors[0].Should().Contain("missing dependency");
     }
 
@@ -351,7 +351,7 @@ stats:
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().HaveCount(1);
         (result.Errors[0].Contains("cycle") || result.Errors[0].Contains("Circular")).Should().BeTrue();
     }
 

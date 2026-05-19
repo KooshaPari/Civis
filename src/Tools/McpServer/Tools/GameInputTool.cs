@@ -453,6 +453,7 @@ public sealed class GameInputTool
             if (gameHwnd != IntPtr.Zero && gameHwnd != previousFocus)
             {
                 SetForegroundWindow(gameHwnd);
+                // pattern-113-ok: one-shot focus settle
                 System.Threading.Thread.Sleep(50); // Let focus settle
             }
 
@@ -463,6 +464,7 @@ public sealed class GameInputTool
             // Restore previous focus only if it's still a valid window
             if (previousFocus != IntPtr.Zero && IsWindow(previousFocus) && previousFocus != gameHwnd)
             {
+                // pattern-113-ok: one-shot focus settle
                 System.Threading.Thread.Sleep(50); // Let input register
                 SetForegroundWindow(previousFocus);
             }

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DINOForge.Tools.Cli.Json;
 
 namespace DINOForge.Tools.Cli.Assetctl.Sketchfab;
 
@@ -644,8 +646,8 @@ public sealed class AssetDownloader
             {
                 try
                 {
-                    var json = File.ReadAllText(manifestPath);
-                    var manifest = JsonSerializer.Deserialize<AssetManifest>(json);
+                    var json = File.ReadAllText(manifestPath, Encoding.UTF8);
+                    var manifest = JsonSerializer.Deserialize<AssetManifest>(json, CliJsonOptions.AssetManifest);
                     if (manifest?.ExternalId != null)
                     {
                         alreadyDownloaded.Add(manifest.ExternalId);

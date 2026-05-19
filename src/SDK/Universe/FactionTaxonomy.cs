@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Universe
@@ -7,19 +8,45 @@ namespace DINOForge.SDK.Universe
     /// Defines the faction hierarchy for a themed universe.
     /// Maps to the existing FactionDefinition model in the SDK.
     /// </summary>
-    public class FactionTaxonomy
+    public sealed class FactionTaxonomy : IValidatable
     {
         /// <summary>
         /// All factions defined in this universe.
         /// </summary>
         [YamlMember(Alias = "factions")]
-        public List<TaxonomyFaction> Factions { get; set; } = new List<TaxonomyFaction>();
+        public List<TaxonomyFaction> Factions { get; set; } = new List<TaxonomyFaction>(); // public-mutable-ok: YAML deserializer requires mutable List
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UniverseLoader factions.yaml deserialize site.
+        /// Rejects any faction entry with a blank id.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            for (int i = 0; i < Factions.Count; i++)
+            {
+                TaxonomyFaction faction = Factions[i];
+                if (faction == null || string.IsNullOrWhiteSpace(faction.Id))
+                {
+                    errors.Add(new ValidationError(
+                        $"factions[{i}].id",
+                        "TaxonomyFaction 'id' is required.",
+                        "non_empty"));
+                }
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// A faction entry in the universe taxonomy.
     /// </summary>
-    public class TaxonomyFaction
+    public sealed class TaxonomyFaction
     {
         /// <summary>
         /// Unique faction identifier (e.g. "republic", "cis").
@@ -67,7 +94,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// A sub-faction within a parent faction.
     /// </summary>
-    public class TaxonomySubFaction
+    public sealed class TaxonomySubFaction
     {
         /// <summary>
         /// Sub-faction identifier.

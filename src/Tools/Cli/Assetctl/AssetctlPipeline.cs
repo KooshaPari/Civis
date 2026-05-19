@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using DINOForge.SDK.Validation;
+using DINOForge.Tools.Cli.Json;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.Tools.Cli.Assetctl;
@@ -33,7 +34,7 @@ internal sealed class AssetctlPipeline
 
     private readonly SourceRulesDocument _rules;
     private readonly NJsonSchemaValidator _schemaValidator;
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+    private readonly JsonSerializerOptions _jsonOptions = CliJsonOptions.AssetManifest;
     private readonly AssetCatalogStore? _catalogStore;
     private readonly LocalSourceAdapter? _localSourceAdapter;
     private readonly string _repositoryRoot;
@@ -46,9 +47,9 @@ internal sealed class AssetctlPipeline
     public AssetctlPipeline(AssetCatalogStore? catalogStore = null, string? repositoryRoot = null)
     {
         _rules = LoadRules();
-        _schemaValidator = new NJsonSchemaValidator(new Dictionary<string, string>
+        _schemaValidator = new NJsonSchemaValidator(new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["asset-manifest"] = File.ReadAllText(DefaultSchemaPath)
+            ["asset-manifest"] = File.ReadAllText(DefaultSchemaPath, Encoding.UTF8)
         });
         _catalogStore = catalogStore;
         _repositoryRoot = repositoryRoot ?? Directory.GetCurrentDirectory();
@@ -235,7 +236,7 @@ internal sealed class AssetctlPipeline
                 return new AssetctlNormalizeResult { Success = false, Message = "Normalization report not found" };
             }
 
-            NormalizationReport report = JsonSerializer.Deserialize<NormalizationReport>(File.ReadAllText(reportPath))
+            NormalizationReport report = JsonSerializer.Deserialize<NormalizationReport>(File.ReadAllText(reportPath, Encoding.UTF8))
                 ?? throw new InvalidOperationException("Failed to parse normalization report");
 
             if (!report.Success)
@@ -420,7 +421,7 @@ internal sealed class AssetctlPipeline
                 return new AssetctlStylizeResult { Success = false, Message = "Stylization report not found" };
             }
 
-            StylizationReport report = JsonSerializer.Deserialize<StylizationReport>(File.ReadAllText(reportPath))
+            StylizationReport report = JsonSerializer.Deserialize<StylizationReport>(File.ReadAllText(reportPath, Encoding.UTF8))
                 ?? throw new InvalidOperationException("Failed to parse stylization report");
 
             // Update manifest
@@ -471,7 +472,7 @@ internal sealed class AssetctlPipeline
         Directory.CreateDirectory(registryDir);
         string registryPath = Path.Combine(registryDir, "asset_index.json");
         List<AssetRegistryRecord> registry = File.Exists(registryPath)
-            ? JsonSerializer.Deserialize<List<AssetRegistryRecord>>(File.ReadAllText(registryPath)) ?? new List<AssetRegistryRecord>()
+            ? JsonSerializer.Deserialize<List<AssetRegistryRecord>>(File.ReadAllText(registryPath, Encoding.UTF8)) ?? new List<AssetRegistryRecord>()
             : new List<AssetRegistryRecord>();
 
         if (!registry.Any(item => string.Equals(item.AssetId, manifest.AssetId, StringComparison.OrdinalIgnoreCase)))
@@ -659,7 +660,7 @@ internal sealed class AssetctlPipeline
 
         double cleanupCost = candidate.OriginalFormat.Equals("blend", StringComparison.OrdinalIgnoreCase) ? 0.65 : 0.45;
 
-        return new Dictionary<string, double>
+        return new Dictionary<string, double>(StringComparer.Ordinal)
         {
             ["style_fit"] = styleFit,
             ["faction_fit"] = factionFit,
@@ -901,7 +902,7 @@ internal sealed class AssetctlPipeline
 
     private static AssetManifest ReadManifest(string manifestPath)
     {
-        string text = File.ReadAllText(manifestPath);
+        string text = File.ReadAllText(manifestPath, Encoding.UTF8);
         return JsonSerializer.Deserialize<AssetManifest>(text) ?? new AssetManifest();
     }
 
@@ -912,7 +913,7 @@ internal sealed class AssetctlPipeline
             return CreateDefaultRules();
         }
 
-        string yaml = File.ReadAllText(DefaultSourceRulesPath);
+        string yaml = File.ReadAllText(DefaultSourceRulesPath, Encoding.UTF8);
         IDeserializer deserializer = DeserializerLazy.Value;
         SourceRulesDocument? rules = deserializer.Deserialize<SourceRulesDocument>(yaml);
         if (rules == null || rules.SourceTiers.Count == 0)
@@ -932,12 +933,12 @@ internal sealed class AssetctlPipeline
 
         if (rules.RiskRules == null)
         {
-            rules.RiskRules = new Dictionary<string, RiskRule>();
+            rules.RiskRules = new Dictionary<string, RiskRule>(StringComparer.Ordinal);
         }
 
         if (rules.StatusPenalty == null)
         {
-            rules.StatusPenalty = new Dictionary<string, double>();
+            rules.StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal);
         }
 
         return rules;
@@ -988,7 +989,7 @@ internal sealed class AssetctlPipeline
                     }
                 }
             },
-            RiskRules = new Dictionary<string, RiskRule>
+            RiskRules = new Dictionary<string, RiskRule>(StringComparer.Ordinal)
             {
                 ["generic_safe"] = new RiskRule { LegalProfile = "generic_safe", ReleaseAllowed = true, Note = "Low legal risk profile." },
                 ["fan_star_wars_private_only"] = new RiskRule { LegalProfile = "fan_work", ReleaseAllowed = false, Note = "Private prototype risk only." },
@@ -998,7 +999,7 @@ internal sealed class AssetctlPipeline
             },
             Scoring = new ScoringSection
             {
-                Weights = new Dictionary<string, double>
+                Weights = new Dictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["style_fit"] = 0.30,
                     ["faction_fit"] = 0.20,
@@ -1009,7 +1010,7 @@ internal sealed class AssetctlPipeline
                     ["ip_risk_penalty"] = 0.15,
                     ["cleanup_cost"] = 0.10
                 },
-                StatusPenalty = new Dictionary<string, double>
+                StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["fan_star_wars_private_only"] = 0.40,
                     ["official_game_mod_tool_reference_only"] = 0.70,
@@ -1017,7 +1018,7 @@ internal sealed class AssetctlPipeline
                     ["high_risk_do_not_ship"] = 1.20
                 }
             },
-            StatusPenalty = new Dictionary<string, double>
+            StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal)
             {
                 ["fan_star_wars_private_only"] = 0.40,
                 ["official_game_mod_tool_reference_only"] = 0.70,

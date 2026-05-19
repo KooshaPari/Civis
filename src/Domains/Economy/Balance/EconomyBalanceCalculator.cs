@@ -13,7 +13,7 @@ namespace DINOForge.Domains.Economy.Balance
     /// Generates economy balance reports by analyzing faction production, consumption,
     /// and trade capabilities from the registries. Used for pack validation and balance tuning.
     /// </summary>
-    public class EconomyBalanceCalculator
+    public sealed class EconomyBalanceCalculator
     {
         private readonly ProductionCalculator _productionCalculator;
         private readonly TradeEngine _tradeEngine;
@@ -77,7 +77,7 @@ namespace DINOForge.Domains.Economy.Balance
                 // Calculate consumption (simplified: use building costs as proxy for upkeep)
                 Dictionary<string, float> consumption = CalculateSimplifiedConsumption(faction, profile);
 
-                // Calculate net balance
+                // Calculate net balance (note: production, consumption, netBalance all have StringComparer.Ordinal from their constructors)
                 Dictionary<string, float> netBalance = _productionCalculator.GetResourceBalance(production, consumption);
 
                 // Count surpluses and deficits
@@ -150,7 +150,7 @@ namespace DINOForge.Domains.Economy.Balance
             FactionDefinition faction,
             EconomyProfile profile)
         {
-            Dictionary<string, float> consumption = new Dictionary<string, float>();
+            Dictionary<string, float> consumption = new Dictionary<string, float>(StringComparer.Ordinal);
 
             // Base consumption: food is always consumed (population upkeep)
             float foodConsumption = 5.0f * profile.GetConsumptionMultiplier("food");

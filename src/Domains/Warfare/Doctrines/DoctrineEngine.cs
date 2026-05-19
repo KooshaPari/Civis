@@ -9,7 +9,7 @@ namespace DINOForge.Domains.Warfare.Doctrines
     /// Engine for applying doctrine and archetype modifiers to unit stats.
     /// All operations are pure: inputs are never mutated.
     /// </summary>
-    public class DoctrineEngine
+    public sealed class DoctrineEngine
     {
         /// <summary>
         /// Apply a doctrine's modifiers to a unit's base stats.

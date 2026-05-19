@@ -11,7 +11,7 @@ namespace DINOForge.Domains.Economy.Rates
     /// Calculates effective production rates for factions given their buildings,
     /// worker allocations, economy profiles, and pack modifiers.
     /// </summary>
-    public class ProductionCalculator
+    public sealed class ProductionCalculator
     {
         /// <summary>
         /// Calculates the total resource production for a faction across all its production buildings.
@@ -36,7 +36,7 @@ namespace DINOForge.Domains.Economy.Rates
             if (buildings == null) throw new ArgumentNullException(nameof(buildings));
             if (buildingIds == null) throw new ArgumentNullException(nameof(buildingIds));
 
-            Dictionary<string, float> totalProduction = new Dictionary<string, float>();
+            Dictionary<string, float> totalProduction = new Dictionary<string, float>(StringComparer.Ordinal);
 
             foreach (string resourceType in ResourceRate.ValidResourceTypes)
             {
@@ -83,7 +83,7 @@ namespace DINOForge.Domains.Economy.Rates
             if (building == null) throw new ArgumentNullException(nameof(building));
             if (profile == null) throw new ArgumentNullException(nameof(profile));
 
-            Dictionary<string, float> output = new Dictionary<string, float>();
+            Dictionary<string, float> output = new Dictionary<string, float>(StringComparer.Ordinal);
 
             int workers = 1;
             if (workerCounts != null && workerCounts.TryGetValue(building.Id, out int assignedWorkers))
@@ -119,7 +119,7 @@ namespace DINOForge.Domains.Economy.Rates
             if (production == null) throw new ArgumentNullException(nameof(production));
             if (consumption == null) throw new ArgumentNullException(nameof(consumption));
 
-            Dictionary<string, float> balance = new Dictionary<string, float>();
+            Dictionary<string, float> balance = new Dictionary<string, float>(StringComparer.Ordinal);
 
             // Start with all production
             foreach (KeyValuePair<string, float> kvp in production)
@@ -160,7 +160,7 @@ namespace DINOForge.Domains.Economy.Rates
             if (unitCounts == null) throw new ArgumentNullException(nameof(unitCounts));
             if (profile == null) throw new ArgumentNullException(nameof(profile));
 
-            Dictionary<string, float> totalConsumption = new Dictionary<string, float>();
+            Dictionary<string, float> totalConsumption = new Dictionary<string, float>(StringComparer.Ordinal);
 
             foreach (KeyValuePair<string, int> kvp in unitCounts)
             {

@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using DINOForge.Bridge.Protocol;
 
 namespace DINOForge.Tests.CliTools;

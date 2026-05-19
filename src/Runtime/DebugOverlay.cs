@@ -262,7 +262,7 @@ namespace DINOForge.Runtime
                     EntityManager em = world.EntityManager;
                     NativeArray<Entity> entities = em.GetAllEntities(Allocator.Temp);
 
-                    Dictionary<string, int> archetypeCounts = new Dictionary<string, int>();
+                    Dictionary<string, int> archetypeCounts = new Dictionary<string, int>(StringComparer.Ordinal);
 
                     foreach (Entity entity in entities)
                     {

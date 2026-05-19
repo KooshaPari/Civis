@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -7,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// Strongly-typed representation of a DINOForge unit definition (units/*.yaml).
     /// Corresponds to schemas/unit.schema.yaml.
     /// </summary>
-    public class UnitDefinition
+    public class UnitDefinition : IValidatable
     {
         /// <summary>Unique unit identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -55,6 +56,7 @@ namespace DINOForge.SDK.Models
         /// Fortified, Shielded, Mechanical, Biological, Heroic.
         /// </summary>
         [YamlMember(Alias = "defense_tags")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> DefenseTags { get; set; } = new List<string>();
 
         /// <summary>
@@ -62,6 +64,7 @@ namespace DINOForge.SDK.Models
         /// Swarm, SiegePriority, AntiStructure, AntiMass, AntiArmor, MoralePressure.
         /// </summary>
         [YamlMember(Alias = "behavior_tags")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> BehaviorTags { get; set; } = new List<string>();
 
         /// <summary>
@@ -96,6 +99,26 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "aerial")]
         public AerialProperties? Aerial { get; set; }
+
+        /// <summary>
+        /// Validates that the unit definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "Id is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                errors.Add(new ValidationError("display_name", "DisplayName is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(FactionId))
+                errors.Add(new ValidationError("faction_id", "FactionId is required.", "validation"));
+            if (Stats?.Hp <= 0)
+                errors.Add(new ValidationError("stats.hp", "Stats.Hp must be greater than 0.", "validation"));
+            if (Stats?.Accuracy < 0 || Stats?.Accuracy > 1)
+                errors.Add(new ValidationError("stats.accuracy", "Stats.Accuracy must be between 0 and 1.", "validation"));
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 
     /// <summary>

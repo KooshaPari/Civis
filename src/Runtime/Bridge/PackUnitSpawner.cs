@@ -258,8 +258,18 @@ namespace DINOForge.Runtime.Bridge
                 // Check if the query returns any entities
                 return query.CalculateEntityCount() > 0;
             }
-            catch
+            catch (InvalidOperationException ex)
             {
+                // Pattern #104 (Task #302): narrow catch to expected exception types only.
+                // EntityManager throws InvalidOperationException when a component type is
+                // not registered in the world; ArgumentException for malformed query desc.
+                // Unexpected exceptions now propagate so caller can diagnose.
+                WriteDebug($"CanSpawn '{unitDefinitionId}' query failed (component '{componentType}' not in world): {ex.Message}");
+                return false;
+            }
+            catch (ArgumentException ex)
+            {
+                WriteDebug($"CanSpawn '{unitDefinitionId}' malformed query for component '{componentType}': {ex.Message}");
                 return false;
             }
         }
@@ -275,9 +285,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

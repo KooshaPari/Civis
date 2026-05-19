@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using DINOForge.Tools.Installer;
+using DINOForge.Tools.Installer.Json;
 using FluentAssertions;
 using Xunit;
 
@@ -205,7 +207,7 @@ public class InstallerCoverageTests
         InstallInspection inspection = InstallLifecycle.Inspect("");
 
         inspection.IsHealthy.Should().BeFalse();
-        inspection.Issues.Should().NotBeEmpty();
+        inspection.Issues.Should().HaveCountGreaterThanOrEqualTo(1); // open-ended-count-ok: empty-path validation fixture produces >= 1 issue deterministically
     }
 
     [Fact]
@@ -421,7 +423,7 @@ public class InstallerCoverageTests
             string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.2.3");
 
             File.Exists(manifestPath).Should().BeTrue();
-            string content = File.ReadAllText(manifestPath);
+            string content = File.ReadAllText(manifestPath, Encoding.UTF8);
             content.Should().Contain("1.2.3");
             content.Should().Contain("DINOForge.Runtime.dll");
         }
@@ -480,16 +482,17 @@ public class InstallerCoverageTests
 
         InstallManifest original = new()
         {
+            SchemaVersion = "1",
             InstallerVersion = "2.0.0",
             InstalledAtUtc = "2026-03-30T00:00:00Z",
             Files = new List<InstalledFileRecord>
             {
-                new InstalledFileRecord { RelativePath = "test.dll", Size = 100, Sha256 = "abc123" }
+                new InstalledFileRecord { RelativePath = "test.dll", Size = 100, Sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }
             }
         };
         File.WriteAllText(
             Path.Combine(pluginsDir, "dinoforge.install_manifest.json"),
-            JsonSerializer.Serialize(original));
+            JsonSerializer.Serialize(original, InstallerJsonOptions.Default));
 
         try
         {
@@ -1308,7 +1311,7 @@ public class InstallerCoverageTests
             string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.0.0");
 
             File.Exists(manifestPath).Should().BeTrue();
-            string content = File.ReadAllText(manifestPath);
+            string content = File.ReadAllText(manifestPath, Encoding.UTF8);
             content.Should().Contain("DINOForge.Runtime.dll");
             content.Should().Contain("test.json");
         }
@@ -1330,9 +1333,9 @@ public class InstallerCoverageTests
             string manifestPath = InstallLifecycle.WriteManifest(tempDir, "1.0.0");
 
             File.Exists(manifestPath).Should().BeTrue();
-            string content = File.ReadAllText(manifestPath);
+            string content = File.ReadAllText(manifestPath, Encoding.UTF8);
             content.Should().Contain("1.0.0");
-            content.Should().Contain("Files");
+            content.Should().Contain("\"files\"");
         }
         finally
         {
@@ -1352,10 +1355,11 @@ public class InstallerCoverageTests
         // Write a manifest that references a file that doesn't exist
         string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
         File.WriteAllText(manifestPath, @"{
+    ""SchemaVersion"": ""1"",
     ""InstallerVersion"": ""1.0.0"",
     ""InstalledAtUtc"": ""2026-03-30T00:00:00Z"",
     ""Files"": [
-        { ""RelativePath"": ""BepInEx/plugins/missing.dll"", ""Size"": 100, ""Sha256"": ""abc123"" }
+        { ""RelativePath"": ""BepInEx/plugins/missing.dll"", ""Size"": 100, ""Sha256"": ""e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"" }
     ]
 }");
 

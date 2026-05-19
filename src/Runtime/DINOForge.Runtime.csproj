@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>DINOForge.Runtime</AssemblyName>
     <RootNamespace>DINOForge.Runtime</RootNamespace>
     <Description>DINOForge runtime plugin - BepInEx bootstrap, ECS introspection, entity dumper</Description>
@@ -172,6 +172,7 @@
   <!-- AssetsTools.NET for asset bundle reading/writing (Runtime-specific, not SDK) -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
   </ItemGroup>
 
   <!--
@@ -232,6 +233,9 @@
   <ItemGroup>
     <ProjectReference Include="..\SDK\DINOForge.SDK.csproj" />
     <ProjectReference Include="..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <!--

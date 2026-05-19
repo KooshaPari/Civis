@@ -48,7 +48,13 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 | M13 | Asset Browser + Mod Manager (DesktopCompanion Asset Browser page, Browse/Update/Conflict views) | Done |
 | M14 | Asset Library & Catalog (SQLite AssetCatalogStore, asset-library CLI commands, LocalSourceAdapter) | Done |
 
-**Current test count: 1,017+ passing**
+**Current Status (v0.25.0-dev, v0.24.0 released)**
+- Build: ✅ Clean (exit 0)
+- Tests: ✅ 3,500+ passing / 0 failures
+- Pattern Catalog: ✅ 28 entries, 11 RETIRED, 100% CI-gated
+- Audit-Rotation: ✅ Converged (regex-driven patterns sub-threshold)
+- v0.24.0: Released 2026-05-06 at commit f222cd3
+- Next Milestone: v0.25.0-dev in progress
 
 ## Install
 

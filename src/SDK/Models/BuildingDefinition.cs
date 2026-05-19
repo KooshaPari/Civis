@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -6,7 +7,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Strongly-typed representation of a DINOForge building definition (buildings/*.yaml).
     /// </summary>
-    public class BuildingDefinition
+    public class BuildingDefinition : IValidatable
     {
         /// <summary>Unique building identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -58,6 +59,7 @@ namespace DINOForge.SDK.Models
         /// attached to its ECS entity on world load by <c>AerialBuildingMapper</c>.
         /// </summary>
         [YamlMember(Alias = "defense_tags")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> DefenseTags { get; set; } = new List<string>();
 
         /// <summary>
@@ -66,6 +68,22 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "anti_air")]
         public BuildingAntiAirProperties? AntiAir { get; set; }
+
+        /// <summary>
+        /// Validates that the building definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "Id is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                errors.Add(new ValidationError("display_name", "DisplayName is required.", "validation"));
+            if (Health < 0)
+                errors.Add(new ValidationError("health", "Health must be non-negative.", "validation"));
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 
     /// <summary>

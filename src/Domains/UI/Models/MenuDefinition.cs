@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.UI.Models
 {
@@ -7,7 +8,7 @@ namespace DINOForge.Domains.UI.Models
     /// Defines a menu that appears in the UI system.
     /// Menus contain items that can navigate to other menus, toggle packs, reload content, or perform custom actions.
     /// </summary>
-    public class MenuDefinition
+    public class MenuDefinition : IValidatable
     {
         /// <summary>
         /// Unique identifier for this menu (e.g. "main-menu", "mods-submenu", "settings").
@@ -65,6 +66,26 @@ namespace DINOForge.Domains.UI.Models
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Title = title ?? throw new ArgumentNullException(nameof(title));
             ParentMenuId = parentMenuId ?? string.Empty;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UIContentLoader deserialize site.
+        /// Rejects blank id and blank title.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "MenuDefinition 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(Title))
+                errors.Add(new ValidationError("title", "MenuDefinition 'title' is required.", "non_empty"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
         }
     }
 }

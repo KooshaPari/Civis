@@ -1,0 +1,15 @@
+# Pattern #220 Allowlist: Unsealed Concrete Classes with Mutable State
+# Purpose: Document known-safe classes or those with legitimate design reasons
+# Format: file:classname -> reason
+# 
+# Unsealing exempt classes:
+# 1. MonoBehaviour subclasses (Unity framework inheritance)
+# 2. DI-testable services (Allows test double injection)
+# 3. ECS systems with no subclassing contract
+# 4. Internal classes not in NuGet packages
+
+# Example entries (uncomment as needed):
+# Runtime/UI/DFCanvas.cs:DFCanvas -> sealed-by-design: MonoBehaviour inheritance
+# SDK/Assets/AssetService.cs:AssetService -> unsealed-by-design: DI-testability for test doubles
+# Runtime/Bridge/AssetSwapSystem.cs:AssetSwapSystem -> sealed-by-design: ECS system, no subclassing contract
+

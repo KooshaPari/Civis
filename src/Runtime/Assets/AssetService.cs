@@ -136,7 +136,7 @@ namespace DINOForge.Runtime.Assets
 
             if (!File.Exists(catalogPath))
             {
-                return new Dictionary<string, string>();
+                return new Dictionary<string, string>(StringComparer.Ordinal);
             }
 
             AddressablesCatalog catalog = AddressablesCatalog.Load(catalogPath);
@@ -559,7 +559,10 @@ namespace DINOForge.Runtime.Assets
                     Path.GetTempPath(), "dinoforge_assetsvc.log");
                 File.AppendAllText(logPath, $"[{DateTime.UtcNow:u}] WARN {message}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AssetService diagnostic log write failed: {ex.Message}");
+            }
         }
 
         /// <inheritdoc/>

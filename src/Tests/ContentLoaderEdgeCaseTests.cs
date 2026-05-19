@@ -92,7 +92,7 @@ type: content
 
             // Assert
             result.IsSuccess.Should().BeFalse();
-            result.Errors.Should().NotBeEmpty();
+            result.Errors.Should().HaveCount(1);
         }
 
         // ─── LoadPacks: circular dependency ──────────────────────────────────
@@ -129,7 +129,7 @@ depends_on:
 
             // Assert — circular dependency is detected and the result is a failure
             result.IsSuccess.Should().BeFalse();
-            result.Errors.Should().NotBeEmpty();
+            result.Errors.Should().HaveCount(1);
         }
 
         // ─── LoadPacks: non-existent directory ───────────────────────────────

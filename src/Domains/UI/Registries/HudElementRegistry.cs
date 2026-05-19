@@ -9,7 +9,7 @@ namespace DINOForge.Domains.UI.Registries
     /// Registry of HUD element definitions. Manages all HUD elements (health bars, resource counters, minimaps, etc.)
     /// registered across all packs.
     /// </summary>
-    public class HudElementRegistry
+    public sealed class HudElementRegistry
     {
         private readonly Dictionary<string, HudElementDefinition> _elements =
             new Dictionary<string, HudElementDefinition>(StringComparer.OrdinalIgnoreCase);

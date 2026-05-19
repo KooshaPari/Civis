@@ -40,8 +40,20 @@ namespace DINOForge.Tests
             var process = LaunchGameProcess();
             process.Should().NotBeNull();
 
-            // Wait for startup
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            // Wait for startup — poll for MainWindowHandle / early-exit (Pattern #108) instead of fixed sleep.
+            await DINOForge.Tests.Support.TestWait.UntilAsync(
+                () =>
+                {
+                    try
+                    {
+                        if (process!.HasExited) return true;
+                        process.Refresh();
+                        return process.MainWindowHandle != IntPtr.Zero;
+                    }
+                    catch { return false; }
+                },
+                TimeSpan.FromSeconds(10),
+                pollMs: 100);
 
             // Then: Window should be visible and responsive
             var mainWindowTitle = GetGameMainWindowTitle();

@@ -35,7 +35,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         /// </summary>
         private string BuildPrefabYaml(OptimizedAsset asset, AssetDefinition definition)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(512);  // Capacity ~= 17 appends × 30 chars (prefab YAML lines)
 
             // Prefab header
             sb.AppendLine("%YAML 1.1");

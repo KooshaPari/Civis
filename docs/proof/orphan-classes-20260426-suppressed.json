@@ -1,0 +1,3604 @@
+{
+  "scan_utc": "2026-04-27T08:03:44.091595Z",
+  "scan_date": "2026-04-27",
+  "scan_root": "C:/Users/koosh/Dino/src",
+  "exclusions": [
+    "src/Tests/** (test fixtures excluded from candidate list)",
+    "**/bin/**",
+    "**/obj/**",
+    "*.designer.cs",
+    "*.g.cs",
+    "*.AssemblyInfo.cs"
+  ],
+  "skip_categories": {
+    "dto_like": 273,
+    "ecs_system_subclass": 13,
+    "bepin_plugin_entry": 2,
+    "monobehaviour": 12,
+    "test_fixture": 308,
+    "xaml_codebehind": 17,
+    "value_converter": 8
+  },
+  "category_counts": {
+    "DEAD": 12,
+    "TEST_ONLY": 26,
+    "PROD": 197
+  },
+  "totals": {
+    "files_scanned": 632,
+    "classes_seen": 868,
+    "candidates_after_skip": 235
+  },
+  "dead_classes": [
+    {
+      "class": "AerialUnitMapper",
+      "file": "Runtime/Aviation/AerialUnitMapper.cs",
+      "line": 19,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModMenuOverlayProxy",
+      "file": "Runtime/UI/ModMenuOverlayProxy.cs",
+      "line": 12,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "UiDiagnostics",
+      "file": "Runtime/UI/UiDiagnostics.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ZigLodPipelineTests",
+      "file": "Tools/AssetPipelineZig/bindings/ZigLodPipelineTests.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "IntakeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/IntakeCommand.cs",
+      "line": 11,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "NormalizeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/NormalizeCommand.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "SearchCommand",
+      "file": "Tools/Cli/Assetctl/Commands/SearchCommand.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModCatalogService",
+      "file": "Tools/DesktopCompanion/Data/ModCatalogService.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "GameLaunchFailureAnalyzer",
+      "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+      "line": 18,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DirectAssetPipeline",
+      "file": "Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DefinitionUpdateService",
+      "file": "Tools/PackCompiler/Services/DefinitionUpdateService.cs",
+      "line": 15,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "VFXPrefabGenerator",
+      "file": "Tools/VFXPrefabGenerator/VFXPrefabGenerator.cs",
+      "line": 35,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    }
+  ],
+  "test_only_classes": [
+    {
+      "class": "CompatibilityChecker",
+      "file": "SDK/CompatibilityChecker.cs",
+      "line": 23,
+      "total_refs": 118,
+      "prod_refs": 0,
+      "test_refs": 118
+    },
+    {
+      "class": "HUDInjectionSystem",
+      "file": "Domains/UI/HUDInjectionSystem.cs",
+      "line": 17,
+      "total_refs": 36,
+      "prod_refs": 0,
+      "test_refs": 36
+    },
+    {
+      "class": "ThemeThemeColor",
+      "file": "Domains/UI/ThemeColorPalette.cs",
+      "line": 190,
+      "total_refs": 29,
+      "prod_refs": 0,
+      "test_refs": 29
+    },
+    {
+      "class": "PackRegistryClient",
+      "file": "SDK/Registry/PackRegistry.cs",
+      "line": 142,
+      "total_refs": 16,
+      "prod_refs": 0,
+      "test_refs": 16
+    },
+    {
+      "class": "RustAssetPipelineInterop",
+      "file": "Runtime/RustAssetPipelineInterop.cs",
+      "line": 24,
+      "total_refs": 15,
+      "prod_refs": 0,
+      "test_refs": 15
+    },
+    {
+      "class": "GoDependencyResolver",
+      "file": "SDK/NativeInterop/GoDependencyResolver.cs",
+      "line": 31,
+      "total_refs": 14,
+      "prod_refs": 0,
+      "test_refs": 14
+    },
+    {
+      "class": "PackGenerator",
+      "file": "SDK/Universe/PackGenerator.cs",
+      "line": 15,
+      "total_refs": 14,
+      "prod_refs": 0,
+      "test_refs": 14
+    },
+    {
+      "class": "ThemeThemeColorPalette",
+      "file": "Domains/UI/ThemeColorPalette.cs",
+      "line": 13,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "NativeMenuHostAdapter",
+      "file": "Runtime/UI/Adapters/NativeMenuHostAdapter.cs",
+      "line": 34,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "ThemeProviderAdapter",
+      "file": "Runtime/UI/Adapters/ThemeProviderAdapter.cs",
+      "line": 40,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "AssetReplacementEngine",
+      "file": "SDK/AssetReplacementEngine.cs",
+      "line": 14,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "UniverseLoader",
+      "file": "SDK/Universe/UniverseLoader.cs",
+      "line": 13,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "NativeButtonAdapter",
+      "file": "Runtime/UI/Adapters/NativeButtonAdapter.cs",
+      "line": 26,
+      "total_refs": 10,
+      "prod_refs": 0,
+      "test_refs": 10
+    },
+    {
+      "class": "NativeLabelGuardAdapter",
+      "file": "Runtime/UI/Adapters/NativeLabelGuardAdapter.cs",
+      "line": 26,
+      "total_refs": 9,
+      "prod_refs": 0,
+      "test_refs": 9
+    },
+    {
+      "class": "FactionNamingRules",
+      "file": "SDK/Universe/NamingGuide.cs",
+      "line": 58,
+      "total_refs": 9,
+      "prod_refs": 0,
+      "test_refs": 9
+    },
+    {
+      "class": "ScenarioPlugin",
+      "file": "Domains/Scenario/ScenarioPlugin.cs",
+      "line": 16,
+      "total_refs": 8,
+      "prod_refs": 0,
+      "test_refs": 8
+    },
+    {
+      "class": "EconomyContentLoader",
+      "file": "Domains/Economy/EconomyContentLoader.cs",
+      "line": 18,
+      "total_refs": 7,
+      "prod_refs": 0,
+      "test_refs": 7
+    },
+    {
+      "class": "EconomyPlugin",
+      "file": "Domains/Economy/EconomyPlugin.cs",
+      "line": 16,
+      "total_refs": 6,
+      "prod_refs": 0,
+      "test_refs": 6
+    },
+    {
+      "class": "NativeDepResolver",
+      "file": "Tools/McpServer/NativeDepResolver.cs",
+      "line": 24,
+      "total_refs": 6,
+      "prod_refs": 0,
+      "test_refs": 6
+    },
+    {
+      "class": "NativeUiSelectorAdapter",
+      "file": "Runtime/UI/Adapters/NativeUiSelectorAdapter.cs",
+      "line": 25,
+      "total_refs": 5,
+      "prod_refs": 0,
+      "test_refs": 5
+    },
+    {
+      "class": "NamingRuleSet",
+      "file": "SDK/Universe/NamingGuide.cs",
+      "line": 83,
+      "total_refs": 5,
+      "prod_refs": 0,
+      "test_refs": 5
+    },
+    {
+      "class": "NativeCanvasLocatorAdapter",
+      "file": "Runtime/UI/Adapters/NativeCanvasLocatorAdapter.cs",
+      "line": 22,
+      "total_refs": 4,
+      "prod_refs": 0,
+      "test_refs": 4
+    },
+    {
+      "class": "WarfarePlugin",
+      "file": "Domains/Warfare/WarfarePlugin.cs",
+      "line": 18,
+      "total_refs": 3,
+      "prod_refs": 0,
+      "test_refs": 3
+    },
+    {
+      "class": "MarketDefinition",
+      "file": "Domains/Economy/Models/MarketDefinition.cs",
+      "line": 9,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    },
+    {
+      "class": "LODManager",
+      "file": "Runtime/Bridge/LODManager.cs",
+      "line": 31,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    },
+    {
+      "class": "VFXPoolManager",
+      "file": "Runtime/Bridge/VFXPoolManager.cs",
+      "line": 31,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    }
+  ],
+  "indirect_callsite_candidates": [],
+  "summary_top_dead": [
+    {
+      "class": "AerialUnitMapper",
+      "file": "Runtime/Aviation/AerialUnitMapper.cs",
+      "line": 19,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModMenuOverlayProxy",
+      "file": "Runtime/UI/ModMenuOverlayProxy.cs",
+      "line": 12,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "UiDiagnostics",
+      "file": "Runtime/UI/UiDiagnostics.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ZigLodPipelineTests",
+      "file": "Tools/AssetPipelineZig/bindings/ZigLodPipelineTests.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "IntakeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/IntakeCommand.cs",
+      "line": 11,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "NormalizeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/NormalizeCommand.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "SearchCommand",
+      "file": "Tools/Cli/Assetctl/Commands/SearchCommand.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModCatalogService",
+      "file": "Tools/DesktopCompanion/Data/ModCatalogService.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "GameLaunchFailureAnalyzer",
+      "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+      "line": 18,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DirectAssetPipeline",
+      "file": "Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    }
+  ],
+  "suppressed_classes": {
+    "dto_like": [
+      {
+        "class": "GameClientException",
+        "file": "Bridge/Client/GameClientException.cs",
+        "line": 8
+      },
+      {
+        "class": "GameClientOptions",
+        "file": "Bridge/Client/GameClientOptions.cs",
+        "line": 8
+      },
+      {
+        "class": "BridgeReceipt",
+        "file": "Bridge/Protocol/BridgeReceipt.cs",
+        "line": 16
+      },
+      {
+        "class": "CatalogEntry",
+        "file": "Bridge/Protocol/CatalogSnapshot.cs",
+        "line": 32
+      },
+      {
+        "class": "CatalogSnapshot",
+        "file": "Bridge/Protocol/CatalogSnapshot.cs",
+        "line": 10
+      },
+      {
+        "class": "ComponentMapEntry",
+        "file": "Bridge/Protocol/ComponentMapResult.cs",
+        "line": 21
+      },
+      {
+        "class": "ComponentMapResult",
+        "file": "Bridge/Protocol/ComponentMapResult.cs",
+        "line": 10
+      },
+      {
+        "class": "GameStatus",
+        "file": "Bridge/Protocol/GameStatus.cs",
+        "line": 10
+      },
+      {
+        "class": "JsonRpcError",
+        "file": "Bridge/Protocol/JsonRpcMessage.cs",
+        "line": 63
+      },
+      {
+        "class": "JsonRpcRequest",
+        "file": "Bridge/Protocol/JsonRpcMessage.cs",
+        "line": 10
+      },
+      {
+        "class": "JsonRpcResponse",
+        "file": "Bridge/Protocol/JsonRpcMessage.cs",
+        "line": 32
+      },
+      {
+        "class": "LoadSceneResult",
+        "file": "Bridge/Protocol/LoadSceneResult.cs",
+        "line": 9
+      },
+      {
+        "class": "OverrideResult",
+        "file": "Bridge/Protocol/OverrideResult.cs",
+        "line": 9
+      },
+      {
+        "class": "PingResult",
+        "file": "Bridge/Protocol/PingResult.cs",
+        "line": 9
+      },
+      {
+        "class": "ProtocolException",
+        "file": "Bridge/Protocol/ProtocolException.cs",
+        "line": 10
+      },
+      {
+        "class": "EntityInfo",
+        "file": "Bridge/Protocol/QueryResult.cs",
+        "line": 24
+      },
+      {
+        "class": "QueryResult",
+        "file": "Bridge/Protocol/QueryResult.cs",
+        "line": 10
+      },
+      {
+        "class": "ReloadResult",
+        "file": "Bridge/Protocol/ReloadResult.cs",
+        "line": 10
+      },
+      {
+        "class": "ResourceSnapshot",
+        "file": "Bridge/Protocol/ResourceSnapshot.cs",
+        "line": 9
+      },
+      {
+        "class": "ScreenshotResult",
+        "file": "Bridge/Protocol/ScreenshotResult.cs",
+        "line": 9
+      },
+      {
+        "class": "StartGameResult",
+        "file": "Bridge/Protocol/StartGameResult.cs",
+        "line": 7
+      },
+      {
+        "class": "StatResult",
+        "file": "Bridge/Protocol/StatResult.cs",
+        "line": 10
+      },
+      {
+        "class": "UiActionResult",
+        "file": "Bridge/Protocol/UiActionResult.cs",
+        "line": 9
+      },
+      {
+        "class": "UiExpectationResult",
+        "file": "Bridge/Protocol/UiExpectationResult.cs",
+        "line": 9
+      },
+      {
+        "class": "UiBounds",
+        "file": "Bridge/Protocol/UiTreeResult.cs",
+        "line": 94
+      },
+      {
+        "class": "UiNode",
+        "file": "Bridge/Protocol/UiTreeResult.cs",
+        "line": 40
+      },
+      {
+        "class": "UiTreeResult",
+        "file": "Bridge/Protocol/UiTreeResult.cs",
+        "line": 10
+      },
+      {
+        "class": "UiWaitResult",
+        "file": "Bridge/Protocol/UiWaitResult.cs",
+        "line": 9
+      },
+      {
+        "class": "VerifyResult",
+        "file": "Bridge/Protocol/VerifyResult.cs",
+        "line": 10
+      },
+      {
+        "class": "WaitResult",
+        "file": "Bridge/Protocol/WaitResult.cs",
+        "line": 9
+      },
+      {
+        "class": "EconomyBalanceReport",
+        "file": "Domains/Economy/Balance/EconomyBalanceReport.cs",
+        "line": 82
+      },
+      {
+        "class": "FactionEconomySummary",
+        "file": "Domains/Economy/Balance/EconomyBalanceReport.cs",
+        "line": 8
+      },
+      {
+        "class": "TradeRouteWrapper",
+        "file": "Domains/Economy/EconomyContentLoader.cs",
+        "line": 153
+      },
+      {
+        "class": "EconomyValidationResult",
+        "file": "Domains/Economy/EconomyValidationResult.cs",
+        "line": 8
+      },
+      {
+        "class": "ResourceRate",
+        "file": "Domains/Economy/Models/ResourceRate.cs",
+        "line": 8
+      },
+      {
+        "class": "TradeRoute",
+        "file": "Domains/Economy/Models/TradeRoute.cs",
+        "line": 8
+      },
+      {
+        "class": "TradeEvaluation",
+        "file": "Domains/Economy/Trade/TradeEngine.cs",
+        "line": 11
+      },
+      {
+        "class": "TradeSuggestion",
+        "file": "Domains/Economy/Trade/TradeEngine.cs",
+        "line": 63
+      },
+      {
+        "class": "DefeatCondition",
+        "file": "Domains/Scenario/Models/DefeatCondition.cs",
+        "line": 25
+      },
+      {
+        "class": "EventAction",
+        "file": "Domains/Scenario/Models/EventAction.cs",
+        "line": 33
+      },
+      {
+        "class": "ScenarioEventDefinition",
+        "file": "Domains/Scenario/Models/ScenarioEventDefinition.cs",
+        "line": 10
+      },
+      {
+        "class": "ScriptedEvent",
+        "file": "Domains/Scenario/Models/ScriptedEvent.cs",
+        "line": 29
+      },
+      {
+        "class": "StartingConditions",
+        "file": "Domains/Scenario/Models/StartingConditions.cs",
+        "line": 9
+      },
+      {
+        "class": "VictoryCondition",
+        "file": "Domains/Scenario/Models/VictoryCondition.cs",
+        "line": 27
+      },
+      {
+        "class": "WinConditionDefinition",
+        "file": "Domains/Scenario/Models/WinConditionDefinition.cs",
+        "line": 10
+      },
+      {
+        "class": "ScenarioValidationResult",
+        "file": "Domains/Scenario/ScenarioValidationResult.cs",
+        "line": 8
+      },
+      {
+        "class": "GameState",
+        "file": "Domains/Scenario/Scripting/GameState.cs",
+        "line": 10
+      },
+      {
+        "class": "HUDElementDefinition",
+        "file": "Domains/UI/HUDInjectionSystem.cs",
+        "line": 95
+      },
+      {
+        "class": "MenuItemDefinition",
+        "file": "Domains/UI/Models/MenuItemDefinition.cs",
+        "line": 9
+      },
+      {
+        "class": "HudElementWrapper",
+        "file": "Domains/UI/UIContentLoader.cs",
+        "line": 181
+      },
+      {
+        "class": "MenuWrapper",
+        "file": "Domains/UI/UIContentLoader.cs",
+        "line": 193
+      },
+      {
+        "class": "ThemeWrapper",
+        "file": "Domains/UI/UIContentLoader.cs",
+        "line": 202
+      },
+      {
+        "class": "FactionArchetype",
+        "file": "Domains/Warfare/Archetypes/FactionArchetype.cs",
+        "line": 10
+      },
+      {
+        "class": "BalanceComparisonReport",
+        "file": "Domains/Warfare/Balance/BalanceComparisonReport.cs",
+        "line": 6
+      },
+      {
+        "class": "FactionPowerReport",
+        "file": "Domains/Warfare/Balance/FactionPowerReport.cs",
+        "line": 8
+      },
+      {
+        "class": "RosterValidationResult",
+        "file": "Domains/Warfare/Roles/RosterValidationResult.cs",
+        "line": 8
+      },
+      {
+        "class": "WarfareValidationResult",
+        "file": "Domains/Warfare/WarfareValidationResult.cs",
+        "line": 9
+      },
+      {
+        "class": "CacheEntry",
+        "file": "Runtime/Bridge/AssetBundleCache.cs",
+        "line": 29
+      },
+      {
+        "class": "DestroyGuardPatch",
+        "file": "Runtime/Bridge/DestroyGuardPatch.cs",
+        "line": 18
+      },
+      {
+        "class": "FactionRuntime",
+        "file": "Runtime/Bridge/FactionSystem.cs",
+        "line": 17
+      },
+      {
+        "class": "StatModification",
+        "file": "Runtime/Bridge/StatModifierSystem.cs",
+        "line": 13
+      },
+      {
+        "class": "ArchetypeGroup",
+        "file": "Runtime/Bridge/VanillaCatalog.cs",
+        "line": 303
+      },
+      {
+        "class": "ActiveWave",
+        "file": "Runtime/Bridge/WaveInjector.cs",
+        "line": 325
+      },
+      {
+        "class": "WaveSpawnRequest",
+        "file": "Runtime/Bridge/WaveInjector.cs",
+        "line": 301
+      },
+      {
+        "class": "PluginInfo",
+        "file": "Runtime/PluginInfo.cs",
+        "line": 6
+      },
+      {
+        "class": "AssetData",
+        "file": "Runtime/RustAssetPipelineInterop.cs",
+        "line": 252
+      },
+      {
+        "class": "AssetMetadataJson",
+        "file": "Runtime/RustAssetPipelineInterop.cs",
+        "line": 288
+      },
+      {
+        "class": "DeferredHudMount",
+        "file": "Runtime/UI/Adapters/HudElementRendererAdapter.cs",
+        "line": 183
+      },
+      {
+        "class": "InjectionRecord",
+        "file": "Runtime/UI/Adapters/ModButtonInjectorAdapter.cs",
+        "line": 193
+      },
+      {
+        "class": "ToastEntry",
+        "file": "Runtime/UI/HudIndicator.cs",
+        "line": 201
+      },
+      {
+        "class": "PluginSettingsInfo",
+        "file": "Runtime/UI/ModSettingsPanel.cs",
+        "line": 273
+      },
+      {
+        "class": "SettingEntryInfo",
+        "file": "Runtime/UI/ModSettingsPanel.cs",
+        "line": 298
+      },
+      {
+        "class": "UiActionEntry",
+        "file": "Runtime/UI/UiActionTrace.cs",
+        "line": 220
+      },
+      {
+        "class": "ModsButtonTextPatch",
+        "file": "Runtime/UI/UiGridHarmonyPatch.cs",
+        "line": 22
+      },
+      {
+        "class": "LODConfig",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 168
+      },
+      {
+        "class": "MaterialConfig",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 156
+      },
+      {
+        "class": "ParticleColorConfig",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 131
+      },
+      {
+        "class": "ParticleShapeConfig",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 123
+      },
+      {
+        "class": "ParticleSystemConfig",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 87
+      },
+      {
+        "class": "VFXPrefabCatalog",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 194
+      },
+      {
+        "class": "VFXPrefabDescriptor",
+        "file": "Runtime/VFX/VFXPrefabDescriptor.cs",
+        "line": 17
+      },
+      {
+        "class": "AssetInfo",
+        "file": "SDK/Assets/AssetInfo.cs",
+        "line": 8
+      },
+      {
+        "class": "AssetSwapRequest",
+        "file": "SDK/Assets/AssetSwapRegistry.cs",
+        "line": 11
+      },
+      {
+        "class": "BundleInfo",
+        "file": "SDK/Assets/BundleInfo.cs",
+        "line": 8
+      },
+      {
+        "class": "CompatibilityResult",
+        "file": "SDK/CompatibilityChecker.cs",
+        "line": 273
+      },
+      {
+        "class": "PackSubmoduleEntry",
+        "file": "SDK/Dependencies/PackSubmoduleManager.cs",
+        "line": 17
+      },
+      {
+        "class": "PackContentChangedEventArgs",
+        "file": "SDK/HotReload/PackFileWatcher.cs",
+        "line": 267
+      },
+      {
+        "class": "JsonOptions",
+        "file": "SDK/Json/JsonOptions.cs",
+        "line": 10
+      },
+      {
+        "class": "AerialProperties",
+        "file": "SDK/Models/AerialProperties.cs",
+        "line": 7
+      },
+      {
+        "class": "BuildingAntiAirProperties",
+        "file": "SDK/Models/BuildingDefinition.cs",
+        "line": 124
+      },
+      {
+        "class": "DoctrineDefinition",
+        "file": "SDK/Models/DoctrineDefinition.cs",
+        "line": 9
+      },
+      {
+        "class": "FactionArmy",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 122
+      },
+      {
+        "class": "FactionAudio",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 274
+      },
+      {
+        "class": "FactionBuildings",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 202
+      },
+      {
+        "class": "FactionDefinition",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 10
+      },
+      {
+        "class": "FactionEconomy",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 92
+      },
+      {
+        "class": "FactionInfo",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 52
+      },
+      {
+        "class": "FactionRoster",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 152
+      },
+      {
+        "class": "FactionVisuals",
+        "file": "SDK/Models/FactionDefinition.cs",
+        "line": 248
+      },
+      {
+        "class": "FactionPatchAdditions",
+        "file": "SDK/Models/FactionPatchDefinition.cs",
+        "line": 39
+      },
+      {
+        "class": "FactionPatchDefinition",
+        "file": "SDK/Models/FactionPatchDefinition.cs",
+        "line": 17
+      },
+      {
+        "class": "ProjectileDefinition",
+        "file": "SDK/Models/ProjectileDefinition.cs",
+        "line": 8
+      },
+      {
+        "class": "ResourceCost",
+        "file": "SDK/Models/ResourceCost.cs",
+        "line": 8
+      },
+      {
+        "class": "SkillDefinition",
+        "file": "SDK/Models/SkillDefinition.cs",
+        "line": 11
+      },
+      {
+        "class": "SkillEffect",
+        "file": "SDK/Models/SkillDefinition.cs",
+        "line": 79
+      },
+      {
+        "class": "SquadDefinition",
+        "file": "SDK/Models/SquadDefinition.cs",
+        "line": 12
+      },
+      {
+        "class": "StatOverrideDefinition",
+        "file": "SDK/Models/StatOverrideDefinition.cs",
+        "line": 12
+      },
+      {
+        "class": "StatOverrideEntry",
+        "file": "SDK/Models/StatOverrideDefinition.cs",
+        "line": 25
+      },
+      {
+        "class": "TcAssetReplacements",
+        "file": "SDK/Models/TotalConversionManifest.cs",
+        "line": 117
+      },
+      {
+        "class": "TcFactionEntry",
+        "file": "SDK/Models/TotalConversionManifest.cs",
+        "line": 80
+      },
+      {
+        "class": "TotalConversionManifest",
+        "file": "SDK/Models/TotalConversionManifest.cs",
+        "line": 11
+      },
+      {
+        "class": "UnitAudio",
+        "file": "SDK/Models/UnitDefinition.cs",
+        "line": 275
+      },
+      {
+        "class": "UnitStats",
+        "file": "SDK/Models/UnitDefinition.cs",
+        "line": 201
+      },
+      {
+        "class": "UnitVisuals",
+        "file": "SDK/Models/UnitDefinition.cs",
+        "line": 249
+      },
+      {
+        "class": "DifficultyScaling",
+        "file": "SDK/Models/WaveDefinition.cs",
+        "line": 90
+      },
+      {
+        "class": "SpawnGroup",
+        "file": "SDK/Models/WaveDefinition.cs",
+        "line": 60
+      },
+      {
+        "class": "WaveDefinition",
+        "file": "SDK/Models/WaveDefinition.cs",
+        "line": 11
+      },
+      {
+        "class": "WeaponDefinition",
+        "file": "SDK/Models/WeaponDefinition.cs",
+        "line": 8
+      },
+      {
+        "class": "ResolverInput",
+        "file": "SDK/NativeInterop/GoDependencyResolver.cs",
+        "line": 223
+      },
+      {
+        "class": "ResolverOutput",
+        "file": "SDK/NativeInterop/GoDependencyResolver.cs",
+        "line": 230
+      },
+      {
+        "class": "AssetDefinition",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 399
+      },
+      {
+        "class": "AssetMetadata",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 375
+      },
+      {
+        "class": "ImportedAsset",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 325
+      },
+      {
+        "class": "LODDefinition",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 410
+      },
+      {
+        "class": "MaterialData",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 357
+      },
+      {
+        "class": "MeshData",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 344
+      },
+      {
+        "class": "OptimizedAsset",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 384
+      },
+      {
+        "class": "SkeletonData",
+        "file": "SDK/NativeInterop/RustAssetPipeline.cs",
+        "line": 366
+      },
+      {
+        "class": "PackLoads",
+        "file": "SDK/PackManifest.cs",
+        "line": 191
+      },
+      {
+        "class": "PackOverrides",
+        "file": "SDK/PackManifest.cs",
+        "line": 269
+      },
+      {
+        "class": "PackRegistryFilter",
+        "file": "SDK/Registry/PackRegistry.cs",
+        "line": 103
+      },
+      {
+        "class": "RegistryDocument",
+        "file": "SDK/Registry/PackRegistry.cs",
+        "line": 83
+      },
+      {
+        "class": "RegistryPackEntry",
+        "file": "SDK/Registry/PackRegistry.cs",
+        "line": 19
+      },
+      {
+        "class": "RegistryConflict",
+        "file": "SDK/Registry/RegistryConflict.cs",
+        "line": 9
+      },
+      {
+        "class": "RegistryEntry",
+        "file": "SDK/Registry/RegistryEntry.cs",
+        "line": 7
+      },
+      {
+        "class": "RegistryManager",
+        "file": "SDK/Registry/RegistryManager.cs",
+        "line": 9
+      },
+      {
+        "class": "ButtonSpec",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 109
+      },
+      {
+        "class": "ExtendedButtonHandle",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 59
+      },
+      {
+        "class": "ExtendedHandle",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 30
+      },
+      {
+        "class": "ExtendedLabelHandle",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 53
+      },
+      {
+        "class": "ExtendedPanelHandle",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 47
+      },
+      {
+        "class": "LabelSpec",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 87
+      },
+      {
+        "class": "PanelSpec",
+        "file": "SDK/UI/Extended/IModCanvas.cs",
+        "line": 65
+      },
+      {
+        "class": "HudElementDefinition",
+        "file": "SDK/UI/Models/UiDefinitionsStub.cs",
+        "line": 16
+      },
+      {
+        "class": "ThemeDefinition",
+        "file": "SDK/UI/Models/UiDefinitionsStub.cs",
+        "line": 42
+      },
+      {
+        "class": "NativeButtonHandle",
+        "file": "SDK/UI/Native/INativeButtonAdapter.cs",
+        "line": 33
+      },
+      {
+        "class": "NativeCanvasHandle",
+        "file": "SDK/UI/Native/INativeCanvasLocator.cs",
+        "line": 25
+      },
+      {
+        "class": "NativeElementHandle",
+        "file": "SDK/UI/Native/INativeUiSelector.cs",
+        "line": 27
+      },
+      {
+        "class": "CrosswalkEntry",
+        "file": "SDK/Universe/CrosswalkDictionary.cs",
+        "line": 136
+      },
+      {
+        "class": "CrosswalkPattern",
+        "file": "SDK/Universe/CrosswalkDictionary.cs",
+        "line": 185
+      },
+      {
+        "class": "FactionTaxonomy",
+        "file": "SDK/Universe/FactionTaxonomy.cs",
+        "line": 10
+      },
+      {
+        "class": "TaxonomyFaction",
+        "file": "SDK/Universe/FactionTaxonomy.cs",
+        "line": 22
+      },
+      {
+        "class": "TaxonomySubFaction",
+        "file": "SDK/Universe/FactionTaxonomy.cs",
+        "line": 70
+      },
+      {
+        "class": "PackGeneratorResult",
+        "file": "SDK/Universe/PackGenerator.cs",
+        "line": 201
+      },
+      {
+        "class": "AudioTheme",
+        "file": "SDK/Universe/StyleGuide.cs",
+        "line": 88
+      },
+      {
+        "class": "ColorPalette",
+        "file": "SDK/Universe/StyleGuide.cs",
+        "line": 58
+      },
+      {
+        "class": "FactionStyle",
+        "file": "SDK/Universe/StyleGuide.cs",
+        "line": 28
+      },
+      {
+        "class": "GlobalStyle",
+        "file": "SDK/Universe/StyleGuide.cs",
+        "line": 124
+      },
+      {
+        "class": "StyleGuide",
+        "file": "SDK/Universe/StyleGuide.cs",
+        "line": 10
+      },
+      {
+        "class": "UniverseBible",
+        "file": "SDK/Universe/UniverseBible.cs",
+        "line": 11
+      },
+      {
+        "class": "TcValidationResult",
+        "file": "SDK/Validation/TotalConversionValidator.cs",
+        "line": 87
+      },
+      {
+        "class": "ValidationError",
+        "file": "SDK/Validation/ValidationResult.cs",
+        "line": 40
+      },
+      {
+        "class": "AssetCatalogEntry",
+        "file": "Tools/Cli/Assetctl/AssetCatalogStore.cs",
+        "line": 514
+      },
+      {
+        "class": "AssetCatalogStats",
+        "file": "Tools/Cli/Assetctl/AssetCatalogStore.cs",
+        "line": 570
+      },
+      {
+        "class": "AssetCandidate",
+        "file": "Tools/Cli/Assetctl/AssetctlModels.cs",
+        "line": 10
+      },
+      {
+        "class": "AssetManifest",
+        "file": "Tools/Cli/Assetctl/AssetctlModels.cs",
+        "line": 124
+      },
+      {
+        "class": "AssetRegistryRecord",
+        "file": "Tools/Cli/Assetctl/AssetctlModels.cs",
+        "line": 363
+      },
+      {
+        "class": "AssetValidationReport",
+        "file": "Tools/Cli/Assetctl/AssetctlModels.cs",
+        "line": 333
+      },
+      {
+        "class": "AssetctlCommandResponse",
+        "file": "Tools/Cli/Assetctl/AssetctlModels.cs",
+        "line": 405
+      },
+      {
+        "class": "AssetctlExportResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 256
+      },
+      {
+        "class": "AssetctlIntakeResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 58
+      },
+      {
+        "class": "AssetctlNormalizeResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 100
+      },
+      {
+        "class": "AssetctlRegisterResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 220
+      },
+      {
+        "class": "AssetctlSearchFilters",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 10
+      },
+      {
+        "class": "AssetctlStylizeResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 178
+      },
+      {
+        "class": "AssetctlValidationResult",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 136
+      },
+      {
+        "class": "FactionPalette",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 319
+      },
+      {
+        "class": "NormalizationReport",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 292
+      },
+      {
+        "class": "RankedCandidate",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 34
+      },
+      {
+        "class": "StylizationReport",
+        "file": "Tools/Cli/Assetctl/AssetctlPipelineModels.cs",
+        "line": 352
+      },
+      {
+        "class": "AssetIndexEntry",
+        "file": "Tools/Cli/Assetctl/LocalSourceAdapter.cs",
+        "line": 200
+      },
+      {
+        "class": "AssetCandidate",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 940
+      },
+      {
+        "class": "AssetDownloadException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 1073
+      },
+      {
+        "class": "AssetDownloadFailedException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 1080
+      },
+      {
+        "class": "AssetDownloaderOptions",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 884
+      },
+      {
+        "class": "AssetLicenseNotAllowedException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 1087
+      },
+      {
+        "class": "AssetSearchCriteria",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 912
+      },
+      {
+        "class": "BatchDownloadProgress",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 1028
+      },
+      {
+        "class": "BatchDownloadResult",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 1053
+      },
+      {
+        "class": "CandidateCreator",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 971
+      },
+      {
+        "class": "CandidateRankingDetails",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 981
+      },
+      {
+        "class": "DownloadAssetResult",
+        "file": "Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+        "line": 997
+      },
+      {
+        "class": "BatchManifestItem",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabAdapter.cs",
+        "line": 397
+      },
+      {
+        "class": "SketchfabApiException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 953
+      },
+      {
+        "class": "SketchfabAuthenticationException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 960
+      },
+      {
+        "class": "SketchfabClientOptions",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 722
+      },
+      {
+        "class": "SketchfabCreator",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 780
+      },
+      {
+        "class": "SketchfabDownloadResult",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 877
+      },
+      {
+        "class": "SketchfabLicense",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 840
+      },
+      {
+        "class": "SketchfabModelInfo",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 744
+      },
+      {
+        "class": "SketchfabModelMetadata",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 792
+      },
+      {
+        "class": "SketchfabModelNotFoundException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 966
+      },
+      {
+        "class": "SketchfabRateLimitState",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 898
+      },
+      {
+        "class": "SketchfabSearchFilters",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 852
+      },
+      {
+        "class": "SketchfabSearchResponse",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 933
+      },
+      {
+        "class": "SketchfabServerException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 979
+      },
+      {
+        "class": "SketchfabTokenValidation",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 914
+      },
+      {
+        "class": "SketchfabValidationException",
+        "file": "Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs",
+        "line": 973
+      },
+      {
+        "class": "AssetPipelineConfiguration",
+        "file": "Tools/Cli/Assetctl/SketchfabConfiguration.cs",
+        "line": 39
+      },
+      {
+        "class": "SketchfabConfiguration",
+        "file": "Tools/Cli/Assetctl/SketchfabConfiguration.cs",
+        "line": 8
+      },
+      {
+        "class": "PolicySection",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 64
+      },
+      {
+        "class": "RiskRule",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 154
+      },
+      {
+        "class": "ScoringSection",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 52
+      },
+      {
+        "class": "SourceCapabilities",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 136
+      },
+      {
+        "class": "SourceRulesDocument",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 10
+      },
+      {
+        "class": "SourceTier",
+        "file": "Tools/Cli/Assetctl/SourceRulesModels.cs",
+        "line": 94
+      },
+      {
+        "class": "AppConfig",
+        "file": "Tools/DesktopCompanion/Data/AppConfig.cs",
+        "line": 7
+      },
+      {
+        "class": "BundleEntry",
+        "file": "Tools/DesktopCompanion/Data/BundleEntry.cs",
+        "line": 9
+      },
+      {
+        "class": "CatalogEntry",
+        "file": "Tools/DesktopCompanion/Data/CatalogEntry.cs",
+        "line": 10
+      },
+      {
+        "class": "ConflictItem",
+        "file": "Tools/DesktopCompanion/Data/ConflictDetectionService.cs",
+        "line": 211
+      },
+      {
+        "class": "ConflictReport",
+        "file": "Tools/DesktopCompanion/Data/ConflictDetectionService.cs",
+        "line": 295
+      },
+      {
+        "class": "DependencyIssue",
+        "file": "Tools/DesktopCompanion/Data/ConflictDetectionService.cs",
+        "line": 241
+      },
+      {
+        "class": "DependencyTreeNode",
+        "file": "Tools/DesktopCompanion/Data/ConflictDetectionService.cs",
+        "line": 274
+      },
+      {
+        "class": "DebugSectionViewModel",
+        "file": "Tools/DesktopCompanion/Data/DebugSectionViewModel.cs",
+        "line": 8
+      },
+      {
+        "class": "CatalogLoadResult",
+        "file": "Tools/DesktopCompanion/Data/IModCatalogService.cs",
+        "line": 27
+      },
+      {
+        "class": "LoadResultViewModel",
+        "file": "Tools/DesktopCompanion/Data/LoadResultViewModel.cs",
+        "line": 8
+      },
+      {
+        "class": "PackAssetGroup",
+        "file": "Tools/DesktopCompanion/Data/PackAssetGroup.cs",
+        "line": 10
+      },
+      {
+        "class": "PackViewModel",
+        "file": "Tools/DesktopCompanion/Data/PackViewModel.cs",
+        "line": 12
+      },
+      {
+        "class": "UpdateInfo",
+        "file": "Tools/DesktopCompanion/Data/UpdateCheckService.cs",
+        "line": 128
+      },
+      {
+        "class": "Program",
+        "file": "Tools/DesktopCompanion/Program.cs",
+        "line": 9
+      },
+      {
+        "class": "MainViewModel",
+        "file": "Tools/DesktopCompanion/ViewModels/MainViewModel.cs",
+        "line": 8
+      },
+      {
+        "class": "FailureAnalysisResult",
+        "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+        "line": 479
+      },
+      {
+        "class": "FailureManifestDto",
+        "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+        "line": 431
+      },
+      {
+        "class": "ProcessInfoDto",
+        "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+        "line": 461
+      },
+      {
+        "class": "InstallOptions",
+        "file": "Tools/Installer/GUI/Services/InstallerService.cs",
+        "line": 15
+      },
+      {
+        "class": "UninstallOptions",
+        "file": "Tools/Installer/GUI/Services/InstallerService.cs",
+        "line": 53
+      },
+      {
+        "class": "OptionsPageViewModel",
+        "file": "Tools/Installer/GUI/ViewModels/OptionsPageViewModel.cs",
+        "line": 9
+      },
+      {
+        "class": "InstallInspection",
+        "file": "Tools/Installer/InstallerLib/InstallLifecycle.cs",
+        "line": 374
+      },
+      {
+        "class": "InstallManifest",
+        "file": "Tools/Installer/InstallerLib/InstallLifecycle.cs",
+        "line": 416
+      },
+      {
+        "class": "InstalledFileRecord",
+        "file": "Tools/Installer/InstallerLib/InstallLifecycle.cs",
+        "line": 427
+      },
+      {
+        "class": "InstallStatus",
+        "file": "Tools/Installer/InstallerLib/InstallVerifier.cs",
+        "line": 173
+      },
+      {
+        "class": "RpcException",
+        "file": "Tools/McpServer/BareCua.cs",
+        "line": 374
+      },
+      {
+        "class": "RpcException",
+        "file": "Tools/McpServer/Laycua.cs",
+        "line": 374
+      },
+      {
+        "class": "RpcException",
+        "file": "Tools/McpServer/PlayCua.cs",
+        "line": 375
+      },
+      {
+        "class": "OmniParserElement",
+        "file": "Tools/McpServer/Tools/GameAnalyzeScreenTool.cs",
+        "line": 195
+      },
+      {
+        "class": "GameCaptureHelper",
+        "file": "Tools/McpServer/Tools/GameCaptureHelper.cs",
+        "line": 20
+      },
+      {
+        "class": "GameClientHelper",
+        "file": "Tools/McpServer/Tools/GameClientHelper.cs",
+        "line": 11
+      },
+      {
+        "class": "GameInputHelper",
+        "file": "Tools/McpServer/Tools/GameInputHelper.cs",
+        "line": 10
+      },
+      {
+        "class": "AssetDefinition",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 100
+      },
+      {
+        "class": "AssetPhase",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 90
+      },
+      {
+        "class": "AssetPipelineConfig",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 12
+      },
+      {
+        "class": "AssetSettings",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 40
+      },
+      {
+        "class": "BuildConfig",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 169
+      },
+      {
+        "class": "DefinitionUpdateConfig",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 153
+      },
+      {
+        "class": "LODDefinition",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 140
+      },
+      {
+        "class": "MaterialDefinition",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 68
+      },
+      {
+        "class": "PerformanceTargets",
+        "file": "Tools/PackCompiler/Models/AssetConfig.cs",
+        "line": 188
+      },
+      {
+        "class": "AssetMetadata",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 140
+      },
+      {
+        "class": "BoneInfo",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 121
+      },
+      {
+        "class": "BoneWeight",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 73
+      },
+      {
+        "class": "ImportedAsset",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 11
+      },
+      {
+        "class": "MaterialData",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 83
+      },
+      {
+        "class": "MeshData",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 36
+      },
+      {
+        "class": "SkeletonData",
+        "file": "Tools/PackCompiler/Models/ImportedAsset.cs",
+        "line": 108
+      },
+      {
+        "class": "LODScreenSize",
+        "file": "Tools/PackCompiler/Models/OptimizedAsset.cs",
+        "line": 42
+      },
+      {
+        "class": "OptimizationMetadata",
+        "file": "Tools/PackCompiler/Models/OptimizedAsset.cs",
+        "line": 62
+      },
+      {
+        "class": "OptimizedAsset",
+        "file": "Tools/PackCompiler/Models/OptimizedAsset.cs",
+        "line": 11
+      },
+      {
+        "class": "AssetMetrics",
+        "file": "Tools/PackCompiler/Models/ProcessingReport.cs",
+        "line": 52
+      },
+      {
+        "class": "AssetProcessingResult",
+        "file": "Tools/PackCompiler/Models/ProcessingReport.cs",
+        "line": 39
+      },
+      {
+        "class": "PipelineMetrics",
+        "file": "Tools/PackCompiler/Models/ProcessingReport.cs",
+        "line": 71
+      },
+      {
+        "class": "ProcessingReport",
+        "file": "Tools/PackCompiler/Models/ProcessingReport.cs",
+        "line": 11
+      },
+      {
+        "class": "ResolverInput",
+        "file": "Tools/PackCompiler/Services/GoResolverService.cs",
+        "line": 240
+      },
+      {
+        "class": "ResolverOutput",
+        "file": "Tools/PackCompiler/Services/GoResolverService.cs",
+        "line": 249
+      }
+    ],
+    "ecs_system_subclass": [
+      {
+        "class": "AerialMovementSystem",
+        "file": "Runtime/Aviation/AerialMovementSystem.cs",
+        "line": 22
+      },
+      {
+        "class": "AerialSpawnSystem",
+        "file": "Runtime/Aviation/AerialSpawnSystem.cs",
+        "line": 38
+      },
+      {
+        "class": "AerialTargetingSystem",
+        "file": "Runtime/Aviation/AerialTargetingSystem.cs",
+        "line": 42
+      },
+      {
+        "class": "AssetSwapSystem",
+        "file": "Runtime/Bridge/AssetSwapSystem.cs",
+        "line": 49
+      },
+      {
+        "class": "BuildingDestructionVFXSystem",
+        "file": "Runtime/Bridge/BuildingDestructionVFXSystem.cs",
+        "line": 14
+      },
+      {
+        "class": "FactionSystem",
+        "file": "Runtime/Bridge/FactionSystem.cs",
+        "line": 57
+      },
+      {
+        "class": "KeyInputSystem",
+        "file": "Runtime/Bridge/KeyInputSystem.cs",
+        "line": 23
+      },
+      {
+        "class": "PackUnitSpawner",
+        "file": "Runtime/Bridge/PackUnitSpawner.cs",
+        "line": 44
+      },
+      {
+        "class": "ProjectileVFXSystem",
+        "file": "Runtime/Bridge/ProjectileVFXSystem.cs",
+        "line": 14
+      },
+      {
+        "class": "StatModifierSystem",
+        "file": "Runtime/Bridge/StatModifierSystem.cs",
+        "line": 85
+      },
+      {
+        "class": "UnitDeathVFXSystem",
+        "file": "Runtime/Bridge/UnitDeathVFXSystem.cs",
+        "line": 14
+      },
+      {
+        "class": "WaveInjector",
+        "file": "Runtime/Bridge/WaveInjector.cs",
+        "line": 27
+      },
+      {
+        "class": "DumpSystem",
+        "file": "Runtime/DumpSystem.cs",
+        "line": 14
+      }
+    ],
+    "bepin_plugin_entry": [
+      {
+        "class": "AviationPlugin",
+        "file": "Runtime/Aviation/AviationPlugin.cs",
+        "line": 19
+      },
+      {
+        "class": "Plugin",
+        "file": "Runtime/Plugin.cs",
+        "line": 29
+      }
+    ],
+    "monobehaviour": [
+      {
+        "class": "MainThreadDispatcher",
+        "file": "Runtime/Bridge/MainThreadDispatcher.cs",
+        "line": 18
+      },
+      {
+        "class": "DebugOverlayBehaviour",
+        "file": "Runtime/DebugOverlay.cs",
+        "line": 18
+      },
+      {
+        "class": "RuntimeDriver",
+        "file": "Runtime/Plugin.cs",
+        "line": 349
+      },
+      {
+        "class": "DFCanvas",
+        "file": "Runtime/UI/DFCanvas.cs",
+        "line": 27
+      },
+      {
+        "class": "DebugPanel",
+        "file": "Runtime/UI/DebugPanel.cs",
+        "line": 13
+      },
+      {
+        "class": "HudIndicator",
+        "file": "Runtime/UI/HudIndicator.cs",
+        "line": 14
+      },
+      {
+        "class": "HudStrip",
+        "file": "Runtime/UI/HudStrip.cs",
+        "line": 26
+      },
+      {
+        "class": "ModMenuOverlay",
+        "file": "Runtime/UI/ModMenuOverlay.cs",
+        "line": 14
+      },
+      {
+        "class": "ModMenuPanel",
+        "file": "Runtime/UI/ModMenuPanel.cs",
+        "line": 16
+      },
+      {
+        "class": "ModSettingsPanel",
+        "file": "Runtime/UI/ModSettingsPanel.cs",
+        "line": 16
+      },
+      {
+        "class": "NativeMenuInjector",
+        "file": "Runtime/UI/NativeMenuInjector.cs",
+        "line": 28
+      },
+      {
+        "class": "UiEventInterceptor",
+        "file": "Runtime/UI/UiEventInterceptor.cs",
+        "line": 13
+      }
+    ],
+    "test_fixture": [
+      {
+        "class": "AddressablesCatalogTests",
+        "file": "Tests/AddressablesCatalogTests.cs",
+        "line": 14
+      },
+      {
+        "class": "ArchitectureTests",
+        "file": "Tests/ArchitectureTests.cs",
+        "line": 13
+      },
+      {
+        "class": "AssetServiceTests",
+        "file": "Tests/AssetServiceTests.cs",
+        "line": 13
+      },
+      {
+        "class": "AssetSwapLatencyTests",
+        "file": "Tests/AssetSwapLatencyTests.cs",
+        "line": 17
+      },
+      {
+        "class": "AssetSwapRegistryCollection",
+        "file": "Tests/AssetSwapRegistryCollection.cs",
+        "line": 5
+      },
+      {
+        "class": "AssetSwapRegistryTests",
+        "file": "Tests/AssetSwapRegistryTests.cs",
+        "line": 15
+      },
+      {
+        "class": "AviationStarWarsTests",
+        "file": "Tests/AviationStarWarsTests.cs",
+        "line": 15
+      },
+      {
+        "class": "BddSpecs",
+        "file": "Tests/BddSpecs.cs",
+        "line": 20
+      },
+      {
+        "class": "ContentLoaderBenchmarks",
+        "file": "Tests/Benchmarks/ContentLoaderBenchmarks.cs",
+        "line": 12
+      },
+      {
+        "class": "Program",
+        "file": "Tests/Benchmarks/Program.cs",
+        "line": 9
+      },
+      {
+        "class": "RegistryBenchmarks",
+        "file": "Tests/Benchmarks/RegistryBenchmarks.cs",
+        "line": 12
+      },
+      {
+        "class": "TestRegistryEntry",
+        "file": "Tests/Benchmarks/RegistryBenchmarks.cs",
+        "line": 181
+      },
+      {
+        "class": "BridgeHmacTests",
+        "file": "Tests/Bridge/BridgeHmacTests.cs",
+        "line": 18
+      },
+      {
+        "class": "BridgeReceiptVerifierTests",
+        "file": "Tests/Bridge/BridgeReceiptVerifierTests.cs",
+        "line": 22
+      },
+      {
+        "class": "CanonicalJsonGoldensTests",
+        "file": "Tests/Bridge/CanonicalJsonGoldensTests.cs",
+        "line": 24
+      },
+      {
+        "class": "GameClientFramingTests",
+        "file": "Tests/Bridge/GameClientFramingTests.cs",
+        "line": 16
+      },
+      {
+        "class": "BlockingMemoryStream",
+        "file": "Tests/BridgeClientAsyncTests.cs",
+        "line": 269
+      },
+      {
+        "class": "BridgeClientAsyncTests",
+        "file": "Tests/BridgeClientAsyncTests.cs",
+        "line": 27
+      },
+      {
+        "class": "BridgeClientRobustnessTests",
+        "file": "Tests/BridgeClientRobustnessTests.cs",
+        "line": 15
+      },
+      {
+        "class": "BridgeClientTests",
+        "file": "Tests/BridgeClientTests.cs",
+        "line": 12
+      },
+      {
+        "class": "AssetctlPipelineTests",
+        "file": "Tests/CliToolTests/AssetctlPipelineTests.cs",
+        "line": 12
+      },
+      {
+        "class": "CliTestFixtures",
+        "file": "Tests/CliToolTests/CliTestFixtures.cs",
+        "line": 9
+      },
+      {
+        "class": "EdgeCaseTests",
+        "file": "Tests/CliToolTests/EdgeCaseTests.cs",
+        "line": 11
+      },
+      {
+        "class": "OverrideCommandTests",
+        "file": "Tests/CliToolTests/OverrideCommandTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ProtocolIntegrationTests",
+        "file": "Tests/CliToolTests/ProtocolIntegrationTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ProtocolTypeTests",
+        "file": "Tests/CliToolTests/ProtocolTypeTests.cs",
+        "line": 11
+      },
+      {
+        "class": "QueryCommandTests",
+        "file": "Tests/CliToolTests/QueryCommandTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ReloadCommandTests",
+        "file": "Tests/CliToolTests/ReloadCommandTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ResourcesCommandTests",
+        "file": "Tests/CliToolTests/ResourcesCommandTests.cs",
+        "line": 11
+      },
+      {
+        "class": "StatusCommandTests",
+        "file": "Tests/CliToolTests/StatusCommandTests.cs",
+        "line": 11
+      },
+      {
+        "class": "DisabledPacksServiceTests",
+        "file": "Tests/CompanionTests/DisabledPacksServiceTests.cs",
+        "line": 11
+      },
+      {
+        "class": "PackDataServiceTests",
+        "file": "Tests/CompanionTests/PackDataServiceTests.cs",
+        "line": 11
+      },
+      {
+        "class": "TestLoadResult",
+        "file": "Tests/CompanionTests/ViewModelTests.cs",
+        "line": 14
+      },
+      {
+        "class": "TestPackViewModel",
+        "file": "Tests/CompanionTests/ViewModelTests.cs",
+        "line": 25
+      },
+      {
+        "class": "ViewModelLogicTests",
+        "file": "Tests/CompanionTests/ViewModelTests.cs",
+        "line": 11
+      },
+      {
+        "class": "CompatibilityCheckerTests",
+        "file": "Tests/CompatibilityCheckerTests.cs",
+        "line": 12
+      },
+      {
+        "class": "ContentLoaderArrayTests",
+        "file": "Tests/ContentLoaderArrayTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ContentLoaderEdgeCaseTests",
+        "file": "Tests/ContentLoaderEdgeCaseTests.cs",
+        "line": 14
+      },
+      {
+        "class": "ContentLoaderErrorTests",
+        "file": "Tests/ContentLoaderErrorTests.cs",
+        "line": 12
+      },
+      {
+        "class": "ContentLoaderIntegrationTests",
+        "file": "Tests/ContentLoaderIntegrationTests.cs",
+        "line": 12
+      },
+      {
+        "class": "ContentLoaderTests",
+        "file": "Tests/ContentLoaderTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ContentRegistrationServiceTests",
+        "file": "Tests/ContentRegistrationServiceTests.cs",
+        "line": 25
+      },
+      {
+        "class": "DependencyResolverTests",
+        "file": "Tests/DependencyResolverTests.cs",
+        "line": 14
+      },
+      {
+        "class": "DisabledPacksDto",
+        "file": "Tests/DisabledPacksPersistenceTests.cs",
+        "line": 19
+      },
+      {
+        "class": "DisabledPacksPersistenceTests",
+        "file": "Tests/DisabledPacksPersistenceTests.cs",
+        "line": 16
+      },
+      {
+        "class": "DumpToolsTests",
+        "file": "Tests/DumpToolsTests.cs",
+        "line": 14
+      },
+      {
+        "class": "EntityQueryBuilder",
+        "file": "Tests/ECS/EntityQueryBuilder.cs",
+        "line": 11
+      },
+      {
+        "class": "MockComponentRegistry",
+        "file": "Tests/ECS/MockComponentRegistry.cs",
+        "line": 10
+      },
+      {
+        "class": "Entity",
+        "file": "Tests/ECS/MockEntityManager.cs",
+        "line": 147
+      },
+      {
+        "class": "MockEntityManager",
+        "file": "Tests/ECS/MockEntityManager.cs",
+        "line": 11
+      },
+      {
+        "class": "AnotherComponent",
+        "file": "Tests/ECS/MockEntityManagerTests.cs",
+        "line": 421
+      },
+      {
+        "class": "MockEntityManagerTests",
+        "file": "Tests/ECS/MockEntityManagerTests.cs",
+        "line": 12
+      },
+      {
+        "class": "TestComponent",
+        "file": "Tests/ECS/MockEntityManagerTests.cs",
+        "line": 416
+      },
+      {
+        "class": "ThirdComponent",
+        "file": "Tests/ECS/MockEntityManagerTests.cs",
+        "line": 425
+      },
+      {
+        "class": "MockEntityQuery",
+        "file": "Tests/ECS/MockEntityQuery.cs",
+        "line": 11
+      },
+      {
+        "class": "MockWorld",
+        "file": "Tests/ECS/MockWorld.cs",
+        "line": 10
+      },
+      {
+        "class": "EconomyAdvancedCoverageTests",
+        "file": "Tests/EconomyAdvancedCoverageTests.cs",
+        "line": 21
+      },
+      {
+        "class": "EconomyBranchCoverageExpansionTests",
+        "file": "Tests/EconomyBranchCoverageExpansionTests.cs",
+        "line": 26
+      },
+      {
+        "class": "EconomyBranchCoverageTests",
+        "file": "Tests/EconomyBranchCoverageTests.cs",
+        "line": 16
+      },
+      {
+        "class": "EconomyContentLoaderValidationTests",
+        "file": "Tests/EconomyContentLoaderValidationTests.cs",
+        "line": 28
+      },
+      {
+        "class": "EconomyCoverageGapTests",
+        "file": "Tests/EconomyCoverageGapTests.cs",
+        "line": 17
+      },
+      {
+        "class": "EconomyCoverageTests",
+        "file": "Tests/EconomyCoverageTests.cs",
+        "line": 21
+      },
+      {
+        "class": "TempDirectory",
+        "file": "Tests/EconomyCoverageTests.cs",
+        "line": 858
+      },
+      {
+        "class": "EconomyDomainExpandedTests",
+        "file": "Tests/EconomyDomainExpandedTests.cs",
+        "line": 16
+      },
+      {
+        "class": "EconomyTests",
+        "file": "Tests/EconomyTests.cs",
+        "line": 16
+      },
+      {
+        "class": "EconomyUiCoverageTests",
+        "file": "Tests/EconomyUiCoverageTests.cs",
+        "line": 14
+      },
+      {
+        "class": "EndToEndUserJourneysTests",
+        "file": "Tests/EndToEndUserJourneysTests.cs",
+        "line": 20
+      },
+      {
+        "class": "EnvironmentCompatibilityTests",
+        "file": "Tests/EnvironmentMatrixTests.cs",
+        "line": 14
+      },
+      {
+        "class": "FactionPatchDefinitionTests",
+        "file": "Tests/FactionPatchDefinitionTests.cs",
+        "line": 9
+      },
+      {
+        "class": "FactionSystemTests",
+        "file": "Tests/FactionSystemTests.cs",
+        "line": 17
+      },
+      {
+        "class": "AssetCatalogFuzzTarget",
+        "file": "Tests/FuzzTargets/AssetCatalogFuzzTarget.cs",
+        "line": 18
+      },
+      {
+        "class": "JsonFuzzTarget",
+        "file": "Tests/FuzzTargets/JsonFuzzTarget.cs",
+        "line": 16
+      },
+      {
+        "class": "PackManifestFuzzTarget",
+        "file": "Tests/FuzzTargets/PackManifestFuzzTarget.cs",
+        "line": 16
+      },
+      {
+        "class": "SchemaValidationFuzzTarget",
+        "file": "Tests/FuzzTargets/SchemaValidationFuzzTarget.cs",
+        "line": 17
+      },
+      {
+        "class": "SemverFuzzTarget",
+        "file": "Tests/FuzzTargets/SemverFuzzTarget.cs",
+        "line": 15
+      },
+      {
+        "class": "YamlFuzzTarget",
+        "file": "Tests/FuzzTargets/YamlFuzzTarget.cs",
+        "line": 16
+      },
+      {
+        "class": "BlockingMemoryStream",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 1087
+      },
+      {
+        "class": "BrokenPipeStream",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 1070
+      },
+      {
+        "class": "FixedResponseReader",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 1020
+      },
+      {
+        "class": "GameClientCoverageTests",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 24
+      },
+      {
+        "class": "ThrowingMemoryStream",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 1048
+      },
+      {
+        "class": "ThrowingReader",
+        "file": "Tests/GameClientCoverageTests.cs",
+        "line": 983
+      },
+      {
+        "class": "GameClientPipelineTests",
+        "file": "Tests/GameClientPipelineTests.cs",
+        "line": 16
+      },
+      {
+        "class": "GameLaunchAssetSwapTests",
+        "file": "Tests/GameLaunch/GameLaunchAssetSwapTests.cs",
+        "line": 15
+      },
+      {
+        "class": "GameLaunchEconomyTests",
+        "file": "Tests/GameLaunch/GameLaunchEconomyTests.cs",
+        "line": 14
+      },
+      {
+        "class": "GameLaunchCollection",
+        "file": "Tests/GameLaunch/GameLaunchFixture.cs",
+        "line": 101
+      },
+      {
+        "class": "GameLaunchFixture",
+        "file": "Tests/GameLaunch/GameLaunchFixture.cs",
+        "line": 26
+      },
+      {
+        "class": "GameLaunchHotReloadTests",
+        "file": "Tests/GameLaunch/GameLaunchHotReloadTests.cs",
+        "line": 15
+      },
+      {
+        "class": "GameLaunchNativeMenuTests",
+        "file": "Tests/GameLaunch/GameLaunchNativeMenuTests.cs",
+        "line": 14
+      },
+      {
+        "class": "GameLaunchOverlayTests",
+        "file": "Tests/GameLaunch/GameLaunchOverlayTests.cs",
+        "line": 17
+      },
+      {
+        "class": "GameLaunchPackTests",
+        "file": "Tests/GameLaunch/GameLaunchPackTests.cs",
+        "line": 13
+      },
+      {
+        "class": "GameLaunchSmokeTests",
+        "file": "Tests/GameLaunch/GameLaunchSmokeTests.cs",
+        "line": 14
+      },
+      {
+        "class": "GameLaunchStatTests",
+        "file": "Tests/GameLaunch/GameLaunchStatTests.cs",
+        "line": 12
+      },
+      {
+        "class": "GameLaunchUiTests",
+        "file": "Tests/GameLaunch/GameLaunchUiTests.cs",
+        "line": 13
+      },
+      {
+        "class": "GameLaunchValidationTests",
+        "file": "Tests/GameLaunchTests.cs",
+        "line": 18
+      },
+      {
+        "class": "FailureAnalysis",
+        "file": "Tests/GameTestDiagnostics.cs",
+        "line": 416
+      },
+      {
+        "class": "FailureManifest",
+        "file": "Tests/GameTestDiagnostics.cs",
+        "line": 368
+      },
+      {
+        "class": "GameDiagnosticsCapture",
+        "file": "Tests/GameTestDiagnostics.cs",
+        "line": 18
+      },
+      {
+        "class": "ProcessInfo",
+        "file": "Tests/GameTestDiagnostics.cs",
+        "line": 398
+      },
+      {
+        "class": "HotReloadTests",
+        "file": "Tests/HotReloadTests.cs",
+        "line": 19
+      },
+      {
+        "class": "InstallerCoverageTests",
+        "file": "Tests/InstallerCoverageTests.cs",
+        "line": 17
+      },
+      {
+        "class": "InstallerTests",
+        "file": "Tests/InstallerTests.cs",
+        "line": 13
+      },
+      {
+        "class": "EntityAssertions",
+        "file": "Tests/Integration/Assertions/EntityAssertions.cs",
+        "line": 12
+      },
+      {
+        "class": "BridgeLatencyTests",
+        "file": "Tests/Integration/BridgeLatencyTests.cs",
+        "line": 17
+      },
+      {
+        "class": "GameCollection",
+        "file": "Tests/Integration/Fixtures/GameCollection.cs",
+        "line": 10
+      },
+      {
+        "class": "GameFixture",
+        "file": "Tests/Integration/Fixtures/GameFixture.cs",
+        "line": 13
+      },
+      {
+        "class": "GameContainer",
+        "file": "Tests/Integration/GameTestContainerHarness.cs",
+        "line": 52
+      },
+      {
+        "class": "GameTestContainerHarness",
+        "file": "Tests/Integration/GameTestContainerHarness.cs",
+        "line": 37
+      },
+      {
+        "class": "GameTestRunner",
+        "file": "Tests/Integration/GameTestRunner.cs",
+        "line": 37
+      },
+      {
+        "class": "ParallelGameTestsWithHarness",
+        "file": "Tests/Integration/ParallelGameTestsWithHarness.cs",
+        "line": 26
+      },
+      {
+        "class": "AssetSwapTests",
+        "file": "Tests/Integration/Tests/AssetSwapTests.cs",
+        "line": 19
+      },
+      {
+        "class": "FakeAssetBundle",
+        "file": "Tests/Integration/Tests/AssetSwapTests.cs",
+        "line": 176
+      },
+      {
+        "class": "FakeAssetSwapSystem",
+        "file": "Tests/Integration/Tests/AssetSwapTests.cs",
+        "line": 220
+      },
+      {
+        "class": "FakeSwappableEntity",
+        "file": "Tests/Integration/Tests/AssetSwapTests.cs",
+        "line": 241
+      },
+      {
+        "class": "BridgeCoverageTests",
+        "file": "Tests/Integration/Tests/BridgeCoverageTests.cs",
+        "line": 13
+      },
+      {
+        "class": "BridgeLifecycleTests",
+        "file": "Tests/Integration/Tests/BridgeLifecycleTests.cs",
+        "line": 22
+      },
+      {
+        "class": "FakeSceneTransitionBridge",
+        "file": "Tests/Integration/Tests/BridgeLifecycleTests.cs",
+        "line": 244
+      },
+      {
+        "class": "BridgeRoundTripTests",
+        "file": "Tests/Integration/Tests/BridgeRoundTripTests.cs",
+        "line": 31
+      },
+      {
+        "class": "CatalogMockIntegrationTests",
+        "file": "Tests/Integration/Tests/CatalogMockIntegrationTests.cs",
+        "line": 14
+      },
+      {
+        "class": "CatalogTests",
+        "file": "Tests/Integration/Tests/CatalogTests.cs",
+        "line": 16
+      },
+      {
+        "class": "ComponentMapTests",
+        "file": "Tests/Integration/Tests/ComponentMapTests.cs",
+        "line": 12
+      },
+      {
+        "class": "ErrorPathTests",
+        "file": "Tests/Integration/Tests/ErrorPathTests.cs",
+        "line": 27
+      },
+      {
+        "class": "GameSandboxIntegrationTests",
+        "file": "Tests/Integration/Tests/GameSandboxIntegrationTests.cs",
+        "line": 20
+      },
+      {
+        "class": "FakeGameWorkflowBridge",
+        "file": "Tests/Integration/Tests/GameWorkflowTests.cs",
+        "line": 282
+      },
+      {
+        "class": "GameWorkflowTests",
+        "file": "Tests/Integration/Tests/GameWorkflowTests.cs",
+        "line": 23
+      },
+      {
+        "class": "InGameAutomationTests",
+        "file": "Tests/Integration/Tests/InGameAutomationTests.cs",
+        "line": 22
+      },
+      {
+        "class": "LiveGameIntegrationTests",
+        "file": "Tests/Integration/Tests/LiveGameIntegrationTests.cs",
+        "line": 24
+      },
+      {
+        "class": "MockBridgeIntegrationTests",
+        "file": "Tests/Integration/Tests/MockBridgeIntegrationTests.cs",
+        "line": 13
+      },
+      {
+        "class": "MockGameServerTests",
+        "file": "Tests/Integration/Tests/MockGameServerTests.cs",
+        "line": 19
+      },
+      {
+        "class": "PackLoadingTests",
+        "file": "Tests/Integration/Tests/PackLoadingTests.cs",
+        "line": 12
+      },
+      {
+        "class": "FreshInstallTests",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 740
+      },
+      {
+        "class": "GameInstance",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 668
+      },
+      {
+        "class": "GameStatus",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 368
+      },
+      {
+        "class": "GameTestFixture",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 23
+      },
+      {
+        "class": "ParallelGameE2ETests",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 173
+      },
+      {
+        "class": "ParallelGameHarness",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 533
+      },
+      {
+        "class": "ScenarioParallelTests",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 886
+      },
+      {
+        "class": "TestResult",
+        "file": "Tests/Integration/Tests/ParallelGameE2ETests.cs",
+        "line": 724
+      },
+      {
+        "class": "PingTests",
+        "file": "Tests/Integration/Tests/PingTests.cs",
+        "line": 12
+      },
+      {
+        "class": "PlayCuaScreenshotTests",
+        "file": "Tests/Integration/Tests/PlayCuaScreenshotTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ResourceTests",
+        "file": "Tests/Integration/Tests/ResourceTests.cs",
+        "line": 12
+      },
+      {
+        "class": "SandboxIsolationTests",
+        "file": "Tests/Integration/Tests/SandboxIsolationTests.cs",
+        "line": 23
+      },
+      {
+        "class": "ScreenshotFallbackTests",
+        "file": "Tests/Integration/Tests/ScreenshotFallbackTests.cs",
+        "line": 29
+      },
+      {
+        "class": "StatTests",
+        "file": "Tests/Integration/Tests/StatTests.cs",
+        "line": 13
+      },
+      {
+        "class": "WorkflowE2ETests",
+        "file": "Tests/Integration/Tests/WorkflowE2ETests.cs",
+        "line": 18
+      },
+      {
+        "class": "UIWireupIntegrationTests",
+        "file": "Tests/Integration/UIWireupIntegrationTests.cs",
+        "line": 33
+      },
+      {
+        "class": "LODCalculationTests",
+        "file": "Tests/LODCalculationTests.cs",
+        "line": 11
+      },
+      {
+        "class": "LODCalculator",
+        "file": "Tests/LODCalculationTests.cs",
+        "line": 81
+      },
+      {
+        "class": "LoadingServicesTests",
+        "file": "Tests/LoadingServicesTests.cs",
+        "line": 10
+      },
+      {
+        "class": "BridgeProtocolDispatcher",
+        "file": "Tests/Mocks/BridgeProtocolDispatcher.cs",
+        "line": 16
+      },
+      {
+        "class": "FakeGameBridge",
+        "file": "Tests/Mocks/FakeGameBridge.cs",
+        "line": 19
+      },
+      {
+        "class": "MockGameBridgeServer",
+        "file": "Tests/Mocks/MockGameBridgeServer.cs",
+        "line": 24
+      },
+      {
+        "class": "ModMenuTests",
+        "file": "Tests/ModMenuTests.cs",
+        "line": 13
+      },
+      {
+        "class": "ModelCoverageTests",
+        "file": "Tests/ModelCoverageTests.cs",
+        "line": 20
+      },
+      {
+        "class": "ModelSerializationTests",
+        "file": "Tests/ModelSerializationTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ModelSnapshotTests",
+        "file": "Tests/ModelSnapshotTests.cs",
+        "line": 25
+      },
+      {
+        "class": "NativeDepResolverTests",
+        "file": "Tests/NativeDepResolverTests.cs",
+        "line": 16
+      },
+      {
+        "class": "AddressablesCatalogErrorPathTests",
+        "file": "Tests/NativeInteropIntegrationTests.cs",
+        "line": 454
+      },
+      {
+        "class": "DependencyResolverEdgeCaseTests",
+        "file": "Tests/NativeInteropIntegrationTests.cs",
+        "line": 591
+      },
+      {
+        "class": "GoDependencyResolverIntegrationTests",
+        "file": "Tests/NativeInteropIntegrationTests.cs",
+        "line": 58
+      },
+      {
+        "class": "NativeInteropIntegrationTests",
+        "file": "Tests/NativeInteropIntegrationTests.cs",
+        "line": 24
+      },
+      {
+        "class": "RustAssetPipelineIntegrationTests",
+        "file": "Tests/NativeInteropIntegrationTests.cs",
+        "line": 263
+      },
+      {
+        "class": "GoDependencyResolverTests",
+        "file": "Tests/NativeInteropTests.cs",
+        "line": 30
+      },
+      {
+        "class": "NativeInteropModelSerializationTests",
+        "file": "Tests/NativeInteropTests.cs",
+        "line": 395
+      },
+      {
+        "class": "NativeInteropTests",
+        "file": "Tests/NativeInteropTests.cs",
+        "line": 24
+      },
+      {
+        "class": "RustAssetPipelineTests",
+        "file": "Tests/NativeInteropTests.cs",
+        "line": 199
+      },
+      {
+        "class": "OverrideApplicatorTests",
+        "file": "Tests/OverrideApplicatorTests.cs",
+        "line": 14
+      },
+      {
+        "class": "PackCompilerCliTests",
+        "file": "Tests/PackCompilerCliTests.cs",
+        "line": 20
+      },
+      {
+        "class": "PackFileWatcherTests",
+        "file": "Tests/PackFileWatcherTests.cs",
+        "line": 16
+      },
+      {
+        "class": "PackLoaderTests",
+        "file": "Tests/PackLoaderTests.cs",
+        "line": 13
+      },
+      {
+        "class": "PackRegistryClientCoverageTests",
+        "file": "Tests/PackRegistryClientCoverageTests.cs",
+        "line": 15
+      },
+      {
+        "class": "RecordingHandler",
+        "file": "Tests/PackRegistryClientCoverageTests.cs",
+        "line": 146
+      },
+      {
+        "class": "PackRegistryClientTests",
+        "file": "Tests/PackRegistryClientTests.cs",
+        "line": 17
+      },
+      {
+        "class": "RecordingHandler",
+        "file": "Tests/PackRegistryClientTests.cs",
+        "line": 183
+      },
+      {
+        "class": "PackRegistryTests",
+        "file": "Tests/PackRegistryTests.cs",
+        "line": 11
+      },
+      {
+        "class": "PackStatInjectorTests",
+        "file": "Tests/PackStatInjectorTests.cs",
+        "line": 23
+      },
+      {
+        "class": "PackSubmoduleTests",
+        "file": "Tests/PackSubmoduleTests.cs",
+        "line": 16
+      },
+      {
+        "class": "RealFsCheckPropertyTests",
+        "file": "Tests/ParameterizedTests/RealFsCheckPropertyTests.cs",
+        "line": 20
+      },
+      {
+        "class": "RegistryPropertyTests",
+        "file": "Tests/ParameterizedTests/RegistryPropertyTests.cs",
+        "line": 16
+      },
+      {
+        "class": "TestEntry",
+        "file": "Tests/ParameterizedTests/RegistryPropertyTests.cs",
+        "line": 19
+      },
+      {
+        "class": "SemVerPropertyTests",
+        "file": "Tests/ParameterizedTests/SemVerPropertyTests.cs",
+        "line": 14
+      },
+      {
+        "class": "YamlFuzzTests",
+        "file": "Tests/ParameterizedTests/YamlFuzzTests.cs",
+        "line": 19
+      },
+      {
+        "class": "PerformanceBenchmarkTests",
+        "file": "Tests/PerformanceBenchmarkTests.cs",
+        "line": 18
+      },
+      {
+        "class": "Phase3ACloneInfantryLODTests",
+        "file": "Tests/Phase3ACloneInfantryLODTests.cs",
+        "line": 27
+      },
+      {
+        "class": "Phase3BDroidLODTests",
+        "file": "Tests/Phase3BDroidLODTests.cs",
+        "line": 27
+      },
+      {
+        "class": "Phase4BuildingLODTests",
+        "file": "Tests/Phase4BuildingLODTests.cs",
+        "line": 16
+      },
+      {
+        "class": "Phase5BuildingExpansionTests",
+        "file": "Tests/Phase5BuildingExpansionTests.cs",
+        "line": 14
+      },
+      {
+        "class": "Phase7VisualAssetIntegrationTests",
+        "file": "Tests/Phase7VisualAssetIntegrationTests.cs",
+        "line": 26
+      },
+      {
+        "class": "AssetSwapRegistryPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 156
+      },
+      {
+        "class": "ContentLoaderRoundTripPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 721
+      },
+      {
+        "class": "DependencyResolverExtendedPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 281
+      },
+      {
+        "class": "PackConflictPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 813
+      },
+      {
+        "class": "PackGenerators",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 30
+      },
+      {
+        "class": "PackIdValidationPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 75
+      },
+      {
+        "class": "RegistryExtendedPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 622
+      },
+      {
+        "class": "SchemaVersionCompatibilityPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 412
+      },
+      {
+        "class": "StatModifierPropertyTests",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 503
+      },
+      {
+        "class": "ValidSemverGenerators",
+        "file": "Tests/PropertyTests.Extended.cs",
+        "line": 398
+      },
+      {
+        "class": "BalanceCalculatorPropertyTests",
+        "file": "Tests/PropertyTests.cs",
+        "line": 290
+      },
+      {
+        "class": "BalanceGenerators",
+        "file": "Tests/PropertyTests.cs",
+        "line": 529
+      },
+      {
+        "class": "CompatibilityCheckerPropertyTests",
+        "file": "Tests/PropertyTests.cs",
+        "line": 26
+      },
+      {
+        "class": "DependencyResolverPropertyTests",
+        "file": "Tests/PropertyTests.cs",
+        "line": 140
+      },
+      {
+        "class": "RegistryPropertyTests",
+        "file": "Tests/PropertyTests.cs",
+        "line": 396
+      },
+      {
+        "class": "TestHelpers",
+        "file": "Tests/PropertyTests.cs",
+        "line": 544
+      },
+      {
+        "class": "VersionGenerators",
+        "file": "Tests/PropertyTests.cs",
+        "line": 513
+      },
+      {
+        "class": "RegistryPropertyTests",
+        "file": "Tests/PropertyTests/RegistryPropertyTests.cs",
+        "line": 16
+      },
+      {
+        "class": "TestEntry",
+        "file": "Tests/PropertyTests/RegistryPropertyTests.cs",
+        "line": 19
+      },
+      {
+        "class": "SemVerPropertyTests",
+        "file": "Tests/PropertyTests/SemVerPropertyTests.cs",
+        "line": 14
+      },
+      {
+        "class": "YamlFuzzTests",
+        "file": "Tests/PropertyTests/YamlFuzzTests.cs",
+        "line": 19
+      },
+      {
+        "class": "ProtocolSerializationTests",
+        "file": "Tests/ProtocolSerializationTests.cs",
+        "line": 15
+      },
+      {
+        "class": "RegistryEdgeCaseTests",
+        "file": "Tests/RegistryEdgeCaseTests.cs",
+        "line": 13
+      },
+      {
+        "class": "RegistryErrorTests",
+        "file": "Tests/RegistryErrorTests.cs",
+        "line": 12
+      },
+      {
+        "class": "RegistryStressTests",
+        "file": "Tests/RegistryStressTests.cs",
+        "line": 10
+      },
+      {
+        "class": "RegistryTests",
+        "file": "Tests/RegistryTests.cs",
+        "line": 11
+      },
+      {
+        "class": "ResourceReaderTests",
+        "file": "Tests/ResourceReaderTests.cs",
+        "line": 31
+      },
+      {
+        "class": "RuntimeExtractionTests",
+        "file": "Tests/RuntimeExtractionTests.cs",
+        "line": 16
+      },
+      {
+        "class": "RustInteropTests",
+        "file": "Tests/RustInteropTests.cs",
+        "line": 10
+      },
+      {
+        "class": "DFCanvasAdapterWireupTests",
+        "file": "Tests/SDK/UI/DFCanvasAdapterWireupTests.cs",
+        "line": 24
+      },
+      {
+        "class": "FakeRuntimeMenuHost",
+        "file": "Tests/SDK/UI/ModMenuHostAdapterTests.cs",
+        "line": 89
+      },
+      {
+        "class": "ModMenuHostAdapterTests",
+        "file": "Tests/SDK/UI/ModMenuHostAdapterTests.cs",
+        "line": 14
+      },
+      {
+        "class": "FakePanel",
+        "file": "Tests/SDK/UI/ModSettingsHostAdapterTests.cs",
+        "line": 17
+      },
+      {
+        "class": "ModSettingsHostAdapterTests",
+        "file": "Tests/SDK/UI/ModSettingsHostAdapterTests.cs",
+        "line": 15
+      },
+      {
+        "class": "NativeAdapterTests",
+        "file": "Tests/SDK/UI/NativeAdapterTests.cs",
+        "line": 14
+      },
+      {
+        "class": "NativeLabelGuardAdapterTests",
+        "file": "Tests/SDK/UI/NativeLabelGuardAdapterTests.cs",
+        "line": 12
+      },
+      {
+        "class": "FakeScreen",
+        "file": "Tests/SDK/UI/NativeMenuHostAdapterTests.cs",
+        "line": 16
+      },
+      {
+        "class": "NativeMenuHostAdapterTests",
+        "file": "Tests/SDK/UI/NativeMenuHostAdapterTests.cs",
+        "line": 14
+      },
+      {
+        "class": "ThemeProviderAdapterTests",
+        "file": "Tests/SDK/UI/ThemeProviderAdapterTests.cs",
+        "line": 14
+      },
+      {
+        "class": "AddressablesCatalogErrorPathTests",
+        "file": "Tests/SDKCovGapTests.cs",
+        "line": 219
+      },
+      {
+        "class": "FileDiscoveryServiceTests",
+        "file": "Tests/SDKCovGapTests.cs",
+        "line": 42
+      },
+      {
+        "class": "RegistryImportServiceTests",
+        "file": "Tests/SDKCovGapTests.cs",
+        "line": 302
+      },
+      {
+        "class": "SDKCovGapTests",
+        "file": "Tests/SDKCovGapTests.cs",
+        "line": 18
+      },
+      {
+        "class": "SDKCoverageTests",
+        "file": "Tests/SDKCoverageTests.cs",
+        "line": 25
+      },
+      {
+        "class": "TempDirectory",
+        "file": "Tests/SDKCoverageTests.cs",
+        "line": 1645
+      },
+      {
+        "class": "ScenarioContentLoaderTests",
+        "file": "Tests/ScenarioContentLoaderTests.cs",
+        "line": 15
+      },
+      {
+        "class": "ScenarioContentLoaderValidationTests",
+        "file": "Tests/ScenarioContentLoaderValidationTests.cs",
+        "line": 28
+      },
+      {
+        "class": "ScenarioDomainCoverageTests",
+        "file": "Tests/ScenarioDomainCoverageTests.cs",
+        "line": 20
+      },
+      {
+        "class": "ScenarioRegistryTests",
+        "file": "Tests/ScenarioRegistryTests.cs",
+        "line": 13
+      },
+      {
+        "class": "ScenarioRunnerTests",
+        "file": "Tests/ScenarioRunnerTests.cs",
+        "line": 16
+      },
+      {
+        "class": "ScenarioTests",
+        "file": "Tests/ScenarioTests.cs",
+        "line": 17
+      },
+      {
+        "class": "SchemaValidationTests",
+        "file": "Tests/SchemaValidationTests.cs",
+        "line": 9
+      },
+      {
+        "class": "SdkAssetEdgeCaseTests",
+        "file": "Tests/SdkAssetEdgeCaseTests.cs",
+        "line": 15
+      },
+      {
+        "class": "SdkCompatibilityEdgeCaseTests",
+        "file": "Tests/SdkCompatibilityEdgeCaseTests.cs",
+        "line": 14
+      },
+      {
+        "class": "SdkEdgeCaseTests",
+        "file": "Tests/SdkEdgeCaseTests.cs",
+        "line": 18
+      },
+      {
+        "class": "SdkHotReloadEdgeCaseTests",
+        "file": "Tests/SdkHotReloadEdgeCaseTests.cs",
+        "line": 12
+      },
+      {
+        "class": "SdkPolyglotIntegrationTests",
+        "file": "Tests/SdkPolyglotIntegrationTests.cs",
+        "line": 20
+      },
+      {
+        "class": "SdkUniverseEdgeCaseTests",
+        "file": "Tests/SdkUniverseEdgeCaseTests.cs",
+        "line": 15
+      },
+      {
+        "class": "SdkValidationEdgeCaseTests",
+        "file": "Tests/SdkValidationEdgeCaseTests.cs",
+        "line": 16
+      },
+      {
+        "class": "FixedTimeProvider",
+        "file": "Tests/Sketchfab/SketchfabAdapterClockTests.cs",
+        "line": 30
+      },
+      {
+        "class": "SketchfabAdapterClockTests",
+        "file": "Tests/Sketchfab/SketchfabAdapterClockTests.cs",
+        "line": 23
+      },
+      {
+        "class": "FixedTimeProvider",
+        "file": "Tests/Sketchfab/SketchfabClientClockTests.cs",
+        "line": 26
+      },
+      {
+        "class": "SketchfabClientClockTests",
+        "file": "Tests/Sketchfab/SketchfabClientClockTests.cs",
+        "line": 19
+      },
+      {
+        "class": "SkillWaveSquadTests",
+        "file": "Tests/SkillWaveSquadTests.cs",
+        "line": 10
+      },
+      {
+        "class": "TestEnvironmentResolver",
+        "file": "Tests/TestEnvironment.cs",
+        "line": 51
+      },
+      {
+        "class": "TotalConversionTests",
+        "file": "Tests/TotalConversionTests.cs",
+        "line": 15
+      },
+      {
+        "class": "TradeEngineCoverageTests",
+        "file": "Tests/TradeEngineCoverageTests.cs",
+        "line": 14
+      },
+      {
+        "class": "UIBranchCoverageTests",
+        "file": "Tests/UIBranchCoverageTests.cs",
+        "line": 15
+      },
+      {
+        "class": "UIContentLoaderValidationTests",
+        "file": "Tests/UIContentLoaderValidationTests.cs",
+        "line": 27
+      },
+      {
+        "class": "UIDomainCoverageGapTests",
+        "file": "Tests/UIDomainCoverageGapTests.cs",
+        "line": 12
+      },
+      {
+        "class": "UIDomainTests",
+        "file": "Tests/UIDomainTests.cs",
+        "line": 16
+      },
+      {
+        "class": "UiActionTraceTests",
+        "file": "Tests/UiActionTraceTests.cs",
+        "line": 17
+      },
+      {
+        "class": "CompanionDashboardTests",
+        "file": "Tests/UiAutomation/CompanionDashboardTests.cs",
+        "line": 12
+      },
+      {
+        "class": "CompanionDebugPanelTests",
+        "file": "Tests/UiAutomation/CompanionDebugPanelTests.cs",
+        "line": 14
+      },
+      {
+        "class": "CompanionFixture",
+        "file": "Tests/UiAutomation/CompanionFixture.cs",
+        "line": 26
+      },
+      {
+        "class": "UiAutomationCollection",
+        "file": "Tests/UiAutomation/CompanionFixture.cs",
+        "line": 135
+      },
+      {
+        "class": "CompanionLaunchTests",
+        "file": "Tests/UiAutomation/CompanionLaunchTests.cs",
+        "line": 13
+      },
+      {
+        "class": "CompanionNavigationTests",
+        "file": "Tests/UiAutomation/CompanionNavigationTests.cs",
+        "line": 13
+      },
+      {
+        "class": "CompanionPackListTests",
+        "file": "Tests/UiAutomation/CompanionPackListTests.cs",
+        "line": 14
+      },
+      {
+        "class": "CompanionPackToggleTests",
+        "file": "Tests/UiAutomation/CompanionPackToggleTests.cs",
+        "line": 13
+      },
+      {
+        "class": "CompanionSettingsTests",
+        "file": "Tests/UiAutomation/CompanionSettingsTests.cs",
+        "line": 13
+      },
+      {
+        "class": "CompanionShortcutTests",
+        "file": "Tests/UiAutomation/CompanionShortcutTests.cs",
+        "line": 12
+      },
+      {
+        "class": "CompanionStatusBarTests",
+        "file": "Tests/UiAutomation/CompanionStatusBarTests.cs",
+        "line": 12
+      },
+      {
+        "class": "UiDomainCoverageTests",
+        "file": "Tests/UiDomainCoverageTests.cs",
+        "line": 20
+      },
+      {
+        "class": "PackUnitSpawnerTests",
+        "file": "Tests/UnitSpawnerTests.cs",
+        "line": 220
+      },
+      {
+        "class": "UnitSpawnRequestTests",
+        "file": "Tests/UnitSpawnerTests.cs",
+        "line": 150
+      },
+      {
+        "class": "VanillaArchetypeMapperTests",
+        "file": "Tests/UnitSpawnerTests.cs",
+        "line": 11
+      },
+      {
+        "class": "UniverseBibleTests",
+        "file": "Tests/UniverseBibleTests.cs",
+        "line": 18
+      },
+      {
+        "class": "UpdateCheckerTests",
+        "file": "Tests/UpdateCheckerTests.cs",
+        "line": 20
+      },
+      {
+        "class": "VFXIntegrationTests",
+        "file": "Tests/VFXIntegrationTests.cs",
+        "line": 14
+      },
+      {
+        "class": "VFXInstance",
+        "file": "Tests/VFXPoolLogicTests.cs",
+        "line": 149
+      },
+      {
+        "class": "VFXMath",
+        "file": "Tests/VFXPoolLogicTests.cs",
+        "line": 171
+      },
+      {
+        "class": "VFXPool",
+        "file": "Tests/VFXPoolLogicTests.cs",
+        "line": 94
+      },
+      {
+        "class": "VFXPoolLogicTests",
+        "file": "Tests/VFXPoolLogicTests.cs",
+        "line": 12
+      },
+      {
+        "class": "VFXIntegrationTestDocumentation",
+        "file": "Tests/VFXSystemTests.cs",
+        "line": 85
+      },
+      {
+        "class": "VFXSystemTests",
+        "file": "Tests/VFXSystemTests.cs",
+        "line": 14
+      },
+      {
+        "class": "VanillaCatalogErrorTests",
+        "file": "Tests/VanillaCatalogErrorTests.cs",
+        "line": 12
+      },
+      {
+        "class": "VanillaCatalogTests",
+        "file": "Tests/VanillaCatalogTests.cs",
+        "line": 18
+      },
+      {
+        "class": "BalanceComprehensiveTests",
+        "file": "Tests/WarfareComprehensiveTests.cs",
+        "line": 231
+      },
+      {
+        "class": "DoctrineComprehensiveTests",
+        "file": "Tests/WarfareComprehensiveTests.cs",
+        "line": 18
+      },
+      {
+        "class": "RoleValidatorComprehensiveTests",
+        "file": "Tests/WarfareComprehensiveTests.cs",
+        "line": 486
+      },
+      {
+        "class": "WaveComposerComprehensiveTests",
+        "file": "Tests/WarfareComprehensiveTests.cs",
+        "line": 346
+      },
+      {
+        "class": "WarfareCoverageGapTests",
+        "file": "Tests/WarfareCoverageGapTests.cs",
+        "line": 13
+      },
+      {
+        "class": "ArchetypeTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 20
+      },
+      {
+        "class": "BalanceCalculatorTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 461
+      },
+      {
+        "class": "DoctrineTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 82
+      },
+      {
+        "class": "RoleValidatorTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 228
+      },
+      {
+        "class": "WarfarePluginIntegrationTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 582
+      },
+      {
+        "class": "WaveComposerTests",
+        "file": "Tests/WarfareTests.cs",
+        "line": 352
+      },
+      {
+        "class": "WaveInjectorTests",
+        "file": "Tests/WaveInjectorTests.cs",
+        "line": 13
+      },
+      {
+        "class": "ModelValidationTests",
+        "file": "Tests/_validate_draft/ModelValidationTests.cs",
+        "line": 10
+      },
+      {
+        "class": "AssetImportServiceTestHelper",
+        "file": "Tools/PackCompiler/Tests/AssetImportServiceTests.cs",
+        "line": 223
+      },
+      {
+        "class": "AssetImportServiceTests",
+        "file": "Tools/PackCompiler/Tests/AssetImportServiceTests.cs",
+        "line": 13
+      },
+      {
+        "class": "AddressablesServiceTests",
+        "file": "Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+        "line": 292
+      },
+      {
+        "class": "AssetOptimizationServiceTests",
+        "file": "Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+        "line": 176
+      },
+      {
+        "class": "AssetValidationServiceTests",
+        "file": "Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+        "line": 13
+      },
+      {
+        "class": "PrefabGenerationServiceTests",
+        "file": "Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+        "line": 234
+      },
+      {
+        "class": "GoResolverServiceTests",
+        "file": "Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+        "line": 17
+      },
+      {
+        "class": "SafePathResolverTests",
+        "file": "Tools/PackCompiler/Tests/SafePathResolverTests.cs",
+        "line": 15
+      },
+      {
+        "class": "YamlDeserializeTest",
+        "file": "Tools/PackCompiler/Tests/YamlDeserializeTest.cs",
+        "line": 10
+      }
+    ],
+    "xaml_codebehind": [
+      {
+        "class": "App",
+        "file": "Tools/DesktopCompanion/App.xaml.cs",
+        "line": 14
+      },
+      {
+        "class": "MainWindow",
+        "file": "Tools/DesktopCompanion/MainWindow.xaml.cs",
+        "line": 12
+      },
+      {
+        "class": "AssetBrowserPage",
+        "file": "Tools/DesktopCompanion/Views/AssetBrowserPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "BrowsePage",
+        "file": "Tools/DesktopCompanion/Views/BrowsePage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "ConflictPage",
+        "file": "Tools/DesktopCompanion/Views/ConflictPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "DashboardPage",
+        "file": "Tools/DesktopCompanion/Views/DashboardPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "DebugPanelPage",
+        "file": "Tools/DesktopCompanion/Views/DebugPanelPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "PackListPage",
+        "file": "Tools/DesktopCompanion/Views/PackListPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "SettingsPage",
+        "file": "Tools/DesktopCompanion/Views/SettingsPage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "UpdatePage",
+        "file": "Tools/DesktopCompanion/Views/UpdatePage.xaml.cs",
+        "line": 11
+      },
+      {
+        "class": "App",
+        "file": "Tools/Installer/GUI/App.axaml.cs",
+        "line": 12
+      },
+      {
+        "class": "GamePathPage",
+        "file": "Tools/Installer/GUI/Views/GamePathPage.axaml.cs",
+        "line": 12
+      },
+      {
+        "class": "MainWindow",
+        "file": "Tools/Installer/GUI/Views/MainWindow.axaml.cs",
+        "line": 8
+      },
+      {
+        "class": "MaintenancePage",
+        "file": "Tools/Installer/GUI/Views/MaintenancePage.axaml.cs",
+        "line": 9
+      },
+      {
+        "class": "OptionsPage",
+        "file": "Tools/Installer/GUI/Views/OptionsPage.axaml.cs",
+        "line": 8
+      },
+      {
+        "class": "ProgressPage",
+        "file": "Tools/Installer/GUI/Views/ProgressPage.axaml.cs",
+        "line": 8
+      },
+      {
+        "class": "WelcomePage",
+        "file": "Tools/Installer/GUI/Views/WelcomePage.axaml.cs",
+        "line": 8
+      }
+    ],
+    "value_converter": [
+      {
+        "class": "BoolToVisibilityConverter",
+        "file": "Tools/DesktopCompanion/Themes/Converters/BoolToVisibilityConverter.cs",
+        "line": 12
+      },
+      {
+        "class": "DepthToWidthConverter",
+        "file": "Tools/DesktopCompanion/Themes/Converters/DepthToWidthConverter.cs",
+        "line": 10
+      },
+      {
+        "class": "ErrorCountToColorConverter",
+        "file": "Tools/DesktopCompanion/Themes/Converters/ErrorCountToColorConverter.cs",
+        "line": 13
+      },
+      {
+        "class": "NullToStringConverter",
+        "file": "Tools/DesktopCompanion/Themes/Converters/NullToStringConverter.cs",
+        "line": 10
+      },
+      {
+        "class": "NullToVisibilityConverter",
+        "file": "Tools/DesktopCompanion/Themes/Converters/NullToVisibilityConverter.cs",
+        "line": 11
+      },
+      {
+        "class": "DevModeTextConverter",
+        "file": "Tools/Installer/GUI/ViewModels/DevModeTextConverter.cs",
+        "line": 10
+      },
+      {
+        "class": "StatusIconConverter",
+        "file": "Tools/Installer/GUI/ViewModels/StatusIconConverter.cs",
+        "line": 11
+      },
+      {
+        "class": "WizardPageConverter",
+        "file": "Tools/Installer/GUI/ViewModels/WizardPageConverter.cs",
+        "line": 11
+      }
+    ]
+  }
+}

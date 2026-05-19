@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.*, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
+      "Steamworks.NET": {
+        "type": "Direct",
+        "requested": "[13.0.0, )",
+        "resolved": "15.0.1",
+        "contentHash": "fRQg01qvpi8kgBSEWd9hhylK2hEyl94+p0osLGdj6zbZkqMJ5XPyYtKo0i51q9Vx5q/YoiCAOevjnByMhRlSYg=="
+      }
+    }
+  }
+}

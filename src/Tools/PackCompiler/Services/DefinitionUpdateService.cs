@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using DINOForge.Tools.PackCompiler.Models;
 
@@ -59,7 +60,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                 throw new FileNotFoundException($"Definition file not found: {defFile}");
             }
 
-            var lines = File.ReadAllLines(defFile);
+            var lines = File.ReadAllLines(defFile, Encoding.UTF8);
             var updated = false;
 
             for (int i = 0; i < lines.Length; i++)
@@ -116,7 +117,7 @@ namespace DINOForge.Tools.PackCompiler.Services
 
             if (updated)
             {
-                File.WriteAllLines(defFile, lines);
+                File.WriteAllLines(defFile, lines, Encoding.UTF8);
             }
         }
 
@@ -179,7 +180,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                 }
 
                 // Check: Asset ID exists in definition file
-                var lines = File.ReadAllLines(defFile);
+                var lines = File.ReadAllLines(defFile, Encoding.UTF8);
                 bool foundAssetId = lines.Any(l => l.TrimStart().StartsWith($"- id: {config.UpdateDefinition.Id}"));
 
                 if (!foundAssetId)

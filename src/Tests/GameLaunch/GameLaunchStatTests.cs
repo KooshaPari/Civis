@@ -16,6 +16,8 @@ public sealed class GameLaunchStatTests(GameLaunchFixture fixture)
     [Fact]
     public async Task StatOverride_HP_PersistsAfterReload()
     {
+        if (!fixture.IsInitialized) return;
+
         const string sdkPath = "units/rep_clone_trooper/stats/hp";
         const float overrideHp = 999f;
 

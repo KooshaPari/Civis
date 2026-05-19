@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace DINOForge.SDK.Registry
 {
+    using TimeProvider = System.TimeProvider;
     // ---------------------------------------------------------------------------
     // Data transfer objects — mirror the registry.json schema exactly.
     // ---------------------------------------------------------------------------
@@ -44,7 +45,7 @@ namespace DINOForge.SDK.Registry
 
         /// <summary>Searchable tag list.</summary>
         [JsonPropertyName("tags")]
-        public List<string> Tags { get; set; } = new List<string>();
+        public List<string> Tags { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>URL of the pack's source repository.</summary>
         [JsonPropertyName("repo")]
@@ -72,11 +73,11 @@ namespace DINOForge.SDK.Registry
 
         /// <summary>Pack IDs that are mutually exclusive with this pack.</summary>
         [JsonPropertyName("conflicts_with")]
-        public List<string> ConflictsWith { get; set; } = new List<string>();
+        public List<string> ConflictsWith { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>Pack IDs that must be installed before this pack.</summary>
         [JsonPropertyName("depends_on")]
-        public List<string> DependsOn { get; set; } = new List<string>();
+        public List<string> DependsOn { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 
     /// <summary>Root document deserialized from the remote registry.json.</summary>
@@ -89,7 +90,7 @@ namespace DINOForge.SDK.Registry
         public string Updated { get; set; } = string.Empty;
 
         [JsonPropertyName("packs")]
-        public List<RegistryPackEntry> Packs { get; set; } = new List<RegistryPackEntry>();
+        public List<RegistryPackEntry> Packs { get; set; } = new List<RegistryPackEntry>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 
     // ---------------------------------------------------------------------------
@@ -161,6 +162,8 @@ namespace DINOForge.SDK.Registry
         /// <summary>How long to keep fetched results before re-requesting the registry.</summary>
         public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(1);
 
+        private static readonly HttpClient SharedHttp = new();
+
         private readonly string _registryUrl;
         private readonly HttpClient _http;
 
@@ -171,6 +174,7 @@ namespace DINOForge.SDK.Registry
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
         private List<RegistryPackEntry>? _cache;
         private DateTime _cacheExpiry = DateTime.MinValue;
+        private readonly TimeProvider _timeProvider;
 
         // ------------------------------------------------------------------
         // Constructors
@@ -187,8 +191,9 @@ namespace DINOForge.SDK.Registry
         /// Useful for private or self-hosted registries.
         /// </summary>
         /// <param name="registryUrl">Full URL of the registry.json endpoint.</param>
-        public PackRegistryClient(string registryUrl)
-            : this(registryUrl, new HttpClient()) { }
+        /// <param name="timeProvider">Optional TimeProvider for cache expiry checks (defaults to System).</param>
+        public PackRegistryClient(string registryUrl, TimeProvider? timeProvider = null)
+            : this(registryUrl, SharedHttp, timeProvider) { }
 
         /// <summary>
         /// Creates a client with an explicit <see cref="HttpClient"/> instance.
@@ -196,10 +201,12 @@ namespace DINOForge.SDK.Registry
         /// </summary>
         /// <param name="registryUrl">Full URL of the registry.json endpoint.</param>
         /// <param name="httpClient">Pre-configured HttpClient to use for requests.</param>
-        public PackRegistryClient(string registryUrl, HttpClient httpClient)
+        /// <param name="timeProvider">Optional TimeProvider for cache expiry checks (defaults to System).</param>
+        public PackRegistryClient(string registryUrl, HttpClient httpClient, TimeProvider? timeProvider = null)
         {
             _registryUrl = registryUrl ?? throw new ArgumentNullException(nameof(registryUrl));
             _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         // ------------------------------------------------------------------
@@ -218,7 +225,7 @@ namespace DINOForge.SDK.Registry
             await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (_cache != null && DateTime.UtcNow < _cacheExpiry)
+                if (_cache != null && _timeProvider.GetUtcNow().UtcDateTime < _cacheExpiry)
                     return _cache.AsReadOnly();
 
                 string json = await _http
@@ -233,7 +240,7 @@ namespace DINOForge.SDK.Registry
                 RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, options);
 
                 _cache = doc?.Packs ?? new List<RegistryPackEntry>();
-                _cacheExpiry = DateTime.UtcNow.Add(CacheDuration);
+                _cacheExpiry = _timeProvider.GetUtcNow().UtcDateTime.Add(CacheDuration);
 
                 return _cache.AsReadOnly();
             }
@@ -331,6 +338,7 @@ namespace DINOForge.SDK.Registry
         /// Invalidates the in-memory cache, forcing the next call to re-fetch
         /// from the remote registry.
         /// </summary>
+        // sync-over-async-unavoidable: public API contract (SDK-shipped)
         public void InvalidateCache()
         {
             _lock.Wait();

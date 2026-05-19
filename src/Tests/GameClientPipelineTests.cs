@@ -406,10 +406,14 @@ public class GameClientPipelineTests
 
     private static GameClient CreateConnectedClient(JsonRpcResponse response)
     {
+        // UseMessageFraming=false so SendRequestCoreAsync gate at GameClient.cs:495 accepts
+        // the reflection-injected _reader/_writer (MemoryStream line-mode) without requiring
+        // an actual NamedPipeClientStream in _pipe. See task #324 / iter-74 #318.
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 0,
-            ReadTimeoutMs = 1000
+            ReadTimeoutMs = 1000,
+            UseMessageFraming = false
         });
 
         MemoryStream responseStream = new(Utf8NoBom.GetBytes(JsonConvert.SerializeObject(response) + Environment.NewLine));

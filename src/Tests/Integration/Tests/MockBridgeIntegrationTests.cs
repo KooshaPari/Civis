@@ -139,7 +139,7 @@ public class MockBridgeIntegrationTests
         QueryResult result = _bridge.QueryEntities("Unit", null);
 
         // Assert
-        result.Count.Should().BeGreaterThan(0);
+        result.Count.Should().Be(100);
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class MockBridgeIntegrationTests
 
         // Assert
         catalog.Should().NotBeNull();
-        catalog.Units.Should().NotBeEmpty();
+        catalog.Units.Should().HaveCount(28);
     }
 
     /// <summary>

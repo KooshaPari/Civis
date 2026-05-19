@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Xunit;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -45,7 +46,7 @@ build:
             configPath = Path.GetFullPath(configPath);
             Assert.True(File.Exists(configPath), $"File not found: {configPath}");
 
-            var yaml = File.ReadAllText(configPath);
+            var yaml = File.ReadAllText(configPath, Encoding.UTF8);
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()

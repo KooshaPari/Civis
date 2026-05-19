@@ -18,8 +18,11 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
     [Fact]
     public async Task Bridge_IsHealthy_AfterBootstrap()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
-        
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
+
         GameStatus status = await fixture.Client!.StatusAsync();
         status.WorldReady.Should().BeTrue("DINOForge plugin should report world ready after BepInEx bootstrap");
         status.EntityCount.Should().BeGreaterThan(0, "the ECS world should have spawned entities");
@@ -28,6 +31,8 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
     [Fact]
     public async Task Bridge_Ping_RoundTripUnder100Ms()
     {
+        if (!fixture.IsInitialized) return;
+
         Stopwatch sw = Stopwatch.StartNew();
         await fixture.Client!.PingAsync();
         sw.Stop();

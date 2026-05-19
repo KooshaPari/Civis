@@ -1,0 +1,14 @@
+# Pattern #121 Unnecessary LINQ Terminal Allocation Allowlist
+#
+# Suppression mechanisms:
+#   1. severity|file|line — line-locked allowlist key (prevents silent drift if line moves)
+#   2. relative/path.cs — file-level suppression (all sites in file)
+#   3. Trailing // allocation-ok: <reason> on the source line (inline self-documenting)
+#
+# HIGH severity: .ToList()/.ToArray() in lock() block or property getter/arrow expression body
+# MED severity: Result immediately consumed by foreach/for on the next line
+# LOW severity: All other uses (generally justified for external API contract or immutability)
+#
+# This gate enforces allocation discipline in hot paths. NEW HIGH violations must be
+# reviewed and justified (not merely allowlisted). Exceptions are rare; prefer refactoring
+# to suppression.

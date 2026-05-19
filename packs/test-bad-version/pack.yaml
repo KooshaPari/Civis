@@ -1,0 +1,5 @@
+id: test-bad-version
+name: Test Bad Version
+version: not.a.valid.semver
+author: Test
+type: content

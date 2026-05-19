@@ -1,0 +1,100 @@
+{
+  "scan_utc": "2026-04-27T12:53:37.668299Z",
+  "scan_date": "2026-04-27",
+  "packs_root": "C:/Users/koosh/Dino/packs",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/framework-version-allowlist.txt",
+  "allowlist_size": 6,
+  "manifests_scanned": 14,
+  "violations_count": 0,
+  "violations": [],
+  "scanned": [
+    {
+      "file": "packs/economy-balanced/pack.yaml",
+      "framework_version": ">=0.6.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/scenario-tutorial/pack.yaml",
+      "framework_version": ">=0.7.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/test-bad-version/pack.yaml",
+      "framework_version": null,
+      "missing": true,
+      "violations": []
+    },
+    {
+      "file": "packs/test-invalid-schema-2/pack.yaml",
+      "framework_version": null,
+      "missing": true,
+      "violations": []
+    },
+    {
+      "file": "packs/test-invalid-schema-3/pack.yaml",
+      "framework_version": null,
+      "missing": true,
+      "violations": []
+    },
+    {
+      "file": "packs/test-invalid-schema-4/pack.yaml",
+      "framework_version": null,
+      "missing": true,
+      "violations": []
+    },
+    {
+      "file": "packs/test-invalid-schema/pack.yaml",
+      "framework_version": "not-a-semver",
+      "missing": false,
+      "violations": [
+        "missing >= lower-bound clause",
+        "missing < upper-bound clause (unbounded range)"
+      ]
+    },
+    {
+      "file": "packs/test-valid/pack.yaml",
+      "framework_version": null,
+      "missing": true,
+      "violations": []
+    },
+    {
+      "file": "packs/ui-hud-minimal/pack.yaml",
+      "framework_version": ">=0.11.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/vanilla-dino/pack.yaml",
+      "framework_version": ">=0.1.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-aerial/pack.yaml",
+      "framework_version": ">=0.4.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-modern/pack.yaml",
+      "framework_version": ">=0.1.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-starwars/manifest.yaml",
+      "framework_version": ">=0.5.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-starwars/pack.yaml",
+      "framework_version": ">=0.5.0 <0.25.0",
+      "missing": false,
+      "violations": []
+    }
+  ],
+  "exit_code": 0
+}

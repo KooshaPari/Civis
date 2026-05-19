@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -90,7 +91,7 @@ namespace DINOForge.DesktopCompanion.ViewModels
                     {
                         try
                         {
-                            string yamlContent = File.ReadAllText(packYamlPath);
+                            string yamlContent = File.ReadAllText(packYamlPath, Encoding.UTF8);
                             // Simple extraction of name and version fields
                             var nameMatch = System.Text.RegularExpressions.Regex.Match(yamlContent, @"name:\s*(.+?)(?:\n|$)");
                             if (nameMatch.Success)

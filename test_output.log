@@ -1,0 +1,62 @@
+
+
+C:\Users\koosh\.nuget\packages\system.text.encodings.web\10.0.8\buildTransitive\netcoreapp2.0\System.Text.Encodings.Web.targets(4,5): warning : System.Text.Encodings.Web 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+C:\Users\koosh\.nuget\packages\system.io.pipelines\10.0.8\buildTransitive\netcoreapp2.0\System.IO.Pipelines.targets(4,5): warning : System.IO.Pipelines 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+C:\Users\koosh\.nuget\packages\system.text.json\10.0.8\buildTransitive\netcoreapp2.0\System.Text.Json.targets(4,5): warning : System.Text.Json 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+Test run for C:\Users\koosh\Dino\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll (.NETCoreApp,Version=v8.0)
+Test run for C:\Users\koosh\Dino\src\Tests\Integration\bin\Release\net8.0\DINOForge.Tests.Integration.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.54]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.BoxStructureTest_AllRequiredFilesPresent [SKIP]
+[xUnit.net 00:00:00.54]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ParallelLaunchTest_AllInstancesConnectWithin30Seconds [SKIP]
+[xUnit.net 00:00:00.54]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.SymlinkValidationTest_NoAssetDuplication [SKIP]
+[xUnit.net 00:00:00.55]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ConcurrentOperationsTest_MultipleContainersWorkIndependently [SKIP]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.BoxStructureTest_AllRequiredFilesPresent [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ParallelLaunchTest_AllInstancesConnectWithin30Seconds [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.SymlinkValidationTest_NoAssetDuplication [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ConcurrentOperationsTest_MultipleContainersWorkIndependently [1 ms]
+[xUnit.net 00:00:00.55]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.PipeNameIsolationTest_UniqueNamesPerInstance [SKIP]
+[xUnit.net 00:00:00.55]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.WorldReadinessPollTest_DetectsEntityCountWithoutSleep [SKIP]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.PipeNameIsolationTest_UniqueNamesPerInstance [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.WorldReadinessPollTest_DetectsEntityCountWithoutSleep [1 ms]
+[xUnit.net 00:00:05.08]     DINOForge.Tests.Bridge.GameClientFramingTests.ConnectAsync_WithoutTimeout_UsesOptionsDefault [SKIP]
+  Skipped DINOForge.Tests.Bridge.GameClientFramingTests.ConnectAsync_WithoutTimeout_UsesOptionsDefault [1 ms]
+[xUnit.net 00:00:05.71]     DINOForge.Tests.Support.TestWaitTests.UntilAsync_PredicateBecomesTrue_ReturnsTrueWithinTimeout [SKIP]
+  Skipped DINOForge.Tests.Support.TestWaitTests.UntilAsync_PredicateBecomesTrue_ReturnsTrueWithinTimeout [1 ms]
+[xUnit.net 00:00:06.27]     DINOForge.Tests.MockGameBridgeServerTests.MockGameBridgeServer_StrictMode_AcceptsValidReceipt [SKIP]
+  Skipped DINOForge.Tests.MockGameBridgeServerTests.MockGameBridgeServer_StrictMode_AcceptsValidReceipt [1 ms]
+The active test run was aborted. Reason: Test host process crashed
+Data collector 'Blame' message: The specified inactivity time of 90 seconds has elapsed. Collecting hang dumps from testhost and its child processes.
+[xUnit.net 00:02:08.41]     DINOForge.Tests.GameClientCoverageTests.KillAsync_WhenProcessIsRunning_DoesNotThrow [SKIP]
+
+  Skipped DINOForge.Tests.GameClientCoverageTests.KillAsync_WhenProcessIsRunning_DoesNotThrow [1 ms]
+Passed!  - Failed:     0, Passed:   136, Skipped:     6, Total:   142, Duration: 7 s - DINOForge.Tests.Integration.dll (net8.0)
+Test Run Aborted.
+
+The active Test Run was aborted because the host process exited unexpectedly. Please inspect the call stack above, if available, to get more information about where the exception originated from.
+The test running when the crash occurred: 
+DINOForge.Tests.Integration.Tests.MockGameServerTests.GameClient_Status_ReportsEntitiesAfterPackLoad
+DINOForge.Tests.Integration.Tests.LiveGameIntegrationTests.LiveGame_ApplyOverride_Succeeds
+DINOForge.Tests.Integration.Tests.ErrorPathTests.MultipleClients_OneDisconnects_OthersContinue
+DINOForge.Tests.Integration.Tests.GameSandboxIntegrationTests.Sandbox_E2E_PackReloadWorkflow
+DINOForge.Tests.Integration.Tests.ScreenshotFallbackTests.Screenshot_FileSize_IsReasonable
+
+This test may, or may not be the source of the crash.
+The active test run was aborted. Reason: Test host process crashed
+Data collector 'Blame' message: The specified inactivity time of 90 seconds has elapsed. Collecting hang dumps from testhost and its child processes.
+
+Passed!  - Failed:     0, Passed:  3307, Skipped:     4, Total:  3311, Duration: 2 m 12 s - DINOForge.Tests.dll (net8.0)
+Test Run Aborted.
+
+The active Test Run was aborted because the host process exited unexpectedly. Please inspect the call stack above, if available, to get more information about where the exception originated from.
+The test running when the crash occurred: 
+DINOForge.Tests.Bridge.GameClientFramingTests.ConnectAsync_WithCustomTimeout_UsesProvidedValue
+DINOForge.Tests.GameClientCoverageTests.SendRequestAsync_GivesUpAfterAllRetries
+
+This test may, or may not be the source of the crash.
+
+Attachments:
+  C:\Users\koosh\Dino\src\Tests\Integration\TestResults\d7b4cf33-a219-41c6-a2f7-cf651eb7ed06\testhost_77756_20260518T101812_hangdump.dmp
+  C:\Users\koosh\Dino\src\Tests\Integration\TestResults\d7b4cf33-a219-41c6-a2f7-cf651eb7ed06\Sequence_a6b22ce734cb4d2cb894c379ce38a6eb.xml
+  C:\Users\koosh\Dino\src\Tests\TestResults\839a46b5-9fa8-4770-8fde-6e564f388cee\testhost_65244_20260518T101820_hangdump.dmp
+  C:\Users\koosh\Dino\src\Tests\TestResults\839a46b5-9fa8-4770-8fde-6e564f388cee\Sequence_67f7c6a476a3483497fb09d881f46928.xml

@@ -60,8 +60,11 @@ export default withMermaid(
           items: [
             { text: 'Home', link: '/' },
             { text: 'Installation', link: '/guide/getting-started' },
+            { text: 'For Mod Authors', link: '/guide/mod-author-guide' },
+            { text: 'Troubleshooting', link: '/guide/troubleshooting' },
             { text: 'Quick Start', link: '/guide/quick-start' },
             { text: 'Creating Packs', link: '/guide/creating-packs' },
+            { text: 'Pack Cookbook', link: '/guide/pack-cookbook' },
             { text: 'MCP Bridge & Automation', link: '/guide/mcp-bridge' },
             { text: 'Pack Registry', link: '/packs' },
           ],
@@ -70,6 +73,7 @@ export default withMermaid(
           text: 'Core Concepts',
           items: [
             { text: 'Architecture Overview', link: '/concepts/architecture' },
+            { text: 'Architecture Diagrams', link: '/architecture/diagrams' },
             { text: 'ECS Bridge Layer', link: '/concepts/ecs-bridge' },
             { text: 'Registry System', link: '/concepts/registry-system' },
             { text: 'Aviation System', link: '/concepts/aviation' },
@@ -167,6 +171,8 @@ export default withMermaid(
         {
           text: 'QA & Observability',
           items: [
+            { text: 'Pattern Catalog', link: '/quality/pattern-catalog' },
+            { text: 'Roslyn Analyzers', link: '/quality/roslyn-analyzers' },
             { text: 'Performance Benchmarks', link: '/benchmarks/' },
             { text: 'Mutation Score', link: '/mutation-score/' },
           ],

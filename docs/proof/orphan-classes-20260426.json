@@ -1,0 +1,423 @@
+{
+  "scan_utc": "2026-04-27T08:02:54.549669Z",
+  "scan_date": "2026-04-27",
+  "scan_root": "C:/Users/koosh/Dino/src",
+  "exclusions": [
+    "src/Tests/** (test fixtures excluded from candidate list)",
+    "**/bin/**",
+    "**/obj/**",
+    "*.designer.cs",
+    "*.g.cs",
+    "*.AssemblyInfo.cs"
+  ],
+  "skip_categories": {
+    "dto_like": 273,
+    "ecs_system_subclass": 13,
+    "bepin_plugin_entry": 2,
+    "monobehaviour": 12,
+    "test_fixture": 308,
+    "xaml_codebehind": 17,
+    "value_converter": 8
+  },
+  "category_counts": {
+    "DEAD": 12,
+    "TEST_ONLY": 26,
+    "PROD": 197
+  },
+  "totals": {
+    "files_scanned": 632,
+    "classes_seen": 868,
+    "candidates_after_skip": 235
+  },
+  "dead_classes": [
+    {
+      "class": "AerialUnitMapper",
+      "file": "Runtime/Aviation/AerialUnitMapper.cs",
+      "line": 19,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModMenuOverlayProxy",
+      "file": "Runtime/UI/ModMenuOverlayProxy.cs",
+      "line": 12,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "UiDiagnostics",
+      "file": "Runtime/UI/UiDiagnostics.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ZigLodPipelineTests",
+      "file": "Tools/AssetPipelineZig/bindings/ZigLodPipelineTests.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "IntakeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/IntakeCommand.cs",
+      "line": 11,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "NormalizeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/NormalizeCommand.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "SearchCommand",
+      "file": "Tools/Cli/Assetctl/Commands/SearchCommand.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModCatalogService",
+      "file": "Tools/DesktopCompanion/Data/ModCatalogService.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "GameLaunchFailureAnalyzer",
+      "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+      "line": 18,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DirectAssetPipeline",
+      "file": "Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DefinitionUpdateService",
+      "file": "Tools/PackCompiler/Services/DefinitionUpdateService.cs",
+      "line": 15,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "VFXPrefabGenerator",
+      "file": "Tools/VFXPrefabGenerator/VFXPrefabGenerator.cs",
+      "line": 35,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    }
+  ],
+  "test_only_classes": [
+    {
+      "class": "CompatibilityChecker",
+      "file": "SDK/CompatibilityChecker.cs",
+      "line": 23,
+      "total_refs": 118,
+      "prod_refs": 0,
+      "test_refs": 118
+    },
+    {
+      "class": "HUDInjectionSystem",
+      "file": "Domains/UI/HUDInjectionSystem.cs",
+      "line": 17,
+      "total_refs": 36,
+      "prod_refs": 0,
+      "test_refs": 36
+    },
+    {
+      "class": "ThemeThemeColor",
+      "file": "Domains/UI/ThemeColorPalette.cs",
+      "line": 190,
+      "total_refs": 29,
+      "prod_refs": 0,
+      "test_refs": 29
+    },
+    {
+      "class": "PackRegistryClient",
+      "file": "SDK/Registry/PackRegistry.cs",
+      "line": 142,
+      "total_refs": 16,
+      "prod_refs": 0,
+      "test_refs": 16
+    },
+    {
+      "class": "RustAssetPipelineInterop",
+      "file": "Runtime/RustAssetPipelineInterop.cs",
+      "line": 24,
+      "total_refs": 15,
+      "prod_refs": 0,
+      "test_refs": 15
+    },
+    {
+      "class": "GoDependencyResolver",
+      "file": "SDK/NativeInterop/GoDependencyResolver.cs",
+      "line": 31,
+      "total_refs": 14,
+      "prod_refs": 0,
+      "test_refs": 14
+    },
+    {
+      "class": "PackGenerator",
+      "file": "SDK/Universe/PackGenerator.cs",
+      "line": 15,
+      "total_refs": 14,
+      "prod_refs": 0,
+      "test_refs": 14
+    },
+    {
+      "class": "ThemeThemeColorPalette",
+      "file": "Domains/UI/ThemeColorPalette.cs",
+      "line": 13,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "NativeMenuHostAdapter",
+      "file": "Runtime/UI/Adapters/NativeMenuHostAdapter.cs",
+      "line": 34,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "ThemeProviderAdapter",
+      "file": "Runtime/UI/Adapters/ThemeProviderAdapter.cs",
+      "line": 40,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "AssetReplacementEngine",
+      "file": "SDK/AssetReplacementEngine.cs",
+      "line": 14,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "UniverseLoader",
+      "file": "SDK/Universe/UniverseLoader.cs",
+      "line": 13,
+      "total_refs": 11,
+      "prod_refs": 0,
+      "test_refs": 11
+    },
+    {
+      "class": "NativeButtonAdapter",
+      "file": "Runtime/UI/Adapters/NativeButtonAdapter.cs",
+      "line": 26,
+      "total_refs": 10,
+      "prod_refs": 0,
+      "test_refs": 10
+    },
+    {
+      "class": "NativeLabelGuardAdapter",
+      "file": "Runtime/UI/Adapters/NativeLabelGuardAdapter.cs",
+      "line": 26,
+      "total_refs": 9,
+      "prod_refs": 0,
+      "test_refs": 9
+    },
+    {
+      "class": "FactionNamingRules",
+      "file": "SDK/Universe/NamingGuide.cs",
+      "line": 58,
+      "total_refs": 9,
+      "prod_refs": 0,
+      "test_refs": 9
+    },
+    {
+      "class": "ScenarioPlugin",
+      "file": "Domains/Scenario/ScenarioPlugin.cs",
+      "line": 16,
+      "total_refs": 8,
+      "prod_refs": 0,
+      "test_refs": 8
+    },
+    {
+      "class": "EconomyContentLoader",
+      "file": "Domains/Economy/EconomyContentLoader.cs",
+      "line": 18,
+      "total_refs": 7,
+      "prod_refs": 0,
+      "test_refs": 7
+    },
+    {
+      "class": "EconomyPlugin",
+      "file": "Domains/Economy/EconomyPlugin.cs",
+      "line": 16,
+      "total_refs": 6,
+      "prod_refs": 0,
+      "test_refs": 6
+    },
+    {
+      "class": "NativeDepResolver",
+      "file": "Tools/McpServer/NativeDepResolver.cs",
+      "line": 24,
+      "total_refs": 6,
+      "prod_refs": 0,
+      "test_refs": 6
+    },
+    {
+      "class": "NativeUiSelectorAdapter",
+      "file": "Runtime/UI/Adapters/NativeUiSelectorAdapter.cs",
+      "line": 25,
+      "total_refs": 5,
+      "prod_refs": 0,
+      "test_refs": 5
+    },
+    {
+      "class": "NamingRuleSet",
+      "file": "SDK/Universe/NamingGuide.cs",
+      "line": 83,
+      "total_refs": 5,
+      "prod_refs": 0,
+      "test_refs": 5
+    },
+    {
+      "class": "NativeCanvasLocatorAdapter",
+      "file": "Runtime/UI/Adapters/NativeCanvasLocatorAdapter.cs",
+      "line": 22,
+      "total_refs": 4,
+      "prod_refs": 0,
+      "test_refs": 4
+    },
+    {
+      "class": "WarfarePlugin",
+      "file": "Domains/Warfare/WarfarePlugin.cs",
+      "line": 18,
+      "total_refs": 3,
+      "prod_refs": 0,
+      "test_refs": 3
+    },
+    {
+      "class": "MarketDefinition",
+      "file": "Domains/Economy/Models/MarketDefinition.cs",
+      "line": 9,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    },
+    {
+      "class": "LODManager",
+      "file": "Runtime/Bridge/LODManager.cs",
+      "line": 31,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    },
+    {
+      "class": "VFXPoolManager",
+      "file": "Runtime/Bridge/VFXPoolManager.cs",
+      "line": 31,
+      "total_refs": 2,
+      "prod_refs": 0,
+      "test_refs": 2
+    }
+  ],
+  "indirect_callsite_candidates": [],
+  "summary_top_dead": [
+    {
+      "class": "AerialUnitMapper",
+      "file": "Runtime/Aviation/AerialUnitMapper.cs",
+      "line": 19,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModMenuOverlayProxy",
+      "file": "Runtime/UI/ModMenuOverlayProxy.cs",
+      "line": 12,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "UiDiagnostics",
+      "file": "Runtime/UI/UiDiagnostics.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ZigLodPipelineTests",
+      "file": "Tools/AssetPipelineZig/bindings/ZigLodPipelineTests.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "IntakeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/IntakeCommand.cs",
+      "line": 11,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "NormalizeCommand",
+      "file": "Tools/Cli/Assetctl/Commands/NormalizeCommand.cs",
+      "line": 10,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "SearchCommand",
+      "file": "Tools/Cli/Assetctl/Commands/SearchCommand.cs",
+      "line": 13,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "ModCatalogService",
+      "file": "Tools/DesktopCompanion/Data/ModCatalogService.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "GameLaunchFailureAnalyzer",
+      "file": "Tools/DumpTools/GameLaunchAnalyzer.cs",
+      "line": 18,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    },
+    {
+      "class": "DirectAssetPipeline",
+      "file": "Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 17,
+      "total_refs": 0,
+      "prod_refs": 0,
+      "test_refs": 0
+    }
+  ]
+}

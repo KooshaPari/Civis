@@ -80,7 +80,7 @@ public partial class WelcomePageViewModel : ObservableObject
     {
         if (!string.IsNullOrEmpty(UpdateUrl))
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            using var _ = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = UpdateUrl,
                 UseShellExecute = true

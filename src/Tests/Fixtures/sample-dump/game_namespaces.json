@@ -1,0 +1,33 @@
+{
+  "DNO.Main": {
+    "Components": [
+      "Health",
+      "ArmorData",
+      "AttackCooldown",
+      "BuildingBase",
+      "ProjectileDataBase"
+    ],
+    "Systems": [
+      "SimulationSystem",
+      "RenderSystem",
+      "PathFindingSystem",
+      "InitializationSystem",
+      "FightSystem"
+    ],
+    "Physics": [
+      "Collider",
+      "RigidBody"
+    ]
+  },
+  "DINOForge.SDK": {
+    "Registry": [
+      "UnitRegistry",
+      "BuildingRegistry",
+      "FactionRegistry"
+    ],
+    "Models": [
+      "UnitDefinition",
+      "BuildingDefinition"
+    ]
+  }
+}

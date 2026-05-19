@@ -14,6 +14,7 @@ namespace DINOForge.Runtime.Bridge
         private readonly int _maxSize;
         private readonly Dictionary<string, CacheEntry> _cache;
         private readonly LinkedList<string> _lruOrder;
+        private readonly TimeProvider _timeProvider;
         private bool _disposed;
 
         /// <summary>
@@ -22,13 +23,13 @@ namespace DINOForge.Runtime.Bridge
         private class CacheEntry
         {
             public AssetBundle Bundle { get; set; }
-            public DateTime LoadedAt { get; set; }
+            public DateTimeOffset LoadedAt { get; set; }
             public LinkedListNode<string>? LruNode { get; set; }
 
-            public CacheEntry(AssetBundle bundle)
+            public CacheEntry(AssetBundle bundle, DateTimeOffset loadedAt)
             {
                 Bundle = bundle;
-                LoadedAt = DateTime.UtcNow;
+                LoadedAt = loadedAt;
             }
         }
 
@@ -36,12 +37,14 @@ namespace DINOForge.Runtime.Bridge
         /// Creates a new AssetBundle cache with the specified max size.
         /// </summary>
         /// <param name="maxSize">Maximum number of bundles to cache (default 10).</param>
-        public AssetBundleCache(int maxSize = 10)
+        /// <param name="timeProvider">Optional TimeProvider for testing. Defaults to <see cref="TimeProvider.System"/>.</param>
+        public AssetBundleCache(int maxSize = 10, TimeProvider? timeProvider = null)
         {
             if (maxSize <= 0)
                 throw new ArgumentException("maxSize must be > 0", nameof(maxSize));
 
             _maxSize = maxSize;
+            _timeProvider = timeProvider ?? TimeProvider.System;
             _cache = new Dictionary<string, CacheEntry>(StringComparer.OrdinalIgnoreCase);
             _lruOrder = new LinkedList<string>();
         }
@@ -81,7 +84,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 // Update existing entry
                 existing.Bundle = bundle;
-                existing.LoadedAt = DateTime.UtcNow;
+                existing.LoadedAt = _timeProvider.GetUtcNow();
 
                 // Move to end of LRU list
                 if (existing.LruNode != null)
@@ -93,7 +96,7 @@ namespace DINOForge.Runtime.Bridge
             else
             {
                 // Add new entry
-                var entry = new CacheEntry(bundle);
+                var entry = new CacheEntry(bundle, _timeProvider.GetUtcNow());
                 entry.LruNode = _lruOrder.AddLast(path);
                 _cache[path] = entry;
 

@@ -9,7 +9,7 @@ namespace DINOForge.Domains.Scenario.Scripting
     /// Evaluates scenario state against victory conditions, defeat conditions, and scripted
     /// event triggers. Tracks which events have already fired to prevent re-triggering.
     /// </summary>
-    public class ScenarioRunner
+    public sealed class ScenarioRunner
     {
         private ScenarioDefinition? _scenario;
         private readonly HashSet<string> _firedEventIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

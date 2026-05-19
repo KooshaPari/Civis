@@ -1,0 +1,110 @@
+{
+  "scan_utc": "2026-05-18T12:25:39.948057Z",
+  "scan_date": "2026-05-18",
+  "files_scanned": 699,
+  "total_hits": 5,
+  "new_hits": 3,
+  "allowlist_size": 2,
+  "strict": false,
+  "high_count": 0,
+  "med_count": 2,
+  "low_count": 1,
+  "high_violations": [],
+  "med_violations": [
+    {
+      "file": "src/Analyzers/TcsSyncContinuationAnalyzer.cs",
+      "line": 49,
+      "generic": "",
+      "args": "...",
+      "severity": "MED",
+      "boundary": "med",
+      "detail": "new TaskCompletionSource(...) runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "MED|src/Analyzers/TcsSyncContinuationAnalyzer.cs|49|<>",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Analyzers/TcsSyncContinuationAnalyzer.cs",
+      "line": 49,
+      "generic": "<T>",
+      "args": "...",
+      "severity": "MED",
+      "boundary": "med",
+      "detail": "new TaskCompletionSource<T>(...) runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "MED|src/Analyzers/TcsSyncContinuationAnalyzer.cs|49|<T>",
+      "in_allowlist": false
+    }
+  ],
+  "low_violations": [
+    {
+      "file": "src/Tests/PackFileWatcherTests.cs",
+      "line": 168,
+      "generic": "<bool>",
+      "args": "",
+      "severity": "LOW",
+      "boundary": "low",
+      "detail": "new TaskCompletionSource<bool>() runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "LOW|src/Tests/PackFileWatcherTests.cs|168|<bool>",
+      "in_allowlist": false
+    }
+  ],
+  "all_hits": [
+    {
+      "file": "src/Analyzers/TcsSyncContinuationAnalyzer.cs",
+      "line": 49,
+      "generic": "",
+      "args": "...",
+      "severity": "MED",
+      "boundary": "med",
+      "detail": "new TaskCompletionSource(...) runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "MED|src/Analyzers/TcsSyncContinuationAnalyzer.cs|49|<>",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Analyzers/TcsSyncContinuationAnalyzer.cs",
+      "line": 49,
+      "generic": "<T>",
+      "args": "...",
+      "severity": "MED",
+      "boundary": "med",
+      "detail": "new TaskCompletionSource<T>(...) runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "MED|src/Analyzers/TcsSyncContinuationAnalyzer.cs|49|<T>",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Runtime/Bridge/MainThreadDispatcher.cs",
+      "line": 88,
+      "generic": "<T>",
+      "args": "",
+      "severity": "HIGH",
+      "boundary": "high",
+      "detail": "new TaskCompletionSource<T>() runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "HIGH|src/Runtime/Bridge/MainThreadDispatcher.cs|88|<T>",
+      "in_allowlist": true
+    },
+    {
+      "file": "src/Runtime/Bridge/MainThreadDispatcher.cs",
+      "line": 101,
+      "generic": "<bool>",
+      "args": "",
+      "severity": "HIGH",
+      "boundary": "high",
+      "detail": "new TaskCompletionSource<bool>() runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "HIGH|src/Runtime/Bridge/MainThreadDispatcher.cs|101|<bool>",
+      "in_allowlist": true
+    },
+    {
+      "file": "src/Tests/PackFileWatcherTests.cs",
+      "line": 168,
+      "generic": "<bool>",
+      "args": "",
+      "severity": "LOW",
+      "boundary": "low",
+      "detail": "new TaskCompletionSource<bool>() runs continuations synchronously on the producer's thread. Pass TaskCreationOptions.RunContinuationsAsynchronously to queue continuations to the threadpool and avoid main-thread starvation / cross-thread deadlocks.",
+      "allowlist_key": "LOW|src/Tests/PackFileWatcherTests.cs|168|<bool>",
+      "in_allowlist": false
+    }
+  ],
+  "exit_code": 1,
+  "scan_root": "C:/Users/koosh/Dino/src",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/tcs-sync-continuation-allowlist.txt"
+}

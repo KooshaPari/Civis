@@ -49,7 +49,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         {
             await Task.Run(() =>
             {
-                var sb = new StringBuilder();
+                var sb = new StringBuilder(4096);  // Capacity ~= YAML header (20 lines × 60 chars) + asset loop (N × 40 chars)
 
                 sb.AppendLine("%YAML 1.1");
                 sb.AppendLine("%TAG !u! tag:unity3d.com,2011:");
@@ -104,7 +104,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             {
                 var groupFile = Path.Combine(outputDirectory, $"{asset.AssetId}_group.yaml");
 
-                var sb = new StringBuilder();
+                var sb = new StringBuilder(512);  // Capacity ~= 22 appends × 24 chars (YAML lines)
                 sb.AppendLine("%YAML 1.1");
                 sb.AppendLine("%TAG !u! tag:unity3d.com,2011:");
                 sb.AppendLine("--- !u!114 &11400000");

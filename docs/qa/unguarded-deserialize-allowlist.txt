@@ -1,0 +1,63 @@
+# Pattern #95 — unguarded-deserialize allowlist (task #265).
+#
+# This file lists deserialize sites that the gate
+# (scripts/ci/detect_unguarded_deserialize.py) flagged but that have been
+# audited and accepted as legitimate exceptions, OR that are grandfathered
+# debt being fixed by tasks #264 / #266.
+#
+# Two entry forms are accepted:
+#
+#   1. ``severity|file|line|T_simple`` — line-locked allowlist key. Pull
+#      these directly from the ``allowlist_key`` field of
+#      ``docs/qa/unguarded-deserialize-report.json``. Moving the line
+#      forces a fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every site in that file. Use
+#      sparingly, only for files where the cross-FFI risk has been
+#      fully addressed by an alternative mechanism (e.g. the file
+#      validates each field manually before use, or the file lives at
+#      a trust boundary that pre-validates upstream).
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_unguarded_deserialize.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_unguarded_deserialize.py --self-test
+# CI workflow: .github/workflows/unguarded-deserialize.yml
+#
+# Pairs with src/SDK/Validation/JsonGuard.cs + IValidatable.cs (the API
+# the gate enforces). Tracking task: #265.
+# Active mop-up tasks: #264 (HIGH FFI DTOs) / #266 (MED FFI DTOs).
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# DesktopCompanion AppConfig + DisabledPacksService — these decode the user's
+# *local* DesktopCompanion config, which is rewritten by the same process
+# every save and never sourced from a foreign trust boundary. The DTOs are
+# LOW-severity user-config; partial / null fields fall back to defaults at
+# read time. Per audit: skip whole-file (#266 will revisit if the surface
+# grows beyond config).
+src/Tools/DesktopCompanion/Data/AppConfigService.cs
+src/Tools/DesktopCompanion/Data/DisabledPacksService.cs
+
+# NativeDepResolver — Deserialize<Dictionary<string,string>> reads a small
+# typed dictionary the McpServer itself wrote (resolver bookkeeping). Per
+# audit: typed simply, no DTO surface to validate. Suppression scoped to
+# the single file.
+src/Tools/McpServer/NativeDepResolver.cs
+
+# GameLaunchAnalyzer FailureManifestDto — diagnostic-only DTO read from
+# DumpTools manifests. LOW-severity (read-only diagnostics, never feeds
+# back into runtime). Per audit: suppression scoped to the single file
+# until #266 lands a tighter contract.
+src/Tools/DumpTools/GameLaunchAnalyzer.cs
+
+# ModPlatform.LoadDisabledPacks — Deserialize<List<string>> reads a list of
+# pack-id strings the runtime itself wrote. The element type is a primitive
+# (string) which has no IValidatable shape to enforce, and the loader already
+# null-guards each element before insertion (#278 / Pattern #95 line-locked
+# allowlist).
+HIGH|src/Runtime/ModPlatform.cs|877|List

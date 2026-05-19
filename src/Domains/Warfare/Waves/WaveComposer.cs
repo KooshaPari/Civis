@@ -10,7 +10,7 @@ namespace DINOForge.Domains.Warfare.Waves
     /// Composes and scales wave definitions for a faction based on available units,
     /// wave count, and difficulty settings.
     /// </summary>
-    public class WaveComposer
+    public sealed class WaveComposer
     {
         /// <summary>
         /// Generate a sequence of waves for a faction based on difficulty and wave count.

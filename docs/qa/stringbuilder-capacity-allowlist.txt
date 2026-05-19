@@ -1,0 +1,18 @@
+# Pattern #117 Allowlist: StringBuilder Capacity Not Pre-sized
+#
+# This allowlist contains exceptions to the rule that StringBuilder should be
+# pre-sized with capacity to avoid repeated allocations.
+#
+# LOW severity violations (<=10 appends) are automatically allowlisted, as they
+# rarely cause memory fragmentation. Only MED/HIGH violations should appear here.
+#
+# Format: <file>:<line>  # <reason>
+# Inline marker: // stringbuilder-capacity-ok: <reason>
+#
+# Examples of acceptable reasons:
+#   - StringBuilder only used in cold path (not in tight loop)
+#   - Output size is genuinely unknown (user input, dynamic content)
+#   - OBSOLETE: Use for code awaiting removal/refactor
+#
+# NO ENTRIES BY DEFAULT. Add entries only when the pattern is genuinely unavoidable.
+#

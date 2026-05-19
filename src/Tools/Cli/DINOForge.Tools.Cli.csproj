@@ -10,6 +10,11 @@
     <RootNamespace>DINOForge.Tools.Cli</RootNamespace>
     <AssemblyName>DINOForge.Tools.Cli</AssemblyName>
     <Description>DINOForge CLI - command-line interface for the DINO mod platform</Description>
+    <!-- Pattern #98 / Task #276: CA2007 (ConfigureAwait) NOT enforced on CLI app.
+         CLI is OutputType=Exe with no Unity/UI sync context — ConfigureAwait is
+         stylistic, not a deadlock-prevention measure. Enforcing here would
+         require ~126 source edits in commands, gated behind #274 follow-up.
+         If a future audit promotes this, set EnforceConfigureAwait=true. -->
   </PropertyGroup>
 
   <ItemGroup>

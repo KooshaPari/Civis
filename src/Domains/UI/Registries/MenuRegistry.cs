@@ -9,7 +9,7 @@ namespace DINOForge.Domains.UI.Registries
     /// Registry of menu definitions. Manages all menus registered across all packs,
     /// supporting navigation, hierarchies, and menu composition.
     /// </summary>
-    public class MenuRegistry
+    public sealed class MenuRegistry
     {
         private readonly Dictionary<string, MenuDefinition> _menus =
             new Dictionary<string, MenuDefinition>(StringComparer.OrdinalIgnoreCase);

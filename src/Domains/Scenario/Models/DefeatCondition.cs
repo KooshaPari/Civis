@@ -22,7 +22,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// <summary>
     /// Defines a condition that, when met, triggers defeat for the player.
     /// </summary>
-    public class DefeatCondition
+    public sealed class DefeatCondition
     {
         /// <summary>
         /// The type of defeat condition to evaluate.

@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Warfare.Archetypes
     /// Registry of faction archetypes. Pre-loaded with the three canonical archetypes
     /// (Order, Industrial Swarm, Asymmetric) and supports custom archetype registration.
     /// </summary>
-    public class ArchetypeRegistry
+    public sealed class ArchetypeRegistry
     {
         private readonly Dictionary<string, FactionArchetype> _archetypes =
             new Dictionary<string, FactionArchetype>(StringComparer.OrdinalIgnoreCase);
@@ -67,7 +67,7 @@ namespace DINOForge.Domains.Warfare.Archetypes
                 "order",
                 "Order",
                 "Balanced stats, strong defense, disciplined formations.",
-                new Dictionary<string, float>
+                new Dictionary<string, float>(StringComparer.Ordinal)
                 {
                     { "armor", 1.10f },
                     { "morale", 1.10f },
@@ -78,7 +78,7 @@ namespace DINOForge.Domains.Warfare.Archetypes
                 "industrial_swarm",
                 "Industrial Swarm",
                 "Cheap units, fast production, weak individuals, overwhelming numbers.",
-                new Dictionary<string, float>
+                new Dictionary<string, float>(StringComparer.Ordinal)
                 {
                     { "cost", 0.80f },
                     { "speed", 1.30f },
@@ -90,7 +90,7 @@ namespace DINOForge.Domains.Warfare.Archetypes
                 "asymmetric",
                 "Asymmetric",
                 "Strong individuals, expensive, ambush tactics, hit-and-run.",
-                new Dictionary<string, float>
+                new Dictionary<string, float>(StringComparer.Ordinal)
                 {
                     { "damage", 1.25f },
                     { "speed", 1.15f },

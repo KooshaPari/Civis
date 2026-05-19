@@ -23,7 +23,7 @@ namespace DINOForge.Tests
             {
                 string name = Path.GetFileNameWithoutExtension(file)
                     .Replace(".schema", "");
-                schemas[name] = File.ReadAllText(file);
+                schemas[name] = File.ReadAllText(file, System.Text.Encoding.UTF8);
             }
 
             _validator = new NJsonSchemaValidator(schemas);
@@ -436,3 +436,4 @@ display_name: Minimal Building
         }
     }
 }
+

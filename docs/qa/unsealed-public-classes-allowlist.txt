@@ -1,0 +1,14 @@
+# Pattern #124 Allowlist: Unsealed Public Concrete Classes in NuGet-Published Assemblies
+#
+# One entry per line. Format:
+#   severity|file|line    — Line-locked suppression (moving line forces re-review)
+#   relative/path.cs      — Suppress all sites in file
+#   # comment             — Documentation
+#
+# Inline suppression also supported: // unsealed-by-design: <reason>
+#
+# This allowlist is for classes where unsealed is intentional (backwards compat,
+# documented extensibility contract, test-only exposure, etc.)
+# All other unsealed classes in NuGet-published surface MUST be sealed.
+
+# Allowlist entries go here once approved.

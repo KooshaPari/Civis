@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using DINOForge.SDK.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -12,7 +13,7 @@ namespace DINOForge.SDK
     /// Loads and validates pack manifest files (pack.yaml).
     /// Wraps YamlDotNet for deserialization (ADR-008).
     /// </summary>
-    public class PackLoader
+    public sealed class PackLoader
     {
         private readonly IDeserializer _deserializer;
 
@@ -35,7 +36,7 @@ namespace DINOForge.SDK
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Pack manifest not found: {filePath}");
 
-            string yaml = File.ReadAllText(filePath);
+            string yaml = SafeFileIO.ReadText(filePath);
             return LoadFromString(yaml);
         }
 

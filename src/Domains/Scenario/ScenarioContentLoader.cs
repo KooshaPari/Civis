@@ -5,6 +5,8 @@ using System.Linq;
 using DINOForge.Domains.Scenario.Models;
 using DINOForge.Domains.Scenario.Registries;
 using DINOForge.SDK;
+using DINOForge.SDK.IO;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -14,7 +16,7 @@ namespace DINOForge.Domains.Scenario
     /// Loads scenario definitions from pack directories into the scenario registry.
     /// Handles scenarios/ subdirectories containing YAML scenario definitions.
     /// </summary>
-    public class ScenarioContentLoader
+    public sealed class ScenarioContentLoader
     {
         private readonly ScenarioRegistry _scenarioRegistry;
         private readonly IDeserializer _deserializer;
@@ -60,10 +62,12 @@ namespace DINOForge.Domains.Scenario
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     ScenarioDefinition scenario = _deserializer.Deserialize<ScenarioDefinition>(yaml);
                     if (scenario != null)
                     {
+                        // Task #319 — IValidatable semantic check at the deserialize site.
+                        JsonGuard.ValidateOrThrow(scenario, file);
                         _scenarioRegistry.Register(scenario);
                     }
                 }

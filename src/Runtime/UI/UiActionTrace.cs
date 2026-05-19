@@ -134,7 +134,7 @@ namespace DINOForge.Runtime.UI
         {
             lock (_lock)
             {
-                var sb = new StringBuilder();
+                var sb = new StringBuilder(4096);  // Capacity ~= trace entry count × 7 fields × 100 chars
                 sb.AppendLine("{");
                 sb.AppendLine("  \"traceEntries\": [");
 

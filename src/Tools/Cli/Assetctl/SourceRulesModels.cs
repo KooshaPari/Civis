@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
@@ -37,13 +38,13 @@ public sealed class SourceRulesDocument
     /// Risk rules by <c>ip_status</c> key.
     /// </summary>
     [YamlMember(Alias = "risk_rules")]
-    public Dictionary<string, RiskRule> RiskRules { get; set; } = new Dictionary<string, RiskRule>();
+    public Dictionary<string, RiskRule> RiskRules { get; set; } = new Dictionary<string, RiskRule>(StringComparer.Ordinal);
 
     [YamlMember(Alias = "scoring")]
     public ScoringSection Scoring { get; set; } = new ScoringSection();
 
     [YamlMember(Alias = "status_penalty")]
-    public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>();
+    public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -52,10 +53,10 @@ public sealed class SourceRulesDocument
 public sealed class ScoringSection
 {
     [YamlMember(Alias = "weights")]
-    public Dictionary<string, double> Weights { get; set; } = new Dictionary<string, double>();
+    public Dictionary<string, double> Weights { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);
 
     [YamlMember(Alias = "status_penalty")]
-    public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>();
+    public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);
 }
 
 /// <summary>

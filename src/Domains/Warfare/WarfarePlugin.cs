@@ -15,7 +15,7 @@ namespace DINOForge.Domains.Warfare
     /// Entry point for the Warfare domain plugin. Provides access to all warfare subsystems:
     /// archetype registry, doctrine engine, unit role validation, wave composition, and balance calculation.
     /// </summary>
-    public class WarfarePlugin
+    public sealed class WarfarePlugin
     {
         /// <summary>
         /// Registry of faction archetypes (Order, Industrial Swarm, Asymmetric, custom).

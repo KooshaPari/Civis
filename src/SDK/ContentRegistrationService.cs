@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DINOForge.SDK.IO;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Validation;
@@ -55,7 +56,7 @@ namespace DINOForge.SDK
             string yamlContent;
             try
             {
-                yamlContent = File.ReadAllText(yamlFilePath);
+                yamlContent = SafeFileIO.ReadText(yamlFilePath);
             }
             catch (Exception ex)
             {
@@ -187,6 +188,11 @@ namespace DINOForge.SDK
             {
                 foreach (T item in items)
                 {
+                    // Task #319 — IValidatable semantic check at the deserialize site.
+                    // Surfaces blank-id / out-of-range / cross-field violations as
+                    // InvalidDataException, propagated to LoadAndRegisterContent's
+                    // catch arm which adds the error to the load result.
+                    JsonGuard.ValidateOrThrow(item);
                     register(item);
                 }
 
@@ -196,6 +202,8 @@ namespace DINOForge.SDK
             T single = _deserializer.Deserialize<T>(yamlContent);
             if (single != null)
             {
+                // Task #319 — IValidatable semantic check at the deserialize site.
+                JsonGuard.ValidateOrThrow(single);
                 register(single);
             }
         }

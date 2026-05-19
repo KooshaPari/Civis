@@ -39,7 +39,7 @@ public class InGameAutomationTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        result.LoadedPacks.Should().NotBeEmpty("packs should be loaded");
+        result.LoadedPacks.Should().HaveCount(2, "warfare-starwars + example-balance packs should be loaded");
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class InGameAutomationTests
 
         // Assert
         entities.Should().NotBeNull();
-        entities.Count.Should().BeGreaterThan(0, "should have entities");
+        entities.Count.Should().Be(100, "FakeGameBridge returns 100 entities when packs loaded");
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class InGameAutomationTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Mappings.Should().NotBeEmpty();
+        result.Mappings.Should().HaveCount(3);
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

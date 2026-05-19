@@ -26,11 +26,13 @@ namespace DINOForge.Runtime
     {
         private readonly ManualLogSource _log;
         private readonly string _outputDir;
+        private readonly TimeProvider _timeProvider;
 
-        public EntityDumper(ManualLogSource log, string outputDir)
+        public EntityDumper(ManualLogSource log, string outputDir, TimeProvider? timeProvider = null)
         {
             _log = log;
             _outputDir = outputDir;
+            _timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         /// <summary>
@@ -41,7 +43,7 @@ namespace DINOForge.Runtime
             try
             {
                 Directory.CreateDirectory(_outputDir);
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+                string timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMddTHHmmssZ");
                 string dumpDir = Path.Combine(_outputDir, $"dump_{timestamp}");
                 Directory.CreateDirectory(dumpDir);
 
@@ -117,8 +119,8 @@ namespace DINOForge.Runtime
         private JArray DumpArchetypes(EntityManager em, NativeArray<Entity> entities, string dumpDir, string worldName)
         {
             // Group entities by archetype
-            Dictionary<string, List<Entity>> archetypeGroups = new Dictionary<string, List<Entity>>();
-            Dictionary<string, ComponentType[]> archetypeComponents = new Dictionary<string, ComponentType[]>();
+            Dictionary<string, List<Entity>> archetypeGroups = new Dictionary<string, List<Entity>>(StringComparer.Ordinal);
+            Dictionary<string, ComponentType[]> archetypeComponents = new Dictionary<string, ComponentType[]>(StringComparer.Ordinal);
 
             foreach (Entity entity in entities)
             {
@@ -372,7 +374,7 @@ namespace DINOForge.Runtime
 
                 try
                 {
-                    Dictionary<string, List<string>> namespaceTypes = new Dictionary<string, List<string>>();
+                    Dictionary<string, List<string>> namespaceTypes = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
                     foreach (Type type in assembly.GetTypes())
                     {

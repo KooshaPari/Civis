@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Universe
@@ -9,7 +10,7 @@ namespace DINOForge.SDK.Universe
     /// Rules for naming units, buildings, and weapons in a themed universe.
     /// Provides prefixes, suffixes, and naming patterns per faction and entity type.
     /// </summary>
-    public class NamingGuide
+    public sealed class NamingGuide : IValidatable
     {
         /// <summary>
         /// Per-faction naming rules.
@@ -50,12 +51,38 @@ namespace DINOForge.SDK.Universe
 
             return baseName;
         }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UniverseLoader naming.yaml deserialize site.
+        /// Rejects any blank faction-rule key.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            foreach (string key in FactionRules.Keys)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    errors.Add(new ValidationError(
+                        "faction_rules",
+                        "NamingGuide 'faction_rules' must not have a blank key.",
+                        "non_empty"));
+                    break;
+                }
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// Naming rules for a specific faction.
     /// </summary>
-    public class FactionNamingRules
+    public sealed class FactionNamingRules
     {
         /// <summary>
         /// Rules for different entity types (unit, building, weapon, vehicle).
@@ -80,7 +107,7 @@ namespace DINOForge.SDK.Universe
     /// <summary>
     /// A set of naming transformation rules.
     /// </summary>
-    public class NamingRuleSet
+    public sealed class NamingRuleSet
     {
         /// <summary>
         /// Prefix to add to names (e.g. "Clone " for Republic soldiers).

@@ -174,9 +174,12 @@ namespace DINOForge.Runtime.Aviation
             {
                 string debugLog = System.IO.Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] AerialTargetingSystem: {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialTargetingSystem: {msg}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AerialTargetingSystem debug log write failed: {ex.Message}");
+            }
         }
     }
 }

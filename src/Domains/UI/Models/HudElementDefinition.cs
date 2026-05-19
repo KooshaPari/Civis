@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.UI.Models
 {
@@ -7,7 +8,7 @@ namespace DINOForge.Domains.UI.Models
     /// Defines a HUD (Heads-Up Display) element that appears in-game overlay.
     /// HUD elements can display health bars, resource counters, minimaps, unit portraits, alert banners, etc.
     /// </summary>
-    public class HudElementDefinition
+    public class HudElementDefinition : IValidatable
     {
         /// <summary>
         /// Unique identifier for this HUD element (e.g. "player-health-bar", "resource-counter").
@@ -84,6 +85,26 @@ namespace DINOForge.Domains.UI.Models
             Position = position ?? throw new ArgumentNullException(nameof(position));
             Width = width;
             Height = height;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UIContentLoader deserialize site.
+        /// Rejects blank id and out-of-range opacity.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "HudElementDefinition 'id' is required.", "non_empty"));
+
+            if (Opacity < 0f || Opacity > 1f)
+                errors.Add(new ValidationError("opacity", "HudElementDefinition 'opacity' must be in [0,1].", "range"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
         }
     }
 }

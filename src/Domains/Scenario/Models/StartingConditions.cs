@@ -6,7 +6,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// <summary>
     /// Defines the initial state of a scenario: starting resources, enabled factions, and difficulty.
     /// </summary>
-    public class StartingConditions
+    public sealed class StartingConditions
     {
         /// <summary>
         /// Initial resource amounts keyed by resource ID (e.g. "food", "wood").

@@ -5,7 +5,7 @@ namespace DINOForge.Bridge.Client;
 /// <summary>
 /// Configuration options for <see cref="GameClient"/>.
 /// </summary>
-public class GameClientOptions
+public sealed class GameClientOptions
 {
     /// <summary>Name of the named pipe to connect to.</summary>
     public string PipeName { get; set; } = "dinoforge-game-bridge";
@@ -33,4 +33,23 @@ public class GameClientOptions
     /// Default is true (recommended for production).
     /// </summary>
     public bool UseMessageFraming { get; set; } = true;
+
+    /// <summary>
+    /// When <c>true</c>, <see cref="GameClient.ConnectAsync(System.Threading.CancellationToken)"/>
+    /// performs a JSON-RPC <c>connect</c> handshake against the bridge server to obtain a
+    /// <c>session_id</c> + <c>session_key_b64</c> pair, populating
+    /// <see cref="GameClient.SessionKeys"/> for subsequent receipt verification.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Wave 2 Phase 4c sub-task A wires this up; sub-task B (#249) will flip the default
+    /// from <c>false</c> to <c>true</c> once all consumer fixtures are migrated to the
+    /// receipt-emitting mock. Until then, opt in explicitly per call site.
+    /// </para>
+    /// <para>
+    /// Setting this to <c>false</c> preserves the legacy "skip handshake" behavior — useful
+    /// for fixtures that target older server builds without a <c>connect</c> handler.
+    /// </para>
+    /// </remarks>
+    public bool PerformConnectHandshake { get; set; } = true;
 }

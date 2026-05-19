@@ -8,7 +8,7 @@ namespace DINOForge.Domains.UI
     /// between the overlay and settings panel. This is a pure state manager
     /// with no Unity dependencies, so it can be tested in isolation.
     /// </summary>
-    public class MenuManager
+    public sealed class MenuManager
     {
         private readonly Dictionary<string, bool> _panelStates =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);

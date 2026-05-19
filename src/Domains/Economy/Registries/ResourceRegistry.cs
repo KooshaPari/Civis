@@ -9,7 +9,7 @@ namespace DINOForge.Domains.Economy.Registries
     /// Registry of resource definitions. Pre-loaded with the five canonical resources
     /// (Food, Wood, Stone, Iron, Gold) and supports custom resource registration.
     /// </summary>
-    public class ResourceRegistry
+    public sealed class ResourceRegistry
     {
         private readonly Dictionary<string, ResourceDefinition> _resources =
             new Dictionary<string, ResourceDefinition>(StringComparer.OrdinalIgnoreCase);

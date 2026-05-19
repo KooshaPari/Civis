@@ -53,6 +53,7 @@ public class PackLoadingTests
             return; // No packs loaded - skip test
         }
 
-        reloadResult.LoadedPacks.Should().NotBeEmpty("at least one pack should be loaded after reload");
+        reloadResult.LoadedPacks.Should().NotBeEmpty( // open-ended-count-ok: loaded pack count is fixture-bound but assertion is non-specific
+            "at least one pack should be loaded after reload");
     }
 }

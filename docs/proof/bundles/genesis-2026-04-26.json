@@ -1,0 +1,111 @@
+{
+  "bridge_receipts": [],
+  "bridges": [
+    {
+      "kind": "BridgeReceipt",
+      "subject": {
+        "feature_id": "f9_overlay",
+        "tool": "game_query_entities",
+        "world_frame": 0
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    },
+    {
+      "kind": "BridgeReceipt",
+      "subject": {
+        "feature_id": "f10_modmenu",
+        "tool": "game_query_entities",
+        "world_frame": 0
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    },
+    {
+      "kind": "BridgeReceipt",
+      "subject": {
+        "feature_id": "pack_load",
+        "tool": "game_query_entities",
+        "world_frame": 0
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    }
+  ],
+  "bundle_id": "genesis-2026-04-26",
+  "judge_receipts": [],
+  "judges": [
+    {
+      "kind": "JudgeReceipt",
+      "subject": {
+        "feature_id": "f9_overlay",
+        "judge_endpoint": "https://api.moonshot.cn/v1",
+        "judge_model": "moonshot-v1-128k",
+        "rationale": "genesis bundle placeholder receipt",
+        "verdict": "PASS"
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    },
+    {
+      "kind": "JudgeReceipt",
+      "subject": {
+        "feature_id": "f10_modmenu",
+        "judge_endpoint": "https://api.moonshot.cn/v1",
+        "judge_model": "moonshot-v1-128k",
+        "rationale": "genesis bundle placeholder receipt",
+        "verdict": "PASS"
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    },
+    {
+      "kind": "JudgeReceipt",
+      "subject": {
+        "feature_id": "pack_load",
+        "judge_endpoint": "https://api.moonshot.cn/v1",
+        "judge_model": "moonshot-v1-128k",
+        "rationale": "genesis bundle placeholder receipt",
+        "verdict": "PASS"
+      },
+      "timestamp_utc": "2026-04-27T04:02:21Z",
+      "version": "1.0"
+    }
+  ],
+  "kind": "BundleManifest",
+  "leaves": [
+    {
+      "path": "raw_f10.mp4",
+      "sha256": "e2ccef5df2df1db6f81b01eb1476e62bedb5a0830b19cc4cc70edcca0ef038a0"
+    },
+    {
+      "path": "raw_f9.mp4",
+      "sha256": "a6fd3b795adfe89bdad869580bee055cea27ecec7f68ac0f65bd1be587a9dd4f"
+    },
+    {
+      "path": "validate_f10.png",
+      "sha256": "5fb4772bb2809e0816cde4bfe010506119029a992bbb9e3abc58185dc75d5ac6"
+    },
+    {
+      "path": "validate_f9.png",
+      "sha256": "44ea1de3834df4abd8fd55ad4d3c9d709eedf7bf6d752ba80c6b00b5bc7a4a17"
+    },
+    {
+      "path": "validate_mods.png",
+      "sha256": "c118c2f88744efbe74a71b82c0cb7ab3ad100058eb1548267515372cfc4ae843"
+    }
+  ],
+  "merkle_root": "3109632b407664334895987d365991843eb36bb5e0391b167fc83f0716c1248b",
+  "policy_id": "dinoforge-default-2026-04",
+  "policy_version": "846ade0ffd488a416bf05fe7007d99cd2ff618c491b37b0d7ce95814d4a2b611",
+  "previous_bundle_hash": null,
+  "self_hash": "ce951eadf7ab412e673bcac8f3910165f2a5cff36cc9d0b26c5faa297c7a52d4",
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "signature": {
+    "method": "ed25519-localkey",
+    "public_key_id": "ed25519:bfa3640741183e69",
+    "signed_at_utc": "2026-04-27T04:02:21Z",
+    "value": "YWBHwQ3l2BU9chTs/hN5WIuNqNnOa4iByLuFPmWa66EPM/ZBQfjWLcXJN2YCOfqmC2uFJ56b7bknHmJyeyLHCQ=="
+  },
+  "version": "1.0"
+}

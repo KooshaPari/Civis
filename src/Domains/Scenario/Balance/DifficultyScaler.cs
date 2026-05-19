@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Scenario.Balance
     /// Scales scenario parameters based on difficulty level. Easy grants more resources
     /// and weaker enemies; Hard and Nightmare reduce resources and increase enemy intensity.
     /// </summary>
-    public class DifficultyScaler
+    public sealed class DifficultyScaler
     {
         /// <summary>
         /// Get the base multiplier for a given difficulty level.

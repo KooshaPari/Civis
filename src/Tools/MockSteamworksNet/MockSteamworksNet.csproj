@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>MockSteamworksNet</AssemblyName>
+    <RootNamespace>DINOForge.Tools.MockSteamworksNet</RootNamespace>
+    <Description>BepInEx plugin that mocks Steamworks.NET API for headless CI testing</Description>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Only compile when game is installed (has BepInEx) -->
+  <PropertyGroup>
+    <GameInstalled Condition="Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="!Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(GameInstalled)' == 'false'">
+    <Compile Remove="**/*.cs" />
+  </ItemGroup>
+
+  <!-- BepInEx core references (game install only) -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExDir)\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Steamworks.NET NuGet package -->
+  <ItemGroup>
+    <PackageReference Include="Steamworks.NET" Version="13.0.0" />
+  </ItemGroup>
+
+</Project>

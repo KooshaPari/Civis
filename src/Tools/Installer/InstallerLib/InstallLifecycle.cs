@@ -4,7 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using DINOForge.SDK.Validation;
+using DINOForge.Tools.Installer.Json;
 
 namespace DINOForge.Tools.Installer
 {
@@ -266,8 +270,8 @@ namespace DINOForge.Tools.Installer
 
             InstallManifest manifest = CreateManifest(gamePath, installerVersion);
             string manifestPath = GetManifestPath(gamePath);
-            string json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(manifestPath, json);
+            string json = JsonSerializer.Serialize(manifest, InstallerJsonOptions.Default);
+            File.WriteAllText(manifestPath, json, Encoding.UTF8);
             return manifestPath;
         }
 
@@ -284,8 +288,15 @@ namespace DINOForge.Tools.Installer
 
             try
             {
-                string json = File.ReadAllText(manifestPath);
-                return JsonSerializer.Deserialize<InstallManifest>(json);
+                string json = File.ReadAllText(manifestPath, Encoding.UTF8);
+                InstallManifest? manifest = JsonSerializer.Deserialize<InstallManifest>(json, InstallerJsonOptions.Default);
+                if (manifest == null)
+                    return null;
+                // Task #294 / Pattern #95 — fast-fail tampered/empty manifests.
+                // Best-effort contract: invalid manifests return null so callers fall back
+                // to detection-only mode (#147).
+                JsonGuard.ValidateOrThrow(manifest, nameof(TryReadManifest));
+                return manifest;
             }
             catch
             {
@@ -413,12 +424,65 @@ namespace DINOForge.Tools.Installer
     /// <summary>
     /// JSON manifest stored alongside installed DINOForge plugin files.
     /// </summary>
-    public sealed class InstallManifest
+    public sealed class InstallManifest : IValidatable
     {
         public string SchemaVersion { get; set; } = "1";
         public string InstallerVersion { get; set; } = "unknown";
         public string InstalledAtUtc { get; set; } = string.Empty;
         public List<InstalledFileRecord> Files { get; set; } = new List<InstalledFileRecord>();
+
+        private static readonly Regex Sha256Regex = new Regex(
+            @"^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #294 / Pattern #95 — pin IValidatable contract on the install
+        /// manifest so JsonGuard.ValidateOrThrow can fast-fail tampered or empty
+        /// payloads at <see cref="InstallLifecycle.TryReadManifest"/>.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (Files == null || Files.Count == 0)
+            {
+                errors.Add(new ValidationError(
+                    "files",
+                    "InstallManifest 'files' must contain at least one entry.",
+                    "non_empty"));
+            }
+            else
+            {
+                for (int i = 0; i < Files.Count; i++)
+                {
+                    InstalledFileRecord rec = Files[i];
+                    if (rec == null)
+                    {
+                        errors.Add(new ValidationError(
+                            $"files[{i}]",
+                            "InstallManifest file record must not be null.",
+                            "non_null"));
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(rec.RelativePath))
+                        errors.Add(new ValidationError(
+                            $"files[{i}].relative_path",
+                            "InstallManifest file 'relative_path' is required.",
+                            "non_empty"));
+
+                    if (string.IsNullOrEmpty(rec.Sha256) || !Sha256Regex.IsMatch(rec.Sha256))
+                        errors.Add(new ValidationError(
+                            $"files[{i}].sha256",
+                            $"InstallManifest file 'sha256' must be a 64-char hex digest. Got: '{rec.Sha256}'.",
+                            "pattern"));
+                }
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
@@ -461,7 +525,7 @@ namespace DINOForge.Tools.Installer
             {
                 try
                 {
-                    string text = File.ReadAllText(versionFile).Trim();
+                    string text = File.ReadAllText(versionFile, Encoding.UTF8).Trim();
                     if (!string.IsNullOrEmpty(text))
                         return text;
                 }

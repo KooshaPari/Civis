@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Runtime.Bridge;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -171,6 +172,15 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
 
     private async Task HandleClientAsync(PipeStream pipe)
     {
+        // Phase 4c sub-task A + sub-task C (#249/#279):
+        // Each connection owns its own SessionHmac instance so the connect
+        // handshake can mint a fresh session_id + 32-byte ephemeral key, and
+        // subsequent responses can be signed with a monotonic world_frame.
+        // The session is null until the first `connect` verb arrives — which
+        // models real-server behaviour where receipts only appear post-handshake.
+        SessionHmac? session = null;
+        long worldFrame = 0;
+
         try
         {
             using (pipe)
@@ -193,9 +203,61 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
                         // Track the received message
                         _receivedMessages.Add((request.Method, request.Params));
 
-                        // Dispatch to bridge
-                        var dispatcher = new BridgeProtocolDispatcher(_bridge);
-                        var response = await dispatcher.DispatchAsync(request).ConfigureAwait(false);
+                        JsonRpcResponse response;
+                        bool isHandshake = string.Equals(request.Method, "connect", StringComparison.OrdinalIgnoreCase);
+
+                        if (isHandshake)
+                        {
+                            // Phase 4c sub-task A: mint a fresh session and reply
+                            // with the (session_id, session_key_b64) envelope that
+                            // GameClient.PerformHandshakeAsync expects. Replace any
+                            // prior session on this connection (reconnect semantics).
+                            session?.Dispose();
+                            session = new SessionHmac();
+                            worldFrame = 0;
+
+                            var envelope = new JObject
+                            {
+                                ["session_id"] = session.SessionId,
+                                ["session_key_b64"] = session.KeyMaterialB64(),
+                            };
+
+                            response = new JsonRpcResponse
+                            {
+                                Id = request.Id,
+                                Result = envelope,
+                            };
+                        }
+                        else
+                        {
+                            // Dispatch to bridge for all other verbs
+                            var dispatcher = new BridgeProtocolDispatcher(_bridge);
+                            response = await dispatcher.DispatchAsync(request).ConfigureAwait(false);
+                        }
+
+                        // Phase 4c sub-task C (#279): if a session was minted,
+                        // attach a signed BridgeReceipt to every response. The
+                        // handshake response itself uses world_frame=0 sentinel;
+                        // subsequent responses advance the frame strictly to
+                        // satisfy BridgeReceiptVerifier monotonicity.
+                        if (session != null && response.Error == null)
+                        {
+                            long frameForReceipt;
+                            if (isHandshake)
+                            {
+                                frameForReceipt = 0;
+                            }
+                            else
+                            {
+                                worldFrame++;
+                                frameForReceipt = worldFrame;
+                            }
+
+                            response.BridgeReceipt = BridgeReceiptBuilder.BuildReceipt(
+                                session,
+                                response.Result,
+                                frameForReceipt);
+                        }
 
                         // Send response
                         string responseJson = JsonConvert.SerializeObject(response, Formatting.None,
@@ -216,6 +278,10 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         catch
         {
             // Connection closed, handler completes
+        }
+        finally
+        {
+            session?.Dispose();
         }
     }
 

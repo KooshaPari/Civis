@@ -7,7 +7,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// Defines a scripted event in a scenario: a trigger and associated effects.
     /// Events fire when their trigger condition is met.
     /// </summary>
-    public class ScenarioEventDefinition
+    public sealed class ScenarioEventDefinition
     {
         /// <summary>
         /// Unique identifier for this event.
@@ -60,9 +60,9 @@ namespace DINOForge.Domains.Scenario.Models
             Id = string.Empty;
             Name = string.Empty;
             Trigger = string.Empty;
-            TriggerParameters = new Dictionary<string, object>();
+            TriggerParameters = new Dictionary<string, object>(StringComparer.Ordinal);
             Effect = string.Empty;
-            EffectParameters = new Dictionary<string, object>();
+            EffectParameters = new Dictionary<string, object>(StringComparer.Ordinal);
             HasFired = false;
         }
 
@@ -80,9 +80,9 @@ namespace DINOForge.Domains.Scenario.Models
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
-            TriggerParameters = triggerParameters ?? new Dictionary<string, object>();
+            TriggerParameters = triggerParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
             Effect = effect ?? throw new ArgumentNullException(nameof(effect));
-            EffectParameters = effectParameters ?? new Dictionary<string, object>();
+            EffectParameters = effectParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
             HasFired = false;
         }
     }

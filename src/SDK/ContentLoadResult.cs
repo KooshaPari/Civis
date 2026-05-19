@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace DINOForge.SDK
@@ -28,7 +29,7 @@ namespace DINOForge.SDK
             IsSuccess = isSuccess;
             LoadedPacks = loadedPacks;
             Errors = errors;
-            ErrorsByPack = errorsByPack ?? (IReadOnlyDictionary<string, IReadOnlyList<string>>)new Dictionary<string, IReadOnlyList<string>>();
+            ErrorsByPack = errorsByPack ?? (IReadOnlyDictionary<string, IReadOnlyList<string>>)new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         }
 
         /// <summary>Creates a successful result.</summary>

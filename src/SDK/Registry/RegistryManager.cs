@@ -6,7 +6,7 @@ namespace DINOForge.SDK.Registry
     /// Central access point for all content registries. Provides typed registries
     /// for each content domain (units, buildings, factions, etc.).
     /// </summary>
-    public class RegistryManager
+    public sealed class RegistryManager
     {
         /// <summary>Registry for unit definitions.</summary>
         public IRegistry<UnitDefinition> Units { get; }

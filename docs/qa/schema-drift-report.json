@@ -1,0 +1,18 @@
+{
+  "scan_utc": "2026-04-27T12:58:37.199512Z",
+  "scan_date": "2026-04-27",
+  "schema_missing": [],
+  "schema_orphan": [],
+  "ref_broken": [],
+  "url_unresolvable": [],
+  "doc_drift": [],
+  "strict": true,
+  "exit_code": 0,
+  "schemas_dir": "C:/Users/koosh/Dino/schemas",
+  "src_root": "C:/Users/koosh/Dino/src",
+  "packs_root": "C:/Users/koosh/Dino/packs",
+  "docs_root": "C:/Users/koosh/Dino/docs",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/schema-drift-allowlist.txt",
+  "allowlist_size": 17,
+  "schemas_seen": 31
+}

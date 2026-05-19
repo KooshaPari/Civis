@@ -1,0 +1,37 @@
+# Pattern #96 — logerror-no-stack allowlist (task #268).
+#
+# This file lists log call sites that the gate
+# (scripts/ci/detect_logerror_no_stack.py) flagged but that have been
+# audited and accepted as legitimate exceptions, OR that are
+# grandfathered debt being fixed by task #267.
+#
+# Two entry forms are accepted:
+#
+#   1. ``severity|file|line|method`` — line-locked allowlist key. Pull
+#      these directly from the ``allowlist_key`` field of
+#      ``docs/qa/logerror-no-stack-report.json``. Moving the line
+#      forces a fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every site in that file.
+#      Use sparingly, only for files where the stack-loss risk has been
+#      fully addressed by an alternative mechanism (e.g. the file uses
+#      a custom logger sink that captures the exception elsewhere).
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_logerror_no_stack.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_logerror_no_stack.py --self-test
+# CI workflow: .github/workflows/logerror-no-stack.yml
+#
+# Pairs with ongoing #267 (Plugin.cs + ModPlatform.cs 27 LogError
+# residuals sweep) and #269 (future Roslyn analyzer for compile-time
+# enforcement). Tracking task: #268.
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# (Empty initially — populate as #267 lands and any residual sites are
+# triaged. Prefer fixing the call site over allowlisting.)

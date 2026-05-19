@@ -2,6 +2,7 @@
 using System.CommandLine;
 using System.Text.Json;
 using DINOForge.Tools.Installer;
+using DINOForge.Tools.Installer.Json;
 using Spectre.Console;
 
 namespace DINOForge.Tools.Cli.Commands;
@@ -62,7 +63,7 @@ internal static class InstallCommand
                     managedFiles = inspection.ManagedFiles,
                 };
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                AnsiConsole.WriteLine(JsonSerializer.Serialize(payload, InstallerJsonOptions.Default));
                 return;
             }
 
@@ -156,7 +157,7 @@ internal static class InstallCommand
                     isHealthy = after.IsHealthy,
                 };
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                AnsiConsole.WriteLine(JsonSerializer.Serialize(payload, InstallerJsonOptions.Default));
                 return;
             }
 

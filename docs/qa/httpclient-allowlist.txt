@@ -1,0 +1,16 @@
+# HttpClient Allowlist (Pattern #115)
+#
+# Lines matching this allowlist are exempted from detection.
+# Add LOW-severity violations here when they are intentionally designed.
+#
+# Format: <filepath>:<line> # <reason>
+#
+# Criteria for allowlisting:
+# - Static readonly HttpClient with proper timeout + headers initialization
+# - Reused across multiple requests (not per-call)
+# - No socket exhaustion risk
+#
+# Example:
+# src/Tools/MyTool/Service.cs:25 # Singleton shared across app lifetime
+
+# End of allowlist

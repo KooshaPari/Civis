@@ -1,3 +1,4 @@
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -5,7 +6,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Stub model for a DINOForge projectile definition (projectiles/*.yaml).
     /// </summary>
-    public class ProjectileDefinition
+    public class ProjectileDefinition : IValidatable
     {
         /// <summary>Unique projectile identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -42,5 +43,21 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "impact_effect")]
         public string? ImpactEffect { get; set; }
+
+        /// <summary>
+        /// Validates that the projectile definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "Id is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                errors.Add(new ValidationError("display_name", "DisplayName is required.", "validation"));
+            if (Speed < 0)
+                errors.Add(new ValidationError("speed", "Speed must be non-negative.", "validation"));
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 }

@@ -1,0 +1,12 @@
+id: wave-counter
+type: resource_counter
+position: top_right
+width: 200
+height: 40
+visible_in:
+  - gameplay
+color_overrides:
+  text_color: "#FFFFFF"
+  background_color: "#1A1A1A"
+opacity: 0.95
+description: "Wave counter display showing the current wave number in the top-right corner."

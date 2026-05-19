@@ -2,9 +2,11 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.CommandLine;
 using DINOForge.Tools.Cli.Assetctl.Sketchfab;
+using DINOForge.Tools.Cli.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
@@ -17,11 +19,7 @@ namespace DINOForge.Tools.Cli.Assetctl;
 internal static class AssetctlCommand
 {
     private static readonly string[] AllowedPipelineBundles = ["unit", "vehicle", "prop"];
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = CliJsonOptions.AssetManifest;
 
     public static Command Create(IServiceProvider serviceProvider)
     {
@@ -1330,7 +1328,7 @@ internal static class AssetctlCommand
 
         try
         {
-            string existingManifest = File.ReadAllText(result.ManifestPath);
+            string existingManifest = File.ReadAllText(result.ManifestPath, Encoding.UTF8);
             AssetManifest? manifest = JsonSerializer.Deserialize<AssetManifest>(existingManifest, JsonOptions);
             if (manifest is null)
             {

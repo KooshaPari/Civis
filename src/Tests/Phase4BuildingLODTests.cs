@@ -42,7 +42,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase4_Configuration_ContainsV1_0_0_Buildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain("v1_0_0_buildings");
             yaml.Should().Contain("Phase 4: Building structures LOD optimization");
         }
@@ -71,7 +71,7 @@ namespace DINOForge.Tests
         [InlineData("rep_shield_generator")]
         public void Phase4_RepublicBuilding_ConfiguredCorrectly(string modelId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"- id: {modelId}")
                 .And.Contain($"faction: republic")
                 .And.Contain("type: building");
@@ -85,7 +85,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_CISBuilding_ConfiguredCorrectly(string modelId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"- id: {modelId}")
                 .And.Contain("faction: cis")
                 .And.Contain("type: building");
@@ -106,7 +106,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_Building_HasLODConfiguration(string buildingId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             startIdx.Should().BeGreaterThan(-1, $"Building {buildingId} not found in configuration");
 
@@ -137,7 +137,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield", "sw-ray-shield")]
         public void Phase4_Building_HasAddressableKey(string buildingId, string expectedKey)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -161,7 +161,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_Building_HasPrefabOutputPath(string buildingId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -186,7 +186,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield", "cis_buildings.yaml")]
         public void Phase4_Building_HasDefinitionUpdate(string buildingId, string expectedFile)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             startIdx.Should().BeGreaterThan(-1, $"Building {buildingId} should be in asset pipeline");
 
@@ -211,7 +211,7 @@ namespace DINOForge.Tests
         [InlineData("rep_shield_generator")]
         public void Phase4_RepublicBuilding_DefinedInYAML(string buildingId)
         {
-            var yaml = File.ReadAllText(RepublicBuildingsYamlPath);
+            var yaml = File.ReadAllText(RepublicBuildingsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"id: {buildingId}");
         }
 
@@ -223,7 +223,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_CISBuilding_DefinedInYAML(string buildingId)
         {
-            var yaml = File.ReadAllText(CISBuildingsYamlPath);
+            var yaml = File.ReadAllText(CISBuildingsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"id: {buildingId}");
         }
 
@@ -235,7 +235,7 @@ namespace DINOForge.Tests
         [InlineData("rep_shield_generator", "defense")]
         public void Phase4_RepublicBuilding_HasCorrectType(string buildingId, string expectedType)
         {
-            var yaml = File.ReadAllText(RepublicBuildingsYamlPath);
+            var yaml = File.ReadAllText(RepublicBuildingsYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             startIdx.Should().BeGreaterThan(-1);
 
@@ -254,7 +254,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield", "defense")]
         public void Phase4_CISBuilding_HasCorrectType(string buildingId, string expectedType)
         {
-            var yaml = File.ReadAllText(CISBuildingsYamlPath);
+            var yaml = File.ReadAllText(CISBuildingsYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             startIdx.Should().BeGreaterThan(-1);
 
@@ -270,7 +270,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase4_Configuration_Has10Buildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var section = yaml.Substring(yaml.IndexOf("v1_0_0_buildings:"),
                 yaml.IndexOf("v1_1_0_buildings_expansion:") - yaml.IndexOf("v1_0_0_buildings:"));
 
@@ -281,7 +281,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase4_Configuration_Has5RepublicBuildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var section = yaml.Substring(yaml.IndexOf("v1_0_0_buildings:"),
                 yaml.IndexOf("v1_1_0_buildings_expansion:") - yaml.IndexOf("v1_0_0_buildings:"));
 
@@ -292,7 +292,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase4_Configuration_Has5CISBuildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var section = yaml.Substring(yaml.IndexOf("v1_0_0_buildings:"),
                 yaml.IndexOf("v1_1_0_buildings_expansion:") - yaml.IndexOf("v1_0_0_buildings:"));
 
@@ -315,7 +315,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield", 32000)]
         public void Phase4_Building_HasReasonablePolycount(string buildingId, int expectedPolycount)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -334,7 +334,7 @@ namespace DINOForge.Tests
         [InlineData("rep_shield_generator")]
         public void Phase4_RepublicBuilding_HasRepublicMaterial(string buildingId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -351,7 +351,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_CISBuilding_HasCISMaterial(string buildingId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -365,7 +365,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase4_Buildings_UseConsistentScreenSizes()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var section = yaml.Substring(yaml.IndexOf("v1_0_0_buildings:"),
                 yaml.IndexOf("v1_1_0_buildings_expansion:") - yaml.IndexOf("v1_0_0_buildings:"));
 
@@ -395,7 +395,7 @@ namespace DINOForge.Tests
         [InlineData("cis_ray_shield")]
         public void Phase4_Building_HasMetadataNote(string buildingId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var startIdx = yaml.IndexOf($"- id: {buildingId}");
             var endIdx = yaml.IndexOf("- id: ", startIdx + 1);
             if (endIdx == -1) endIdx = yaml.Length;
@@ -406,3 +406,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

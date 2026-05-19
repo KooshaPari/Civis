@@ -1,0 +1,25 @@
+
+
+Test run for C:\Users\koosh\Dino\src\Tests\Integration\bin\Release\net8.0\DINOForge.Tests.Integration.dll (.NETCoreApp,Version=v8.0)
+C:\Users\koosh\.nuget\packages\system.text.encodings.web\10.0.8\buildTransitive\netcoreapp2.0\System.Text.Encodings.Web.targets(4,5): warning : System.Text.Encodings.Web 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+C:\Users\koosh\.nuget\packages\system.io.pipelines\10.0.8\buildTransitive\netcoreapp2.0\System.IO.Pipelines.targets(4,5): warning : System.IO.Pipelines 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+C:\Users\koosh\.nuget\packages\system.text.json\10.0.8\buildTransitive\netcoreapp2.0\System.Text.Json.targets(4,5): warning : System.Text.Json 10.0.8 doesn't support net6.0 and has not been tested with it. Consider upgrading your TargetFramework to net8.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk. [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+Test run for C:\Users\koosh\Dino\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:01.02]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.BoxStructureTest_AllRequiredFilesPresent [SKIP]
+[xUnit.net 00:00:01.02]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ParallelLaunchTest_AllInstancesConnectWithin30Seconds [SKIP]
+[xUnit.net 00:00:01.02]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.SymlinkValidationTest_NoAssetDuplication [SKIP]
+[xUnit.net 00:00:01.03]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ConcurrentOperationsTest_MultipleContainersWorkIndependently [SKIP]
+[xUnit.net 00:00:01.03]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.PipeNameIsolationTest_UniqueNamesPerInstance [SKIP]
+[xUnit.net 00:00:01.03]     DINOForge.Tests.Integration.ParallelGameTestsWithHarness.WorldReadinessPollTest_DetectsEntityCountWithoutSleep [SKIP]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.BoxStructureTest_AllRequiredFilesPresent [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ParallelLaunchTest_AllInstancesConnectWithin30Seconds [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.SymlinkValidationTest_NoAssetDuplication [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.ConcurrentOperationsTest_MultipleContainersWorkIndependently [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.PipeNameIsolationTest_UniqueNamesPerInstance [1 ms]
+  Skipped DINOForge.Tests.Integration.ParallelGameTestsWithHarness.WorldReadinessPollTest_DetectsEntityCountWithoutSleep [1 ms]
+[xUnit.net 00:00:03.29]     DINOForge.Tests.Bridge.GameClientFramingTests.ConnectAsync_WithoutTimeout_UsesOptionsDefault [SKIP]
+  Skipped DINOForge.Tests.Bridge.GameClientFramingTests.ConnectAsync_WithoutTimeout_UsesOptionsDefault [1 ms]
+[xUnit.net 00:00:05.37]     DINOForge.Tests.MockGameBridgeServerTests.MockGameBridgeServer_StrictMode_AcceptsValidReceipt [SKIP]
+  Skipped DINOForge.Tests.MockGameBridgeServerTests.MockGameBridgeServer_StrictMode_AcceptsValidReceipt [1 ms]

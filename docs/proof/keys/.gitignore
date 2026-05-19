@@ -1,0 +1,4 @@
+# Block any real private key from being committed.
+# Pub keys (*.pub) and example placeholders (*.key.example) are allowed.
+*.key
+!*.key.example

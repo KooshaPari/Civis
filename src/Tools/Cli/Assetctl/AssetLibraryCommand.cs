@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using DINOForge.Tools.Cli.Json;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -19,11 +20,7 @@ public static class AssetLibraryCommand
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "DINOForge", "asset_catalog.db");
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = CliJsonOptions.AssetManifest;
 
     /// <summary>
     /// Creates the asset-library command group.
@@ -350,8 +347,7 @@ public static class AssetLibraryCommand
                     try
                     {
                         using var doc = JsonDocument.Parse(asset.MetadataJson);
-                        var options = new JsonSerializerOptions { WriteIndented = true };
-                        AnsiConsole.Write(new Panel(JsonSerializer.Serialize(doc.RootElement, options))
+                        AnsiConsole.Write(new Panel(JsonSerializer.Serialize(doc.RootElement, JsonOptions))
                             .BorderColor(Color.Grey));
                     }
                     catch

@@ -58,6 +58,7 @@ namespace DINOForge.SDK.Models
         /// <summary>
         /// List of faction replacements defined in this total conversion.
         /// </summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<TcFactionEntry> Factions { get; set; } = new();
 
         /// <summary>
@@ -70,6 +71,7 @@ namespace DINOForge.SDK.Models
         /// List of pack IDs that conflict with this total conversion.
         /// </summary>
         [YamlMember(Alias = "conflicts_with")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> ConflictsWith { get; set; } = new();
 
         /// <summary>If true, only one total conversion can be active at a time.</summary>
@@ -105,11 +107,13 @@ namespace DINOForge.SDK.Models
         /// <summary>
         /// List of unit IDs that belong to this faction.
         /// </summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> Units { get; set; } = new();
 
         /// <summary>
         /// List of building IDs that this faction can construct.
         /// </summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> Buildings { get; set; } = new();
     }
 

@@ -324,7 +324,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("test-starwars", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -359,7 +359,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("no-replaces", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -393,7 +393,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("faction-no-replaces", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -429,7 +429,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("partial-tc", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -464,7 +464,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("faction-no-id", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -499,7 +499,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("not-tc", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -815,7 +815,7 @@ asset_replacements:
             string manifestPath = CreateTestTcManifest("complete-tc", tcYaml);
 
             // Act
-            string yaml = File.ReadAllText(manifestPath);
+            string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
             var manifest = YamlLoader.Deserializer.Deserialize<TotalConversionManifest>(yaml);
             var result = TotalConversionValidator.Validate(manifest!);
 
@@ -827,3 +827,4 @@ asset_replacements:
         #endregion
     }
 }
+

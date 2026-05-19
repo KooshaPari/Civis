@@ -1,0 +1,125 @@
+[
+  {
+    "name": "Health",
+    "fullName": "Components.Health",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": true,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "value", "type": "int" }
+    ]
+  },
+  {
+    "name": "ArmorData",
+    "fullName": "Components.ArmorData",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": true,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "armor", "type": "float" },
+      { "name": "resistance", "type": "float" }
+    ]
+  },
+  {
+    "name": "AttackCooldown",
+    "fullName": "Components.AttackCooldown",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": true,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "cooldown", "type": "float" }
+    ]
+  },
+  {
+    "name": "BuildingBase",
+    "fullName": "Components.BuildingBase",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": true,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "buildingId", "type": "int" }
+    ]
+  },
+  {
+    "name": "ProjectileDataBase",
+    "fullName": "Components.ProjectileDataBase",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": true,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "damage", "type": "float" }
+    ]
+  },
+  {
+    "name": "UnitDamageBuffer",
+    "fullName": "Components.UnitDamageBuffer",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": false,
+    "isSharedComponent": false,
+    "isBuffer": true,
+    "isSystem": false,
+    "fields": []
+  },
+  {
+    "name": "FactionShared",
+    "fullName": "Components.FactionShared",
+    "namespace": "Components",
+    "assembly": "DNO.Main",
+    "isComponent": false,
+    "isSharedComponent": true,
+    "isBuffer": false,
+    "isSystem": false,
+    "fields": [
+      { "name": "factionId", "type": "int" }
+    ]
+  },
+  {
+    "name": "SimulationSystem",
+    "fullName": "Systems.SimulationSystem",
+    "namespace": "Systems",
+    "assembly": "DNO.Main",
+    "isComponent": false,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": true,
+    "fields": []
+  },
+  {
+    "name": "RenderSystem",
+    "fullName": "Systems.RenderSystem",
+    "namespace": "Systems",
+    "assembly": "DNO.Main",
+    "isComponent": false,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": true,
+    "fields": []
+  },
+  {
+    "name": "PathFindingSystem",
+    "fullName": "Systems.PathFindingSystem",
+    "namespace": "Systems",
+    "assembly": "DNO.Main",
+    "isComponent": false,
+    "isSharedComponent": false,
+    "isBuffer": false,
+    "isSystem": true,
+    "fields": []
+  }
+]

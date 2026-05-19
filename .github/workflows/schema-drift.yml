@@ -1,0 +1,66 @@
+name: schema-drift
+
+# Pattern #90 detection gate — fails CI when schemas/ silently de-syncs from
+# its callers: missing schema files referenced by C# code, broken `$ref`
+# anchors, unresolvable `$schema` directives in pack files, or markdown
+# references to deleted schemas. Orphan schemas (in repo, no callers) are
+# soft-warning by default; pass --strict to promote to hard.
+#
+# Companion: scripts/ci/schema_drift_check.py (run with --self-test for spec).
+# Cross-reference: tasks #90/#243/#244/#245.
+
+on:
+  pull_request:
+    paths:
+      - "schemas/**"
+      - "src/**/*.cs"
+      - "packs/**"
+      - "docs/**/*.md"
+      - "scripts/ci/schema_drift_check.py"
+      - "docs/qa/schema-drift-allowlist.txt"
+      - ".github/workflows/schema-drift.yml"
+  push:
+    branches: [main]
+    paths:
+      - "schemas/**"
+      - "src/**/*.cs"
+      - "packs/**"
+      - "docs/**/*.md"
+      - "scripts/ci/schema_drift_check.py"
+      - "docs/qa/schema-drift-allowlist.txt"
+      - ".github/workflows/schema-drift.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema-drift-check:
+    name: Pattern #90 schema-drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install jsonschema (optional, for future $ref deep-walk)
+        run: pip install --quiet jsonschema
+
+      - name: Self-test the gate
+        run: python scripts/ci/schema_drift_check.py --self-test
+
+      - name: Run schema-drift gate
+        run: python scripts/ci/schema_drift_check.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: schema-drift-report
+          path: docs/qa/schema-drift-report.json
+          if-no-files-found: warn
+          retention-days: 14

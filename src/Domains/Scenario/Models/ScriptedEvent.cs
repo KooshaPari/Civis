@@ -26,7 +26,7 @@ namespace DINOForge.Domains.Scenario.Models
     /// A scripted event that fires during a scenario when its trigger condition is met.
     /// Events execute a list of actions that modify game state.
     /// </summary>
-    public class ScriptedEvent
+    public sealed class ScriptedEvent
     {
         /// <summary>
         /// Unique identifier for this scripted event.

@@ -218,7 +218,7 @@ namespace DINOForge.Tests
                 var fileInfo = new FileInfo(filePath);
                 if (fileInfo.Length < 1024 * 1024) // < 1 MB
                 {
-                    var allLines = File.ReadAllLines(filePath);
+                    var allLines = File.ReadAllLines(filePath, Encoding.UTF8);
                     return allLines.TakeLast(lineCount).ToList();
                 }
 

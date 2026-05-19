@@ -10,7 +10,7 @@ namespace DINOForge.SDK.Dependencies
     /// Resolves pack dependency graphs, detects conflicts, computes topological load order,
     /// and checks framework version compatibility.
     /// </summary>
-    public class PackDependencyResolver
+    public sealed class PackDependencyResolver
     {
         /// <summary>
         /// Resolves dependencies for a target pack against a set of available packs.
@@ -143,7 +143,14 @@ namespace DINOForge.SDK.Dependencies
                 return true;
 
             string required = pack.FrameworkVersion.TrimStart('>', '<', '=', '~', '^', ' ');
-            return string.Equals(required, frameworkVersion, StringComparison.OrdinalIgnoreCase);
+            string runningNormalized = frameworkVersion.TrimStart('>', '<', '=', '~', '^', ' ');
+
+            if (string.IsNullOrWhiteSpace(required) || string.IsNullOrWhiteSpace(runningNormalized))
+            {
+                // Bare operator (e.g. "~") with no version: treat as universal match (compatible with anything)
+                return true;
+            }
+            return string.Equals(required, runningNormalized, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

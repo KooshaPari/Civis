@@ -1,0 +1,56 @@
+name: tautological-test
+
+# Pattern #91 detection gate — fails CI when any [Fact]/[Theory] body
+# matches the tautological signatures (true.Should().BeTrue, Assert.True(true),
+# Assert.Equal(N,N), or no real assertion at all) and the FQN is NOT in the
+# allowlist at docs/qa/known-tautological-tests.txt.
+#
+# Companion: scripts/ci/tautological_test_check.py (run with --self-test for
+# spec). Cross-reference: tasks #91/#246/#247/#248.
+
+on:
+  pull_request:
+    paths:
+      - "src/Tests/**"
+      - "scripts/ci/tautological_test_check.py"
+      - "docs/qa/known-tautological-tests.txt"
+      - ".github/workflows/tautological-test.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/Tests/**"
+      - "scripts/ci/tautological_test_check.py"
+      - "docs/qa/known-tautological-tests.txt"
+      - ".github/workflows/tautological-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tautological-test-check:
+    name: Pattern #91 detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/tautological_test_check.py --self-test
+
+      - name: Run tautological-test gate
+        run: python scripts/ci/tautological_test_check.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: tautological-test-report
+          path: docs/qa/tautological-test-report.json
+          if-no-files-found: warn
+          retention-days: 14

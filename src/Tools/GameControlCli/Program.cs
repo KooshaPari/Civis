@@ -1,5 +1,6 @@
 #nullable enable
 using System.CommandLine;
+using System.Text;
 using System.Text.Json;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
@@ -210,7 +211,7 @@ public static class Program
             {
                 try
                 {
-                    string fallback = File.ReadAllText(fallbackPath).Trim();
+                    string fallback = File.ReadAllText(fallbackPath, Encoding.UTF8).Trim();
                     if (JsonOutput)
                     {
                         Console.WriteLine(JsonSerializer.Serialize(new { success = true, raw = fallback }));
@@ -223,7 +224,7 @@ public static class Program
                     File.Delete(fallbackPath);
                     return 0;
                 }
-                catch { }
+                catch { } // safe-swallow: fallback cache read best-effort
             }
 
             if (JsonOutput)

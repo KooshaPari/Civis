@@ -5,6 +5,8 @@ using System.Linq;
 using DINOForge.Domains.UI.Models;
 using DINOForge.Domains.UI.Registries;
 using DINOForge.SDK;
+using DINOForge.SDK.IO;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -14,7 +16,7 @@ namespace DINOForge.Domains.UI
     /// Loads UI definitions from pack directories into UI registries.
     /// Handles hud_elements/, menus/, and themes/ subdirectories.
     /// </summary>
-    public class UIContentLoader
+    public sealed class UIContentLoader
     {
         private readonly HudElementRegistry _hudElementRegistry;
         private readonly MenuRegistry _menuRegistry;
@@ -63,18 +65,21 @@ namespace DINOForge.Domains.UI
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     HudElementWrapper wrapper = _deserializer.Deserialize<HudElementWrapper>(yaml);
-                    if (wrapper?.Elements != null)
+                    if (wrapper?.HudElements != null && wrapper.HudElements.Count > 0)
                     {
-                        foreach (HudElementDefinition element in wrapper.Elements)
+                        foreach (HudElementDefinition element in wrapper.HudElements)
                         {
+                            // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(element, file);
                             _hudElementRegistry.Register(element);
                         }
                     }
-                    else if (wrapper?.Element != null)
+                    else if (wrapper?.HudElement != null)
                     {
-                        _hudElementRegistry.Register(wrapper.Element);
+                        JsonGuard.ValidateOrThrow(wrapper.HudElement, file);
+                        _hudElementRegistry.Register(wrapper.HudElement);
                     }
                 }
                 catch (Exception ex)
@@ -95,17 +100,20 @@ namespace DINOForge.Domains.UI
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     MenuWrapper wrapper = _deserializer.Deserialize<MenuWrapper>(yaml);
-                    if (wrapper?.Menus != null)
+                    if (wrapper?.Menus != null && wrapper.Menus.Count > 0)
                     {
                         foreach (MenuDefinition menu in wrapper.Menus)
                         {
+                            // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(menu, file);
                             _menuRegistry.Register(menu);
                         }
                     }
                     else if (wrapper?.Menu != null)
                     {
+                        JsonGuard.ValidateOrThrow(wrapper.Menu, file);
                         _menuRegistry.Register(wrapper.Menu);
                     }
                 }
@@ -127,17 +135,20 @@ namespace DINOForge.Domains.UI
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     ThemeWrapper wrapper = _deserializer.Deserialize<ThemeWrapper>(yaml);
-                    if (wrapper?.Themes != null)
+                    if (wrapper?.Themes != null && wrapper.Themes.Count > 0)
                     {
                         foreach (ThemeDefinition theme in wrapper.Themes)
                         {
+                            // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(theme, file);
                             _themeRegistry.Register(theme);
                         }
                     }
                     else if (wrapper?.Theme != null)
                     {
+                        JsonGuard.ValidateOrThrow(wrapper.Theme, file);
                         _themeRegistry.Register(wrapper.Theme);
                     }
                 }
@@ -151,11 +162,13 @@ namespace DINOForge.Domains.UI
 
         /// <summary>
         /// YAML wrapper for HUD elements array or single element.
+        /// Property names are mapped via UnderscoredNamingConvention so
+        /// <c>HudElements</c> → <c>hud_elements</c> (matches pack manifest top-level key).
         /// </summary>
         private class HudElementWrapper
         {
-            public List<HudElementDefinition> Elements { get; set; } = new List<HudElementDefinition>();
-            public HudElementDefinition? Element { get; set; }
+            public List<HudElementDefinition> HudElements { get; set; } = new List<HudElementDefinition>();
+            public HudElementDefinition? HudElement { get; set; }
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using DINOForge.SDK;
 using YamlDotNet.Serialization;
@@ -57,7 +58,7 @@ namespace DINOForge.DesktopCompanion.Data
 
                 try
                 {
-                    string yaml = File.ReadAllText(manifestPath);
+                    string yaml = File.ReadAllText(manifestPath, Encoding.UTF8);
                     PackManifest manifest = YamlDeserializer.Deserialize<PackManifest>(yaml);
 
                     packs.Add(new PackViewModel

@@ -1,5 +1,6 @@
 #nullable enable
 using System.CommandLine;
+using System.Text;
 using DINOForge.Tools.Cli.Assetctl;
 using DINOForge.Tools.Cli.Assetctl.Sketchfab;
 using DINOForge.Tools.Cli.Commands;
@@ -62,7 +63,7 @@ services.AddScoped<ISketchfabAdapter, SketchfabAdapter>();
 // Register asset downloader
 services.AddScoped<AssetDownloader>();
 
-IServiceProvider serviceProvider = services.BuildServiceProvider();
+IServiceProvider serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
 // Log DI registration on startup
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
@@ -117,7 +118,7 @@ static void LoadEnvFile()
         envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
         if (!File.Exists(envFile)) return;
     }
-    foreach (var line in File.ReadAllLines(envFile))
+    foreach (var line in File.ReadAllLines(envFile, Encoding.UTF8))
     {
         var trimmed = line.Trim();
         if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;

@@ -22,12 +22,14 @@ namespace DINOForge.Bridge.Client;
 /// <remarks>
 /// Thread-safe. All public methods use internal locking to ensure that
 /// only one request is in flight at a time on the underlying pipe stream.
+/// Implements <see cref="IDisposable"/> for proper resource cleanup.
 /// </remarks>
-public sealed class GameClient : IGameClient
+public sealed class GameClient : IGameClient, IDisposable
 {
     private readonly GameClientOptions _options;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly object _stateLock = new();
+    private readonly object _disposeLock = new();
     private readonly ILogger _logger;
 
     private NamedPipeClientStream? _pipe;
@@ -35,6 +37,48 @@ public sealed class GameClient : IGameClient
     private StreamWriter? _writer;
     private ConnectionState _state = ConnectionState.Disconnected;
     private bool _disposed;
+
+    // -- Wave 2 Phase 4b/4c: per-session HMAC state -------------------------------
+    // These are exposed via internal-visibility so the Tests assembly (granted by
+    // [InternalsVisibleTo("DINOForge.Tests")] in the csproj) can pin handshake
+    // behavior without expanding the public NuGet API surface.
+    private string? _sessionId;
+    private long _lastFrame;
+    internal SessionKeyCache SessionKeys { get; } = new SessionKeyCache();
+
+    /// <summary>
+    /// The session_id captured from the server's <c>connect</c> handshake reply,
+    /// or <c>null</c> if no handshake has been performed (or the server didn't
+    /// emit one). Used by <see cref="BridgeReceiptVerifier"/> to look up the
+    /// per-session HMAC key from <see cref="SessionKeys"/>.
+    /// </summary>
+    internal string? SessionId
+    {
+        get { lock (_stateLock) return _sessionId; }
+        private set { lock (_stateLock) _sessionId = value; }
+    }
+
+    /// <summary>
+    /// The last successfully-verified <c>world_frame</c> from a server receipt.
+    /// Reset to <c>0</c> on connect; advances strictly on every non-handshake
+    /// response under Strict / WarnOnly verification.
+    /// </summary>
+    internal long LastFrame
+    {
+        get { lock (_stateLock) return _lastFrame; }
+        private set { lock (_stateLock) _lastFrame = value; }
+    }
+
+    /// <summary>
+    /// Receipt verification mode. Wave 2 Phase 4b shipped <see cref="VerificationMode.WarnOnly"/>
+    /// as the default to keep legacy fixtures green; Phase 4c sub-task B (#249)
+    /// flipped the default to <see cref="VerificationMode.Strict"/>.
+    /// </summary>
+    /// <remarks>
+    /// Public set to allow object-initializer syntax in tests
+    /// (<c>new GameClient(...) { HmacVerificationMode = VerificationMode.Off }</c>).
+    /// </remarks>
+    public VerificationMode HmacVerificationMode { get; set; } = VerificationMode.Strict;
 
     /// <summary>
     /// Initializes a new instance of <see cref="GameClient"/> with default options.
@@ -137,6 +181,14 @@ public sealed class GameClient : IGameClient
 
             State = ConnectionState.Connected;
             _logger.Information("Successfully connected to pipe '{PipeName}'", _options.PipeName);
+
+            // Wave 2 Phase 4b/4c: optionally exchange a session key with the server.
+            // Reset frame counter — every connection is a fresh session.
+            LastFrame = 0;
+            if (_options.PerformConnectHandshake)
+            {
+                await PerformHandshakeAsync(ct).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -150,10 +202,89 @@ public sealed class GameClient : IGameClient
     }
 
     /// <summary>
+    /// Performs the JSON-RPC <c>connect</c> handshake to obtain a per-session
+    /// HMAC key and session id from the bridge server. Populates
+    /// <see cref="SessionId"/> and <see cref="SessionKeys"/> on success.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Wave 2 Phase 4c sub-task A wires this up; the companion mock-server
+    /// support for the <c>connect</c> verb (sub-task A on the server side) and
+    /// the default-flip (sub-task B) land separately under #249.
+    /// </para>
+    /// <para>
+    /// Tolerant by design — if the server doesn't reply with the expected
+    /// <c>session_id</c>/<c>session_key_b64</c> envelope (e.g. older bridge
+    /// build that lacks a <c>connect</c> handler), this method logs a warning
+    /// and returns. Callers that demand strict session capture should also set
+    /// <see cref="HmacVerificationMode"/> to <see cref="VerificationMode.Strict"/>,
+    /// which fails fast on the first un-verified response.
+    /// </para>
+    /// </remarks>
+    internal async Task PerformHandshakeAsync(CancellationToken ct = default)
+    {
+        if (!IsConnected)
+        {
+            _logger.Warning("PerformHandshakeAsync called while not connected; skipping");
+            return;
+        }
+
+        try
+        {
+            // The connect handshake currently has no parameters — the server
+            // mints the session id + ephemeral key and returns them.
+            JObject result = await SendRequestAsync<JObject>("connect", parameters: null, ct: ct)
+                .ConfigureAwait(false);
+
+            string? sessionId = result.Value<string>("session_id");
+            string? sessionKeyB64 = result.Value<string>("session_key_b64");
+
+            if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(sessionKeyB64))
+            {
+                _logger.Warning(
+                    "Connect handshake reply missing session envelope (session_id or session_key_b64); falling back to no-session mode");
+                return;
+            }
+
+            byte[] keyBytes;
+            try
+            {
+                keyBytes = Convert.FromBase64String(sessionKeyB64!);
+            }
+            catch (FormatException ex)
+            {
+                _logger.Warning(ex, "Connect handshake session_key_b64 is not valid base64; ignoring");
+                return;
+            }
+
+            if (keyBytes.Length != 32)
+            {
+                _logger.Warning(
+                    "Connect handshake session key has invalid length {Length} (expected 32); ignoring",
+                    keyBytes.Length);
+                return;
+            }
+
+            SessionKeys.Set(sessionId!, keyBytes);
+            SessionId = sessionId;
+            _logger.Information("Captured session_id {SessionId} from connect handshake", sessionId);
+        }
+        catch (Exception ex)
+        {
+            // Phase 4c sub-task A is groundwork — until sub-task B flips the
+            // default, a missing connect handler must not fail ConnectAsync for
+            // legacy fixtures. We log and let the caller proceed; Strict-mode
+            // verification will catch the missing session on the next call.
+            _logger.Warning(ex, "Connect handshake failed; continuing without session key");
+        }
+    }
+
+    /// <summary>
     /// Disconnects from the game bridge server.
     /// </summary>
     public void Disconnect()
     {
+        ThrowIfDisposed();
         _logger.Information("Disconnecting from pipe '{PipeName}'", _options.PipeName);
         CleanupPipe();
         State = ConnectionState.Disconnected;
@@ -398,6 +529,7 @@ public sealed class GameClient : IGameClient
                 }
                 else
                 {
+                    // null-forgiveness-ok: _writer set in ConnectAsync before any write
                     await _writer!.WriteLineAsync(requestJson).ConfigureAwait(false);
                 }
             }
@@ -423,16 +555,20 @@ public sealed class GameClient : IGameClient
                 }
                 else
                 {
-                    responseLine = await ReadLineAsync(_reader!, readLinkedCts.Token).ConfigureAwait(false);
+                    // Explicit null check: _reader must be initialized before ReadLineAsync
+                    if (_reader is null)
+                        throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.");
+
+                    responseLine = await ReadLineAsync(_reader, readLinkedCts.Token).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException ex) when (readTimeoutCts.Token.IsCancellationRequested)
             {
-                _logger.Error(ex, "Read timeout for request '{Method}' after {TimeoutMs}ms",
+                _logger.Error(ex, "Read timed out for request '{Method}' after {TimeoutMs}ms",
                     method, effectiveReadTimeout.TotalMilliseconds);
                 State = ConnectionState.Error;
                 throw new GameClientException(
-                    $"Read timeout for request '{method}' after {effectiveReadTimeout.TotalMilliseconds}ms", ex);
+                    $"Read timed out for request '{method}' after {effectiveReadTimeout.TotalMilliseconds}ms", ex);
             }
 
             if (responseLine is null)
@@ -469,6 +605,28 @@ public sealed class GameClient : IGameClient
                 throw new GameClientException($"Failed to deserialize result for '{method}'.");
             }
 
+            // Wave 2 Phase 4c: verify receipt if HMAC verification is enabled
+            // and a receipt was actually provided by the server (skip if receipt is null).
+            bool isHandshake = string.Equals(method, "connect", StringComparison.OrdinalIgnoreCase);
+            if (HmacVerificationMode != VerificationMode.Off && response.BridgeReceipt != null)
+            {
+                long frameRef = LastFrame;
+                var verifyResult = BridgeReceiptVerifier.Verify(response, SessionKeys, HmacVerificationMode, ref frameRef, isHandshake);
+
+                // BridgeReceiptVerifier updates frameRef on success; propagate it via our property
+                LastFrame = frameRef;
+
+                if (!verifyResult.Valid && HmacVerificationMode == VerificationMode.Strict)
+                {
+                    _logger.Error("Receipt verification failed for request '{Method}': {Reason}", method, verifyResult.Reason);
+                    throw new GameClientException($"Receipt verification failed for '{method}': {verifyResult.Reason}");
+                }
+                if (!verifyResult.Valid)
+                {
+                    _logger.Warning("Receipt verification warning for request '{Method}': {Reason}", method, verifyResult.Reason);
+                }
+            }
+
             sw.Stop();
             _logger.Information("Request '{Method}' completed successfully in {ElapsedMs}ms", method, sw.ElapsedMilliseconds);
             return result;
@@ -493,7 +651,21 @@ public sealed class GameClient : IGameClient
             await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
         }
 
-        return readTask.Result;
+        // Safe: readTask.IsCompleted is true by loop exit invariant
+        // sync-over-async-unavoidable: .Result may throw directly or wrapped in AggregateException
+        try
+        {
+            return readTask.Result;
+        }
+        catch (NullReferenceException nre)
+        {
+            throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.", nre);
+        }
+        catch (AggregateException agg) when (agg.InnerExceptions.Count == 1 && agg.InnerExceptions[0] is NullReferenceException nreInner)
+        {
+            // Some completion paths wrap exceptions; handle both
+            throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.", nreInner);
+        }
     }
 
     /// <summary>
@@ -606,10 +778,14 @@ public sealed class GameClient : IGameClient
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        CleanupPipe();
-        _sendLock.Dispose();
-        State = ConnectionState.Disconnected;
+        lock (_disposeLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            CleanupPipe();
+            _sendLock.Dispose();
+            SessionKeys.Dispose();
+            State = ConnectionState.Disconnected;
+        }
     }
 }

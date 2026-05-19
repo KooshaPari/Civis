@@ -352,9 +352,9 @@ namespace DINOForge.Runtime.Bridge
             try
             {
                 string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.Now}] [{nameof(KeyInputSystem)}] {msg}\n");
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] [{nameof(KeyInputSystem)}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

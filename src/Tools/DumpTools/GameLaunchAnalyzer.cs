@@ -95,7 +95,7 @@ namespace DINOForge.Tools.DumpTools
             }
 
             // Find error patterns
-            var errorPatterns = new Dictionary<string, string>
+            var errorPatterns = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 { "ERROR", "Error logged" },
                 { "FATAL", "Fatal error" },
@@ -107,7 +107,7 @@ namespace DINOForge.Tools.DumpTools
                 { "InvalidOperationException", "Invalid operation" }
             };
 
-            var systemPatterns = new Dictionary<string, string>
+            var systemPatterns = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 { "Warfare", "Warfare domain plugin" },
                 { "Economy", "Economy domain plugin" },
@@ -256,7 +256,7 @@ namespace DINOForge.Tools.DumpTools
         /// </summary>
         private string GenerateMarkdownReport(FailureManifestDto failureData, FailureAnalysisResult analysis)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(512);  // Capacity ~= 14 appends × 36 chars
             var timestamp = failureData.CapturedAt ?? DateTime.UtcNow.ToString("O");
 
             sb.AppendLine("# Game Launch Failure Analysis Report");

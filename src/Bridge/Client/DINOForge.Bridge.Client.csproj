@@ -34,6 +34,19 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    Phase 4c sub-task A (#249): grant test-only access to internal handshake state
+    (GameClient.SessionId / SessionKeys / LastFrame / PerformHandshakeAsync). These
+    are kept internal so they don't expand the public NuGet API surface.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DINOForge.Tests" />
   </ItemGroup>
 
   <ItemGroup>

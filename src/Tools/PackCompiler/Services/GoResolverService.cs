@@ -132,8 +132,18 @@ namespace DINOForge.Tools.PackCompiler.Services
             finally
             {
                 // Clean up temp files
-                try { if (File.Exists(tempInputPath)) File.Delete(tempInputPath); } catch { }
-                try { if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath); } catch { }
+                try { if (File.Exists(tempInputPath)) File.Delete(tempInputPath); }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: temp file cleanup failure does not affect resolver output; file will be cleaned by OS temp folder policy */
+                    System.Diagnostics.Debug.WriteLine($"Failed to delete temp input file {tempInputPath}: {ex.Message}");
+                }
+                try { if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath); }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: temp file cleanup failure does not affect resolver output; file will be cleaned by OS temp folder policy */
+                    System.Diagnostics.Debug.WriteLine($"Failed to delete temp output file {tempOutputPath}: {ex.Message}");
+                }
             }
         }
 
@@ -158,8 +168,8 @@ namespace DINOForge.Tools.PackCompiler.Services
             }
 
             // Build in-degree map (number of dependencies for each pack)
-            var inDegree = new Dictionary<string, int>();
-            var dependents = new Dictionary<string, List<string>>();
+            var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
+            var dependents = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
             foreach (var pack in available)
             {

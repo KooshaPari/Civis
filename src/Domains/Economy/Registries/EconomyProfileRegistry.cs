@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Economy.Registries
     /// <summary>
     /// Registry of economy profile definitions. Supports custom profile registration and lookup.
     /// </summary>
-    public class EconomyProfileRegistry
+    public sealed class EconomyProfileRegistry
     {
         private readonly Dictionary<string, EconomyProfile> _profiles =
             new Dictionary<string, EconomyProfile>(StringComparer.OrdinalIgnoreCase);

@@ -19,11 +19,11 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>List of stat changes that would be applied by this pack.</summary>
         [JsonProperty("statChanges")]
-        public List<string> StatChanges { get; set; } = new List<string>();
+        public List<string> StatChanges { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>Errors encountered during verification.</summary>
         [JsonProperty("errors")]
-        public List<string> Errors { get; set; } = new List<string>();
+        public List<string> Errors { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>Total entity count affected by this pack.</summary>
         [JsonProperty("entityCount")]

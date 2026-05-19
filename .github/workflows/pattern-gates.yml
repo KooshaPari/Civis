@@ -1,0 +1,62 @@
+name: Pattern Detection Gates (Unified Matrix)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  detect-patterns:
+    name: Pattern #${{ matrix.pattern.number }} (${{ matrix.pattern.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      max-parallel: 8
+      fail-fast: false
+      matrix:
+        pattern:
+          - { number: 99, name: 'string-dict', script: 'detect_unprotected_string_dict.py' }
+          - { number: 104, name: 'catch-swallow-default', script: 'detect_catch_swallow_default.py' }
+          - { number: 105, name: 'event-lifecycle', script: 'detect_event_lifecycle_asymmetry.py' }
+          - { number: 106, name: 'implicit-encoding', script: 'detect_implicit_encoding.py' }
+          - { number: 107, name: 'unvalidated-di', script: 'detect_unvalidated_di.py' }
+          - { number: 108, name: 'test-sleep-sync', script: 'detect_test_sleep_sync.py' }
+          - { number: 110, name: 'open-ended-count', script: 'detect_open_ended_count.py' }
+          - { number: 111, name: 'silent-catch', script: 'detect_silent_catch.py' }
+          - { number: 113, name: 'blocking-poll-sleep', script: 'detect_blocking_poll_sleep.py' }
+          - { number: 114, name: 'ct-not-threaded', script: 'detect_ct_not_threaded.py' }
+          - { number: 115, name: 'httpclient-per-instance', script: 'detect_httpclient_per_instance.py' }
+          - { number: 117, name: 'stringbuilder-no-capacity', script: 'detect_stringbuilder_no_capacity.py' }
+          - { number: 120, name: 'unguarded-json-deserialize', script: 'detect_unguarded_json_deserialize.py' }
+          - { number: 121, name: 'unnecessary-allocation', script: 'detect_unnecessary_allocation.py' }
+          - { number: 123, name: 'public-mutable-collections', script: 'detect_public_mutable_collections.py' }
+          - { number: 124, name: 'unsealed-public-classes', script: 'detect_unsealed_public_classes.py' }
+          - { number: 125, name: 'orphan-interface-mocks', script: 'detect_orphan_interface_mocks.py' }
+          - { number: 441, name: 'hardcoded-pipe-names', script: 'detect_hardcoded_pipe_names.py' }
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Run Pattern #${{ matrix.pattern.number }} detection
+        run: |
+          python scripts/ci/${{ matrix.pattern.script }}
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@573e96872e1e9bf7d7d6db67e6efe79c0c3eac65 # v4.0.4
+        with:
+          name: pattern-${{ matrix.pattern.number }}-report
+          path: pattern-${{ matrix.pattern.number }}-report.json
+          retention-days: 14

@@ -67,7 +67,7 @@ public class GameTestFixture : IDisposable
         var repoRoot = GetRepoRoot();
         var configFile = Path.Combine(repoRoot, ".dino_test_instance_path");
         var instancePath = File.Exists(configFile)
-            ? File.ReadAllText(configFile).Trim()
+            ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
 
         var steamApi = Path.Combine(instancePath, "steam_api64.dll");
@@ -175,6 +175,7 @@ public class GameTestFixture : IDisposable
 [Trait("Journey", "Journey-AutomateGame")]
 public class ParallelGameE2ETests : IDisposable
 {
+    private readonly bool _infrastructureAvailable;
     private readonly string _testInstancePath;
     private readonly string _gameExePath;
     private readonly string _gameControlCliPath;
@@ -184,9 +185,12 @@ public class ParallelGameE2ETests : IDisposable
 
     public ParallelGameE2ETests()
     {
+        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
         var instancePath = File.Exists(configFile)
-            ? File.ReadAllText(configFile).Trim()
+            ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
 
         var steamApi = Path.Combine(instancePath, "steam_api64.dll");
@@ -410,8 +414,20 @@ public class ParallelGameE2ETests : IDisposable
         if (process == null)
             return (null, null);
 
-        // Wait for process to stabilize
-        await Task.Delay(5000);
+        // Wait for process to stabilize — poll for window handle / early-exit (Pattern #108).
+        await DINOForge.Tests.Support.TestWait.UntilAsync(
+            () =>
+            {
+                try
+                {
+                    if (process.HasExited) return true; // exit fast on early-fail
+                    process.Refresh();
+                    return process.MainWindowHandle != IntPtr.Zero;
+                }
+                catch { return false; }
+            },
+            TimeSpan.FromSeconds(10),
+            pollMs: 100).ConfigureAwait(false);
 
         // Check if process exited early
         if (process.HasExited)
@@ -433,6 +449,7 @@ public class ParallelGameE2ETests : IDisposable
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_FreshLaunch_GameStartsClean()
     {
+        if (!_infrastructureAvailable) return;
         // Use shared game instance - connects to existing or launches fresh
         var fixture = GameTestFixture.Instance;
 
@@ -456,6 +473,7 @@ public class ParallelGameE2ETests : IDisposable
     [Trait("Parallel", "Sequential")]
     public async Task ParallelE2E_MultipleOperations_AllSucceed()
     {
+        if (!_infrastructureAvailable) return;
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -482,6 +500,7 @@ public class ParallelGameE2ETests : IDisposable
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_ModLoading_PacksRecognized()
     {
+        if (!_infrastructureAvailable) return;
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -502,6 +521,7 @@ public class ParallelGameE2ETests : IDisposable
     [Trait("Parallel", "Stability")]
     public async Task ParallelE2E_ProcessStability_RemainsRunning()
     {
+        if (!_infrastructureAvailable) return;
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -543,7 +563,7 @@ public class ParallelGameHarness : IDisposable
 
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
         _testInstancePath = File.Exists(configFile)
-            ? File.ReadAllText(configFile).Trim()
+            ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -742,14 +762,18 @@ public class TestResult
 [Trait("Journey", "Journey-InstallPlay")]
 public class FreshInstallTests : IDisposable
 {
+    private readonly bool _infrastructureAvailable;
     private readonly string _testInstancePath;
     private bool _isDisposed;
 
     public FreshInstallTests()
     {
+        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
         _testInstancePath = File.Exists(configFile)
-            ? File.ReadAllText(configFile).Trim()
+            ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -775,6 +799,7 @@ public class FreshInstallTests : IDisposable
     [Trait("FreshInstall", "Timing")]
     public async Task FreshInstall_FirstLaunch_CompletesInReasonableTime()
     {
+        if (!_infrastructureAvailable) return;
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
 
         if (!File.Exists(exePath))
@@ -823,6 +848,7 @@ public class FreshInstallTests : IDisposable
     [Trait("FreshInstall", "PackValidation")]
     public async Task FreshInstall_PackValidation_BeforeFirstLaunch()
     {
+        if (!_infrastructureAvailable) return;
         // Validate packs exist before launching game
         var packsDir = Path.Combine(GetRepoRoot(), "packs");
 
@@ -855,6 +881,7 @@ public class FreshInstallTests : IDisposable
     [Trait("FreshInstall", "Configuration")]
     public void FreshInstall_TESTInstance_ConfiguredCorrectly()
     {
+        if (!_infrastructureAvailable) return;
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
 
         // TEST instance should exist for parallel testing
@@ -888,10 +915,14 @@ public class FreshInstallTests : IDisposable
 [Trait("Journey", "Journey-AutomateGame")]
 public class ScenarioParallelTests : IDisposable
 {
+    private readonly bool _infrastructureAvailable;
     private readonly string _testInstancePath;
 
     public ScenarioParallelTests()
     {
+        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+
         var repoRoot = Directory.GetCurrentDirectory();
         while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "CLAUDE.md")))
         {
@@ -900,7 +931,7 @@ public class ScenarioParallelTests : IDisposable
 
         var configFile = Path.Combine(repoRoot ?? "", ".dino_test_instance_path");
         _testInstancePath = File.Exists(configFile)
-            ? File.ReadAllText(configFile).Trim()
+            ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
     }
 
@@ -917,6 +948,7 @@ public class ScenarioParallelTests : IDisposable
     [Trait("Parallel", "MultiInstance")]
     public async Task Scenario_PackLoading_MultipleInstances_AllSucceed()
     {
+        if (!_infrastructureAvailable) return;
         // Check if TEST instance exists
         var testExe = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
         if (!File.Exists(testExe)) return; // Skip - TEST instance not installed
@@ -958,6 +990,7 @@ public class ScenarioParallelTests : IDisposable
     [Trait("Parallel", "Independent")]
     public async Task Scenario_StateIsolation_InstancesDontInterfere()
     {
+        if (!_infrastructureAvailable) return;
         // Check if TEST instance exists
         var testExe = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
         if (!File.Exists(testExe))
@@ -1004,3 +1037,5 @@ public class ScenarioParallelTests : IDisposable
         }
     }
 }
+
+

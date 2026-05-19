@@ -15,7 +15,7 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>List of matching entity summaries.</summary>
         [JsonProperty("entities")]
-        public List<EntityInfo> Entities { get; set; } = new List<EntityInfo>();
+        public List<EntityInfo> Entities { get; set; } = new List<EntityInfo>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 
     /// <summary>
@@ -29,6 +29,6 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>List of component type names on this entity.</summary>
         [JsonProperty("components")]
-        public List<string> Components { get; set; } = new List<string>();
+        public List<string> Components { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 }

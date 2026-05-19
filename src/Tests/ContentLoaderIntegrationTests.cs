@@ -287,7 +287,7 @@ loads:
             overrideDef.Overrides.Should().HaveCount(2);
             overrideDef.Overrides[0].Target.Should().Be("unit.stats.hp");
             overrideDef.Overrides[0].Value.Should().Be(1.5f);
-            overrideDef.Overrides[0].Mode.Should().Be("multiply");
+            overrideDef.Overrides[0].Mode.Should().Be(StatOverrideMode.Multiply);
             overrideDef.Overrides[0].Filter.Should().Be("Components.MeleeUnit");
             overrideDef.Overrides[1].Target.Should().Be("unit.stats.speed");
         }
@@ -300,7 +300,7 @@ loads:
             ContentLoadResult result = _loader.LoadPack(missingDir);
 
             result.IsSuccess.Should().BeFalse();
-            result.Errors.Should().NotBeEmpty();
+            result.Errors.Should().HaveCount(1);
             result.Errors[0].Should().Contain("not found");
         }
 

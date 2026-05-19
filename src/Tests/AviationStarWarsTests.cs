@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using FluentAssertions;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace DINOForge.Tests
         public void AerialUnit_ExistsInYaml(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             yaml.Should().Contain($"id: {unitId}",
                 $"Aerial unit '{unitId}' must be defined in {faction} units YAML");
@@ -50,7 +51,7 @@ namespace DINOForge.Tests
         public void AerialUnit_HasAerialBehaviorTag(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             // Extract the block for this unit and confirm it has Aerial in behavior_tags
             int idIndex = yaml.IndexOf($"id: {unitId}");
@@ -72,7 +73,7 @@ namespace DINOForge.Tests
         public void AerialUnit_HasAerialBlockWithCruiseAltitude(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {unitId}");
             idIndex.Should().BeGreaterThan(-1);
@@ -109,7 +110,7 @@ namespace DINOForge.Tests
         public void AerialUnit_CruiseAltitudeInValidRange(string unitId, string faction, double expectedAltitude)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {unitId}");
             int nextUnit = yaml.IndexOf("\n- id:", idIndex + 1);
@@ -138,7 +139,7 @@ namespace DINOForge.Tests
             double expectedAscend, double expectedDescend)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {unitId}");
             int nextUnit = yaml.IndexOf("\n- id:", idIndex + 1);
@@ -175,7 +176,7 @@ namespace DINOForge.Tests
         public void AntiAirBuilding_ExistsInYaml(string buildingId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             yaml.Should().Contain($"id: {buildingId}",
                 $"Anti-air building '{buildingId}' must be defined in {faction} buildings YAML");
@@ -187,7 +188,7 @@ namespace DINOForge.Tests
         public void AntiAirBuilding_HasAntiAirDefenseTag(string buildingId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {buildingId}");
             idIndex.Should().BeGreaterThan(-1,
@@ -208,7 +209,7 @@ namespace DINOForge.Tests
         public void AntiAirBuilding_HasAntiAirBlockWithRange(string buildingId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {buildingId}");
             int nextBuilding = yaml.IndexOf("\n- id:", idIndex + 1);
@@ -242,7 +243,7 @@ namespace DINOForge.Tests
             double expectedRange, double expectedDamageBonus)
         {
             var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
-            var yaml = File.ReadAllText(yamlPath);
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
 
             int idIndex = yaml.IndexOf($"id: {buildingId}");
             int nextBuilding = yaml.IndexOf("\n- id:", idIndex + 1);
@@ -276,7 +277,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Republic_HasAtLeastOneAerialUnit()
         {
-            var yaml = File.ReadAllText(RepublicUnitsYamlPath);
+            var yaml = File.ReadAllText(RepublicUnitsYamlPath, System.Text.Encoding.UTF8);
             var lines = yaml.Split('\n');
 
             int aerialUnitCount = 0;
@@ -304,7 +305,7 @@ namespace DINOForge.Tests
         [Fact]
         public void CIS_HasAtLeastOneAerialUnit()
         {
-            var yaml = File.ReadAllText(CISUnitsYamlPath);
+            var yaml = File.ReadAllText(CISUnitsYamlPath, System.Text.Encoding.UTF8);
             var lines = yaml.Split('\n');
 
             int aerialUnitCount = 0;
@@ -334,7 +335,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetPipeline_ContainsPhase5UnitsSection()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain("v1_2_0_units_phase5:",
                 "asset_pipeline.yaml must contain the 'v1_2_0_units_phase5:' section");
         }
@@ -342,7 +343,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetPipeline_Phase5UnitsSection_HasAtLeast8Models()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_2_0_units_phase5:");
             start.Should().BeGreaterThan(-1,
                 "'v1_2_0_units_phase5:' section must exist in asset_pipeline.yaml");
@@ -361,7 +362,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetPipeline_Phase5UnitsSection_IncludesAerialUnits()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_2_0_units_phase5:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);
@@ -375,7 +376,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetPipeline_Phase5UnitsSection_AerialUnitsHaveAerialType()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_2_0_units_phase5:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);

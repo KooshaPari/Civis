@@ -24,7 +24,10 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     [Fact]
     public async Task Overlay_F9_TogglesPersistentDebugOverlay()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         await fixture.Client!.ToggleUiAsync("debugoverlay");
         await Task.Delay(300);
@@ -47,7 +50,10 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     [Fact]
     public async Task Overlay_F10_ModMenuToggle_PreservesRuntime()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         GameStatus initialStatus = await fixture.Client!.StatusAsync();
         int initialEntityCount = initialStatus.EntityCount;
@@ -76,7 +82,9 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     [Fact]
     public async Task RuntimeDriver_Survives600FramesAndBeyond()
     {
-        GameStatus initialStatus = await fixture.Client.StatusAsync();
+        if (!fixture.IsInitialized) return;
+
+        GameStatus initialStatus = await fixture.Client!.StatusAsync();
         initialStatus.EntityCount.Should().BeGreaterThan(0,
             "ECS world should be populated at start");
 

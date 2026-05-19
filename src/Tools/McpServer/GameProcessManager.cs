@@ -1,5 +1,6 @@
 #nullable enable
 using System.Diagnostics;
+using System.Text;
 
 namespace DINOForge.Tools.McpServer;
 
@@ -131,7 +132,7 @@ public sealed class GameProcessManager : IDisposable
             string markerPath = Path.Combine(dir, ".dino_test_instance_path");
             if (File.Exists(markerPath))
             {
-                string? path = File.ReadAllText(markerPath).Trim();
+                string? path = File.ReadAllText(markerPath, Encoding.UTF8).Trim();
                 return Directory.Exists(path) ? path : null;
             }
 
@@ -144,7 +145,7 @@ public sealed class GameProcessManager : IDisposable
         string cwdMarker = Path.Combine(Environment.CurrentDirectory, ".dino_test_instance_path");
         if (File.Exists(cwdMarker))
         {
-            string? path = File.ReadAllText(cwdMarker).Trim();
+            string? path = File.ReadAllText(cwdMarker, Encoding.UTF8).Trim();
             return Directory.Exists(path) ? path : null;
         }
 

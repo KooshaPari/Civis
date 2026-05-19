@@ -244,7 +244,7 @@ namespace DINOForge.Tests
                 Radius = 0f,
                 Effects = new List<SkillEffect>
                 {
-                    new SkillEffect { Stat = "health", ModifierType = "flat", Value = 50f }
+                    new SkillEffect { Stat = "health", ModifierType = SkillModifierType.Flat, Value = 50f }
                 },
                 VanillaMapping = "Components.Skills.HealSkillData"
             };

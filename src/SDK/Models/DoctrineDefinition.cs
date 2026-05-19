@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -6,7 +7,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Stub model for a DINOForge doctrine definition (doctrines/*.yaml).
     /// </summary>
-    public class DoctrineDefinition
+    public class DoctrineDefinition : IValidatable
     {
         /// <summary>Unique doctrine identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -33,5 +34,27 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "modifiers")]
         public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>();
+
+        /// <summary>
+        /// Validates that the doctrine definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "Id is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                errors.Add(new ValidationError("display_name", "DisplayName is required.", "validation"));
+            if (Modifiers != null)
+            {
+                foreach (var kvp in Modifiers)
+                {
+                    if (kvp.Value < 0)
+                        errors.Add(new ValidationError($"modifiers.{kvp.Key}", "Modifier values must be non-negative.", "validation"));
+                }
+            }
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 }

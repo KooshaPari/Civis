@@ -8,7 +8,7 @@ namespace DINOForge.Domains.Scenario.Registries
     /// <summary>
     /// Registry of scenario definitions. Supports custom scenario registration and lookup.
     /// </summary>
-    public class ScenarioRegistry
+    public sealed class ScenarioRegistry
     {
         private readonly Dictionary<string, ScenarioDefinition> _scenarios =
             new Dictionary<string, ScenarioDefinition>(StringComparer.OrdinalIgnoreCase);

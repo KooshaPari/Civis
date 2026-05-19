@@ -21,6 +21,7 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("RequiresGame", "true")]
 public class GameSandboxIntegrationTests : IDisposable
 {
+    private readonly bool _infrastructureAvailable;
     private readonly GameProcessManager _processManager;
     private GameClient? _client;
     private string? _gamePath;
@@ -30,6 +31,9 @@ public class GameSandboxIntegrationTests : IDisposable
 
     public GameSandboxIntegrationTests()
     {
+        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+
         _processManager = new GameProcessManager();
         _tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dinoforge_sandbox_{Guid.NewGuid():N}");
         System.IO.Directory.CreateDirectory(_tempDir);
@@ -152,6 +156,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public void Sandbox_GameLaunch_ProcessStarts()
     {
+        if (!_infrastructureAvailable) return;
         // Skip if game wasn't launched (not available)
         if (!_launchedGame)
             return;
@@ -167,6 +172,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public void Sandbox_ConnectToBridge_Succeeds()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
         _client.IsConnected.Should().BeTrue();
@@ -180,6 +186,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public async Task Sandbox_Ping_ReturnsPong()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
         var result = await _client.PingAsync();
@@ -194,6 +201,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public async Task Sandbox_GetStatus_ShowsGameRunning()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
         var status = await _client.StatusAsync();
@@ -206,6 +214,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public async Task Sandbox_E2E_PackReloadWorkflow()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
 
@@ -225,6 +234,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public async Task Sandbox_Match_StartNewGame()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
 
@@ -244,6 +254,7 @@ public class GameSandboxIntegrationTests : IDisposable
     [Fact]
     public async Task Sandbox_Gameplay_QueryEntities()
     {
+        if (!_infrastructureAvailable) return;
         if (_client == null || !_client.IsConnected)
             return;
 

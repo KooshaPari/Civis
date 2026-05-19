@@ -344,7 +344,7 @@ public class MockGameServerTests
             CatalogSnapshot catalog = await client.GetCatalogAsync();
 
             // Assert
-            catalog.Units.Should().NotBeEmpty();
+            catalog.Units.Should().HaveCount(28);
             int totalUnits = catalog.Units.Sum(u => u.EntityCount);
             totalUnits.Should().Be(28, "warfare-starwars has 28 units (14 Republic + 14 CIS)");
             client.Disconnect();

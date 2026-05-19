@@ -10,7 +10,7 @@ namespace DINOForge.Domains.UI
     /// Entry point for the UI domain plugin. Provides access to all UI subsystems:
     /// HUD element registry, menu registry, theme registry, and menu management.
     /// </summary>
-    public class UIPlugin
+    public sealed class UIPlugin
     {
         private readonly RegistryManager _registries;
 

@@ -187,7 +187,7 @@ namespace DINOForge.Tests
             DependencyResult result = _resolver.ComputeLoadOrder(packs);
 
             result.IsSuccess.Should().BeFalse();
-            result.Errors.Should().HaveCountGreaterThan(0);
+            result.Errors.Should().ContainSingle(e => e.Contains("ircular"));
         }
 
         /// <summary>

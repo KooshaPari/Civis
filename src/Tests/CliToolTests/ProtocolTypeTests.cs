@@ -1,4 +1,6 @@
 #nullable enable
+using System.Collections.Generic;
+using System.Linq;
 using DINOForge.Bridge.Protocol;
 using FluentAssertions;
 using Xunit;

@@ -46,23 +46,7 @@ const simpleJourney = {
     }
   ]
 }
-</script>
 
-<JourneyViewer :journey="simpleJourney" title="Simple Example" />
-
-Try it:
-- Click **Play** to auto-advance
-- Use arrow keys to navigate
-- Press **Space** to toggle playback
-- Click a thumbnail to jump
-
----
-
-## Journey with Annotations
-
-Annotations highlight important regions on screenshots:
-
-<script setup>
 const annotatedJourney = {
   id: 'annotated-example',
   intent: 'Feature with annotated regions of interest',
@@ -107,26 +91,7 @@ const annotatedAnnotations = {
     }
   ]
 }
-</script>
 
-<JourneyViewer 
-  :journey="annotatedJourney" 
-  title="With Annotations"
-  :annotations="annotatedAnnotations"
-/>
-
-Notice:
-- Green boxes highlight successful regions
-- Annotations are only shown on relevant frames
-- Labels appear above the bounding boxes
-
----
-
-## Failed Journey
-
-A journey where assertions fail:
-
-<script setup>
 const failedJourney = {
   id: 'failed-example',
   intent: 'User encounters an error during workflow',
@@ -164,26 +129,7 @@ const failedAnnotations = {
     }
   ]
 }
-</script>
 
-<JourneyViewer 
-  :journey="failedJourney"
-  title="Failed Journey - Error Handling"
-  :annotations="failedAnnotations"
-/>
-
-Notice:
-- Status badge shows "✗ Failed"
-- Error boxes are highlighted in red
-- Can still use to document error states and recovery paths
-
----
-
-## Multi-Type Annotations
-
-Using different annotation types (passed, failed, info):
-
-<script setup>
 const multiAnnotationJourney = {
   id: 'multi-annotation',
   intent: 'Complex interface with multiple regions of interest',
@@ -222,7 +168,69 @@ const multiAnnotations = {
     }
   ]
 }
+
+const speedDemoJourney = {
+  id: 'speed-demo',
+  intent: 'Demonstrate different playback speeds',
+  keyframe_count: 5,
+  passed: true,
+  steps: Array.from({ length: 5 }, (_, i) => ({
+    index: i,
+    slug: `frame-${i}`,
+    intent: `Frame ${i + 1} of 5`,
+    screenshot_path: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><rect fill="%23${200 + i * 50}" width="1920" height="1080"/><text x="960" y="540" font-size="64" fill="white" text-anchor="middle" dominant-baseline="middle">Frame ${i + 1}</text></svg>`,
+    assertions: { must_contain: [`Frame ${i + 1}`] }
+  }))
+}
 </script>
+
+<JourneyViewer :journey="simpleJourney" title="Simple Example" />
+
+Try it:
+- Click **Play** to auto-advance
+- Use arrow keys to navigate
+- Press **Space** to toggle playback
+- Click a thumbnail to jump
+
+---
+
+## Journey with Annotations
+
+Annotations highlight important regions on screenshots:
+
+<JourneyViewer 
+  :journey="annotatedJourney" 
+  title="With Annotations"
+  :annotations="annotatedAnnotations"
+/>
+
+Notice:
+- Green boxes highlight successful regions
+- Annotations are only shown on relevant frames
+- Labels appear above the bounding boxes
+
+---
+
+## Failed Journey
+
+A journey where assertions fail:
+
+<JourneyViewer 
+  :journey="failedJourney"
+  title="Failed Journey - Error Handling"
+  :annotations="failedAnnotations"
+/>
+
+Notice:
+- Status badge shows "✗ Failed"
+- Error boxes are highlighted in red
+- Can still use to document error states and recovery paths
+
+---
+
+## Multi-Type Annotations
+
+Using different annotation types (passed, failed, info):
 
 <JourneyViewer 
   :journey="multiAnnotationJourney"
@@ -240,22 +248,6 @@ Color guide:
 ## Playback Speed Demonstration
 
 The same journey at different speeds:
-
-<script setup>
-const speedDemoJourney = {
-  id: 'speed-demo',
-  intent: 'Demonstrate different playback speeds',
-  keyframe_count: 5,
-  passed: true,
-  steps: Array.from({ length: 5 }, (_, i) => ({
-    index: i,
-    slug: `frame-${i}`,
-    intent: `Frame ${i + 1} of 5`,
-    screenshot_path: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><rect fill="%23${200 + i * 50}" width="1920" height="1080"/><text x="960" y="540" font-size="64" fill="white" text-anchor="middle" dominant-baseline="middle">Frame ${i + 1}</text></svg>`,
-    assertions: { must_contain: [`Frame ${i + 1}`] }
-  }))
-}
-</script>
 
 <JourneyViewer 
   :journey="speedDemoJourney"

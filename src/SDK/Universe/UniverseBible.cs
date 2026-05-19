@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Universe
@@ -8,7 +9,7 @@ namespace DINOForge.SDK.Universe
     /// A UniverseBible provides all the metadata needed to deterministically
     /// generate a complete mod pack for a given theme (e.g. Star Wars, Modern Warfare).
     /// </summary>
-    public class UniverseBible
+    public class UniverseBible : IValidatable
     {
         /// <summary>
         /// Unique identifier for this universe (e.g. "star-wars-clone-wars").
@@ -69,5 +70,25 @@ namespace DINOForge.SDK.Universe
         /// </summary>
         [YamlMember(Alias = "style")]
         public StyleGuide StyleGuide { get; set; } = new StyleGuide();
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UniverseLoader deserialize sites.
+        /// Rejects blank id and blank name (the two universe-level required fields).
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "UniverseBible 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(Name))
+                errors.Add(new ValidationError("name", "UniverseBible 'name' is required.", "non_empty"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 }

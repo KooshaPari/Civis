@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DINOForge.Tools.Cli.Json;
 using Microsoft.Extensions.Logging;
 
 namespace DINOForge.Tools.Cli.Assetctl.Sketchfab;
@@ -140,7 +141,7 @@ public sealed class SketchfabAdapter : ISketchfabAdapter
         try
         {
             var json = await File.ReadAllTextAsync(manifestPath, ct).ConfigureAwait(false);
-            var manifest = JsonSerializer.Deserialize<BatchManifestItem[]>(json)
+            var manifest = JsonSerializer.Deserialize<BatchManifestItem[]>(json, CliJsonOptions.AssetManifest)
                 ?? throw new InvalidOperationException("Failed to deserialize manifest");
 
             if (manifest.Length == 0)

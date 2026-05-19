@@ -7,7 +7,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DINOForge.SDK.Json;
 using DINOForge.SDK.Models;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.SDK.NativeInterop
 {
@@ -51,8 +53,23 @@ namespace DINOForge.SDK.NativeInterop
                     _mcpAvailable = response != null;
                     return _mcpAvailable.Value;
                 }
-                catch
+                catch (HttpRequestException ex)
                 {
+                    // Pattern #104 (Task #302): transient I/O failure — DO NOT poison the
+                    // memoization. MCP server may be starting up; retry on next access.
+                    System.Diagnostics.Debug.WriteLine($"[RustAssetPipeline] IsAvailable transient HTTP error (not memoized): {ex}");
+                    return false;
+                }
+                catch (TaskCanceledException ex)
+                {
+                    // Timeout — also transient.
+                    System.Diagnostics.Debug.WriteLine($"[RustAssetPipeline] IsAvailable timeout (not memoized): {ex}");
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    // Permanent fault (config/parse/etc) — memoize false to avoid retry storms.
+                    System.Diagnostics.Debug.WriteLine($"[RustAssetPipeline] IsAvailable permanent fault (memoized=false): {ex}");
                     _mcpAvailable = false;
                     return false;
                 }
@@ -110,7 +127,7 @@ namespace DINOForge.SDK.NativeInterop
 
             // Parse response JSON
             var json = response.ToString();
-            var imported = JsonSerializer.Deserialize<ImportedAsset>(json);
+            var imported = JsonSerializer.Deserialize<ImportedAsset>(json, JsonOptions.Default);
 
             if (imported == null)
                 throw new InvalidOperationException("Failed to deserialize Rust import result");
@@ -173,7 +190,7 @@ namespace DINOForge.SDK.NativeInterop
 
             var response = await CallMcpAsync("asset_optimize", request);
             var json = response.ToString();
-            return JsonSerializer.Deserialize<OptimizedAsset>(json)
+            return JsonSerializer.Deserialize<OptimizedAsset>(json, JsonOptions.Default)
                 ?? throw new InvalidOperationException("Failed to deserialize optimization result");
         }
 
@@ -253,6 +270,7 @@ namespace DINOForge.SDK.NativeInterop
                 var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1));
                 var task = _httpClient.GetAsync($"{McpServerUrl}/health", cts.Token);
 
+                // sync-over-async-unavoidable: health check only (1-second timeout)
                 // Block synchronously for availability check (health check only)
                 task.Wait(cts.Token);
 
@@ -267,8 +285,11 @@ namespace DINOForge.SDK.NativeInterop
 
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
+                // Pattern #104 (Task #302): structured logging instead of swallow.
+                // Caller treats null as "not available" — log full ex for diagnosis.
+                System.Diagnostics.Debug.WriteLine($"[RustAssetPipeline] TryCallMcp('{toolName}') failed: {ex}");
                 return null;
             }
         }
@@ -307,7 +328,7 @@ namespace DINOForge.SDK.NativeInterop
                 string json = Marshal.PtrToStringAnsi(resultPtr)
                     ?? throw new InvalidOperationException("Rust returned null JSON");
 
-                var imported = JsonSerializer.Deserialize<ImportedAsset>(json);
+                var imported = JsonSerializer.Deserialize<ImportedAsset>(json, JsonOptions.Default);
                 return imported ?? throw new InvalidOperationException("Failed to deserialize JSON");
             }
             finally
@@ -322,7 +343,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// Represents an asset imported via the Rust pipeline, containing mesh, materials, skeleton, and metadata.
     /// </summary>
-    public class ImportedAsset
+    public sealed class ImportedAsset : IValidatable
     {
         /// <summary>The unique identifier for this asset.</summary>
         public string AssetId { get; set; } = string.Empty;
@@ -331,17 +352,38 @@ namespace DINOForge.SDK.NativeInterop
         /// <summary>Mesh data (vertices, indices, triangles).</summary>
         public MeshData Mesh { get; set; } = new();
         /// <summary>List of materials used by this asset.</summary>
-        public List<MaterialData> Materials { get; set; } = new();
+        public List<MaterialData> Materials { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List
         /// <summary>Optional skeleton data for rigged assets.</summary>
         public SkeletonData? Skeleton { get; set; }
         /// <summary>Asset metadata including polycount.</summary>
         public AssetMetadata Metadata { get; set; } = new();
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #294 / Pattern #95 — IValidatable contract for cross-FFI boundary.
+        /// Asserts asset_id non-blank and mesh.vertices non-empty so an ill-formed
+        /// payload from the Rust subprocess fails fast at JsonGuard.ValidateOrThrow.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(AssetId))
+                errors.Add(new ValidationError("asset_id", "ImportedAsset 'asset_id' is required.", "non_empty"));
+
+            if (Mesh == null || Mesh.Vertices == null || Mesh.Vertices.Length == 0)
+                errors.Add(new ValidationError("mesh.vertices", "ImportedAsset 'mesh.vertices' must contain at least one vertex.", "non_empty"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// Mesh geometry data including vertices, indices, and triangle count.
     /// </summary>
-    public class MeshData
+    public sealed class MeshData
     {
         /// <summary>Vertex positions as float array.</summary>
         public float[] Vertices { get; set; } = Array.Empty<float>();
@@ -354,7 +396,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// Material data including name and properties.
     /// </summary>
-    public class MaterialData
+    public sealed class MaterialData
     {
         /// <summary>Name of this material.</summary>
         public string Name { get; set; } = string.Empty;
@@ -363,7 +405,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// Skeleton data for rigged assets.
     /// </summary>
-    public class SkeletonData
+    public sealed class SkeletonData
     {
         /// <summary>Name of the skeleton.</summary>
         public string Name { get; set; } = string.Empty;
@@ -372,7 +414,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// Metadata about an imported asset.
     /// </summary>
-    public class AssetMetadata
+    public sealed class AssetMetadata
     {
         /// <summary>Number of polygons in the original asset.</summary>
         public int PolyCount { get; set; }
@@ -381,7 +423,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// Asset with pre-generated LOD (Level of Detail) meshes.
     /// </summary>
-    public class OptimizedAsset
+    public sealed class OptimizedAsset : IValidatable
     {
         /// <summary>The unique identifier for this asset.</summary>
         public string AssetId { get; set; } = string.Empty;
@@ -391,12 +433,28 @@ namespace DINOForge.SDK.NativeInterop
         public MeshData LOD1 { get; set; } = new();
         /// <summary>Lowest-detail LOD mesh (typically 10% polycount).</summary>
         public MeshData LOD2 { get; set; } = new();
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #294 / Pattern #95 — IValidatable contract for cross-FFI boundary.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(AssetId))
+                errors.Add(new ValidationError("asset_id", "OptimizedAsset 'asset_id' is required.", "non_empty"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
     }
 
     /// <summary>
     /// Definition of an asset for registration in the asset registry.
     /// </summary>
-    public class AssetDefinition
+    public sealed class AssetDefinition
     {
         /// <summary>Unique identifier for this asset.</summary>
         public string Id { get; set; } = string.Empty;
@@ -407,7 +465,7 @@ namespace DINOForge.SDK.NativeInterop
     /// <summary>
     /// LOD (Level of Detail) configuration specifying mesh reduction targets.
     /// </summary>
-    public class LODDefinition
+    public sealed class LODDefinition
     {
         /// <summary>Polycount percentages for each LOD level (e.g., [100, 50, 10]).</summary>
         public int[] Levels { get; set; } = Array.Empty<int>();

@@ -205,13 +205,13 @@ internal static class GameCaptureHelper
                     await Task.Delay(100, timeoutCts.Token).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { } // safe-swallow: timeout expected behavior
 
             // Clean up request file if game didn't respond
-            try { File.Delete(ScreenshotRequestFile); } catch { }
+            try { File.Delete(ScreenshotRequestFile); } catch { } // safe-swallow: best-effort cleanup, non-critical
             return false;
         }
-        catch { return false; }
+        catch { return false; } // safe-swallow: screenshot capture failed, return false to caller
     }
 
     [SupportedOSPlatform("windows")]
@@ -334,11 +334,11 @@ internal static class GameCaptureHelper
             {
                 await tcs.Task.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { } // safe-swallow: timeout expected behavior
 
             return File.Exists(outputPath) && new FileInfo(outputPath).Length > 0;
         }
-        catch { return false; }
+        catch { return false; } // safe-swallow: capture failure best-effort fallback
     }
 
     private static async Task<bool> TryFfmpegGdigrabAsync(string outputPath, CancellationToken ct)
@@ -366,7 +366,7 @@ internal static class GameCaptureHelper
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
             try { await proc.WaitForExitAsync(cts.Token).ConfigureAwait(false); }
-            catch (OperationCanceledException) { try { proc.Kill(); } catch { } return false; }
+            catch (OperationCanceledException) { try { proc.Kill(); } catch { } /* safe-swallow: best-effort kill, non-critical */ return false; }
 
             return proc.ExitCode == 0 && File.Exists(outputPath) && new FileInfo(outputPath).Length > 0;
         }

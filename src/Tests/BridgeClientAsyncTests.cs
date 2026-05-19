@@ -95,7 +95,7 @@ public class BridgeClientAsyncTests
             RetryCount = 1,
             RetryDelayMs = 10,
             ReadTimeoutMs = 1000,
-            PipeName = "reconnect-test"
+            PipeName = $"dinoforge-test-{Guid.NewGuid():N}"
         };
         var client = new GameClient(options);
 

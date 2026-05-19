@@ -597,7 +597,7 @@ type: content
             var conflicts = resolver.DetectConflicts(new[] { packA, packB, packC });
 
             // Then: Both A-B and B-C pairs should be reported
-            conflicts.Should().HaveCountGreaterThanOrEqualTo(2);
+            conflicts.Should().HaveCount(2);
         }
 
         [Fact]

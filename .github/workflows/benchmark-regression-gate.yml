@@ -1,0 +1,116 @@
+name: Benchmark Regression Gate
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/SDK/**'
+      - 'src/Bridge/**'
+      - 'src/Tools/PackCompiler/**'
+      - 'src/Tests/Benchmarks/**'
+      - '.github/workflows/benchmark-regression-gate.yml'
+
+permissions:
+  pull-requests: write
+
+jobs:
+  benchmark-regression:
+    runs-on: ubuntu-latest
+    name: Check Benchmark Regressions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@6bd8b7f7d58d76bb371f91465f0c7d208eccb313  # v4.0.0
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/DINOForge.sln
+
+      - name: Run Benchmarks (Quick)
+        run: |
+          cd src/Tests/Benchmarks
+          dotnet run -c Release -- --job short --exporters json 2>&1 | tee benchmark.log
+        env:
+          DOTNET_TieredCompilation: false
+          DOTNET_TieredCompilationQuickJit: false
+
+      - name: Find BenchmarkDotNet CSV result
+        id: find_csv
+        run: |
+          CSV_PATH=$(find . -name "*.csv" -path "*/BenchmarkDotNet.Artifacts/results/*" -type f 2>/dev/null | head -1)
+          if [ -z "$CSV_PATH" ]; then
+            echo "ERROR: BenchmarkDotNet CSV not found"
+            exit 1
+          fi
+          echo "csv_path=$CSV_PATH" >> $GITHUB_OUTPUT
+          echo "Found CSV: $CSV_PATH"
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Check Benchmark Regressions
+        id: regression_check
+        run: |
+          python scripts/ci/check_benchmark_regression.py \
+            --current-csv "${{ steps.find_csv.outputs.csv_path }}" \
+            --baselines-dir "docs/benchmarks/" \
+            --threshold-time-pct 20 \
+            --threshold-alloc-pct 30 \
+            --output-json benchmark_report.json
+        continue-on-error: true
+
+      - name: Read regression report
+        id: report
+        if: always()
+        run: |
+          if [ -f benchmark_report.json ]; then
+            cat benchmark_report.json
+            STATUS=$(python -c "import json; print(json.load(open('benchmark_report.json'))['status'])")
+            echo "status=$STATUS" >> $GITHUB_OUTPUT
+          else
+            echo "status=ERROR" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR on regression
+        if: steps.report.outputs.status == 'FAIL'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('benchmark_report.json', 'utf8'));
+
+            let comment = `## ⚠️ Benchmark Regression Detected\n\n`;
+            comment += `| Benchmark | Metric | Baseline | Current | % Increase | Threshold |\n`;
+            comment += `|-----------|--------|----------|---------|------------|----------|\n`;
+
+            report.violations.forEach(v => {
+              comment += `| ${v.benchmark} | ${v.metric} | ${v.baseline_value} ${v.unit} | ${v.current_value} ${v.unit} | ${v.pct_increase} | ${v.threshold_pct} |\n`;
+            });
+
+            comment += `\n**Summary**: ${report.violations_count} regression(s) detected out of ${report.total_current} benchmarks.\n`;
+            comment += `\n_Time threshold: ${report.threshold_time_pct}% | Memory threshold: ${report.threshold_alloc_pct}%_`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail if regressions detected
+        if: steps.report.outputs.status == 'FAIL'
+        run: exit 1
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a  # v4.3.6
+        with:
+          name: benchmark-report
+          path: benchmark_report.json
+          retention-days: 30

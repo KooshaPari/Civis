@@ -11,7 +11,7 @@ namespace DINOForge.Bridge.Protocol
     {
         /// <summary>List of component mappings matching the query.</summary>
         [JsonProperty("mappings")]
-        public List<ComponentMapEntry> Mappings { get; set; } = new List<ComponentMapEntry>();
+        public List<ComponentMapEntry> Mappings { get; set; } = new List<ComponentMapEntry>(); // public-mutable-ok: JSON deserializer requires mutable List
     }
 
     /// <summary>

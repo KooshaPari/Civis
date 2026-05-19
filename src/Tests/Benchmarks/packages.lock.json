@@ -60,6 +60,11 @@
         "resolved": "1.1.0",
         "contentHash": "1Am6l4Vpn3/K32daEqZI+FFr96OlZkgwK2LcT3pZ2zWubR5zTPW3/FkO1Rat9kb7oQOa4rxgl9LJHc5tspCWfg=="
       },
+      "Microsoft.Bcl.TimeProvider": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "f5Kr5JepAbiGo7uDmhgvMqhntwxqXNn6/IpTBSSI4cuHhgnJGrLxFRhMjVpRkLPp6zJXO0/G0l3j9p9zSJxa+w=="
+      },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Transitive",
         "resolved": "3.3.3",
@@ -254,6 +259,27 @@
           "System.Memory": "4.5.3"
         }
       },
+      "Serilog": {
+        "type": "Transitive",
+        "resolved": "4.3.1",
+        "contentHash": "savYe7h5yRlkqBVOwP8cIRDOdqKiPmYCU4W87JH38sBmcKD5EBoXvQIw6bNEvZ/pTe1gsiye3VFCzBsoppGkXQ=="
+      },
+      "Serilog.Sinks.Console": {
+        "type": "Transitive",
+        "resolved": "6.1.1",
+        "contentHash": "8jbqgjUyZlfCuSTaJk6lOca465OndqOz3KZP6Cryt/IqZYybyBu7GP0fE/AXBzrrQB3EBmQntBFAvMVz1COvAA==",
+        "dependencies": {
+          "Serilog": "4.0.0"
+        }
+      },
+      "Serilog.Sinks.File": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "lxjg89Y8gJMmFxVkbZ+qDgjl+T4yC5F7WSLTvA+5q0R04tfKVLRL/EHpYoJ/MEQd2EeCKDuylBIVnAYMotmh2A==",
+        "dependencies": {
+          "Serilog": "4.0.0"
+        }
+      },
       "System.CodeDom": {
         "type": "Transitive",
         "resolved": "5.0.0",
@@ -329,8 +355,8 @@
       },
       "System.IO.Pipelines": {
         "type": "Transitive",
-        "resolved": "10.0.5",
-        "contentHash": "8/ZHN/j2y1t+7McdCf1wXku2/c7wtrGLz3WQabIoPuLAn3bHDWT6YOJYreJq8sCMPSo6c8iVYXUdLlFGX5PEqw=="
+        "resolved": "10.0.8",
+        "contentHash": "STVNTIVd+UrYvSo31D2tOOTs19IThdjGDN14FS3/NZb4PWsVakAg/VT4sq+JYWGP/GtazzvXwebWL6LPBAwnFQ=="
       },
       "System.Linq": {
         "type": "Transitive",
@@ -569,16 +595,16 @@
       },
       "System.Text.Encodings.Web": {
         "type": "Transitive",
-        "resolved": "10.0.5",
-        "contentHash": "opvD/nKTzGKA7GVntZ9L823kN6IxgHQfuxY+VI9gv8VE1Y7CSKoi/QS1EYDQiA63MqtZsD7X6zkISd2ZQJohTQ=="
+        "resolved": "10.0.8",
+        "contentHash": "HvFIJXM/CMTRu6PBQmjukQZ/O32Vx5fOEYZs0kq0OD5s9vJQ19KHLWCVmnfh3gNC7pbYomm06tzOTgJBflr/nQ=="
       },
       "System.Text.Json": {
         "type": "Transitive",
-        "resolved": "10.0.5",
-        "contentHash": "vW2zhkWziyfhoSXNf42mTWyilw+vfwBGOsODDsHSFtOIY6LCgfRVUyaAilLEL4Kc1fzhaxcep5pS0VWYPSDW0w==",
+        "resolved": "10.0.8",
+        "contentHash": "/fysUDkD7oFGaRPoA7IaFs0wRoO3GlwlCNq2P+xWZqxLy1R4cktRSKfMjJDy9ymS4grL7IDVdt8de8L9a0z55Q==",
         "dependencies": {
-          "System.IO.Pipelines": "10.0.5",
-          "System.Text.Encodings.Web": "10.0.5"
+          "System.IO.Pipelines": "10.0.8",
+          "System.Text.Encodings.Web": "10.0.8"
         }
       },
       "System.Threading": {
@@ -610,22 +636,40 @@
         "resolved": "16.3.0",
         "contentHash": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA=="
       },
+      "dinoforge.bridge.client": {
+        "type": "Project",
+        "dependencies": {
+          "DINOForge.Bridge.Protocol": "[0.24.0, )",
+          "DINOForge.SDK": "[0.18.0, )",
+          "Newtonsoft.Json": "[13.*, )",
+          "Serilog": "[4.*, )",
+          "Serilog.Sinks.Console": "[6.*, )",
+          "Serilog.Sinks.File": "[6.*, )"
+        }
+      },
+      "dinoforge.bridge.protocol": {
+        "type": "Project",
+        "dependencies": {
+          "Newtonsoft.Json": "[13.*, )"
+        }
+      },
       "dinoforge.domains.economy": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.3.0, )"
+          "DINOForge.SDK": "[0.18.0, )"
         }
       },
       "dinoforge.domains.warfare": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.3.0, )"
+          "DINOForge.SDK": "[0.18.0, )"
         }
       },
       "dinoforge.sdk": {
         "type": "Project",
         "dependencies": {
           "AssetsTools.NET": "[3.0.4, )",
+          "Microsoft.Bcl.TimeProvider": "[8.0.0, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
           "System.Text.Json": "[10.*, )",

@@ -72,9 +72,12 @@ namespace DINOForge.Runtime.Aviation
             {
                 string debugLog = System.IO.Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] AerialMovementSystem: {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialMovementSystem: {msg}\n");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AerialMovementSystem debug log write failed: {ex.Message}");
+            }
         }
     }
 }

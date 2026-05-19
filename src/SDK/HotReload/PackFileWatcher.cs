@@ -31,13 +31,13 @@ namespace DINOForge.SDK.HotReload
         private bool _disposed;
 
         /// <summary>Raised when pack content files change on disk.</summary>
-        public event EventHandler<PackContentChangedEventArgs>? OnPackContentChanged;
+        public event EventHandler<PackContentChangedEventArgs>? OnPackContentChanged; // public-field-ok: events are intrinsically encapsulated (only += and -= allowed)
 
         /// <summary>Raised after packs are successfully reloaded.</summary>
-        public event EventHandler<HotReloadResult>? OnPackReloaded;
+        public event EventHandler<HotReloadResult>? OnPackReloaded; // public-field-ok: events are intrinsically encapsulated (only += and -= allowed)
 
         /// <summary>Raised when a reload attempt fails.</summary>
-        public event EventHandler<HotReloadResult>? OnPackReloadFailed;
+        public event EventHandler<HotReloadResult>? OnPackReloadFailed; // public-field-ok: events are intrinsically encapsulated (only += and -= allowed)
 
         /// <summary>
         /// Initializes a new <see cref="PackFileWatcher"/>.

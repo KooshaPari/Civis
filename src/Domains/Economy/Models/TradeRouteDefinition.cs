@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Models
 {
     /// <summary>
     /// Defines a trade route: the resources involved, exchange rate, and transaction constraints.
     /// </summary>
-    public class TradeRouteDefinition
+    public class TradeRouteDefinition : IValidatable
     {
         /// <summary>
         /// Unique identifier for this trade route (e.g. "trade-wood-to-gold").
@@ -85,6 +87,32 @@ namespace DINOForge.Domains.Economy.Models
             CooldownTicks = cooldownTicks;
             MaxPerTransaction = maxPerTransaction;
             Enabled = enabled;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the EconomyContentLoader deserialize site.
+        /// Rejects blank id, blank source/target resource, and non-positive exchange_rate.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "TradeRouteDefinition 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(SourceResource))
+                errors.Add(new ValidationError("source_resource", "TradeRouteDefinition 'source_resource' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(TargetResource))
+                errors.Add(new ValidationError("target_resource", "TradeRouteDefinition 'target_resource' is required.", "non_empty"));
+
+            if (ExchangeRate <= 0f)
+                errors.Add(new ValidationError("exchange_rate", "TradeRouteDefinition 'exchange_rate' must be > 0.", "min-value"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
         }
     }
 }

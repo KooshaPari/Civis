@@ -1,0 +1,26 @@
+# closed-tasks list (Pattern #92 follow-up, task #251 + #252)
+#
+# This file lists CLOSED task IDs that the changelog-lint stale-TODO sweep
+# (`scripts/ci/changelog_lint.py`) cross-references against `TODO(#NNN)`
+# markers in `src/**/*.cs`. Any TODO whose task ID appears here is flagged
+# as stale.
+#
+# Format: one task ID per line, optionally prefixed with `#`. Lines starting
+# with `# ` (hash + space) or `//` are comments; blanks are ignored. So
+# `#123` is a task ID and `# 123` is a comment — be careful with spacing.
+#
+# Bootstrap policy (2026-04-27):
+#   - This file is intentionally EMPTY at landing. The lint gate degrades
+#     gracefully when this file is missing/empty (zero stale-TODO offenders).
+#   - Operators may populate manually from `TaskList(status="completed")`
+#     output, or via a future generator (#252) that pipes the closed-task
+#     IDs from the harness TaskList API into this file.
+#   - Once populated, the lint gate begins flagging any `TODO(#NNN)` that
+#     points at a closed ID. Use `--strict` to promote to a hard CI fail.
+#
+# Companion script: scripts/ci/changelog_lint.py (--self-test for spec).
+# Cross-reference: tasks #92/#250/#251/#252.
+#
+# ----------------------------------------------------------------------------
+# (intentionally empty — populate when generator lands or by hand audit.)
+# ----------------------------------------------------------------------------

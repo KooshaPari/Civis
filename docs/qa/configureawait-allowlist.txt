@@ -1,0 +1,58 @@
+# Pattern #98 — missing-configureawait allowlist (task #275).
+#
+# This file lists C# library awaits that the gate
+# (scripts/ci/detect_missing_configureawait.py) flagged but that have
+# been audited and accepted as legitimate exceptions, OR that are
+# grandfathered debt.
+#
+# The healthy library pattern is to suffix every awaited Task with
+# ``.ConfigureAwait(false)`` so the continuation is NOT marshalled
+# back onto a captured SynchronizationContext or TaskScheduler. Library
+# code that ships into UI hosts (Avalonia GUI installer, WinUI desktop
+# companion) or onto the Unity main thread is at risk of deadlock or
+# context-switch tax otherwise.
+#
+# Two entry forms are accepted:
+#
+#   1. ``severity|file|line`` — line-locked allowlist key. Pull these
+#      directly from the ``allowlist_key`` field of
+#      ``docs/qa/configureawait-report.json``. Moving the line forces a
+#      fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every await in that file.
+#      Use sparingly, only for files where the captured-context risk
+#      has been fully addressed by an alternative mechanism (e.g. the
+#      file is documented as console-only and forbids GUI consumers).
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_missing_configureawait.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_missing_configureawait.py --self-test
+# CI workflow: .github/workflows/configureawait.yml
+#
+# Auto-skipped scopes (these never appear in the report):
+#   src/Tests/                           — test code (intentional)
+#   src/Tools/Installer/GUI/             — Avalonia (needs UI context)
+#   src/Runtime/                         — Unity / BepInEx
+#   src/Tools/DesktopCompanion/          — WinUI 3 (needs UI context)
+#   src/Tools/DinoforgeMcp/              — Python, not C#
+#
+# Auto-skipped expressions:
+#   await using ...                      — async-disposable surface
+#   await foreach ...                    — async-enumerable surface
+#   await Task.Yield()                   — context-yield primitive
+#   await Task.CompletedTask...          — completed-task primitive
+#   ... // CA-allowed: <reason>          — explicit per-line opt-out
+#
+# Pairs with #274 (sweep) and #276 (CA2007 enable) and a future
+# Roslyn analyzer for compile-time enforcement. Tracking task: #275.
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# (Empty initially — populate as residuals are triaged. Prefer fixing
+# the call site over allowlisting; per-line ``// CA-allowed: <reason>``
+# comments are the preferred opt-out for a single legitimate site.)

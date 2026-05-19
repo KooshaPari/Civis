@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.UI.Models
 {
@@ -6,7 +9,7 @@ namespace DINOForge.Domains.UI.Models
     /// Defines a UI theme that controls the overall appearance and styling of the mod menu and HUD elements.
     /// Themes specify colors, fonts, border radius, and other visual properties.
     /// </summary>
-    public class ThemeDefinition
+    public class ThemeDefinition : IValidatable
     {
         /// <summary>
         /// Unique identifier for this theme (e.g. "dark-theme", "light-theme", "faction-blue").
@@ -85,6 +88,42 @@ namespace DINOForge.Domains.UI.Models
             PrimaryColor = primaryColor ?? throw new ArgumentNullException(nameof(primaryColor));
             SecondaryColor = secondaryColor ?? throw new ArgumentNullException(nameof(secondaryColor));
             AccentColor = accentColor ?? throw new ArgumentNullException(nameof(accentColor));
+        }
+
+        private static readonly Regex HexColorRegex = new Regex(
+            "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+            RegexOptions.Compiled);
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the UIContentLoader deserialize site.
+        /// Rejects blank id, blank name, and any malformed hex color.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "ThemeDefinition 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(Name))
+                errors.Add(new ValidationError("name", "ThemeDefinition 'name' is required.", "non_empty"));
+
+            ValidateHex(PrimaryColor, "primary_color", errors);
+            ValidateHex(SecondaryColor, "secondary_color", errors);
+            ValidateHex(AccentColor, "accent_color", errors);
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
+        }
+
+        private static void ValidateHex(string value, string path, List<ValidationError> errors)
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+            if (!HexColorRegex.IsMatch(value))
+                errors.Add(new ValidationError(path, $"ThemeDefinition '{path}' must be a hex color (e.g. #RRGGBB).", "format"));
         }
     }
 }

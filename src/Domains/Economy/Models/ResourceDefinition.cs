@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Models
 {
     /// <summary>
     /// Defines a resource type in the economy system: production rates, storage capacity, and decay behavior.
     /// </summary>
-    public class ResourceDefinition
+    public class ResourceDefinition : IValidatable
     {
         /// <summary>
         /// Unique identifier for this resource (e.g. "food", "wood", "stone", "iron", "gold").
@@ -76,6 +78,32 @@ namespace DINOForge.Domains.Economy.Models
             StorageCapacity = storageCapacity;
             DecayRate = decayRate;
             IsTradeableDefault = isTradeableDefault;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the EconomyContentLoader deserialize site.
+        /// Rejects blank id, blank name, and negative storage_capacity / production_rate.
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "ResourceDefinition 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(Name))
+                errors.Add(new ValidationError("name", "ResourceDefinition 'name' is required.", "non_empty"));
+
+            if (StorageCapacity < 0f)
+                errors.Add(new ValidationError("storage_capacity", "ResourceDefinition 'storage_capacity' must be >= 0.", "min-value"));
+
+            if (ProductionRate < 0f)
+                errors.Add(new ValidationError("production_rate", "ResourceDefinition 'production_rate' must be >= 0.", "min-value"));
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
         }
     }
 }

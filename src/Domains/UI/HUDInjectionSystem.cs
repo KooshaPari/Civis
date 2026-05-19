@@ -14,7 +14,7 @@ namespace DINOForge.Domains.UI
     /// plugin targets netstandard2.0 without Unity ECS references.
     /// The Runtime layer will create the actual ECS system that delegates to this class.
     /// </remarks>
-    public class HUDInjectionSystem
+    public sealed class HUDInjectionSystem
     {
         private readonly List<HUDElementDefinition> _registeredElements = new List<HUDElementDefinition>();
         private bool _initialized;

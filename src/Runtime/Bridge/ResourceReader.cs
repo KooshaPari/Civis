@@ -189,7 +189,7 @@ namespace DINOForge.Runtime.Bridge
                         clrType = asm.GetType(ecsTypeName, throwOnError: false);
                         if (clrType != null) break;
                     }
-                    catch { }
+                    catch { } // safe-swallow: ECS type resolution, normal degradation path for version-skew
                 }
 
                 if (clrType == null)
@@ -303,18 +303,18 @@ namespace DINOForge.Runtime.Bridge
                 var resourceTypes = discovered
                     .Where(t => t.Contains("Food") || t.Contains("Wood") || t.Contains("Stone") ||
                                 t.Contains("Iron") || t.Contains("Money") || t.Contains("Soul") ||
-                                t.Contains("Bone") || t.Contains("Spirit") || t.Contains("Resource"))
-                    .ToList();
+                                t.Contains("Bone") || t.Contains("Spirit") || t.Contains("Resource"));
 
-                if (resourceTypes.Any())
+                var resourceTypeList = resourceTypes.ToList();
+                if (resourceTypeList.Any())
                 {
                     WriteDebug("[ResourceReader] AutoDiscovery found resource types:");
-                    foreach (var t in resourceTypes.Take(20))
+                    foreach (var t in resourceTypeList.Take(20))
                     {
                         WriteDebug($"  - {t}");
                     }
-                    if (resourceTypes.Count > 20)
-                        WriteDebug($"  ... and {resourceTypes.Count - 20} more");
+                    if (resourceTypeList.Count > 20)
+                        WriteDebug($"  ... and {resourceTypeList.Count - 20} more");
                 }
                 else
                 {
@@ -333,9 +333,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

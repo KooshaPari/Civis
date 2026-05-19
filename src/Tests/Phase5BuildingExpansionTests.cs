@@ -32,7 +32,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_Configuration_ContainsExpansionSection()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain("v1_1_0_buildings_expansion",
                 "Phase 5 expansion section must exist in asset_pipeline.yaml");
         }
@@ -40,7 +40,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_Configuration_Has12ExpansionBuildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_1_0_buildings_expansion:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);
@@ -52,7 +52,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_Configuration_Has6RepublicExpansionBuildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_1_0_buildings_expansion:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);
@@ -64,7 +64,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_Configuration_Has6CISExpansionBuildings()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_1_0_buildings_expansion:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);
@@ -76,7 +76,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_ExpansionBuildings_UseConsistentScreenSizes()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             int start = yaml.IndexOf("v1_1_0_buildings_expansion:");
             int end = yaml.IndexOf("v0_9_0_future:", start + 1);
             var section = yaml.Substring(start, end - start);
@@ -99,7 +99,7 @@ namespace DINOForge.Tests
         [InlineData("rep_skyshield_generator", "sw-skyshield-generator")]
         public void Phase5_RepublicExpansion_HasVisualAsset(string buildingId, string expectedKey)
         {
-            var yaml = File.ReadAllText(RepublicBuildingsYamlPath);
+            var yaml = File.ReadAllText(RepublicBuildingsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"id: {buildingId}",
                 $"Republic building '{buildingId}' must be defined");
             yaml.Should().Contain($"visual_asset: {expectedKey}",
@@ -117,7 +117,7 @@ namespace DINOForge.Tests
         [InlineData("cis_vulture_nest", "sw-vulture-nest")]
         public void Phase5_CISExpansion_HasVisualAsset(string buildingId, string expectedKey)
         {
-            var yaml = File.ReadAllText(CISBuildingsYamlPath);
+            var yaml = File.ReadAllText(CISBuildingsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"id: {buildingId}",
                 $"CIS building '{buildingId}' must be defined");
             yaml.Should().Contain($"visual_asset: {expectedKey}",
@@ -151,7 +151,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_RepublicBuildings_AllHaveVisualAssets()
         {
-            var yaml = File.ReadAllText(RepublicBuildingsYamlPath);
+            var yaml = File.ReadAllText(RepublicBuildingsYamlPath, System.Text.Encoding.UTF8);
             var lines = yaml.Split('\n');
             string? currentId = null;
             bool hasVisual = false;
@@ -175,7 +175,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase5_CISBuildings_AllHaveVisualAssets()
         {
-            var yaml = File.ReadAllText(CISBuildingsYamlPath);
+            var yaml = File.ReadAllText(CISBuildingsYamlPath, System.Text.Encoding.UTF8);
             var lines = yaml.Split('\n');
             string? currentId = null;
             bool hasVisual = false;
@@ -197,3 +197,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

@@ -13,7 +13,7 @@ namespace DINOForge.Domains.Scenario
     /// Entry point for the Scenario domain plugin. Provides access to scenario subsystems:
     /// scenario registry, content loader, runner, validator, and difficulty scaler.
     /// </summary>
-    public class ScenarioPlugin
+    public sealed class ScenarioPlugin
     {
         /// <summary>
         /// Registry of all loaded scenario definitions.

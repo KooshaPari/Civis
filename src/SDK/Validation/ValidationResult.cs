@@ -32,6 +32,21 @@ namespace DINOForge.SDK.Validation
         /// <param name="errors">One or more errors that caused validation to fail.</param>
         public static ValidationResult Failure(IReadOnlyList<ValidationError> errors)
             => new ValidationResult(false, errors);
+
+        /// <summary>
+        /// Creates a failed <see cref="ValidationResult"/> with a single error message.
+        /// </summary>
+        /// <param name="message">Human-readable error message.</param>
+        public static ValidationResult Failure(string message)
+            => Failure(new[] { new ValidationError("", message, "validation") });
+
+        /// <summary>
+        /// Creates a failed <see cref="ValidationResult"/> with a single error at a specific path.
+        /// </summary>
+        /// <param name="path">Dot-separated path to the offending field.</param>
+        /// <param name="message">Human-readable error message.</param>
+        public static ValidationResult Failure(string path, string message)
+            => Failure(new[] { new ValidationError(path, message, "validation") });
     }
 
     /// <summary>

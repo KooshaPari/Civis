@@ -136,7 +136,7 @@ public sealed class GameUIAutomationTool
     {
         try
         {
-            var result = await client.ScreenshotAsync();
+            var result = await client.ScreenshotAsync(null, ct);
 
             return new
             {

@@ -21,7 +21,10 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     [Fact]
     public async Task MainMenu_HasModsButton_AfterInjection()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         UiActionResult result = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
         result.Should().NotBeNull("Mods button should be queryable in UI");
@@ -35,7 +38,10 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     [Fact]
     public async Task MainMenu_ModsButton_OpensOverlay()
     {
-        Skip.If(!fixture.IsInitialized, "Game not available - DINO_GAME_PATH not set or game not running");
+        if (!fixture.IsInitialized)
+        {
+            return;  // Skip test when game is not available
+        }
         
         UiActionResult result = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
         result.Should().NotBeNull("Mods button should be found in main menu");
@@ -58,7 +64,9 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     [Fact]
     public async Task MainMenu_ModsButton_PersistsAcrossSceneChanges()
     {
-        UiActionResult initialQuery = await fixture.Client.QueryUiAsync("button:contains('Mods')");
+        if (!fixture.IsInitialized) return;
+
+        UiActionResult initialQuery = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
         initialQuery.MatchCount.Should().BeGreaterThan(0,
             "Mods button should exist in main menu initially");
 

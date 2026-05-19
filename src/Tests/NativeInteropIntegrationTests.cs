@@ -159,7 +159,7 @@ exit /b {exitCode}
 
             // Assert
             result.IsSuccess.Should().BeFalse("circular dependency should fail");
-            result.Errors.Should().NotBeEmpty();
+            result.Errors.Should().HaveCount(1);
         }
 
         [Fact]

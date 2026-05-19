@@ -40,3 +40,4 @@ loads:
     - economy_profiles/abundance.yaml
   trade_routes:
     - trade_routes/standard_routes.yaml
+

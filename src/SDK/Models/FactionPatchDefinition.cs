@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.SDK.Models
 {
@@ -14,7 +15,7 @@ namespace DINOForge.SDK.Models
     ///   - <c>"enemy"</c>  — the vanilla enemy faction (entities with Components.Enemy)
     ///   - A specific faction ID from a loaded faction definition
     /// </summary>
-    public class FactionPatchDefinition
+    public class FactionPatchDefinition : IValidatable
     {
         /// <summary>
         /// ID of the faction to extend. Use "player" or "enemy" for vanilla factions.
@@ -31,6 +32,20 @@ namespace DINOForge.SDK.Models
         /// Key = unit ID, Value = new role string.
         /// </summary>
         public Dictionary<string, string> RoleOverrides { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Validates that the faction patch definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new System.Collections.Generic.List<ValidationError>();
+            if (string.IsNullOrWhiteSpace(TargetFaction))
+                errors.Add(new ValidationError("target_faction", "TargetFaction is required.", "validation"));
+            if ((Add?.Units?.Count ?? 0) == 0 && (Add?.Buildings?.Count ?? 0) == 0 && (Add?.Doctrines?.Count ?? 0) == 0)
+                errors.Add(new ValidationError("add", "At least one addition (units, buildings, or doctrines) is required.", "validation"));
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 
     /// <summary>
@@ -39,12 +54,15 @@ namespace DINOForge.SDK.Models
     public class FactionPatchAdditions
     {
         /// <summary>Unit definition IDs to add to the faction.</summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> Units { get; set; } = new List<string>();
 
         /// <summary>Building definition IDs to add to the faction.</summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> Buildings { get; set; } = new List<string>();
 
         /// <summary>Doctrine definition IDs to add to the faction.</summary>
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> Doctrines { get; set; } = new List<string>();
     }
 }

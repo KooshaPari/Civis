@@ -30,7 +30,7 @@ public enum InstallPhase
 /// ViewModel for the Progress / Completion wizard page.
 /// Drives the installation sequence and surfaces log output.
 /// </summary>
-public partial class ProgressPageViewModel : ObservableObject
+public partial class ProgressPageViewModel : ObservableObject, IDisposable
 {
     private readonly InstallerService _service = new InstallerService();
     private CancellationTokenSource? _cts;
@@ -72,6 +72,8 @@ public partial class ProgressPageViewModel : ObservableObject
     /// <param name="options">Install options.</param>
     public async Task RunInstallAsync(InstallOptions options)
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         Phase = InstallPhase.Running;
         HasError = false;
@@ -139,6 +141,8 @@ public partial class ProgressPageViewModel : ObservableObject
     /// <param name="options">Install options populated with the existing game path.</param>
     public async Task RunRepairAsync(InstallOptions options)
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         Phase = InstallPhase.Running;
         HasError = false;
@@ -212,6 +216,8 @@ public partial class ProgressPageViewModel : ObservableObject
     /// <param name="options">Uninstall options.</param>
     public async Task RunUninstallAsync(UninstallOptions options)
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         Phase = InstallPhase.Running;
         HasError = false;
@@ -279,7 +285,8 @@ public partial class ProgressPageViewModel : ObservableObject
         string exe = Path.Combine(GamePath, "Diplomacy is Not an Option.exe");
         if (File.Exists(exe))
         {
-            Process.Start(new ProcessStartInfo { FileName = exe, UseShellExecute = true });
+            // game.exe outlives installer; intentional discard (Pattern #102)
+            _ = Process.Start(new ProcessStartInfo { FileName = exe, UseShellExecute = true }); // pattern-102-allowed
         }
     }
 
@@ -291,7 +298,7 @@ public partial class ProgressPageViewModel : ObservableObject
     {
         if (Directory.Exists(GamePath))
         {
-            Process.Start(new ProcessStartInfo { FileName = GamePath, UseShellExecute = true });
+            using var _ = Process.Start(new ProcessStartInfo { FileName = GamePath, UseShellExecute = true });
         }
     }
 
@@ -302,5 +309,16 @@ public partial class ProgressPageViewModel : ObservableObject
     public void Cancel()
     {
         _cts?.Cancel();
+    }
+
+    /// <summary>
+    /// Disposes the CancellationTokenSource to prevent resource leaks.
+    /// </summary>
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        GC.SuppressFinalize(this);
     }
 }

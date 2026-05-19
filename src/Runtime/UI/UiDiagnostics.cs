@@ -17,7 +17,7 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         public static string CaptureCanvasState()
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(1024);  // Capacity ~= canvas count × 6 fields × 30 chars
             sb.AppendLine("=== Canvas State ===");
 
             Canvas[] canvases = Resources.FindObjectsOfTypeAll<Canvas>();
@@ -47,7 +47,7 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         public static string CaptureScrollRectState(ScrollRect scrollRect, string name)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(512);  // Capacity ~= 13 appends × 40 chars
             sb.AppendLine($"=== ScrollRect: {name} ===");
 
             sb.AppendLine($"enabled: {scrollRect.enabled}");

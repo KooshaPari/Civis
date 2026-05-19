@@ -36,13 +36,13 @@ namespace DINOForge.Runtime.Bridge
         /// Pool structure: prefab path → queue of available ParticleSystem instances.
         /// </summary>
         private readonly Dictionary<string, Queue<ParticleSystem>> _pools =
-            new Dictionary<string, Queue<ParticleSystem>>();
+            new Dictionary<string, Queue<ParticleSystem>>(StringComparer.Ordinal);
 
         /// <summary>
         /// Track active (checked-out) instances for stats reporting.
         /// </summary>
         private readonly Dictionary<string, int> _activeCount =
-            new Dictionary<string, int>();
+            new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>
         /// Root container for all pooled particle systems. Disabled in hierarchy.
@@ -130,6 +130,7 @@ namespace DINOForge.Runtime.Bridge
                 {
                     try
                     {
+                        // null-forgiveness-ok: _poolRoot lazy-initialized at field declaration
                         ParticleSystem instance = UnityEngine.Object.Instantiate(prefab, _poolRoot!.transform);
                         instance.name = $"{prefab.name}_{i}";
                         instance.gameObject.SetActive(false);
@@ -230,6 +231,7 @@ namespace DINOForge.Runtime.Bridge
                 ParticleSystem? prefab = LoadPrefabFromPack(prefabPath);
                 if (prefab != null)
                 {
+                    // null-forgiveness-ok: _poolRoot lazy-initialized at field declaration
                     instance = UnityEngine.Object.Instantiate(prefab, _poolRoot!.transform);
                     instance.gameObject.SetActive(false);
                     _totalInstances++;
@@ -430,9 +432,9 @@ namespace DINOForge.Runtime.Bridge
             try
             {
                 string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now:HH:mm:ss.fff}] [VFXPoolManager] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:HH:mm:ss.fff}] [VFXPoolManager] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
     }
 }

@@ -34,7 +34,7 @@ namespace DINOForge.Tests
             FactionArchetype archetype = _registry.GetArchetype(id);
             archetype.Should().NotBeNull();
             archetype.Id.Should().Be(id);
-            archetype.BaseModifiers.Should().NotBeEmpty();
+            archetype.BaseModifiers.Should().HaveCountGreaterThanOrEqualTo(3); // open-ended-count-ok: ArchetypeRegistry fixture defines each archetype with 3+ modifiers deterministically
         }
 
         [Fact]

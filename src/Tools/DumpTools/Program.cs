@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Spectre.Console;
@@ -116,7 +117,7 @@ namespace DINOForge.Tools.DumpTools
             string worldsPath = Path.Combine(dumpDir, "worlds.json");
             if (File.Exists(worldsPath))
             {
-                JArray worlds = JArray.Parse(File.ReadAllText(worldsPath));
+                JArray worlds = JArray.Parse(File.ReadAllText(worldsPath, Encoding.UTF8));
                 AnsiConsole.MarkupLine($"\n[bold]Worlds: {worlds.Count}[/]");
                 foreach (JToken world in worlds)
                 {
@@ -145,7 +146,7 @@ namespace DINOForge.Tools.DumpTools
                 return 1;
             }
 
-            JArray types = JArray.Parse(File.ReadAllText(typesPath));
+            JArray types = JArray.Parse(File.ReadAllText(typesPath, Encoding.UTF8));
 
             // Group by category
             var components = types.Where(t => (bool)(t["isComponent"] ?? false)).ToList();
@@ -224,7 +225,7 @@ namespace DINOForge.Tools.DumpTools
             foreach (string file in systemFiles)
             {
                 string worldName = Path.GetFileNameWithoutExtension(file).Replace("systems_", "");
-                JArray systems = JArray.Parse(File.ReadAllText(file));
+                JArray systems = JArray.Parse(File.ReadAllText(file, Encoding.UTF8));
 
                 AnsiConsole.MarkupLine($"\n[bold]Systems in '{worldName}' ({systems.Count}):[/]");
 
@@ -261,7 +262,7 @@ namespace DINOForge.Tools.DumpTools
                 return 1;
             }
 
-            JObject namespaces = JObject.Parse(File.ReadAllText(nsPath));
+            JObject namespaces = JObject.Parse(File.ReadAllText(nsPath, Encoding.UTF8));
 
             foreach (var assembly in namespaces.Properties())
             {

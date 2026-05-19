@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -9,7 +10,7 @@ namespace DINOForge.SDK.Models
     /// Components.FormationArrowData, Components.FormationDrawParameters,
     /// Components.FormationViewMainColor, and Components.FormationViewBackColor ECS components.
     /// </summary>
-    public class SquadDefinition
+    public class SquadDefinition : IValidatable
     {
         /// <summary>Unique squad identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -73,6 +74,32 @@ namespace DINOForge.SDK.Models
         /// Behavior tags for AI control. Valid values: hold_position, aggressive, defensive, patrol.
         /// </summary>
         [YamlMember(Alias = "behavior_tags")]
+        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
         public List<string> BehaviorTags { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Validates that the squad definition is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+            {
+                errors.Add(new ValidationError("id", "Squad id must not be empty", "required"));
+            }
+
+            if (string.IsNullOrWhiteSpace(DisplayName))
+            {
+                errors.Add(new ValidationError("display_name", "Squad display_name must not be empty", "required"));
+            }
+
+            if (MaxSize < MinSize)
+            {
+                errors.Add(new ValidationError("max_size", "MaxSize cannot be less than MinSize", "constraint-violation"));
+            }
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 }

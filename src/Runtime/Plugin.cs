@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -280,9 +281,9 @@ namespace DINOForge.Runtime
             try
             {
                 string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
 
         private static void LogInstallDiagnostics()
@@ -330,6 +331,7 @@ namespace DINOForge.Runtime
             // The persistent root and RuntimeDriver continue running independently.
             Log?.LogInfo("[Plugin] BepInEx plugin object OnDestroy (persistent root still alive).");
             _harmony?.UnpatchSelf();
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             WriteDebug("OnDestroy called (BepInEx object only)");
         }
     }
@@ -409,6 +411,7 @@ namespace DINOForge.Runtime
         // Cross-thread flag: true once OnDestroy is called. The background polling thread
         // checks this to avoid calling OnWorldReady after the RuntimeDriver is destroyed.
         private volatile bool _destroyed;
+        private readonly ManualResetEventSlim _backgroundPollStopEvent = new(false);
 
         /// <summary>Polling interval in seconds for ECS world detection.</summary>
         private const float WorldPollInterval = 0.5f;
@@ -644,7 +647,7 @@ namespace DINOForge.Runtime
                         System.Threading.Thread.Sleep(2000);
                         if (System.IO.File.Exists(signalPath))
                         {
-                            try { System.IO.File.Delete(signalPath); } catch { }
+                            try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
 
                             // Direct invocation from background thread — works in Mono 2021.3
                             // Same pattern as F9/F10 key polling (no Update() required)
@@ -682,7 +685,7 @@ namespace DINOForge.Runtime
                         }
                     }
                 }
-                catch { }
+                catch { } // safe-swallow: HMR reload best-effort, non-critical
             });
         }
 
@@ -707,7 +710,9 @@ namespace DINOForge.Runtime
                     int heartbeatCounter = 0;
                     while (true)
                     {
-                        System.Threading.Thread.Sleep(50); // Poll every 50ms
+                        // sync-over-async-unavoidable: background thread control signal (50ms timeout, no deadlock)
+                        if (_backgroundPollStopEvent.Wait(50))  // Signaled = destroyed
+                            break;
 
                         // Guard: only run if initialized
                         if (!_initialized) continue;
@@ -831,7 +836,7 @@ namespace DINOForge.Runtime
                                     TryRegisterKeyInputSystem(w);
                                 }
                             }
-                            catch { }
+                            catch { } // safe-swallow: ECS world discovery best-effort
 
                             // Catalog rebuild: only trigger once when enough entities exist
                             try
@@ -848,7 +853,7 @@ namespace DINOForge.Runtime
                                     }
                                 }
                             }
-                            catch { }
+                            catch { } // safe-swallow: catalog rebuild best-effort
                         }
                         // Stable state: detect world changes (scene transitions) and re-register KeyInputSystem.
                         // After scene transitions, DINO creates a new ECS world and updates
@@ -875,7 +880,7 @@ namespace DINOForge.Runtime
                                     }
                                 }
                             }
-                            catch { }
+                            catch { } // safe-swallow: Key system discovery best-effort
                         }
                     }
                 }
@@ -1156,14 +1161,15 @@ namespace DINOForge.Runtime
             try
             {
                 string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.Now}] {msg}\n");
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] {msg}\n");
             }
-            catch { }
+            catch { } // safe-swallow: best-effort debug I/O, non-critical
         }
 
         private void OnDestroy()
         {
             _destroyed = true; // Signal background polling thread to stop
+            _backgroundPollStopEvent.Set();  // Wake up the polling loop
             WriteDebug("[RuntimeDriver] OnDestroy called — DINO destroyed our root. Bridge kept alive.");
             Plugin.NeedsResurrection = true;
             Plugin.PersistentRoot = null;
@@ -1175,7 +1181,7 @@ namespace DINOForge.Runtime
             {
                 _modPlatform?.ShutdownNonBridge();
             }
-            catch { }
+            catch { } // safe-swallow: cleanup, non-fatal even if shutdown fails
         }
     }
 }

@@ -1,0 +1,11 @@
+# Pattern #111 Silent Catch Allowlist
+# Files where bare catch { } is acceptable (pure disposable cleanup)
+# Format: one filename pattern per line (substring matching)
+
+# SAFE: Pure disposable cleanup (Dispose/Close only, no error handling needed)
+Bridge/Client/GameClient.cs
+Runtime/Bridge/GameBridgeServer.cs
+Runtime/Bridge/SessionHmac.cs
+
+# TEST_OK: Test files where best-effort cleanup is acceptable
+Tests/

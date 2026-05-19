@@ -25,6 +25,8 @@ namespace DINOForge.Tools.Cli.Assetctl.Sketchfab;
 /// </remarks>
 public sealed class SketchfabClient : IDisposable
 {
+    private static readonly HttpClient SharedHttp = new();
+
     private readonly HttpClient _httpClient;
     private readonly string _apiToken;
     private readonly string _apiBaseUrl;
@@ -52,10 +54,8 @@ public sealed class SketchfabClient : IDisposable
         _options = options ?? new SketchfabClientOptions();
         _apiBaseUrl = _options.ApiBaseUrl;
 
-        _httpClient = new HttpClient()
-        {
-            Timeout = TimeSpan.FromSeconds(_options.HttpTimeoutSeconds)
-        };
+        _httpClient = SharedHttp;
+        _httpClient.Timeout = TimeSpan.FromSeconds(_options.HttpTimeoutSeconds);
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("DINOForge/1.0 (+https://github.com/KooshaPari/Dino)");
     }

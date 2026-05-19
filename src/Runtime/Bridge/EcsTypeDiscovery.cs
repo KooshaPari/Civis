@@ -34,9 +34,9 @@ namespace DINOForge.Runtime.Bridge
             if (_discoveryLogged) return;
             _discoveryLogged = true;
 
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(8192);  // Capacity ~= 100+ assemblies × 100+ types × 60 chars per line
             sb.AppendLine("=== DINOForge ECS Type Discovery ===");
-            sb.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Timestamp: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
             sb.AppendLine();
 
             // Discover assemblies
@@ -50,7 +50,11 @@ namespace DINOForge.Runtime.Bridge
                         assemblies.Add(asm);
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: assembly metadata read failure is acceptable during ECS type discovery; assembly is skipped */
+                    System.Diagnostics.Debug.WriteLine($"ECS type discovery assembly check failed: {ex.Message}");
+                }
             }
 
             sb.AppendLine($"Game assemblies found: {assemblies.Count}");
@@ -161,7 +165,11 @@ namespace DINOForge.Runtime.Bridge
                         if (type != null) return true;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: type search failure in assembly is acceptable; search continues with next assembly */
+                    System.Diagnostics.Debug.WriteLine($"ECS type existence check '{typeName}' failed: {ex.Message}");
+                }
             }
             return false;
         }
@@ -186,7 +194,7 @@ namespace DINOForge.Runtime.Bridge
         {
             if (_discoveredTypes == null) DiscoverAndLog();
 
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(2048);  // Capacity ~= 100+ type names × 20 chars
             sb.AppendLine("=== All Discovered Types ===");
             foreach (var type in _discoveredTypes?.OrderBy(t => t) ?? Enumerable.Empty<string>())
             {
@@ -277,10 +285,13 @@ namespace DINOForge.Runtime.Bridge
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.Now:u}] {msg}\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
                 Debug.Log($"[EcsTypeDiscovery] {msg.Split('\n')[0]}");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"EcsTypeDiscovery debug log write failed: {ex.Message}");
+            }
         }
     }
 }

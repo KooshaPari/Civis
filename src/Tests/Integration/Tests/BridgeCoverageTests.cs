@@ -61,7 +61,7 @@ public class BridgeCoverageTests
     {
         ComponentMapResult result = _bridge.GetComponentMap(null);
 
-        result.Mappings.Should().NotBeEmpty();
+        result.Mappings.Should().HaveCount(3);
         result.Mappings.Should().Contain(m => m.SdkPath == "unit.stats.hp");
         result.Mappings.Should().Contain(m => m.SdkPath == "unit.stats.speed");
         result.Mappings.Should().Contain(m => m.SdkPath == "unit.stats.damage");

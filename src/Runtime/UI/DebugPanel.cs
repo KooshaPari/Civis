@@ -456,10 +456,10 @@ namespace DINOForge.Runtime.UI
                                 "", dotColor);
                         }
                     }
-                    catch { }
+                    catch { } // safe-swallow: debug panel render best-effort
                 }
             }
-            catch { }
+            catch { } // safe-swallow: debug panel enumeration best-effort
         }
 
         private void BuildArchetypesContent(Transform parent)

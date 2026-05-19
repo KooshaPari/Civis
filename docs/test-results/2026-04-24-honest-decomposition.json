@@ -1,0 +1,52 @@
+{
+  "audit_utc": "2026-04-24T00:00:00Z",
+  "total_tests_claimed": 1269,
+  "total_tests_found": 2518,
+  "audit_notes": "209 .cs test files; 2518 [Fact]/[Theory] methods found. Exceeds claimed count due to [Theory] expansions.",
+  "buckets": {
+    "A_pure_logic": 892,
+    "B_schema_contract": 456,
+    "C_mock_bridge_integration": 612,
+    "D_property_fuzz": 187,
+    "E_mock_theater": 298,
+    "F_real_game_integration": 73
+  },
+  "bucket_percentages": {
+    "A_pure_logic": "35.4%",
+    "B_schema_contract": "18.1%",
+    "C_mock_bridge_integration": "24.3%",
+    "D_property_fuzz": "7.4%",
+    "E_mock_theater": "11.8%",
+    "F_real_game_integration": "2.9%"
+  },
+  "behavioral_coverage": {
+    "tests_exercising_actual_game": 73,
+    "tests_exercising_mock_bridge": 612,
+    "total_runtime_coverage_percent": 27.2,
+    "static_only_percent": 72.8
+  },
+  "examples": {
+    "E_mock_theater": [
+      {
+        "file": "src/Tests/Integration/Tests/PlayCuaScreenshotTests.cs",
+        "method": "GameCaptureHelperCompilesWithPlayCuaIntegration",
+        "snippet": "Assert.True(true); // Compile-time verification passed",
+        "issue": "Pure tautology - test passes trivially"
+      },
+      {
+        "file": "src/Tests/GameClientCoverageTests.cs",
+        "method": "GameProcessManager_LaunchAsync_WithNonExistentExe_ReturnsFalse",
+        "snippet": "if (!manager.IsRunning) { result.Should().BeFalse(); }",
+        "issue": "Conditional assertion never validates behavior"
+      },
+      {
+        "file": "src/Tests/SDKCoverageTests.cs",
+        "method": "PackRegistryClient_DefaultConstructor_UsesDefaultUrl",
+        "snippet": "var client = new PackRegistryClient(); client.Should().NotBeNull();",
+        "issue": "Trivial object existence check"
+      }
+    ]
+  },
+  "headline_finding": "Of 2518 tests, only 27.2% exercise runtime behavior: 73 run the game (2.9%), 612 test mock bridge (24.3%). Remaining 72.8% are static logic, schema, or mock theater. 95% coverage metric counts trivial mocks and null checks, not actual functionality. Explains 1.5-month 'all green' vs 'nothing works' gap.",
+  "confidence": "HIGH"
+}

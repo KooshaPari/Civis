@@ -19,6 +19,8 @@
     <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
     <ProjectReference Include="..\..\Domains\Warfare\DINOForge.Domains.Warfare.csproj" />
     <ProjectReference Include="..\..\Domains\Economy\DINOForge.Domains.Economy.csproj" />
+    <ProjectReference Include="..\..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
   </ItemGroup>
 
 </Project>

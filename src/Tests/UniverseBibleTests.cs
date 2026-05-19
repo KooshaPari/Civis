@@ -258,7 +258,7 @@ version: '0.1.0'
 
                 PackGeneratorResult result = generator.Generate(bible, null, outputDir);
 
-                result.GeneratedFiles.Should().HaveCountGreaterThan(0);
+                result.GeneratedFiles.Should().HaveCountGreaterThanOrEqualTo(3);
                 File.Exists(Path.Combine(outputDir, "pack.yaml")).Should().BeTrue();
                 Directory.Exists(Path.Combine(outputDir, "factions")).Should().BeTrue();
                 Directory.Exists(Path.Combine(outputDir, "units")).Should().BeTrue();

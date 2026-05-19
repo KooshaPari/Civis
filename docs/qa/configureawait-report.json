@@ -1,0 +1,1922 @@
+{
+  "scan_utc": "2026-04-27T18:52:47.997169Z",
+  "scan_date": "2026-04-27",
+  "scanned_files": 158,
+  "files_scanned": 158,
+  "total_hits": 95,
+  "new_hits": 95,
+  "allowlist_size": 0,
+  "strict": false,
+  "high_count": 0,
+  "med_count": 95,
+  "low_count": 0,
+  "high_violations": [],
+  "med_violations": [
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 520,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|520",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 529,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|529",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 627,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct, force)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct, force) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|627",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 645,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "localAdapter.SearchAsync(\"\", ct)",
+      "detail": "await localAdapter.SearchAsync(\"\", ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|645",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 665,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ...",
+      "detail": "await downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|665",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 844,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.DownloadAssetAsync(\n                    new Sketchfab.AssetCandidate\n                    {\n               ...",
+      "detail": "await downloader.DownloadAssetAsync(\n                    new Sketchfab.AssetCandidate\n                    {\n               ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|844",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1010,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ...",
+      "detail": "await downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1010",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1045,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.DownloadBatchAsync(\n                    batchCandidates,\n                    outputDir,\n                  ...",
+      "detail": "await downloader.DownloadBatchAsync(\n                    batchCandidates,\n                    outputDir,\n                  ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1045",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1136,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "adapter.ValidateTokenAsync(ct)",
+      "detail": "await adapter.ValidateTokenAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1136",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1198,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "adapter.GetQuotaAsync(ct)",
+      "detail": "await adapter.GetQuotaAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1198",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/LocalSourceAdapter.cs",
+      "line": 65,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(registryPath, cancellationToken)",
+      "detail": "await File.ReadAllTextAsync(registryPath, cancellationToken) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/LocalSourceAdapter.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|65",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/LocalSourceAdapter.cs",
+      "line": 113,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(registryPath, cancellationToken)",
+      "detail": "await File.ReadAllTextAsync(registryPath, cancellationToken) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/LocalSourceAdapter.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|113",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 107,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.SearchModelsAsync(query, filters, ct)",
+      "detail": "await _sketchfabClient.SearchModelsAsync(query, filters, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|107",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 233,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.SearchModelsAsync(query, filters, ct)",
+      "detail": "await _sketchfabClient.SearchModelsAsync(query, filters, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|233",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 378,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.DownloadModelAsync(\n                candidate.ModelId,\n                \"glb\",\n                downlo...",
+      "detail": "await _sketchfabClient.DownloadModelAsync(\n                candidate.ModelId,\n                \"glb\",\n                downlo... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|378",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 424,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.WriteAllTextAsync(manifestPath, manifestJson, ct)",
+      "detail": "await File.WriteAllTextAsync(manifestPath, manifestJson, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|424",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 521,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "semaphore.WaitAsync(ct)",
+      "detail": "await semaphore.WaitAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|521",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 534,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "DownloadAssetAsync(candidate, outputDir, ct)",
+      "detail": "await DownloadAssetAsync(candidate, outputDir, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|534",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 583,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(2500, ct)",
+      "detail": "await Task.Delay(2500, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|583",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 591,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.WhenAll(tasks)",
+      "detail": "await Task.WhenAll(tasks) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|591",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ComponentMapCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ComponentMapCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ComponentMapCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ComponentMapCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetComponentMapAsync(path, ct)",
+      "detail": "await client.GetComponentMapAsync(path, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ComponentMapCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ComponentMapCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 33,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|33",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 45,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.DumpStateAsync(category, ct)\n                : await client.GetCatalogAsync(ct)",
+      "detail": "await client.DumpStateAsync(category, ct)\n                : await client.GetCatalogAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|45",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 46,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetCatalogAsync(ct)",
+      "detail": "await client.GetCatalogAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|46",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/OverrideCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/OverrideCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/OverrideCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/OverrideCommand.cs",
+      "line": 51,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ApplyOverrideAsync(path, value, mode, filter, ct)",
+      "detail": "await client.ApplyOverrideAsync(path, value, mode, filter, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/OverrideCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/OverrideCommand.cs|51",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 49,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.AddPackAsync(repoUrl, path)",
+      "detail": "await manager.AddPackAsync(repoUrl, path) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|49",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 160,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.UpdateAllAsync()",
+      "detail": "await manager.UpdateAllAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|160",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 206,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.GenerateLockFile()",
+      "detail": "await manager.GenerateLockFile() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|206",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/QueryCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/QueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/QueryCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/QueryCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.QueryEntitiesAsync(componentType: path, ct: ct)",
+      "detail": "await client.QueryEntitiesAsync(componentType: path, ct: ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/QueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/QueryCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/RecordCommand.cs",
+      "line": 108,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct)",
+      "detail": "await Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/RecordCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/RecordCommand.cs|108",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ReloadCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ReloadCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ReloadCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ReloadCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ReloadPacksAsync(path, ct)",
+      "detail": "await client.ReloadPacksAsync(path, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ReloadCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ReloadCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ResourcesCommand.cs",
+      "line": 25,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ResourcesCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ResourcesCommand.cs|25",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ResourcesCommand.cs",
+      "line": 36,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetResourcesAsync(ct)",
+      "detail": "await client.GetResourcesAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ResourcesCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ResourcesCommand.cs|36",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ScreenshotCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ScreenshotCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ScreenshotCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ScreenshotCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ScreenshotAsync(output, ct)",
+      "detail": "await client.ScreenshotAsync(output, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ScreenshotCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ScreenshotCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/StatusCommand.cs",
+      "line": 24,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/StatusCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/StatusCommand.cs|24",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/StatusCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.StatusAsync(ct)",
+      "detail": "await client.StatusAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/StatusCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/StatusCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 47,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "WatchAndSyncAsync(repoPath, gamePacksPath, ct)",
+      "detail": "await WatchAndSyncAsync(repoPath, gamePacksPath, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|47",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 51,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|51",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 107,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name))",
+      "detail": "await CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name)) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|107",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 117,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(pack.FullName, dest)",
+      "detail": "await CopyDirectoryAsync(pack.FullName, dest) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|117",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 130,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "TriggerInGameReloadAsync()",
+      "detail": "await TriggerInGameReloadAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|130",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 149,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|149",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 158,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|158",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 166,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(Timeout.Infinite, ct)",
+      "detail": "await Task.Delay(Timeout.Infinite, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|166",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 179,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ConnectAsync()",
+      "detail": "await client.ConnectAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|179",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 182,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ReloadPacksAsync()",
+      "detail": "await client.ReloadPacksAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|182",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 206,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() => File.Copy(file, destFile, true))",
+      "detail": "await Task.Run(() => File.Copy(file, destFile, true)) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|206",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 212,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(dir, destDir)",
+      "detail": "await CopyDirectoryAsync(dir, destDir) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|212",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiClickCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiClickCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiClickCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiClickCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ClickUiAsync(selector, ct)",
+      "detail": "await client.ClickUiAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiClickCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiClickCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiExpectCommand.cs",
+      "line": 31,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiExpectCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiExpectCommand.cs|31",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiExpectCommand.cs",
+      "line": 42,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ExpectUiAsync(selector, condition, ct)",
+      "detail": "await client.ExpectUiAsync(selector, condition, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiExpectCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiExpectCommand.cs|42",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiQueryCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiQueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiQueryCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiQueryCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.QueryUiAsync(selector, ct)",
+      "detail": "await client.QueryUiAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiQueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiQueryCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiTreeCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiTreeCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiTreeCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiTreeCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetUiTreeAsync(selector, ct)",
+      "detail": "await client.GetUiTreeAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiTreeCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiTreeCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiWaitCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiWaitCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiWaitCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiWaitCommand.cs",
+      "line": 46,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.WaitForUiAsync(selector, state, timeout, ct)",
+      "detail": "await client.WaitForUiAsync(selector, state, timeout, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiWaitCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiWaitCommand.cs|46",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/VerifyPackCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/VerifyPackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/VerifyPackCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/VerifyPackCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.VerifyModAsync(packPath, ct)",
+      "detail": "await client.VerifyModAsync(packPath, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/VerifyPackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/VerifyPackCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 22,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct)",
+      "detail": "await CommandHelper.ConnectAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|22",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 28,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "AnsiConsole.Live(new Table())\n                .StartAsync(async ctx =>\n                {\n                    while (!...",
+      "detail": "await AnsiConsole.Live(new Table())\n                .StartAsync(async ctx =>\n                {\n                    while (!... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|28",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.StatusAsync(ct)",
+      "detail": "await client.StatusAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 36,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetResourcesAsync(ct)",
+      "detail": "await client.GetResourcesAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|36",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 74,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(2000, ct)",
+      "detail": "await Task.Delay(2000, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|74",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Program.cs",
+      "line": 109,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "parseResult.InvokeAsync()",
+      "detail": "await parseResult.InvokeAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Program.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Program.cs|109",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 91,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "importService.ImportAsync(asset.Id, assetPath)",
+      "detail": "await importService.ImportAsync(asset.Id, assetPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|91",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 155,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "optimizeService.OptimizeAsync(imported, defaultDef)",
+      "detail": "await optimizeService.OptimizeAsync(imported, defaultDef) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|155",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 219,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath)",
+      "detail": "await prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|219",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Program.cs",
+      "line": 222,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "parseResultObj.InvokeAsync()",
+      "detail": "await parseResultObj.InvokeAsync() omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Program.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Program.cs|222",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 24,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var catalogEntries = new List<string>();\n                catalogEntries....",
+      "detail": "await Task.Run(() =>\n            {\n                var catalogEntries = new List<string>();\n                catalogEntries.... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|24",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 50,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var sb = new StringBuilder();\n\n                sb.AppendLine(\"%YAML 1.1\"...",
+      "detail": "await Task.Run(() =>\n            {\n                var sb = new StringBuilder();\n\n                sb.AppendLine(\"%YAML 1.1\"... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|50",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 103,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var groupFile = Path.Combine(outputDirectory, $\"{asset.AssetId}_group.ya...",
+      "detail": "await Task.Run(() =>\n            {\n                var groupFile = Path.Combine(outputDirectory, $\"{asset.AssetId}_group.ya... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|103",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AssetImportService.cs",
+      "line": 31,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var scene = _assimpContext.ImportFile(filePath, PostProcessSteps.Triangu...",
+      "detail": "await Task.Run(() =>\n            {\n                var scene = _assimpContext.ImportFile(filePath, PostProcessSteps.Triangu... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AssetImportService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AssetImportService.cs|31",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AssetOptimizationService.cs",
+      "line": 44,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var stopwatch = Stopwatch.StartNew();\n\n                try\n             ...",
+      "detail": "await Task.Run(() =>\n            {\n                var stopwatch = Stopwatch.StartNew();\n\n                try\n             ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AssetOptimizationService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AssetOptimizationService.cs|44",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/DefinitionUpdateService.cs",
+      "line": 25,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                foreach (var (asset, config) in processedAssets)\n                {\n     ...",
+      "detail": "await Task.Run(() =>\n            {\n                foreach (var (asset, config) in processedAssets)\n                {\n     ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/DefinitionUpdateService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/DefinitionUpdateService.cs|25",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 52,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ResolveWithGoAsync(available, target)",
+      "detail": "await ResolveWithGoAsync(available, target) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|52",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 85,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.WriteAllTextAsync(tempInputPath, inputJson)",
+      "detail": "await File.WriteAllTextAsync(tempInputPath, inputJson) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|85",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 113,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "process.StandardError.ReadToEndAsync()",
+      "detail": "await process.StandardError.ReadToEndAsync() omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|113",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 119,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(tempOutputPath)",
+      "detail": "await File.ReadAllTextAsync(tempOutputPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|119",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/PrefabGenerationService.cs",
+      "line": 23,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var prefab = BuildPrefabYaml(asset, definition);\n\n                Direct...",
+      "detail": "await Task.Run(() =>\n            {\n                var prefab = BuildPrefabYaml(asset, definition);\n\n                Direct... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/PrefabGenerationService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/PrefabGenerationService.cs|23",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 219,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_optimizationService.OptimizeAsync(asset, definition)",
+      "detail": "await _optimizationService.OptimizeAsync(asset, definition) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|219",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 275,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_prefabService.GeneratePrefabAsync(asset, definition, outputPath)",
+      "detail": "await _prefabService.GeneratePrefabAsync(asset, definition, outputPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|275",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 334,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_addressablesService.GenerateCatalogAsync(assets, catalogPath)",
+      "detail": "await _addressablesService.GenerateCatalogAsync(assets, catalogPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|334",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 48,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack)",
+      "detail": "await resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|48",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 65,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|65",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 91,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|91",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 111,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Assert.ThrowsAsync<ArgumentException>(\n                () => resolver.ResolveDependenciesAsync(available, packA)\n    ...",
+      "detail": "await Assert.ThrowsAsync<ArgumentException>(\n                () => resolver.ResolveDependenciesAsync(available, packA)\n    ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|111",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 127,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Assert.ThrowsAsync<InvalidOperationException>(\n                () => resolver.ResolveDependenciesAsync(available, pac...",
+      "detail": "await Assert.ThrowsAsync<InvalidOperationException>(\n                () => resolver.ResolveDependenciesAsync(available, pac... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|127",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 143,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|143",
+      "in_allowlist": false
+    }
+  ],
+  "low_violations": [],
+  "all_hits": [
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 665,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ...",
+      "detail": "await downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|665",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 844,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.DownloadAssetAsync(\n                    new Sketchfab.AssetCandidate\n                    {\n               ...",
+      "detail": "await downloader.DownloadAssetAsync(\n                    new Sketchfab.AssetCandidate\n                    {\n               ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|844",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1010,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ...",
+      "detail": "await downloader.SearchCandidatesAsync(\n                    query,\n                    new AssetSearchCriteria\n            ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1010",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1045,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "downloader.DownloadBatchAsync(\n                    batchCandidates,\n                    outputDir,\n                  ...",
+      "detail": "await downloader.DownloadBatchAsync(\n                    batchCandidates,\n                    outputDir,\n                  ... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1045",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1136,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "adapter.ValidateTokenAsync(ct)",
+      "detail": "await adapter.ValidateTokenAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1136",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetctlCommand.cs",
+      "line": 1198,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "adapter.GetQuotaAsync(ct)",
+      "detail": "await adapter.GetQuotaAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetctlCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetctlCommand.cs|1198",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 520,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|520",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 529,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|529",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 627,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ImportFromLocalAsync(store, repoRoot, logger, ct, force)",
+      "detail": "await ImportFromLocalAsync(store, repoRoot, logger, ct, force) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|627",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/AssetLibraryCommand.cs",
+      "line": 645,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "localAdapter.SearchAsync(\"\", ct)",
+      "detail": "await localAdapter.SearchAsync(\"\", ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/AssetLibraryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|645",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/LocalSourceAdapter.cs",
+      "line": 65,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(registryPath, cancellationToken)",
+      "detail": "await File.ReadAllTextAsync(registryPath, cancellationToken) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/LocalSourceAdapter.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|65",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/LocalSourceAdapter.cs",
+      "line": 113,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(registryPath, cancellationToken)",
+      "detail": "await File.ReadAllTextAsync(registryPath, cancellationToken) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/LocalSourceAdapter.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|113",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 107,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.SearchModelsAsync(query, filters, ct)",
+      "detail": "await _sketchfabClient.SearchModelsAsync(query, filters, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|107",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 233,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.SearchModelsAsync(query, filters, ct)",
+      "detail": "await _sketchfabClient.SearchModelsAsync(query, filters, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|233",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 378,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_sketchfabClient.DownloadModelAsync(\n                candidate.ModelId,\n                \"glb\",\n                downlo...",
+      "detail": "await _sketchfabClient.DownloadModelAsync(\n                candidate.ModelId,\n                \"glb\",\n                downlo... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|378",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 424,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.WriteAllTextAsync(manifestPath, manifestJson, ct)",
+      "detail": "await File.WriteAllTextAsync(manifestPath, manifestJson, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|424",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 521,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "semaphore.WaitAsync(ct)",
+      "detail": "await semaphore.WaitAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|521",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 534,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "DownloadAssetAsync(candidate, outputDir, ct)",
+      "detail": "await DownloadAssetAsync(candidate, outputDir, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|534",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 583,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(2500, ct)",
+      "detail": "await Task.Delay(2500, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|583",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs",
+      "line": 591,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.WhenAll(tasks)",
+      "detail": "await Task.WhenAll(tasks) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|591",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ComponentMapCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ComponentMapCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ComponentMapCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ComponentMapCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetComponentMapAsync(path, ct)",
+      "detail": "await client.GetComponentMapAsync(path, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ComponentMapCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ComponentMapCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 33,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|33",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 45,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.DumpStateAsync(category, ct)\n                : await client.GetCatalogAsync(ct)",
+      "detail": "await client.DumpStateAsync(category, ct)\n                : await client.GetCatalogAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|45",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/DumpCommand.cs",
+      "line": 46,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetCatalogAsync(ct)",
+      "detail": "await client.GetCatalogAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/DumpCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/DumpCommand.cs|46",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/OverrideCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/OverrideCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/OverrideCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/OverrideCommand.cs",
+      "line": 51,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ApplyOverrideAsync(path, value, mode, filter, ct)",
+      "detail": "await client.ApplyOverrideAsync(path, value, mode, filter, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/OverrideCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/OverrideCommand.cs|51",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 49,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.AddPackAsync(repoUrl, path)",
+      "detail": "await manager.AddPackAsync(repoUrl, path) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|49",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 160,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.UpdateAllAsync()",
+      "detail": "await manager.UpdateAllAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|160",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/PackCommand.cs",
+      "line": 206,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "manager.GenerateLockFile()",
+      "detail": "await manager.GenerateLockFile() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/PackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/PackCommand.cs|206",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/QueryCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/QueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/QueryCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/QueryCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.QueryEntitiesAsync(componentType: path, ct: ct)",
+      "detail": "await client.QueryEntitiesAsync(componentType: path, ct: ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/QueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/QueryCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/RecordCommand.cs",
+      "line": 108,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct)",
+      "detail": "await Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/RecordCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/RecordCommand.cs|108",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ReloadCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ReloadCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ReloadCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ReloadCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ReloadPacksAsync(path, ct)",
+      "detail": "await client.ReloadPacksAsync(path, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ReloadCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ReloadCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ResourcesCommand.cs",
+      "line": 25,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ResourcesCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ResourcesCommand.cs|25",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ResourcesCommand.cs",
+      "line": 36,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetResourcesAsync(ct)",
+      "detail": "await client.GetResourcesAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ResourcesCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ResourcesCommand.cs|36",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ScreenshotCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ScreenshotCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ScreenshotCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/ScreenshotCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ScreenshotAsync(output, ct)",
+      "detail": "await client.ScreenshotAsync(output, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/ScreenshotCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/ScreenshotCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/StatusCommand.cs",
+      "line": 24,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/StatusCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/StatusCommand.cs|24",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/StatusCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.StatusAsync(ct)",
+      "detail": "await client.StatusAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/StatusCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/StatusCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 47,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "WatchAndSyncAsync(repoPath, gamePacksPath, ct)",
+      "detail": "await WatchAndSyncAsync(repoPath, gamePacksPath, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|47",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 51,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|51",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 107,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name))",
+      "detail": "await CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name)) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|107",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 117,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(pack.FullName, dest)",
+      "detail": "await CopyDirectoryAsync(pack.FullName, dest) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|117",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 130,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "TriggerInGameReloadAsync()",
+      "detail": "await TriggerInGameReloadAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|130",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 149,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|149",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 158,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "SyncPacksAsync(repoPath, gamePacksPath)",
+      "detail": "await SyncPacksAsync(repoPath, gamePacksPath) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|158",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 166,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(Timeout.Infinite, ct)",
+      "detail": "await Task.Delay(Timeout.Infinite, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|166",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 179,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ConnectAsync()",
+      "detail": "await client.ConnectAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|179",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 182,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ReloadPacksAsync()",
+      "detail": "await client.ReloadPacksAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|182",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 206,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() => File.Copy(file, destFile, true))",
+      "detail": "await Task.Run(() => File.Copy(file, destFile, true)) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|206",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/SyncCommand.cs",
+      "line": 212,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CopyDirectoryAsync(dir, destDir)",
+      "detail": "await CopyDirectoryAsync(dir, destDir) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/SyncCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/SyncCommand.cs|212",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiClickCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiClickCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiClickCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiClickCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ClickUiAsync(selector, ct)",
+      "detail": "await client.ClickUiAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiClickCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiClickCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiExpectCommand.cs",
+      "line": 31,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiExpectCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiExpectCommand.cs|31",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiExpectCommand.cs",
+      "line": 42,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.ExpectUiAsync(selector, condition, ct)",
+      "detail": "await client.ExpectUiAsync(selector, condition, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiExpectCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiExpectCommand.cs|42",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiQueryCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiQueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiQueryCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiQueryCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.QueryUiAsync(selector, ct)",
+      "detail": "await client.QueryUiAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiQueryCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiQueryCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiTreeCommand.cs",
+      "line": 26,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiTreeCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiTreeCommand.cs|26",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiTreeCommand.cs",
+      "line": 37,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetUiTreeAsync(selector, ct)",
+      "detail": "await client.GetUiTreeAsync(selector, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiTreeCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiTreeCommand.cs|37",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiWaitCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiWaitCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiWaitCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/UiWaitCommand.cs",
+      "line": 46,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.WaitForUiAsync(selector, state, timeout, ct)",
+      "detail": "await client.WaitForUiAsync(selector, state, timeout, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/UiWaitCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/UiWaitCommand.cs|46",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/VerifyPackCommand.cs",
+      "line": 29,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct, writeErrors: !json)",
+      "detail": "await CommandHelper.ConnectAsync(ct, writeErrors: !json) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/VerifyPackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/VerifyPackCommand.cs|29",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/VerifyPackCommand.cs",
+      "line": 40,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.VerifyModAsync(packPath, ct)",
+      "detail": "await client.VerifyModAsync(packPath, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/VerifyPackCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/VerifyPackCommand.cs|40",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 22,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "CommandHelper.ConnectAsync(ct)",
+      "detail": "await CommandHelper.ConnectAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|22",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 28,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "AnsiConsole.Live(new Table())\n                .StartAsync(async ctx =>\n                {\n                    while (!...",
+      "detail": "await AnsiConsole.Live(new Table())\n                .StartAsync(async ctx =>\n                {\n                    while (!... omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|28",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 35,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.StatusAsync(ct)",
+      "detail": "await client.StatusAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|35",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 36,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "client.GetResourcesAsync(ct)",
+      "detail": "await client.GetResourcesAsync(ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|36",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Commands/WatchCommand.cs",
+      "line": 74,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Delay(2000, ct)",
+      "detail": "await Task.Delay(2000, ct) omits .ConfigureAwait(false). Library code under src/Tools/Cli/Commands/WatchCommand.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Commands/WatchCommand.cs|74",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/Cli/Program.cs",
+      "line": 109,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "parseResult.InvokeAsync()",
+      "detail": "await parseResult.InvokeAsync() omits .ConfigureAwait(false). Library code under src/Tools/Cli/Program.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/Cli/Program.cs|109",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 91,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "importService.ImportAsync(asset.Id, assetPath)",
+      "detail": "await importService.ImportAsync(asset.Id, assetPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|91",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 155,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "optimizeService.OptimizeAsync(imported, defaultDef)",
+      "detail": "await optimizeService.OptimizeAsync(imported, defaultDef) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|155",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/DirectAssetPipeline.cs",
+      "line": 219,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath)",
+      "detail": "await prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/DirectAssetPipeline.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|219",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Program.cs",
+      "line": 222,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "parseResultObj.InvokeAsync()",
+      "detail": "await parseResultObj.InvokeAsync() omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Program.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Program.cs|222",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 24,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var catalogEntries = new List<string>();\n                catalogEntries....",
+      "detail": "await Task.Run(() =>\n            {\n                var catalogEntries = new List<string>();\n                catalogEntries.... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|24",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 50,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var sb = new StringBuilder();\n\n                sb.AppendLine(\"%YAML 1.1\"...",
+      "detail": "await Task.Run(() =>\n            {\n                var sb = new StringBuilder();\n\n                sb.AppendLine(\"%YAML 1.1\"... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|50",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AddressablesService.cs",
+      "line": 103,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var groupFile = Path.Combine(outputDirectory, $\"{asset.AssetId}_group.ya...",
+      "detail": "await Task.Run(() =>\n            {\n                var groupFile = Path.Combine(outputDirectory, $\"{asset.AssetId}_group.ya... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AddressablesService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AddressablesService.cs|103",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AssetImportService.cs",
+      "line": 31,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var scene = _assimpContext.ImportFile(filePath, PostProcessSteps.Triangu...",
+      "detail": "await Task.Run(() =>\n            {\n                var scene = _assimpContext.ImportFile(filePath, PostProcessSteps.Triangu... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AssetImportService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AssetImportService.cs|31",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/AssetOptimizationService.cs",
+      "line": 44,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var stopwatch = Stopwatch.StartNew();\n\n                try\n             ...",
+      "detail": "await Task.Run(() =>\n            {\n                var stopwatch = Stopwatch.StartNew();\n\n                try\n             ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/AssetOptimizationService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/AssetOptimizationService.cs|44",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/DefinitionUpdateService.cs",
+      "line": 25,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                foreach (var (asset, config) in processedAssets)\n                {\n     ...",
+      "detail": "await Task.Run(() =>\n            {\n                foreach (var (asset, config) in processedAssets)\n                {\n     ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/DefinitionUpdateService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/DefinitionUpdateService.cs|25",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 52,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "ResolveWithGoAsync(available, target)",
+      "detail": "await ResolveWithGoAsync(available, target) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|52",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 85,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.WriteAllTextAsync(tempInputPath, inputJson)",
+      "detail": "await File.WriteAllTextAsync(tempInputPath, inputJson) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|85",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 113,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "process.StandardError.ReadToEndAsync()",
+      "detail": "await process.StandardError.ReadToEndAsync() omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|113",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
+      "line": 119,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "File.ReadAllTextAsync(tempOutputPath)",
+      "detail": "await File.ReadAllTextAsync(tempOutputPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/GoResolverService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|119",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Services/PrefabGenerationService.cs",
+      "line": 23,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Task.Run(() =>\n            {\n                var prefab = BuildPrefabYaml(asset, definition);\n\n                Direct...",
+      "detail": "await Task.Run(() =>\n            {\n                var prefab = BuildPrefabYaml(asset, definition);\n\n                Direct... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Services/PrefabGenerationService.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Services/PrefabGenerationService.cs|23",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 219,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_optimizationService.OptimizeAsync(asset, definition)",
+      "detail": "await _optimizationService.OptimizeAsync(asset, definition) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|219",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 275,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_prefabService.GeneratePrefabAsync(asset, definition, outputPath)",
+      "detail": "await _prefabService.GeneratePrefabAsync(asset, definition, outputPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|275",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/AssetPipelineTests.cs",
+      "line": 334,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "_addressablesService.GenerateCatalogAsync(assets, catalogPath)",
+      "detail": "await _addressablesService.GenerateCatalogAsync(assets, catalogPath) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/AssetPipelineTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/AssetPipelineTests.cs|334",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 48,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack)",
+      "detail": "await resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|48",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 65,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|65",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 91,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|91",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 111,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Assert.ThrowsAsync<ArgumentException>(\n                () => resolver.ResolveDependenciesAsync(available, packA)\n    ...",
+      "detail": "await Assert.ThrowsAsync<ArgumentException>(\n                () => resolver.ResolveDependenciesAsync(available, packA)\n    ... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|111",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 127,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "Assert.ThrowsAsync<InvalidOperationException>(\n                () => resolver.ResolveDependenciesAsync(available, pac...",
+      "detail": "await Assert.ThrowsAsync<InvalidOperationException>(\n                () => resolver.ResolveDependenciesAsync(available, pac... omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|127",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs",
+      "line": 143,
+      "severity": "MED",
+      "boundary": "med",
+      "snippet": "resolver.ResolveDependenciesAsync(available, packC)",
+      "detail": "await resolver.ResolveDependenciesAsync(available, packC) omits .ConfigureAwait(false). Library code under src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs should not capture the consumer's SynchronizationContext or TaskScheduler \u2014 append .ConfigureAwait(false) to the awaited expression.",
+      "allowlist_key": "MED|src/Tools/PackCompiler/Tests/GoResolverServiceTests.cs|143",
+      "in_allowlist": false
+    }
+  ],
+  "exit_code": 1,
+  "scan_root": "C:/Users/koosh/Dino/src",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/configureawait-allowlist.txt"
+}

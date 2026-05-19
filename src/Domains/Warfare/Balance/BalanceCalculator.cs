@@ -13,7 +13,7 @@ namespace DINOForge.Domains.Warfare.Balance
     /// Power rating is a composite score derived from a unit's effective stats after
     /// archetype and doctrine modifiers.
     /// </summary>
-    public class BalanceCalculator
+    public sealed class BalanceCalculator
     {
         private readonly DoctrineEngine _doctrineEngine;
 

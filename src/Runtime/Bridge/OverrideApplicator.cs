@@ -62,17 +62,17 @@ namespace DINOForge.Runtime.Bridge
                 {
                     foreach (SDK.Models.StatOverrideEntry entry in definition.Overrides)
                     {
-                        // Parse the mode string to ModifierMode enum
-                        ModifierMode mode = ModifierMode.Override;
-                        if (!string.IsNullOrEmpty(entry.Mode))
+                        // entry.Mode is a StatOverrideMode enum from YAML deserialization.
+                        // Map to runtime ModifierMode (the runtime enum is internal to
+                        // the Bridge layer; we keep the mapping explicit so the layers can
+                        // diverge in the future without breaking pack authors).
+                        ModifierMode mode = entry.Mode switch
                         {
-                            if (string.Equals(entry.Mode, "override", StringComparison.OrdinalIgnoreCase))
-                                mode = ModifierMode.Override;
-                            else if (string.Equals(entry.Mode, "add", StringComparison.OrdinalIgnoreCase))
-                                mode = ModifierMode.Add;
-                            else if (string.Equals(entry.Mode, "multiply", StringComparison.OrdinalIgnoreCase))
-                                mode = ModifierMode.Multiply;
-                        }
+                            StatOverrideMode.Add => ModifierMode.Add,
+                            StatOverrideMode.Multiply => ModifierMode.Multiply,
+                            StatOverrideMode.Override => ModifierMode.Override,
+                            _ => ModifierMode.Override,  // Default fallback
+                        };
 
                         // Create stat modification
                         StatModification mod = new StatModification(

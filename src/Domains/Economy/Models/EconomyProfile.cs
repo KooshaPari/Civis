@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using DINOForge.SDK.Models;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Models
 {
@@ -8,7 +10,7 @@ namespace DINOForge.Domains.Economy.Models
     /// production bonuses, and trade modifiers. Economy profiles control
     /// how a faction gathers, produces, and trades resources.
     /// </summary>
-    public class EconomyProfile
+    public class EconomyProfile : IValidatable
     {
         /// <summary>
         /// Unique identifier for this economy profile.
@@ -34,13 +36,13 @@ namespace DINOForge.Domains.Economy.Models
         /// Per-resource production multipliers. Keys are resource types (food, wood, stone, iron, gold).
         /// Values are multipliers applied to all production of that resource. Default 1.0 for unlisted.
         /// </summary>
-        public Dictionary<string, float> ProductionMultipliers { get; set; } = new Dictionary<string, float>();
+        public Dictionary<string, float> ProductionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
 
         /// <summary>
         /// Per-resource consumption multipliers. Keys are resource types.
         /// Values less than 1.0 reduce consumption; greater than 1.0 increase it.
         /// </summary>
-        public Dictionary<string, float> ConsumptionMultipliers { get; set; } = new Dictionary<string, float>();
+        public Dictionary<string, float> ConsumptionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
 
         /// <summary>
         /// Global trade exchange rate modifier. Values less than 1.0 give better rates;
@@ -89,6 +91,60 @@ namespace DINOForge.Domains.Economy.Models
         public float GetConsumptionMultiplier(string resourceType)
         {
             return ConsumptionMultipliers.TryGetValue(resourceType, out float multiplier) ? multiplier : 1.0f;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Task #319 — IValidatable wiring for the EconomyContentLoader deserialize site.
+        /// Rejects blank id, blank display_name, and any negative multiplier
+        /// (production / consumption / trade rate / cooldown / storage / building cost / worker efficiency).
+        /// </remarks>
+        public ValidationResult Validate()
+        {
+            List<ValidationError> errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "EconomyProfile 'id' is required.", "non_empty"));
+
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                errors.Add(new ValidationError("display_name", "EconomyProfile 'display_name' is required.", "non_empty"));
+
+            if (TradeRateModifier < 0f)
+                errors.Add(new ValidationError("trade_rate_modifier", "EconomyProfile 'trade_rate_modifier' must be >= 0.", "min-value"));
+
+            if (TradeCooldownModifier < 0f)
+                errors.Add(new ValidationError("trade_cooldown_modifier", "EconomyProfile 'trade_cooldown_modifier' must be >= 0.", "min-value"));
+
+            if (StorageMultiplier < 0f)
+                errors.Add(new ValidationError("storage_multiplier", "EconomyProfile 'storage_multiplier' must be >= 0.", "min-value"));
+
+            if (BuildingCostModifier < 0f)
+                errors.Add(new ValidationError("building_cost_modifier", "EconomyProfile 'building_cost_modifier' must be >= 0.", "min-value"));
+
+            if (WorkerEfficiency < 0f)
+                errors.Add(new ValidationError("worker_efficiency", "EconomyProfile 'worker_efficiency' must be >= 0.", "min-value"));
+
+            foreach (KeyValuePair<string, float> kvp in ProductionMultipliers)
+            {
+                if (kvp.Value < 0f)
+                    errors.Add(new ValidationError(
+                        $"production_multipliers.{kvp.Key}",
+                        $"EconomyProfile 'production_multipliers.{kvp.Key}' must be >= 0.",
+                        "min-value"));
+            }
+
+            foreach (KeyValuePair<string, float> kvp in ConsumptionMultipliers)
+            {
+                if (kvp.Value < 0f)
+                    errors.Add(new ValidationError(
+                        $"consumption_multipliers.{kvp.Key}",
+                        $"EconomyProfile 'consumption_multipliers.{kvp.Key}' must be >= 0.",
+                        "min-value"));
+            }
+
+            return errors.Count == 0
+                ? ValidationResult.Success()
+                : ValidationResult.Failure(errors.AsReadOnly());
         }
     }
 }

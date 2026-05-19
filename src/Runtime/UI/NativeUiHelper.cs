@@ -210,8 +210,23 @@ namespace DINOForge.Runtime.UI
                 System.Reflection.PropertyInfo? prop = tmpType.GetProperty("text");
                 return prop?.GetValue(tmp) as string;
             }
-            catch
+            catch (System.Reflection.TargetInvocationException ex)
             {
+                // Pattern #104 (Task #302): narrow catch to expected reflection failures only.
+                // PropertyInfo.GetValue wraps the underlying exception in TargetInvocationException;
+                // TypeLoadException/MissingMethodException occur when TMPro is wrong version.
+                // Unexpected exceptions now propagate so caller can diagnose.
+                System.Diagnostics.Debug.WriteLine($"[NativeUiHelper] TryGetTmpText reflection failed: {ex.InnerException ?? (Exception)ex}");
+                return null;
+            }
+            catch (TypeLoadException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[NativeUiHelper] TryGetTmpText TMPro type load failed: {ex}");
+                return null;
+            }
+            catch (MissingMethodException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[NativeUiHelper] TryGetTmpText TMPro API mismatch: {ex}");
                 return null;
             }
         }

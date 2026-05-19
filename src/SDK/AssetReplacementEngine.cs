@@ -11,7 +11,7 @@ namespace DINOForge.SDK
     /// Tracks texture, audio, and UI asset swaps for total conversion packs.
     /// Falls back to vanilla assets when mod asset is missing.
     /// </summary>
-    public class AssetReplacementEngine
+    public sealed class AssetReplacementEngine
     {
         private readonly Dictionary<string, string> _textureMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> _audioMap = new(StringComparer.OrdinalIgnoreCase);

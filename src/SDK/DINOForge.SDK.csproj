@@ -26,6 +26,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="DINOForge.Tests" />
+    <!-- Phase 2 of #193 SDK split — Runtime adapters construct internal handle types
+         (NativeButtonHandle / NativeCanvasHandle / NativeElementHandle / Extended*Handle)
+         and inspect their Inner refs. Documented in the adapter source files. -->
+    <InternalsVisibleTo Include="DINOForge.Runtime" />
   </ItemGroup>
 
   <!-- Exclude duplicate Loading folder -->
@@ -37,6 +41,13 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
   </ItemGroup>
 
+  <!-- Roslyn analyzer for Pattern #96 (LogError stack trace) -->
+  <ItemGroup>
+    <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
   <!-- Wrapped dependencies (ADR-008: wrap, don't handroll) -->
   <!-- NOTE: AssetsTools.NET has been moved to Runtime where it is actually used (AssetService is now in Runtime.Assets) -->
   <ItemGroup>
@@ -45,6 +56,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.*" />
     <PackageReference Include="NJsonSchema" Version="10.*" />
     <PackageReference Include="System.Text.Json" Version="10.*" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

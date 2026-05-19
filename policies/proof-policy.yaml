@@ -1,0 +1,52 @@
+# DINOForge proof policy — declarative per-feature receipt requirements.
+# See docs/design/2026-04-25-smart-contract-proof-system.md section 5.
+#
+# Used by .claude/commands/prove-features-gate.ps1 to determine whether
+# a proof bundle satisfies the declared requirements per feature.
+
+version: "1.0"
+policy_id: dinoforge-default-2026-04
+description: |
+  Default policy for DINOForge feature proof bundles.
+  Requires external (non-Anthropic-family) judge with valid receipt + bridge receipt
+  for every claimed feature. Forbidden judges include all Claude/Codex variants.
+
+forbidden_judges_global:
+  - "claude-*"
+  - "codex-*"
+  - "anthropic-*"
+  - "claude"
+  - "anthropic"
+
+features:
+  f9_overlay:
+    description: F9 toggles DebugOverlay visible/invisible.
+    required_judge: moonshot
+    forbidden_judges: ["claude-*", "codex-*", "anthropic-*"]
+    required_artifacts:
+      - validate_f9.png
+      - raw_f9.mp4
+    require_bridge_receipt: true
+    require_external_judge: true
+    max_age_seconds: 86400
+
+  f10_modmenu:
+    description: F10 toggles ModMenuPanel visible/invisible.
+    required_judge: moonshot
+    forbidden_judges: ["claude-*", "codex-*", "anthropic-*"]
+    required_artifacts:
+      - validate_f10.png
+      - raw_f10.mp4
+    require_bridge_receipt: true
+    require_external_judge: true
+    max_age_seconds: 86400
+
+  pack_load:
+    description: Mod packs load and HudIndicator shows pack count.
+    required_judge: moonshot
+    forbidden_judges: ["claude-*", "codex-*", "anthropic-*"]
+    required_artifacts:
+      - validate_mods.png
+    require_bridge_receipt: true
+    require_external_judge: true
+    max_age_seconds: 86400

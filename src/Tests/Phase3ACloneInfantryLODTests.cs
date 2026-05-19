@@ -53,7 +53,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3A_Configuration_ContainsV0_8_1_Infantry()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain("v0_8_1_infantry");
             yaml.Should().Contain("Clone infantry variants");
         }
@@ -61,7 +61,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3A_Configuration_Has5CloneUnits()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             // Parse YAML to count Phase 3A models
             var deserializer = YamlLoader.Deserializer;
@@ -155,7 +155,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_CloneUnit_ConfiguredCorrectly(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             // Verify unit exists in config
             yaml.Should().Contain($"- id: {unitId}", $"Unit {unitId} must be defined in asset_pipeline.yaml");
@@ -179,7 +179,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_CloneUnit_HasAddressableKey(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("addressable_key:", $"{unitId} must have addressable_key defined");
@@ -194,7 +194,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_CloneUnit_HasOutputPrefab(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("output_prefab:", $"{unitId} must have output_prefab defined");
@@ -209,7 +209,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_CloneUnit_ReferencesRawGlbPath_InConfiguration(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("file: raw/", $"{unitId} must point at a raw asset path in config");
@@ -220,7 +220,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3A_CloneUnits_UseDistinctRawGlbPaths()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitIds = new[]
             {
                 "rep_clone_sharpshooter",
@@ -247,7 +247,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_CloneUnit_HasDefinitionUpdate(string unitId)
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
             var unitSection = ExtractUnitSection(yaml, unitId);
 
             unitSection.Should().Contain("update_definition:", $"{unitId} must have update_definition");
@@ -261,7 +261,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3A_RepublicMaterial_Defined()
         {
-            var yaml = File.ReadAllText(AssetPipelineYamlPath);
+            var yaml = File.ReadAllText(AssetPipelineYamlPath, System.Text.Encoding.UTF8);
 
             yaml.Should().Contain("republic:", "Republic material must be defined");
             yaml.Should().Contain("faction: republic", "Republic material must specify faction");
@@ -282,11 +282,11 @@ namespace DINOForge.Tests
         [Fact]
         public void Phase3A_RepublicUnits_Has5PlusUnits()
         {
-            var yaml = File.ReadAllText(RepublicUnitsYamlPath);
+            var yaml = File.ReadAllText(RepublicUnitsYamlPath, System.Text.Encoding.UTF8);
 
             // Count units (lines starting with "- id:")
             var unitLines = yaml.Split('\n').Where(l => l.TrimStart().StartsWith("- id:")).ToList();
-            unitLines.Count.Should().BeGreaterThanOrEqualTo(5, "Republic units should have at least 5 units defined");
+            unitLines.Count.Should().BeGreaterThanOrEqualTo(5, "Republic units should have at least 5 base Clone infantry units (may have additional variants)");
         }
 
         [Theory]
@@ -297,7 +297,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_RepublicUnit_Defined(string unitId)
         {
-            var yaml = File.ReadAllText(RepublicUnitsYamlPath);
+            var yaml = File.ReadAllText(RepublicUnitsYamlPath, System.Text.Encoding.UTF8);
             yaml.Should().Contain($"- id: {unitId}", $"Unit {unitId} must be defined in republic_units.yaml");
         }
 
@@ -309,7 +309,7 @@ namespace DINOForge.Tests
         [InlineData("rep_clone_militia")]
         public void Phase3A_RepublicUnit_IsRepublicFaction(string unitId)
         {
-            var yaml = File.ReadAllText(RepublicUnitsYamlPath);
+            var yaml = File.ReadAllText(RepublicUnitsYamlPath, System.Text.Encoding.UTF8);
             var unitStart = yaml.IndexOf($"- id: {unitId}");
 
             if (unitStart == -1)
@@ -351,3 +351,4 @@ namespace DINOForge.Tests
         }
     }
 }
+

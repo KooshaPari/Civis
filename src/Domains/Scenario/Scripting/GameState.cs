@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace DINOForge.Domains.Scenario.Scripting
@@ -7,7 +8,7 @@ namespace DINOForge.Domains.Scenario.Scripting
     /// and scripted event triggers. This is a lightweight data container, not a live
     /// reference to game internals.
     /// </summary>
-    public class GameState
+    public sealed class GameState
     {
         /// <summary>
         /// The current wave number (1-based). Zero means no waves have started.
@@ -27,7 +28,7 @@ namespace DINOForge.Domains.Scenario.Scripting
         /// <summary>
         /// Current resource amounts keyed by resource name (food, wood, stone, iron, gold).
         /// </summary>
-        public Dictionary<string, int> Resources { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> Resources { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>
         /// Set of building IDs that have been constructed at least once during the scenario.

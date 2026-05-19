@@ -53,7 +53,7 @@ namespace DINOForge.SDK.Validation
 
             if (value is Dictionary<object, object> dict)
             {
-                Dictionary<string, object?> result = new Dictionary<string, object?>();
+                Dictionary<string, object?> result = new Dictionary<string, object?>(StringComparer.Ordinal);
                 foreach (KeyValuePair<object, object> kvp in dict)
                 {
                     string key = kvp.Key?.ToString() ?? "";

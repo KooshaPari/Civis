@@ -4,7 +4,7 @@ description: Journeys for scenario system, UI customization, installer, and infr
 ---
 
 <script setup>
-import JourneyViewer from '../.vitepress/theme/components/JourneyViewer.vue'
+import JourneyViewer from './.vitepress/theme/components/JourneyViewer.vue'
 
 // Scenario Domain Journey
 const scenarioDomainJourney = {

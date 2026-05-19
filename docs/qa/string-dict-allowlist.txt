@@ -1,0 +1,12 @@
+# Pattern #99 Allowlist: Unprotected Dictionary<string, T> without StringComparer
+# Lines below are excluded from CI failure. Each entry format: file:line or filename:line
+# Allowlist only applies when HIGH violations exceed threshold (default: 10)
+#
+# To exempt a line, add one of:
+# 1. Entry in this file: src\\Path\\File.cs:123
+# 2. Inline marker in code: // string-dict-ok: <reason>
+#
+# Governance: For user-sourced keys (pack IDs, JSON property names, unit IDs),
+# use new Dictionary<string, T>(StringComparer.Ordinal).
+# For UI-facing case-insensitive lookups, use StringComparer.OrdinalIgnoreCase.
+

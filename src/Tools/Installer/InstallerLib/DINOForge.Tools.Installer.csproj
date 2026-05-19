@@ -21,4 +21,14 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Task #294 — InstallManifest.Validate() pins IValidatable contract; pull in SDK.Validation. -->
+    <ProjectReference Include="..\..\..\SDK\DINOForge.SDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UpdateChecker.cs uses GitHubClient + Release for the GitHub releases API. -->
+    <PackageReference Include="Octokit" Version="13.*" />
+  </ItemGroup>
+
 </Project>

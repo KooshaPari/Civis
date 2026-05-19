@@ -221,7 +221,7 @@ conflicts_with:
             // Act & Assert
             foreach (var file in yamlFiles)
             {
-                var yaml = File.ReadAllText(file);
+                var yaml = File.ReadAllText(file, System.Text.Encoding.UTF8);
                 var action = () =>
                 {
                     try
@@ -244,3 +244,4 @@ conflicts_with:
         }
     }
 }
+

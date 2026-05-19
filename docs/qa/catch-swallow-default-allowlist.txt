@@ -1,0 +1,10 @@
+# Pattern #104: Catch-Swallow-Default Erasure Allowlist
+#
+# Format: <file-path>:<line-num> <reason>
+# Example: src/Runtime/Bridge/AssetService.cs:42 safe-swallow: resource cleanup only
+#
+# Use this file to allowlist sites where returning null/default from catch
+# is intentional and safe (e.g., pure-cleanup scenarios).
+#
+# If a site is allowlisted, document it with a clear reason.
+

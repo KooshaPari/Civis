@@ -1,0 +1,11 @@
+# CancellationToken Threading Allowlist
+# Format: relative path from src/, optionally :line
+# Examples:
+#   Tools/Cli/Commands/SyncCommand.cs  # entire file exempt
+#   Tools/SomeFile.cs:42  # specific line
+#
+# Entries below are grandfathered from iter-79 pre-audit or intentional design decisions.
+# New violations MUST be fixed in-code, not allowlisted.
+#
+# NOTE: Token-aliasing false positives (iter-81 #365) eliminated via detector refinement.
+# Entries like "linkedCts.Token" and "timeoutCts.Token" now recognized as valid derived CTs.

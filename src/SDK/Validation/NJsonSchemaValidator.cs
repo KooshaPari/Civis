@@ -29,7 +29,7 @@ namespace DINOForge.SDK.Validation
         public NJsonSchemaValidator(Dictionary<string, string> schemaSources)
         {
             _schemaSources = schemaSources ?? throw new ArgumentNullException(nameof(schemaSources));
-            _cachedSchemas = new Dictionary<string, JsonSchema>();
+            _cachedSchemas = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);
         }
 
         /// <summary>

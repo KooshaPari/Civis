@@ -10,7 +10,7 @@ namespace DINOForge.Domains.UI
     /// Represents a faction-specific color palette with WCAG AA compliance validation.
     /// Supports 12+ colors per faction (primary, secondary, accent, text, background, etc.)
     /// </summary>
-    public class ThemeThemeColorPalette
+    public sealed class ThemeThemeColorPalette
     {
         /// <summary>
         /// Unique identifier for this palette (e.g., "republic", "cis").
@@ -187,7 +187,7 @@ namespace DINOForge.Domains.UI
     /// Simple RGB color representation for themes.
     /// Renamed to avoid conflict with UnityEngine.ThemeColor.
     /// </summary>
-    public class ThemeThemeColor
+    public sealed class ThemeThemeColor
     {
         public byte R { get; set; }
         public byte G { get; set; }

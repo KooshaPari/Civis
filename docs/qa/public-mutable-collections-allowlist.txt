@@ -1,0 +1,27 @@
+# Public Mutable Collections Allowlist (Pattern #123)
+# Format: severity|file|line OR bare relative path OR inline // public-mutable-ok: <reason>
+#
+# This allowlist suppresses detected violations of Pattern #123 (public mutable collections).
+# Each entry should be reviewed and either fixed or justified.
+#
+# Entries are organized by category for audit clarity.
+
+# ALLOWLISTED SITES — Review before next audit cycle
+# (Add entries here as violations are deferred; all new violations should start UNALLOWLISTED)
+
+# Pattern #123 D1 — Iter-93 sweep: 15 safe NuGet-published sites (YAML/JSON deserialize required)
+HIGH|src/SDK/Models/BuildingDefinition.cs|62
+HIGH|src/SDK/Models/UnitDefinition.cs|59
+HIGH|src/SDK/Models/UnitDefinition.cs|67
+HIGH|src/SDK/Models/SkillDefinition.cs|68
+HIGH|src/SDK/Models/SquadDefinition.cs|77
+HIGH|src/SDK/Models/FactionPatchDefinition.cs|43
+HIGH|src/SDK/Models/FactionPatchDefinition.cs|47
+HIGH|src/SDK/Models/FactionPatchDefinition.cs|51
+HIGH|src/SDK/Models/StatOverrideDefinition.cs|19
+HIGH|src/SDK/Models/TotalConversionManifest.cs|62
+HIGH|src/SDK/Models/TotalConversionManifest.cs|75
+HIGH|src/SDK/Models/TotalConversionManifest.cs|111
+HIGH|src/SDK/Models/TotalConversionManifest.cs|117
+HIGH|src/SDK/Models/WaveDefinition.cs|49
+HIGH|src/Bridge/Protocol/StatResult.cs|27

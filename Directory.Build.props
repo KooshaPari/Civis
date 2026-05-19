@@ -53,6 +53,14 @@
     <BuildProjectReferences Condition="'$(SolutionPath)' != '' and '$(DesignTimeBuild)' != 'true'">false</BuildProjectReferences>
   </PropertyGroup>
 
+  <!-- CA2007: ConfigureAwait enforcement for library code (Pattern #98) -->
+  <!-- Enable CA2007 warnings for SDK, Bridge.Client, Bridge.Protocol, and Domains/* libraries -->
+  <!-- Excludes: Tests, Tools/* (applications), Runtime (plugin, Mono-incompatible) -->
+  <PropertyGroup Condition="'$(IsLibrary)' == 'true' OR ($(OutputType) == 'Library' AND '$(RootNamespace)' != 'DINOForge.Runtime' AND '$(RootNamespace)' != 'DINOForge.Tools')">
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
   <!-- MinVer: git-tag-based versioning for all projects -->
   <ItemGroup>
     <PackageReference Include="MinVer" Version="7.*" PrivateAssets="All" Condition="'$(DisableMinVer)' != 'true'" />

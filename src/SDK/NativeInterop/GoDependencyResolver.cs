@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DINOForge.SDK.Dependencies;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.SDK.NativeInterop
 {
@@ -121,7 +123,7 @@ namespace DINOForge.SDK.NativeInterop
                 if (!File.Exists(tempOutput))
                     throw new InvalidOperationException("Go resolver produced no output file");
 
-                var outputJson = File.ReadAllText(tempOutput);
+                var outputJson = File.ReadAllText(tempOutput, Encoding.UTF8);
                 var output = JsonSerializer.Deserialize<ResolverOutput>(outputJson)
                     ?? throw new InvalidOperationException("Failed to parse resolver output");
 
@@ -154,8 +156,8 @@ namespace DINOForge.SDK.NativeInterop
             finally
             {
                 // Cleanup temp files
-                try { if (File.Exists(tempInput)) File.Delete(tempInput); } catch { }
-                try { if (File.Exists(tempOutput)) File.Delete(tempOutput); } catch { }
+                try { if (File.Exists(tempInput)) File.Delete(tempInput); } catch { } // safe-swallow: temp file cleanup
+                try { if (File.Exists(tempOutput)) File.Delete(tempOutput); } catch { } // safe-swallow: temp file cleanup
             }
         }
 
@@ -222,15 +224,55 @@ namespace DINOForge.SDK.NativeInterop
         /// <summary>JSON input for Go resolver.</summary>
         private class ResolverInput
         {
-            public List<PackManifest> Available { get; set; }
+            public List<PackManifest> Available { get; set; } // public-mutable-ok: JSON deserializer requires mutable List
             public PackManifest Target { get; set; }
         }
 
         /// <summary>JSON output from Go resolver.</summary>
-        private class ResolverOutput
+        /// <summary>
+        /// Single-document JSON output emitted by the <c>dinoforge-resolver</c> Go subprocess.
+        /// Internal so tests under <c>InternalsVisibleTo("DINOForge.Tests")</c> can pin the
+        /// IValidatable + JsonGuard contract at the FFI boundary (Task #294 / Pattern #95).
+        /// </summary>
+        internal class ResolverOutput : IValidatable
         {
-            public List<string> Resolved { get; set; } // Load order (pack IDs)
-            public List<string> Errors { get; set; }
+            /// <summary>Resolved load order (pack IDs).</summary>
+            public List<string> Resolved { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
+
+            /// <summary>Errors encountered during resolution (e.g. missing deps, cycles).</summary>
+            public List<string> Errors { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer requires mutable List
+
+            /// <inheritdoc />
+            public ValidationResult Validate()
+            {
+                List<ValidationError> errors = new List<ValidationError>();
+
+                bool hasResolved = Resolved != null && Resolved.Count > 0;
+                bool hasErrors = Errors != null && Errors.Count > 0;
+                if (!hasResolved && !hasErrors)
+                {
+                    errors.Add(new ValidationError(
+                        "resolved|errors",
+                        "ResolverOutput must contain at least one resolved entry or one error.",
+                        "non_empty"));
+                }
+
+                if (Resolved != null)
+                {
+                    for (int i = 0; i < Resolved.Count; i++)
+                    {
+                        if (string.IsNullOrWhiteSpace(Resolved[i]))
+                            errors.Add(new ValidationError(
+                                $"resolved[{i}]",
+                                "ResolverOutput 'resolved' entries must be non-blank pack IDs.",
+                                "non_empty"));
+                    }
+                }
+
+                return errors.Count == 0
+                    ? ValidationResult.Success()
+                    : ValidationResult.Failure(errors.AsReadOnly());
+            }
         }
     }
 

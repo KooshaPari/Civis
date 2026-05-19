@@ -27,7 +27,8 @@ public class ComponentMapTests
 
         ComponentMapResult result = await _fixture.Client.GetComponentMapAsync();
 
-        result.Mappings.Should().NotBeEmpty("the component map should have registered mappings");
+        result.Mappings.Should().NotBeEmpty( // open-ended-count-ok: component map fixture size is deterministic but assertion is non-specific
+            "the component map should have registered mappings");
     }
 
     /// <summary>Verifies that filtering by SDK path works.</summary>

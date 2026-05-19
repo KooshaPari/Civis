@@ -10,7 +10,7 @@ namespace DINOForge.Domains.Scenario.Validation
     /// Checks faction references, condition validity, scripted event integrity,
     /// and resource constraints.
     /// </summary>
-    public class ScenarioValidator
+    public sealed class ScenarioValidator
     {
         private readonly RegistryManager _registries;
 

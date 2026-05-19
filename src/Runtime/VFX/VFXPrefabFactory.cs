@@ -44,7 +44,7 @@ namespace DINOForge.Runtime.VFX
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[VFXPrefabFactory] Failed to create prefab from descriptor '{descriptor.Id}': {ex.Message}");
+                Debug.LogError($"[VFXPrefabFactory] Failed to create prefab from descriptor '{descriptor.Id}': {ex}");
                 return null!;
             }
         }
@@ -165,7 +165,7 @@ namespace DINOForge.Runtime.VFX
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VFXPrefabFactory] Failed to create prefab '{descriptor.Id}': {ex.Message}");
+                    Debug.LogError($"[VFXPrefabFactory] Failed to create prefab '{descriptor.Id}': {ex}");
                 }
             }
 

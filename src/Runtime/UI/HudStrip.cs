@@ -106,6 +106,13 @@ namespace DINOForge.Runtime.UI
             toastRt.pivot = Vector2.one;
             toastRt.anchoredPosition = new Vector2(-8f, -(8f + 32f + 6f)); // below strip
 
+            // Disable raycastTarget on toast so clicks pass through to native menu
+            Image? toastImg = _toastGo.GetComponent<Image>();
+            if (toastImg != null)
+            {
+                toastImg.raycastTarget = false;
+            }
+
             _toastGroup = UiBuilder.EnsureCanvasGroup(_toastGo);
             _toastGroup.alpha = 0f;
 

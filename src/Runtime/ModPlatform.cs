@@ -127,7 +127,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Config binding failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] Config binding failed: {ex}");
                 return;
             }
 
@@ -149,7 +149,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to create subsystems: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to create subsystems: {ex}");
                 return;
             }
 
@@ -165,7 +165,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] Could not create packs directory: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] Could not create packs directory: {ex}");
             }
 
             _initialized = true;
@@ -201,7 +201,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to register StatModifierSystem: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to register StatModifierSystem: {ex}");
             }
 
             // Register the PackUnitSpawner
@@ -212,7 +212,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to register PackUnitSpawner: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to register PackUnitSpawner: {ex}");
             }
 
             // Register the WaveInjector
@@ -224,7 +224,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] WaveInjector failed: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] WaveInjector failed: {ex}");
             }
 
             // Register the FactionSystem
@@ -237,7 +237,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] FactionSystem failed: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] FactionSystem failed: {ex}");
             }
 
             // Build the vanilla entity catalog
@@ -252,7 +252,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] VanillaCatalog build failed: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] VanillaCatalog build failed: {ex}");
             }
 
             // Validate component mappings
@@ -267,7 +267,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] ComponentMap validation failed: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] ComponentMap validation failed: {ex}");
             }
 
             // Start/reuse the IPC bridge server (static singleton on Plugin to survive scene transitions)
@@ -289,7 +289,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to start GameBridgeServer: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to start GameBridgeServer: {ex}");
             }
 
             _worldReady = true;
@@ -311,7 +311,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] VanillaCatalog rebuild failed: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] VanillaCatalog rebuild failed: {ex}");
                 return;
             }
 
@@ -329,7 +329,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[ModPlatform] PackStatInjector failed: {ex.Message}");
+                    _log.LogWarning($"[ModPlatform] PackStatInjector failed: {ex}");
                 }
             }
 
@@ -343,7 +343,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[ModPlatform] Unit stat override re-apply failed: {ex.Message}");
+                    _log.LogWarning($"[ModPlatform] Unit stat override re-apply failed: {ex}");
                 }
 
                 try
@@ -356,7 +356,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[ModPlatform] YAML stat override re-apply failed: {ex.Message}");
+                    _log.LogWarning($"[ModPlatform] YAML stat override re-apply failed: {ex}");
                 }
             }
         }
@@ -396,7 +396,7 @@ namespace DINOForge.Runtime
                         }
                         catch (Exception ex)
                         {
-                            _log.LogWarning($"[ModPlatform] Failed to disable pack {packId}: {ex.Message}");
+                            _log.LogWarning($"[ModPlatform] Failed to disable pack {packId}: {ex}");
                         }
                     }
                 }
@@ -410,7 +410,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Pack loading failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] Pack loading failed: {ex}");
                 result = ContentLoadResult.Failure(
                     new List<string> { $"Pack loading exception: {ex.Message}" }.AsReadOnly());
                 _lastLoadResult = result;
@@ -433,7 +433,7 @@ namespace DINOForge.Runtime
                     }
                     catch (Exception ex)
                     {
-                        _log.LogWarning($"[ModPlatform] Failed to re-enable pack {originalPath}: {ex.Message}");
+                        _log.LogWarning($"[ModPlatform] Failed to re-enable pack {originalPath}: {ex}");
                     }
                 }
             }
@@ -460,7 +460,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to initialize PackUnitSpawner: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to initialize PackUnitSpawner: {ex}");
             }
 
             // Initialize AerialSpawnSystem so it can sweep baked building entities for
@@ -472,7 +472,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to initialize AerialSpawnSystem: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to initialize AerialSpawnSystem: {ex}");
             }
 
             // Apply stat overrides from loaded units
@@ -485,7 +485,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Stat override application failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] Stat override application failed: {ex}");
             }
 
             // Apply YAML stat overrides
@@ -501,7 +501,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] YAML stat override application failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] YAML stat override application failed: {ex}");
             }
 
             // Update UI
@@ -552,7 +552,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to start hot reload: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to start hot reload: {ex}");
             }
         }
 
@@ -610,7 +610,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Error handling hot reload completion: {ex.Message}");
+                _log.LogError($"[ModPlatform] Error handling hot reload completion: {ex}");
             }
         }
 
@@ -667,7 +667,7 @@ namespace DINOForge.Runtime
                         }
                         catch (Exception ex)
                         {
-                            _log.LogWarning($"[ModPlatform] Could not read manifest in {dir}: {ex.Message}");
+                            _log.LogWarning($"[ModPlatform] Could not read manifest in {dir}: {ex}");
                         }
                     }
                 }
@@ -692,7 +692,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] UI update failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] UI update failed: {ex}");
             }
         }
 
@@ -743,7 +743,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Reload failed: {ex.Message}");
+                _log.LogError($"[ModPlatform] Reload failed: {ex}");
                 _modMenuHost?.SetStatus($"Reload failed: {ex.Message}", 1);
             }
         }
@@ -776,7 +776,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[ModPlatform] Failed to reload after toggle: {ex.Message}");
+                _log.LogError($"[ModPlatform] Failed to reload after toggle: {ex}");
                 _modMenuHost?.SetStatus($"Reload after toggle failed: {ex.Message}", 1);
             }
         }
@@ -797,7 +797,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] Failed to save disabled packs: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] Failed to save disabled packs: {ex}");
             }
         }
 
@@ -826,7 +826,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] Failed to load disabled packs: {ex.Message}");
+                _log.LogWarning($"[ModPlatform] Failed to load disabled packs: {ex}");
             }
         }
 
@@ -860,7 +860,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log?.LogWarning($"[ModPlatform] Error during partial shutdown: {ex.Message}");
+                _log?.LogWarning($"[ModPlatform] Error during partial shutdown: {ex}");
             }
 
             _log?.LogInfo("[ModPlatform] Partial shutdown complete. Bridge server still running.");
@@ -885,7 +885,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log?.LogWarning($"[ModPlatform] Error during shutdown: {ex.Message}");
+                _log?.LogWarning($"[ModPlatform] Error during shutdown: {ex}");
             }
 
             _initialized = false;

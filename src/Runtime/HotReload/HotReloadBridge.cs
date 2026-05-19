@@ -138,7 +138,7 @@ namespace DINOForge.Runtime.HotReload
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[HotReloadBridge] StatModifierSystem.Reapply() failed: {ex.Message}");
+                _log.LogWarning($"[HotReloadBridge] StatModifierSystem.Reapply() failed: {ex}");
             }
 
             OnRuntimeUpdated?.Invoke(this, result);

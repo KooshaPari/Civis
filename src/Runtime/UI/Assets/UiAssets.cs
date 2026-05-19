@@ -160,7 +160,7 @@ namespace DINOForge.Runtime.UI
             catch (Exception ex)
             {
                 BepInEx.Logging.Logger.CreateLogSource("UiAssets").LogWarning(
-                    $"[UiAssets] Failed to load sprite '{relativePath}': {ex.Message}");
+                    $"[UiAssets] Failed to load sprite '{relativePath}': {ex}");
                 return null;
             }
         }
@@ -212,7 +212,7 @@ namespace DINOForge.Runtime.UI
             catch (Exception ex)
             {
                 BepInEx.Logging.Logger.CreateLogSource("UiAssets").LogWarning(
-                    $"[UiAssets] Failed to load sliced sprite '{relativePath}': {ex.Message}");
+                    $"[UiAssets] Failed to load sliced sprite '{relativePath}': {ex}");
                 return null;
             }
         }

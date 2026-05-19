@@ -85,7 +85,7 @@ namespace DINOForge.Runtime.UI
             }
             catch (Exception ex)
             {
-                _log?.LogWarning($"[DFCanvas] Canvas build failed in Initialize(): {ex.Message}");
+                _log?.LogWarning($"[DFCanvas] Canvas build failed in Initialize(): {ex}");
                 OnInitFailed?.Invoke();
             }
         }
@@ -104,8 +104,7 @@ namespace DINOForge.Runtime.UI
             }
             catch (Exception ex)
             {
-                _log?.LogWarning($"[DFCanvas] Canvas setup failed — IMGUI fallback will activate: {ex.Message}");
-                _log?.LogWarning($"[DFCanvas] Full exception: {ex}");
+                _log?.LogWarning($"[DFCanvas] Canvas setup failed — IMGUI fallback will activate: {ex}");
                 _ready = false;
                 OnInitFailed?.Invoke();
             }
@@ -128,8 +127,21 @@ namespace DINOForge.Runtime.UI
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // GraphicRaycaster for pointer events
-            canvasGo.AddComponent<GraphicRaycaster>();
+            // GraphicRaycaster for pointer events (disabled by default to avoid intercepting main menu clicks)
+            // Child code can re-enable when interactive elements are added
+            GraphicRaycaster raycaster = canvasGo.AddComponent<GraphicRaycaster>();
+            raycaster.enabled = false;
+
+            // Ensure an EventSystem exists so the canvas can dispatch pointer events.
+            // Without it, UI clicks are routed nowhere and input is dead.
+            if (UnityEngine.EventSystems.EventSystem.current == null)
+            {
+                var esGo = new GameObject("DINOForge_EventSystem");
+                GameObject.DontDestroyOnLoad(esGo);
+                esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                _log?.LogInfo("[DFCanvas] EventSystem not found — created DINOForge_EventSystem.");
+            }
 
             Transform canvasRoot = canvasGo.transform;
 

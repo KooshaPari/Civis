@@ -32,6 +32,17 @@ namespace DINOForge.Runtime
         private static ManualLogSource Log = null!;
         private Harmony? _harmony;
 
+        // Static constructor fires BEFORE Awake — probe entry point
+        static Plugin()
+        {
+            try
+            {
+                string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [STATIC] Plugin class referenced\n");
+            }
+            catch { } // safe-swallow: diagnostic only
+        }
+
         /// <summary>
         /// The persistent GameObject that survives scene changes.
         /// All UI and runtime components live here, NOT on the BepInEx-managed gameObject.
@@ -69,6 +80,7 @@ namespace DINOForge.Runtime
         private void Awake()
         {
             Log = Logger;
+            Log.LogInfo("[DINOForge] Plugin.Awake() ENTRY");
             Log.LogInfo($"DINOForge Runtime v{PluginInfo.VERSION} loading...");
 
             // Config for debug features
@@ -88,7 +100,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                Log.LogWarning($"Version detection failed: {ex.Message}");
+                Log.LogWarning($"Version detection failed: {ex}");
             }
 
             // ECS Type Discovery - log all available component types for diagnostics
@@ -99,7 +111,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                Log.LogWarning($"[Plugin] ECS type discovery failed: {ex.Message}");
+                Log.LogWarning($"[Plugin] ECS type discovery failed: {ex}");
             }
 
             // Harmony — apply patches from this assembly
@@ -114,7 +126,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                Log.LogError($"Harmony init/patch failed: {ex.Message}");
+                Log.LogError($"Harmony init/patch failed: {ex}");
             }
 
             // Create a dedicated persistent GameObject that won't be destroyed.
@@ -129,7 +141,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                Log.LogError($"[Plugin] Failed to create persistent root: {ex.Message}");
+                Log.LogError($"[Plugin] Failed to create persistent root: {ex}");
                 return;
             }
 
@@ -144,7 +156,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                Log.LogError($"[Plugin] RuntimeDriver setup failed: {ex.Message}");
+                Log.LogError($"[Plugin] RuntimeDriver setup failed: {ex}");
             }
 
             // Capture state for static resurrection callback (kept for emergency use)
@@ -157,6 +169,7 @@ namespace DINOForge.Runtime
 
             WriteDebug("Awake completed");
             Log.LogInfo("DINOForge Runtime loaded successfully.");
+            Log.LogInfo("[DINOForge] Plugin.Awake() EXIT");
         }
 
         /// <summary>
@@ -392,7 +405,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] TryRegisterKeyInputSystem failed: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] TryRegisterKeyInputSystem failed: {ex}");
             }
         }
 
@@ -427,6 +440,7 @@ namespace DINOForge.Runtime
             _dumpOnStartup = dumpOnStartup;
             _dumpOutputPath = dumpOutputPath;
             _initialized = true;
+            _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() ENTRY");
 
             CleanupUiInterceptors();
 
@@ -448,7 +462,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] UiAssets initialization failed: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] UiAssets initialization failed: {ex}");
             }
 
             // Initialize ModPlatform orchestrator
@@ -460,7 +474,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[RuntimeDriver] ModPlatform initialization failed: {ex.Message}");
+                _log.LogError($"[RuntimeDriver] ModPlatform initialization failed: {ex}");
                 _modPlatform = null;
             }
 
@@ -472,7 +486,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[RuntimeDriver] MainThreadDispatcher setup failed: {ex.Message}");
+                _log.LogError($"[RuntimeDriver] MainThreadDispatcher setup failed: {ex}");
             }
 
             // ── Step 1: Always add DebugOverlayBehaviour ────────────────────────────
@@ -487,7 +501,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex.Message}");
+                _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex}");
             }
 
             // ── KeyInputSystem ECS callbacks (DISABLED) ────────────────────────────────
@@ -537,7 +551,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log?.LogWarning($"[RuntimeDriver] Pack reload failed: {ex.Message}");
+                    _log?.LogWarning($"[RuntimeDriver] Pack reload failed: {ex}");
                 }
             };
 
@@ -574,7 +588,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] DFCanvas AddComponent failed, falling back to IMGUI immediately: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] DFCanvas AddComponent failed, falling back to IMGUI immediately: {ex}");
 
                 if (_dfCanvas != null)
                 {
@@ -602,7 +616,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] NativeMenuInjector setup failed: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] NativeMenuInjector setup failed: {ex}");
             }
 
             // ── Step 3b: UiEventInterceptor intentionally disabled ──
@@ -623,6 +637,7 @@ namespace DINOForge.Runtime
             WriteDebug($"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
+            _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
         }
 
         /// <summary>
@@ -660,7 +675,7 @@ namespace DINOForge.Runtime
                             }
                             catch (System.Exception ex)
                             {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload invocation failed: {ex.Message}");
+                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload invocation failed: {ex}");
                             }
 
                             // Re-initialize UGUI if it exists
@@ -678,7 +693,7 @@ namespace DINOForge.Runtime
                             }
                             catch (System.Exception ex)
                             {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: UGUI reset failed: {ex.Message}");
+                                _log?.LogWarning($"[RuntimeDriver] HMR: UGUI reset failed: {ex}");
                             }
 
                             _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");
@@ -771,7 +786,7 @@ namespace DINOForge.Runtime
                                 }
                                 catch (System.Exception ex)
                                 {
-                                    _log?.LogWarning($"[RuntimeDriver] F10 toggle failed: {ex.Message}");
+                                    _log?.LogWarning($"[RuntimeDriver] F10 toggle failed: {ex}");
                                 }
 
                                 // Wait for key release (dead code)
@@ -876,7 +891,7 @@ namespace DINOForge.Runtime
                                     }
                                     catch (Exception ex)
                                     {
-                                        _log?.LogWarning($"[RuntimeDriver] KeyInputSystem re-registration failed: {ex.Message}");
+                                        _log?.LogWarning($"[RuntimeDriver] KeyInputSystem re-registration failed: {ex}");
                                     }
                                 }
                             }
@@ -886,7 +901,7 @@ namespace DINOForge.Runtime
                 }
                 catch (System.Exception ex)
                 {
-                    _log?.LogError($"[RuntimeDriver] Background polling thread exception: {ex.Message}");
+                    _log?.LogError($"[RuntimeDriver] Background polling thread exception: {ex}");
                 }
             });
         }
@@ -930,7 +945,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] UiEventInterceptor cleanup failed: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] UiEventInterceptor cleanup failed: {ex}");
             }
         }
 
@@ -970,7 +985,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogError($"[RuntimeDriver] IMGUI fallback ModMenuOverlay setup failed: {ex.Message}");
+                _log.LogError($"[RuntimeDriver] IMGUI fallback ModMenuOverlay setup failed: {ex}");
             }
 
             try
@@ -994,7 +1009,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] HudIndicator setup failed: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] HudIndicator setup failed: {ex}");
             }
         }
 
@@ -1067,7 +1082,7 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[RuntimeDriver] UGUI→ModPlatform wiring failed, activating IMGUI fallback: {ex.Message}");
+                _log.LogWarning($"[RuntimeDriver] UGUI→ModPlatform wiring failed, activating IMGUI fallback: {ex}");
                 _uguiReady = false;
                 ActivateImguiFallback();
             }
@@ -1094,7 +1109,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[RuntimeDriver] DumpSystem registration failed: {ex.Message}");
+                    _log.LogWarning($"[RuntimeDriver] DumpSystem registration failed: {ex}");
                 }
             }
 
@@ -1108,7 +1123,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError($"[RuntimeDriver] ModPlatform.OnWorldReady failed: {ex.Message}");
+                    _log.LogError($"[RuntimeDriver] ModPlatform.OnWorldReady failed: {ex}");
                 }
 
                 // Load packs
@@ -1120,7 +1135,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError($"[RuntimeDriver] Pack loading failed: {ex.Message}");
+                    _log.LogError($"[RuntimeDriver] Pack loading failed: {ex}");
                 }
 
                 // Start hot reload
@@ -1131,7 +1146,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError($"[RuntimeDriver] Hot reload startup failed: {ex.Message}");
+                    _log.LogError($"[RuntimeDriver] Hot reload startup failed: {ex}");
                 }
 
                 // Discover settings for the settings panel
@@ -1145,7 +1160,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[RuntimeDriver] Settings discovery failed: {ex.Message}");
+                    _log.LogWarning($"[RuntimeDriver] Settings discovery failed: {ex}");
                 }
             }
 

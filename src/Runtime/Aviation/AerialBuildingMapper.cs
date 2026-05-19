@@ -92,7 +92,7 @@ namespace DINOForge.Runtime.Aviation
             }
             catch (Exception ex)
             {
-                BepInEx.Logging.Logger.CreateLogSource("AerialBuildingMapper").LogWarning($"Failed to write debug log: {ex.Message}");
+                BepInEx.Logging.Logger.CreateLogSource("AerialBuildingMapper").LogWarning($"Failed to write debug log: {ex}");
             }
         }
     }

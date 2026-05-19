@@ -103,7 +103,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"  Failed to dump world '{world.Name}': {ex.Message}");
+                    _log.LogWarning($"  Failed to dump world '{world.Name}': {ex}");
                     worldObj["error"] = ex.Message;
                 }
 
@@ -142,7 +142,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"  Failed to get components for entity {entity.Index}: {ex.Message}");
+                    _log.LogWarning($"  Failed to get components for entity {entity.Index}: {ex}");
                 }
             }
 
@@ -213,7 +213,7 @@ namespace DINOForge.Runtime
                     }
                     catch (Exception ex)
                     {
-                        _log.LogWarning($"  Failed to dump sample entities for archetype {archetypeIndex}: {ex.Message}");
+                        _log.LogWarning($"  Failed to dump sample entities for archetype {archetypeIndex}: {ex}");
                     }
                 }
 
@@ -351,7 +351,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"  Failed to scan assembly {assembly.GetName().Name}: {ex.Message}");
+                    _log.LogWarning($"  Failed to scan assembly {assembly.GetName().Name}: {ex}");
                 }
             }
 
@@ -395,7 +395,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"  Failed to scan {assemblyName}: {ex.Message}");
+                    _log.LogWarning($"  Failed to scan {assemblyName}: {ex}");
                     namespaceDump[assemblyName] = ex.Message;
                 }
             }

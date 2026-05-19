@@ -48,7 +48,7 @@ namespace DINOForge.Runtime.UI
             }
             catch (Exception ex)
             {
-                LogWarning($"[UiEventInterceptor::{_sessionId}] Failed to hook button '{btn.name}': {ex.Message}");
+                LogWarning($"[UiEventInterceptor::{_sessionId}] Failed to hook button '{btn.name}': {ex}");
             }
         }
 

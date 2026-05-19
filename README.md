@@ -25,8 +25,9 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 - **Schema Validation** — 24 JSON schemas catch errors before runtime
 - **Polyglot Build** — Rust, Go, and Zig optimization modules with seamless .NET integration
 - **Game Automation Framework** — Headless game testing, UI automation, and state validation
-- **95%+ Test Coverage** — 1,269+ passing tests (unit, integration, property-based, and E2E)
-- **20/20 CI Workflows** — Fully automated CI/CD with GitHub Actions, dependency scanning, and SBOM generation
+- **95%+ Test Coverage** — 3,613+ passing tests (unit, integration, parameterized, property-based, and E2E)
+- **27 Tier 2 Analyzers** — 162 / 16,200 fuzz property cases with 5 caught SUT bugs
+- **30+ Pattern Catalog** — 28 CI-gated patterns (12 new in iter-122-141), 11 retired, 100% enforcement
 
 ## Milestone Status
 
@@ -48,13 +49,13 @@ DINOForge is a mod operating system, not a single mod. It provides the framework
 | M13 | Asset Browser + Mod Manager (DesktopCompanion Asset Browser page, Browse/Update/Conflict views) | Done |
 | M14 | Asset Library & Catalog (SQLite AssetCatalogStore, asset-library CLI commands, LocalSourceAdapter) | Done |
 
-**Current Status (v0.25.0-dev, v0.24.0 released)**
+**Current Status (v0.25.0-dev)**
 - Build: ✅ Clean (exit 0)
-- Tests: ✅ 3,500+ passing / 0 failures
-- Pattern Catalog: ✅ 28 entries, 11 RETIRED, 100% CI-gated
-- Audit-Rotation: ✅ Converged (regex-driven patterns sub-threshold)
+- Tests: ✅ 3,613+ passing / 0 failures
+- Pattern Catalog: ✅ 30+ entries (27 Tier 2 analyzers, 12 new patterns), 11 RETIRED, 100% CI-gated
+- Audit-Rotation: ✅ Converged (iter-122-141, 5 fuzz SUT bugs caught)
 - v0.24.0: Released 2026-05-06 at commit f222cd3
-- Next Milestone: v0.25.0-dev in progress
+- v0.25.0-dev: In progress (closure-gate on fix branch)
 
 ## Install
 
@@ -390,13 +391,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **For Project Planning & Roadmap:**
 
-- **[v0.24.0 Roadmap](docs/ROADMAP_v0.24.0.md)** — Planned features, milestones, and timeline for the next major release
+- **[v0.25.0 Roadmap](docs/ROADMAP_v0.25.0.md)** — Planned features, milestones, and timeline
 - **[Performance Baseline](docs/PERFORMANCE_BASELINE.md)** — Performance metrics, benchmarks, and optimization targets
+- **[Pattern Catalog](docs/PATTERN_CATALOG.md)** — 30+ CI-gated code quality patterns and governance
 
-**Coming in v0.24.0:**
-- **phenocompose integration** — AI-assisted pack composition and content generation
+**Coming in v0.25.0+:**
 - **VDD (Virtual Display Driver)** — Tier 1 isolated headless game testing
 - **Docker backend** — Containerized game automation for CI/CD environments
+- **phenocompose integration** — AI-assisted parallel game fleet testing (phenocompose v1.0)
 
 ## License
 

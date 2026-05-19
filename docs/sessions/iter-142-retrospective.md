@@ -252,6 +252,18 @@ Pending **user-authorized merge sequence + final push** before tag.
 
 ---
 
+## Late Iter-142 Findings (post-deploy wave)
+
+1. **Codex headless dispatch**: Works via `--dangerously-bypass-approvals-and-sandbox`; `gpt-5.5` slow (4/5 timed out at 10min cap)
+2. **Lefthook unblock**: Scope-narrowing recommended in #523 (1-line change)
+3. **IL2026 root cause**: Newtonsoft.Json v13 trim-incompatibility
+4. **isolation_layer.py LOC**: 814 total dead code (not 315 initially estimated)
+5. **Merge conflict surface**: 7,108 files (was 282 code-only) → 4–4.5h effort estimate
+6. **Memory graph health**: 0 orphan [[links]], documentation integrity confirmed
+7. **Audit reports landed**: 12+ audit reports across `docs/qa/` and `docs/sessions/`
+
+---
+
 ## References
 
 - Branch consolidation playbook: `docs/sessions/branch_consolidation_playbook_iter142.md`
@@ -261,3 +273,27 @@ Pending **user-authorized merge sequence + final push** before tag.
 - CHANGELOG.md: v0.24.0-dev Iter-105-108 entries
 - Game fix: fix/handle-connect-iter142 (ced0dccf)
 - Safety snapshot: safety/iter140-snapshot-2026-05-18 (17f88a14)
+
+---
+
+## Final Game-Fix Verification
+
+**Timestamp**: 2026-05-19 03:15 UTC — Multi-stage diagnostic completed
+
+**Root Cause Stack** (discovery order):
+1. HandleConnect missing in main (#508) — 26 LOC RPC endpoint
+2. False deploy claim — built from main not fix branch (#522)
+3. WriteDebug silent-swallow on 3.3GB log overflow (Pattern #232)
+4. net8.0 TFM incompat with BepInEx Mono CLR 4.0 (Pattern #233)
+5. Stale obj/ cache post-TFM change — required `--no-incremental` rebuild
+
+**External Verification Evidence**:
+- Plugin.Awake() ENTRY/EXIT probes fire in BepInEx LogOutput.log
+- HandleConnect symbol in 407,552B DINOForge.Runtime.dll binary
+- GameBridgeServer singleton online + ECS world (54 assemblies, 3,209 types)
+- Mods button injection successful in main menu
+
+**Governance Lessons**:
+- Pattern #232 (WriteDebug silent-swallow) added to CLAUDE.md Pattern Catalog
+- Pattern #233 (TFM binary incompatibility) added to CLAUDE.md Pattern Catalog
+- New feedback: `feedback_verify_build_branch_before_deploy_claim` — symbol-in-binary check required before claiming deploy success

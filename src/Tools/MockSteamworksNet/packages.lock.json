@@ -1,6 +1,34 @@
 {
   "version": 1,
   "dependencies": {
+    ".NETStandard,Version=v2.0": {
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.*, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
+      "NETStandard.Library": {
+        "type": "Direct",
+        "requested": "[2.0.3, )",
+        "resolved": "2.0.3",
+        "contentHash": "st47PosZSHrjECdjeIzZQbzivYBJFv6P2nv4cj2ypdI204DO+vZ7l5raGMiX4eXMJ53RfOIg+/s4DHVZ54Nu2A==",
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.1.0"
+        }
+      },
+      "Steamworks.NET": {
+        "type": "Direct",
+        "requested": "[15.0.*, )",
+        "resolved": "15.0.1",
+        "contentHash": "fRQg01qvpi8kgBSEWd9hhylK2hEyl94+p0osLGdj6zbZkqMJ5XPyYtKo0i51q9Vx5q/YoiCAOevjnByMhRlSYg=="
+      },
+      "Microsoft.NETCore.Platforms": {
+        "type": "Transitive",
+        "resolved": "1.1.0",
+        "contentHash": "kz0PEW2lhqygehI/d6XsPCQzD7ff7gUJaVGPVETX611eadGsA3A877GdSlU0LRVMCTH/+P3o2iDTak+S08V2+A=="
+      }
+    },
     "net8.0": {
       "MinVer": {
         "type": "Direct",
@@ -10,7 +38,7 @@
       },
       "Steamworks.NET": {
         "type": "Direct",
-        "requested": "[13.0.0, )",
+        "requested": "[15.0.*, )",
         "resolved": "15.0.1",
         "contentHash": "fRQg01qvpi8kgBSEWd9hhylK2hEyl94+p0osLGdj6zbZkqMJ5XPyYtKo0i51q9Vx5q/YoiCAOevjnByMhRlSYg=="
       }

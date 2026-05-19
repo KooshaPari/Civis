@@ -19,7 +19,6 @@ public class CatchAndRethrowWithoutContextAnalyzerTests
 
         // Assert
         Assert.Equal("DF1020", id);
-        Assert.NotNull(analyzer.SupportedDiagnostics);
         Assert.NotEmpty(analyzer.SupportedDiagnostics);
         Assert.Equal(id, analyzer.SupportedDiagnostics[0].Id);
     }

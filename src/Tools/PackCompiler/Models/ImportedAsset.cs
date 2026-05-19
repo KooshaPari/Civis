@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Tools.PackCompiler.Models
 {
@@ -8,7 +9,7 @@ namespace DINOForge.Tools.PackCompiler.Models
     /// In-memory representation of an imported 3D model (GLB/FBX).
     /// Intermediate format between raw GLB/FBX and optimized LOD variants.
     /// </summary>
-    public class ImportedAsset
+    public class ImportedAsset : IValidatable
     {
         /// <summary>Asset identifier (e.g., clone_trooper_phase2)</summary>
         public required string AssetId { get; init; }
@@ -30,6 +31,38 @@ namespace DINOForge.Tools.PackCompiler.Models
 
         /// <summary>Timestamp of import</summary>
         public DateTime ImportedAt { get; init; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Validates that the imported asset has required fields and valid structure.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new List<ValidationError>();
+
+            // AssetId must not be empty
+            if (string.IsNullOrWhiteSpace(AssetId))
+                errors.Add(new ValidationError("asset_id", "AssetId is required and cannot be empty.", "validation"));
+
+            // Mesh must exist
+            if (Mesh == null)
+                errors.Add(new ValidationError("mesh", "Mesh is required.", "validation"));
+            else
+            {
+                // Validate mesh vertices are multiple of 3 (Vector3 per vertex)
+                if (Mesh.Vertices == null || Mesh.Vertices.Length == 0)
+                    errors.Add(new ValidationError("mesh.vertices", "Vertices array cannot be empty.", "validation"));
+                else if (Mesh.Vertices.Length % 3 != 0)
+                    errors.Add(new ValidationError("mesh.vertices", "Vertices array length must be a multiple of 3 (Vector3).", "validation"));
+
+                // Validate mesh indices are multiple of 3 (triangle indices)
+                if (Mesh.Indices == null || Mesh.Indices.Length == 0)
+                    errors.Add(new ValidationError("mesh.indices", "Indices array cannot be empty.", "validation"));
+                else if (Mesh.Indices.Length % 3 != 0)
+                    errors.Add(new ValidationError("mesh.indices", "Indices array length must be a multiple of 3 (triangles).", "validation"));
+            }
+
+            return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure((IReadOnlyList<ValidationError>)errors);
+        }
     }
 
     /// <summary>Mesh geometry data</summary>

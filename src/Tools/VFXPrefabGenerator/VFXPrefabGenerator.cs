@@ -88,7 +88,7 @@ namespace DINOForge.Tools.VFXPrefabGenerator
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[VFXPrefabGenerator] Failed to generate prefabs: {ex.Message}\n{ex.StackTrace}");
+                Debug.LogError($"[VFXPrefabGenerator] Failed to generate prefabs: {ex}");
                 EditorUtility.DisplayDialog(
                     "VFX Prefab Generator Error",
                     $"Failed to generate prefabs:\n{ex.Message}",

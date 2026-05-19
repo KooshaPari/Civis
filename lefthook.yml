@@ -16,7 +16,7 @@ pre-commit:
   commands:
     format-check:
       glob: "**/*.cs"
-      run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes
+      run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --include {staged_files}
 
     check-yaml:
       glob: "**/*.{yaml,yml}"

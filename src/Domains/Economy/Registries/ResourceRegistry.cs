@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DINOForge.Domains.Economy.Models;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Registries
 {
@@ -71,10 +72,20 @@ namespace DINOForge.Domains.Economy.Registries
         /// Register a custom resource.
         /// </summary>
         /// <param name="resource">The resource definition to register.</param>
+        /// <exception cref="ArgumentException">Thrown when the resource fails validation.</exception>
         public void Register(ResourceDefinition resource)
         {
             if (resource == null) throw new ArgumentNullException(nameof(resource));
-            if (string.IsNullOrWhiteSpace(resource.Id)) throw new ArgumentException("Resource ID cannot be empty.", nameof(resource));
+
+            // Pattern #95/#210: IValidatable wiring — validate before registration
+            ValidationResult result = resource.Validate();
+            if (!result.IsValid)
+            {
+                throw new ArgumentException(
+                    $"Resource validation failed: {string.Join("; ", result.Errors.Select(e => e.Message))}",
+                    nameof(resource));
+            }
+
             _resources[resource.Id] = resource;
         }
 

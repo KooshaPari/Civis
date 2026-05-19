@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using DINOForge.Tools.PackCompiler.Models;
 using DINOForge.SDK;
+using DINOForge.SDK.Validation;
 using System.Diagnostics.CodeAnalysis;
 
 namespace DINOForge.Tools.PackCompiler.Services
@@ -41,6 +42,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         /// <summary>
         /// Resolve pack dependencies using Go binary if available, otherwise C# fallback.
         /// </summary>
+        [RequiresUnreferencedCode()]
         public async Task<List<string>> ResolveDependenciesAsync(
             List<PackManifest> available,
             PackManifest target)
@@ -256,13 +258,51 @@ namespace DINOForge.Tools.PackCompiler.Services
             public PackManifest Target { get; set; } = new();
         }
 
-        private class ResolverOutput
+        /// <summary>
+        /// Output from Go resolver binary or C# fallback resolver.
+        /// Pattern #95: IValidatable contract ensures both Resolved and Errors cannot both be empty.
+        /// </summary>
+        public class ResolverOutput : IValidatable
         {
             [JsonPropertyName("resolved")]
             public List<string> Resolved { get; set; } = new();
 
             [JsonPropertyName("errors")]
             public List<string> Errors { get; set; } = new();
+
+            /// <summary>
+            /// Validates that the resolver output is meaningful (either has resolved packs OR errors).
+            /// </summary>
+            SDK.Validation.ValidationResult IValidatable.Validate()
+            {
+                var errors = new List<SDK.Validation.ValidationError>();
+
+                // Both empty is invalid — go resolver must produce something
+                if ((Resolved == null || Resolved.Count == 0) && (Errors == null || Errors.Count == 0))
+                    errors.Add(new SDK.Validation.ValidationError("resolved|errors", "Resolver output must contain either resolved packs or error messages.", "validation"));
+
+                // Check for blank entries in Resolved list
+                if (Resolved != null)
+                {
+                    for (int i = 0; i < Resolved.Count; i++)
+                    {
+                        if (string.IsNullOrWhiteSpace(Resolved[i]))
+                            errors.Add(new SDK.Validation.ValidationError($"resolved[{i}]", $"Resolved pack ID at index {i} cannot be empty.", "validation"));
+                    }
+                }
+
+                // Check for blank entries in Errors list
+                if (Errors != null)
+                {
+                    for (int i = 0; i < Errors.Count; i++)
+                    {
+                        if (string.IsNullOrWhiteSpace(Errors[i]))
+                            errors.Add(new SDK.Validation.ValidationError($"errors[{i}]", $"Error message at index {i} cannot be empty.", "validation"));
+                    }
+                }
+
+                return errors.Count == 0 ? SDK.Validation.ValidationResult.Success() : SDK.Validation.ValidationResult.Failure((IReadOnlyList<SDK.Validation.ValidationError>)errors);
+            }
         }
 
         #endregion

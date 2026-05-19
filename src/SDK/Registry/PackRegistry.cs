@@ -341,6 +341,7 @@ namespace DINOForge.SDK.Registry
         // sync-over-async-unavoidable: public API contract (SDK-shipped)
         public void InvalidateCache()
         {
+            // sync-over-async-unavoidable: SemaphoreSlim acquire in sync public API; non-async by contract
             _lock.Wait();
             try
             {

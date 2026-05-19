@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DINOForge.Domains.Economy.Models;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Registries
 {
@@ -62,10 +63,20 @@ namespace DINOForge.Domains.Economy.Registries
         /// Register a custom economy profile.
         /// </summary>
         /// <param name="profile">The economy profile to register.</param>
+        /// <exception cref="ArgumentException">Thrown when the profile fails validation.</exception>
         public void Register(EconomyProfile profile)
         {
             if (profile == null) throw new ArgumentNullException(nameof(profile));
-            if (string.IsNullOrWhiteSpace(profile.Id)) throw new ArgumentException("Profile ID cannot be empty.", nameof(profile));
+
+            // Pattern #95/#210: IValidatable wiring — validate before registration
+            ValidationResult result = profile.Validate();
+            if (!result.IsValid)
+            {
+                throw new ArgumentException(
+                    $"Economy profile validation failed: {string.Join("; ", result.Errors.Select(e => e.Message))}",
+                    nameof(profile));
+            }
+
             _profiles[profile.Id] = profile;
         }
 

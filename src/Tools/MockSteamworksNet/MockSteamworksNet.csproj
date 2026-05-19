@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>  <!-- pattern-233-exception: Steamworks.NET v15.0+ requires ns2.1; verified compatible with BepInEx Mono via shim -->
     <AssemblyName>MockSteamworksNet</AssemblyName>
     <RootNamespace>DINOForge.Tools.MockSteamworksNet</RootNamespace>
     <Description>BepInEx plugin that mocks Steamworks.NET API for headless CI testing</Description>
@@ -42,7 +42,36 @@
 
   <!-- Steamworks.NET NuGet package -->
   <ItemGroup>
-    <PackageReference Include="Steamworks.NET" Version="13.0.0" />
+    <PackageReference Include="Steamworks.NET" Version="15.0.*" />
   </ItemGroup>
+
+  <!-- MockSteamworks deployment target -->
+  <PropertyGroup>
+    <DeployMockSteamworks Condition="'$(DeployMockSteamworks)' == ''">false</DeployMockSteamworks>
+  </PropertyGroup>
+
+  <Target Name="DeployMockSteamworksNet"
+          AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true'
+                     and '$(DeployToGame)' == 'true'
+                     and '$(DeployMockSteamworks)' == 'true'
+                     and '$(TargetFramework)' == 'netstandard2.0'
+                     and Exists('$(BepInExDir)')">
+    <PropertyGroup>
+      <MockSteamworksPluginDir>$(BepInExDir)\plugins</MockSteamworksPluginDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(MockSteamworksPluginDir)"
+             Condition="!Exists('$(MockSteamworksPluginDir)')" />
+
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFiles="$(MockSteamworksPluginDir)\MockSteamworksNet.dll"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(TargetPath)')" />
+
+    <Message Text="Deployed MockSteamworksNet.dll to $(MockSteamworksPluginDir)"
+             Importance="high"
+             Condition="Exists('$(TargetPath)')" />
+  </Target>
 
 </Project>

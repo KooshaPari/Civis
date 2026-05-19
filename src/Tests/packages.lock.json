@@ -1649,7 +1649,7 @@
           "AssetsTools.NET": "[3.0.4, )",
           "DINOForge.Bridge.Protocol": "[0.24.0, )",
           "DINOForge.SDK": "[0.18.0, )",
-          "Microsoft.Bcl.TimeProvider": "[8.0.0, )"
+          "Microsoft.Bcl.TimeProvider": "[7.0.0, )"
         }
       },
       "dinoforge.sdk": {

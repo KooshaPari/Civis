@@ -12,18 +12,18 @@ using Xunit;
 namespace DINOForge.Tests
 {
     /// <summary>
-    /// Pins the JsonGuard.ValidateOrThrow wiring at the three EconomyContentLoader
-    /// deserialize sites (resources, trade routes, economy profiles).
-    /// EconomyContentLoader wraps every load failure in
-    /// <see cref="InvalidOperationException"/>; the underlying validation surface is
-    /// the <see cref="System.IO.InvalidDataException"/> carried as InnerException.
+    /// Pins the IValidatable wiring at the three EconomyContentLoader deserialize sites
+    /// (resources, trade routes, economy profiles). Per Pattern #95/#210 (iter-128),
+    /// registry Register() methods throw <see cref="ArgumentException"/> for validation
+    /// failures. EconomyContentLoader wraps every exception in
+    /// <see cref="InvalidOperationException"/>; the underlying validation fault is
+    /// the <see cref="ArgumentException"/> carried as InnerException.
     ///
     /// These negative tests enforce that:
-    ///   - ResourceDefinition.Validate() rejects blank id and negative storage/production
-    ///   - TradeRouteDefinition.Validate() rejects blank id, blank source/target resource,
-    ///     and non-positive exchange rates
-    ///   - EconomyProfile.Validate() rejects blank id and negative multipliers
-    /// at the deserialize site, not later when Register() runs.
+    ///   - ResourceDefinition validates id at register time
+    ///   - TradeRouteDefinition validates id, source/target, and exchange rates at register time
+    ///   - EconomyProfile validates id, display_name, and multipliers at register time
+    /// at the deserialize site, not later.
     /// </summary>
     public class EconomyContentLoaderValidationTests : IDisposable
     {
@@ -87,7 +87,7 @@ is_tradeable_default: true
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*id*");
 
             // ResourceRegistry pre-registers 5 canonical resources
@@ -116,7 +116,7 @@ is_tradeable_default: true
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*storage_capacity*");
 
             // ResourceRegistry pre-registers 5 canonical resources; the bad
@@ -149,7 +149,7 @@ routes:
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*id*");
 
             _tradeRouteRegistry.Count.Should().Be(0);
@@ -178,7 +178,7 @@ routes:
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*exchange_rate*");
 
             _tradeRouteRegistry.Count.Should().Be(0);
@@ -207,7 +207,7 @@ routes:
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*source_resource*");
 
             _tradeRouteRegistry.Count.Should().Be(0);
@@ -240,7 +240,7 @@ worker_efficiency: 1.0
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*id*");
 
             _profileRegistry.Count.Should().Be(0);
@@ -271,7 +271,7 @@ worker_efficiency: 1.0
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*trade_rate_modifier*");
 
             _profileRegistry.Count.Should().Be(0);
@@ -300,7 +300,7 @@ worker_efficiency: 1.0
 
             act.Should()
                 .Throw<InvalidOperationException>()
-                .WithInnerException<InvalidDataException>()
+                .WithInnerException<ArgumentException>()
                 .WithMessage("*display_name*");
 
             _profileRegistry.Count.Should().Be(0);

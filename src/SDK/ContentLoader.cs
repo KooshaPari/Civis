@@ -188,10 +188,20 @@ namespace DINOForge.SDK
 
             errors.AddRange(_dependencyResolver.DetectConflicts(manifests.Select(item => item.Manifest)));
 
-            Dictionary<string, string> directoriesByPackId = manifests.ToDictionary(
-                item => item.Manifest.Id,
-                item => item.Directory,
-                StringComparer.OrdinalIgnoreCase);
+            // Build pack directory map, gracefully handling duplicate pack IDs by skipping duplicates with a warning.
+            Dictionary<string, string> directoriesByPackId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in manifests)
+            {
+                if (directoriesByPackId.ContainsKey(item.Manifest.Id))
+                {
+                    // Duplicate pack ID detected; skip the duplicate and log a warning.
+                    errors.Add($"Duplicate pack ID '{item.Manifest.Id}' found in {item.Directory} — pack will be skipped.");
+                }
+                else
+                {
+                    directoriesByPackId[item.Manifest.Id] = item.Directory;
+                }
+            }
 
             List<string> loadedPacks = new List<string>();
             foreach (PackManifest orderedManifest in dependencyResult.LoadOrder)

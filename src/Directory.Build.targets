@@ -1,10 +1,9 @@
 <Project>
-  <!-- CI Gate: Prevent DINOForge.Runtime TFM drift -->
-  <!-- Background: Iter-97 found Runtime.csproj had netstandard2.0 instead of net8.0,
-       causing silent build-to-wrong-directory failure and stale DLL deployment. -->
-  <Target Name="EnsureRuntimeFrameworkTarget" BeforeTargets="Build" Condition="'$(MSBuildProjectName)' == 'DINOForge.Runtime'">
-    <Error
-      Condition="'$(TargetFramework)' != 'net8.0'"
-      Text="DINOForge.Runtime MUST target net8.0 (matches BepInEx/.NET 8 runtime in game). Found: $(TargetFramework). Do not change this without updating the DeployToGame pipeline and consulting CLAUDE.md .NET Version Policy." />
-  </Target>
+  <!-- Iter-142 root cause confirms iter-97 guard was based on false premise.
+       Iter-142 direct evidence: LogOutput shows "Loading [DINOForge Runtime]" but Plugin.Awake never fires.
+       Root cause: BepInEx 5.4.23.5 CLR is 4.0.30319.42000 (Mono/.NET Framework 4.x).
+       Net8.0 BCL types don't exist in CLR 4.0 → Plugin.Awake fails silently on type resolution.
+       Solution: Runtime MUST target netstandard2.0 for BepInEx Mono compatibility.
+       Prerequisite: Verify SDK/Bridge assemblies are copied to BepInEx/plugins/ alongside Runtime.dll
+       (CopyLocalLockFileAssemblies already enabled for game deploys). -->
 </Project>

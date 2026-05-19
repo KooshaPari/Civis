@@ -44,10 +44,10 @@ jobs:
       - name: Run benchmarks
         run: |
           # Run benchmark project if it exists
-          if [ -d "src/Tools/Benchmarks" ]; then
-            dotnet run --project src/Tools/Benchmarks/DINOForge.Tools.Benchmarks.csproj -- --configuration Release
+          if [ -d "src/Tests/Benchmarks" ]; then
+            dotnet run --project src/Tests/Benchmarks/DINOForge.Tests.Benchmarks.csproj -- --configuration Release
           else
-            echo "Note: Benchmark project not yet created. Create src/Tools/Benchmarks/DINOForge.Tools.Benchmarks.csproj with BenchmarkDotNet v0.13.* and benchmarks for ContentLoader.LoadPacks"
+            echo "Note: Benchmark project not yet created. Create src/Tests/Benchmarks/DINOForge.Tests.Benchmarks.csproj with BenchmarkDotNet v0.13.* and benchmarks for ContentLoader.LoadPacks"
           fi
 
       - name: Check performance regression

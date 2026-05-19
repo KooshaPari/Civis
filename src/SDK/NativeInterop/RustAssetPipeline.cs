@@ -29,6 +29,7 @@ namespace DINOForge.SDK.NativeInterop
     [ExcludeFromCodeCoverage] // Requires Rust/PyO3 toolchain — integration tests only
     public static class RustAssetPipeline
     {
+        // static-init-ok: Pattern #115 canonical HttpClient singleton (no I/O occurs at construction — only socket-pool reservation, deferred until first request)
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         private static bool? _mcpAvailable;
         private const string McpServerUrl = "http://127.0.0.1:8765";
@@ -276,6 +277,7 @@ namespace DINOForge.SDK.NativeInterop
 
                 if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
                 {
+                    // sync-over-async-unavoidable: health check only (1-second bounded timeout, task already completed)
                     var response = task.Result;
                     if (response.IsSuccessStatusCode)
                     {

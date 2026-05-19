@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DINOForge.Domains.Economy.Models;
+using DINOForge.SDK.Validation;
 
 namespace DINOForge.Domains.Economy.Registries
 {
@@ -68,10 +69,20 @@ namespace DINOForge.Domains.Economy.Registries
         /// Register a custom trade route.
         /// </summary>
         /// <param name="route">The trade route definition to register.</param>
+        /// <exception cref="ArgumentException">Thrown when the route fails validation.</exception>
         public void Register(TradeRouteDefinition route)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
-            if (string.IsNullOrWhiteSpace(route.Id)) throw new ArgumentException("Trade route ID cannot be empty.", nameof(route));
+
+            // Pattern #95/#210: IValidatable wiring — validate before registration
+            ValidationResult result = route.Validate();
+            if (!result.IsValid)
+            {
+                throw new ArgumentException(
+                    $"Trade route validation failed: {string.Join("; ", result.Errors.Select(e => e.Message))}",
+                    nameof(route));
+            }
+
             _routes[route.Id] = route;
         }
 

@@ -17,7 +17,7 @@ Architecture:
   Each IsolationContext selects a backend; tools transparently use it.
 
 Implementation notes:
-  - playCUA binary: C:\Users\koosh\playcua_ci_test\native\target\release\bare-cua-native.exe
+  - playCUA binary: C:\Users\koosh\playcua_ci_test\target\release\bare-cua-native.exe
   - JSON-RPC protocol: stdin/stdout NDJSON
   - All methods are async-ready (return dicts compatible with FastMCP)
 """
@@ -563,7 +563,7 @@ class PlayCUABackend(IsolationBackend):
 
     def __init__(self, binary_path: Optional[str] = None):
         if binary_path is None:
-            binary_path = r"C:\Users\koosh\playcua_ci_test\native\target\release\bare-cua-native.exe"
+            binary_path = r"C:\Users\koosh\playcua_ci_test\target\release\bare-cua-native.exe"
         self.binary_path = binary_path
         self.client: Optional[PlayCUAClient] = None
 

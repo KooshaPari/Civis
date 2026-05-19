@@ -348,16 +348,102 @@ async def game_get_resources(ctx: Context, pipe_name: str | None = None) -> dict
 @mcp.tool()
 async def game_screenshot(ctx: Context, output_path: str | None = None, pipe_name: str | None = None) -> dict:
     """
-    Capture a screenshot of the game window.
+    Capture a screenshot of the game window using a multi-tier fallback chain.
+
+    Tier order (per docs/proposals/wgc-capture-backend-design.md, task #536):
+      1. WGC (Windows.Graphics.Capture, via bare-cua-native) — foreground-independent,
+         survives hung Unity / DXGI exclusive fullscreen / non-focused windows.
+         5s timeout; falls through silently on failure.
+      2. GameControlCli "screenshot" — named pipe → Unity ScreenCapture.CaptureScreenshot
+         (GPU backbuffer). Highest-fidelity path but BLOCKS when the game hangs.
+      3. (Future) Last-resort PrintWindow / GDI via HiddenDesktopBackend.
+
+    The returned dict includes a `backend` field ("wgc" | "game_control_cli")
+    indicating which tier succeeded, in addition to the original keys produced
+    by GameControlCli (success, path, error, etc.).
 
     Args:
         output_path: Optional file path to save the PNG. Defaults to a temp path.
-        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+        pipe_name: Optional named pipe name for multi-instance support
+                   (defaults to "dinoforge-game-bridge"). Only used by the
+                   GameControlCli fallback tier.
     """
+    # --- Tier 1: WGC (foreground-independent, hung-game safe) ---
+    try:
+        from .capture_wgc import (
+            DEFAULT_DINO_WINDOW_TITLE,
+            capture_window_via_wgc,
+            check_wgc_available,
+        )
+        if check_wgc_available():
+            try:
+                wgc_out = Path(output_path) if output_path else None
+                wgc_result = await capture_window_via_wgc(
+                    window_title=DEFAULT_DINO_WINDOW_TITLE,
+                    output_path=wgc_out,
+                    timeout_seconds=5.0,
+                )
+                if wgc_result.success:
+                    d = wgc_result.to_dict()
+                    d["backend"] = "wgc"
+                    return d
+                try:
+                    await ctx.info(f"WGC capture failed (will fall back): {wgc_result.error}")
+                except Exception:
+                    logger.info("WGC capture failed (will fall back): %s", wgc_result.error)
+            except Exception as e:
+                try:
+                    await ctx.info(f"WGC capture exception (will fall back): {e}")
+                except Exception:
+                    logger.info("WGC capture exception (will fall back): %s", e)
+        else:
+            logger.debug("WGC unavailable (bare-cua-native not found); using GameControlCli")
+    except ImportError as e:
+        logger.debug("capture_wgc unavailable: %s", e)
+
+    # --- Tier 2: GameControlCli → named pipe → Unity ScreenCapture ---
     args = ["screenshot"]
     if output_path:
         args += ["--output", output_path]
-    return _run_game_cli(*args, pipe_name=pipe_name)
+    result = _run_game_cli(*args, pipe_name=pipe_name)
+    if isinstance(result, dict):
+        result.setdefault("backend", "game_control_cli")
+    return result
+
+
+@mcp.tool()
+async def game_screenshot_wgc(
+    ctx: Context,
+    window_title: str = "Diplomacy is Not an Option",
+    output_path: str | None = None,
+    timeout_seconds: float = 8.0,
+) -> dict:
+    """
+    Capture the game window directly via Windows.Graphics.Capture (WGC).
+
+    Bypasses the GameBridge named pipe entirely — works on hung/unresponsive
+    Unity processes and on DXGI exclusive fullscreen surfaces where GDI /
+    PrintWindow / BitBlt return solid-black frames. Routes through
+    bare-cua-native's WGC adapter (#537).
+
+    Args:
+        window_title: Exact window title to capture (FindWindowW). Defaults to DINO.
+        output_path: PNG output path. Defaults to %TEMP%/DINOForge/wgc/wgc_<ts>.png.
+        timeout_seconds: Hard cap on capture round-trip. Default 8s.
+
+    Returns:
+        dict with keys: success, path, width, height, backend ("wgc"),
+        elapsed_ms, error.
+    """
+    from .capture_wgc import capture_window_via_wgc
+
+    out = Path(output_path) if output_path else None
+    result = await capture_window_via_wgc(
+        window_title=window_title,
+        output_path=out,
+        timeout_seconds=timeout_seconds,
+    )
+    return result.to_dict()
 
 
 @mcp.tool()

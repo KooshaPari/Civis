@@ -12,7 +12,7 @@ namespace DINOForge.SDK.Registry
     public sealed class Registry<T> : IRegistry<T>
     {
         private readonly Dictionary<string, List<RegistryEntry<T>>> _entries =
-            new Dictionary<string, List<RegistryEntry<T>>>(StringComparer.OrdinalIgnoreCase);
+            new Dictionary<string, List<RegistryEntry<T>>>(StringComparer.Ordinal);
 
         /// <inheritdoc />
         public void Register(string id, T entry, RegistrySource source, string sourcePackId, int loadOrder = 100)
@@ -48,7 +48,7 @@ namespace DINOForge.SDK.Registry
         {
             get
             {
-                Dictionary<string, RegistryEntry<T>> result = new Dictionary<string, RegistryEntry<T>>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, RegistryEntry<T>> result = new Dictionary<string, RegistryEntry<T>>(StringComparer.Ordinal);
                 foreach (KeyValuePair<string, List<RegistryEntry<T>>> kvp in _entries)
                 {
                     if (kvp.Value.Count > 0)

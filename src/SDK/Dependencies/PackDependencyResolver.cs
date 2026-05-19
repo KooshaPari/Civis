@@ -73,14 +73,14 @@ namespace DINOForge.SDK.Dependencies
         public DependencyResult ComputeLoadOrder(IEnumerable<PackManifest> packs)
         {
             List<PackManifest> packList = packs.ToList();
-            Dictionary<string, PackManifest> packById = packList.ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, PackManifest> packById = packList.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
             // Build in-degree map and adjacency list (dep -> dependents).
-            Dictionary<string, int> inDegree = packList.ToDictionary(p => p.Id, _ => 0, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> inDegree = packList.ToDictionary(p => p.Id, _ => 0, StringComparer.Ordinal);
             Dictionary<string, List<string>> dependents = packList.ToDictionary(
                 p => p.Id,
                 _ => new List<string>(),
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.Ordinal);
 
             List<string> errors = new List<string>();
 

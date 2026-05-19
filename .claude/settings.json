@@ -20,6 +20,21 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/hooks/block-git-stash.ps1"
+          },
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/hooks/guard-git-worktree.ps1"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

@@ -121,7 +121,9 @@ namespace DINOForge.Runtime.Bridge
                 _lruOrder.Remove(entry.LruNode);
             }
 
-            entry.Bundle?.Unload(unloadAllLoadedObjects: true);
+            // unloadAllLoadedObjects:false — destroying loaded objects breaks vanilla UI
+            // when AssetSwapSystem cached a vanilla bundle for patching (#534).
+            entry.Bundle?.Unload(unloadAllLoadedObjects: false);
             _cache.Remove(path);
         }
 
@@ -132,7 +134,8 @@ namespace DINOForge.Runtime.Bridge
 
             foreach (var entry in _cache.Values)
             {
-                entry.Bundle?.Unload(unloadAllLoadedObjects: true);
+                // unloadAllLoadedObjects:false — preserves vanilla sprite refs (#534).
+                entry.Bundle?.Unload(unloadAllLoadedObjects: false);
             }
 
             _cache.Clear();
@@ -168,7 +171,8 @@ namespace DINOForge.Runtime.Bridge
             var lruPath = _lruOrder.First.Value;
             if (_cache.TryGetValue(lruPath, out var entry))
             {
-                entry.Bundle?.Unload(unloadAllLoadedObjects: true);
+                // unloadAllLoadedObjects:false — see Clear() comment (#534).
+                entry.Bundle?.Unload(unloadAllLoadedObjects: false);
                 _cache.Remove(lruPath);
             }
 

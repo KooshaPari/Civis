@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using DINOForge.SDK.Assets;
 using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
@@ -188,7 +189,12 @@ namespace DINOForge.Runtime.Bridge
                     string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
                         vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
 
-                    if (File.Exists(vanillaBundlePath))
+                    if (string.IsNullOrEmpty(vanillaBundlePath))
+                    {
+                        if (_reportedFailures.Add($"resolve:{request.AssetAddress}"))
+                            WriteDebug($"ApplySwap: unable to resolve vanilla bundle path for '{request.AssetAddress}'");
+                    }
+                    else if (File.Exists(vanillaBundlePath))
                     {
                         string patchedFileName = Path.GetFileName(vanillaBundlePath);
                         string outputPath = Path.Combine(patchDir, patchedFileName);
@@ -329,8 +335,18 @@ namespace DINOForge.Runtime.Bridge
             MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethod(
                 "GetSharedComponentData",
                 new[] { typeof(Entity), typeof(ComponentType) });
-            MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethod(
-                "SetSharedComponentData");
+            // #101: SetSharedComponentData<T> has multiple overloads (Entity, EntityQuery,
+            // NativeArray<Entity>), so plain GetMethod("SetSharedComponentData") throws
+            // AmbiguousMatchException. GetMethod(name, types[]) also can't disambiguate
+            // open generics (parameter type is T, not a concrete Type). Filter by arity +
+            // first-parameter Entity to pin the (Entity, T) overload.
+            MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(m =>
+                    m.Name == "SetSharedComponentData"
+                    && m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 2
+                    && m.GetParameters()[0].ParameterType == typeof(Entity));
 
             if (getSharedNonGeneric == null || setSharedGeneric == null)
             {
@@ -531,15 +547,30 @@ namespace DINOForge.Runtime.Bridge
             WriteDebug("AssetSwapSystem.OnDestroy - bundles unloaded");
         }
 
+        private const long DebugLogMaxBytes = 100L * 1024 * 1024;  // 100 MB
+
         private static void WriteDebug(string msg)
         {
             try
             {
                 string debugLog = Path.Combine(
                     BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
+
+                // Pattern #232: rotate at 100 MB to prevent unbounded growth (iter-142 incident — 3.3GB file caused disk exhaustion)
+                if (File.Exists(debugLog) && new FileInfo(debugLog).Length >= DebugLogMaxBytes)
+                {
+                    string rotated = debugLog + ".1";
+                    if (File.Exists(rotated)) File.Delete(rotated);
+                    File.Move(debugLog, rotated);
+                }
+
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [AssetSwapSystem] {msg}\n");
             }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
+            catch (System.Exception ex)
+            {
+                // Pattern #111: fallback to BepInEx logger so append failures don't lose messages
+                BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"WriteDebug fallback: {ex} (msg: {msg})");
+            }
         }
     }
 }

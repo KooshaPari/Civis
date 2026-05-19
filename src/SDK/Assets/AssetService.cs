@@ -409,6 +409,24 @@ namespace DINOForge.SDK.Assets
         /// <returns>True if the replacement succeeded; false on any error.</returns>
         public bool ReplaceAsset(string bundlePath, string assetName, byte[] newData, string outputPath)
         {
+            if (string.IsNullOrEmpty(bundlePath))
+            {
+                LogWarning($"ReplaceAsset: bundlePath is null or empty (asset '{assetName}')");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                LogWarning($"ReplaceAsset: assetName is null or empty (bundle '{bundlePath}')");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(outputPath))
+            {
+                LogWarning($"ReplaceAsset: outputPath is null or empty (asset '{assetName}')");
+                return false;
+            }
+
             if (!File.Exists(bundlePath))
             {
                 LogWarning($"ReplaceAsset: source bundle not found: {bundlePath}");
@@ -509,7 +527,7 @@ namespace DINOForge.SDK.Assets
             }
             catch (Exception ex)
             {
-                LogWarning($"ReplaceAsset: failed to patch '{assetName}' in '{bundlePath}': {ex.Message}");
+                LogWarning($"ReplaceAsset: failed to patch '{assetName}' in '{bundlePath}': {ex}");
                 return false;
             }
         }
@@ -539,7 +557,7 @@ namespace DINOForge.SDK.Assets
                 }
                 catch (Exception ex)
                 {
-                    LogWarning($"FindBundlesWithType: could not read bundle '{bundle.Name}': {ex.Message}");
+                    LogWarning($"FindBundlesWithType: could not read bundle '{bundle.Name}': {ex}");
                 }
             }
 

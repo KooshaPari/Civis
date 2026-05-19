@@ -511,7 +511,7 @@ namespace DINOForge.Runtime.Assets
             }
             catch (Exception ex)
             {
-                LogWarning($"ReplaceAsset: failed to patch '{assetName}' in '{bundlePath}': {ex.Message}");
+                LogWarning($"ReplaceAsset: failed to patch '{assetName}' in '{bundlePath}': {ex}");
                 return false;
             }
         }
@@ -541,7 +541,7 @@ namespace DINOForge.Runtime.Assets
                 }
                 catch (Exception ex)
                 {
-                    LogWarning($"FindBundlesWithType: could not read bundle '{bundle.Name}': {ex.Message}");
+                    LogWarning($"FindBundlesWithType: could not read bundle '{bundle.Name}': {ex}");
                 }
             }
 

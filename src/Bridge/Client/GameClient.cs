@@ -592,12 +592,14 @@ public sealed class GameClient : IGameClient, IDisposable
                 throw new GameClientException($"Server error [{response.Error.Code}]: {response.Error.Message}");
             }
 
+            // sync-over-async-unavoidable: JsonRpcResponse.Result is a JToken property (Newtonsoft.Json.Linq), not Task.Result. Analyzer false positive.
             if (response.Result is null)
             {
                 _logger.Warning("Server returned null result for request '{Method}'", method);
                 throw new GameClientException($"Server returned null result for '{method}'.");
             }
 
+            // sync-over-async-unavoidable: JsonRpcResponse.Result is a JToken property (Newtonsoft.Json.Linq), not Task.Result. Analyzer false positive.
             T? result = JsonConvert.DeserializeObject<T>(response.Result.ToString()!);
             if (result is null)
             {
@@ -652,9 +654,9 @@ public sealed class GameClient : IGameClient, IDisposable
         }
 
         // Safe: readTask.IsCompleted is true by loop exit invariant
-        // sync-over-async-unavoidable: .Result may throw directly or wrapped in AggregateException
         try
         {
+            // sync-over-async-unavoidable: readTask.IsCompleted is true by loop-exit invariant above; .Result is a non-blocking unwrap here. Inner exceptions handled in catches.
             return readTask.Result;
         }
         catch (NullReferenceException nre)

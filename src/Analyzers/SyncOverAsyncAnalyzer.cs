@@ -8,11 +8,20 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace DINOForge.Analyzers
 {
+    /// <summary>
+    /// Analyzer DF0116: Sync-over-async blocking call (Pattern #116).
+    /// Detects <c>.Result</c> / <c>.Wait()</c> on tasks. Suppress with
+    /// <c>// sync-over-async-unavoidable: &lt;reason&gt;</c> on the same line
+    /// (trailing trivia), the previous line (leading trivia of the enclosing
+    /// statement), or directly on the offending node. Marker semantics mirror
+    /// Pattern #96 (DF0096) for consistency.
+    /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class SyncOverAsyncAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "DF0116";
         private const string Category = "Reliability";
+        private const string SuppressionMarker = "sync-over-async-unavoidable:";
 
         private static readonly LocalizableString Title =
             (LocalizableString)"Sync-over-async blocking call (.Result / .Wait())";
@@ -53,12 +62,12 @@ namespace DINOForge.Analyzers
             if (memberName != "Result")
                 return;
 
-            // Exclude false-positive member names
+            // Exclude false-positive member names (defense in depth — the prior
+            // equality check already narrows to "Result" exactly).
             if (IsFalsePositiveMemberName(memberName))
                 return;
 
-            // Check for sync-over-async-unavoidable comment in leading trivia
-            if (HasSyncOverAsyncUnavoidableComment(memberAccess))
+            if (HasSuppressionMarker(memberAccess))
                 return;
 
             var diagnostic = Diagnostic.Create(Rule, memberAccess.Name.GetLocation());
@@ -76,8 +85,7 @@ namespace DINOForge.Analyzers
             if (memberAccess.Name.Identifier.ValueText != "Wait")
                 return;
 
-            // Check for sync-over-async-unavoidable comment in leading trivia
-            if (HasSyncOverAsyncUnavoidableComment(invocation))
+            if (HasSuppressionMarker(invocation))
                 return;
 
             var diagnostic = Diagnostic.Create(Rule, invocation.GetLocation());
@@ -91,40 +99,45 @@ namespace DINOForge.Analyzers
             return falsePositives.Contains(memberName);
         }
 
-        private static bool HasSyncOverAsyncUnavoidableComment(SyntaxNode node)
+        /// <summary>
+        /// Returns true when the offending node (or the enclosing statement)
+        /// carries a <c>// sync-over-async-unavoidable: ...</c> marker in
+        /// adjacent trivia. Checks (in order): node leading + trailing trivia,
+        /// enclosing statement leading + trailing trivia. Mirrors DF0096's
+        /// HasSuppressionMarker so authors can place the marker on the
+        /// statement above the call site OR inline at the end of the line.
+        /// </summary>
+        private static bool HasSuppressionMarker(SyntaxNode node)
         {
-            // Check leading trivia for sync-over-async-unavoidable marker
-            var leadingTrivia = node.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
+            if (TriviaContainsMarker(node.GetLeadingTrivia()))
+                return true;
+            if (TriviaContainsMarker(node.GetTrailingTrivia()))
+                return true;
+
+            var statement = node.FirstAncestorOrSelf<StatementSyntax>();
+            if (statement != null)
             {
-                if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia))
+                if (TriviaContainsMarker(statement.GetLeadingTrivia()))
+                    return true;
+                if (TriviaContainsMarker(statement.GetTrailingTrivia()))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool TriviaContainsMarker(SyntaxTriviaList trivia)
+        {
+            foreach (var t in trivia)
+            {
+                if (t.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
+                    t.IsKind(SyntaxKind.MultiLineCommentTrivia))
                 {
-                    var commentText = trivia.ToFullString();
-                    if (commentText.Contains("sync-over-async-unavoidable:"))
+                    var text = t.ToFullString();
+                    if (text.IndexOf(SuppressionMarker, StringComparison.Ordinal) >= 0)
                         return true;
                 }
             }
-
-            // Also check trailing trivia of preceding token
-            var parent = node.Parent;
-            if (parent != null)
-            {
-                var token = parent.GetFirstToken();
-                if (token.HasTrailingTrivia)
-                {
-                    var trailingTrivia = token.TrailingTrivia;
-                    foreach (var trivia in trailingTrivia)
-                    {
-                        if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia))
-                        {
-                            var commentText = trivia.ToFullString();
-                            if (commentText.Contains("sync-over-async-unavoidable:"))
-                                return true;
-                        }
-                    }
-                }
-            }
-
             return false;
         }
     }

@@ -107,6 +107,7 @@ public static class BridgeReceiptVerifier
         }
 
         // 1) Recompute the payload hash and compare against state_sha256.
+        // sync-over-async-unavoidable: JsonRpcResponse.Result is a JToken property (Newtonsoft.Json.Linq), not Task.Result. Analyzer false positive.
         string canonicalPayload = CanonicalJson.Canonicalize(response.Result);
         string recomputedPayloadHash = Sha256Hex(Encoding.UTF8.GetBytes(canonicalPayload));
         if (!StringComparer.Ordinal.Equals(recomputedPayloadHash, receipt.StateSha256Hex))

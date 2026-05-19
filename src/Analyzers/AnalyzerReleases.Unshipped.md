@@ -5,7 +5,7 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 DF0094  | Design   | Warning  | Unbounded version constraint - detects version constraints without upper bounds (Pattern #94)
-DF0096  | Logging  | Warning  | LogError missing exception parameter - detects calls that discard stack traces
+DF0096  | Logging  | Warning  | LogError discards exception stack trace - detects ex.Message member access, $"{ex.Message}" interpolation, and "msg" + ex.Message concatenation patterns in LogError/LogCritical/LogWarning/LogException calls. Suppress with `// pattern-96-ok: <reason>`. Mirrors detect_logerror_no_stack.py (Pattern #96). Formalized as Tier 1 in iter-144 with 19 firing tests.
 DF0097  | Concurrency | Warning | TaskCompletionSource missing RunContinuationsAsynchronously - detects sync-continuation deadlock risks
 DF0098  | Async    | Info     | await missing ConfigureAwait(false) in library code - detects library-scope awaits that should suppress context capture (Pattern #98)
 DF0099  | Performance | Warning | Dictionary<string, T> without explicit StringComparer - detects unprotected string keys requiring Ordinal comparison

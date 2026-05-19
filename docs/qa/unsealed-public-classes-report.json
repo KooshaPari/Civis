@@ -1,15 +1,93 @@
 {
-  "scan_utc": "2026-05-18T20:41:44.970796Z",
-  "scan_date": "2026-05-18",
-  "files_scanned": 784,
-  "total_hits": 340,
-  "new_hits": 340,
+  "scan_utc": "2026-05-19T04:26:17.485835Z",
+  "scan_date": "2026-05-19",
+  "files_scanned": 800,
+  "total_hits": 357,
+  "new_hits": 357,
   "allowlist_size": 0,
   "strict": false,
   "threshold": 5,
-  "high_count": 18,
-  "med_count": 322,
+  "high_count": 24,
+  "med_count": 333,
   "unsealed_nuget": [
+    {
+      "file": "src/Domains/Economy/Balance/EconomyBalanceReport.cs",
+      "line": 8,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class FactionEconomySummary",
+      "class_name": "FactionEconomySummary",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'FactionEconomySummary'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class FactionEconomySummary` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Balance/EconomyBalanceReport.cs|8",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Balance/EconomyBalanceReport.cs",
+      "line": 82,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyBalanceReport",
+      "class_name": "EconomyBalanceReport",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyBalanceReport'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyBalanceReport` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Balance/EconomyBalanceReport.cs|82",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/EconomyContentLoader.cs",
+      "line": 17,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyContentLoader",
+      "class_name": "EconomyContentLoader",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyContentLoader'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyContentLoader` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/EconomyContentLoader.cs|17",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/EconomyPlugin.cs",
+      "line": 16,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyPlugin",
+      "class_name": "EconomyPlugin",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyPlugin'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyPlugin` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/EconomyPlugin.cs|16",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Models/MarketDefinition.cs",
+      "line": 9,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class MarketDefinition",
+      "class_name": "MarketDefinition",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'MarketDefinition'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class MarketDefinition` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Models/MarketDefinition.cs|9",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Models/TradeRoute.cs",
+      "line": 8,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class TradeRoute",
+      "class_name": "TradeRoute",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'TradeRoute'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class TradeRoute` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Models/TradeRoute.cs|8",
+      "in_allowlist": false
+    },
     {
       "file": "src/SDK/Models/AerialProperties.cs",
       "line": 7,
@@ -585,6 +663,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/LargeMethodParameterCountAnalyzerTests.cs",
+      "line": 7,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class LargeMethodParameterCountAnalyzerTests",
+      "class_name": "LargeMethodParameterCountAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'LargeMethodParameterCountAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/LargeMethodParameterCountAnalyzerTests.cs|7",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/LongMethodAnalyzerTests.cs",
       "line": 9,
       "severity": "MED",
@@ -624,6 +715,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/PublicMethodReturnsListAnalyzerTests.cs",
+      "line": 9,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class PublicMethodReturnsListAnalyzerTests",
+      "class_name": "PublicMethodReturnsListAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'PublicMethodReturnsListAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/PublicMethodReturnsListAnalyzerTests.cs|9",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/PublicMutableFieldAnalyzerTests.cs",
       "line": 8,
       "severity": "MED",
@@ -650,6 +754,32 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/StaticInitializerSideEffectAnalyzerTests.cs",
+      "line": 9,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class StaticInitializerSideEffectAnalyzerTests",
+      "class_name": "StaticInitializerSideEffectAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'StaticInitializerSideEffectAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/StaticInitializerSideEffectAnalyzerTests.cs|9",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/StringConcatenationInLoopAnalyzerTests.cs",
+      "line": 5,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class StringConcatenationInLoopAnalyzerTests",
+      "class_name": "StringConcatenationInLoopAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'StringConcatenationInLoopAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/StringConcatenationInLoopAnalyzerTests.cs|5",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/ThrowExceptionStackLossAnalyzerTests.cs",
       "line": 8,
       "severity": "MED",
@@ -673,6 +803,19 @@
       "class_name": "UnsealedConcreteMutableClassAnalyzerTests",
       "detail": "Production code declares unsealed public concrete class 'UnsealedConcreteMutableClassAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/Analyzers/UnsealedConcreteMutableClassAnalyzerTests.cs|6",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/UnusedPrivateFieldAnalyzerTests.cs",
+      "line": 5,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class UnusedPrivateFieldAnalyzerTests",
+      "class_name": "UnusedPrivateFieldAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'UnusedPrivateFieldAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/UnusedPrivateFieldAnalyzerTests.cs|5",
       "in_allowlist": false
     },
     {
@@ -2249,6 +2392,32 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/GameClientOptionsFsCheckProperties.cs",
+      "line": 15,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class GameClientOptionsFsCheckProperties",
+      "class_name": "GameClientOptionsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'GameClientOptionsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/GameClientOptionsFsCheckProperties.cs|15",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/HashInvariantsFsCheckProperties.cs",
+      "line": 13,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class HashInvariantsFsCheckProperties",
+      "class_name": "HashInvariantsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'HashInvariantsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/HashInvariantsFsCheckProperties.cs|13",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/HotReloadFsCheckProperties.cs",
       "line": 30,
       "severity": "MED",
@@ -2301,6 +2470,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/PathSafetyFsCheckProperties.cs",
+      "line": 18,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class PathSafetyFsCheckProperties",
+      "class_name": "PathSafetyFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'PathSafetyFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/PathSafetyFsCheckProperties.cs|18",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/RealFsCheckPropertyTests.cs",
       "line": 21,
       "severity": "MED",
@@ -2340,19 +2522,6 @@
       "in_allowlist": false
     },
     {
-      "file": "src/Tests/ParameterizedTests/RuntimeBridgeFsCheckProperties.cs",
-      "line": 31,
-      "severity": "MED",
-      "rule": "unsealed_internal",
-      "is_test": true,
-      "has_inline_allow": false,
-      "line_excerpt": "public class RuntimeBridgeFsCheckProperties",
-      "class_name": "RuntimeBridgeFsCheckProperties",
-      "detail": "Production code declares unsealed public concrete class 'RuntimeBridgeFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Tests/ParameterizedTests/RuntimeBridgeFsCheckProperties.cs|31",
-      "in_allowlist": false
-    },
-    {
       "file": "src/Tests/ParameterizedTests/RuntimeFsCheckProperties.cs",
       "line": 32,
       "severity": "MED",
@@ -2379,6 +2548,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/SemVerInvariantsFsCheckProperties.cs",
+      "line": 12,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class SemVerInvariantsFsCheckProperties",
+      "class_name": "SemVerInvariantsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'SemVerInvariantsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/SemVerInvariantsFsCheckProperties.cs|12",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/SemVerPropertyTests.cs",
       "line": 15,
       "severity": "MED",
@@ -2389,6 +2571,32 @@
       "class_name": "SemVerPropertyTests",
       "detail": "Production code declares unsealed public concrete class 'SemVerPropertyTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/ParameterizedTests/SemVerPropertyTests.cs|15",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/SerializationFsCheckProperties.cs",
+      "line": 17,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class SerializationFsCheckProperties",
+      "class_name": "SerializationFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'SerializationFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/SerializationFsCheckProperties.cs|17",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/TelemetryFsCheckProperties.cs",
+      "line": 12,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class TelemetryFsCheckProperties",
+      "class_name": "TelemetryFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'TelemetryFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/TelemetryFsCheckProperties.cs|12",
       "in_allowlist": false
     },
     {
@@ -2454,6 +2662,19 @@
       "class_name": "Pattern101EnumDiscriminatorTests",
       "detail": "Production code declares unsealed public concrete class 'Pattern101EnumDiscriminatorTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/Pattern101EnumDiscriminatorTests.cs|18",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Pattern234TestPackLeakTests.cs",
+      "line": 14,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class Pattern234TestPackLeakTests",
+      "class_name": "Pattern234TestPackLeakTests",
+      "detail": "Production code declares unsealed public concrete class 'Pattern234TestPackLeakTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Pattern234TestPackLeakTests.cs|14",
       "in_allowlist": false
     },
     {
@@ -4448,6 +4669,84 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Domains/Economy/Balance/EconomyBalanceReport.cs",
+      "line": 8,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class FactionEconomySummary",
+      "class_name": "FactionEconomySummary",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'FactionEconomySummary'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class FactionEconomySummary` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Balance/EconomyBalanceReport.cs|8",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Balance/EconomyBalanceReport.cs",
+      "line": 82,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyBalanceReport",
+      "class_name": "EconomyBalanceReport",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyBalanceReport'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyBalanceReport` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Balance/EconomyBalanceReport.cs|82",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/EconomyContentLoader.cs",
+      "line": 17,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyContentLoader",
+      "class_name": "EconomyContentLoader",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyContentLoader'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyContentLoader` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/EconomyContentLoader.cs|17",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/EconomyPlugin.cs",
+      "line": 16,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class EconomyPlugin",
+      "class_name": "EconomyPlugin",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'EconomyPlugin'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class EconomyPlugin` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/EconomyPlugin.cs|16",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Models/MarketDefinition.cs",
+      "line": 9,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class MarketDefinition",
+      "class_name": "MarketDefinition",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'MarketDefinition'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class MarketDefinition` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Models/MarketDefinition.cs|9",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Domains/Economy/Models/TradeRoute.cs",
+      "line": 8,
+      "severity": "HIGH",
+      "rule": "unsealed_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public class TradeRoute",
+      "class_name": "TradeRoute",
+      "detail": "NuGet-published API surface declares unsealed public concrete class 'TradeRoute'. This allows external mod code to subclass it, breaking the API contract boundary and preventing version-safe changes. Add `sealed` modifier: `public sealed class TradeRoute` UNLESS an explicit subclassing contract exists (document virtual methods). Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/Domains/Economy/Models/TradeRoute.cs|8",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Runtime/Bridge/FactionSystem.cs",
       "line": 18,
       "severity": "MED",
@@ -5020,6 +5319,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/LargeMethodParameterCountAnalyzerTests.cs",
+      "line": 7,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class LargeMethodParameterCountAnalyzerTests",
+      "class_name": "LargeMethodParameterCountAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'LargeMethodParameterCountAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/LargeMethodParameterCountAnalyzerTests.cs|7",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/LongMethodAnalyzerTests.cs",
       "line": 9,
       "severity": "MED",
@@ -5059,6 +5371,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/PublicMethodReturnsListAnalyzerTests.cs",
+      "line": 9,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class PublicMethodReturnsListAnalyzerTests",
+      "class_name": "PublicMethodReturnsListAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'PublicMethodReturnsListAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/PublicMethodReturnsListAnalyzerTests.cs|9",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/PublicMutableFieldAnalyzerTests.cs",
       "line": 8,
       "severity": "MED",
@@ -5085,6 +5410,32 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/Analyzers/StaticInitializerSideEffectAnalyzerTests.cs",
+      "line": 9,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class StaticInitializerSideEffectAnalyzerTests",
+      "class_name": "StaticInitializerSideEffectAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'StaticInitializerSideEffectAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/StaticInitializerSideEffectAnalyzerTests.cs|9",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/StringConcatenationInLoopAnalyzerTests.cs",
+      "line": 5,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class StringConcatenationInLoopAnalyzerTests",
+      "class_name": "StringConcatenationInLoopAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'StringConcatenationInLoopAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/StringConcatenationInLoopAnalyzerTests.cs|5",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/Analyzers/ThrowExceptionStackLossAnalyzerTests.cs",
       "line": 8,
       "severity": "MED",
@@ -5108,6 +5459,19 @@
       "class_name": "UnsealedConcreteMutableClassAnalyzerTests",
       "detail": "Production code declares unsealed public concrete class 'UnsealedConcreteMutableClassAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/Analyzers/UnsealedConcreteMutableClassAnalyzerTests.cs|6",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/UnusedPrivateFieldAnalyzerTests.cs",
+      "line": 5,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class UnusedPrivateFieldAnalyzerTests",
+      "class_name": "UnusedPrivateFieldAnalyzerTests",
+      "detail": "Production code declares unsealed public concrete class 'UnusedPrivateFieldAnalyzerTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/UnusedPrivateFieldAnalyzerTests.cs|5",
       "in_allowlist": false
     },
     {
@@ -6684,6 +7048,32 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/GameClientOptionsFsCheckProperties.cs",
+      "line": 15,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class GameClientOptionsFsCheckProperties",
+      "class_name": "GameClientOptionsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'GameClientOptionsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/GameClientOptionsFsCheckProperties.cs|15",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/HashInvariantsFsCheckProperties.cs",
+      "line": 13,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class HashInvariantsFsCheckProperties",
+      "class_name": "HashInvariantsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'HashInvariantsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/HashInvariantsFsCheckProperties.cs|13",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/HotReloadFsCheckProperties.cs",
       "line": 30,
       "severity": "MED",
@@ -6736,6 +7126,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/PathSafetyFsCheckProperties.cs",
+      "line": 18,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class PathSafetyFsCheckProperties",
+      "class_name": "PathSafetyFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'PathSafetyFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/PathSafetyFsCheckProperties.cs|18",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/RealFsCheckPropertyTests.cs",
       "line": 21,
       "severity": "MED",
@@ -6775,19 +7178,6 @@
       "in_allowlist": false
     },
     {
-      "file": "src/Tests/ParameterizedTests/RuntimeBridgeFsCheckProperties.cs",
-      "line": 31,
-      "severity": "MED",
-      "rule": "unsealed_internal",
-      "is_test": true,
-      "has_inline_allow": false,
-      "line_excerpt": "public class RuntimeBridgeFsCheckProperties",
-      "class_name": "RuntimeBridgeFsCheckProperties",
-      "detail": "Production code declares unsealed public concrete class 'RuntimeBridgeFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Tests/ParameterizedTests/RuntimeBridgeFsCheckProperties.cs|31",
-      "in_allowlist": false
-    },
-    {
       "file": "src/Tests/ParameterizedTests/RuntimeFsCheckProperties.cs",
       "line": 32,
       "severity": "MED",
@@ -6814,6 +7204,19 @@
       "in_allowlist": false
     },
     {
+      "file": "src/Tests/ParameterizedTests/SemVerInvariantsFsCheckProperties.cs",
+      "line": 12,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class SemVerInvariantsFsCheckProperties",
+      "class_name": "SemVerInvariantsFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'SemVerInvariantsFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/SemVerInvariantsFsCheckProperties.cs|12",
+      "in_allowlist": false
+    },
+    {
       "file": "src/Tests/ParameterizedTests/SemVerPropertyTests.cs",
       "line": 15,
       "severity": "MED",
@@ -6824,6 +7227,32 @@
       "class_name": "SemVerPropertyTests",
       "detail": "Production code declares unsealed public concrete class 'SemVerPropertyTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/ParameterizedTests/SemVerPropertyTests.cs|15",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/SerializationFsCheckProperties.cs",
+      "line": 17,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class SerializationFsCheckProperties",
+      "class_name": "SerializationFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'SerializationFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/SerializationFsCheckProperties.cs|17",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/ParameterizedTests/TelemetryFsCheckProperties.cs",
+      "line": 12,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class TelemetryFsCheckProperties",
+      "class_name": "TelemetryFsCheckProperties",
+      "detail": "Production code declares unsealed public concrete class 'TelemetryFsCheckProperties'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/ParameterizedTests/TelemetryFsCheckProperties.cs|12",
       "in_allowlist": false
     },
     {
@@ -6889,6 +7318,19 @@
       "class_name": "Pattern101EnumDiscriminatorTests",
       "detail": "Production code declares unsealed public concrete class 'Pattern101EnumDiscriminatorTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
       "allowlist_key": "MED|src/Tests/Pattern101EnumDiscriminatorTests.cs|18",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Pattern234TestPackLeakTests.cs",
+      "line": 14,
+      "severity": "MED",
+      "rule": "unsealed_internal",
+      "is_test": true,
+      "has_inline_allow": false,
+      "line_excerpt": "public class Pattern234TestPackLeakTests",
+      "class_name": "Pattern234TestPackLeakTests",
+      "detail": "Production code declares unsealed public concrete class 'Pattern234TestPackLeakTests'. Prefer sealed classes by default unless an explicit subclassing contract exists (document virtual methods). Add `sealed` modifier for clarity. Suppress with `// unsealed-by-design: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Pattern234TestPackLeakTests.cs|14",
       "in_allowlist": false
     },
     {

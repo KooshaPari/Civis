@@ -1,20 +1,182 @@
 {
-  "scan_utc": "2026-04-27T12:56:17.630039Z",
-  "scan_date": "2026-04-27",
-  "total_violations": 11,
+  "scan_utc": "2026-05-19T04:25:47.425375Z",
+  "scan_date": "2026-05-19",
+  "total_violations": 17,
   "allowlist_size": 11,
-  "new_violations": 0,
+  "new_violations": 6,
   "strict": false,
-  "exit_code": 0,
+  "exit_code": 1,
   "by_severity": {
-    "HIGH": [],
-    "MED": [],
-    "LOW": []
+    "HIGH": [
+      {
+        "rule": "raw_prod_env_var",
+        "severity": "HIGH",
+        "file": "NativeInteropIntegrationTests.cs",
+        "line": 42,
+        "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+        "class": "NativeInteropIntegrationTests",
+        "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+        "in_collection": false,
+        "allowlist_key": "raw_prod_env_var|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+        "in_allowlist": false
+      },
+      {
+        "rule": "raw_prod_env_var",
+        "severity": "HIGH",
+        "file": "NativeInteropIntegrationTests.cs",
+        "line": 119,
+        "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+        "class": "GoDependencyResolverIntegrationTests",
+        "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+        "in_collection": false,
+        "allowlist_key": "raw_prod_env_var|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+        "in_allowlist": false
+      }
+    ],
+    "MED": [
+      {
+        "rule": "env_mutation_without_collection",
+        "severity": "MED",
+        "file": "NativeInteropIntegrationTests.cs",
+        "line": 42,
+        "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+        "class": "NativeInteropIntegrationTests",
+        "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+        "var": "DINOFORGE_RESOLVER_PATH",
+        "in_collection": false,
+        "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+        "in_allowlist": false
+      },
+      {
+        "rule": "env_mutation_without_collection",
+        "severity": "MED",
+        "file": "NativeInteropIntegrationTests.cs",
+        "line": 119,
+        "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+        "class": "GoDependencyResolverIntegrationTests",
+        "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+        "var": "DINOFORGE_RESOLVER_PATH",
+        "in_collection": false,
+        "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+        "in_allowlist": false
+      }
+    ],
+    "LOW": [
+      {
+        "rule": "class_static_path_no_guid",
+        "severity": "LOW",
+        "file": "GameTestDiagnostics.cs",
+        "line": 20,
+        "fqn": "DINOForge.Tests.GameDiagnosticsCapture",
+        "class": "GameDiagnosticsCapture",
+        "field": "FailuresDirectory",
+        "rhs": "Path.Combine(\n            Environment.GetEnvironmentVariable(\"TEMP\") ?? \"C:\\\\temp\",\n            \"DINOForge\", \"failures\")",
+        "detail": "Class-static path field `FailuresDirectory` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+        "in_collection": false,
+        "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.GameDiagnosticsCapture|20|GameTestDiagnostics.cs",
+        "in_allowlist": false
+      },
+      {
+        "rule": "class_static_path_no_guid",
+        "severity": "LOW",
+        "file": "RustInteropTests.cs",
+        "line": 13,
+        "fqn": "DINOForge.Tests.RustInteropTests",
+        "class": "RustInteropTests",
+        "field": "TestGlbPath",
+        "rhs": "Path.Combine(\n            Path.GetTempPath(), \"DINOForge_Test\", \"test_model.glb\")",
+        "detail": "Class-static path field `TestGlbPath` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+        "in_collection": false,
+        "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.RustInteropTests|13|RustInteropTests.cs",
+        "in_allowlist": false
+      }
+    ]
   },
-  "raw_prod_env_var": [],
-  "static_path_no_guid": [],
+  "raw_prod_env_var": [
+    {
+      "rule": "raw_prod_env_var",
+      "severity": "HIGH",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 42,
+      "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+      "class": "NativeInteropIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+      "in_collection": false,
+      "allowlist_key": "raw_prod_env_var|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "raw_prod_env_var",
+      "severity": "HIGH",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 119,
+      "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+      "class": "GoDependencyResolverIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+      "in_collection": false,
+      "allowlist_key": "raw_prod_env_var|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    }
+  ],
+  "static_path_no_guid": [
+    {
+      "rule": "class_static_path_no_guid",
+      "severity": "LOW",
+      "file": "GameTestDiagnostics.cs",
+      "line": 20,
+      "fqn": "DINOForge.Tests.GameDiagnosticsCapture",
+      "class": "GameDiagnosticsCapture",
+      "field": "FailuresDirectory",
+      "rhs": "Path.Combine(\n            Environment.GetEnvironmentVariable(\"TEMP\") ?? \"C:\\\\temp\",\n            \"DINOForge\", \"failures\")",
+      "detail": "Class-static path field `FailuresDirectory` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+      "in_collection": false,
+      "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.GameDiagnosticsCapture|20|GameTestDiagnostics.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "class_static_path_no_guid",
+      "severity": "LOW",
+      "file": "RustInteropTests.cs",
+      "line": 13,
+      "fqn": "DINOForge.Tests.RustInteropTests",
+      "class": "RustInteropTests",
+      "field": "TestGlbPath",
+      "rhs": "Path.Combine(\n            Path.GetTempPath(), \"DINOForge_Test\", \"test_model.glb\")",
+      "detail": "Class-static path field `TestGlbPath` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+      "in_collection": false,
+      "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.RustInteropTests|13|RustInteropTests.cs",
+      "in_allowlist": false
+    }
+  ],
   "working_dir_mutation": [],
-  "env_var_no_collection": [],
+  "env_var_no_collection": [
+    {
+      "rule": "env_mutation_without_collection",
+      "severity": "MED",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 42,
+      "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+      "class": "NativeInteropIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+      "var": "DINOFORGE_RESOLVER_PATH",
+      "in_collection": false,
+      "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "env_mutation_without_collection",
+      "severity": "MED",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 119,
+      "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+      "class": "GoDependencyResolverIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+      "var": "DINOFORGE_RESOLVER_PATH",
+      "in_collection": false,
+      "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    }
+  ],
   "temp_path_no_guid": [],
   "all_violations": [
     {
@@ -29,6 +191,70 @@
       "in_collection": false,
       "allowlist_key": "hardcoded_temp_path|DINOForge.Tests.GameClientCoverageTests|74|GameClientCoverageTests.cs",
       "in_allowlist": true
+    },
+    {
+      "rule": "class_static_path_no_guid",
+      "severity": "LOW",
+      "file": "GameTestDiagnostics.cs",
+      "line": 20,
+      "fqn": "DINOForge.Tests.GameDiagnosticsCapture",
+      "class": "GameDiagnosticsCapture",
+      "field": "FailuresDirectory",
+      "rhs": "Path.Combine(\n            Environment.GetEnvironmentVariable(\"TEMP\") ?? \"C:\\\\temp\",\n            \"DINOForge\", \"failures\")",
+      "detail": "Class-static path field `FailuresDirectory` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+      "in_collection": false,
+      "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.GameDiagnosticsCapture|20|GameTestDiagnostics.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "env_mutation_without_collection",
+      "severity": "MED",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 42,
+      "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+      "class": "NativeInteropIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+      "var": "DINOFORGE_RESOLVER_PATH",
+      "in_collection": false,
+      "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "raw_prod_env_var",
+      "severity": "HIGH",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 42,
+      "fqn": "DINOForge.Tests.NativeInteropIntegrationTests",
+      "class": "NativeInteropIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+      "in_collection": false,
+      "allowlist_key": "raw_prod_env_var|DINOForge.Tests.NativeInteropIntegrationTests|42|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "env_mutation_without_collection",
+      "severity": "MED",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 119,
+      "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+      "class": "GoDependencyResolverIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable in a class without [Collection(EnvVarMutation)] \u2014 xUnit default class-parallelism races on env state.",
+      "var": "DINOFORGE_RESOLVER_PATH",
+      "in_collection": false,
+      "allowlist_key": "env_mutation_without_collection|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
+    },
+    {
+      "rule": "raw_prod_env_var",
+      "severity": "HIGH",
+      "file": "NativeInteropIntegrationTests.cs",
+      "line": 119,
+      "fqn": "DINOForge.Tests.GoDependencyResolverIntegrationTests",
+      "class": "GoDependencyResolverIntegrationTests",
+      "detail": "Environment.SetEnvironmentVariable(\"DINOFORGE_RESOLVER_PATH\") \u2014 production env-var name set from a test. Use DINOFORGE_TEST_ prefix or move to InternalsVisibleTo.",
+      "in_collection": false,
+      "allowlist_key": "raw_prod_env_var|DINOForge.Tests.GoDependencyResolverIntegrationTests|119|NativeInteropIntegrationTests.cs",
+      "in_allowlist": false
     },
     {
       "rule": "hardcoded_temp_path",
@@ -70,6 +296,20 @@
       "in_collection": false,
       "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.Phase7VisualAssetIntegrationTests|30|Phase7VisualAssetIntegrationTests.cs",
       "in_allowlist": true
+    },
+    {
+      "rule": "class_static_path_no_guid",
+      "severity": "LOW",
+      "file": "RustInteropTests.cs",
+      "line": 13,
+      "fqn": "DINOForge.Tests.RustInteropTests",
+      "class": "RustInteropTests",
+      "field": "TestGlbPath",
+      "rhs": "Path.Combine(\n            Path.GetTempPath(), \"DINOForge_Test\", \"test_model.glb\")",
+      "detail": "Class-static path field `TestGlbPath` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+      "in_collection": false,
+      "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.RustInteropTests|13|RustInteropTests.cs",
+      "in_allowlist": false
     },
     {
       "rule": "hardcoded_temp_path",
@@ -170,5 +410,5 @@
   ],
   "scan_root": "C:/Users/koosh/Dino/src/Tests",
   "allowlist_path": "C:/Users/koosh/Dino/docs/qa/global-state-allowlist.txt",
-  "files_scanned": 221
+  "files_scanned": 332
 }

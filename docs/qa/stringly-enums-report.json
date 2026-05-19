@@ -1,13 +1,13 @@
 {
-  "scan_utc": "2026-04-27T18:58:52.592905Z",
-  "scan_date": "2026-04-27",
-  "scanned_files": 59,
-  "files_scanned": 59,
-  "total_hits": 14,
-  "new_hits": 14,
+  "scan_utc": "2026-05-19T11:34:47.713751Z",
+  "scan_date": "2026-05-19",
+  "scanned_files": 60,
+  "files_scanned": 60,
+  "total_hits": 11,
+  "new_hits": 11,
   "allowlist_size": 0,
   "strict": false,
-  "high_count": 13,
+  "high_count": 10,
   "med_count": 1,
   "high_violations": [
     {
@@ -36,14 +36,14 @@
     },
     {
       "file": "src/Bridge/Protocol/StatResult.cs",
-      "line": 30,
+      "line": 31,
       "name": "ComponentType",
       "severity": "HIGH",
       "has_known_values": false,
       "has_ivalidatable": false,
       "snippet": "public string ComponentType { get; set; } = \"\";",
       "detail": "public string ComponentType in src/Bridge/Protocol/StatResult.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/Bridge/Protocol/StatResult.cs|30",
+      "allowlist_key": "HIGH|src/Bridge/Protocol/StatResult.cs|31",
       "in_allowlist": false
     },
     {
@@ -83,51 +83,15 @@
       "in_allowlist": false
     },
     {
-      "file": "src/Domains/UI/Models/HudElementDefinition.cs",
-      "line": 21,
-      "name": "Type",
-      "severity": "HIGH",
-      "has_known_values": false,
-      "has_ivalidatable": false,
-      "snippet": "public string Type { get; set; }",
-      "detail": "public string Type in src/Domains/UI/Models/HudElementDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/Domains/UI/Models/HudElementDefinition.cs|21",
-      "in_allowlist": false
-    },
-    {
       "file": "src/SDK/Models/SkillDefinition.cs",
-      "line": 37,
+      "line": 50,
       "name": "TargetType",
       "severity": "HIGH",
       "has_known_values": false,
       "has_ivalidatable": false,
       "snippet": "public string TargetType { get; set; } = \"\";",
       "detail": "public string TargetType in src/SDK/Models/SkillDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|37",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Models/SkillDefinition.cs",
-      "line": 91,
-      "name": "ModifierType",
-      "severity": "HIGH",
-      "has_known_values": false,
-      "has_ivalidatable": false,
-      "snippet": "public string ModifierType { get; set; } = \"flat\";",
-      "detail": "public string ModifierType in src/SDK/Models/SkillDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|91",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Models/StatOverrideDefinition.cs",
-      "line": 44,
-      "name": "Mode",
-      "severity": "HIGH",
-      "has_known_values": false,
-      "has_ivalidatable": false,
-      "snippet": "public string Mode { get; set; } = \"override\";",
-      "detail": "public string Mode in src/SDK/Models/StatOverrideDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/StatOverrideDefinition.cs|44",
+      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|50",
       "in_allowlist": false
     },
     {
@@ -169,15 +133,15 @@
   ],
   "med_violations": [
     {
-      "file": "src/Domains/Economy/Models/ResourceRate.cs",
-      "line": 14,
-      "name": "ResourceType",
+      "file": "src/Domains/UI/Models/HudElementDefinition.cs",
+      "line": 22,
+      "name": "Type",
       "severity": "MED",
-      "has_known_values": true,
-      "has_ivalidatable": false,
-      "snippet": "public string ResourceType { get; set; } = \"\";",
-      "detail": "public string ResourceType in src/Domains/Economy/Models/ResourceRate.cs is constrained at runtime (KnownXxx constraint set present) but the type system still accepts any string. Migration to a real enum + JsonConverter is recommended for IDE/compiler support; not gating.",
-      "allowlist_key": "MED|src/Domains/Economy/Models/ResourceRate.cs|14",
+      "has_known_values": false,
+      "has_ivalidatable": true,
+      "snippet": "public string Type { get; set; }",
+      "detail": "public string Type in src/Domains/UI/Models/HudElementDefinition.cs is constrained at runtime (IValidatable.Validate() present) but the type system still accepts any string. Migration to a real enum + JsonConverter is recommended for IDE/compiler support; not gating.",
+      "allowlist_key": "MED|src/Domains/UI/Models/HudElementDefinition.cs|22",
       "in_allowlist": false
     }
   ],
@@ -208,14 +172,14 @@
     },
     {
       "file": "src/Bridge/Protocol/StatResult.cs",
-      "line": 30,
+      "line": 31,
       "name": "ComponentType",
       "severity": "HIGH",
       "has_known_values": false,
       "has_ivalidatable": false,
       "snippet": "public string ComponentType { get; set; } = \"\";",
       "detail": "public string ComponentType in src/Bridge/Protocol/StatResult.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/Bridge/Protocol/StatResult.cs|30",
+      "allowlist_key": "HIGH|src/Bridge/Protocol/StatResult.cs|31",
       "in_allowlist": false
     },
     {
@@ -243,18 +207,6 @@
       "in_allowlist": false
     },
     {
-      "file": "src/Domains/Economy/Models/ResourceRate.cs",
-      "line": 14,
-      "name": "ResourceType",
-      "severity": "MED",
-      "has_known_values": true,
-      "has_ivalidatable": false,
-      "snippet": "public string ResourceType { get; set; } = \"\";",
-      "detail": "public string ResourceType in src/Domains/Economy/Models/ResourceRate.cs is constrained at runtime (KnownXxx constraint set present) but the type system still accepts any string. Migration to a real enum + JsonConverter is recommended for IDE/compiler support; not gating.",
-      "allowlist_key": "MED|src/Domains/Economy/Models/ResourceRate.cs|14",
-      "in_allowlist": false
-    },
-    {
       "file": "src/Domains/Scenario/Models/WinConditionDefinition.cs",
       "line": 20,
       "name": "Type",
@@ -268,50 +220,26 @@
     },
     {
       "file": "src/Domains/UI/Models/HudElementDefinition.cs",
-      "line": 21,
+      "line": 22,
       "name": "Type",
-      "severity": "HIGH",
+      "severity": "MED",
       "has_known_values": false,
-      "has_ivalidatable": false,
+      "has_ivalidatable": true,
       "snippet": "public string Type { get; set; }",
-      "detail": "public string Type in src/Domains/UI/Models/HudElementDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/Domains/UI/Models/HudElementDefinition.cs|21",
+      "detail": "public string Type in src/Domains/UI/Models/HudElementDefinition.cs is constrained at runtime (IValidatable.Validate() present) but the type system still accepts any string. Migration to a real enum + JsonConverter is recommended for IDE/compiler support; not gating.",
+      "allowlist_key": "MED|src/Domains/UI/Models/HudElementDefinition.cs|22",
       "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/SkillDefinition.cs",
-      "line": 37,
+      "line": 50,
       "name": "TargetType",
       "severity": "HIGH",
       "has_known_values": false,
       "has_ivalidatable": false,
       "snippet": "public string TargetType { get; set; } = \"\";",
       "detail": "public string TargetType in src/SDK/Models/SkillDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|37",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Models/SkillDefinition.cs",
-      "line": 91,
-      "name": "ModifierType",
-      "severity": "HIGH",
-      "has_known_values": false,
-      "has_ivalidatable": false,
-      "snippet": "public string ModifierType { get; set; } = \"flat\";",
-      "detail": "public string ModifierType in src/SDK/Models/SkillDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|91",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Models/StatOverrideDefinition.cs",
-      "line": 44,
-      "name": "Mode",
-      "severity": "HIGH",
-      "has_known_values": false,
-      "has_ivalidatable": false,
-      "snippet": "public string Mode { get; set; } = \"override\";",
-      "detail": "public string Mode in src/SDK/Models/StatOverrideDefinition.cs has an enum-ish name but no KnownXxx HashSet and no IValidatable.Validate() \u2014 silent typo risk. Migrate to an enum + JsonConverter or add a KnownXxx constraint set + IValidatable Validate() that rejects unknown values at deserialize-time.",
-      "allowlist_key": "HIGH|src/SDK/Models/StatOverrideDefinition.cs|44",
+      "allowlist_key": "HIGH|src/SDK/Models/SkillDefinition.cs|50",
       "in_allowlist": false
     },
     {

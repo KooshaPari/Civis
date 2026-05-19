@@ -1,0 +1,5 @@
+# Pattern #235: GraphicRaycaster without EventSystem Guard
+# Allowlist for whitelisted GraphicRaycaster instantiations that don't require EventSystem guard.
+# One file path per line. Lines starting with # are comments.
+
+# EMPTY — no allowlisted sites. All GraphicRaycaster AddComponent calls are protected.

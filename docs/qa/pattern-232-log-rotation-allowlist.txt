@@ -1,0 +1,35 @@
+# Pattern #232 (Unbounded Log Append) — initial baseline allowlist iter-143
+# To be remediated by LogRotationHelper wrapper in v0.26.0.
+#
+# Format: <relative-path>:<line-number>
+#
+# See CLAUDE.md Pattern #232 for governance.
+
+src\Runtime\DumpSystem.cs:76
+src\Runtime\Plugin.cs:41
+src\Runtime\Plugin.cs:297
+src\Runtime\Plugin.cs:1179
+src\Runtime\Assets\AssetService.cs:560
+src\Runtime\Aviation\AerialBuildingMapper.cs:91
+src\Runtime\Aviation\AerialMovementSystem.cs:75
+src\Runtime\Aviation\AerialSpawnSystem.cs:210
+src\Runtime\Aviation\AerialTargetingSystem.cs:177
+src\Runtime\Aviation\AerialUnitMapper.cs:106
+src\Runtime\Aviation\AviationPlugin.cs:35
+src\Runtime\Bridge\AssetSwapSystem.cs:540
+src\Runtime\Bridge\BuildingDestructionVFXSystem.cs:196
+src\Runtime\Bridge\EcsTypeDiscovery.cs:288
+src\Runtime\Bridge\FactionSystem.cs:331
+src\Runtime\Bridge\KeyInputSystem.cs:355
+src\Runtime\Bridge\LODManager.cs:171
+src\Runtime\Bridge\PackUnitSpawner.cs:288
+src\Runtime\Bridge\ProjectileVFXSystem.cs:110
+src\Runtime\Bridge\ResourceReader.cs:336
+src\Runtime\Bridge\StatModifierSystem.cs:580
+src\Runtime\Bridge\UnitDeathVFXSystem.cs:168
+src\Runtime\Bridge\VanillaCatalog.cs:295
+src\Runtime\Bridge\VFXPoolManager.cs:435
+src\Runtime\Bridge\WaveInjector.cs:292
+src\Runtime\UI\NativeMenuInjector.cs:981
+
+# TODO(#505-equivalent): v0.26.0 sweep — extract LogRotationHelper + remove this allowlist

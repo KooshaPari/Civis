@@ -1,12 +1,25 @@
 # Pattern Catalog Reconciliation Index
 
-**Status as of iter-134, 2026-05-18**
+**Status as of iter-142, 2026-05-18**
 
-This document reconciles all Pattern Catalog entries across three sources:
+This document reconciles all Pattern Catalog entries across four sources:
 - **CLAUDE.md** Pattern Catalog (governance doctrine)
 - **docs/qa/** audit files (detailed findings & allowlists)
 - **scripts/ci/** detection scripts (automated CI gates)
 - **src/Analyzers/** Roslyn analyzers (compile-time enforcement, Tier 1-3)
+- **PreToolUse Hooks** (structural enforcement via scripts/hooks/)
+
+---
+
+## Governance Hooks (Iter-141/142 Hardening)
+
+| Hook | Rule | Trigger Incident | Status |
+|---|---|---|---|
+| `scripts/hooks/block-git-stash.ps1` (76 LOC) | feedback_stash_auto_route_to_branch.md | Iter-141: 3 concurrent stashes nearly lost | LIVE (tested, awaiting .claude/settings.json wiring) |
+| `scripts/hooks/guard-git-worktree.ps1` (100 LOC) | feedback_worktree_boundary.md | Iter-142: `git worktree remove --force` bypassed safety | LIVE (tested, awaiting .claude/settings.json wiring) |
+| `scripts/hooks/block-no-verify.ps1` (pending) | feedback_no_verify_forbidden.md | Iter-142: Preventive (no incident yet) | QUEUED for v0.26.0 |
+
+**Configuration Status**: Hook files exist and are tested. `.claude/settings.json` **PreToolUse** wiring not yet implemented (v0.26.0 roadmap). See `governance_hardening_iter142.md` for full context.
 
 ---
 
@@ -16,6 +29,7 @@ This document reconciles all Pattern Catalog entries across three sources:
 |---------|------|---------|------|------|--------|
 | DF1010 | AsyncLambdaActionAnalyzer | N/A | 1 | 121 | Warning |
 | DF1011 | AsyncBlockingCallAnalyzer | N/A | 1 | 122 | Warning |
+| DF0096 | LogErrorStackTraceAnalyzer | #96 (LogError) | 1 | 144 | Warning — formalized (task #269); interpolation + concat + marker recognition + 19 tests |
 | DF1012 | ThrowExceptionStackLossAnalyzer | #96 (LogError) | 1 | 123 | Warning, marker-fix iter-126 |
 | DF1013 | UnsealedConcreteMutableClassAnalyzer | #220 | 1 | 125 | Info |
 | DF1014 | HardcodedThresholdAnalyzer | #221 | 1 | 126 | Info |
@@ -33,6 +47,7 @@ This document reconciles all Pattern Catalog entries across three sources:
 
 | Pattern # | CLAUDE.md | docs/qa Audit | scripts/ci Detection | Status | Notes |
 |-----------|:---------:|:-----------:|:------------------:|--------|-------|
+| 96 | ❌ (pre-catalog) | ❌ | ✅ detect_logerror_no_stack.py + Roslyn DF0096 (Tier 1) | Partial (no CLAUDE.md entry yet) | LogError stack-trace loss; Roslyn formalized iter-144 (task #269); 19 firing tests |
 | 99 | ✅ | ❌ | ✅ detect_unprotected_string_dict.py | Full alignment | StringComparer.Ordinal doc exists only in CLAUDE.md; detection + allowlist in place |
 | 100 | ✅ | ❌ | ✅ detect_direct_datetime.py | Full alignment | TimeProvider injection; detection scoped to SDK/Runtime/Tools |
 | 101 | ✅ | ❌ | ✅ detect_stringly_enums.py | Full alignment | Stringly-typed enum discriminators |
@@ -58,26 +73,52 @@ This document reconciles all Pattern Catalog entries across three sources:
 | 124 | ✅ | ❌ | ✅ detect_unsealed_public_classes.py | Full alignment | Unsealed public classes in NuGet assemblies |
 | 125 | ✅ | ❌ | ❌ | Partial | Orphan interface mocks (detection script exists: detect_orphan_interface_mocks.py but not mapped) |
 | 220 | ✅ | ✅ pattern_220_audit.md | ❌ | Partial | Custom pattern (audit-rotation methodology convergence) — no CI detection |
-| 221 | ✅ | ✅ pattern_221_audit.md | ❌ | Partial | Custom pattern (CT propagation follow-up) — no CI detection |
-| 222 | ✅ | ✅ pattern_222_audit.md | ❌ | Partial | Custom pattern (magic number extraction) — no CI detection |
-| 226 | ✅ | ✅ pattern_226_audit.md | ✅ DF1018 (Roslyn) | Full alignment (iter-131) | Public field mutability in NuGet API (HIGH=0 as of iter-134) |
-| 227 | ✅ | (planned) | (planned) | Pending | TBD — next HIGH-priority pattern from iter-134 audit queue |
+| 221 | ✅ | ✅ pattern_221_audit.md | ❌ | Partial | Custom pattern (hardcoded numeric thresholds) — no CI detection |
+| 222 | ✅ | ✅ pattern_222_audit.md | ❌ | Partial | Custom pattern (method body > 60 lines) — no CI detection |
+| 223 | ✅ | ✅ pattern_223_audit.md | ❌ | Partial | Custom pattern (iter-139) — no CI detection |
+| 224 | ✅ | ✅ pattern_224_audit.md | ❌ | Partial | Custom pattern (iter-140) — no CI detection |
+| 225 | ✅ | ✅ pattern_225_audit.md | ❌ | Partial | Custom pattern (iter-141) — no CI detection |
+| 226 | ✅ | ✅ pattern_226_audit.md + pattern_226_event_exemptions.md | ✅ DF1018 (Roslyn) | Full alignment (iter-131) | Public field mutability in NuGet API (HIGH=0 as of iter-142) |
+| 227 | ✅ | ✅ pattern_227_audit.md | ❌ | Partial | Custom pattern (iter-141) — no CI detection |
+| 228 | ✅ | ✅ pattern_228_audit.md | ❌ | Partial | Custom pattern (iter-142) — no CI detection |
+| 229 | ✅ | ✅ pattern_229_audit.md | ❌ | Partial | Custom pattern (iter-142) — no CI detection |
+| 230 | ✅ | ✅ pattern_230_audit.md | ❌ | Partial | Custom pattern (iter-142) — no CI detection |
+| 231 | ✅ | ✅ pattern_231_audit.md | ✅ detect_static_init_side_effect.py | Full alignment | Static constructor / field initializer with I/O side effect (HIGH=11 in NuGet surface) |
+| 232 | ✅ | ✅ pattern_232_audit.md | ✅ detect_unbounded_log_append.py | Full alignment (closure) | Unbounded append-only file logging without rotation (HIGH=26 baseline) |
+| 233 | ✅ | ✅ pattern_233_audit.md | ✅ detect_bepinex_plugin_tfm.py | Full alignment (closure) | TFM/SDK migration stale obj/ cache + BepInEx plugin multi-target (HIGH=0 baseline) |
+| 234 | ✅ | ✅ test_pack_leak_audit_iter142.md | ✅ detect_test_pack_leak.py | Full alignment (iter-142) | Test fixture IDs leaking into deployed packs (MSBuild DeployPacks exclusion landed) |
 
 ---
 
-## Summary Statistics
+## Iter-142 Audit Closeouts
 
-- **Total unique patterns across all 4 sources**: 26
-- **CLAUDE.md entries**: 20 documented patterns in catalog section (+ 5 pre-pattern #94-98)
-- **docs/qa audit files**: 4 files covering patterns {220, 221, 222, 223}
-- **scripts/ci detection scripts**: 36 scripts across all patterns
-- **Roslyn analyzers (src/Analyzers/)**: 32 compiled analyzer implementations
-- **Recently-landed Roslyn**: 5 (DF1010, DF1011, DF1012, DF1013, DF1014); 1 pending (DF1015)
+| Finding | Reference | Status | Notes |
+|---------|-----------|--------|-------|
+| HiddenDesktopBackend wiring | isolation_layer.py (814 LOC) | DEFERRED v0.26.0 | NOT WIRED — dead code in current isolation_layer.py |
+| Lefthook scope | scripts/hooks/lefthook | OPEN | Hardcoded sln path, fix = `{staged_files}` glob requires user authorization |
+| TIER 1 deploy spec | src/Runtime/DINOForge.Runtime.csproj | OPEN | Verified accurate, 28-line XML ready for implementation |
+| IL2026 root cause | Newtonsoft.Json v13 transitive | OPEN | SDK serialization; 3 resolution options documented |
+| CHANGELOG iter-142 entry | CHANGELOG.md | LANDED | 1-line addendum on isolation layer status |
 
-### Alignment Counts (Post-Roslyn Era, iter-131+)
-- **Full alignment (CLAUDE.md + docs/qa + Roslyn/CI)**: 5 patterns {220, 221, 222, 226, +pending}
-- **2-of-3 (CLAUDE.md + detection script)**: 17 patterns {99-125 minus overlaps}
-- **Partial/Legacy (pre-catalog detections)**: 6 patterns {94-98 + global-state orphans}
+Cross-reference: `docs/sessions/iter-142-DECISIONS-SYNTHESIS.md`, `docs/qa/*_iter142.md` (5 audit reports).
+
+---
+
+## Summary Statistics (Iter-142)
+
+- **Total unique patterns across all 4 sources**: 39 (patterns 99-125 + 220-234)
+- **CLAUDE.md entries**: 27 documented patterns in catalog section (+ 5 pre-pattern #94-98)
+- **docs/qa audit files**: 15 files covering patterns {220-234} (iter-130+)
+- **scripts/ci detection scripts**: 36 scripts across legacy patterns (99-125)
+- **Roslyn analyzers (src/Analyzers/)**: 42 compiled analyzer implementations (Tier 1-3)
+- **Recently-landed Roslyn**: 7 (DF1010-DF1015 + pending DF1021)
+- **Governance Hooks**: 2 LIVE + 1 queued for v0.26.0
+
+### Alignment Counts (Post-Roslyn Era, iter-142)
+- **Full alignment (CLAUDE.md + docs/qa + Roslyn/CI)**: 3 patterns {226 (Roslyn DF1018), 234 (DeployPacks exclusion), pending}
+- **Tier 2 Audit-Only (CLAUDE.md + docs/qa, no CI detection)**: 12 patterns {220-225, 227-233} (custom patterns from iter-139+)
+- **Legacy 2-of-3 (CLAUDE.md + detection script)**: 17 patterns {99-125 minus overlaps}
+- **Partial/Pre-catalog (no CLAUDE.md yet)**: 5 patterns {94-98}
 
 ---
 
@@ -87,7 +128,7 @@ This document reconciles all Pattern Catalog entries across three sources:
 - ❌ `detect_unguarded_deserialize.py` — **Pattern #95 analog** (not in Pattern Catalog section, pre-pattern methodology era)
 - ❌ `detect_global_state_tests.py` — no CLAUDE.md equivalent
 - ❌ `detect_hardcoded_pipe_names.py` — related to Pattern #118-119 (not documented)
-- ❌ `detect_logerror_no_stack.py` — **Pattern #96 analog** (pre-catalog)
+- ✅ `detect_logerror_no_stack.py` — **Pattern #96** (Python detector); paired with Roslyn DF0096 (formalized iter-144, task #269)
 - ❌ `detect_missing_configureawait.py` — **Pattern #98 analog** (pre-catalog)
 - ❌ `detect_tcs_sync_continuations.py` — **Pattern #97 analog** (pre-catalog)
 - ❌ `detect_unbounded_constraints.py` — **Pattern #94 analog** (pre-catalog)
@@ -156,5 +197,6 @@ This document reconciles all Pattern Catalog entries across three sources:
 
 ---
 
-**Last Updated**: 2026-05-18 (iter-134)  
-**Curated By**: Agent doc-sync sweep (Haiku, 200k token budget)
+**Last Updated**: 2026-05-18 (iter-142)  
+**Curated By**: Agent doc-sync sweep (Haiku, 200k token budget)  
+**Governance Hooks Status**: 2 LIVE (block-git-stash, guard-git-worktree), 1 queued (block-no-verify). Settings.json wiring planned for v0.26.0.

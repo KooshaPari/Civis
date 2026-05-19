@@ -1,15 +1,99 @@
 {
-  "scan_utc": "2026-05-18T08:33:25.329322Z",
-  "scan_date": "2026-05-18",
-  "files_scanned": 658,
-  "total_hits": 43,
-  "new_hits": 30,
+  "scan_utc": "2026-05-19T04:26:02.893937Z",
+  "scan_date": "2026-05-19",
+  "files_scanned": 800,
+  "total_hits": 45,
+  "new_hits": 39,
   "allowlist_size": 15,
   "strict": false,
   "threshold": 5,
-  "high_count": 2,
+  "high_count": 11,
   "med_count": 28,
   "public_mutable_nuget": [
+    {
+      "file": "src/SDK/CompatibilityChecker.cs",
+      "line": 283,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Warnings { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Warnings",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Warnings' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Warnings { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/CompatibilityChecker.cs|283",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/CompatibilityChecker.cs",
+      "line": 288,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Errors { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Errors",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Errors' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Errors { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/CompatibilityChecker.cs|288",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/BuildingDefinition.cs",
+      "line": 63,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> DefenseTags { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "DefenseTags",
+      "detail": "NuGet-published API surface exposes mutable collection property 'DefenseTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> DefenseTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/BuildingDefinition.cs|63",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/FactionPatchDefinition.cs",
+      "line": 58,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Units { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Units",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Units' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Units { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|58",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/FactionPatchDefinition.cs",
+      "line": 62,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Buildings { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Buildings",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Buildings' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Buildings { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|62",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/FactionPatchDefinition.cs",
+      "line": 66,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Doctrines { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Doctrines",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Doctrines' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Doctrines { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|66",
+      "in_allowlist": false
+    },
     {
       "file": "src/SDK/Models/SkillDefinition.cs",
       "line": 81,
@@ -25,6 +109,20 @@
       "in_allowlist": false
     },
     {
+      "file": "src/SDK/Models/SquadDefinition.cs",
+      "line": 78,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> BehaviorTags { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "BehaviorTags",
+      "detail": "NuGet-published API surface exposes mutable collection property 'BehaviorTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> BehaviorTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/SquadDefinition.cs|78",
+      "in_allowlist": false
+    },
+    {
       "file": "src/SDK/Models/StatOverrideDefinition.cs",
       "line": 34,
       "severity": "HIGH",
@@ -37,12 +135,40 @@
       "detail": "NuGet-published API surface exposes mutable collection property 'Overrides' (List<StatOverrideEntry>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Overrides { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
       "allowlist_key": "HIGH|src/SDK/Models/StatOverrideDefinition.cs|34",
       "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/UnitDefinition.cs",
+      "line": 60,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> DefenseTags { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "DefenseTags",
+      "detail": "NuGet-published API surface exposes mutable collection property 'DefenseTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> DefenseTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|60",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/Models/UnitDefinition.cs",
+      "line": 68,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> BehaviorTags { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "BehaviorTags",
+      "detail": "NuGet-published API surface exposes mutable collection property 'BehaviorTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> BehaviorTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|68",
+      "in_allowlist": false
     }
   ],
   "public_mutable_internal": [
     {
       "file": "src/Domains/Economy/EconomyContentLoader.cs",
-      "line": 147,
+      "line": 139,
       "severity": "MED",
       "rule": "public_mutable_internal",
       "is_test": false,
@@ -51,7 +177,7 @@
       "type_name": "List<TradeRouteDefinition>",
       "prop_name": "Routes",
       "detail": "Production code exposes mutable collection property 'Routes' (List<TradeRouteDefinition>) with public setter. Prefer immutable interfaces (IReadOnlyList<T>) to prevent accidental mutations. Convert to: public IReadOnlyList<T> Routes { get; init; } = new(); Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Domains/Economy/EconomyContentLoader.cs|147",
+      "allowlist_key": "MED|src/Domains/Economy/EconomyContentLoader.cs|139",
       "in_allowlist": false
     },
     {
@@ -452,7 +578,7 @@
     },
     {
       "file": "src/Domains/Economy/EconomyContentLoader.cs",
-      "line": 147,
+      "line": 139,
       "severity": "MED",
       "rule": "public_mutable_internal",
       "is_test": false,
@@ -461,7 +587,7 @@
       "type_name": "List<TradeRouteDefinition>",
       "prop_name": "Routes",
       "detail": "Production code exposes mutable collection property 'Routes' (List<TradeRouteDefinition>) with public setter. Prefer immutable interfaces (IReadOnlyList<T>) to prevent accidental mutations. Convert to: public IReadOnlyList<T> Routes { get; init; } = new(); Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Domains/Economy/EconomyContentLoader.cs|147",
+      "allowlist_key": "MED|src/Domains/Economy/EconomyContentLoader.cs|139",
       "in_allowlist": false
     },
     {
@@ -633,8 +759,36 @@
       "in_allowlist": false
     },
     {
+      "file": "src/SDK/CompatibilityChecker.cs",
+      "line": 283,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Warnings { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Warnings",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Warnings' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Warnings { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/CompatibilityChecker.cs|283",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/SDK/CompatibilityChecker.cs",
+      "line": 288,
+      "severity": "HIGH",
+      "rule": "public_mutable_nuget",
+      "is_test": false,
+      "has_inline_allow": false,
+      "line_excerpt": "public List<string> Errors { get; set; } = new List<string>();",
+      "type_name": "List<string>",
+      "prop_name": "Errors",
+      "detail": "NuGet-published API surface exposes mutable collection property 'Errors' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Errors { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
+      "allowlist_key": "HIGH|src/SDK/CompatibilityChecker.cs|288",
+      "in_allowlist": false
+    },
+    {
       "file": "src/SDK/Models/BuildingDefinition.cs",
-      "line": 62,
+      "line": 63,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -643,12 +797,12 @@
       "type_name": "List<string>",
       "prop_name": "DefenseTags",
       "detail": "NuGet-published API surface exposes mutable collection property 'DefenseTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> DefenseTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/BuildingDefinition.cs|62",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/BuildingDefinition.cs|63",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/FactionPatchDefinition.cs",
-      "line": 43,
+      "line": 58,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -657,12 +811,12 @@
       "type_name": "List<string>",
       "prop_name": "Units",
       "detail": "NuGet-published API surface exposes mutable collection property 'Units' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Units { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|43",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|58",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/FactionPatchDefinition.cs",
-      "line": 47,
+      "line": 62,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -671,12 +825,12 @@
       "type_name": "List<string>",
       "prop_name": "Buildings",
       "detail": "NuGet-published API surface exposes mutable collection property 'Buildings' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Buildings { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|47",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|62",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/FactionPatchDefinition.cs",
-      "line": 51,
+      "line": 66,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -685,8 +839,8 @@
       "type_name": "List<string>",
       "prop_name": "Doctrines",
       "detail": "NuGet-published API surface exposes mutable collection property 'Doctrines' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> Doctrines { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|51",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/FactionPatchDefinition.cs|66",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/SkillDefinition.cs",
@@ -704,7 +858,7 @@
     },
     {
       "file": "src/SDK/Models/SquadDefinition.cs",
-      "line": 77,
+      "line": 78,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -713,8 +867,8 @@
       "type_name": "List<string>",
       "prop_name": "BehaviorTags",
       "detail": "NuGet-published API surface exposes mutable collection property 'BehaviorTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> BehaviorTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/SquadDefinition.cs|77",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/SquadDefinition.cs|78",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/StatOverrideDefinition.cs",
@@ -788,7 +942,7 @@
     },
     {
       "file": "src/SDK/Models/UnitDefinition.cs",
-      "line": 59,
+      "line": 60,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -797,12 +951,12 @@
       "type_name": "List<string>",
       "prop_name": "DefenseTags",
       "detail": "NuGet-published API surface exposes mutable collection property 'DefenseTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> DefenseTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|59",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|60",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/UnitDefinition.cs",
-      "line": 67,
+      "line": 68,
       "severity": "HIGH",
       "rule": "public_mutable_nuget",
       "is_test": false,
@@ -811,8 +965,8 @@
       "type_name": "List<string>",
       "prop_name": "BehaviorTags",
       "detail": "NuGet-published API surface exposes mutable collection property 'BehaviorTags' (List<string>) with public setter. This breaks encapsulation and allows external mod code to mutate state. Convert to: public IReadOnlyList<T> BehaviorTags { get; init; } = new(); OR use backing-field pattern with [YamlIgnore] property. Suppress with `// public-mutable-ok: <reason>` if intentional.",
-      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|67",
-      "in_allowlist": true
+      "allowlist_key": "HIGH|src/SDK/Models/UnitDefinition.cs|68",
+      "in_allowlist": false
     },
     {
       "file": "src/SDK/Models/WaveDefinition.cs",
@@ -1039,7 +1193,7 @@
       "in_allowlist": false
     }
   ],
-  "exit_code": 0,
+  "exit_code": 1,
   "scan_root": "C:/Users/koosh/Dino",
   "scan_paths": [
     "src"

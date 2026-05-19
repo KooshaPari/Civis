@@ -1,0 +1,16 @@
+# Pattern #233: Unsealed BepInEx Plugins with Unsafe TFM
+#
+# This allowlist exempts csproj files that are confirmed BepInEx plugins
+# but have non-standard TFM configurations (net8.0+ only, netstandard2.1 only).
+#
+# Exemptions REQUIRE inline marker in either:
+#  - C#: // pattern-233-ok: netstandard2.1
+#  - XML: <!-- pattern-233-ok: netstandard2.1 -->
+#
+# Format: <relative-path> <reason>
+#
+# Enforced baseline: multi-target netstandard2.0;net8.0 (preferred)
+# OR netstandard2.1;net8.0 WITH marker (acceptable)
+#
+# See CLAUDE.md Pattern #233 for governance.
+# See iter-142 incident: mono-runtime incompatibility discovery.

@@ -140,6 +140,16 @@ namespace DINOForge.Runtime.Bridge
             // Clear the cached world reference so GetActiveWorld() falls back to scanning
             // all worlds until a new KeyInputSystem is registered in the new world.
             _cachedWorld = null;
+
+            // CRITICAL (task #535): mark the dispatcher pump dead so background-thread
+            // bridge handlers fail fast instead of queueing work that can never be
+            // drained. Without this, every .Result / .Wait(...) in GameBridgeServer
+            // burns its full timeout once KeyInputSystem is gone, accumulating
+            // wedged operations until the bridge thread parks indefinitely
+            // (IsHungAppWindow=True). The flag is re-armed automatically on the
+            // next DrainQueue tick once a fresh KeyInputSystem is registered.
+            MainThreadDispatcher.MarkPumpDead();
+
             base.OnDestroy();
         }
 
@@ -347,14 +357,29 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
+        private const long DebugLogMaxBytes = 100L * 1024 * 1024;  // 100 MB
+
         private static void WriteDebug(string msg)
         {
             try
             {
                 string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] [{nameof(KeyInputSystem)}] {msg}\n");
+
+                // Pattern #232: rotate at 100 MB to prevent unbounded growth (iter-142 incident — 3.3GB file caused disk exhaustion)
+                if (System.IO.File.Exists(debugLog) && new System.IO.FileInfo(debugLog).Length >= DebugLogMaxBytes)
+                {
+                    string rotated = debugLog + ".1";
+                    if (System.IO.File.Exists(rotated)) System.IO.File.Delete(rotated);
+                    System.IO.File.Move(debugLog, rotated);
+                }
+
+                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] [KeyInputSystem] {msg}\n");
             }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
+            catch (System.Exception ex)
+            {
+                // Pattern #111: fallback to BepInEx logger so append failures don't lose messages
+                BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"WriteDebug fallback: {ex} (msg: {msg})");
+            }
         }
     }
 }

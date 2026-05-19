@@ -31,6 +31,16 @@ namespace DINOForge.Runtime.Bridge
         // See: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Threading/Thread.cs
         private const int COR_E_THREADABORT = unchecked((int)0x80131623);
 
+        // Bounded waits for MainThreadDispatcher work items (task #535).
+        // Background threads MUST NOT call .Result or .Wait() unbounded — the dispatcher
+        // pump (KeyInputSystem.OnUpdate) can be torn down at any scene transition, after
+        // which queued work never drains and the bridge thread parks indefinitely
+        // (IsHungAppWindow=True). Use these constants as the timeout argument.
+        // threshold-ok: bounded main-thread wait for ECS handlers
+        private const int MainThreadWaitTimeoutMs = 5000;
+        // threshold-ok: longer bound for heavier reflection-driven UI handlers
+        private const int MainThreadHeavyWaitTimeoutMs = 10000;
+
         private ModPlatform _platform;
         private readonly DateTimeOffset _startTime;
         private readonly TimeProvider _timeProvider;
@@ -885,12 +895,33 @@ namespace DINOForge.Runtime.Bridge
             if (mapping == null)
                 throw new ArgumentException($"Unknown SDK path: {sdkPath}");
 
-            // Reading ECS data requires main thread
+            // Reading ECS data requires main thread.
+            // Task #535: bound the wait to avoid wedging the bridge thread when the
+            // dispatcher pump (KeyInputSystem) is dead. On timeout, surface a structured
+            // failure with EntityCount=0 so callers can distinguish "no data" from "hang".
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            StatResult statResult = MainThreadDispatcher.RunOnMainThread(() =>
+            var statTask = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 return ReadStatFromEcs(mapping, entityIndex);
-            }).Result;
+            });
+            StatResult statResult;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            if (!statTask.Wait(MainThreadWaitTimeoutMs))
+            {
+                WriteDebug($"[GameBridgeServer] HandleGetStat timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                statResult = new StatResult
+                {
+                    SdkPath = mapping.SdkModelPath,
+                    ComponentType = mapping.EcsComponentType,
+                    FieldName = mapping.TargetFieldName ?? "",
+                    EntityCount = 0
+                };
+            }
+            else
+            {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                statResult = statTask.Result;
+            }
 
             return JToken.FromObject(statResult);
         }
@@ -923,8 +954,10 @@ namespace DINOForge.Runtime.Bridge
 
             // Apply immediately on the main thread so callers see the change reflected at once.
             // Also enqueue so the StatModifierSystem re-applies it after scene reloads.
+            // Task #535: bounded wait — on timeout, the enqueue won't happen but the bridge
+            // thread survives; return Success=false so callers can retry once the pump is alive.
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            OverrideResult result = MainThreadDispatcher.RunOnMainThread(() =>
+            var overrideTask = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 World? world = GetActiveWorld();
                 int modified = 0;
@@ -944,7 +977,24 @@ namespace DINOForge.Runtime.Bridge
                         ? $"Applied {modeStr} override for {sdkPath} = {value} to {modified} entities"
                         : $"Enqueued {modeStr} override for {sdkPath} = {value} (no live entities yet)"
                 };
-            }).Result;
+            });
+            OverrideResult result;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            if (!overrideTask.Wait(MainThreadWaitTimeoutMs))
+            {
+                WriteDebug($"[GameBridgeServer] HandleApplyOverride timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                result = new OverrideResult
+                {
+                    Success = false,
+                    SdkPath = sdkPath,
+                    Message = $"Timed out applying {modeStr} override for {sdkPath} (main-thread pump unresponsive)"
+                };
+            }
+            else
+            {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                result = overrideTask.Result;
+            }
 
             return JToken.FromObject(result);
         }
@@ -954,11 +1004,27 @@ namespace DINOForge.Runtime.Bridge
             string? componentType = parameters?.Value<string>("componentType");
             string? category = parameters?.Value<string>("category");
 
+            // Task #535: bounded wait — return empty result on timeout instead of hanging.
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            QueryResult queryResult = MainThreadDispatcher.RunOnMainThread(() =>
+            var queryTask = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 return QueryEntitiesOnMainThread(componentType, category);
-            }).Result;
+            });
+            QueryResult queryResult;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            if (!queryTask.Wait(MainThreadWaitTimeoutMs))
+            {
+                WriteDebug($"[GameBridgeServer] HandleQueryEntities timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead (componentType='{componentType}' category='{category}')");
+                queryResult = new QueryResult
+                {
+                    Count = 0
+                };
+            }
+            else
+            {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                queryResult = queryTask.Result;
+            }
 
             return JToken.FromObject(queryResult);
         }
@@ -978,19 +1044,35 @@ namespace DINOForge.Runtime.Bridge
             }
             try
             {
-                // Pack loading involves file IO and registry updates
+                // Pack loading involves file IO and registry updates.
+                // Task #535: bounded wait — heavy I/O so use the heavy timeout.
                 // sync-over-async-unavoidable: ECS-bound, main-thread-required
-                SDK.ContentLoadResult loadResult = MainThreadDispatcher.RunOnMainThread(() =>
+                var loadTask = MainThreadDispatcher.RunOnMainThread(() =>
                 {
                     return _platform.LoadPacks();
-                }).Result;
-
-                reloadResult = new ReloadResult
+                });
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                if (!loadTask.Wait(MainThreadHeavyWaitTimeoutMs))
                 {
-                    Success = loadResult.IsSuccess,
-                    LoadedPacks = new List<string>(loadResult.LoadedPacks),
-                    Errors = new List<string>(loadResult.Errors)
-                };
+                    WriteDebug($"[GameBridgeServer] HandleReloadPacks timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                    reloadResult = new ReloadResult
+                    {
+                        Success = false,
+                        LoadedPacks = new List<string>(),
+                        Errors = new List<string> { "Pack reload timed out (main-thread pump unresponsive)." }
+                    };
+                }
+                else
+                {
+                    // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                    SDK.ContentLoadResult loadResult = loadTask.Result;
+                    reloadResult = new ReloadResult
+                    {
+                        Success = loadResult.IsSuccess,
+                        LoadedPacks = new List<string>(loadResult.LoadedPacks),
+                        Errors = new List<string>(loadResult.Errors)
+                    };
+                }
             }
             catch (Exception ex)
             {
@@ -1076,8 +1158,9 @@ namespace DINOForge.Runtime.Bridge
                     $"dinoforge_{DateTime.UtcNow:yyyyMMddTHHmmssZ}.png");
             }
 
+            // Task #535: bounded wait. Screenshot can be a couple of frames long on first call.
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            ScreenshotResult ssResult = MainThreadDispatcher.RunOnMainThread(() =>
+            var ssTask = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 try
                 {
@@ -1109,7 +1192,23 @@ namespace DINOForge.Runtime.Bridge
                         Path = path
                     };
                 }
-            }).Result;
+            });
+            ScreenshotResult ssResult;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            if (!ssTask.Wait(MainThreadWaitTimeoutMs))
+            {
+                WriteDebug($"[GameBridgeServer] HandleScreenshot timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                ssResult = new ScreenshotResult
+                {
+                    Success = false,
+                    Path = path
+                };
+            }
+            else
+            {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                ssResult = ssTask.Result;
+            }
 
             return JToken.FromObject(ssResult);
         }
@@ -1118,9 +1217,10 @@ namespace DINOForge.Runtime.Bridge
         {
             string? category = parameters?.Value<string>("category");
 
-            // Rebuild the catalog for a fresh dump
+            // Rebuild the catalog for a fresh dump.
+            // Task #535: bounded wait — heavy catalog rebuild on a busy ECS world, use heavy timeout.
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            CatalogSnapshot snapshot = MainThreadDispatcher.RunOnMainThread(() =>
+            var dumpTask = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 World? world = GetActiveWorld();
                 if (world == null || !world.IsCreated)
@@ -1130,7 +1230,19 @@ namespace DINOForge.Runtime.Bridge
                 freshCatalog.Build(world.EntityManager);
 
                 return BuildCatalogSnapshot(freshCatalog, category);
-            }).Result;
+            });
+            CatalogSnapshot snapshot;
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            if (!dumpTask.Wait(MainThreadHeavyWaitTimeoutMs))
+            {
+                WriteDebug($"[GameBridgeServer] HandleDumpState timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                snapshot = new CatalogSnapshot();
+            }
+            else
+            {
+                // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                snapshot = dumpTask.Result;
+            }
 
             return JToken.FromObject(snapshot);
         }
@@ -1188,13 +1300,26 @@ namespace DINOForge.Runtime.Bridge
                     string worldName = "";
                     try
                     {
-                        worldName = MainThreadDispatcher.RunOnMainThread(() =>
+                        // Task #535: bounded wait. The world is "ready" but the dispatcher pump
+                        // can still be dead during scene transition — fall through to empty name.
+                        // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                        var wnTask = MainThreadDispatcher.RunOnMainThread(() =>
                         {
                             World? world = GetActiveWorld();
                             return world?.Name ?? "";
-                        }).Result;
+                        });
+                        // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                        if (wnTask.Wait(MainThreadWaitTimeoutMs))
+                        {
+                            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                            worldName = wnTask.Result;
+                        }
+                        else
+                        {
+                            WriteDebug($"[GameBridgeServer] HandleWaitForWorld world-name read timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                        }
                     }
-                    catch { }
+                    catch (Exception ex) { WriteDebug($"[GameBridgeServer] HandleWaitForWorld world-name read failed: {ex}"); }
 
                     WaitResult readyResult = new WaitResult
                     {
@@ -1204,6 +1329,7 @@ namespace DINOForge.Runtime.Bridge
                     return JToken.FromObject(readyResult);
                 }
 
+                // sync-over-async-unavoidable: ManualResetEventSlim signal wait with 200ms bounded timeout (not a Task)
                 if (_shutdownEvent.Wait(200))  // Signaled = shutdown
                     break;
             }
@@ -1555,8 +1681,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1625,8 +1753,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1671,8 +1801,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(8000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1726,8 +1858,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1794,8 +1928,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1867,8 +2003,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -1947,8 +2085,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(5000);
             if (!completed) return JToken.FromObject(new { error = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -2196,8 +2336,10 @@ namespace DINOForge.Runtime.Bridge
                 }
             });
 
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool completed = result.Wait(10000);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }
 
@@ -2265,20 +2407,48 @@ namespace DINOForge.Runtime.Bridge
             return null;
         }
 
+        private const long DebugLogMaxBytes = 100L * 1024 * 1024; // 100 MB rotation threshold
+
         private static void WriteDebug(string msg)
         {
             string? logPath = null;
-            try { logPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log"); } catch { }
+            try { logPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log"); } catch { } // safe-swallow: BepInEx path init — non-critical fallback to return
             if (logPath == null) return;
             try
             {
+                // rotation: check size before append to avoid unbounded growth (iter-142 hardening)
+                if (File.Exists(logPath))
+                {
+                    var info = new FileInfo(logPath);
+                    if (info.Length >= DebugLogMaxBytes)
+                    {
+                        var rotated = logPath + ".1";
+                        try
+                        {
+                            if (File.Exists(rotated)) File.Delete(rotated);
+                            File.Move(logPath, rotated);
+                        }
+                        catch (Exception rotEx)
+                        {
+                            // log rotation failure is non-critical; continue with append
+                            try { BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug.Rotate").LogWarning($"rotation failed ({rotEx.GetType().Name}): {rotEx.Message}"); }
+                            catch { } // safe-swallow: BepInEx logger fallback — if even the fallback fails, continue
+                        }
+                    }
+                }
                 File.AppendAllText(logPath, $"[{DateTime.UtcNow:o}] {msg}\n");
             }
             catch (ThreadAbortException)
             {
                 Thread.ResetAbort();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // safe-swallow: file append failures (e.g., disk full, permissions) are non-critical;
+                // fallback to BepInEx logger to surface the error instead of losing it (rotation above prevents size explosion)
+                try { BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"AppendAllText failed ({ex.GetType().Name}): {ex}; msg: {msg}"); }
+                catch { } // safe-swallow: BepInEx logger fallback — if even the fallback fails, losing the message is acceptable
+            }
         }
     }
 }

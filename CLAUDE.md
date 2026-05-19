@@ -31,9 +31,12 @@ graph TD
 
 **This repo uses .NET 11 preview.** Locally: `11.0.100-preview.2.26159.112`. This is intentional.
 - .NET 11 EXISTS — see https://dotnet.microsoft.com/download/dotnet/11.0
-- Tool/app projects target `net11.0`. Core SDK/domain libraries target `net8.0` (netstandard compat).
+- **Tool/app projects** (CLI, PackCompiler, McpServer, Installer): `net11.0`
+- **Core SDK/domain libraries** (SDK, Bridge.Protocol, Bridge.Client): `net8.0` with netstandard2.0 compatibility where consumed by Runtime
+- **Runtime BepInEx plugin** (DINOForge.Runtime): `netstandard2.0` ONLY — BepInEx 5.4.23.5 ships Mono CLR 4.0; `net8.0` silently breaks Plugin.Awake() at load time (iter-142 incident, see Pattern #233)
 - CI installs .NET 11 preview via `include-prerelease: true` in `setup-dotnet`.
 - **NEVER downgrade `net11.0` TFMs to net9.0/net8.0.** If a build fails on CI due to SDK version, fix the CI workflow to install .NET 11, not the other way around.
+- **NEVER target net8.0 or higher in DINOForge.Runtime.csproj** — use `netstandard2.0` to maintain BepInEx compatibility.
 - `global.json` pins `11.0.100-preview.2.26159.112` with `latestMajor` rollforward — do not change this.
 
 ## Agent Operational Rules (MANDATORY)
@@ -175,7 +178,7 @@ DINOForge/
     warfare-guerrilla/   #   Asymmetric warfare (Guerrilla faction)
     economy-balanced/    #   Economy balance pack
     scenario-tutorial/   #   Tutorial scenario pack
-  schemas/               # Canonical JSON/YAML schema definitions (24 schemas)
+  schemas/               # Canonical JSON/YAML schema definitions (29 schemas)
   docs/                  # All project documentation
   manifests/             # System contracts, ownership maps, extension points
 ```
@@ -979,6 +982,75 @@ graph LR
 **Detection**: `DF1015` Roslyn analyzer (Info severity, landed iter-127) — counts lines between opening and closing braces of method body (`MethodDeclarationSyntax.Body`). Skips expression-bodied members. Counts case labels (`CaseSwitchLabelSyntax` + `CasePatternSwitchLabelSyntax`) and fires only if body > 60 lines AND case count < 5. Suppression marker: `// long-method-ok: <reason>` on the same or preceding line.
 
 **Governance**: Decompose methods exceeding 60 lines into focused helpers or extract state machines into dedicated context classes (e.g., `ButtonInjectionContext` for UI state, `GameSaveOrchestrator` for multi-phase orchestration). Tier 2 audit identified 41 production candidates; 4 high-priority sites flagged in `NativeMenuInjector`, `GameBridgeServer`, `DirectAssetPipeline`, `AssetctlCommand`. Info severity allows gradual refactoring without blocking CI.
+
+### Pattern #232: Unbounded Append-Only File Logging Without Rotation
+
+**Smell**: `File.AppendAllText(path, ...)` called in a hot path (e.g., WriteDebug on every frame or system event) with no size check or rotation logic.
+
+**Why bad**: Log files grow unbounded (iter-142 incident: 3.3GB dinoforge_debug.log caused system slowdown and disk exhaustion). File I/O becomes the bottleneck; append operations on gigabyte-scale files degrade performance. Subsequent append operations may fail with disk-full or handle-exhaustion errors, silencing future debug output.
+
+**Governance**: Add a rotation check before append: if log file exists and size ≥ N MB (typically 100 MB), rename current to `.1` (overwrite any prior `.1`), then start fresh. Pair with a fallback logger (e.g., BepInEx logger) so append failures don't lose messages entirely. Pairs with Pattern #54 (logging discipline) and #111 (silent swallow handling).
+
+### Pattern #233: Stale `obj/` Cache During TFM/SDK Migration
+
+**Smell**: Csproj `<TargetFramework>` changed but `obj/` directory retains compilation artifacts from prior TFM. Incremental builds may link old-TFM intermediates into new-TFM output, producing DLLs that pass reflection-based TFM checks (`Assembly.GetCustomAttributes(TargetFrameworkAttribute)` returns new TFM) but contain incompatible IL from the old TFM.
+
+**Why bad**: Iter-142 caught this when changing Runtime DLL from net8.0 → netstandard2.0 — first build appeared correct by reflection but Plugin.Awake() never fired in BepInEx because the IL still referenced net8.0 BCL types. Clean rebuild (`Remove-Item obj/ -Recurse; dotnet clean; dotnet build`) resolved it. Silent: no compile error, no runtime exception, just non-functional binary.
+
+**Detection**: Manual check during TFM changes — clean obj/ + bin/ before testing. Future CI gate: hash-check obj/.NETStandard,Version=v2.0.AssemblyAttributes.cs vs obj/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs and warn if both exist.
+
+**Governance**: Any csproj `<TargetFramework>` change MUST be followed by `Remove-Item obj/, bin/ -Recurse; dotnet clean; dotnet build --no-incremental` before claiming the change is deployed. Test the deployed binary's actual runtime behavior, not just reflection metadata.
+
+**Additional governance (iter-142 extension)**: Any BepInEx plugin consumed as a project reference by net8.0+ tests MUST multi-target via `<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>`. Single-TFM (either pure netstandard2.0 or pure net8.0) is unsafe — pure net8.0 silently breaks BepInEx loading (Mono CLR 4.0 incompat), pure netstandard2.0 breaks test consumers that need net8.0 metadata. iter-97 commit a6559c64 established this as the canonical pattern; iter-142 momentarily violated it and rediscovered the constraint.
+
+### Pattern #234: Test Fixture IDs Leaking Into Deployed Packs
+
+**Smell**: Pack manifest entries with IDs like `TestInvalidID`, `TestFixture*`, `MockTest*` reach the deployed `dinoforge_packs/` directory at game runtime, causing duplicate-key crashes in `Registry.Add()` / `ContentLoader`.
+
+**Why bad**: Iter-142 incident — `TestInvalidID` deployed in production pack triggered `An item with the same key has already been added` exception during `[ModPlatform] Pack loading`. Fatal error dialog fired ~1s later. Game unstarteable until offending pack removed.
+
+**Detection**: `scripts/ci/detect_test_ids_in_packs.py` (pending) — scans `packs/**/*.{yaml,json}` for `id:` fields matching `^Test|^Mock|^Fake|^Dummy|^Placeholder` patterns. Test fixtures MUST live in `src/Tests/Fixtures/` not `packs/`.
+
+**Governance**: Test pack fixtures live in `src/Tests/Fixtures/` (excluded from DeployPacks MSBuild target). Production pack IDs MUST NOT start with test/mock/fake prefixes. Registry.Add must use TryAdd + warning log + skip on duplicate (defense-in-depth). Pairs with Pattern #91 (Tautological Test Theater).
+
+**Status**: CLOSED — fix landed 2026-05-18, CI detector pending. MSBuild Exclude attribute applied to Runtime.csproj line 292 to filter test-* packs from deployment glob.
+
+### Pattern #235: BepInEx Plugin GraphicRaycaster Without EventSystem Guard
+
+**Smell**: Plugin adds `GraphicRaycaster` to its overlay Canvas WITHOUT first ensuring `EventSystem.current != null`.
+
+**Why bad**: BepInEx plugins load before/during Unity scene init. If the vanilla game hasn't yet created an EventSystem (or destroys it during scene transitions), the raycaster fires but pointer events have nowhere to route. Result: ALL Unity UI mouse clicks die silently—both plugin overlay AND native game UI. F-keys work (Win32 `GetAsyncKeyState` bypasses Unity), masking the issue.
+
+**Detection**: grep `AddComponent<GraphicRaycaster>` in BepInEx plugin sources; verify each has preceding `EventSystem.current ?? CreateOne()` check.
+
+**Governance**: Every Canvas with GraphicRaycaster MUST be preceded by EventSystem ensure block. Pairs with Pattern #231 (static init I/O discipline). Example: src/Runtime/UI/DFCanvas.cs.
+
+### Pattern #530: MSBuild Deploy Target Silently No-ops Under Multi-TFM Project
+
+**Smell**: Multi-targeting csproj (`<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>`) has `<Target>` definitions conditioned on a specific `$(TargetFramework)` value but no guardrail when the user invokes `dotnet build -p:DeployToGame=true` without `-p:TargetFramework=<expected>`. MSBuild silently skips the target on the non-matching leaf and reports success.
+
+**Why bad**: Iter-143 task #530 — `dotnet build -p:DeployToGame=true` for `DINOForge.Runtime.csproj` defaults to building net8.0, then DeployUiAssets / DeployPacks / OutputPath redirection (all conditioned on `'$(TargetFramework)' == 'netstandard2.0'`) are skipped without notice. Build exits 0, but no DLL is deployed to BepInEx. Users waste cycles diagnosing "why isn't my fix in the game?" The exit code is a lie because the *intent* of `DeployToGame=true` was unmet. Pairs with feedback `feedback_verify_deploy_by_hash_not_build_exit.md` (never trust exit 0 as proof of deploy).
+
+**Detection**: Manual review of any csproj with `<TargetFrameworks>` (plural) plus TFM-conditional deploy targets. CI gate (future): grep csproj files for `<Target` with TFM condition AND verify a matching `Warning Code="DF0xxx"` guardrail exists for the negative case.
+
+**Governance**: Every TFM-conditional deploy target MUST be paired with a guardrail warning target that fires on the *other* TFM leaf(s) when the deploy property is set. Example (landed in `src/Runtime/DINOForge.Runtime.csproj`):
+```xml
+<Target Name="WarnDeployWrongTFM" AfterTargets="Build"
+        Condition="'$(DeployToGame)' == 'true' and '$(TargetFramework)' != 'netstandard2.0' and '$(TargetFramework)' != ''">
+  <Warning Text="[#530] DeployToGame=true but TFM is '$(TargetFramework)'. Deploy targets will NOT fire. Add -p:TargetFramework=netstandard2.0." Code="DF0530" />
+</Target>
+```
+The empty-string guard on `$(TargetFramework)` prevents the warning from firing during the outer multi-target dispatch (where TFM is empty); the warning surfaces exactly once per build invocation, on the leaf that won't deploy. Pairs with Pattern #233 (stale obj/ cache during TFM/SDK migration) — both patterns address invisible TFM-related build failures.
+
+### Pattern #231: Static Constructor / Static Field Initializer with I/O Side Effect
+
+**Smell**: Static field initializer (`static readonly Foo = ...`) or static constructor body (`static { ... }`) performing file I/O, process spawn, environment-variable read, HttpClient instantiation, or other blocking operations at class-load time.
+
+**Why bad**: Load-order dependent and untestable. Class-load triggers at JIT compilation (unpredictable timing in .NET). Exceptions during static init become `TypeInitializationException`, hiding the root cause. I/O failures block entire assembly load. Audit (a74aaa4) found 11 HIGH violations in NuGet-published surfaces (SDK, Bridge.Client, Bridge.Protocol, Domains).
+
+**Detection**: `scripts/ci/detect_static_init_side_effect.py` — scans NuGet-published assemblies for `static readonly ... = File|Process|Environment|HttpClient|Directory|Path\.` and `static { ... }` blocks containing I/O. Severity: HIGH in NuGet surface, MED elsewhere. Exit 1 if HIGH > 0. Allowlist: `docs/qa/pattern-231-static-init-allowlist.txt`.
+
+**Governance**: Refactor static I/O to lazy initialization using `Lazy<T>` or explicit `Initialize()` method. For unavoidable static setup (rare), document with `// static-init-ok: <reason>` and add to allowlist. Examples: `static readonly Logger = LoggerFactory.CreateLogger()` (acceptable—logger setup), `static readonly Foo = File.ReadAllText(...)` (unacceptable—replace with lazy property).
 
 ---
 

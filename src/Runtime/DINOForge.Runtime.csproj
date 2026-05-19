@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
     <AssemblyName>DINOForge.Runtime</AssemblyName>
     <RootNamespace>DINOForge.Runtime</RootNamespace>
     <Description>DINOForge runtime plugin - BepInEx bootstrap, ECS introspection, entity dumper</Description>
@@ -14,10 +14,10 @@
     <!-- Copy SDK and its dependencies alongside Runtime DLL for deployment (game install only) -->
     <CopyLocalLockFileAssemblies Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">true</CopyLocalLockFileAssemblies>
 
-    <!-- Deploy built DLL to BepInEx plugins when game is installed; else default bin/ -->
-    <OutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">$(BepInExDir)\plugins</OutputPath>
-    <AppendTargetFrameworkToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">false</AppendRuntimeIdentifierToOutputPath>
+    <!-- Deploy ONLY netstandard2.0 build to BepInEx plugins (BepInEx-loadable); keep net8.0 in bin/ for test consumption -->
+    <OutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">$(BepInExDir)\plugins</OutputPath>
+    <AppendTargetFrameworkToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">false</AppendRuntimeIdentifierToOutputPath>
 
     <!-- Suppress version conflict warning for System.IO.Compression — game provides 4.2.0.0 at runtime, netstandard2.0 ref resolves to 4.1.3.0, both are compatible -->
     <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
@@ -172,7 +172,7 @@
   <!-- AssetsTools.NET for asset bundle reading/writing (Runtime-specific, not SDK) -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="7.0.0" />
   </ItemGroup>
 
   <!--
@@ -244,7 +244,7 @@
     If no Kenney assets have been downloaded (src/Runtime/UI/Assets/kenney/ contains only
     .gitkeep files) the target copies nothing and the plugin falls back to flat colours.
   -->
-  <Target Name="DeployUiAssets" AfterTargets="Build" Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">
+  <Target Name="DeployUiAssets" AfterTargets="Build" Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
     <ItemGroup>
       <KenneyAssetFiles Include="$(MSBuildThisFileDirectory)UI\Assets\kenney\**\*"
                         Exclude="$(MSBuildThisFileDirectory)UI\Assets\kenney\**\.gitkeep" />
@@ -287,15 +287,30 @@
   </Target>
 
   <!-- Deploy packs from repo to game directory -->
-  <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)')">
+  <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)') and '$(TargetFramework)' == 'netstandard2.0'">
     <ItemGroup>
-      <PackFiles Include="$(MSBuildThisFileDirectory)..\..\packs\**\*" />
+      <PackFiles Include="$(MSBuildThisFileDirectory)..\..\packs\**\*" Exclude="$(MSBuildThisFileDirectory)..\..\packs\test-*;$(MSBuildThisFileDirectory)..\..\packs\test-*\**\*" />
     </ItemGroup>
     <MakeDir Directories="$(BepInExDir)\dinoforge_packs" Condition="!Exists('$(BepInExDir)\dinoforge_packs')" />
     <Copy SourceFiles="@(PackFiles)"
           DestinationFolder="$(BepInExDir)\dinoforge_packs\%(RecursiveDir)"
           SkipUnchangedFiles="true" />
     <Message Text="Deployed packs to $(BepInExDir)\dinoforge_packs" Importance="high" />
+  </Target>
+
+  <!--
+    [Pattern #530] Guardrail: warn when DeployToGame=true is used without an explicit
+    TargetFramework=netstandard2.0. The Deploy* targets above are conditioned on the
+    netstandard2.0 TFM (the only BepInEx-loadable output per Pattern #233 / iter-97).
+    Without this guardrail, a default `dotnet build -p:DeployToGame=true` invocation
+    silently builds net8.0 only and skips all deploy targets, masking deploy failures.
+
+    The warning fires only on the non-netstandard2.0 leaf so it surfaces exactly once
+    per multi-target build invocation (and not at all when -p:TargetFramework is set
+    explicitly to netstandard2.0).
+  -->
+  <Target Name="WarnDeployWrongTFM" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and '$(TargetFramework)' != 'netstandard2.0' and '$(TargetFramework)' != ''">
+    <Warning Text="[#530] DeployToGame=true was set but TargetFramework is '$(TargetFramework)', not netstandard2.0. Deploy* targets (DeployUiAssets, DeployPacks, plugin DLL copy) will NOT fire for this TFM. Add -p:TargetFramework=netstandard2.0 to your build command to deploy to the BepInEx-compatible output." Code="DF0530" />
   </Target>
 
 </Project>

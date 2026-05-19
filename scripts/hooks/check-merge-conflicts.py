@@ -27,9 +27,16 @@ SKIP_DIRS = {
     ".claude",
 }
 
+# Files that legitimately contain marker strings (this hook + its tests).
+# Skipping these prevents the hook from tripping on its own pattern definitions.
+SKIP_FILES = {
+    "scripts/hooks/check-merge-conflicts.py",
+    "scripts/hooks/tests/test_check_merge_conflicts.py",
+}
+
 # Get staged files if in hook context
 result = subprocess.run(
-    ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRD"],
     capture_output=True, text=True
 )
 files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
@@ -49,8 +56,11 @@ for path in files:
     # Skip binary asset bundles (no extension, in bundles/ dir)
     if "bundles" + os.sep in path or "/bundles/" in path:
         continue
-    parts = path.replace("\\", "/").split("/")
-    if any(d in parts or path.replace("\\", "/").startswith(d) for d in SKIP_DIRS):
+    norm = path.replace("\\", "/")
+    if norm in SKIP_FILES:
+        continue
+    parts = norm.split("/")
+    if any(d in parts or norm.startswith(d) for d in SKIP_DIRS):
         continue
     try:
         with open(path, encoding="utf-8", errors="ignore") as fh:

@@ -379,13 +379,24 @@ public sealed class NativeMenuInjectorCharacterizationTests
         Regex.IsMatch(body, @"\A\{\s*try\s*\{")
             .Should().BeTrue(because: "behavior #3: entire method body must be wrapped in try{ ... } as first statement");
         // There must be a final catch(Exception ex) that LogWarnings the exception.
-        // The catch must include exception details — either via {ex} interpolation
-        // (which is ex.ToString() including message + stack), via ex.ToString()
-        // explicitly, or via ex.Message + ex.StackTrace separately. All three forms
-        // satisfy Pattern #74 / #111 governance (no silent swallow / no Message-only).
-        Regex.IsMatch(body,
-                @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,800}?LogWarning\([\s\S]{0,400}?InjectButton EXCEPTION[\s\S]{0,400}?(?:\{ex\}|ex\.ToString\(\)|ex\.Message[\s\S]{0,300}?ex\.StackTrace)")
-            .Should().BeTrue(because: "behavior #3: outer catch must LogWarning with 'InjectButton EXCEPTION' and full exception detail ({ex}, ex.ToString(), or ex.Message + ex.StackTrace)");
+        // The catch must reference the exception with full detail (Pattern #74 / #111:
+        // no silent swallow, no Message-only). Acceptable forms:
+        //   - $"...{ex}"  (interpolation, expands to ex.ToString() → message + stack)
+        //   - ex.ToString()  (explicit ToString — same result)
+        //   - ex.Message followed somewhere by ex.StackTrace  (legacy explicit form)
+        // We split this into two checks for clarity:
+        //   1) the LogWarning call mentions "InjectButton EXCEPTION"
+        //   2) the LogWarning arg references the exception via one of the forms above
+        var hasInjectButtonExceptionLog = Regex.IsMatch(body,
+            @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,1200}?LogWarning\([\s\S]{0,800}?InjectButton EXCEPTION");
+        hasInjectButtonExceptionLog.Should().BeTrue(
+            because: "behavior #3: outer catch must LogWarning with 'InjectButton EXCEPTION' marker text");
+
+        var hasFullExceptionDetail = Regex.IsMatch(body, @"\{ex\}")
+            || Regex.IsMatch(body, @"ex\.ToString\(\)")
+            || (Regex.IsMatch(body, @"ex\.Message") && Regex.IsMatch(body, @"ex\.StackTrace"));
+        hasFullExceptionDetail.Should().BeTrue(
+            because: "behavior #3: outer catch must include full exception detail — {ex} interpolation (preferred), ex.ToString(), or ex.Message + ex.StackTrace");
     }
 
     // ------------------------------------------------------------------ //

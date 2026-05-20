@@ -138,14 +138,16 @@ namespace DINOForge.Tests
         }
 
         [Fact]
-        public void Registry_CaseInsensitiveLookup()
+        public void Registry_CaseSensitiveLookup()
         {
             var registry = new Registry<TestItem>();
             registry.Register("Raptor", new TestItem("Raptor"), RegistrySource.BaseGame, "base");
 
-            registry.Get("raptor")!.Name.Should().Be("Raptor");
-            registry.Get("RAPTOR")!.Name.Should().Be("Raptor");
-            registry.Contains("RaPtOr").Should().BeTrue();
+            // Pattern #99: Registry keys are case-sensitive (StringComparer.Ordinal).
+            registry.Get("Raptor")!.Name.Should().Be("Raptor");
+            registry.Get("raptor").Should().BeNull();
+            registry.Get("RAPTOR").Should().BeNull();
+            registry.Contains("RaPtOr").Should().BeFalse();
         }
 
         [Fact]

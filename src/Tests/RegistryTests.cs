@@ -138,16 +138,17 @@ namespace DINOForge.Tests
         }
 
         [Fact]
-        public void Registry_Contains_CaseInsensitive()
+        public void Registry_Contains_CaseSensitive()
         {
             // Arrange
             var registry = new Registry<TestItem>();
             registry.Register("MyItem", new TestItem("Test"), RegistrySource.BaseGame, "base");
 
-            // Act & Assert - lookup with different case should still find it
-            registry.Contains("myitem").Should().BeTrue();
-            registry.Contains("MYITEM").Should().BeTrue();
+            // Act & Assert - Pattern #99 governance: registry IDs are case-sensitive
+            // (StringComparer.Ordinal). User-sourced keys must match exactly.
             registry.Contains("MyItem").Should().BeTrue();
+            registry.Contains("myitem").Should().BeFalse();
+            registry.Contains("MYITEM").Should().BeFalse();
         }
 
         [Fact]

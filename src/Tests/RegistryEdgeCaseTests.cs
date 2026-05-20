@@ -143,19 +143,20 @@ namespace DINOForge.Tests
             all.Should().ContainKey("c");
         }
 
-        // ─── case-insensitive lookups ─────────────────────────────────────────
+        // ─── case-sensitive lookups (Pattern #99) ─────────────────────────────
 
         [Fact]
-        public void Get_CaseInsensitive_FindsRegisteredId()
+        public void Get_CaseSensitive_OnlyExactMatchFound()
         {
             // Arrange
             Registry<EdgeItem> registry = new Registry<EdgeItem>();
             registry.Register("MyUnit", new EdgeItem("MyUnit"), RegistrySource.BaseGame, "base");
 
-            // Act & Assert
-            registry.Get("myunit")!.Label.Should().Be("MyUnit");
-            registry.Get("MYUNIT")!.Label.Should().Be("MyUnit");
+            // Pattern #99: Registry keys are case-sensitive (StringComparer.Ordinal).
+            // User-sourced IDs must match exactly.
             registry.Get("MyUnit")!.Label.Should().Be("MyUnit");
+            registry.Get("myunit").Should().BeNull();
+            registry.Get("MYUNIT").Should().BeNull();
         }
 
         // ─── conflict detection ───────────────────────────────────────────────

@@ -46,6 +46,13 @@ namespace DINOForge.Runtime.Bridge
         private readonly TimeProvider _timeProvider;
         private Thread? _serverThread;
         private volatile bool _running;
+
+        /// <summary>
+        /// Diagnostic: true if the server background thread is alive. Used by RuntimeDriver.OnDestroy
+        /// to log accurate state instead of asserting "Bridge kept alive" without verification.
+        /// (iter-144 #535 re-fix.)
+        /// </summary>
+        public bool IsServerThreadAlive => _running && _serverThread != null && _serverThread.IsAlive;
         private NamedPipeServerStream? _currentPipe;
         private readonly ManualResetEventSlim _shutdownEvent = new(false);
         private SessionHmac? _session;
@@ -112,7 +119,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 // ServerLoop exited — either stopped normally or thread was aborted.
                 // Dispose any lingering pipe to free the pipe name for restart.
-                try { _currentPipe?.Dispose(); } catch { }
+                try { _currentPipe?.Dispose(); } catch { /* safe-swallow: pipe already disposed or invalid during restart */ }
                 _currentPipe = null;
 
                 if (_running)
@@ -147,7 +154,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 _currentPipe?.Dispose();
             }
-            catch { }
+            catch { /* safe-swallow: pipe disposal during shutdown can race with server loop */ }
 
             _currentPipe = null;
 
@@ -155,7 +162,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 _session?.Dispose();
             }
-            catch { }
+            catch { /* safe-swallow: session disposal during shutdown can race */ }
 
             _session = null;
             WriteDebug("[GameBridgeServer] Stopped.");
@@ -260,7 +267,7 @@ namespace DINOForge.Runtime.Bridge
                             {
                                 Thread.ResetAbort();
                             }
-                            catch { }
+                            catch { /* safe-swallow: read errors on client pipe — loop continues, line remains null */ }
 
                             if (line == null) continue;
                             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -275,7 +282,7 @@ namespace DINOForge.Runtime.Bridge
                             {
                                 Thread.ResetAbort();
                             }
-                            catch { }
+                            catch { /* safe-swallow: ProcessMessage errors leave response null — fallback writer handles it */ }
 
                             if (response == null) continue;
 
@@ -296,7 +303,7 @@ namespace DINOForge.Runtime.Bridge
                             {
                                 Thread.ResetAbort();
                             }
-                            catch { }
+                            catch { /* safe-swallow: write errors trigger fallback writer in finally block */ }
                         }
                         finally
                         {
@@ -327,9 +334,10 @@ namespace DINOForge.Runtime.Bridge
                                         Directory.CreateDirectory(fallbackDir);
                                         string fallbackFile = Path.Combine(fallbackDir, "dinoforge_bridge_fallback.txt");
                                         File.WriteAllText(fallbackFile,
-                                            "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}");
+                                            "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Bridge error\"}}",
+                                            Encoding.UTF8);
                                     }
-                                    catch { }
+                                    catch { /* safe-swallow: fallback file is best-effort diagnostic; pipe error already handled */ }
                                 }
                             }
                         }
@@ -341,7 +349,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (ObjectDisposedException)
                 {
-                    // Server is shutting down
+                    // safe-swallow: server is shutting down — pipe disposal is expected
                 }
                 catch (System.Threading.ThreadAbortException)
                 {
@@ -349,7 +357,7 @@ namespace DINOForge.Runtime.Bridge
                     // Reset the abort and continue the loop — the bridge must survive.
                     System.Threading.Thread.ResetAbort();
                     WriteDebug("[GameBridgeServer] [OUTER] ThreadAbortException caught — closing pipe to unblock client.");
-                    try { pipe?.Dispose(); } catch { }
+                    try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after ThreadAbort recovery */ }
                 }
                 catch (IOException ex)
                 {
@@ -366,19 +374,19 @@ namespace DINOForge.Runtime.Bridge
                     {
                         WriteDebug($"[GameBridgeServer] [OUTER-IO] Non-abort IOException.");
                     }
-                    try { pipe?.Dispose(); } catch { }
+                    try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after IO error */ }
                 }
                 catch (Exception ex)
                 {
                     WriteDebug($"[GameBridgeServer] [OUTER] Error in server loop: {ex.Message}");
-                    try { pipe?.Dispose(); } catch { }
+                    try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after outer exception */ }
                 }
                 finally
                 {
                     // Close the pipe handle. Unlike Dispose(), Close() on Windows named pipes
                     // sends ERROR_OPIPE_NOT_CONNECTED to waiting clients without blocking.
                     // This unblocks any client blocked in Read() on this pipe.
-                    try { pipe?.Dispose(); } catch { }
+                    try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose in finally — guaranteed cleanup */ }
                     _currentPipe = null;
                 }
 
@@ -595,12 +603,12 @@ namespace DINOForge.Runtime.Bridge
                             status.LoadedPacks.Add(id);
                     }
                 }
-                catch { }
+                catch { /* safe-swallow: pack-status enumeration is best-effort diagnostic */ }
             }
 
             WriteDebug($"[GameBridgeServer] HandleStatus EXIT: worldName='{status.WorldName}' entityCount={status.EntityCount}");
             try { return JToken.FromObject(status); }
-            catch { return JToken.FromObject(new { EntityCount = -1, Running = true }); }
+            catch { return JToken.FromObject(new { EntityCount = -1, Running = true }); /* safe-swallow: JToken serialization fallback */ }
         }
 
         private JToken HandleGetCatalog()
@@ -1430,9 +1438,10 @@ namespace DINOForge.Runtime.Bridge
                     else if (rawValue is int iv) floatVal = iv;
 
                     result.Values.Add(floatVal);
+                    // event-lifecycle-ok: local float accumulator, not an event subscription
                     sum += floatVal;
                 }
-                catch { }
+                catch { /* safe-swallow: per-entity reflection failure skips one entry but continues aggregation */ }
             }
 
             if (result.Values.Count > 0)
@@ -1489,7 +1498,7 @@ namespace DINOForge.Runtime.Bridge
                         }
                         types.Dispose();
                     }
-                    catch { }
+                    catch { /* safe-swallow: component-type enumeration per-entity is best-effort diagnostic */ }
 
                     result.Entities.Add(info);
                 }
@@ -1524,6 +1533,7 @@ namespace DINOForge.Runtime.Bridge
                     int totalCount = 0;
                     foreach (VanillaEntityInfo entry in list)
                     {
+                        // event-lifecycle-ok: local int accumulator, not an event subscription
                         totalCount += entry.EntityCount;
                         EntityInfo info = new EntityInfo
                         {
@@ -1702,6 +1712,7 @@ namespace DINOForge.Runtime.Bridge
                     {
                         if (mb == null) continue;
                         string tName = mb.GetType().Name;
+                        // event-lifecycle-ok: local string accumulator for diagnostic dump, not an event subscription
                         found += $"[{tName}]";
 
                         // Target: UI.LoadingProgressBar

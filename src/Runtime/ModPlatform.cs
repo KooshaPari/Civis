@@ -396,6 +396,21 @@ namespace DINOForge.Runtime
         /// <returns>The result of the load operation.</returns>
         public ContentLoadResult LoadPacks()
         {
+            // Iter-144 H9 probe: ENTER/EXIT timing around mod-side pack-load entry.
+            var __h9sw = System.Diagnostics.Stopwatch.StartNew();
+            _log?.LogInfo($"[ModPlatform.LoadPacks] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            try
+            {
+                return LoadPacksImpl();
+            }
+            finally
+            {
+                _log?.LogInfo($"[ModPlatform.LoadPacks] EXIT elapsed={__h9sw.ElapsedMilliseconds}ms");
+            }
+        }
+
+        private ContentLoadResult LoadPacksImpl()
+        {
             // Iter-144 #547 H6 gray-freeze fix: short-circuit if RuntimeDriver is being destroyed.
             // Pack-load can race scene teardown — a new RuntimeDriver may attempt LoadPacks while
             // the previous one's OnDestroy chain is still running and disposing shared state

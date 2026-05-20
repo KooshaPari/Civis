@@ -129,6 +129,7 @@ namespace DINOForge.Runtime
                 Bridge.DestroyGuardPatch.Apply(_harmony);
                 Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
                 Bridge.AssetBundleUnloadGuardPatch.Apply(_harmony);
+                Bridge.AssetBundleLoadGuardPatch.Apply(_harmony);
                 Bridge.SceneUnloadGuardPatch.Apply(_harmony);
                 Bridge.WorldDisposeGuardPatch.Apply(_harmony);
                 UI.ModsButtonTextPatch.Apply(_harmony);

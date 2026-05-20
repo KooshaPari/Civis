@@ -63,8 +63,18 @@ namespace DINOForge.Runtime.Aviation
         /// <param name="registry">The RegistryManager containing loaded pack definitions.</param>
         public static void Initialize(RegistryManager? registry)
         {
-            _registry = registry;
-            WriteDebug("AerialSpawnSystem.Initialize: Registry set");
+            // Iter-144 H9 probe: ENTER/EXIT timing around mod-side pack-recreation entry point.
+            var __sw = System.Diagnostics.Stopwatch.StartNew();
+            WriteDebug($"[AerialSpawnSystem.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            try
+            {
+                _registry = registry;
+                WriteDebug("AerialSpawnSystem.Initialize: Registry set");
+            }
+            finally
+            {
+                WriteDebug($"[AerialSpawnSystem.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
+            }
         }
 
         // -------------------------------------------------------------------------

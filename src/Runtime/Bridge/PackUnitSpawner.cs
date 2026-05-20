@@ -66,8 +66,18 @@ namespace DINOForge.Runtime.Bridge
         /// <param name="registry">The RegistryManager containing loaded pack definitions.</param>
         public static void Initialize(RegistryManager registry)
         {
-            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-            WriteDebug("PackUnitSpawner.Initialize: Registry initialized");
+            // Iter-144 H9 probe: ENTER/EXIT timing around mod-side pack-recreation entry point.
+            var __sw = System.Diagnostics.Stopwatch.StartNew();
+            WriteDebug($"[PackUnitSpawner.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            try
+            {
+                _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+                WriteDebug("PackUnitSpawner.Initialize: Registry initialized");
+            }
+            finally
+            {
+                WriteDebug($"[PackUnitSpawner.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
+            }
         }
 
         protected override void OnCreate()

@@ -171,15 +171,21 @@ namespace DINOForge.Tests
 
             // Act — write a YAML file inside the pack directory to trigger the watcher
             watcher.Start();
-            await Task.Delay(50); // let watcher settle
+            // Pattern #108: Windows FileSystemWatcher needs a generous settle window
+            // before the OS hooks in, especially under push-time lefthook CPU contention
+            // (xUnit parallel + build + test concurrency).
+            await Task.Delay(250);
 
             string yamlFile = Path.Combine(packDir, "trigger.yaml");
             File.WriteAllText(yamlFile, "id: trigger\n");
 
-            // Assert — wait up to 3 seconds for debounce + reload
-            bool completed = await Task.WhenAny(tcs.Task, Task.Delay(3000)) == tcs.Task;
+            // Assert — wait up to 15 seconds for debounce + reload.
+            // Original 3s was too tight under Windows FSW + xUnit parallel + lefthook
+            // CPU contention (push v7 flake). 15s ceiling still fails fast on real bugs
+            // while absorbing OS-level FSW latency spikes (200-2000ms observed).
+            bool completed = await Task.WhenAny(tcs.Task, Task.Delay(15000)) == tcs.Task;
             // The watcher fires; success or failure both indicate the callback fired
-            completed.Should().BeTrue("the watcher should fire its reload callback within 3 seconds");
+            completed.Should().BeTrue("the watcher should fire its reload callback within 15 seconds");
         }
 
         [Fact]

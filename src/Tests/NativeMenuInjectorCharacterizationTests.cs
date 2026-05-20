@@ -379,9 +379,13 @@ public sealed class NativeMenuInjectorCharacterizationTests
         Regex.IsMatch(body, @"\A\{\s*try\s*\{")
             .Should().BeTrue(because: "behavior #3: entire method body must be wrapped in try{ ... } as first statement");
         // There must be a final catch(Exception ex) that LogWarnings the exception.
-        // The catch must include ex.Message and ex.StackTrace (Pattern #74 / #111 governance: no bare catch).
-        Regex.IsMatch(body, @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,800}?LogWarning\([\s\S]{0,400}?InjectButton EXCEPTION[\s\S]{0,200}?ex\.Message[\s\S]{0,100}?ex\.StackTrace")
-            .Should().BeTrue(because: "behavior #3: outer catch must LogWarning with 'InjectButton EXCEPTION', ex.Message, and ex.StackTrace");
+        // The catch must include exception details — either via {ex} interpolation
+        // (which is ex.ToString() including message + stack), via ex.ToString()
+        // explicitly, or via ex.Message + ex.StackTrace separately. All three forms
+        // satisfy Pattern #74 / #111 governance (no silent swallow / no Message-only).
+        Regex.IsMatch(body,
+                @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,800}?LogWarning\([\s\S]{0,400}?InjectButton EXCEPTION[\s\S]{0,400}?(?:\{ex\}|ex\.ToString\(\)|ex\.Message[\s\S]{0,300}?ex\.StackTrace)")
+            .Should().BeTrue(because: "behavior #3: outer catch must LogWarning with 'InjectButton EXCEPTION' and full exception detail ({ex}, ex.ToString(), or ex.Message + ex.StackTrace)");
     }
 
     // ------------------------------------------------------------------ //

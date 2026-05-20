@@ -42,7 +42,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         /// <summary>
         /// Resolve pack dependencies using Go binary if available, otherwise C# fallback.
         /// </summary>
-        [RequiresUnreferencedCode()]
+        [RequiresUnreferencedCode("Calls JsonSerializer.Serialize which requires types to be preserved during trimming.")]
         public async Task<List<string>> ResolveDependenciesAsync(
             List<PackManifest> available,
             PackManifest target)

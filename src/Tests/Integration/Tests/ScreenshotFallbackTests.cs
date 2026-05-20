@@ -64,11 +64,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
 
     private void SkipIfGameNotAvailable()
     {
-        if (_fixture == null || !_fixture.GameAvailable)
-        {
-            // Skip test gracefully if game not available
-            return;
-        }
+        Skip.IfNot(_fixture?.GameAvailable ?? false, "DINO not available — integration test skipped.");
     }
 
     /// <summary>
@@ -76,7 +72,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we request a screenshot with default settings
     /// THEN a valid image file is created
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_Capture_CreatesValidImageFile()
     {
         // Arrange
@@ -97,7 +93,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we request multiple consecutive screenshots
     /// THEN all screenshots are created and differ slightly in content
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_Multiple_AllCreated()
     {
         // Arrange
@@ -127,7 +123,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we capture a screenshot
     /// THEN the file is in PNG format (has valid PNG header)
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_Format_IsPng()
     {
         // Arrange
@@ -157,7 +153,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we capture a screenshot with a custom path
     /// THEN the file is created at the specified path
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_CustomPath_FileCreatedAtPath()
     {
         // Arrange
@@ -179,7 +175,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we measure screenshot performance
     /// THEN capture completes within reasonable time (< 5 seconds)
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_Performance_CapturesWithinTimeout()
     {
         // Arrange
@@ -208,7 +204,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we capture screenshots in rapid succession
     /// THEN all captures succeed despite high frequency
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_RapidSuccession_AllSucceed()
     {
         // Arrange
@@ -238,7 +234,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we capture a screenshot with a very long path
     /// THEN the operation handles path length gracefully
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_LongPath_HandledGracefully()
     {
         // Arrange
@@ -266,7 +262,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we capture screenshots with different output directories
     /// THEN all files are created independently
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_MultipleDirectories_AllCreated()
     {
         // Arrange
@@ -298,7 +294,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     /// WHEN we read the file size
     /// THEN the size is consistent and reasonable for a game screenshot
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Screenshot_FileSize_IsReasonable()
     {
         // Arrange

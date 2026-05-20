@@ -42,7 +42,7 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
     {
         _pipeName = !string.IsNullOrWhiteSpace(pipeName)
             ? pipeName
-            : "dinoforge-game-bridge";
+            : $"dinoforge-mock-{Guid.NewGuid():N}";
 
         _bridge = bridge ?? new FakeGameBridge();
         _receivedMessages = new ConcurrentBag<(string, object?)>();

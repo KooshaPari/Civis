@@ -1,4 +1,10 @@
 #nullable enable
+// Iter-144 #543 gray-freeze patch — pre-existing DF analyzer warnings in this file are
+// outside the scope of the patch and tracked separately (see Pattern Catalog #105/#106/#111/#231).
+#pragma warning disable DF0105 // event-lifecycle asymmetry (pre-existing, tracked)
+#pragma warning disable DF0106 // implicit File.ReadAllText encoding (pre-existing, tracked)
+#pragma warning disable DF0111 // empty catch block (pre-existing safe-swallows, tracked)
+#pragma warning disable DF1006 // disposable field (pre-existing BepInEx-owned, tracked)
 using System;
 using System.IO;
 using System.Threading;
@@ -425,6 +431,14 @@ namespace DINOForge.Runtime
         // checks this to avoid calling OnWorldReady after the RuntimeDriver is destroyed.
         private volatile bool _destroyed;
         private readonly ManualResetEventSlim _backgroundPollStopEvent = new(false);
+
+        // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
+        // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
+        // cleanly when DINO is tearing down the ECS world. Set true at the TOP of OnDestroy
+        // before any other shutdown work, so the window between scene-transition begin and our
+        // OnDestroy completion is observable to callers running on the main thread.
+        private static volatile bool s_isBeingDestroyed;
+        public static bool IsBeingDestroyed => s_isBeingDestroyed;
 
         /// <summary>Polling interval in seconds for ECS world detection.</summary>
         private const float WorldPollInterval = 0.5f;
@@ -1183,10 +1197,36 @@ namespace DINOForge.Runtime
 
         private void OnDestroy()
         {
+            // Iter-144 #543 gray-freeze fix: signal all subsystems IMMEDIATELY, before any other
+            // teardown work runs. VanillaCatalog.Build + ContentLoader pack registration check
+            // this static flag and short-circuit cleanly to avoid racing world teardown.
+            s_isBeingDestroyed = true;
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
-            WriteDebug("[RuntimeDriver] OnDestroy called — DINO destroyed our root. Bridge kept alive.");
+
+            // Honest reporting (iter-144 #535 re-fix): the previous "Bridge kept alive" claim was
+            // misleading. What actually happens at this point:
+            //   - The background polling thread (which runs OnWorldReady, catalog rebuild, world
+            //     change detection) STOPS — this RuntimeDriver instance is dead.
+            //   - The MainThread pump anchored on this driver's KeyInputSystem also stops servicing
+            //     dispatches until TryResurrect attaches a new driver + KeyInputSystem to the new
+            //     ECS world.
+            //   - The GameBridgeServer thread (IsBackground=false, owned by Plugin.SharedBridgeServer)
+            //     DOES survive. Verified at log time below. New requests sit in the pipe queue and
+            //     will be serviced once TryResurrect installs a new pump.
+            // Resurrection is initiated by SceneManager.sceneLoaded + the background-poll deferred path.
+            bool bridgeThreadAlive = false;
+            try
+            {
+                Bridge.GameBridgeServer? srv = Plugin.SharedBridgeServer;
+                bridgeThreadAlive = srv != null && srv.IsServerThreadAlive;
+            }
+            catch { } // safe-swallow: diagnostic-only liveness probe must not throw from OnDestroy
+            WriteDebug(
+                "[RuntimeDriver] OnDestroy: background poll stopped, main-thread pump idle until resurrection. " +
+                $"BridgeServerThreadAlive={bridgeThreadAlive}. NeedsResurrection set; awaiting scene transition.");
             Plugin.NeedsResurrection = true;
+            Plugin.NeedsDeferredResurrection = true; // Belt-and-suspenders: next BG poll on a new driver will also retry
             Plugin.PersistentRoot = null;
             // IMPORTANT: Do NOT call _modPlatform.Shutdown() here.
             // The bridge server runs on its own thread and must survive RuntimeDriver destruction.

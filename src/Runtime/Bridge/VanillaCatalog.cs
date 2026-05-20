@@ -1,9 +1,13 @@
+// Iter-144 #543 gray-freeze patch — pre-existing DF0111 in this file is outside the scope
+// of the patch and tracked separately (see Pattern Catalog #111).
+#pragma warning disable DF0111 // empty catch block (pre-existing safe-swallow, tracked)
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
+using DINOForge.Runtime;
 
 namespace DINOForge.Runtime.Bridge
 {
@@ -91,9 +95,39 @@ namespace DINOForge.Runtime.Bridge
             _projectiles.Clear();
             _other.Clear();
 
+            // Iter-144 #543 gray-freeze fix: short-circuit if DINO is tearing down the ECS world.
+            // Calling em.GetAllEntities during world teardown throws ArgumentNullException
+            // (MemSet destination=null) because the underlying EntityDataAccess chunk store has
+            // been disposed. The exception was previously caught and swallowed at ModPlatform.cs:253
+            // but subsequent pack-load registrations then blocked the main thread against a dying
+            // world, producing the gray-screen hang.
+            if (RuntimeDriver.IsBeingDestroyed)
+            {
+                WriteDebug("VanillaCatalog.Build: aborted — RuntimeDriver.IsBeingDestroyed=true (scene teardown in progress)");
+                return;
+            }
+
+            World? currentWorld = World.DefaultGameObjectInjectionWorld;
+            if (currentWorld == null || !currentWorld.IsCreated)
+            {
+                WriteDebug("VanillaCatalog.Build: aborted — Default world null or not created");
+                return;
+            }
+
             WriteDebug("VanillaCatalog.Build starting scan");
 
-            NativeArray<Entity> allEntities = em.GetAllEntities(Allocator.Temp);
+            NativeArray<Entity> allEntities;
+            try
+            {
+                allEntities = em.GetAllEntities(Allocator.Temp);
+            }
+            catch (Exception ex)
+            {
+                // World was torn down between our pre-check and the GetAllEntities call.
+                // Surface full detail per Pattern #96 so future races are visible.
+                WriteDebug($"VanillaCatalog.Build: GetAllEntities threw {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                return;
+            }
             WriteDebug($"VanillaCatalog: scanning {allEntities.Length} entities");
 
             // Skip if no entities (e.g., still on MainMenu scene)

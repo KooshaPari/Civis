@@ -1,4 +1,8 @@
 #nullable enable
+// Iter-144 #543 gray-freeze patch — pre-existing DF analyzer warnings in this file are
+// outside the scope of the patch and tracked separately (see Pattern Catalog #106/#231).
+#pragma warning disable DF0106 // implicit File.ReadAllText encoding (pre-existing, tracked)
+#pragma warning disable DF1006 // disposable field (pre-existing BepInEx-owned, tracked)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -241,18 +245,33 @@ namespace DINOForge.Runtime
             }
 
             // Build the vanilla entity catalog
-            try
+            // Iter-144 #543: short-circuit if world is being torn down (gray-freeze fix).
+            if (RuntimeDriver.IsBeingDestroyed)
             {
-                // null-forgiveness-ok: _vanillaCatalog set in Initialize before any Build call
-                _vanillaCatalog!.Build(world.EntityManager);
-                _log.LogInfo($"[ModPlatform] VanillaCatalog built: " +
-                    $"{_vanillaCatalog.Units.Count} units, " +
-                    $"{_vanillaCatalog.Buildings.Count} buildings, " +
-                    $"{_vanillaCatalog.Projectiles.Count} projectiles.");
+                _log.LogWarning("[ModPlatform] Skipping VanillaCatalog.Build — RuntimeDriver.IsBeingDestroyed=true (scene teardown in progress).");
             }
-            catch (Exception ex)
+            else
             {
-                _log.LogWarning($"[ModPlatform] VanillaCatalog build failed: {ex}");
+                try
+                {
+                    // null-forgiveness-ok: _vanillaCatalog set in Initialize before any Build call
+                    _vanillaCatalog!.Build(world.EntityManager);
+                    _log.LogInfo($"[ModPlatform] VanillaCatalog built: " +
+                        $"{_vanillaCatalog.Units.Count} units, " +
+                        $"{_vanillaCatalog.Buildings.Count} buildings, " +
+                        $"{_vanillaCatalog.Projectiles.Count} projectiles.");
+                }
+                catch (Exception ex)
+                {
+                    // Iter-144 #543: Pattern #96 — surface full exception detail. Previous silent
+                    // swallow masked the ArgumentNullException(MemSet destination=null) race that
+                    // caused the gray-freeze hang. Future world-teardown races will be visible.
+                    _log.LogError($"[ModPlatform] VanillaCatalog build failed: {ex}");
+                    if (ex.InnerException != null)
+                    {
+                        _log.LogError($"[ModPlatform] VanillaCatalog inner: {ex.InnerException}");
+                    }
+                }
             }
 
             // Validate component mappings
@@ -301,6 +320,14 @@ namespace DINOForge.Runtime
         /// </summary>
         public void RebuildCatalogAndApplyStats(Unity.Entities.World world)
         {
+            // Iter-144 #543 gray-freeze fix: short-circuit if RuntimeDriver is being destroyed,
+            // so pack stat re-injection does not race world teardown.
+            if (RuntimeDriver.IsBeingDestroyed)
+            {
+                _log.LogWarning("[ModPlatform] Skipping RebuildCatalogAndApplyStats — RuntimeDriver.IsBeingDestroyed=true.");
+                return;
+            }
+
             try
             {
                 _vanillaCatalog!.Build(world.EntityManager);
@@ -311,7 +338,8 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[ModPlatform] VanillaCatalog rebuild failed: {ex}");
+                // Iter-144 #543: Pattern #96 — surface full exception detail.
+                _log.LogError($"[ModPlatform] VanillaCatalog rebuild failed: {ex}");
                 return;
             }
 

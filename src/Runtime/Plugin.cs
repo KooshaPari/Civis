@@ -70,6 +70,22 @@ namespace DINOForge.Runtime
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
 
+        /// <summary>
+        /// Iter-144 #543 fix: Companion flag set by RuntimeDriver.OnDestroy BEFORE any teardown work.
+        /// Resurrection check OR's this with NeedsResurrection to avoid the Unity fake-null trap
+        /// (PersistentRoot field may hold a destroyed-but-not-nulled reference where `== null`
+        /// returns true via Unity's operator overload but ReferenceEquals(_, null) returns false,
+        /// causing the resurrection loop to silently skip).
+        /// </summary>
+        internal static volatile bool s_rootJustDestroyed;
+
+        /// <summary>
+        /// Iter-144 #543 fix: Set when RuntimeDriver.OnDestroy fires during a scene transition so
+        /// AssetSwapSystem.OnDestroy can skip its bundle-unload (bundles must survive scene
+        /// transitions; unloading mid-swap orphans chicken-sprite placeholders).
+        /// </summary>
+        internal static volatile bool s_skipBundleUnload;
+
         // Deferred TryResurrect: set by OnSceneLoaded or KeyInputSystem.OnCreate when a scene
         // transition or ECS world creation is detected. Checked by the background polling thread
         // which runs AFTER Plugin.Awake() completes. This prevents TryResurrect from racing
@@ -216,11 +232,16 @@ namespace DINOForge.Runtime
             // Trigger resurrection here. IMPORTANT: we defer TryResurrect to the resurrection thread
             // (or the new RuntimeDriver's BG poll thread) instead of calling directly, since a brand
             // new RuntimeDriver may not have completed Initialize() yet at this exact tick.
-            if (NeedsResurrection || PersistentRoot == null)
+            // Iter-144 #543 fix: ReferenceEquals check + s_rootJustDestroyed avoids Unity fake-null
+            // trap (== null on a destroyed-but-not-nulled MonoBehaviour reports true via operator
+            // overload but the actual managed reference is still non-null).
+            bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
+            if (NeedsResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null)
             {
-                WriteDebug($"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootNull={PersistentRoot == null}");
+                WriteDebug($"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
                 LastSceneNameForResurrection = newScene.name;
                 NeedsDeferredResurrection = true;
+                WriteDebug("[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
             }
         }
 
@@ -268,7 +289,13 @@ namespace DINOForge.Runtime
                     {
                         WriteDebug($"[Plugin] ResurrectionFallback heartbeat #{iterationCount} NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootNull={PersistentRoot == null}");
                     }
-                    if (!NeedsResurrection && !NeedsDeferredResurrection)
+                    // Iter-144 #543 fix: OR in s_rootJustDestroyed flag — when RuntimeDriver.OnDestroy
+                    // fires, PersistentRoot may hold a destroyed-but-not-nulled Unity fake-null reference,
+                    // and NeedsResurrection could be cleared by a stale scene event before the new
+                    // driver attaches. The companion flag is the source of truth for "RuntimeDriver
+                    // died and has not been replaced yet."
+                    bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed;
+                    if (!needsRevive)
                     {
                         lastNeedsObservedUtc = DateTime.MinValue;
                         continue;
@@ -297,6 +324,9 @@ namespace DINOForge.Runtime
                         // After attempt, clear flags so we don't spin; if revive failed, scene event/poller will re-set them.
                         NeedsResurrection = false;
                         NeedsDeferredResurrection = false;
+                        s_rootJustDestroyed = false;
+                        s_skipBundleUnload = false;
+                        WriteDebug("[Plugin] Resurrection complete via ResurrectionFallbackThread (flags cleared).");
                         lastNeedsObservedUtc = DateTime.MinValue;
                     }
                     catch (Exception ex)
@@ -1308,6 +1338,18 @@ namespace DINOForge.Runtime
 
         private void OnDestroy()
         {
+            // Iter-144 #543 fix: set resurrection flags AT THE VERY TOP, before any teardown work.
+            // The s_rootJustDestroyed companion flag is the source of truth for "RuntimeDriver died
+            // and has not been replaced yet" — the fallback loop checks it via OR with
+            // NeedsResurrection to avoid the Unity fake-null trap where PersistentRoot reports
+            // == null via operator overload but ReferenceEquals(_, null) is false.
+            // s_skipBundleUnload is checked by AssetSwapSystem.OnDestroy to preserve bundles
+            // across scene transitions (otherwise chicken-sprite swaps orphan mid-flight).
+            Plugin.NeedsResurrection = true;
+            Plugin.NeedsDeferredResurrection = true;
+            Plugin.s_rootJustDestroyed = true;
+            Plugin.s_skipBundleUnload = true;
+
             // Iter-144 #543 gray-freeze fix: signal all subsystems IMMEDIATELY, before any other
             // teardown work runs. VanillaCatalog.Build + ContentLoader pack registration check
             // this static flag and short-circuit cleanly to avoid racing world teardown.
@@ -1315,12 +1357,9 @@ namespace DINOForge.Runtime
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
 
-            // Iter-144 #547 H5: set resurrection flags BEFORE any work that could wedge. If
-            // ShutdownNonBridge or any subsequent teardown step deadlocks the main thread, the
-            // resurrection flag has already been observed by the Win32 fallback thread + the
-            // activeSceneChanged subscriber (kept alive across BepInEx Plugin instance death).
-            Plugin.NeedsResurrection = true;
-            Plugin.NeedsDeferredResurrection = true;
+            // Iter-144 #547 H5: belt-and-suspenders — the resurrection flags were already set above,
+            // but null the field reference explicitly so the next check sees a true managed null
+            // (not a Unity fake-null) on subsequent activeSceneChanged callbacks.
             Plugin.PersistentRoot = null;
 
             // Honest reporting (iter-144 #535 re-fix): the previous "Bridge kept alive" claim was

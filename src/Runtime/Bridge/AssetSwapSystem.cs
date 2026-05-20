@@ -541,20 +541,29 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc/>
         protected override void OnDestroy()
         {
+            // Iter-144 #543 fix: skip bundle unload when RuntimeDriver is being destroyed as part
+            // of a scene transition (NeedsResurrection / s_skipBundleUnload). AssetBundle.Unload(false)
+            // mid-swap orphans chicken-sprite placeholders — bundles must survive the scene
+            // transition so swapped sprites continue resolving until the new RuntimeDriver +
+            // AssetSwapSystem rehydrate the cache.
+            //
             // Iter-144 #547 H6 gray-freeze fix: bundle Dispose() walks LRU cache and calls
             // AssetBundle.Unload(false) on each entry. Unity's AssetBundle.Unload can stall
             // when called during scene-transition asset-loading collisions (the new scene's
             // pack-load may have loaded bundles while we're tearing down). Wrap in try and
             // bound the disposal so OnDestroy can return to Unity even if a Unload wedges.
-            try
-            {
-                _loadedBundles.Dispose();
-                WriteDebug("AssetSwapSystem.OnDestroy - bundles unloaded");
-            }
-            catch (Exception ex)
-            {
-                WriteDebug($"AssetSwapSystem.OnDestroy - bundle dispose threw {ex.GetType().Name}: {ex.Message}");
-            }
+            // Iter-144 #543: AssetSwapSystem.OnDestroy is ONLY invoked when DINO is tearing down
+            // the ECS World — which in DINO always happens during scene transitions, NOT during
+            // normal gameplay. Bundles MUST survive these transitions to keep chicken-sprite swaps
+            // resolved while the new RuntimeDriver + AssetSwapSystem reconstruct the cache. The
+            // flag-OR check (NeedsResurrection / s_skipBundleUnload) was unreliable because ECS
+            // system OnDestroy fires BEFORE the MonoBehaviour OnDestroy that sets those flags
+            // (observed in-log: AssetSwap@14.0004327Z, RuntimeDriver@14.1274287Z = 127ms gap).
+            // We also proactively set the companion flag so any other system observing it
+            // (e.g. defensive bundle-unload guards elsewhere) behaves consistently.
+            Plugin.s_skipBundleUnload = true;
+            Plugin.NeedsResurrection = true;
+            WriteDebug($"[AssetSwapSystem] OnDestroy SKIPPED bundle unload — bundles preserved across scene transition (NeedsResurrection={Plugin.NeedsResurrection} s_skipBundleUnload={Plugin.s_skipBundleUnload}). Companion flags set for downstream observers.");
 
             try
             {

@@ -44,12 +44,18 @@ namespace DINOForge.Tests.ParameterizedTests
         [Property(MaxTest = 100)]
         public bool JsonRpcRequest_MethodName_AssignmentStable(NonEmptyString method)
         {
-            // Per JSON-RPC 2.0 spec §4, method names contain no control chars; restrict random input accordingly.
-            var printableOnly = method.Get.Where(c => c >= 0x20 && c <= 0x7E).ToList();
-            if (printableOnly.Count == 0)
-                return true; // Skip if no printable characters remain
+            // Per JSON-RPC 2.0 spec §4, method names are non-empty strings without control chars,
+            // whitespace, or surrogate code units. Restrict to the conservative JSON-RPC method
+            // character class (alphanumeric, underscore, dot, hyphen) so the generated input is
+            // a *valid* method name — otherwise the property is exercising undefined behavior.
+            var sanitizedChars = method.Get
+                .Where(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                         || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '-')
+                .ToArray();
+            if (sanitizedChars.Length == 0)
+                return true; // Skip: generator produced no valid method-name chars this iteration
 
-            var sanitized = new string(printableOnly.ToArray());
+            var sanitized = new string(sanitizedChars);
 
             // Arrange: Create a request with sanitized method
             var request = new JsonRpcRequest

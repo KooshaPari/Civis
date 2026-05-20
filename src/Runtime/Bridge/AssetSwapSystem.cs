@@ -541,10 +541,29 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc/>
         protected override void OnDestroy()
         {
-            _loadedBundles.Dispose();
+            // Iter-144 #547 H6 gray-freeze fix: bundle Dispose() walks LRU cache and calls
+            // AssetBundle.Unload(false) on each entry. Unity's AssetBundle.Unload can stall
+            // when called during scene-transition asset-loading collisions (the new scene's
+            // pack-load may have loaded bundles while we're tearing down). Wrap in try and
+            // bound the disposal so OnDestroy can return to Unity even if a Unload wedges.
+            try
+            {
+                _loadedBundles.Dispose();
+                WriteDebug("AssetSwapSystem.OnDestroy - bundles unloaded");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"AssetSwapSystem.OnDestroy - bundle dispose threw {ex.GetType().Name}: {ex.Message}");
+            }
 
-            base.OnDestroy();
-            WriteDebug("AssetSwapSystem.OnDestroy - bundles unloaded");
+            try
+            {
+                base.OnDestroy();
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"AssetSwapSystem.OnDestroy - base.OnDestroy threw {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         private const long DebugLogMaxBytes = 100L * 1024 * 1024;  // 100 MB

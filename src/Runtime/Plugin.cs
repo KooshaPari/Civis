@@ -179,39 +179,137 @@ namespace DINOForge.Runtime
         }
 
         /// <summary>
-        /// Registers a static SceneManager.activeSceneChanged callback that re-registers
-        /// KeyInputSystem in the current ECS world whenever a new scene finishes loading.
-        /// This is the most reliable scene-transition detector — fires for every scene load
-        /// including InitialGameLoader→gameplay where the ECS world changes.
-        /// The callback persists as a static delegate even after Plugin MonoBehaviour destruction.
+        /// Iter-144 #543/#546 gray-freeze fix: subscribe to <c>SceneManager.activeSceneChanged</c>
+        /// rather than <c>sceneLoaded</c>. Per project_dino_runtime_execution_model.md (confirmed
+        /// 2026-03-21), DINO replaces Unity's PlayerLoop entirely; <c>sceneLoaded</c> fires
+        /// inconsistently (in-game probe iter-144 confirmed NO sceneLoaded post-OnDestroy) while
+        /// <c>activeSceneChanged</c> reliably fires on the main thread for each scene transition.
+        ///
+        /// Also starts a Win32 background polling thread that calls TryResurrect on a grace-window
+        /// timer in case NO scene-change event fires within the window (defense-in-depth, survives
+        /// RuntimeDriver destruction since it lives on the Plugin class, not the MonoBehaviour).
         /// </summary>
         private static void StartResurrectionWatcher()
         {
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            WriteDebug("[Plugin] SceneLoaded watcher registered.");
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+            WriteDebug("[Plugin] activeSceneChanged watcher registered (iter-144 #546 fix).");
+            StartResurrectionFallbackThread();
         }
 
-        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        private static void OnActiveSceneChanged(Scene oldScene, Scene newScene)
         {
-            WriteDebug($"[Plugin] OnSceneLoaded: scene='{scene.name}' mode={mode}");
-            Bridge.KeyInputSystem.RecreateInCurrentWorld();
+            WriteDebug($"[Plugin] OnActiveSceneChanged: old='{oldScene.name}' new='{newScene.name}'");
+            try
+            {
+                Bridge.KeyInputSystem.RecreateInCurrentWorld();
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
+            }
             // RuntimeDriver may have been destroyed when DINO destroyed our root.
-            // Trigger resurrection here so TryResurrect fires even if KeyInputSystem.OnCreate
-            // doesn't fire (e.g. when RecreateInCurrentWorld finds no valid world).
-            //
-            // IMPORTANT: We defer TryResurrect to the background polling thread (via _needsDeferredResurrection)
-            // instead of calling it directly. This is because:
-            // 1. When a new RuntimeDriver is created during scene transition, its Plugin.Awake() hasn't completed yet
-            // 2. Calling TryResurrect directly would fail because _resurrectionLog/_resurrectionConfig are null
-            // 3. The background polling thread runs AFTER Plugin.Awake() completes, so TryResurrect will succeed
+            // Trigger resurrection here. IMPORTANT: we defer TryResurrect to the resurrection thread
+            // (or the new RuntimeDriver's BG poll thread) instead of calling directly, since a brand
+            // new RuntimeDriver may not have completed Initialize() yet at this exact tick.
             if (NeedsResurrection || PersistentRoot == null)
             {
-                WriteDebug($"[Plugin] OnSceneLoaded: resurrection needed - NeedsRes={NeedsResurrection} rootNull={PersistentRoot == null}");
-                // Mark that we need resurrection — the background polling thread will call TryResurrect
-                // on the NEXT iteration, after Plugin.Awake() has had time to complete.
-                LastSceneNameForResurrection = scene.name;
+                WriteDebug($"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootNull={PersistentRoot == null}");
+                LastSceneNameForResurrection = newScene.name;
                 NeedsDeferredResurrection = true;
             }
+        }
+
+        // Iter-144 #546 fallback: Win32 background thread independent of any MonoBehaviour.
+        // Survives RuntimeDriver destruction (the MB-owned background poll thread dies with its host).
+        // Polls NeedsResurrection every 500ms; if set and no scene event has cleared it within the
+        // grace window, attempts TryResurrect directly. Plugin class is referenced as long as the
+        // BepInEx assembly is loaded, so this thread persists across scene transitions.
+        private static Thread? _resurrectionFallbackThread;
+        private static volatile bool _resurrectionFallbackStop;
+
+        private static void StartResurrectionFallbackThread()
+        {
+            if (_resurrectionFallbackThread != null) return;
+            _resurrectionFallbackThread = new Thread(ResurrectionFallbackLoop)
+            {
+                Name = "DINOForge.ResurrectionFallback",
+                IsBackground = true,
+            };
+            _resurrectionFallbackThread.Start();
+            WriteDebug("[Plugin] Resurrection fallback thread started.");
+        }
+
+        private static void ResurrectionFallbackLoop()
+        {
+            DateTime lastNeedsObservedUtc = DateTime.MinValue;
+            long iterationCount = 0;
+            const int PollIntervalMs = 500;
+            const int GraceWindowMs = 4000; // 4s after NeedsResurrection observed, attempt direct revive
+            // Iter-144 #547 H6: 4-iter (2s) heartbeat — frequent enough to distinguish "Mono wedged"
+            // from "no scene events firing yet" in the post-OnDestroy gray-freeze window. Previous 10s
+            // cadence left ambiguous gaps where probe timing missed the window entirely.
+            const int HeartbeatEveryNIterations = 4;
+            WriteDebug("[Plugin] ResurrectionFallback: loop entered.");
+            while (!_resurrectionFallbackStop)
+            {
+                try
+                {
+                    Thread.Sleep(PollIntervalMs);
+                    iterationCount++;
+                    // Iter-144 #547 H5: emit periodic heartbeat to prove Mono runtime + this thread are alive.
+                    // If the gray-freeze is a native deadlock at runtime level, heartbeats stop appearing
+                    // immediately after OnDestroy. If they keep appearing, the hang is elsewhere.
+                    if (iterationCount % HeartbeatEveryNIterations == 0)
+                    {
+                        WriteDebug($"[Plugin] ResurrectionFallback heartbeat #{iterationCount} NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootNull={PersistentRoot == null}");
+                    }
+                    if (!NeedsResurrection && !NeedsDeferredResurrection)
+                    {
+                        lastNeedsObservedUtc = DateTime.MinValue;
+                        continue;
+                    }
+                    if (lastNeedsObservedUtc == DateTime.MinValue)
+                    {
+                        lastNeedsObservedUtc = DateTime.UtcNow;
+                        WriteDebug("[Plugin] ResurrectionFallback: NeedsResurrection observed, starting grace timer.");
+                        continue;
+                    }
+                    TimeSpan since = DateTime.UtcNow - lastNeedsObservedUtc;
+                    if (since.TotalMilliseconds < GraceWindowMs) continue;
+                    // Grace window exceeded with no scene-event resolution: attempt direct resurrect.
+                    if (_resurrectionLog == null || _resurrectionConfig == null)
+                    {
+                        // Plugin.Awake never completed; can't resurrect. Reset timer to retry later.
+                        WriteDebug("[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Will retry.");
+                        lastNeedsObservedUtc = DateTime.UtcNow;
+                        continue;
+                    }
+                    string sceneName = LastSceneNameForResurrection ?? "fallback-unknown";
+                    WriteDebug($"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms exceeded — invoking TryResurrect (scene='{sceneName}').");
+                    try
+                    {
+                        TryResurrect(sceneName, "ResurrectionFallbackThread");
+                        // After attempt, clear flags so we don't spin; if revive failed, scene event/poller will re-set them.
+                        NeedsResurrection = false;
+                        NeedsDeferredResurrection = false;
+                        lastNeedsObservedUtc = DateTime.MinValue;
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteDebug($"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
+                        lastNeedsObservedUtc = DateTime.UtcNow; // back off, retry next grace window
+                    }
+                }
+                catch (ThreadAbortException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    WriteDebug($"[Plugin] ResurrectionFallback loop error: {ex.Message}");
+                }
+            }
+            WriteDebug("[Plugin] Resurrection fallback thread exiting.");
         }
 
         /// <summary>
@@ -349,9 +447,17 @@ namespace DINOForge.Runtime
             // The BepInEx-managed object is being destroyed (expected in DINO).
             // The persistent root and RuntimeDriver continue running independently.
             Log?.LogInfo("[Plugin] BepInEx plugin object OnDestroy (persistent root still alive).");
-            _harmony?.UnpatchSelf();
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            WriteDebug("OnDestroy called (BepInEx object only)");
+            try { _harmony?.UnpatchSelf(); } catch (Exception ex) { WriteDebug($"OnDestroy Harmony.UnpatchSelf failed: {ex.Message}"); }
+            // Iter-144 #547 H5 gray-freeze fix: do NOT unsubscribe activeSceneChanged here.
+            // The handler is a static method on the Plugin class; the static delegate survives
+            // BepInEx Plugin instance destruction. Previously we unsubscribed here, breaking
+            // resurrection on second-and-later scene transitions (only the Win32 fallback thread
+            // could revive). Keeping the subscription live is the correct behavior — there's
+            // no leak because the target is a static method.
+            // Harmony unpatch is also deliberately skipped — runtime patches must persist across
+            // BepInEx Plugin object death since the actual functionality lives on RuntimeDriver/
+            // ModPlatform which outlive this BepInEx wrapper.
+            WriteDebug("OnDestroy called (BepInEx object only); activeSceneChanged + fallback thread persist by design (iter-144 #547).");
         }
     }
 
@@ -1204,6 +1310,14 @@ namespace DINOForge.Runtime
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
 
+            // Iter-144 #547 H5: set resurrection flags BEFORE any work that could wedge. If
+            // ShutdownNonBridge or any subsequent teardown step deadlocks the main thread, the
+            // resurrection flag has already been observed by the Win32 fallback thread + the
+            // activeSceneChanged subscriber (kept alive across BepInEx Plugin instance death).
+            Plugin.NeedsResurrection = true;
+            Plugin.NeedsDeferredResurrection = true;
+            Plugin.PersistentRoot = null;
+
             // Honest reporting (iter-144 #535 re-fix): the previous "Bridge kept alive" claim was
             // misleading. What actually happens at this point:
             //   - The background polling thread (which runs OnWorldReady, catalog rebuild, world
@@ -1214,7 +1328,8 @@ namespace DINOForge.Runtime
             //   - The GameBridgeServer thread (IsBackground=false, owned by Plugin.SharedBridgeServer)
             //     DOES survive. Verified at log time below. New requests sit in the pipe queue and
             //     will be serviced once TryResurrect installs a new pump.
-            // Resurrection is initiated by SceneManager.sceneLoaded + the background-poll deferred path.
+            // Resurrection is initiated by SceneManager.activeSceneChanged (iter-144 #546 fix) +
+            // a Win32 fallback thread (Plugin.ResurrectionFallbackLoop) + the background-poll deferred path.
             bool bridgeThreadAlive = false;
             try
             {
@@ -1225,18 +1340,43 @@ namespace DINOForge.Runtime
             WriteDebug(
                 "[RuntimeDriver] OnDestroy: background poll stopped, main-thread pump idle until resurrection. " +
                 $"BridgeServerThreadAlive={bridgeThreadAlive}. NeedsResurrection set; awaiting scene transition.");
-            Plugin.NeedsResurrection = true;
-            Plugin.NeedsDeferredResurrection = true; // Belt-and-suspenders: next BG poll on a new driver will also retry
-            Plugin.PersistentRoot = null;
             // IMPORTANT: Do NOT call _modPlatform.Shutdown() here.
             // The bridge server runs on its own thread and must survive RuntimeDriver destruction.
             // It will be reattached when TryResurrect creates a new RuntimeDriver.
-            // Only shut down file watchers and HMR (they depend on the MonoBehaviour lifecycle).
+            // Iter-144 #547 H5: dispatch ShutdownNonBridge to a worker thread so this OnDestroy
+            // returns immediately. The dispose work (file watcher + HMR cleanup) is non-essential
+            // for resurrection and was previously the suspect for native deadlock. Running it on
+            // a background thread releases Unity's destruction pump even if dispose work wedges.
             try
             {
-                _modPlatform?.ShutdownNonBridge();
+                ModPlatform? mp = _modPlatform;
+                if (mp != null)
+                {
+                    WriteDebug("[RuntimeDriver] OnDestroy: dispatching ShutdownNonBridge to worker thread.");
+                    Thread shutdownWorker = new Thread(() =>
+                    {
+                        try
+                        {
+                            mp.ShutdownNonBridge();
+                            WriteDebug("[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge completed.");
+                        }
+                        catch (Exception ex)
+                        {
+                            WriteDebug($"[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge threw {ex.GetType().Name}: {ex.Message}");
+                        }
+                    })
+                    {
+                        Name = "DINOForge.ShutdownNonBridge",
+                        IsBackground = true,
+                    };
+                    shutdownWorker.Start();
+                }
             }
-            catch { } // safe-swallow: cleanup, non-fatal even if shutdown fails
+            catch (Exception ex)
+            {
+                WriteDebug($"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
+            }
+            WriteDebug("[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
         }
     }
 }

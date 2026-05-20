@@ -396,6 +396,17 @@ namespace DINOForge.Runtime
         /// <returns>The result of the load operation.</returns>
         public ContentLoadResult LoadPacks()
         {
+            // Iter-144 #547 H6 gray-freeze fix: short-circuit if RuntimeDriver is being destroyed.
+            // Pack-load can race scene teardown — a new RuntimeDriver may attempt LoadPacks while
+            // the previous one's OnDestroy chain is still running and disposing shared state
+            // (PackFileWatcher, HotReloadBridge, AssetBundleCache). Cleanly skipping prevents
+            // partial state corruption that wedged the main thread post-OnDestroy.
+            if (RuntimeDriver.IsBeingDestroyed)
+            {
+                _log?.LogWarning("[ModPlatform] Skipping LoadPacks — RuntimeDriver.IsBeingDestroyed=true (H6 race guard).");
+                return ContentLoadResult.Failure(
+                    new List<string> { "LoadPacks aborted — RuntimeDriver being destroyed" }.AsReadOnly());
+            }
             if (!_initialized || _contentLoader == null || _registryManager == null)
             {
                 _log.LogError("[ModPlatform] Cannot load packs - not initialized.");

@@ -107,8 +107,33 @@ namespace DINOForge.Runtime.Bridge
                 return;
             }
 
-            World? currentWorld = World.DefaultGameObjectInjectionWorld;
+            // Iter-144 #547 H5: defensive checks BEFORE IsBeingDestroyed. The world can be torn down
+            // by DINO ~1.6s before our OnDestroy hook fires (observed in iter-144 probe). Validate
+            // EntityManager + World directly, since DINO's native teardown happens before our flag flips.
+            if (em == default)
+            {
+                WriteDebug("VanillaCatalog.Build: aborted — EntityManager is default (uninitialized)");
+                return;
+            }
+            World? currentWorld;
+            try
+            {
+                currentWorld = em.World;
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"VanillaCatalog.Build: aborted — EntityManager.World threw {ex.GetType().Name}: {ex.Message}");
+                return;
+            }
             if (currentWorld == null || !currentWorld.IsCreated)
+            {
+                WriteDebug("VanillaCatalog.Build: aborted — em.World null or not created (world torn down)");
+                return;
+            }
+            // Cross-check the default world is also alive (some pathways pass an em whose World
+            // is stale; the Default world is what DINO actually drives).
+            World? defaultWorld = World.DefaultGameObjectInjectionWorld;
+            if (defaultWorld == null || !defaultWorld.IsCreated)
             {
                 WriteDebug("VanillaCatalog.Build: aborted — Default world null or not created");
                 return;

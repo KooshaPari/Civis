@@ -29,6 +29,14 @@ public class MockGameServerTests
     /// WHEN the server starts
     /// THEN PipeName is exposed and accessible
     /// </summary>
+    /// <remarks>
+    /// Iter-144 fix (7de6fd37) changed the default pipe name from the fixed
+    /// "dinoforge-game-bridge" (which collided with the live runtime pipe) to
+    /// a per-instance GUID-suffixed name "dinoforge-mock-{Guid:N}". This test
+    /// asserts the new default shape rather than the literal string so each
+    /// MockGameBridgeServer instance owns its own pipe and parallel tests
+    /// cannot collide on a shared listener.
+    /// </remarks>
     [Fact]
     public async Task Server_Starts_ExposesPipeName()
     {
@@ -43,7 +51,8 @@ public class MockGameServerTests
 
             // Assert
             pipeName.Should().NotBeNullOrWhiteSpace();
-            pipeName.Should().Be("dinoforge-game-bridge");
+            pipeName.Should().StartWith("dinoforge-mock-",
+                "iter-144 #544 changed default pipe name to unique GUID-suffixed form");
         }
         finally
         {

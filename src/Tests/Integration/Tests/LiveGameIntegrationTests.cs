@@ -12,14 +12,17 @@ namespace DINOForge.Tests.Integration.Tests;
 /// Live game integration tests that require a running game instance.
 /// These tests connect to the actual game via the IPC bridge and test
 /// real game functionality.
-/// 
+///
 /// Prerequisites:
 /// - Game must be running with DINOForge Runtime plugin loaded
 /// - Game must be at the main menu or in gameplay
 /// - MCP bridge must be listening on the named pipe
-/// 
-/// To skip these tests when game is not available, they check GameAvailable
-/// and return early if the game cannot be reached.
+///
+/// When the game is not available, tests are skipped via Skip.IfNot()
+/// using the [SkippableFact] attribute (Xunit.SkippableFact). This mirrors
+/// the iter-144 7de6fd37 pattern landed for ScreenshotFallbackTests so
+/// CI runs (where DINO is never present) record SKIP rather than fail
+/// or hang.
 /// </summary>
 [Trait("Category", "LiveGame")]
 [Trait("RequiresGame", "true")]
@@ -34,18 +37,27 @@ public class LiveGameIntegrationTests : IDisposable
         _tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dinoforge_live_test_{Guid.NewGuid():N}");
         System.IO.Directory.CreateDirectory(_tempDir);
 
-        // Try to connect to the game
+        // Try to connect to the game. Use a short connect timeout so that
+        // CI environments (where DINO is never running) skip immediately
+        // instead of blocking the test-runner constructor for minutes.
         _client = new GameClient();
         try
         {
-            _client.ConnectAsync().GetAwaiter().GetResult();
+            _client.ConnectAsync(connectTimeout: TimeSpan.FromSeconds(2))
+                .GetAwaiter().GetResult();
             _gameAvailable = _client.IsConnected;
         }
         catch
         {
             _gameAvailable = false;
+            try { _client?.Dispose(); } catch { /* best-effort */ }
             _client = null;
         }
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_gameAvailable, "DINO not available — live-game integration test skipped.");
     }
 
     public void Dispose()
@@ -74,11 +86,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we connect to the IPC bridge
     /// THEN the connection succeeds and we can ping the game
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void LiveGame_ConnectToBridge_Succeeds()
     {
-        // Skip if game not available - this is expected in CI
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         _client.Should().NotBeNull("game client should be initialized");
         _client!.IsConnected.Should().BeTrue("should be connected to game bridge");
@@ -89,10 +100,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we ping the game
     /// THEN we get a valid pong response with game info
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_Ping_ReturnsPong()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.PingAsync();
 
@@ -109,10 +120,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we get the game status
     /// THEN the status reflects the actual game state
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_GetStatus_ReturnsGameState()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var status = await _client!.StatusAsync();
 
@@ -129,10 +140,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query the catalog
     /// THEN we get the full entity catalog
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_GetCatalog_ReturnsEntities()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var catalog = await _client!.GetCatalogAsync();
 
@@ -145,10 +156,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query for units
     /// THEN we get unit entities with stats
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_QueryUnits_ReturnsUnitData()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.QueryEntitiesAsync("Unit", null);
 
@@ -165,10 +176,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we read a unit stat
     /// THEN we get a stat result (value may be 0 if unit not found)
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_ReadStat_ReturnsResult()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var stat = await _client!.GetStatAsync("unit.stats.hp", null);
 
@@ -181,10 +192,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we apply a stat override
     /// THEN the override is applied to matching entities
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_ApplyOverride_Succeeds()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.ApplyOverrideAsync("unit.stats.hp", 999f, "override", null);
 
@@ -201,10 +212,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we reload packs
     /// THEN the reload succeeds and packs are reloaded
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_ReloadPacks_Succeeds()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.ReloadPacksAsync(null);
 
@@ -217,10 +228,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we verify DINOForge Runtime is loaded
     /// THEN we get a verify result (loaded may be false if mod not injected)
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_VerifyMod_ReturnsResult()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.VerifyModAsync("DINOForge.Runtime");
 
@@ -238,10 +249,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query resources
     /// THEN we get the current resource state
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_GetResources_ReturnsResources()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var resources = await _client!.GetResourcesAsync();
 
@@ -258,10 +269,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we get the component map
     /// THEN we get the SDK to ECS component mappings
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_GetComponentMap_ReturnsMappings()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.GetComponentMapAsync(null);
 
@@ -278,10 +289,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we wait for the world to be ready
     /// THEN the world is reported as ready
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_WaitForWorld_IsReady()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.WaitForWorldAsync(1000);
 
@@ -294,10 +305,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we query entities
     /// THEN we get entity counts
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_QueryEntities_ReturnsEntities()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var result = await _client!.QueryEntitiesAsync("Unit", null);
 
@@ -314,10 +325,10 @@ public class LiveGameIntegrationTests : IDisposable
     /// WHEN we take a screenshot
     /// THEN the screenshot is captured
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task LiveGame_Screenshot_Succeeds()
     {
-        if (!_gameAvailable) return;
+        SkipIfGameNotAvailable();
 
         var screenshotPath = System.IO.Path.Combine(_tempDir, "test_screenshot.png");
         var result = await _client!.ScreenshotAsync(screenshotPath);

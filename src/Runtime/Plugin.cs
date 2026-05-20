@@ -127,6 +127,7 @@ namespace DINOForge.Runtime
             {
                 _harmony = new Harmony(PluginInfo.GUID);
                 Bridge.DestroyGuardPatch.Apply(_harmony);
+                Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
                 UI.ModsButtonTextPatch.Apply(_harmony);
                 Log.LogInfo("Harmony initialized and patches applied.");
             }

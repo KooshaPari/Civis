@@ -1357,6 +1357,24 @@ namespace DINOForge.Runtime
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
 
+            // Iter-144 #547 gray-freeze ROOT CAUSE fix: WinDbg analysis revealed the main thread
+            // was parked in mono_jit_cleanup → mono_threads_set_shutting_down waiting on the
+            // bridge thread stuck in synchronous ConnectNamedPipe. Force-cancel the bridge accept
+            // loop NOW (synchronously) before any other teardown work, so the kernel I/O unblocks
+            // and mono_jit_cleanup can complete cleanly at process exit. The bridge's
+            // RequestShutdown() disposes the current pipe handle, which yields ObjectDisposedException
+            // on the BeginWaitForConnection IAsyncResult and lets the accept loop exit.
+            // (docs/sessions/iter144-windbg-wedge-stack.md)
+            try
+            {
+                Plugin.SharedBridgeServer?.RequestShutdown();
+                WriteDebug("[RuntimeDriver] OnDestroy: GameBridgeServer.RequestShutdown() invoked (sync pipe unwedge).");
+            }
+            catch (Exception ex)
+            {
+                WriteDebug($"[RuntimeDriver] OnDestroy: RequestShutdown failed (non-fatal): {ex.GetType().Name}: {ex.Message}");
+            }
+
             // Iter-144 #547 H5: belt-and-suspenders — the resurrection flags were already set above,
             // but null the field reference explicitly so the next check sees a true managed null
             // (not a Unity fake-null) on subsequent activeSceneChanged callbacks.

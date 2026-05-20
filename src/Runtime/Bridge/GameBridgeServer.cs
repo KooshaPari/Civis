@@ -143,20 +143,37 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Iter-144 #547 gray-freeze ROOT CAUSE fix: signals shutdown and disposes the current
+        /// pipe handle synchronously to unblock the kernel-mode ConnectNamedPipe wait that was
+        /// parking the bridge thread in mono_jit_cleanup. Safe to call from Unity OnDestroy at
+        /// the TOP of teardown, BEFORE mono_threads_set_shutting_down tries to interrupt the
+        /// blocked thread. WinDbg analysis (docs/sessions/iter144-windbg-wedge-stack.md)
+        /// identified the synchronous ConnectNamedPipe syscall on thread 82 as the wedge.
+        /// </summary>
+        public void RequestShutdown()
+        {
+            _running = false;
+            try { _shutdownEvent.Set(); } catch { /* safe-swallow: event disposed during shutdown race */ }
+
+            // Dispose the pipe handle synchronously — this unblocks the kernel I/O
+            // (BeginWaitForConnection / WaitForConnectionAsync) with ObjectDisposedException.
+            try
+            {
+                NamedPipeServerStream? pipe = _currentPipe;
+                _currentPipe = null;
+                pipe?.Dispose();
+            }
+            catch { /* safe-swallow: pipe dispose during shutdown — kernel I/O will unblock */ }
+
+            WriteDebug("[GameBridgeServer] shutdown requested — pipe disposed, accept loop will exit.");
+        }
+
+        /// <summary>
         /// Stops the server and releases all resources.
         /// </summary>
         public void Stop()
         {
-            _running = false;
-            _shutdownEvent.Set();  // Signal polling loop to wake up
-
-            try
-            {
-                _currentPipe?.Dispose();
-            }
-            catch { /* safe-swallow: pipe disposal during shutdown can race with server loop */ }
-
-            _currentPipe = null;
+            RequestShutdown();
 
             try
             {
@@ -232,16 +249,36 @@ namespace DINOForge.Runtime.Bridge
                     // Allow multiple server instances so that after a ThreadAbortException
                     // + ResetAbort cycle, a new pipe can be created even if the old one
                     // hasn't been fully disposed yet.
+                    // Iter-144 #547 gray-freeze ROOT CAUSE fix: use PipeOptions.Asynchronous so
+                    // BeginWaitForConnection returns an IAsyncResult whose WaitHandle can be
+                    // multiplexed with _shutdownEvent. The previous synchronous WaitForConnection
+                    // parked this thread in kernel-mode ConnectNamedPipe; Mono could not interrupt
+                    // it, causing mono_jit_cleanup to wait forever on the bridge thread at the
+                    // MainMenu transition (WinDbg dump: docs/sessions/iter144-windbg-wedge-stack.md).
                     pipe = new NamedPipeServerStream(
                         PipeName,
                         PipeDirection.InOut,
                         NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
-                        PipeOptions.None);
+                        PipeOptions.Asynchronous);
 
                     _currentPipe = pipe;
-                    WriteDebug("[GameBridgeServer] Waiting for connection...");
-                    pipe.WaitForConnection();
+                    WriteDebug("[GameBridgeServer] Waiting for connection (async-cancellable)...");
+
+                    IAsyncResult connectAr = pipe.BeginWaitForConnection(null, null);
+                    WaitHandle[] handles = { connectAr.AsyncWaitHandle, _shutdownEvent.WaitHandle };
+                    int sigIdx = WaitHandle.WaitAny(handles);
+                    if (sigIdx == 1 || !_running)
+                    {
+                        // Shutdown signaled — dispose pipe to unblock the pending I/O cleanly.
+                        WriteDebug("[GameBridgeServer] pipe disposed, accept loop exiting (shutdown).");
+                        try { pipe.Dispose(); } catch { /* safe-swallow: pipe dispose during shutdown */ }
+                        _currentPipe = null;
+                        return;
+                    }
+
+                    // Connection completed — call EndWaitForConnection to observe any exception.
+                    pipe.EndWaitForConnection(connectAr);
                     WriteDebug("[GameBridgeServer] Client connected.");
 
                     WriteDebug("[GameBridgeServer] Setting up line reader");

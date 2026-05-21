@@ -32,7 +32,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["content", "balance", "ruleset", "total_conversion", "utility"],
+      "enum": ["content", "balance", "ruleset", "scenario", "total_conversion", "utility"],
       "description": "Pack type category."
     },
     "description": {
@@ -75,7 +75,17 @@
         "wave_templates": { "type": "array", "items": { "type": "string" } },
         "tech_nodes": { "type": "array", "items": { "type": "string" } },
         "scenarios": { "type": "array", "items": { "type": "string" } },
-        "faction_patches": { "type": "array", "items": { "type": "string" }, "description": "Faction patch definition IDs to apply to existing factions." }
+        "faction_patches": { "type": "array", "items": { "type": "string" }, "description": "Faction patch definition IDs to apply to existing factions." },
+        "economy_profiles": { "type": "array", "items": { "type": "string" }, "description": "M6 Economy profile definition file paths." },
+        "resources": { "type": "array", "items": { "type": "string" }, "description": "M6 Economy resource definition file paths." },
+        "trade_routes": { "type": "array", "items": { "type": "string" }, "description": "M6 Economy trade route definition file paths." },
+        "stats": { "type": "array", "items": { "type": "string" }, "description": "Stat override definition file paths." },
+        "waves": { "type": "array", "items": { "type": "string" }, "description": "Wave definition file paths." },
+        "hud_elements": { "type": "array", "items": { "type": "string" }, "description": "M11 UI HUD element definition file paths." },
+        "menus": { "type": "array", "items": { "type": "string" }, "description": "M11 UI menu definition file paths." },
+        "themes": { "type": "array", "items": { "type": "string" }, "description": "M11 UI theme definition file paths." },
+        "ui_themes": { "type": "array", "items": { "type": "string" }, "description": "M11 UI theme definition file paths (alternate naming)." },
+        "ui_overlays": { "type": "array", "items": { "type": "string" }, "description": "M11 UI overlay definition file paths." }
       },
       "additionalProperties": false
     },

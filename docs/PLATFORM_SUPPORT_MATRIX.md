@@ -341,8 +341,8 @@ Each platform build includes:
 
 ## Related Documentation
 
-- [CLAUDE.md](../CLAUDE.md) — Agent governance and .NET version policy
-- [Build Commands](../CLAUDE.md#build-commands) — Standard build invocations
+- [CLAUDE.md](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md) — Agent governance and .NET version policy
+- [Build Commands](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md#build-commands) — Standard build invocations
 - [.github/workflows/polyglot-build.yml](../.github/workflows/polyglot-build.yml) — CI configuration
 - [.github/workflows/build.yml](../.github/workflows/build.yml) — Main C# build workflow
 

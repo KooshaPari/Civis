@@ -262,7 +262,7 @@ DINOForge settings are stored in: `%LOCALAPPDATA%\DINOForge\config.json`
 - **User Account Control (UAC)**: The installer requires administrator privileges. If you see UAC prompts, click "Yes" to allow installation.
 - **Windows Defender**: Sometimes flags game modifications. You may need to add exceptions for the game directory.
 - **Antivirus**: Some antivirus software blocks file modifications in `Program Files`. Disable scans temporarily during deployment, or use alternate Steam library paths.
-- **Multiple Game Instances**: To run two game instances simultaneously (for testing), set `GameInstallPath` to different directories. See [Game Launch Protocol](/docs/CLAUDE.md#game-launch-protocol).
+- **Multiple Game Instances**: To run two game instances simultaneously (for testing), set `GameInstallPath` to different directories. See [Game Launch Protocol](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md#game-launch-protocol-via-subagent).
 
 ## Next Steps
 

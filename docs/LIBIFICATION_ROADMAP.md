@@ -347,6 +347,6 @@ A: All libified components follow semantic versioning aligned with main DINOForg
 ## See Also
 
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — Package consumption guide
-- [README.md](../README.md) — NuGet packages section
-- [CHANGELOG.md](../CHANGELOG.md) — Per-release libification notes
+- [README.md](https://github.com/KooshaPari/Dino/blob/main/README.md) — NuGet packages section
+- [CHANGELOG.md](https://github.com/KooshaPari/Dino/blob/main/CHANGELOG.md) — Per-release libification notes
 - [.github/workflows/release.yml](../.github/workflows/release.yml) — Automated publishing pipeline

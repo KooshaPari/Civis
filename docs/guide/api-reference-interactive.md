@@ -601,4 +601,4 @@ The MCP (Model Context Protocol) server provides JSON-RPC tools for game automat
 - **Hot Reload**: Use hot reload during development to iterate quickly. It preserves entity state and game progress while updating content.
 - **JSON-RPC Calls**: The MCP server is HTTP-based on port 8765. All method calls are JSON-RPC 2.0 compliant.
 
-For more detailed API documentation, see the [Registry API Reference](/api/registry), [Domain Plugins](/concepts/domain-plugins), and [MCP Tools](/guide/mcp-bridge).
+For more detailed API documentation, see the [Registry API Reference](/api/registry), [Architecture Overview](/concepts/architecture), and [MCP Tools](/guide/mcp-bridge).

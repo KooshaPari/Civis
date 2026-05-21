@@ -1,7 +1,7 @@
 id: PACK_ID
 name: PACK_NAME
 version: 0.1.0
-framework_version: ">=0.3.0 <1.0.0"
+framework_version: ">=0.24.0 <0.26.0"
 author: PACK_AUTHOR
 type: PACK_TYPE
 description: |

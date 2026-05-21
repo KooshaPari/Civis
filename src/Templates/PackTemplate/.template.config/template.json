@@ -27,12 +27,13 @@
     },
     "PackType": {
       "type": "parameter",
-      "description": "Pack type: content, balance, ruleset, total_conversion, utility",
+      "description": "Pack type: content, balance, ruleset, scenario, total_conversion, utility",
       "datatype": "choice",
       "choices": [
         {"choice": "content"},
         {"choice": "balance"},
         {"choice": "ruleset"},
+        {"choice": "scenario"},
         {"choice": "total_conversion"},
         {"choice": "utility"}
       ],

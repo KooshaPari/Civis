@@ -267,7 +267,7 @@ dotnet clean src/DINOForge.sln
 dotnet build src/DINOForge.sln -c Release
 ```
 
-**Reference**: See [.NET Version Policy in CLAUDE.md](../../CLAUDE.md#net-version-policy-mandatory--do-not-change-without-checking)
+**Reference**: See [.NET Version Policy in CLAUDE.md](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md#net-version-policy-mandatory--do-not-change-without-checking)
 
 ---
 
@@ -422,7 +422,7 @@ If your issue isn't covered above:
 1. **Check the debug log**: `BepInEx/dinoforge_debug.log` (detailed) and `BepInEx/LogOutput.log` (exception traces)
 2. **Search the issue tracker**: [github.com/KooshaPari/Dino/issues](https://github.com/KooshaPari/Dino/issues)
 3. **Consult the reference docs**:
-   - [CLAUDE.md - Governance & Architecture](../../CLAUDE.md)
+   - [CLAUDE.md - Governance & Architecture](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md)
    - [Modding DX Reference](/reference/modding-dx-reference)
    - [ECS Bridge Layer](/concepts/ecs-bridge)
 4. **File a new issue** with your `dinoforge_debug.log` and pack YAML attached

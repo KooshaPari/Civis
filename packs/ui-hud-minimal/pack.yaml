@@ -1,7 +1,7 @@
 id: ui-hud-minimal
 name: UI HUD Minimal
 version: 0.1.0
-framework_version: ">=0.11.0 <1.0.0"
+framework_version: ">=0.11.0 <0.26.0"
 author: DINOForge Agents
 description: Minimal UI pack with essential HUD elements, menus, and dark theme.
 type: content

@@ -10,7 +10,7 @@
 id: warfare-starwars
 name: Star Wars - Clone Wars
 version: 0.1.0
-framework_version: ">=0.1.0"
+framework_version: ">=0.5.0 <0.26.0"
 author: DINOForge
 description: |
   A total conversion transporting DINO into the Star Wars universe during the Clone Wars. Command the clone trooper legions of the Galactic Republic against the mechanized forces of the Separatist Confederacy.

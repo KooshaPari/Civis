@@ -4,7 +4,7 @@
 id: warfare-modern
 name: Modern Warfare
 version: 0.2.0
-framework_version: ">=0.1.0 <1.0.0"
+framework_version: ">=0.1.0 <0.26.0"
 author: DINOForge
 description: |
   A total conversion replacing DINO's fantasy armies with contemporary military forces. Deploy modern infantry, vehicles, and artillery in asymmetric warfare between NATO-inspired Western Alliance and a technologically-advanced adversary.

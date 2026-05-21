@@ -26,6 +26,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
 
+    <!-- Centralized version from VERSION file (single source of truth) -->
+    <DinoForgeVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</DinoForgeVersion>
+    <Version Condition="'$(Version)' == ''">$(DinoForgeVersion)</Version>
+    <PackageVersion Condition="'$(PackageVersion)' == ''">$(DinoForgeVersion)</PackageVersion>
+
     <!-- MinVer: git-tag-based versioning for all projects -->
     <!-- Disable MinVer in MSYS2 bash due to crash issues with native binary execution -->
     <DisableMinVer Condition="'$(OS)' == 'Windows_NT' and '$(MSYSTEM)' != ''">true</DisableMinVer>
@@ -64,5 +69,29 @@
   <!-- MinVer: git-tag-based versioning for all projects -->
   <ItemGroup>
     <PackageReference Include="MinVer" Version="7.*" PrivateAssets="All" Condition="'$(DisableMinVer)' != 'true'" />
+  </ItemGroup>
+
+  <!-- #864: SourceLink + Deterministic build flags for NuGet packages -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- #823: Centralized NuGet metadata for all packable projects -->
+    <!-- Individual csprojs may still override; these are the shared defaults. -->
+    <Authors>KooshaPari (DINOForge maintainers)</Authors>
+    <Company>KooshaPari</Company>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>dinoforge;dino;moddable;modding;sdk;unity;ecs</PackageTags>
+    <Copyright>Copyright (c) 2026 KooshaPari</Copyright>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>

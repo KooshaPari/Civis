@@ -60,7 +60,7 @@ This file accumulates per-iteration updates from the audit-rotation methodology 
 
 **Symptom:** User reported game is "completely unresponsive" after v0.23.0 release deployed to production. Expected: game launches with fresh DLL. Actual: game hung on black screen with 4-day-stale plugin DLL.
 
-**Root Cause:** `src/Runtime/DINOForge.Runtime.csproj` had `&lt;TargetFramework&gt;netstandard2.0</TargetFramework>` (likely post-v0.23.0 merge accident). DeployToGame MSBuild task expects binaries in `bin\net8.0\Release\` — when TFM is netstandard, output lands in `bin\netstandard2.0\Release\`, bypassing the copy logic entirely. Build exit code = 0 (successful compile), but deployment silently fails. User gets no error signal.
+**Root Cause:** `src/Runtime/DINOForge.Runtime.csproj` had `&lt;TargetFramework&gt;netstandard2.0&lt;/TargetFramework&gt;` (likely post-v0.23.0 merge accident). DeployToGame MSBuild task expects binaries in `bin\net8.0\Release\` — when TFM is netstandard, output lands in `bin\netstandard2.0\Release\`, bypassing the copy logic entirely. Build exit code = 0 (successful compile), but deployment silently fails. User gets no error signal.
 
 **Timeline:**
 - v0.23.0 released successfully (TFM verified net8.0)
@@ -72,7 +72,7 @@ This file accumulates per-iteration updates from the audit-rotation methodology 
 
 ### Major Closes
 
-- **Runtime TFM fix:** `&lt;TargetFramework&gt;net8.0</TargetFramework>` restored + verified in Release.yml pre-commit gate.
+- **Runtime TFM fix:** `&lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;` restored + verified in Release.yml pre-commit gate.
 - **CI guard wired:** `.github/workflows/validate-tfm.yml` added. Fails release if Runtime TFM != net8.0 (prevents recurrence).
 - **Fresh DLL deployed:** `dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true` run immediately. Game now responsive.
 - **#408 BridgeReceipt JsonProperty:** JsonProperty attribute corrected to snake_case (`serialize_result`). 1 test added.
@@ -2080,7 +2080,7 @@ Both audited as CLEAN. MainThreadDispatcher is a thread-safe action queue (no ba
 `Plugin.cs:637-683` (StartHmrWatcher) runs a `while (true)` ThreadPool worker WITHOUT checking the `_destroyed` flag. The sibling thread at `Plugin.cs:703-786` (StartBackgroundPollingThread) DOES check `_destroyed` at line 786 and breaks. So on scene load/unload cycles, HMR watcher accumulates threads in ThreadPool. The asymmetry is the smoking gun — the symmetric fix exists in the sibling. Easy mechanical fix: add `if (_destroyed) break;` at the top of the HMR loop body.
 
 ### ❌ Task #144 (new): ArchitectureTests.cs build error
-Agent noted: "Pre-existing test suite has unrelated error in ArchitectureTests.cs (InvalidOperationException missing using directive)". Likely introduced when #138's meta-test (`CiYml_RunsAllTestCategories_WithoutFilter`) added `throw new InvalidOperationException(...)`. Two-line fix: add `using System;` or rely on `&lt;ImplicitUsings&gt;enable</ImplicitUsings>`. Minor.
+Agent noted: "Pre-existing test suite has unrelated error in ArchitectureTests.cs (InvalidOperationException missing using directive)". Likely introduced when #138's meta-test (`CiYml_RunsAllTestCategories_WithoutFilter`) added `throw new InvalidOperationException(...)`. Two-line fix: add `using System;` or rely on `&lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;`. Minor.
 
 ### Pattern catalog state
 - Pattern #16 (NEW): **Asymmetric guard between sibling threads** — instance: HMR watcher loop missing `_destroyed` check while sibling has it. Caught by side-by-side comparison. New pattern category surfaced this iteration.

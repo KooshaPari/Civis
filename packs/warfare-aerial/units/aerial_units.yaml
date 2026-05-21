@@ -211,14 +211,14 @@
     accuracy: 0.75
     fire_rate: 1.5
     morale: 200.0
-  # Phoenix respawns - special behavior handled by ECS
-  cost:
-    food: 150
-    wood: 40
-    stone: 20
-    iron: 80
-    gold: 120
-    population: 3
+    # Phoenix respawns - special behavior handled by ECS
+    cost:
+      food: 150
+      wood: 40
+      stone: 20
+      iron: 80
+      gold: 120
+      population: 3
   aerial:
     cruise_altitude: 25.0
     ascend_speed: 10.0
@@ -307,13 +307,13 @@
     accuracy: 0.7
     fire_rate: 1.8
     morale: 999.0  # Undead never breaks
-  cost:
-    food: 0
-    wood: 0
-    stone: 10
-    iron: 40
-    gold: 60
-    population: 2
+    cost:
+      food: 0
+      wood: 0
+      stone: 10
+      iron: 40
+      gold: 60
+      population: 2
   aerial:
     cruise_altitude: 18.0
     ascend_speed: 8.0

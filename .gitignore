@@ -7,6 +7,9 @@ build/
 *.exe
 *.pdb
 
+# Memory dumps (forensic artifacts — never commit; archive locally)
+*.dmp
+
 # IDE
 .vs/
 .idea/
@@ -126,3 +129,16 @@ ui_test_run.log
 scripts/asset_download_web.log
 installer-gui.pp.xml
 src/Runtime/DINOForge.Runtime.pp.xml
+
+# #557/#558: API smoke-test receipts — ephemeral, may contain redacted-but-leakable keys.
+# Never commit; regenerate locally via scripts/proof/test-*.ps1
+docs/proof/fireworks-kimi-smoke-receipt.md
+docs/proof/*-smoke-receipt.md
+
+# #560: Push-attempt log scaffolding from iter-144 wave-1 thrash — ephemeral session debris,
+# polluted repo root. Pattern matches all push-wave*.log files (12 currently present).
+push-wave*.log
+# #560: Stray empty log file from MyEasy mod or installer fixture.
+myeasylog.log
+# #560: Generated PR body templates — drafted before push, not commit content.
+.git-pr-body-*.md

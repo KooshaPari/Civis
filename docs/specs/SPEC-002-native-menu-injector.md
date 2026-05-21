@@ -3,7 +3,7 @@
 **Status**: Accepted
 **Date**: 2026-03-24
 **Author**: DINOForge Agents
-**Related ADR**: [ADR-002: Native Menu Injector Design](../adr/ADR-002-native-menu-injector.md)
+**Related ADR**: [ADR-015: Native Menu Injector](../adr/ADR-015-native-menu-injector.md)
 
 ---
 

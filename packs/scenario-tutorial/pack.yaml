@@ -1,7 +1,7 @@
 id: scenario-tutorial
 name: Tutorial Scenario
 version: 0.1.0
-framework_version: ">=0.1.0"
+framework_version: ">=0.7.0 <0.26.0"
 author: DINOForge Team
 type: scenario
 description: |

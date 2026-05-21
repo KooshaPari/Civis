@@ -200,7 +200,7 @@ DINOForge specifications are divided into two primary documents:
 - Asset swap Phase 1 and Phase 2
 - Hot reload for YAML content
 
-See [CHANGELOG.md](/CHANGELOG.md) for full version history.
+See [CHANGELOG.md](https://github.com/KooshaPari/Dino/blob/main/CHANGELOG.md) for full version history.
 
 ---
 
@@ -209,7 +209,7 @@ See [CHANGELOG.md](/CHANGELOG.md) for full version history.
 - **[Product Requirements Document](../product-requirements-document.md)**: High-level product goals and vision
 - **[QA Matrix](../QA_MATRIX.md)**: Testing tiers and quality gates
 - **[Project Status](../guide/project-status.md)**: Current release status and roadmap
-- **[Contributing Guidelines](../../CONTRIBUTING.md)**: How to contribute to DINOForge
+- **[Contributing Guidelines](https://github.com/KooshaPari/Dino/blob/main/CONTRIBUTING.md)**: How to contribute to DINOForge
 
 ---
 

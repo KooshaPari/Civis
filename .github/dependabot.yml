@@ -43,3 +43,93 @@ updates:
       - "dependencies"
       - "github-actions"
       - "automated"
+
+  # npm (root)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "automated"
+
+  # npm (docs - VitePress)
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "automated"
+
+  # pip (FastMCP server)
+  - package-ecosystem: "pip"
+    directory: "/src/Tools/DinoforgeMcp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "pip"
+      - "automated"
+
+  # pip (e2e tests)
+  - package-ecosystem: "pip"
+    directory: "/src/Tests/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "pip"
+      - "automated"
+
+  # cargo (phenotype-journeys workspace)
+  - package-ecosystem: "cargo"
+    directory: "/tools/phenotype-journeys"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "cargo"
+      - "automated"
+
+  # cargo (AssetPipelineRust workspace)
+  - package-ecosystem: "cargo"
+    directory: "/src/Tools/AssetPipelineRust"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "cargo"
+      - "automated"
+
+  - package-ecosystem: "gomod"
+    directory: "/src/Tools/DependencyResolver"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/scripts/companion-playwright"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/scripts/video"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

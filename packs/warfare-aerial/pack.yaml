@@ -7,7 +7,7 @@
 id: warfare-aerial
 name: Aerial Warfare Expansion
 version: 0.1.0
-framework_version: ">=0.1.0"
+framework_version: ">=0.23.0 <0.26.0"
 author: DINOForge
 description: |
   Fantasy aerial warfare expansion adding flying units and airfields to vanilla DINO factions.

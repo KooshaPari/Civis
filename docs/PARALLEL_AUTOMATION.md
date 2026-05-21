@@ -342,7 +342,7 @@ fi
 
 ## See Also
 
-- [Game Automation MCP Tools](../README.md#mcp-bridge)
-- [MCP Server Documentation](../src/Tools/DinoforgeMcp/README.md)
-- [GitHub Actions Workflow](../.github/workflows/game-automation.yml)
-- [DINO Runtime Facts](../docs/DINO_RUNTIME_FACTS.md)
+- [Game Automation MCP Tools](https://github.com/KooshaPari/Dino/blob/main/README.md#mcp-bridge)
+- [MCP Server Documentation](https://github.com/KooshaPari/Dino/blob/main/src/Tools/DinoforgeMcp/README.md)
+- [GitHub Actions Workflow](https://github.com/KooshaPari/Dino/blob/main/.github/workflows/game-automation.yml)
+- [DINO Runtime Facts](https://github.com/KooshaPari/Dino/blob/main/docs/DINO_RUNTIME_FACTS.md)

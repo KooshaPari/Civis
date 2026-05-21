@@ -37,6 +37,31 @@ public class LiveGameIntegrationTests : IDisposable
         _tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dinoforge_live_test_{Guid.NewGuid():N}");
         System.IO.Directory.CreateDirectory(_tempDir);
 
+        // Pre-push / CI bypass: skip the connect attempt entirely when explicitly disabled.
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        if (!string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0")
+        {
+            _gameAvailable = false;
+            _client = null;
+            return;
+        }
+
+        // Iter-145 (#737): mirror GameFixture / GameSandboxIntegrationTests / ParallelGameE2ETests
+        // infrastructure-availability gate. Even when DINO_DISABLE_TEST_LAUNCH is unset,
+        // dev/CI boxes that do not own the sandbox layout (G:\dino_boxes) and have not
+        // opted in via DINO_GAME_PATH must NOT attempt to connect to the game bridge.
+        // The 2s connect timeout per test still multiplies across the whole class and
+        // contributed to the bteg33tii VSTestTask stall. Gate B (this) sits after Gate A
+        // (DINO_DISABLE_TEST_LAUNCH) so explicit opt-out still wins.
+        var infrastructureAvailable = System.IO.Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        if (!infrastructureAvailable)
+        {
+            _gameAvailable = false;
+            _client = null;
+            return;
+        }
+
         // Try to connect to the game. Use a short connect timeout so that
         // CI environments (where DINO is never running) skip immediately
         // instead of blocking the test-runner constructor for minutes.

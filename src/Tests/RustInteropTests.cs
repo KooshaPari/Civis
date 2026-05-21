@@ -10,8 +10,10 @@ namespace DINOForge.Tests
     public class RustInteropTests
     {
         private const string TestAssetId = "test-asset-01";
+        // Pattern #93: Guid discriminator on the static path so two instances
+        // of this test class (xUnit class-parallelism) never share state.
         private static readonly string TestGlbPath = Path.Combine(
-            Path.GetTempPath(), "DINOForge_Test", "test_model.glb");
+            Path.GetTempPath(), "DINOForge_Test", Guid.NewGuid().ToString("N"), "test_model.glb");
 
         public RustInteropTests()
         {

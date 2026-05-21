@@ -409,5 +409,79 @@ namespace DINOForge.Tests
             // Assert
             result.Should().BeEmpty(); // bin still excluded
         }
+
+        // Regression tests for fix #852: packs/_archived/ silently re-discovered.
+        // Underscore-prefixed directories ("_archived", "_temp", "_scratch", and
+        // generally any "_*") must be excluded by default.
+
+        [Fact]
+        public void GetDirectories_UnderscoreArchived_IsExcludedByDefault()
+        {
+            // Arrange
+            var service = new FileDiscoveryService();
+            Directory.CreateDirectory(Path.Combine(_tempDir, "_archived"));
+            Directory.CreateDirectory(Path.Combine(_tempDir, "real-pack"));
+
+            // Act
+            string[] result = service.GetDirectories(_tempDir, SearchOption.TopDirectoryOnly);
+
+            // Assert
+            result.Should().HaveCount(1);
+            result[0].Should().EndWith("real-pack");
+        }
+
+        [Fact]
+        public void GetDirectories_UnderscoreTemp_IsExcludedByDefault()
+        {
+            // Arrange
+            var service = new FileDiscoveryService();
+            Directory.CreateDirectory(Path.Combine(_tempDir, "_temp"));
+            Directory.CreateDirectory(Path.Combine(_tempDir, "real-pack"));
+
+            // Act
+            string[] result = service.GetDirectories(_tempDir, SearchOption.TopDirectoryOnly);
+
+            // Assert
+            result.Should().HaveCount(1);
+            result[0].Should().EndWith("real-pack");
+        }
+
+        [Fact]
+        public void GetDirectories_UnderscoreScratch_IsExcludedByDefault()
+        {
+            // Arrange
+            var service = new FileDiscoveryService();
+            Directory.CreateDirectory(Path.Combine(_tempDir, "_scratch"));
+            Directory.CreateDirectory(Path.Combine(_tempDir, "real-pack"));
+
+            // Act
+            string[] result = service.GetDirectories(_tempDir, SearchOption.TopDirectoryOnly);
+
+            // Assert
+            result.Should().HaveCount(1);
+            result[0].Should().EndWith("real-pack");
+        }
+
+        [Fact]
+        public void DiscoverPackDirectories_UnderscoreArchivedPack_NotDiscovered()
+        {
+            // Arrange — simulates packs/_archived/old-pack/pack.yaml on disk;
+            // discovery should skip the entire _archived subtree.
+            var service = new FileDiscoveryService();
+            string archivedDir = Path.Combine(_tempDir, "_archived");
+            Directory.CreateDirectory(archivedDir);
+            File.WriteAllText(Path.Combine(archivedDir, "pack.yaml"), "id: archived\n");
+
+            string liveDir = Path.Combine(_tempDir, "live-pack");
+            Directory.CreateDirectory(liveDir);
+            File.WriteAllText(Path.Combine(liveDir, "pack.yaml"), "id: live\n");
+
+            // Act
+            string[] packs = service.DiscoverPackDirectories(_tempDir);
+
+            // Assert
+            packs.Should().HaveCount(1);
+            packs[0].Should().EndWith("live-pack");
+        }
     }
 }

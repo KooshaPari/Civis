@@ -18,6 +18,9 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ALLOWLIST_PATH = REPO_ROOT / "docs" / "qa" / "pattern-231-static-init-allowlist.txt"
+
 # Target directories (NuGet-published surfaces)
 SOURCES = [
     "src/SDK/",
@@ -25,6 +28,24 @@ SOURCES = [
     "src/Bridge/Protocol/",
     "src/Domains/",
 ]
+
+
+def load_allowlist() -> set:
+    """Load allowlist entries as set of "filepath:line" strings (POSIX paths)."""
+    allow: set = set()
+    if not ALLOWLIST_PATH.exists():
+        return allow
+    for line in ALLOWLIST_PATH.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        # Format: filepath:line_number | reason
+        entry = s.split("|", 1)[0].strip()
+        if not entry:
+            continue
+        # Normalize backslashes to forward slashes
+        allow.add(entry.replace("\\", "/"))
+    return allow
 
 # Patterns indicating I/O side effects
 IO_PATTERNS = [
@@ -119,8 +140,10 @@ def scan_file(filepath: Path) -> list:
 def main():
     """Main entry point."""
     repo_root = Path.cwd()
+    allow = load_allowlist()
 
     all_violations = defaultdict(list)
+    suppressed_count = 0
 
     for source_dir in SOURCES:
         source_path = repo_root / source_dir
@@ -134,7 +157,16 @@ def main():
 
             violations = scan_file(cs_file)
             for v in violations:
+                # Build allowlist key: "<posix-relpath>:<line>"
+                rel = str(v['file']).replace('\\', '/')
+                key = f"{rel}:{v['line']}"
+                if key in allow:
+                    suppressed_count += 1
+                    continue
                 all_violations[v['severity']].append(v)
+
+    if suppressed_count:
+        print(f"[detect_static_init_side_effect] suppressed via allowlist: {suppressed_count}")
 
     # Sort by severity and file
     high_count = len(all_violations['HIGH'])

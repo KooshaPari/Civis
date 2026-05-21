@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using DINOForge.Bridge.Protocol;
 using FluentAssertions;
@@ -23,6 +24,22 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("Category", "GameWorkflow")]
 public class GameWorkflowTests
 {
+    // #820: Pre-push gate. These tests use FakeGameWorkflowBridge (in-process mock),
+    // so they do NOT require a running DINO. Skip only when explicitly disabled via
+    // DINO_DISABLE_TEST_LAUNCH=1.
+    private readonly bool _gameAvailable;
+
+    public GameWorkflowTests()
+    {
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        _gameAvailable = string.IsNullOrEmpty(disableLaunch) || disableLaunch == "0";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_gameAvailable, "Integration tests disabled via DINO_DISABLE_TEST_LAUNCH.");
+    }
+
     // FEATURE: Save Loading via Bridge
     //
     // The CLI `load-save` command and MCP `game_navigate_to` tool
@@ -48,9 +65,10 @@ public class GameWorkflowTests
     /// The bridge does NOT load the save itself -- it creates a LoadRequest
     /// ECS singleton that DINO's SaveLoadSystem reads and acts upon.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void LoadSave_GivenMainMenu_CreatesLoadRequestEntity()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -72,9 +90,10 @@ public class GameWorkflowTests
     /// when a save is successfully loaded. If EntityCount stays at 17,
     /// the save was not loaded.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_AfterSaveLoaded_EntityCountJumpsToGameplay()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -99,9 +118,10 @@ public class GameWorkflowTests
     /// The dismiss mechanism looks for UI.LoadingProgressBar and invokes
     /// its _startAction UnityAction.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void DismissLoadScreen_GivenLoadingScreenVisible_DismissesSuccessfully()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateLoadingScreen();
 
@@ -126,9 +146,10 @@ public class GameWorkflowTests
     /// This is tested using SimulateMainMenu (no loading screen visible)
     /// rather than SimulateSaveLoaded (loading screen visible).
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void DismissLoadScreen_GivenNoLoadingScreen_ReturnsFailureGracefully()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         // SimulateMainMenu: no loading screen, at main menu
         bridge.SimulateMainMenu(entityCount: 17);
@@ -147,9 +168,10 @@ public class GameWorkflowTests
     ///
     /// This is the full end-to-end save-load-goto-gameplay sequence test.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void FullSaveLoadSequence_GivenMainMenu_EntityCountReachesGameplay()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -189,9 +211,10 @@ public class GameWorkflowTests
     /// by marking the world as ready after the first WaitForWorld call
     /// when SimulateSaveLoaded has been called.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void WaitForWorld_GivenWorldNotReady_EventuallyReportsReady()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -209,9 +232,10 @@ public class GameWorkflowTests
     /// WHEN WaitForWorld is called again
     /// THEN it must return Ready=true immediately (no polling needed).
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void WaitForWorld_GivenWorldAlreadyReady_ReturnsImmediately()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -240,9 +264,10 @@ public class GameWorkflowTests
     /// Before the fix, the CLI always output AnsiConsole markup,
     /// which the MCP server could not parse -> timeout.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void CliJsonOutput_GivenFormatJsonFlag_OutputsValidJson()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateMainMenu(entityCount: 17);
 
@@ -263,9 +288,10 @@ public class GameWorkflowTests
     /// Even when HandleStatus catches an exception and falls back to
     /// EntityCount=-1, the JSON-RPC response must be valid.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void CliJsonOutput_GivenBridgeReturnsFallback_StillOutputsValidJson()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeGameWorkflowBridge();
         bridge.SimulateFallbackState();
 

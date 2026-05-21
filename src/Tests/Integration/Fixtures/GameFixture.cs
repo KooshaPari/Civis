@@ -40,6 +40,31 @@ public sealed class GameFixture : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
+        // Pre-push / CI bypass: skip game launch entirely when explicitly disabled.
+        // Set DINO_DISABLE_TEST_LAUNCH=1 (lefthook pre-push) to prevent integration
+        // tests from launching DINO. All consumers gracefully skip via GameAvailable.
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        if (!string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0")
+        {
+            GameAvailable = false;
+            return;
+        }
+
+        // Iter-145 (#704): mirror GameSandboxIntegrationTests / ParallelGameE2ETests
+        // infrastructure-availability gate. Even when DINO_DISABLE_TEST_LAUNCH is unset,
+        // dev boxes that do not own the sandbox layout (G:\dino_boxes) and have not
+        // opted in via DINO_GAME_PATH must NOT launch the game from xUnit fixtures.
+        // Previously, finding the default Steam exe was enough to trigger a 30s connect
+        // loop + 60s world-wait per consumer class, stalling `dotnet test` beyond the
+        // 600s push watchdog. Pair with ScreenshotFallbackTests guard pattern (iter-144).
+        var infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        if (!infrastructureAvailable)
+        {
+            GameAvailable = false;
+            return;
+        }
+
         // Build list of possible game paths including DINO_GAME_PATH env var
         var allGamePaths = KnownGamePaths.ToList();
         var gamePathEnv = Environment.GetEnvironmentVariable("DINO_GAME_PATH");

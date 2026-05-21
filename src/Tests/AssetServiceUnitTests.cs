@@ -214,9 +214,13 @@ namespace DINOForge.Tests
             // Arrange
             using var service = new AssetService(_testGameDir);
 
-            // Act & Assert - should not throw
-            service.Dispose();
-            service.Dispose(); // Second dispose should be safe
+            // Act & Assert - should not throw on repeated dispose
+            var act = () =>
+            {
+                service.Dispose();
+                service.Dispose(); // Second dispose should be safe
+            };
+            act.Should().NotThrow("IDisposable.Dispose must be idempotent");
         }
 
         [Fact]

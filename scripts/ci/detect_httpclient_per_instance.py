@@ -208,10 +208,10 @@ public class Good {
     else:
         print(f"HttpClient Pattern #115 Scan Results")
         print(f"====================================")
-        print(f"Total violations: {report['total_violations']}")
-        print(f"HIGH: {report['severity_breakdown']['HIGH']}, MED: {report['severity_breakdown']['MED']}, LOW: {report['severity_breakdown']['LOW']}")
+        print(f"Total violations: {report.total_violations}")
+        print(f"HIGH: {report.severity_breakdown['HIGH']}, MED: {report.severity_breakdown['MED']}, LOW: {report.severity_breakdown['LOW']}")
         print()
-        for v in report['violations']:
+        for v in report.violations:
             print(f"{v['file']}:{v['line']} [{v['severity']}] {v['reason']}")
             print(f"  {v['code_snippet'][:80]}")
 

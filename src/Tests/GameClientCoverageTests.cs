@@ -1166,10 +1166,12 @@ public class GameClientCoverageTests
 
         // The IsRunning property should be accessible and return a boolean without throwing.
         // The value (true/false) depends on whether the game is currently running.
-        bool isRunning = manager.IsRunning;
+        var act = () => manager.IsRunning;
 
-        // Just verify no exception was thrown — value is environment-dependent
-        Assert.True(true);
+        // Assert: access does not throw; result is a bool (environment-dependent value).
+        act.Should().NotThrow("IsRunning must be safely accessible from any environment");
+        bool observed = act();
+        observed.GetType().Should().Be(typeof(bool), "IsRunning must return a concrete bool, not throw or return null");
     }
 
     [Fact]

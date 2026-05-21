@@ -123,9 +123,11 @@ PROCESS_START_RE = re.compile(
 )
 
 # ``using var <name> = Process.Start(...)`` — the IDisposable scope
-# form. Treated as the safe pattern; auto-skipped.
+# form (declaration). Also accepts the block-form
+# ``using (var <name> = Process.Start(...)) { }`` (with parens).
+# Treated as the safe pattern; auto-skipped.
 USING_DECL_RE = re.compile(
-    r"\busing\s+(?:var\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s+)?"
+    r"\busing\s*\(?\s*(?:var\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s+)?"
     r"[A-Za-z_][A-Za-z0-9_]*\s*=\s*"
     r"(?:System\.Diagnostics\.)?Process\.Start\s*\("
 )
@@ -927,9 +929,13 @@ def _self_test() -> int:  # noqa: C901
     # ``proc.Start`` (instance call on a Process instance) must NOT match.
     assert not PROCESS_START_RE.search("proc.Start(psi);")
 
-    # using-decl regex.
+    # using-decl regex. All four scope-form variants must match
+    # (statement+block × named+discard) per audit a7778085307a7e298.
     assert USING_DECL_RE.search("using var p = Process.Start(psi);")
+    assert USING_DECL_RE.search("using (var p = Process.Start(psi)) { }")
     assert USING_DECL_RE.search("using var _ = Process.Start(psi);")
+    assert USING_DECL_RE.search("using (var _ = Process.Start(psi)) { }")
+    assert USING_DECL_RE.search("using(var _=Process.Start(psi)){}")
     assert USING_DECL_RE.search(
         "            using var proc = System.Diagnostics.Process.Start(psi);"
     )

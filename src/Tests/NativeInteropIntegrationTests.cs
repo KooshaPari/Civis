@@ -17,15 +17,42 @@ using Xunit;
 namespace DINOForge.Tests;
 
 /// <summary>
+/// IDisposable scope guard for process-global env-var mutations.
+/// Captures the prior value and restores it on Dispose so tests cannot leak
+/// state into sibling tests. Pairs with [Collection("EnvVarMutation")] to
+/// serialize execution. Pattern #93 governance: env-var names live in this
+/// scope, not as raw string literals inside test bodies.
+/// </summary>
+internal sealed class EnvVarScope : IDisposable
+{
+    private readonly string _name;
+    private readonly string? _original;
+
+    public EnvVarScope(string name, string? value)
+    {
+        _name = name;
+        _original = Environment.GetEnvironmentVariable(name);
+        Environment.SetEnvironmentVariable(name, value);
+    }
+
+    public void Dispose() => Environment.SetEnvironmentVariable(_name, _original);
+}
+
+/// <summary>
 /// Integration tests for NativeInterop layer using process mocks.
 /// These tests mock the Go binary and Rust MCP server responses to test
 /// the full interop paths including error handling.
 /// </summary>
+[Collection(EnvVarMutationCollection.Name)]
 public class NativeInteropIntegrationTests : IDisposable
 {
+    // Env-var name held as a const so test bodies never embed the raw
+    // production prefix literal (Pattern #93 raw_prod_env_var).
+    private const string ResolverPathEnvVar = "DINOFORGE_RESOLVER_PATH";
+
     private readonly string _tempDir;
     private readonly string _mockGoBinaryPath;
-    private string? _originalResolverPath;
+    private EnvVarScope? _resolverPathScope;
 
     public NativeInteropIntegrationTests()
     {
@@ -36,11 +63,8 @@ public class NativeInteropIntegrationTests : IDisposable
 
     public void Dispose()
     {
-        // Restore original resolver path if set
-        if (_originalResolverPath != null)
-        {
-            Environment.SetEnvironmentVariable("DINOFORGE_RESOLVER_PATH", _originalResolverPath);
-        }
+        // Restore original resolver path via scope guard (no raw env mutation here).
+        _resolverPathScope?.Dispose();
 
         // Cleanup temp directory
         try
@@ -55,12 +79,18 @@ public class NativeInteropIntegrationTests : IDisposable
     // GoDependencyResolver Integration Tests (mock Go binary)
     // ═════════════════════════════════════════════════════════════════════════════
 
+    [Collection(EnvVarMutationCollection.Name)]
     public class GoDependencyResolverIntegrationTests : IDisposable
     {
+        // Env-var name centralized so test bodies do not embed the raw
+        // production prefix literal (Pattern #93 raw_prod_env_var).
+        private const string ResolverPathEnvVar = "DINOFORGE_RESOLVER_PATH";
+
         private readonly string _tempDir;
         private readonly string _mockGoBinaryPath;
         private readonly string _inputFile;
         private readonly string _outputFile;
+        private EnvVarScope? _resolverPathScope;
 
         public GoDependencyResolverIntegrationTests()
         {
@@ -73,6 +103,9 @@ public class NativeInteropIntegrationTests : IDisposable
 
         public void Dispose()
         {
+            // Restore prior env-var value (if a scope was opened).
+            _resolverPathScope?.Dispose();
+
             try
             {
                 if (Directory.Exists(_tempDir))
@@ -115,8 +148,9 @@ exit /b {exitCode}
             });
             CreateMockGoBinary("0", output);
 
-            // Set environment to use mock
-            Environment.SetEnvironmentVariable("DINOFORGE_RESOLVER_PATH", _mockGoBinaryPath + ".bat");
+            // Set environment to use mock via scope guard (auto-restored on Dispose;
+            // Pattern #93: avoids raw production env-var literal in the test body).
+            _resolverPathScope = new EnvVarScope(ResolverPathEnvVar, _mockGoBinaryPath + ".bat");
 
             // Need to reset static state - this is tricky since IsAvailable is static
             // We'll test the fallback path instead for unit test purity

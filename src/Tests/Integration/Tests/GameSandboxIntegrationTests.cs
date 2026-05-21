@@ -31,8 +31,11 @@ public class GameSandboxIntegrationTests : IDisposable
 
     public GameSandboxIntegrationTests()
     {
-        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
-            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        // Pre-push / CI bypass: when DINO_DISABLE_TEST_LAUNCH=1, treat infra as unavailable.
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        var bypass = !string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0";
+        _infrastructureAvailable = !bypass && (Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH")));
 
         _processManager = new GameProcessManager();
         _tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dinoforge_sandbox_{Guid.NewGuid():N}");
@@ -113,6 +116,12 @@ public class GameSandboxIntegrationTests : IDisposable
         }
     }
 
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_infrastructureAvailable, "DINO not available — integration test skipped.");
+        Skip.If(_client == null || !_client.IsConnected, "Game bridge not connected — integration test skipped.");
+    }
+
     private void SkipIfNotConnected()
     {
         if (_client == null || !_client.IsConnected)
@@ -153,13 +162,12 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we launch the game
     /// THEN the game process starts
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Sandbox_GameLaunch_ProcessStarts()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         // Skip if game wasn't launched (not available)
-        if (!_launchedGame)
-            return;
+        Skip.IfNot(_launchedGame, "Game was not launched — skipping.");
 
         _processManager.IsRunning.Should().BeTrue("game should be running after launch");
     }
@@ -169,13 +177,11 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we connect to the IPC bridge
     /// THEN the connection succeeds
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Sandbox_ConnectToBridge_Succeeds()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
-        _client.IsConnected.Should().BeTrue();
+        SkipIfGameNotAvailable();
+        _client!.IsConnected.Should().BeTrue();
     }
 
     /// <summary>
@@ -183,13 +189,11 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we ping the bridge
     /// THEN we get a pong response
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Ping_ReturnsPong()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
-        var result = await _client.PingAsync();
+        SkipIfGameNotAvailable();
+        var result = await _client!.PingAsync();
         result.Pong.Should().BeTrue();
     }
 
@@ -198,27 +202,23 @@ public class GameSandboxIntegrationTests : IDisposable
     /// WHEN we get the game status
     /// THEN the status shows game is running
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_GetStatus_ShowsGameRunning()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
-        var status = await _client.StatusAsync();
+        SkipIfGameNotAvailable();
+        var status = await _client!.StatusAsync();
         status.Running.Should().BeTrue();
     }
 
     /// <summary>
     /// E2E: Reload packs -> Verify mod loaded -> Check resources
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_E2E_PackReloadWorkflow()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        var reloadResult = await _client.ReloadPacksAsync(null);
+        var reloadResult = await _client!.ReloadPacksAsync(null);
         reloadResult.Should().NotBeNull();
 
         var verifyResult = await _client.VerifyModAsync("DINOForge.Runtime");
@@ -231,14 +231,12 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Start a new game from main menu
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Match_StartNewGame()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        var loadResult = await _client.LoadSaveAsync("NEW_GAME");
+        var loadResult = await _client!.LoadSaveAsync("NEW_GAME");
         loadResult.Should().NotBeNull();
 
         await _client.DismissLoadScreenAsync();
@@ -251,14 +249,12 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Query game entities by type
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Gameplay_QueryEntities()
     {
-        if (!_infrastructureAvailable) return;
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        await _client.WaitForWorldAsync(5000);
+        await _client!.WaitForWorldAsync(5000);
 
         var units = await _client.QueryEntitiesAsync("Unit", null);
         units.Should().NotBeNull();
@@ -267,13 +263,12 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Apply stat overrides during gameplay
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Gameplay_ApplyStatOverrides()
     {
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        await _client.WaitForWorldAsync(5000);
+        await _client!.WaitForWorldAsync(5000);
 
         await _client.ApplyOverrideAsync("unit.stats.hp", 500f, "override", null);
         await _client.ApplyOverrideAsync("unit.stats.damage", 50f, "override", null);
@@ -282,13 +277,12 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Hot reload content packs
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Mod_HotReloadPacks()
     {
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        var result = await _client.ReloadPacksAsync(null);
+        var result = await _client!.ReloadPacksAsync(null);
         result.Should().NotBeNull();
         // Pack reload may fail if game is in gameplay state (not main menu)
         // or if no packs are loaded — this is expected in some game states
@@ -300,27 +294,25 @@ public class GameSandboxIntegrationTests : IDisposable
     /// <summary>
     /// E2E: Take screenshot of gameplay
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_UI_TakeScreenshot()
     {
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
         var screenshotPath = System.IO.Path.Combine(_tempDir, "gameplay.png");
-        var result = await _client.ScreenshotAsync(screenshotPath);
+        var result = await _client!.ScreenshotAsync(screenshotPath);
         result.Should().NotBeNull();
     }
 
     /// <summary>
     /// E2E: Dump game state for debugging
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Sandbox_Debug_DumpState()
     {
-        if (_client == null || !_client.IsConnected)
-            return;
+        SkipIfGameNotAvailable();
 
-        var state = await _client.DumpStateAsync(null);
+        var state = await _client!.DumpStateAsync(null);
         state.Should().NotBeNull();
     }
 }

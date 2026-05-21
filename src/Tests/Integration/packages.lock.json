@@ -38,6 +38,16 @@
         "resolved": "2.8.2",
         "contentHash": "vm1tbfXhFmjFMUmS4M0J0ASXz3/U5XvXBa6DOQUL3fEz4Vt6YPhv+ESCarx6M6D+9kJkJYZKCNvJMas1+nVfmQ=="
       },
+      "Xunit.SkippableFact": {
+        "type": "Direct",
+        "requested": "[1.4.*, )",
+        "resolved": "1.4.13",
+        "contentHash": "IyzZNvJEtXGlXrzxDiSbtH5Lyxf4iJdRQADuyjGdDf00LjXRLJwIoezQNFhFGKTMtvk8IIgaSHxW4mAV4O7b8A==",
+        "dependencies": {
+          "Validation": "2.4.18",
+          "xunit.extensibility.execution": "2.4.0"
+        }
+      },
       "AssetsTools.NET": {
         "type": "Transitive",
         "resolved": "3.0.4",
@@ -1545,6 +1555,11 @@
           "System.Xml.ReaderWriter": "4.3.0"
         }
       },
+      "Validation": {
+        "type": "Transitive",
+        "resolved": "2.4.18",
+        "contentHash": "NfvWJ1QeuZ1FQCkqgXTu1cOkRkbNCfxs4Tat+abXLwom6OXbULVhRGp34BTvVB4XPxj6VIAl7KfLfStXMt/Ehw=="
+      },
       "xunit.abstractions": {
         "type": "Transitive",
         "resolved": "2.0.3",
@@ -1596,8 +1611,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.24.0, )",
-          "DINOForge.SDK": "[0.18.0, )",
+          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.25.0-dev, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -1613,33 +1628,33 @@
       "dinoforge.domains.economy": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.scenario": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.ui": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.warfare": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.runtime": {
         "type": "Project",
         "dependencies": {
           "AssetsTools.NET": "[3.0.4, )",
-          "DINOForge.Bridge.Protocol": "[0.24.0, )",
-          "DINOForge.SDK": "[0.18.0, )",
+          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.25.0-dev, )",
           "Microsoft.Bcl.TimeProvider": "[7.0.0, )"
         }
       },
@@ -1659,15 +1674,15 @@
         "dependencies": {
           "AutoFixture": "[4.*, )",
           "AutoFixture.Xunit2": "[4.*, )",
-          "DINOForge.Analyzers": "[1.0.0, )",
-          "DINOForge.Bridge.Client": "[0.24.0, )",
-          "DINOForge.Domains.Economy": "[0.18.0, )",
-          "DINOForge.Domains.Scenario": "[0.18.0, )",
-          "DINOForge.Domains.UI": "[0.18.0, )",
-          "DINOForge.Domains.Warfare": "[0.18.0, )",
-          "DINOForge.Runtime": "[1.0.0, )",
-          "DINOForge.SDK": "[0.18.0, )",
-          "DINOForge.Tools.Installer": "[0.20.0, )",
+          "DINOForge.Analyzers": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Client": "[0.25.0-dev, )",
+          "DINOForge.Domains.Economy": "[0.25.0-dev, )",
+          "DINOForge.Domains.Scenario": "[0.25.0-dev, )",
+          "DINOForge.Domains.UI": "[0.25.0-dev, )",
+          "DINOForge.Domains.Warfare": "[0.25.0-dev, )",
+          "DINOForge.Runtime": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Tools.Installer": "[0.25.0-dev, )",
           "FluentAssertions": "[6.*, )",
           "FsCheck.Xunit": "[3.*, )",
           "Microsoft.CodeAnalysis.Analyzers": "[3.*, )",
@@ -1683,8 +1698,8 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )",
-          "Octokit": "[13.*, )"
+          "DINOForge.SDK": "[0.25.0-dev, )",
+          "Octokit": "[13.0.1, )"
         }
       }
     }

@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using DINOForge.SDK.Json;
 
 namespace DINOForge.Tests
 {
@@ -17,9 +18,12 @@ namespace DINOForge.Tests
     /// </summary>
     public static class GameDiagnosticsCapture
     {
+        // Pattern #93: Guid discriminator prevents cross-process / cross-class
+        // collision when two parallel test runs (or sister classes) emit
+        // diagnostics at the same instant. Per-process unique scope.
         private static readonly string FailuresDirectory = Path.Combine(
             Environment.GetEnvironmentVariable("TEMP") ?? "C:\\temp",
-            "DINOForge", "failures");
+            "DINOForge", "failures", Guid.NewGuid().ToString("N"));
 
         private const string GameProcessName = "Diplomacy is Not an Option";
         private const string GameDir = @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option";
@@ -105,7 +109,7 @@ namespace DINOForge.Tests
                 }
 
                 var manifestJson = await File.ReadAllTextAsync(manifestFiles);
-                var manifest = JsonSerializer.Deserialize<FailureManifest>(manifestJson);
+                var manifest = JsonSerializer.Deserialize<FailureManifest>(manifestJson, JsonOptions.Default);
 
                 if (manifest == null)
                 {

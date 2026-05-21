@@ -39,20 +39,30 @@ $ErrorActionPreference = "Continue"
 
 $results = @()
 
-# Check 1: MOONSHOT_API_KEY
-$apiKey = [Environment]::GetEnvironmentVariable("MOONSHOT_API_KEY", "Process")
-if ([string]::IsNullOrWhiteSpace($apiKey)) {
+# Check 1: Judge API key (MOONSHOT_API_KEY or FIREWORKS_API_KEY) — #103: Fireworks runbook
+# needs FIREWORKS_API_KEY; either provider satisfies the external-judge requirement.
+$moonshotKey = [Environment]::GetEnvironmentVariable("MOONSHOT_API_KEY", "Process")
+$fireworksKey = [Environment]::GetEnvironmentVariable("FIREWORKS_API_KEY", "Process")
+$presentKeys = @()
+if (-not [string]::IsNullOrWhiteSpace($moonshotKey)) {
+    $masked = $moonshotKey.Substring(0, [Math]::Min(4, $moonshotKey.Length)) + "..." + $moonshotKey.Substring([Math]::Max(0, $moonshotKey.Length - 4))
+    $presentKeys += "MOONSHOT_API_KEY ($masked)"
+}
+if (-not [string]::IsNullOrWhiteSpace($fireworksKey)) {
+    $masked = $fireworksKey.Substring(0, [Math]::Min(4, $fireworksKey.Length)) + "..." + $fireworksKey.Substring([Math]::Max(0, $fireworksKey.Length - 4))
+    $presentKeys += "FIREWORKS_API_KEY ($masked)"
+}
+if ($presentKeys.Count -eq 0) {
     $results += [pscustomobject]@{
-        Check = "MOONSHOT_API_KEY"
+        Check = "Judge API key (MOONSHOT_API_KEY or FIREWORKS_API_KEY)"
         Pass = $false
-        Detail = "Not set in current process. Run: `$env:MOONSHOT_API_KEY = '<your key>'"
+        Detail = "Neither set. Run: `$env:MOONSHOT_API_KEY = '<key>'  -or-  `$env:FIREWORKS_API_KEY = '<key>'"
     }
 } else {
-    $masked = $apiKey.Substring(0, [Math]::Min(4, $apiKey.Length)) + "..." + $apiKey.Substring([Math]::Max(0, $apiKey.Length - 4))
     $results += [pscustomobject]@{
-        Check = "MOONSHOT_API_KEY"
+        Check = "Judge API key (MOONSHOT_API_KEY or FIREWORKS_API_KEY)"
         Pass = $true
-        Detail = "Set ($masked)"
+        Detail = "Set: " + ($presentKeys -join ", ")
     }
 }
 

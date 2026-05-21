@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using DINOForge.SDK.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.SDK;
@@ -11,7 +12,7 @@ using DINOForge.SDK.Assets;
 using DINOForge.SDK.Dependencies;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Universe;
-using DINOForge.Runtime.Assets;
+// #613 dedup: DINOForge.Runtime.Assets using removed; was orphan after retirement of duplicate AssetService.
 using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
@@ -167,7 +168,7 @@ public class SDKCoverageTests
         };
 
         string json = JsonSerializer.Serialize(original);
-        RegistryPackEntry? deserialized = JsonSerializer.Deserialize<RegistryPackEntry>(json);
+        RegistryPackEntry? deserialized = JsonSerializer.Deserialize<RegistryPackEntry>(json, JsonOptions.Default);
 
         deserialized.Should().NotBeNull();
         deserialized!.Id.Should().Be("test-pack");

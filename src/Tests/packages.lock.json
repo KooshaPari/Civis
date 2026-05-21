@@ -1605,8 +1605,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.24.0, )",
-          "DINOForge.SDK": "[0.18.0, )",
+          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.25.0-dev, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -1622,33 +1622,33 @@
       "dinoforge.domains.economy": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.scenario": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.ui": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.domains.warfare": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )"
+          "DINOForge.SDK": "[0.25.0-dev, )"
         }
       },
       "dinoforge.runtime": {
         "type": "Project",
         "dependencies": {
           "AssetsTools.NET": "[3.0.4, )",
-          "DINOForge.Bridge.Protocol": "[0.24.0, )",
-          "DINOForge.SDK": "[0.18.0, )",
+          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.25.0-dev, )",
           "Microsoft.Bcl.TimeProvider": "[7.0.0, )"
         }
       },
@@ -1666,8 +1666,8 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )",
-          "Octokit": "[13.*, )"
+          "DINOForge.SDK": "[0.25.0-dev, )",
+          "Octokit": "[13.0.1, )"
         }
       }
     }

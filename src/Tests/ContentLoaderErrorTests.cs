@@ -1,5 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using DINOForge.SDK;
+using DINOForge.SDK.Registry;
 using FluentAssertions;
 using Xunit;
 
@@ -164,11 +169,37 @@ name: Test";
         [Fact]
         public void FrameworkVersionMismatch_IsDetected()
         {
-            // Arrange
-            var currentFramework = "0.4.0";
+            // Arrange: build a pack manifest constraining framework_version far above current
+            // (P2 fix #836: replaces tautology; invokes real ContentLoader.LoadPack against
+            // a pack whose framework_version constraint cannot be satisfied by the installed SDK,
+            // exercising the #762 CompatibilityChecker wiring in ContentLoader.LoadPack.)
+            var tempPackDir = Path.Combine(Path.GetTempPath(), $"dinoforge-test-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempPackDir);
+            try
+            {
+                File.WriteAllText(
+                    Path.Combine(tempPackDir, "pack.yaml"),
+                    "id: test-incompat\nname: Test Incompat\nversion: 0.1.0\nframework_version: \">=99.0.0\"\nauthor: Test\ntype: content\n",
+                    Encoding.UTF8);
 
-            // Act & Assert
-            currentFramework.Should().NotBe("0.5.0");
+                var registryManager = new RegistryManager();
+                var loader = new ContentLoader(registryManager);
+
+                // Act
+                ContentLoadResult result = loader.LoadPack(tempPackDir);
+
+                // Assert
+                result.IsSuccess.Should().BeFalse();
+                result.Errors.Should().Contain(e =>
+                    e.IndexOf("framework_version", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    e.IndexOf("incompatible", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    e.IndexOf("compat", StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            finally
+            {
+                // test-cleanup-ok: ephemeral $env:TEMP scratch (TEST_OK per #871 allowlist)
+                Directory.Delete(tempPackDir, recursive: true);
+            }
         }
     }
 }

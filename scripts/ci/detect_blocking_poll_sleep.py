@@ -131,7 +131,7 @@ def scan_file(file_path: Path, allowlist: AllowlistManager) -> List[Finding]:
         print(f"[WARN] Could not read {file_path}: {e}", file=sys.stderr)
         return findings
 
-    relative_path = str(file_path.relative_to(SRC_DIR)).replace("\\", "/")
+    relative_path = str(file_path.relative_to(REPO_ROOT)).replace("\\", "/")
 
     for line_idx, line in enumerate(lines, 1):
         # Match Thread.Sleep(...) calls
@@ -188,7 +188,7 @@ def scan_file_with_test_rules(file_path: Path, allowlist: AllowlistManager) -> L
         print(f"[WARN] Could not read {file_path}: {e}", file=sys.stderr)
         return findings
 
-    relative_path = str(file_path.relative_to(SRC_DIR)).replace("\\", "/")
+    relative_path = str(file_path.relative_to(REPO_ROOT)).replace("\\", "/")
 
     for line_idx, line in enumerate(lines, 1):
         # Match Thread.Sleep(...) calls

@@ -164,13 +164,25 @@ def line_text(text: str, offset: int) -> str:
 
 
 def load_allowlist(path: Path) -> set[str]:
+    """Load allowlist entries. Tolerates inline ``#`` comments, trailing
+    whitespace, and Windows-style ``\\`` separators in bare-path entries
+    (normalized to POSIX ``/`` so they match ``h.file``)."""
     if not path.exists():
         return set()
     out: set[str] = set()
     for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
+        # Strip BOM/whitespace and skip blank/comment lines
+        line = raw.lstrip("﻿").strip()
         if not line or line.startswith("#"):
             continue
+        # Strip trailing inline comments (e.g. ``src/Foo.cs  # legacy``)
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        # Normalize Windows separators to POSIX for bare-path entries;
+        # severity|file|line keys also benefit since the middle field is
+        # a posix-relative path.
+        line = line.replace("\\", "/")
         out.add(line)
     return out
 

@@ -10,6 +10,38 @@ import re
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ALLOWLIST_PATH = REPO_ROOT / "docs" / "qa" / "pattern-234-test-pack-leak-allowlist.txt"
+
+
+def load_allowlist():
+    """Load allowlist. Entries:
+       - csproj exclusion: "<file-path>" (single token, no colon-prefixed pack-id)
+       - test-id-in-packs: "<file-path>:<pack-id>"
+       Returns (csproj_set, pack_id_set) where pack_id_set holds "file:pack_id" keys.
+    """
+    csproj_set = set()
+    pack_id_set = set()
+    if not ALLOWLIST_PATH.exists():
+        return csproj_set, pack_id_set
+    for line in ALLOWLIST_PATH.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        # Format: <file-path>:<pack-id>:<reason>  OR  <file-path>::<reason> for csproj
+        parts = s.split(":", 2)
+        if len(parts) >= 2:
+            fp = parts[0].strip().replace("\\", "/")
+            pid = parts[1].strip()
+            if pid:
+                pack_id_set.add(f"{fp}:{pid}")
+            else:
+                csproj_set.add(fp)
+        else:
+            csproj_set.add(s.replace("\\", "/"))
+    return csproj_set, pack_id_set
+
+
 def scan_csproj_deploy_packs(csproj_path):
     """Check if csproj lacks test-pack exclusion in DeployPacks."""
     violations = []
@@ -73,13 +105,38 @@ def scan_pack_ids():
     return violations
 
 def main():
+    csproj_allow, pack_id_allow = load_allowlist()
+    suppressed = 0
+
     csproj_violations = []
     for csproj in Path('src').rglob('*.csproj'):
         if 'DeployPacks' in csproj.read_text(encoding='utf-8', errors='ignore'):
             csproj_violations.extend(scan_csproj_deploy_packs(csproj))
 
     pack_id_violations = scan_pack_ids()
-    all_violations = csproj_violations + pack_id_violations
+
+    # Apply allowlist filtering
+    filtered_csproj = []
+    for v in csproj_violations:
+        rel = str(v['file']).replace('\\', '/')
+        if rel in csproj_allow:
+            suppressed += 1
+            continue
+        filtered_csproj.append(v)
+
+    filtered_pack_ids = []
+    for v in pack_id_violations:
+        rel = str(v['file']).replace('\\', '/')
+        key = f"{rel}:{v['pack_id']}"
+        if key in pack_id_allow:
+            suppressed += 1
+            continue
+        filtered_pack_ids.append(v)
+
+    if suppressed:
+        print(f"[detect_test_pack_leak] suppressed via allowlist: {suppressed}")
+
+    all_violations = filtered_csproj + filtered_pack_ids
 
     high_count = sum(1 for v in all_violations if v['severity'] == 'HIGH')
     med_count = sum(1 for v in all_violations if v['severity'] == 'MED')

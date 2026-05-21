@@ -111,18 +111,14 @@ public sealed class GameProcessManagerUnitTests
         // - Timeout gracefully if a game happens to be running in the test environment
         // (Pattern #146: test environment resource contamination is acceptable)
         var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var act = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> act = async () => await manager.WaitForExitAsync(cts.Token);
 
-        // Assert — should not throw unexpected exception type and should complete within timeout
-        // OperationCanceledException from timeout is acceptable (means game was running)
-        try
+        // Assert — only OperationCanceledException (timeout) is acceptable; nothing else.
+        var exception = await Record.ExceptionAsync(act);
+        if (exception is not null)
         {
-            await manager.WaitForExitAsync(cts.Token);
-            // Success: either returned immediately or timed out gracefully
-        }
-        catch (OperationCanceledException)
-        {
-            // Acceptable: game was running and timeout occurred
+            exception.Should().BeAssignableTo<OperationCanceledException>(
+                "only timeout cancellation is an acceptable outcome when a lingering game runs");
         }
     }
 }

@@ -99,6 +99,11 @@ public class GameTestFixture : IDisposable
         if (_client?.IsConnected == true)
             return;
 
+        // Pre-push / CI bypass: skip game launch + connect when explicitly disabled.
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        if (!string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0")
+            return;
+
         // Check if game is already running
         var existingGame = Process.GetProcessesByName("Diplomacy is Not an Option").FirstOrDefault();
         if (existingGame != null)
@@ -185,8 +190,11 @@ public class ParallelGameE2ETests : IDisposable
 
     public ParallelGameE2ETests()
     {
-        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
-            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        // Pre-push / CI bypass: when DINO_DISABLE_TEST_LAUNCH=1, treat infra as unavailable.
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        var bypass = !string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0";
+        _infrastructureAvailable = !bypass && (Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH")));
 
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
         var instancePath = File.Exists(configFile)
@@ -207,6 +215,11 @@ public class ParallelGameE2ETests : IDisposable
 
         _gameControlCliPath = Path.Combine(GetRepoRoot(), "src", "Tools", "Cli", "bin", "Release", "net11.0", "GameControlCli.dll");
         _pipeName = $"dinoforge-game-bridge-test-{Process.GetCurrentProcess().Id}";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_infrastructureAvailable, "DINO not available — integration test skipped.");
     }
 
     private static string GetRepoRoot()
@@ -445,11 +458,11 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Game bridge responds to ping when game is running.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_FreshLaunch_GameStartsClean()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         // Use shared game instance - connects to existing or launches fresh
         var fixture = GameTestFixture.Instance;
 
@@ -469,11 +482,11 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Multiple bridge operations succeed in sequence.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Parallel", "Sequential")]
     public async Task ParallelE2E_MultipleOperations_AllSucceed()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -496,11 +509,11 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Mod is loaded and verified when game is running.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Parallel", "Isolated")]
     public async Task ParallelE2E_ModLoading_PacksRecognized()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -517,11 +530,11 @@ public class ParallelGameE2ETests : IDisposable
     /// <summary>
     /// Test: Game process remains stable during test operations.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Parallel", "Stability")]
     public async Task ParallelE2E_ProcessStability_RemainsRunning()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         var fixture = GameTestFixture.Instance;
 
         // Skip if not connected
@@ -768,13 +781,20 @@ public class FreshInstallTests : IDisposable
 
     public FreshInstallTests()
     {
-        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
-            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        var bypass = !string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0";
+        _infrastructureAvailable = !bypass && (Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH")));
 
         var configFile = Path.Combine(GetRepoRoot(), ".dino_test_instance_path");
         _testInstancePath = File.Exists(configFile)
             ? File.ReadAllText(configFile, System.Text.Encoding.UTF8).Trim()
             : @"G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_infrastructureAvailable, "DINO not available — integration test skipped.");
     }
 
     private static string GetRepoRoot()
@@ -795,11 +815,11 @@ public class FreshInstallTests : IDisposable
     /// <summary>
     /// Test: First launch of fresh install takes expected time.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("FreshInstall", "Timing")]
     public async Task FreshInstall_FirstLaunch_CompletesInReasonableTime()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
 
         if (!File.Exists(exePath))
@@ -844,11 +864,11 @@ public class FreshInstallTests : IDisposable
     /// <summary>
     /// Test: Pack validation works before game launch.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("FreshInstall", "PackValidation")]
     public async Task FreshInstall_PackValidation_BeforeFirstLaunch()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         // Validate packs exist before launching game
         var packsDir = Path.Combine(GetRepoRoot(), "packs");
 
@@ -877,11 +897,11 @@ public class FreshInstallTests : IDisposable
     /// <summary>
     /// Test: Test that the TEST instance is properly configured.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("FreshInstall", "Configuration")]
     public void FreshInstall_TESTInstance_ConfiguredCorrectly()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         var exePath = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
 
         // TEST instance should exist for parallel testing
@@ -920,8 +940,10 @@ public class ScenarioParallelTests : IDisposable
 
     public ScenarioParallelTests()
     {
-        _infrastructureAvailable = Directory.Exists(@"G:\dino_boxes")
-            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        var bypass = !string.IsNullOrEmpty(disableLaunch) && disableLaunch != "0";
+        _infrastructureAvailable = !bypass && (Directory.Exists(@"G:\dino_boxes")
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH")));
 
         var repoRoot = Directory.GetCurrentDirectory();
         while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "CLAUDE.md")))
@@ -940,15 +962,20 @@ public class ScenarioParallelTests : IDisposable
         // Cleanup any running instances
     }
 
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_infrastructureAvailable, "DINO not available — integration test skipped.");
+    }
+
     /// <summary>
     /// Test: Run pack loading scenario on multiple instances simultaneously.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Scenario", "PackLoading")]
     [Trait("Parallel", "MultiInstance")]
     public async Task Scenario_PackLoading_MultipleInstances_AllSucceed()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         // Check if TEST instance exists
         var testExe = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
         if (!File.Exists(testExe)) return; // Skip - TEST instance not installed
@@ -985,12 +1012,12 @@ public class ScenarioParallelTests : IDisposable
     /// <summary>
     /// Test: Each instance maintains independent state.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     [Trait("Scenario", "StateIsolation")]
     [Trait("Parallel", "Independent")]
     public async Task Scenario_StateIsolation_InstancesDontInterfere()
     {
-        if (!_infrastructureAvailable) return;
+        SkipIfGameNotAvailable();
         // Check if TEST instance exists
         var testExe = Path.Combine(_testInstancePath, "Diplomacy is Not an Option.exe");
         if (!File.Exists(testExe))

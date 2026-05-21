@@ -9,6 +9,11 @@
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <!-- Explicit parallelization tuning: 4 threads for CI (4-core runners), scales to ProcessorCount locally -->
     <MaxParallelThreads>4</MaxParallelThreads>
+    <!-- #550: NU1701 noise from Microsoft.CodeAnalysis.* 1.0.1 packages restored at net461.
+         These are legitimate analyzer-test-fixture dependencies; the net461 fallback is harmless
+         for our consumption pattern (we exercise the analyzer via Compilation, not by referencing
+         net461 surface). Suppress to keep lefthook stream watchdog from drowning in noise. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
     <!-- Code coverage disabled (see below) -->

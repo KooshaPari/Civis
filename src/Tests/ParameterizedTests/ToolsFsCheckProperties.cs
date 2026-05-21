@@ -7,6 +7,7 @@ using DINOForge.SDK.Models;
 using DINOForge.SDK.Validation;
 using FluentAssertions;
 using FsCheck;
+using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
@@ -93,39 +94,42 @@ namespace DINOForge.Tests.ParameterizedTests
         /// For any string formatted as "source:modelId", TryParseModelRef extracts both parts.
         /// Validates parser correctness and bijection (no data loss on parse).
         ///
-        /// FsCheck generates 100+ random (source, modelId) pairs with valid identifiers.
+        /// Filter-quality (iter-#594): replaced post-hoc <c>.Where(IsLetterOrDigit||'-').Take(50)</c>
+        /// filter with an upfront <c>ModelRefIdentGen</c> that emits ONLY valid identifier chars
+        /// of length 1..50 — every iteration genuinely exercises the parser bijection.
         /// </summary>
         [Property(MaxTest = 100)]
-        public bool AssetctlCli_TryParseModelRef_ExtractsPartsExactly(
-            string rawSource,
-            string rawModelId)
+        public Property AssetctlCli_TryParseModelRef_ExtractsPartsExactly()
         {
-            if (rawSource == null || rawModelId == null)
-                return true; // Skip null
+            return Prop.ForAll(
+                ModelRefIdentGen.ToArbitrary(),
+                ModelRefIdentGen.ToArbitrary(),
+                (source, modelId) =>
+                {
+                    // Parse: reconstruct the input and parse it
+                    var input = $"{source}:{modelId}";
+                    var result = TryParseModelRef(input, out var parsedSource, out var parsedId, out _);
 
-            // Filter: only alphanumeric sources and IDs (no colons, which are delimiters)
-            var source = new string(rawSource.Where(c => char.IsLetterOrDigit(c) || c == '-').Take(50).ToArray());
-            var modelId = new string(rawModelId.Where(c => char.IsLetterOrDigit(c) || c == '-').Take(50).ToArray());
-
-            if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(modelId))
-                return true; // Skip empty after filtering
-
-            // Parse: reconstruct the input and parse it
-            var input = $"{source}:{modelId}";
-            var result = TryParseModelRef(input, out var parsedSource, out var parsedId, out _);
-
-            // Invariant: successful parse extracts exact parts
-            if (result)
-            {
-                var partsMatch = parsedSource == source && parsedId == modelId;
-                partsMatch.Should().BeTrue(
-                    because: $"Parser should extract '{source}' and '{modelId}' from '{input}'");
-                return partsMatch;
-            }
-
-            // If parse fails, input was malformed (acceptable)
-            return true;
+                    // Bijection invariant: parse always succeeds and recovers both halves.
+                    return result && parsedSource == source && parsedId == modelId;
+                });
         }
+
+        /// <summary>
+        /// Upfront generator for model-reference identifiers: 1..50 chars drawn from
+        /// [a-zA-Z0-9-]. Replaces the previous post-hoc filter that silently discarded
+        /// nearly all FsCheck-generated strings.
+        /// </summary>
+        private static readonly Gen<string> ModelRefIdentGen =
+            from len in Gen.Choose(1, 50)
+            from arr in Gen.ArrayOf<char>(
+                Gen.Frequency<char>(
+                    (26, Gen.Choose('a', 'z').Select(c => (char)c)),
+                    (26, Gen.Choose('A', 'Z').Select(c => (char)c)),
+                    (10, Gen.Choose('0', '9').Select(c => (char)c)),
+                    (3,  Gen.Constant('-'))),
+                len)
+            select new string(arr);
 
         /// <summary>
         /// Property: Catalog key validation rejects keys with spaces.
@@ -246,39 +250,39 @@ namespace DINOForge.Tests.ParameterizedTests
         /// extracts SUFFIX precisely (bijection).
         /// Validates CLI argument parsing correctness.
         ///
-        /// FsCheck generates 100+ random suffix strings (alphanumeric, hyphens, dots).
+        /// Filter-quality (iter-#594): upfront <c>VersionSuffixGen</c> emits valid
+        /// suffix chars [a-zA-Z0-9-.] of length 1..50 — every iteration exercises
+        /// the parser instead of being silently discarded by a post-hoc <c>.Where</c>.
         /// </summary>
         [Property(MaxTest = 100)]
-        public bool CliTools_TryParseVersionSuffix_ExtractsExactly(string rawSuffix)
+        public Property CliTools_TryParseVersionSuffix_ExtractsExactly()
         {
-            if (rawSuffix == null)
-                return true; // Skip null
-
-            // Filter: version suffixes can contain alphanumeric, hyphens, dots
-            var suffix = new string(rawSuffix
-                .Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '.')
-                .Take(50)
-                .ToArray());
-
-            if (string.IsNullOrEmpty(suffix))
-                return true; // Skip empty
-
-            // Parse: construct the arg and parse it
-            var input = $"--version-suffix={suffix}";
-            var result = TryParseVersionSuffix(input, out var parsedSuffix, out _);
-
-            // Invariant: successful parse extracts exact suffix
-            if (result)
+            return Prop.ForAll(VersionSuffixGen.ToArbitrary(), suffix =>
             {
-                var matches = parsedSuffix == suffix;
-                matches.Should().BeTrue(
-                    because: $"Parser should extract '{suffix}' from '{input}'");
-                return matches;
-            }
+                // Parse: construct the arg and parse it
+                var input = $"--version-suffix={suffix}";
+                var result = TryParseVersionSuffix(input, out var parsedSuffix, out _);
 
-            // If parse fails, the arg was malformed (acceptable)
-            return true;
+                // Bijection invariant: parse always succeeds and recovers the exact suffix.
+                return result && parsedSuffix == suffix;
+            });
         }
+
+        /// <summary>
+        /// Upfront generator for version-suffix tokens: 1..50 chars drawn from
+        /// [a-zA-Z0-9-.]. Replaces the previous post-hoc filter.
+        /// </summary>
+        private static readonly Gen<string> VersionSuffixGen =
+            from len in Gen.Choose(1, 50)
+            from arr in Gen.ArrayOf<char>(
+                Gen.Frequency<char>(
+                    ((int, Gen<char>))(26, Gen.Choose('a', 'z').Select(c => (char)c)),
+                    ((int, Gen<char>))(26, Gen.Choose('A', 'Z').Select(c => (char)c)),
+                    ((int, Gen<char>))(10, Gen.Choose('0', '9').Select(c => (char)c)),
+                    ((int, Gen<char>))(3,  Gen.Constant('-')),
+                    ((int, Gen<char>))(3,  Gen.Constant('.'))),
+                len)
+            select new string(arr);
 
         // === Helper functions (pure, no I/O, no game dependencies) ===
 

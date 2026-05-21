@@ -30,9 +30,28 @@ public class ErrorPathTests : IAsyncLifetime
 {
     private MockGameBridgeServer? _mockServer;
     private string? _testPipeName;
+    // #820: Pre-push gate. These tests spin up a real named-pipe mock server. CI/pre-push
+    // contexts can disable the whole class via DINO_DISABLE_TEST_LAUNCH=1 to avoid pipe
+    // infrastructure flakes (bteg33tii-style hard fail). Default behavior runs the tests.
+    private readonly bool _gameAvailable;
+
+    public ErrorPathTests()
+    {
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        _gameAvailable = string.IsNullOrEmpty(disableLaunch) || disableLaunch == "0";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_gameAvailable, "Integration tests disabled via DINO_DISABLE_TEST_LAUNCH.");
+    }
 
     public async Task InitializeAsync()
     {
+        if (!_gameAvailable)
+        {
+            return; // Don't spin up the pipe server when disabled.
+        }
         // Create a mock game server for error scenario testing
         _testPipeName = "dinoforge-test-error-" + Guid.NewGuid().ToString("N")[..8];
         _mockServer = new MockGameBridgeServer(_testPipeName);
@@ -52,9 +71,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN the server stops unexpectedly
     /// THEN the client detects the disconnection
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task BridgeDisconnection_Detected_ClientKnowsAboutIt()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
@@ -82,9 +103,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN we try to connect
     /// THEN the connection fails with appropriate error
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task PipeUnavailable_ConnectionFails_WithError()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var nonExistentPipeName = "dinoforge-nonexistent-" + Guid.NewGuid().ToString("N");
         var options = new GameClientOptions { PipeName = nonExistentPipeName, ConnectTimeoutMs = 2000 };
@@ -106,9 +129,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN some fail and some succeed
     /// THEN partial success is handled correctly
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task MultipleClients_PartialFailure_SomeSucceedSomeFail()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var goodPipeName = _testPipeName!;
         var badPipeName = "dinoforge-bad-" + Guid.NewGuid().ToString("N");
@@ -159,9 +184,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN a command is sent
     /// THEN the command completes successfully (mock server is responsive)
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task CommandSucceeds_MockServer_RespondsQuickly()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName!, ConnectTimeoutMs = 5000 };
         var client = new GameClient(options);
@@ -186,9 +213,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN sending a ping
     /// THEN the ping succeeds
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task ServerResponse_ValidPing_Succeeds()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
@@ -210,9 +239,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN several ping requests are sent
     /// THEN successful commands process correctly
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task ConcurrentCommands_RapidPings_AllSucceed()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
@@ -240,9 +271,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN the client is disposed
     /// THEN subsequent operations fail gracefully
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task DisposedClient_Operations_FailGracefully()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
@@ -267,9 +300,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN one client disconnects
     /// THEN other clients remain functional
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task MultipleClients_OneDisconnects_OthersContinue()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client1 = new GameClient(options);
@@ -304,9 +339,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN reconnection is attempted
     /// THEN it succeeds if server is available
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task ClientReconnection_AfterDisconnect_Succeeds()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
@@ -335,9 +372,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN they all try to connect simultaneously
     /// THEN all succeed without deadlocks
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task ConcurrentConnect_MultipleClients_NoDeadlock()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         const int clientCount = 4;
         var clients = Enumerable.Range(0, clientCount)
@@ -372,9 +411,11 @@ public class ErrorPathTests : IAsyncLifetime
     /// WHEN one connection sends a message
     /// THEN other connections are not affected
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task ConcurrentPings_MultipleClients_NoInterference()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var clients = Enumerable.Range(0, 3)

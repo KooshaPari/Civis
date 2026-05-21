@@ -3,14 +3,23 @@
 Pattern #232 enforcement: File.AppendAllText() calls must be preceded by a
 size-check and rotation pattern within 30 lines.
 
-Detects:
-- File.AppendAllText( calls in src/Runtime/, src/Bridge/
-- Check preceding 30 lines for rotation guard (file size check + rename/overwrite)
-- Guard pattern: FileInfo.*Length or File.*Length >= MaxLogSize or similar
+Detects unbounded log-append patterns across the production source tree:
+- File.AppendAllText(  / File.AppendAllLines(
+- new StreamWriter(path, append: true)  / new StreamWriter(path, true)
+- FileMode.Append (FileStream / File.Open)
+- FileInfo.AppendText()  / File.AppendText()
 
-Reports HIGH for unguarded appends (no rotation).
+Scope: src/Runtime/, src/Bridge/, src/SDK/, src/Tools/, src/Domains/
+Extension (#708 audit, 2026-05-21): now also covers AppendAllLines,
+StreamWriter append-mode, FileMode.Append, AppendText — previously only
+File.AppendAllText was detected.
+
+Each match is checked against the preceding 30 lines for a rotation guard
+(file size check + rename/delete/move). Unguarded => HIGH violation.
+
 Threshold: HIGH > 0 fails CI.
 Allowlist: docs/qa/pattern-232-log-rotation-allowlist.txt (file:line format)
+Inline marker: `// unbounded-log-ok: <reason>` on the offending line.
 """
 import sys
 import re
@@ -18,10 +27,22 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 SRC = REPO / "src"
-SCOPES = ["Runtime", "Bridge"]
+SCOPES = ["Runtime", "Bridge", "SDK", "Tools", "Domains"]
 
-# Pattern for File.AppendAllText calls
-APPEND_PATTERN = re.compile(r"File\.AppendAllText\s*\(")
+# Patterns for unbounded log-append call sites.
+APPEND_PATTERNS = [
+    ("AppendAllText",   re.compile(r"File\.AppendAllText\s*\(")),
+    ("AppendAllLines",  re.compile(r"File\.AppendAllLines\s*\(")),
+    # StreamWriter with append=true (named or positional bool after path).
+    ("StreamWriterAppend", re.compile(
+        r"new\s+StreamWriter\s*\([^)]*?(?:append\s*:\s*true|,\s*true\b)"
+    )),
+    ("FileModeAppend",  re.compile(r"FileMode\.Append\b")),
+    ("AppendText",      re.compile(r"\.AppendText\s*\(")),
+]
+
+# Inline suppression marker.
+INLINE_OK = re.compile(r"//\s*unbounded-log-ok\s*:")
 
 # Rotation guard patterns: size check or rename/overwrite
 ROTATION_GUARD = re.compile(
@@ -73,25 +94,32 @@ def check_allowlist(file_path, line_num, allowlist):
 
 def check_file(cs_file):
     """
-    Check a .cs file for unguarded File.AppendAllText calls.
-    Return list of (line_number, severity) tuples.
+    Check a .cs file for unguarded log-append calls.
+    Return list of (line_number, severity, kind) tuples.
     """
     content = cs_file.read_text(encoding="utf-8", errors="replace")
     lines = content.split('\n')
     violations = []
 
     for line_idx, line in enumerate(lines):
-        if not APPEND_PATTERN.search(line):
+        matched_kind = None
+        for kind, pat in APPEND_PATTERNS:
+            if pat.search(line):
+                matched_kind = kind
+                break
+        if matched_kind is None:
             continue
 
-        # Found an AppendAllText call on line line_idx.
+        # Inline suppression marker on the same line.
+        if INLINE_OK.search(line):
+            continue
+
         # Check preceding 30 lines for a rotation guard.
         start = max(0, line_idx - 30)
         preceding = '\n'.join(lines[start:line_idx])
 
         if not ROTATION_GUARD.search(preceding):
-            # No guard found => HIGH violation
-            violations.append((line_idx + 1, "HIGH"))
+            violations.append((line_idx + 1, "HIGH", matched_kind))
 
     return violations
 
@@ -109,19 +137,19 @@ def main():
 
         for cs_file in scope_dir.rglob("*.cs"):
             file_violations = check_file(cs_file)
-            for line_no, severity in file_violations:
+            for line_no, severity, kind in file_violations:
                 if check_allowlist(cs_file, line_no, allowlist):
                     allowlisted += 1
                 else:
-                    violations.append((cs_file.relative_to(REPO), line_no, severity))
+                    violations.append((cs_file.relative_to(REPO), line_no, severity, kind))
 
     if violations:
-        high_count = sum(1 for _, _, sev in violations if sev == "HIGH")
+        high_count = sum(1 for v in violations if v[2] == "HIGH")
         med_count = len(violations) - high_count
 
         print(f"Pattern #232 violations ({high_count} HIGH, {med_count} MED, {allowlisted} allowlisted):")
-        for path, line_no, sev in violations:
-            print(f"  {sev}  {path}:{line_no}: File.AppendAllText call without size check/rotation guard")
+        for path, line_no, sev, kind in violations:
+            print(f"  {sev}  {path}:{line_no}: [{kind}] unbounded log-append without size check/rotation guard")
 
         sys.exit(1 if high_count > 0 else 0)
 

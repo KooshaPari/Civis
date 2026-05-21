@@ -11,6 +11,34 @@ namespace DINOForge.Tests
     public class RegistryTests
     {
         [Fact]
+        public void Register_CaseVariant_LogsWarning()
+        {
+            // #771: registering an id that differs only in casing from a prior id
+            // should emit a warning via the injected logger sink.
+            List<string> warnings = new List<string>();
+            var registry = new Registry<TestItem>(warnings.Add);
+
+            registry.Register("clone-trooper", new TestItem("CT"), RegistrySource.Pack, "p1");
+            registry.Register("Clone-Trooper", new TestItem("CT-Caps"), RegistrySource.Pack, "p2");
+
+            warnings.Should().ContainSingle(w => w.Contains("Case-variant collision") && w.Contains("Clone-Trooper"));
+        }
+
+        [Fact]
+        public void Register_SameIdTwice_DoesNotLogCaseVariantWarning()
+        {
+            // #771: exact-duplicate registration is a normal override path and must NOT
+            // emit the case-variant warning.
+            List<string> warnings = new List<string>();
+            var registry = new Registry<TestItem>(warnings.Add);
+
+            registry.Register("clone-trooper", new TestItem("A"), RegistrySource.Pack, "p1");
+            registry.Register("clone-trooper", new TestItem("B"), RegistrySource.Pack, "p2");
+
+            warnings.Should().BeEmpty();
+        }
+
+        [Fact]
         public void Register_And_Get_ReturnsEntry()
         {
             var registry = new Registry<TestItem>();

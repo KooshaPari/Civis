@@ -24,4 +24,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Share TestWait helper from sibling Tests project (Pattern #108 polling). -->
+    <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
+  </ItemGroup>
 </Project>

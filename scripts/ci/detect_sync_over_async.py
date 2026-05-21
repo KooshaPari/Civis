@@ -46,6 +46,33 @@ class Report:
     allowlist_entries: list
 
 
+def load_allowlist(allowlist_path: Path) -> set:
+    """
+    Load Pattern #116 allowlist from docs/qa/sync-over-async-allowlist.txt.
+
+    Format per line: <repo-relative-path>:<line>  # reason
+    Lines starting with '#' or blank are ignored.
+    Returns a set of "path:line" keys (path uses forward slashes).
+    """
+    entries = set()
+    if not allowlist_path.exists():
+        return entries
+
+    with open(allowlist_path, 'r', encoding='utf-8') as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            # Strip trailing comment
+            key = line.split('#')[0].strip()
+            if not key:
+                continue
+            # Normalize separators
+            key = key.replace('\\', '/')
+            entries.add(key)
+    return entries
+
+
 def is_false_positive(line: str) -> bool:
     """
     Check if line contains a false positive (property access, not Task.Result/.Wait()).
@@ -168,10 +195,13 @@ def scan_csharp_file(file_path: Path) -> list[Violation]:
     return violations
 
 
-def scan_codebase(src_root: Path) -> list[Violation]:
+def scan_codebase(src_root: Path, allowlist: set = None, repo_root: Path = None) -> list[Violation]:
     """
-    Scan src/ excluding Tests/, bin/, obj/.
+    Scan src/ excluding Tests/, bin/, obj/. Filters out entries present in allowlist.
+    Allowlist keys are "<repo-relative-path>:<line>" with forward slashes.
     """
+    if allowlist is None:
+        allowlist = set()
     all_violations = []
 
     for cs_file in src_root.rglob("*.cs"):
@@ -181,6 +211,21 @@ def scan_codebase(src_root: Path) -> list[Violation]:
             continue
 
         violations = scan_csharp_file(cs_file)
+
+        # Filter by allowlist if provided
+        if allowlist and repo_root is not None:
+            filtered = []
+            for v in violations:
+                try:
+                    rel = str(Path(v.file).relative_to(repo_root)).replace('\\', '/')
+                except ValueError:
+                    rel = v.file.replace('\\', '/')
+                key = f"{rel}:{v.line}"
+                if key in allowlist:
+                    continue
+                filtered.append(v)
+            violations = filtered
+
         all_violations.extend(violations)
 
     return all_violations
@@ -298,8 +343,10 @@ public class FalsePositives {
     # Real scan
     repo_root = Path(__file__).parent.parent.parent
     src_root = repo_root / "src"
+    allowlist_path = repo_root / "docs" / "qa" / "sync-over-async-allowlist.txt"
+    allowlist = load_allowlist(allowlist_path)
 
-    violations = scan_codebase(src_root)
+    violations = scan_codebase(src_root, allowlist=allowlist, repo_root=repo_root)
 
     # Categorize
     critical_count = len([v for v in violations if v.severity == "CRITICAL"])

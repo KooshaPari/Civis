@@ -7,6 +7,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>DINOForge.Tests.Integration</RootNamespace>
+    <!-- #550: Inherits transitive Microsoft.CodeAnalysis.* 1.0.1 from DINOForge.Tests. Same rationale. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

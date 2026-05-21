@@ -247,7 +247,7 @@ public class InGameAutomationTests
     // MCP Tool: game_dump_state → bridge.DumpState() - placeholder
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact]
+    [Fact(Skip = "MCP game_dump_state not yet implemented in FakeGameBridge")]
     public void MCP_game_dump_state_Placeholder_NotYetImplemented()
     {
         // NOTE: DumpState is not implemented in FakeGameBridge
@@ -259,7 +259,7 @@ public class InGameAutomationTests
     // MCP Tool: game_navigate_to (with Spectre bug workaround)
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact]
+    [Fact(Skip = "Pending Spectre.Console upstream fix in GameControlCli")]
     public void MCP_game_navigate_to_Placeholder_SpectreBug()
     {
         // NOTE: game_navigate_to has a known bug with Spectre.Console "cat" style
@@ -273,7 +273,7 @@ public class InGameAutomationTests
     // MCP Tool: log_swap_status - placeholder
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact]
+    [Fact(Skip = "MCP log_swap_status not registered in MCP server")]
     public void MCP_log_swap_status_Placeholder_NotRegistered()
     {
         // NOTE: log_swap_status is not yet registered in the MCP server
@@ -285,7 +285,7 @@ public class InGameAutomationTests
     // MCP Tool: log_debug_log - placeholder
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact]
+    [Fact(Skip = "MCP log_debug_log not registered in MCP server")]
     public void MCP_log_debug_log_Placeholder_ToolNotYetRegistered()
     {
         // NOTE: log_debug_log is not yet registered in the MCP server
@@ -297,7 +297,7 @@ public class InGameAutomationTests
     // MCP Tool: log_packs_loaded - placeholder
     // ═════════════════════════════════════════════════════════════════════════════
 
-    [Fact]
+    [Fact(Skip = "MCP log_packs_loaded not registered in MCP server")]
     public void MCP_log_packs_loaded_Placeholder_ToolNotYetRegistered()
     {
         // NOTE: log_packs_loaded is not yet registered in the MCP server

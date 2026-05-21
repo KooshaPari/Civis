@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using DINOForge.SDK.Json;
 using DINOForge.SDK.NativeInterop;
 using DINOForge.SDK.Validation;
 using FluentAssertions;
@@ -66,7 +67,7 @@ namespace DINOForge.Tests
         {
             // Simulate the deserialize site: JSON arrives from Rust without an asset_id.
             string json = "{\"AssetId\":\"\",\"Mesh\":{\"Vertices\":[0.0,0.0,0.0],\"Indices\":[],\"TriangleCount\":0}}";
-            var imported = JsonSerializer.Deserialize<ImportedAsset>(json);
+            var imported = JsonSerializer.Deserialize<ImportedAsset>(json, JsonOptions.Default);
 
             System.Action act = () => JsonGuard.ValidateOrThrow(imported!, "RustAssetPipelineValidationTests");
             act.Should().Throw<InvalidDataException>().WithMessage("*asset_id*");
@@ -98,7 +99,7 @@ namespace DINOForge.Tests
         {
             // Simulate the deserialize site: JSON arrives from Rust without an asset_id.
             string json = "{\"AssetId\":\"\",\"LOD0\":{},\"LOD1\":{},\"LOD2\":{}}";
-            var optimized = JsonSerializer.Deserialize<OptimizedAsset>(json);
+            var optimized = JsonSerializer.Deserialize<OptimizedAsset>(json, JsonOptions.Default);
 
             System.Action act = () => JsonGuard.ValidateOrThrow(optimized!, "RustAssetPipelineValidationTests");
             act.Should().Throw<InvalidDataException>().WithMessage("*asset_id*");

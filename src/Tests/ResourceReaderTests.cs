@@ -253,7 +253,7 @@ namespace DINOForge.Tests
         // we document the requirement as a specification fact that will be enforced by
         // in-game integration tests (ResourceTests.cs in the Integration project).
 
-        [Fact]
+        [Fact(Skip = "Pure documentation marker — IncludePrefab requirement is verified in-game via ResourceReader.ReadSingletonInt, not unit-testable without Unity. See class-level docstring.")]
         public void BugFix_IncludePrefab_IsDocumentedRequirement()
         {
             // DINO marks all live game entities — including resource singleton entities —

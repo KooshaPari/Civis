@@ -1,6 +1,9 @@
 #nullable enable
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -88,9 +91,27 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         initialStatus.EntityCount.Should().BeGreaterThan(0,
             "ECS world should be populated at start");
 
-        await Task.Delay(10_000);
+        // Pattern #108: poll throughout the survival window instead of bare 10s sleep.
+        // Fails fast on regression (driver death) rather than waiting full duration.
+        var survivalWindow = TimeSpan.FromSeconds(10);
+        var sw = Stopwatch.StartNew();
+        GameStatus finalStatus = initialStatus;
+        bool stayedAlive = await TestWait.UntilAsync(
+            async () =>
+            {
+                finalStatus = await fixture.Client.StatusAsync().ConfigureAwait(false);
+                if (finalStatus.EntityCount <= 0 || !finalStatus.ModPlatformReady)
+                {
+                    // Regression detected — stop polling immediately.
+                    return true;
+                }
+                // Keep polling until the survival window elapses.
+                return sw.Elapsed >= survivalWindow;
+            },
+            timeout: survivalWindow + TimeSpan.FromSeconds(2),
+            pollMs: 500).ConfigureAwait(false);
 
-        GameStatus finalStatus = await fixture.Client.StatusAsync();
+        stayedAlive.Should().BeTrue("status polling should complete within the survival window");
         finalStatus.EntityCount.Should().BeGreaterThan(0,
             "RuntimeDriver should keep ECS world alive after 600+ frames");
         finalStatus.ModPlatformReady.Should().BeTrue(

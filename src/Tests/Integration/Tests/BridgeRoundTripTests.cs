@@ -39,6 +39,25 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("UserStory", "US-F5.1")]
 public class BridgeRoundTripTests
 {
+    // #820: Pre-push gate. These tests use FakeGameBridge (in-process mock), so they do
+    // NOT require a running DINO. The gate exists so pre-push test-integration can be
+    // narrowed to "no game-touching tests" via DINO_DISABLE_TEST_LAUNCH=1 without
+    // sweeping in this offline class. Default behavior (env unset) still runs the tests.
+    private readonly bool _gameAvailable;
+
+    public BridgeRoundTripTests()
+    {
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        // Offline mock-only — "gameAvailable" here means "test infrastructure available".
+        // Skip only when explicitly disabled (covers paranoid pre-push contexts).
+        _gameAvailable = string.IsNullOrEmpty(disableLaunch) || disableLaunch == "0";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_gameAvailable, "Integration tests disabled via DINO_DISABLE_TEST_LAUNCH.");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Step 1: LoadPacks → verify warfare-starwars loads with 28 units
     // ─────────────────────────────────────────────────────────────────────────────
@@ -46,9 +65,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that ReloadPacks returns success and includes warfare-starwars with 28 units.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step1_LoadPacks_WarfareStarwarsLoadsWithTwentyEightUnits()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
 
@@ -75,9 +96,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that the fake bridge status reports a ready ECS world with entities.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step2_GetStatus_ReportsReadyWorldWithEntities()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
         bridge.ReloadPacks(path: null); // Ensure packs are loaded first
@@ -101,9 +124,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that querying the catalog finds rep_clone_trooper among the loaded units.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step3_QueryUnits_RepCloneTrooperIsInCatalog()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
         bridge.ReloadPacks(path: null);
@@ -126,9 +151,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that applying an override to rep_clone_trooper hp succeeds.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step4_ApplyOverride_RepCloneTrooperHpSetTo999()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
         bridge.ReloadPacks(path: null);
@@ -155,9 +182,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that after applying hp=999, reading the stat returns 999.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step5_ReadStat_HpReturns999AfterOverride()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
         bridge.ReloadPacks(path: null);
@@ -181,9 +210,11 @@ public class BridgeRoundTripTests
     /// <summary>
     /// Verifies that a second reload succeeds and that the applied override is still in effect.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_Step6_ReloadPacks_SucceedsAndOverridePersists()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
         bridge.ReloadPacks(path: null);
@@ -211,9 +242,11 @@ public class BridgeRoundTripTests
     /// Executes the complete bridge round-trip sequence in a single test, verifying
     /// that each step transitions the fake bridge state correctly.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void BridgeRoundTrip_FullSequence_PackLoadStatReadOverrideApplyVerifyReload()
     {
+        SkipIfGameNotAvailable();
+
         // Arrange
         FakeGameBridge bridge = new();
 

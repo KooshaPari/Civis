@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using DINOForge.Bridge.Protocol;
@@ -22,6 +23,22 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("Category", "BridgeLifecycle")]
 public class BridgeLifecycleTests
 {
+    // #820: Pre-push gate. These tests use FakeSceneTransitionBridge (in-process mock),
+    // so they do NOT require a running DINO. Skip only when explicitly disabled via
+    // DINO_DISABLE_TEST_LAUNCH=1 (so paranoid pre-push contexts can opt out wholesale).
+    private readonly bool _gameAvailable;
+
+    public BridgeLifecycleTests()
+    {
+        var disableLaunch = Environment.GetEnvironmentVariable("DINO_DISABLE_TEST_LAUNCH");
+        _gameAvailable = string.IsNullOrEmpty(disableLaunch) || disableLaunch == "0";
+    }
+
+    private void SkipIfGameNotAvailable()
+    {
+        Skip.IfNot(_gameAvailable, "Integration tests disabled via DINO_DISABLE_TEST_LAUNCH.");
+    }
+
     // FEATURE: Entity Count Never Returns -1
     //
     // The bridge must NEVER report EntityCount = -1 to callers.
@@ -43,9 +60,10 @@ public class BridgeLifecycleTests
     /// because HandleStatus read KeyInputSystem.LastEntityCount before OnUpdate
     /// had a chance to populate it with the real count.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_GivenWorldReady_EntityCountIsNeverNegative()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
 
@@ -65,9 +83,10 @@ public class BridgeLifecycleTests
     /// was cleared to -1 on world destroy but HandleStatus read it before
     /// OnUpdate could re-populate it.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_GivenWorldReady_MultipleRequestsReturnConsistentEntityCount()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
 
@@ -92,9 +111,10 @@ public class BridgeLifecycleTests
     /// At gameplay (wave 1+), DINO creates thousands of entities.
     /// A 0 or -1 count during gameplay indicates the world was not accessible.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_GivenGameplayWorld_EntityCountReflectsRealCount()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 45_776);
 
@@ -113,9 +133,10 @@ public class BridgeLifecycleTests
     /// -1 means "unknown/error" which is misleading during the loading phase.
     /// 0 is the correct value when the world genuinely has no entities yet.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_GivenWorldNotYetCreated_EntityCountIsZero()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldNotYetCreated();
 
@@ -135,9 +156,10 @@ public class BridgeLifecycleTests
     /// KeyInputSystem.LastEntityCount of -1 after world destroy and
     /// before a new world was registered.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Status_GivenWorldDestroyedDuringTransition_DoesNotCrashAndReturnsGracefulValue()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
         bridge.SimulateWorldDestroyed();
@@ -173,9 +195,10 @@ public class BridgeLifecycleTests
     /// Without this fix, OnSceneLoaded would only call RecreateInCurrentWorld,
     /// but would not trigger TryResurrect -- leaving RuntimeDriver dead.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void OnSceneLoaded_GivenRuntimeDriverDestroyed_TriggersResurrection()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
         bridge.SimulateRuntimeDriverDestroyed();
@@ -196,9 +219,10 @@ public class BridgeLifecycleTests
     /// Before the responseWritten fix, HandleStatus could exit without
     /// writing a pipe response when RuntimeDriver was destroyed, hanging the CLI.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void HandleStatus_GivenRuntimeDriverDestroyedMidRequest_WritesResponseToPipe()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
         bridge.SimulateRuntimeDriverDestroyed();
@@ -225,9 +249,10 @@ public class BridgeLifecycleTests
     /// Without the responseWritten flag + try-finally, the ThreadAbortException
     /// would escape without writing a response, hanging the CLI.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void ProcessMessage_GivenThreadAbortException_WritesFallbackResponse()
     {
+        SkipIfGameNotAvailable();
         var bridge = new FakeSceneTransitionBridge();
         bridge.SimulateWorldReady(entityCount: 17);
         bridge.SimulateThreadAbort();

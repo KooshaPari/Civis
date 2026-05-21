@@ -36,7 +36,9 @@ def find_cs_files(src_dir: Path) -> List[Path]:
     for cs_file in src_dir.rglob('*.cs'):
         parts = cs_file.parts
         # Skip excluded directories
-        if 'Tests' in parts or 'bin' in parts or 'obj' in parts:
+        # Analyzers/ and Roslyn/ contain analyzer source whose comments/strings
+        # describe the very pattern being detected (Pattern #99 self-match false positive).
+        if 'Tests' in parts or 'bin' in parts or 'obj' in parts or 'Analyzers' in parts or 'Roslyn' in parts:
             continue
         files.append(cs_file)
     return sorted(files)

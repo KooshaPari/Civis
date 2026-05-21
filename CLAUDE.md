@@ -164,7 +164,13 @@ DINOForge/
       Scenario/          #   Scenario domain plugin (scripting, conditions, validation)
       UI/                #   UI/UX domain plugin (HUD injection, menu management)
     Tools/
-      Cli/               #   dinoforge CLI (status, query, override, reload, watch, etc.)
+      Cli/               #   dinoforge CLI — 21 commands:
+                         #     Core:    status, install (status|repair), query, dump, override,
+                         #              resources, verify-pack, reload, screenshot, record,
+                         #              component-map
+                         #     UI:      ui-tree, ui-query, ui-click, ui-wait, ui-expect
+                         #     Packs:   pack, watch
+                         #     Assets:  assetctl (incl. asset-library), sync
       DinoforgeMcp/      #   FastMCP server for Claude Code integration (HTTP/SSE + stdio)
       PackCompiler/      #   Pack compiler: validate, build, package packs
       DumpTools/         #   Entity/component dump analysis (Spectre.Console)
@@ -280,7 +286,7 @@ name: Example Pack
 version: 0.1.0
 framework_version: ">=0.1.0 <1.0.0"
 author: DINOForge Agents
-type: content  # content | balance | ruleset | total_conversion | utility
+type: content  # content | balance | ruleset | scenario | total_conversion | utility
 depends_on: []
 conflicts_with: []
 loads:
@@ -383,13 +389,15 @@ Agents importing assets MUST follow this sequence **in order**:
 
 Core services in `src/Tools/PackCompiler/Services/`:
 
+**STATUS (iter-144 audit a82aaf707e8907d1a):** Aspirational test coverage claim was false. `AssetPipelineTests.cs` file referenced below does NOT exist. Services HAVE real implementations (no `NotImplementedException`) but C# behavior is unverified. Track as #589 — write the 20+ tests OR accept FsCheck-only coverage.
+
 | Service | Responsibility | Tests |
 |---------|-----------------|-------|
-| `AssetImportService` | GLB/FBX → JSON (via AssimpNet) | 4+ tests |
-| `AssetOptimizationService` | Mesh decimation → LOD variants | 4+ tests |
-| `PrefabGenerationService` | JSON → .prefab (serialized) | 4+ tests |
-| `AddressablesService` | YAML → catalog entries | 2+ tests |
-| `DefinitionUpdateService` | Inject visual_asset into YAML | 2+ tests |
+| `AssetImportService` | GLB/FBX → JSON (via AssimpNet) | 0 direct unit tests (FsCheck property tests only at src/Tests/ParameterizedTests/AssetPipelineFsCheckProperties.cs) |
+| `AssetOptimizationService` | Mesh decimation → LOD variants | 0 direct unit tests (FsCheck property tests only at src/Tests/ParameterizedTests/AssetPipelineFsCheckProperties.cs) |
+| `PrefabGenerationService` | JSON → .prefab (serialized) | 0 direct unit tests (FsCheck property tests only at src/Tests/ParameterizedTests/AssetPipelineFsCheckProperties.cs) |
+| `AddressablesService` | YAML → catalog entries | 0 direct unit tests (FsCheck property tests only at src/Tests/ParameterizedTests/AssetPipelineFsCheckProperties.cs) |
+| `DefinitionUpdateService` | Inject visual_asset into YAML | 0 direct unit tests (FsCheck property tests only at src/Tests/ParameterizedTests/AssetPipelineFsCheckProperties.cs) |
 
 ### Extension Pattern
 
@@ -469,10 +477,9 @@ The `dinoforge` MCP server (registered in MCP transport config) exposes:
 | `game_wait_and_screenshot` | Poll for visual change then capture screenshot (configurable timeout/interval) |
 | `game_navigate_to` | Navigate to game state (main_menu/gameplay/pause_menu) via input sequences |
 
-The runtime includes additional asset, catalog, logging, and pack-management tools beyond this excerpt (full tool surface is maintained in `src/Tools/DinoforgeMcp/dinoforge_mcp/server.py`).
+The runtime ships **43 tools** total (full list in `src/Tools/DinoforgeMcp/dinoforge_mcp/server.py` `@mcp.tool()` decorators) covering asset, catalog, logging, and pack-management surfaces beyond the excerpt above. Note: 2 of those tools (`asset_import`, `asset_optimize`) advertise Rust acceleration but execute the Python pass-through path — see #595 audit. Per #555/#595 audits the 43-tool surface also contains 2 duplicates pending consolidation.
 
-MCP runs from the FastMCP Python server in HTTP mode on `http://127.0.0.1:8765` and is managed by
-`scripts/start-mcp.ps1`.
+MCP runs from the FastMCP Python server (canonical) in HTTP mode on `http://127.0.0.1:8765` and is managed by `scripts/start-mcp.ps1`. The legacy C# MCP server at `src/Tools/McpServer/` is **DEPRECATED** and is NOT the primary — it remains in-tree for historical reference only. All new MCP tool work MUST land in the FastMCP Python server.
 
 The repo-tracked CC hook can keep MCP alive automatically across sessions using `./scripts/start-mcp.ps1 -Action start -Detached`.
 
@@ -544,44 +551,13 @@ Future: Install a dedicated DINOForge virtual display driver (IDD/WDDM) to provi
 - Tier 3: playCUA (cross-platform)
 - Tier 4 (future): Docker/Kubernetes (DockerBackend)
 
-#### PhenoCompose Integration (v0.24.0+)
+#### PhenoCompose Integration (RESEARCH-ONLY — vaporware as of iter-144 audit)
 
-**PhenoCompose** (`https://github.com/KooshaPari/phenocompose`) is an external multi-tier virtualization platform by KooshaPari. It provides orchestration for game automation at scale:
+PhenoCompose was a planned external multi-tier virtualization platform reference (3-tier WASM/gVisor/Firecracker) — **the repo does NOT exist under KooshaPari/**. References here are aspirational; remove all claim of integration. `nanovms` (Go) is real but separate from this. No DINOForge code depends on phenocompose; no integration shipped in v0.23.0 or planned for v0.24.0/v0.25.0. Treat this section as research notes only — do not author code, MCP tools, or roadmap items that assume phenocompose exists.
 
-**3-Tier Architecture:**
-1. **Tier 1 (WASM)**: ~1ms startup, language-level isolation (Wasmtime)
-2. **Tier 2 (gVisor)**: ~90ms startup, syscall-filtered containers (100+ parallel)
-3. **Tier 3 (Firecracker)**: ~125ms startup, full VM isolation with GPU passthrough (VFIO)
+#### Steamless / MockSteamworks (VAPORWARE — iter-144 audit)
 
-**Game Automation Features** (directly applicable to DINO):
-- Parallel game test fleet (100+ instances from snapshot)
-- GPU passthrough (VFIO) for visual asset validation
-- Snapshot-based cloning (<2s VM restore from baseline)
-- Native BepInEx plugin loader support
-- Steam integration (headless)
-- Cross-platform (Linux, macOS, Windows via WSL2)
-
-**Integration Strategy (Roadmap):**
-
-| Version | Feature | Effort |
-|---------|---------|--------|
-| v0.24.0 | Evaluate phenocompose as CLI tool for parallel game testing | 1 sprint |
-| v0.25.0 | Wrap nanovms CLI in MCP server (`game_launch_fleet`, `game_snapshot_template`) | 2 sprints |
-| v0.26.0+ | Adopt phenocompose's ADR pattern for DINOForge architecture decisions | Ongoing |
-
-**Do NOT:**
-- Fork phenocompose (maintain as external dependency)
-- Rewrite nanovms in C# (violates "wrap, don't handroll" rule)
-- Use for ML/Mojo inference (out of scope)
-
-**Reference Documents:**
-- `docs/sessions/phenocompose_nvms_investigation.md` — Full repository analysis
-- `docs/sessions/phenocompose_integration_technical.md` — Technical deep dive with workflow phases
-
-**Contact/Monitoring:**
-- Monitor upstream: `https://github.com/KooshaPari/phenocompose` (already yours, active development)
-- License: Apache-2.0 (compatible)
-- Primary languages: Go (nanovms) + Rust (pheno-compose-driver)
+Steamless and MockSteamworks have **NO source** in this repository — they are vaporware as of the iter-144 audit. Any prior claim of "~30% complete" was incorrect. **Will not ship in v0.25.0.** Do not reference these as available infra; do not predicate features, CI gates, or sandbox isolation on their presence. DINO continues to launch via Steam directly (or via the test instance path) — there is no Steamless-stripped binary path today.
 
 ### Agent Slash Commands for Game Work
 

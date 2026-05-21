@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.25.0-dev] - In Progress
 
+#### Iter-144 Wave 1 — Gray-Freeze Root Cause + Bundle Preservation
+
+**Status**: Gray-freeze hang on scene transition fixed at the kernel-IO level. WinDbg-confirmed root cause via 1.4GB MDMP. In-game verified `Process.Responding=True` 25s post-launch.
+
+**Fixed**
+- **Gray-freeze hang on scene transition (commit `974e78e4`)** — `GameBridgeServer.RequestShutdown()` now disposes the pipe handle synchronously, releasing the kernel-level `ConnectNamedPipe` wait that was blocking `mono_jit_cleanup`. Async pipe accept + force-cancel on `OnDestroy` is the true root cause (superseding the earlier VanillaCatalog hypothesis). WinDbg-confirmed via 1.4GB MDMP. In-game verified `Responding=True` at 25s post-launch.
+- **AssetSwapSystem bundle preservation across MainMenu scene transition (commit `66bba825`)** — bundles are no longer unloaded mid-transition; resurrection + bundle preservation restores asset swap continuity across scene boundaries.
+
+**Added**
+- **Harmony H9 probes for mod-side pack-recreation ENTER/EXIT instrumentation (commit `0d15c74c`)** — permanent diagnostic infrastructure surviving wave-1 for future hang triage.
+- **VanillaCatalog defensive guards (commit `30b29705`)** — `IsBeingDestroyed` flag + `EntityManager.World` validity check + Pattern #96 full-exception logging. NOTE: Initially thought to be the gray-freeze fix but later WinDbg analysis identified the true root cause (`974e78e4`); this commit added valuable observability infrastructure regardless.
+
+**Session productivity**
+- 22 fix agents dispatched, 20+ landed: SDK Models `sealed` + `IValidatable`, `BridgeReceiptVerifier` constant-time HMAC, `GameProcessManager` Pattern #102 (orphan process handle), `PluginInfo` VERSION sync, Dependabot 6 ecosystems, 11 GitHub Actions SHA-pinned, plus assorted analyzer + governance hardening. See session iceberg memory for full inventory.
+
+---
+
 #### Iter-143 Wave 2 — Production Hang Fixed + Star Wars Render Unblocked
 
 **Status**: HANG FIX VERIFIED at runtime — log progression past `RuntimeDriver.OnDestroy` confirmed; game stays `Responding=True` past scene transition. Game playable autonomously. Star Wars asset swap unblocked. 6 production fixes + 3 analyzer hardenings.

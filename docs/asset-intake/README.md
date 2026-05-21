@@ -8,10 +8,12 @@ DINOForge's asset intake pipeline enables **automated discovery, download, and i
 
 | Document | Purpose |
 |----------|---------|
-| **[SKETCHFAB_API_SETUP.md](../SKETCHFAB_API_SETUP.md)** | Complete API setup guide, token generation, security, rate limits |
-| **[SKETCHFAB_CLI_COMMANDS.md](./SKETCHFAB_CLI_COMMANDS.md)** | CLI command specifications and examples |
-| **[IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md)** | 5-sprint implementation plan for agents |
-| **[WORKFLOWS.md](./WORKFLOWS.md)** | Common workflows and use cases (planned) |
+| **[sketchfab-cli-commands.md](./sketchfab-cli-commands.md)** | CLI command specifications and examples |
+| **[implementation-roadmap.md](./implementation-roadmap.md)** | 5-sprint implementation plan for agents |
+| **[quick-reference.md](./quick-reference.md)** | Quick reference card |
+| **[assetctl-prd.md](./assetctl-prd.md)** | Asset control PRD |
+
+> Sketchfab API setup notes are tracked in the worklog (not part of the published site); see the source markdown under `docs/worklog/sketchfab-api-setup.md` in the repo.
 
 ## Status
 
@@ -82,7 +84,7 @@ cp .env.example .env
 # SKETCHFAB_API_TOKEN=your_token_here
 ```
 
-See [SKETCHFAB_API_SETUP.md](../SKETCHFAB_API_SETUP.md) for detailed instructions.
+See the Sketchfab API setup worklog (`docs/worklog/sketchfab-api-setup.md` in the source repo) for detailed instructions.
 
 ### 2. Validate Token (1 minute)
 
@@ -196,7 +198,7 @@ cp .env.example .env
 - [ ] Use read-only scope (no write permissions)
 - [ ] Store in environment variables, not code
 
-See [API Setup: Security Best Practices](../SKETCHFAB_API_SETUP.md#security-best-practices)
+See API Setup: Security Best Practices (in the worklog at `docs/worklog/sketchfab-api-setup.md`).
 
 ## Workflows
 
@@ -360,7 +362,7 @@ assetctl download-sketchfab sketchfab:model_id \
 # 4. Try different format (--format zip instead of glb)
 ```
 
-See [SKETCHFAB_API_SETUP.md: Troubleshooting](../SKETCHFAB_API_SETUP.md#part-8-troubleshooting) for more.
+See the Sketchfab API setup worklog (`docs/worklog/sketchfab-api-setup.md`, Troubleshooting section) for more.
 
 ## Implementation Status
 
@@ -397,13 +399,13 @@ See [SKETCHFAB_API_SETUP.md: Troubleshooting](../SKETCHFAB_API_SETUP.md#part-8-t
 1. **Start Sprint 1**: Create TaskList for implementation, assign to team
 2. **Review Pseudocode**: Read SketchfabClient.cs and AssetDownloader.cs
 3. **Set Up Environment**: Copy `.env.example` to `.env` with test token
-4. **Begin Implementation**: Follow IMPLEMENTATION_ROADMAP.md
+4. **Begin Implementation**: Follow [implementation-roadmap.md](./implementation-roadmap.md)
 
 ## Support & Questions
 
-- **API Issues**: See [SKETCHFAB_API_SETUP.md](../SKETCHFAB_API_SETUP.md)
-- **Command Usage**: See [SKETCHFAB_CLI_COMMANDS.md](./SKETCHFAB_CLI_COMMANDS.md)
-- **Implementation**: See [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md)
+- **API Issues**: See `docs/worklog/sketchfab-api-setup.md` (worklog) in the source repo
+- **Command Usage**: See [sketchfab-cli-commands.md](./sketchfab-cli-commands.md)
+- **Implementation**: See [implementation-roadmap.md](./implementation-roadmap.md)
 - **Errors**: Check troubleshooting sections in API setup guide
 
 ## References

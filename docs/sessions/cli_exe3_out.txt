@@ -1,1 +1,0 @@
-{"success":true,"Running":true,"WorldReady":true,"WorldName":"","EntityCount":0,"ModPlatformReady":true,"LoadedPacks":["vanilla-dino","economy-balanced","scenario-tutorial","ui-hud-minimal","warfare-aerial","warfare-modern","warfare-starwars"],"Version":"0.1.0"}

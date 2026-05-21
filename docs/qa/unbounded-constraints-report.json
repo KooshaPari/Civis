@@ -1,6 +1,6 @@
 {
-  "scan_utc": "2026-05-19T04:26:14.259284Z",
-  "scan_date": "2026-05-19",
+  "scan_utc": "2026-05-21T06:25:07.126108Z",
+  "scan_date": "2026-05-21",
   "strict": false,
   "allowlist_size": 76,
   "nuget_floating": [
@@ -162,33 +162,11 @@
       "rule": "nuget_floating",
       "severity": "HIGH",
       "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 22,
+      "line": 27,
       "package": "Microsoft.NET.Test.Sdk",
       "version": "17.*",
       "detail": "PackageReference 'Microsoft.NET.Test.Sdk' uses floating version: Version=\"17.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|22",
-      "in_allowlist": false
-    },
-    {
-      "rule": "nuget_floating",
-      "severity": "HIGH",
-      "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 23,
-      "package": "xunit",
-      "version": "2.*",
-      "detail": "PackageReference 'xunit' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|23",
-      "in_allowlist": false
-    },
-    {
-      "rule": "nuget_floating",
-      "severity": "HIGH",
-      "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 24,
-      "package": "xunit.runner.visualstudio",
-      "version": "2.*",
-      "detail": "PackageReference 'xunit.runner.visualstudio' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|24",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|27",
       "in_allowlist": false
     },
     {
@@ -196,9 +174,9 @@
       "severity": "HIGH",
       "file": "src/Tests/DINOForge.Tests.csproj",
       "line": 28,
-      "package": "FluentAssertions",
-      "version": "6.*",
-      "detail": "PackageReference 'FluentAssertions' uses floating version: Version=\"6.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "package": "xunit",
+      "version": "2.*",
+      "detail": "PackageReference 'xunit' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
       "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|28",
       "in_allowlist": false
     },
@@ -206,22 +184,11 @@
       "rule": "nuget_floating",
       "severity": "HIGH",
       "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 32,
-      "package": "coverlet.collector",
-      "version": "10.*",
-      "detail": "PackageReference 'coverlet.collector' uses floating version: Version=\"10.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|32",
-      "in_allowlist": false
-    },
-    {
-      "rule": "nuget_floating",
-      "severity": "HIGH",
-      "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 36,
-      "package": "coverlet.msbuild",
-      "version": "10.*",
-      "detail": "PackageReference 'coverlet.msbuild' uses floating version: Version=\"10.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|36",
+      "line": 29,
+      "package": "xunit.runner.visualstudio",
+      "version": "2.*",
+      "detail": "PackageReference 'xunit.runner.visualstudio' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|29",
       "in_allowlist": false
     },
     {
@@ -229,9 +196,9 @@
       "severity": "HIGH",
       "file": "src/Tests/DINOForge.Tests.csproj",
       "line": 37,
-      "package": "NetArchTest.Rules",
-      "version": "1.*",
-      "detail": "PackageReference 'NetArchTest.Rules' uses floating version: Version=\"1.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "package": "coverlet.collector",
+      "version": "10.*",
+      "detail": "PackageReference 'coverlet.collector' uses floating version: Version=\"10.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
       "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|37",
       "in_allowlist": false
     },
@@ -239,11 +206,66 @@
       "rule": "nuget_floating",
       "severity": "HIGH",
       "file": "src/Tests/DINOForge.Tests.csproj",
-      "line": 38,
+      "line": 41,
+      "package": "coverlet.msbuild",
+      "version": "10.*",
+      "detail": "PackageReference 'coverlet.msbuild' uses floating version: Version=\"10.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|41",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/DINOForge.Tests.csproj",
+      "line": 42,
+      "package": "NetArchTest.Rules",
+      "version": "1.*",
+      "detail": "PackageReference 'NetArchTest.Rules' uses floating version: Version=\"1.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|42",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/DINOForge.Tests.csproj",
+      "line": 43,
       "package": "AutoFixture",
       "version": "4.*",
       "detail": "PackageReference 'AutoFixture' uses floating version: Version=\"4.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
-      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|38",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|43",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/DINOForge.Tests.csproj",
+      "line": 44,
+      "package": "AutoFixture.Xunit2",
+      "version": "4.*",
+      "detail": "PackageReference 'AutoFixture.Xunit2' uses floating version: Version=\"4.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|44",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/DINOForge.Tests.csproj",
+      "line": 52,
+      "package": "Microsoft.CodeAnalysis.Analyzers",
+      "version": "3.*",
+      "detail": "PackageReference 'Microsoft.CodeAnalysis.Analyzers' uses floating version: Version=\"3.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|52",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/DINOForge.Tests.csproj",
+      "line": 53,
+      "package": "Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.xunit",
+      "version": "1.*",
+      "detail": "PackageReference 'Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.xunit' uses floating version: Version=\"1.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/DINOForge.Tests.csproj|53",
       "in_allowlist": false
     },
     {
@@ -255,6 +277,50 @@
       "version": "6.*",
       "detail": "PackageReference 'coverlet.collector' uses floating version: Version=\"6.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
       "allowlist_key": "nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|19",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/Integration/DINOForge.Tests.Integration.csproj",
+      "line": 16,
+      "package": "xunit",
+      "version": "2.*",
+      "detail": "PackageReference 'xunit' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|16",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/Integration/DINOForge.Tests.Integration.csproj",
+      "line": 17,
+      "package": "xunit.runner.visualstudio",
+      "version": "2.*",
+      "detail": "PackageReference 'xunit.runner.visualstudio' uses floating version: Version=\"2.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|17",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/Integration/DINOForge.Tests.Integration.csproj",
+      "line": 21,
+      "package": "FluentAssertions",
+      "version": "6.*",
+      "detail": "PackageReference 'FluentAssertions' uses floating version: Version=\"6.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|21",
+      "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tests/Integration/DINOForge.Tests.Integration.csproj",
+      "line": 22,
+      "package": "Xunit.SkippableFact",
+      "version": "1.4.*",
+      "detail": "PackageReference 'Xunit.SkippableFact' uses floating version: Version=\"1.4.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|22",
       "in_allowlist": false
     },
     {
@@ -344,6 +410,17 @@
       "detail": "PackageReference 'Steamworks.NET' uses floating version: Version=\"15.0.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
       "allowlist_key": "nuget_floating|src/Tools/MockSteamworksNet/MockSteamworksNet.csproj|45",
       "in_allowlist": false
+    },
+    {
+      "rule": "nuget_floating",
+      "severity": "HIGH",
+      "file": "src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj",
+      "line": 28,
+      "package": "Spectre.Console",
+      "version": "0.*",
+      "detail": "PackageReference 'Spectre.Console' uses floating version: Version=\"0.*\" (NuGet floating, no fixed ceiling). Pin to an explicit ``[lo,hi)`` range or a single version.",
+      "allowlist_key": "nuget_floating|src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj|28",
+      "in_allowlist": false
     }
   ],
   "dependabot_unrationalized": [],
@@ -352,7 +429,7 @@
   "vacuous_numeric_guard": [],
   "unbounded_join_consumer": [],
   "totals": {
-    "nuget_floating": 31,
+    "nuget_floating": 38,
     "dependabot_unrationalized": 0,
     "gitignore_overbroad": 0,
     "tautological_predicate": 0,
@@ -360,7 +437,7 @@
     "unbounded_join_consumer": 0
   },
   "raw_totals": {
-    "nuget_floating": 78,
+    "nuget_floating": 74,
     "dependabot_unrationalized": 1,
     "gitignore_overbroad": 6,
     "tautological_predicate": 0,

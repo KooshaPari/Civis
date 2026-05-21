@@ -1,6 +1,6 @@
 # Pattern Catalog Reconciliation Index
 
-**Status as of iter-142, 2026-05-18**
+**Status as of iter-144, 2026-05-20** (previously iter-142, 2026-05-18)
 
 This document reconciles all Pattern Catalog entries across four sources:
 - **CLAUDE.md** Pattern Catalog (governance doctrine)
@@ -39,7 +39,7 @@ This document reconciles all Pattern Catalog entries across four sources:
 | DF1020 | (Pending) | N/A | 1 | 133 | Info |
 | DF1021 | (Pending) | N/A | 1 | 134 | Info |
 
-**Total Roslyn Analyzers**: 42 files in `src/Analyzers/`. Analyzer tests in `src/Tests/Analyzers.Tests.csproj`.
+**Total Roslyn Analyzers**: 44 files in `src/Analyzers/` (Tier 1 = 16 + Tier 2 = 28 per #585 audit). Analyzer tests in `src/Tests/Analyzers.Tests.csproj`.
 
 ---
 
@@ -87,6 +87,24 @@ This document reconciles all Pattern Catalog entries across four sources:
 | 232 | ✅ | ✅ pattern_232_audit.md | ✅ detect_unbounded_log_append.py | Full alignment (closure) | Unbounded append-only file logging without rotation (HIGH=26 baseline) |
 | 233 | ✅ | ✅ pattern_233_audit.md | ✅ detect_bepinex_plugin_tfm.py | Full alignment (closure) | TFM/SDK migration stale obj/ cache + BepInEx plugin multi-target (HIGH=0 baseline) |
 | 234 | ✅ | ✅ test_pack_leak_audit_iter142.md | ✅ detect_test_pack_leak.py | Full alignment (iter-142) | Test fixture IDs leaking into deployed packs (MSBuild DeployPacks exclusion landed) |
+| 235 | ✅ | ❌ | ❌ | LIVE (iter-143) | BepInEx plugin GraphicRaycaster without EventSystem guard; EventSystem ensure block landed in src/Runtime/UI/DFCanvas.cs (iter-143) — pairs with Pattern #231 static-init discipline |
+| 530 | ✅ | ❌ | ❌ | LIVE (iter-143) | MSBuild deploy target silent no-op under multi-TFM project; WarnDeployWrongTFM guardrail target (Warning DF0530) landed in src/Runtime/DINOForge.Runtime.csproj (iter-143) — pairs with Pattern #233 stale obj/ cache |
+
+---
+
+## Iter-144 Progress Notes (2026-05-20)
+
+| Pattern | Activity | File:Line / Ref | Status |
+|---------|----------|-----------------|--------|
+| #96 (LogError stack-trace loss) | ModPlatform.cs:253 reformatted to Pattern #96-compliant logging (full exception object passed, not `.Message`) — commit `30b29705` | `src/Runtime/ModPlatform.cs:253` | Code site cleaned; Roslyn DF0096 already enforces compile-time (iter-144 task #269) |
+| #108 (Sleep-based test sync) | PackFileWatcher debounce relaxed — commit `9bc88f9c` | PackFileWatcher (SDK) | Debounce interval relaxed for test stability; not a regression — detection threshold unchanged |
+| #231 (Static-init I/O side effect) | Referenced via task #505 follow-up; no new code touched in iter-144 (work landed earlier) | `src/Analyzers/...` | Stable; HIGH=11 in NuGet surface (baseline from iter-142) |
+| #99, #117, #123 | No iter-144 code touches; baseline holds | — | Unchanged |
+
+**Iter-144 recommended detector runs (next session)**:
+- `scripts/ci/detect_logerror_no_stack.py` — verify ModPlatform.cs:253 fix did not introduce regressions elsewhere
+- `scripts/ci/detect_test_sleep_sync.py` — confirm PackFileWatcher debounce change did not push test sleep counts over threshold
+- `scripts/ci/detect_static_init_side_effect.py` — re-baseline HIGH count (still 11 expected)
 
 ---
 
@@ -95,30 +113,32 @@ This document reconciles all Pattern Catalog entries across four sources:
 | Finding | Reference | Status | Notes |
 |---------|-----------|--------|-------|
 | HiddenDesktopBackend wiring | isolation_layer.py (814 LOC) | DEFERRED v0.26.0 | NOT WIRED — dead code in current isolation_layer.py |
-| Lefthook scope | scripts/hooks/lefthook | OPEN | Hardcoded sln path, fix = `{staged_files}` glob requires user authorization |
-| TIER 1 deploy spec | src/Runtime/DINOForge.Runtime.csproj | OPEN | Verified accurate, 28-line XML ready for implementation |
-| IL2026 root cause | Newtonsoft.Json v13 transitive | OPEN | SDK serialization; 3 resolution options documented |
+| Lefthook scope | scripts/hooks/lefthook | OPEN (still open per iter-144 audit) | Hardcoded sln path, fix = `{staged_files}` glob requires user authorization; no iter-143/144 closure recorded |
+| TIER 1 deploy spec | src/Runtime/DINOForge.Runtime.csproj | RESOLVED (iter-143) | WarnDeployWrongTFM guardrail (Pattern #530) landed in iter-143 — DF0530 warning fires on non-netstandard2.0 TFM leaves when DeployToGame=true |
+| IL2026 root cause | Newtonsoft.Json v13 transitive | OPEN (still open per iter-144 audit) | SDK serialization; 3 resolution options documented; no iter-143/144 closure recorded |
 | CHANGELOG iter-142 entry | CHANGELOG.md | LANDED | 1-line addendum on isolation layer status |
 
 Cross-reference: `docs/sessions/iter-142-DECISIONS-SYNTHESIS.md`, `docs/qa/*_iter142.md` (5 audit reports).
 
 ---
 
-## Summary Statistics (Iter-142)
+## Summary Statistics (Iter-144)
 
-- **Total unique patterns across all 4 sources**: 39 (patterns 99-125 + 220-234)
-- **CLAUDE.md entries**: 27 documented patterns in catalog section (+ 5 pre-pattern #94-98)
+- **Total unique patterns across all 4 sources**: 41 (patterns 99-125 + 220-235 + 530)
+- **CLAUDE.md entries**: 29 documented patterns in catalog section (+ 5 pre-pattern #94-98)
 - **docs/qa audit files**: 15 files covering patterns {220-234} (iter-130+)
 - **scripts/ci detection scripts**: 36 scripts across legacy patterns (99-125)
-- **Roslyn analyzers (src/Analyzers/)**: 42 compiled analyzer implementations (Tier 1-3)
-- **Recently-landed Roslyn**: 7 (DF1010-DF1015 + pending DF1021)
+- **Roslyn analyzers (src/Analyzers/)**: 44 compiled analyzer implementations across Tier 1 (16) + Tier 2 (28) per #585 audit
+- **Recently-landed Roslyn (Tier 1)**: 9 (DF1010-DF1015 + DF1018 + DF0096 + pending DF1019-DF1021)
+- **Tier 3 (FsCheck property-based)**: 159 properties per ac455d audit (behavioral variance seeding for pack/schema/Registry)
 - **Governance Hooks**: 2 LIVE + 1 queued for v0.26.0
 
-### Alignment Counts (Post-Roslyn Era, iter-142)
+### Alignment Counts (Post-Roslyn Era, iter-144)
 - **Full alignment (CLAUDE.md + docs/qa + Roslyn/CI)**: 3 patterns {226 (Roslyn DF1018), 234 (DeployPacks exclusion), pending}
 - **Tier 2 Audit-Only (CLAUDE.md + docs/qa, no CI detection)**: 12 patterns {220-225, 227-233} (custom patterns from iter-139+)
 - **Legacy 2-of-3 (CLAUDE.md + detection script)**: 17 patterns {99-125 minus overlaps}
 - **Partial/Pre-catalog (no CLAUDE.md yet)**: 5 patterns {94-98}
+- **Iter-143 LIVE (CLAUDE.md only, code-site fix)**: 2 patterns {235 (EventSystem guard), 530 (WarnDeployWrongTFM guardrail)}
 
 ---
 
@@ -187,16 +207,16 @@ Cross-reference: `docs/sessions/iter-142-DECISIONS-SYNTHESIS.md`, `docs/qa/*_ite
 
 ## Roslyn Analyzer Tier Coverage
 
-**Tier 1 (High-signal, compile-time catch)**: DF1010, DF1011, DF1012, DF1013, DF1014 — 5 active, 1 pending (DF1015).
+**Tier 1 (High-signal, compile-time catch)**: 16 analyzers including DF0096, DF1010-DF1015, DF1018 active; DF1019-DF1021 pending.
 
-**Tier 2 (Semantic patterns, tool use)**: DF1001-DF1009 (9 files) — foundational analyzers for SDK surface.
+**Tier 2 (Semantic patterns, tool use)**: 28 analyzers (DF1001-DF1009 foundational + extensions) — covers SDK surface.
 
-**Tier 3 (FsCheck property-based)**: Pending — behavioral variance seeding for pack/schema/Registry.
+**Tier 3 (FsCheck property-based)**: 159 properties per ac455d audit — behavioral variance seeding for pack/schema/Registry landed.
 
-**Total Analyzer Implementations**: 32 files in `src/Analyzers/`, with dedicated test project `src/Tests/Analyzers.Tests.csproj`.
+**Total Analyzer Implementations**: 44 files in `src/Analyzers/` (Tier 1 + Tier 2 per #585 audit), with dedicated test project `src/Tests/Analyzers.Tests.csproj`.
 
 ---
 
-**Last Updated**: 2026-05-18 (iter-142)  
-**Curated By**: Agent doc-sync sweep (Haiku, 200k token budget)  
+**Last Updated**: 2026-05-20 (iter-144) — previously iter-142 (2026-05-18)  
+**Curated By**: Agent doc-sync sweep (iter-144 doc gardener)  
 **Governance Hooks Status**: 2 LIVE (block-git-stash, guard-git-worktree), 1 queued (block-no-verify). Settings.json wiring planned for v0.26.0.

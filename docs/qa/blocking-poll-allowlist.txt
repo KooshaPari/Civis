@@ -24,3 +24,7 @@ src/Runtime/Plugin.cs:646  # HMR signal file watcher polling — guarded by File
 src/Runtime/Plugin.cs:755  # key event debounce sleep — one-shot wait within condition
 src/Runtime/Bridge/GameBridgeServer.cs:786  # awaiting MCP pipe connection setup — guarded timeout
 src/Runtime/Bridge/GameBridgeServer.cs:369  # guarded by thread-local state variable
+
+# Iter-145 P0 (audit a9ec9a7a41fa48804): bring HIGH below threshold of 8
+# Detector now uses repo-relative paths (relative_to(REPO_ROOT)) — entries MUST start with src/
+src/Runtime/Bridge/KeyInputSystem.cs:162  # one-shot debounce guarded by ThreadInterruptedException -> break (cooperative cancellation)

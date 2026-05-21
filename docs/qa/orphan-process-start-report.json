@@ -1,65 +1,16 @@
 {
-  "scan_utc": "2026-05-19T11:34:46.026118Z",
-  "scan_date": "2026-05-19",
-  "scanned_files": 772,
-  "files_scanned": 772,
-  "total_hits": 18,
-  "new_hits": 18,
+  "scan_utc": "2026-05-21T17:24:41.946822Z",
+  "scan_date": "2026-05-21",
+  "scanned_files": 804,
+  "files_scanned": 804,
+  "total_hits": 15,
+  "new_hits": 15,
   "allowlist_size": 0,
   "strict": false,
-  "high_count": 4,
-  "med_count": 13,
+  "high_count": 0,
+  "med_count": 14,
   "low_count": 1,
-  "high_violations": [
-    {
-      "file": "src/Bridge/Client/GameProcessManager.cs",
-      "line": 65,
-      "severity": "HIGH",
-      "shape": "fire_and_forget",
-      "has_await_or_throw": false,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process.Start(steamInfo);",
-      "detail": "`Process.Start(...)` fire-and-forget statement in core code (src/Bridge/Client/GameProcessManager.cs). The Process handle is discarded; OS handle closure relies on finalizer GC. Wrap with `using var _ = Process.Start(...);` for deterministic dispose, or capture into a field and dispose explicitly.",
-      "allowlist_key": "HIGH|src/Bridge/Client/GameProcessManager.cs|65",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/Bridge/Client/GameProcessManager.cs",
-      "line": 92,
-      "severity": "HIGH",
-      "shape": "fire_and_forget",
-      "has_await_or_throw": false,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process.Start(startInfo);",
-      "detail": "`Process.Start(...)` fire-and-forget statement in core code (src/Bridge/Client/GameProcessManager.cs). The Process handle is discarded; OS handle closure relies on finalizer GC. Wrap with `using var _ = Process.Start(...);` for deterministic dispose, or capture into a field and dispose explicitly.",
-      "allowlist_key": "HIGH|src/Bridge/Client/GameProcessManager.cs|92",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Dependencies/PackSubmoduleManager.cs",
-      "line": 268,
-      "severity": "HIGH",
-      "shape": "assign_no_cleanup",
-      "has_await_or_throw": true,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process process = Process.Start(psi);",
-      "detail": "`process = Process.Start(...)` in src/SDK/Dependencies/PackSubmoduleManager.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|268",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Dependencies/PackSubmoduleManager.cs",
-      "line": 294,
-      "severity": "HIGH",
-      "shape": "assign_no_cleanup",
-      "has_await_or_throw": true,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process process = Process.Start(psi);",
-      "detail": "`process = Process.Start(...)` in src/SDK/Dependencies/PackSubmoduleManager.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|294",
-      "in_allowlist": false
-    }
-  ],
+  "high_violations": [],
   "med_violations": [
     {
       "file": "src/Analyzers/OrphanProcessHandleAnalyzer.cs",
@@ -95,6 +46,30 @@
       "snippet": "// Check if parent is an initializer (e.g., new SomeClass { Process = Process.Start(...) })",
       "detail": "`Process = Process.Start(...)` in src/Analyzers/OrphanProcessHandleAnalyzer.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
       "allowlist_key": "MED|src/Analyzers/OrphanProcessHandleAnalyzer.cs|129",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs",
+      "line": 41,
+      "severity": "MED",
+      "shape": "fire_and_forget",
+      "has_await_or_throw": false,
+      "has_try_catch_cleanup": false,
+      "snippet": "Process.Start(\"\"notepad.exe\"\");",
+      "detail": "`Process.Start(...)` fire-and-forget statement in non-core code (src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs). Common for browser-open / shell-execute calls; wrap with `using var _ = Process.Start(...);` for handle hygiene, or append `// pattern-102-allowed: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs|41",
+      "in_allowlist": false
+    },
+    {
+      "file": "src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs",
+      "line": 76,
+      "severity": "MED",
+      "shape": "assign_no_cleanup",
+      "has_await_or_throw": true,
+      "has_try_catch_cleanup": false,
+      "snippet": "var p = Process.Start(\"\"notepad.exe\"\");",
+      "detail": "`p = Process.Start(...)` in src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
+      "allowlist_key": "MED|src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs|76",
       "in_allowlist": false
     },
     {
@@ -195,26 +170,14 @@
     },
     {
       "file": "src/Tools/McpServer/Program.cs",
-      "line": 31,
+      "line": 35,
       "severity": "MED",
       "shape": "fire_and_forget",
       "has_await_or_throw": false,
       "has_try_catch_cleanup": false,
       "snippet": "services.AddSingleton<GameProcessManager>(); // Owned by this file; wraps Process.Start()",
       "detail": "`Process.Start(...)` fire-and-forget statement in non-core code (src/Tools/McpServer/Program.cs). Common for browser-open / shell-execute calls; wrap with `using var _ = Process.Start(...);` for handle hygiene, or append `// pattern-102-allowed: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Tools/McpServer/Program.cs|31",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
-      "line": 99,
-      "severity": "MED",
-      "shape": "assign_no_cleanup",
-      "has_await_or_throw": true,
-      "has_try_catch_cleanup": false,
-      "snippet": "using (var process = Process.Start(psi))",
-      "detail": "`process = Process.Start(...)` in src/Tools/PackCompiler/Services/GoResolverService.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|99",
+      "allowlist_key": "MED|src/Tools/McpServer/Program.cs|35",
       "in_allowlist": false
     }
   ],
@@ -282,51 +245,27 @@
       "in_allowlist": false
     },
     {
-      "file": "src/Bridge/Client/GameProcessManager.cs",
-      "line": 65,
-      "severity": "HIGH",
+      "file": "src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs",
+      "line": 41,
+      "severity": "MED",
       "shape": "fire_and_forget",
       "has_await_or_throw": false,
       "has_try_catch_cleanup": false,
-      "snippet": "Process.Start(steamInfo);",
-      "detail": "`Process.Start(...)` fire-and-forget statement in core code (src/Bridge/Client/GameProcessManager.cs). The Process handle is discarded; OS handle closure relies on finalizer GC. Wrap with `using var _ = Process.Start(...);` for deterministic dispose, or capture into a field and dispose explicitly.",
-      "allowlist_key": "HIGH|src/Bridge/Client/GameProcessManager.cs|65",
+      "snippet": "Process.Start(\"\"notepad.exe\"\");",
+      "detail": "`Process.Start(...)` fire-and-forget statement in non-core code (src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs). Common for browser-open / shell-execute calls; wrap with `using var _ = Process.Start(...);` for handle hygiene, or append `// pattern-102-allowed: <reason>` if intentional.",
+      "allowlist_key": "MED|src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs|41",
       "in_allowlist": false
     },
     {
-      "file": "src/Bridge/Client/GameProcessManager.cs",
-      "line": 92,
-      "severity": "HIGH",
-      "shape": "fire_and_forget",
-      "has_await_or_throw": false,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process.Start(startInfo);",
-      "detail": "`Process.Start(...)` fire-and-forget statement in core code (src/Bridge/Client/GameProcessManager.cs). The Process handle is discarded; OS handle closure relies on finalizer GC. Wrap with `using var _ = Process.Start(...);` for deterministic dispose, or capture into a field and dispose explicitly.",
-      "allowlist_key": "HIGH|src/Bridge/Client/GameProcessManager.cs|92",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Dependencies/PackSubmoduleManager.cs",
-      "line": 268,
-      "severity": "HIGH",
+      "file": "src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs",
+      "line": 76,
+      "severity": "MED",
       "shape": "assign_no_cleanup",
       "has_await_or_throw": true,
       "has_try_catch_cleanup": false,
-      "snippet": "Process process = Process.Start(psi);",
-      "detail": "`process = Process.Start(...)` in src/SDK/Dependencies/PackSubmoduleManager.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|268",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/SDK/Dependencies/PackSubmoduleManager.cs",
-      "line": 294,
-      "severity": "HIGH",
-      "shape": "assign_no_cleanup",
-      "has_await_or_throw": true,
-      "has_try_catch_cleanup": false,
-      "snippet": "Process process = Process.Start(psi);",
-      "detail": "`process = Process.Start(...)` in src/SDK/Dependencies/PackSubmoduleManager.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|294",
+      "snippet": "var p = Process.Start(\"\"notepad.exe\"\");",
+      "detail": "`p = Process.Start(...)` in src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
+      "allowlist_key": "MED|src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs|76",
       "in_allowlist": false
     },
     {
@@ -427,30 +366,18 @@
     },
     {
       "file": "src/Tools/McpServer/Program.cs",
-      "line": 31,
+      "line": 35,
       "severity": "MED",
       "shape": "fire_and_forget",
       "has_await_or_throw": false,
       "has_try_catch_cleanup": false,
       "snippet": "services.AddSingleton<GameProcessManager>(); // Owned by this file; wraps Process.Start()",
       "detail": "`Process.Start(...)` fire-and-forget statement in non-core code (src/Tools/McpServer/Program.cs). Common for browser-open / shell-execute calls; wrap with `using var _ = Process.Start(...);` for handle hygiene, or append `// pattern-102-allowed: <reason>` if intentional.",
-      "allowlist_key": "MED|src/Tools/McpServer/Program.cs|31",
-      "in_allowlist": false
-    },
-    {
-      "file": "src/Tools/PackCompiler/Services/GoResolverService.cs",
-      "line": 99,
-      "severity": "MED",
-      "shape": "assign_no_cleanup",
-      "has_await_or_throw": true,
-      "has_try_catch_cleanup": false,
-      "snippet": "using (var process = Process.Start(psi))",
-      "detail": "`process = Process.Start(...)` in src/Tools/PackCompiler/Services/GoResolverService.cs is followed by `await`/`throw`/method-end with no covering try/catch that calls Kill()/Dispose() on failure. If the await throws, the spawned handle is orphaned. Wrap the spawn in `try { ... } catch { proc?.Kill(); proc?.Dispose(); throw; }` or use `using var p = Process.Start(...);` if local.",
-      "allowlist_key": "MED|src/Tools/PackCompiler/Services/GoResolverService.cs|99",
+      "allowlist_key": "MED|src/Tools/McpServer/Program.cs|35",
       "in_allowlist": false
     }
   ],
-  "exit_code": 1,
+  "exit_code": 0,
   "scan_root": "C:/Users/koosh/Dino/src",
   "allowlist_path": "C:/Users/koosh/Dino/docs/qa/orphan-process-start-allowlist.txt"
 }

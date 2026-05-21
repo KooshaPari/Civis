@@ -32,7 +32,7 @@ jobs:
 
       # Install all required SDKs: net8.0 (SDK/Domains/Tests) + net11.0 (Tools/CLI)
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@6bd8b7f7d58d76bb371f91465f0c7d208eccb313 # v4.0.0
         with:
           dotnet-version: |
             8.0.x
@@ -220,7 +220,7 @@ jobs:
         shell: pwsh
 
       - name: Publish to NuGet.org
-        if: ${{ !steps.version.outputs.IS_PRERELEASE == 'true' }}
+        if: steps.version.outputs.IS_PRERELEASE != 'true'
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
@@ -370,7 +370,7 @@ jobs:
       # Build Go DependencyResolver binary
       # ---------------------------------------------------------------
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: '1.22'
 
@@ -410,7 +410,7 @@ jobs:
       # Build Rust AssetPipeline binary
       # ---------------------------------------------------------------
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b # stable
 
       - name: Build Rust AssetPipeline (Release)
         continue-on-error: true
@@ -655,6 +655,7 @@ jobs:
           $nugetFiles = Get-ChildItem "staging/nuget/*.nupkg" -ErrorAction SilentlyContinue
           $hasSdk       = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.SDK\." }
           $hasProtocol  = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Bridge\.Protocol\." }
+          $hasClient    = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Bridge\.Client\." }
           $hasTemplates = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Templates\." }
           $hasWarfare   = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.Warfare\." }
           $hasEconomy   = $nugetFiles | Where-Object { $_.Name -match "DINOForge\.Domains\.Economy\." }
@@ -667,6 +668,7 @@ jobs:
           }
           if (-not $hasSdk)       { $missing += "staging/nuget/DINOForge.SDK.*.nupkg" }
           if (-not $hasProtocol)  { $missing += "staging/nuget/DINOForge.Bridge.Protocol.*.nupkg" }
+          if (-not $hasClient)    { $missing += "staging/nuget/DINOForge.Bridge.Client.*.nupkg" }
           if (-not $hasTemplates) { $missing += "staging/nuget/DINOForge.Templates.*.nupkg" }
           if (-not $hasWarfare)   { $missing += "staging/nuget/DINOForge.Domains.Warfare.*.nupkg" }
           if (-not $hasEconomy)   { $missing += "staging/nuget/DINOForge.Domains.Economy.*.nupkg" }
@@ -724,7 +726,7 @@ jobs:
 
       # Upload Desktop Companion (optional — skipped if VS Build Tools unavailable)
       - name: Upload Desktop Companion
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: desktop-companion
           path: |

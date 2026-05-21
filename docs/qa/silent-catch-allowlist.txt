@@ -9,3 +9,10 @@ Runtime/Bridge/SessionHmac.cs
 
 # TEST_OK: Test files where best-effort cleanup is acceptable
 Tests/
+
+# SAFE: Roslyn analyzer source files — the `catch { ... }` text appears in XML
+# doc comments / inline comments describing the patterns they detect, not in
+# actual executable catch blocks. Self-test reference patterns are intentional.
+# safe-swallow: analyzer-self-test, intentional reference pattern
+Analyzers/EmptyCatchBlockAnalyzer.cs
+Analyzers/SilentCatchAnalyzer.cs

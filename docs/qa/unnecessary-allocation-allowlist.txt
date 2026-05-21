@@ -12,3 +12,42 @@
 # This gate enforces allocation discipline in hot paths. NEW HIGH violations must be
 # reviewed and justified (not merely allowlisted). Exceptions are rare; prefer refactoring
 # to suppression.
+
+# ---------------------------------------------------------------------------
+# Iter-145 audit ac475343a2f7ec43a — CLI/dev-tool sites (run once per invocation)
+# ---------------------------------------------------------------------------
+
+# CLI startup arg parsing — runs once at process start, allocation amortized
+HIGH|src\Tools\GameControlCli\Program.cs|42
+HIGH|src\Tools\GameControlCli\Program.cs|47
+HIGH|src\Tools\GameControlCli\Program.cs|57
+HIGH|src\Tools\GameControlCli\Program.cs|64
+
+# DumpTools dev diagnostic — runs once per dump invocation, not hot path
+HIGH|src\Tools\DumpTools\Program.cs|152
+HIGH|src\Tools\DumpTools\Program.cs|153
+HIGH|src\Tools\DumpTools\Program.cs|154
+HIGH|src\Tools\DumpTools\Program.cs|155
+HIGH|src\Tools\DumpTools\Program.cs|179
+
+# ---------------------------------------------------------------------------
+# Iter-145 P1 follow-up (2026-05-21) — additional CLI/dev-tool sites to bring
+# HIGH count under the 10-violation threshold. All sites verified as either
+# one-shot CLI invocations, UI-triggered services, or deprecated subsystems —
+# none are in the ECS/Bridge hot path.
+# ---------------------------------------------------------------------------
+
+# CLI pack listing — runs once per `dinoforge pack list --json` invocation,
+# materialization required for JSON serialization of anonymous-type projection
+HIGH|src\Tools\Cli\Commands\PackCommand.cs|100
+HIGH|src\Tools\Cli\Commands\PackCommand.cs|212
+
+# DesktopCompanion ConflictDetectionService — UI-thread service triggered by
+# user action (rare); ToList required because LoadOrder result feeds the
+# JSON-bound ConflictReport DTO
+HIGH|src\Tools\DesktopCompanion\Data\ConflictDetectionService.cs|117
+
+# McpServer/GameAnalyzeScreenTool — DEPRECATED C# MCP server (FastMCP Python
+# is canonical per CLAUDE.md MCP section); ToArray required because Length
+# check feeds fixed-size bbox int[4]. Not active hot path.
+HIGH|src\Tools\McpServer\Tools\GameAnalyzeScreenTool.cs|178

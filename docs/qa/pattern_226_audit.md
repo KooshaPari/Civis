@@ -43,8 +43,8 @@
 | `Runtime\Aviation\AerialUnitComponent.cs` | 33 | MED | `IsAttacking` | public bool IsAttacking; |
 | `Runtime\Aviation\AntiAirComponent.cs` | 17 | MED | `AntiAirRange` | public float AntiAirRange; |
 | `Runtime\Aviation\AntiAirComponent.cs` | 22 | MED | `AntiAirDamageBonus` | public float AntiAirDamageBonus; |
-| `Runtime\HotReload\HotReloadBridge.cs` | 25 | MED | `OnRuntimeUpdated` | public event EventHandler<HotReloadResult>? OnRuntimeUpdated; |
-| `Runtime\ModPlatform.cs` | 69 | MED | `OnHudCountsChanged` | public Action<int, int>? OnHudCountsChanged; |
+| `Runtime\HotReload\HotReloadBridge.cs` | 25 | MED | `OnRuntimeUpdated` | `public event EventHandler<HotReloadResult>? OnRuntimeUpdated;` |
+| `Runtime\ModPlatform.cs` | 69 | MED | `OnHudCountsChanged` | `public Action<int, int>? OnHudCountsChanged;` |
 | `Runtime\UI\DFCanvas.cs` | 51 | MED | `OnInitSuccess` | public Action? OnInitSuccess; |
 | `Runtime\UI\DFCanvas.cs` | 58 | MED | `OnInitFailed` | public Action? OnInitFailed; |
 | `Runtime\UI\HudStrip.cs` | 29 | MED | `OnClicked` | public Action? OnClicked; |

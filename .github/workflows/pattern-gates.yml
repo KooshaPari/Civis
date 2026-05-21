@@ -43,6 +43,25 @@ jobs:
           - { number: 234, name: 'test-pack-leak', script: 'detect_test_pack_leak.py' }
           - { number: 235, name: 'graphicraycaster-eventsystem', script: 'detect_graphicraycaster_no_eventsystem.py' }
           - { number: 441, name: 'hardcoded-pipe-names', script: 'detect_hardcoded_pipe_names.py' }
+          - { number: 94, name: 'framework-version', script: 'check_framework_version.py', continue_on_error: true }
+          - { number: 231, name: 'static-init-side-effect', script: 'detect_static_init_side_effect.py' }
+          - { number: 116, name: 'sync-over-async', script: 'detect_sync_over_async.py', continue_on_error: true }
+          - { number: 98, name: 'missing-configureawait', script: 'detect_missing_configureawait.py', continue_on_error: true }
+          - { number: 102, name: 'orphan-process-start', script: 'detect_orphan_process_start.py', continue_on_error: true }
+          - { number: 109, name: 'inline-json-options', script: 'detect_inline_json_options.py' }
+          - { number: 862, name: 'raw-remove-item', script: 'detect_raw_remove_item.py', continue_on_error: true }
+          - { number: 112, name: 'direct-datetime', script: 'detect_direct_datetime.py', continue_on_error: true }
+          - { number: 97,  name: 'tcs-sync-continuations', script: 'detect_tcs_sync_continuations.py', continue_on_error: true }
+          - { number: 101, name: 'stringly-enums', script: 'detect_stringly_enums.py', continue_on_error: true }
+          - { number: 999, name: 'logerror-no-stack', script: 'detect_logerror_no_stack.py', continue_on_error: true }
+          - { number: 998, name: 'global-state-tests', script: 'detect_global_state_tests.py', continue_on_error: true }
+          - { number: 735, name: 'comparer-mismatch', script: 'detect_comparer_mismatch.py', continue_on_error: true }
+          # P1 #739: Wire orphan detectors (initially continue-on-error for safe rollout)
+          - { number: 94,  name: 'unbounded-constraints', script: 'detect_unbounded_constraints.py', continue_on_error: true }
+          - { number: 95,  name: 'unguarded-deserialize', script: 'detect_unguarded_deserialize.py', continue_on_error: true }
+          - { number: 226, name: 'public-mutable-fields', script: 'detect_pattern_226.py', continue_on_error: true }
+          - { number: 230, name: 'broad-exception-catch', script: 'audit_broad_exception_catch.py', continue_on_error: true }
+          - { number: 223, name: 'todo-without-ticket', script: 'audit_todo_without_ticket.py', continue_on_error: true }
 
     steps:
       - name: Checkout code
@@ -54,6 +73,7 @@ jobs:
           python-version: '3.11'
 
       - name: Run Pattern #${{ matrix.pattern.number }} detection
+        continue-on-error: ${{ matrix.pattern.continue_on_error == true }}
         run: |
           python scripts/ci/${{ matrix.pattern.script }}
 

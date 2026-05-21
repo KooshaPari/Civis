@@ -1,8 +1,8 @@
 {
-  "scan_utc": "2026-04-27T09:28:18.606822Z",
-  "scan_date": "2026-04-27",
-  "total_test_methods": 2721,
-  "tautological_count": 24,
+  "scan_utc": "2026-05-21T17:46:43.284094Z",
+  "scan_date": "2026-05-21",
+  "total_test_methods": 3690,
+  "tautological_count": 20,
   "allowlist_size": 24,
   "new_instances": [],
   "tautological_methods": [
@@ -27,8 +27,8 @@
     {
       "fqn": "DINOForge.Tests.CliTools.ProtocolTypeTests.GameStatus_AllPropertiesAccessible",
       "file": "CliToolTests/ProtocolTypeTests.cs",
-      "line": 35,
-      "method_line": 35,
+      "line": 37,
+      "method_line": 37,
       "signature": "no_real_assertion",
       "method": "GameStatus_AllPropertiesAccessible",
       "in_allowlist": true
@@ -54,8 +54,8 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.StateProperty_IsThreadSafe",
       "file": "GameClientCoverageTests.cs",
-      "line": 251,
-      "method_line": 251,
+      "line": 253,
+      "method_line": 253,
       "signature": "no_real_assertion",
       "method": "StateProperty_IsThreadSafe",
       "in_allowlist": true
@@ -63,8 +63,8 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.Dispose_CanBeCalledMultipleTimes",
       "file": "GameClientCoverageTests.cs",
-      "line": 304,
-      "method_line": 304,
+      "line": 306,
+      "method_line": 306,
       "signature": "no_real_assertion",
       "method": "Dispose_CanBeCalledMultipleTimes",
       "in_allowlist": true
@@ -72,8 +72,8 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.Dispose_AfterDisconnect_StillDisposes",
       "file": "GameClientCoverageTests.cs",
-      "line": 316,
-      "method_line": 316,
+      "line": 318,
+      "method_line": 318,
       "signature": "no_real_assertion",
       "method": "Dispose_AfterDisconnect_StillDisposes",
       "in_allowlist": true
@@ -81,8 +81,8 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.Options_AreSetCorrectly",
       "file": "GameClientCoverageTests.cs",
-      "line": 1323,
-      "method_line": 1323,
+      "line": 1331,
+      "method_line": 1331,
       "signature": "no_real_assertion",
       "method": "Options_AreSetCorrectly",
       "in_allowlist": true
@@ -90,8 +90,8 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.GameProcessManager_IsRunning_WhenGameNotRunning_ReturnsFalse",
       "file": "GameClientCoverageTests.cs",
-      "line": 1341,
-      "method_line": 1341,
+      "line": 1349,
+      "method_line": 1349,
       "signature": "no_real_assertion",
       "method": "GameProcessManager_IsRunning_WhenGameNotRunning_ReturnsFalse",
       "in_allowlist": true
@@ -99,46 +99,10 @@
     {
       "fqn": "DINOForge.Tests.GameClientCoverageTests.GameClient_Dispose_CanBeCalledMultipleTimes",
       "file": "GameClientCoverageTests.cs",
-      "line": 2091,
-      "method_line": 2091,
+      "line": 2101,
+      "method_line": 2101,
       "signature": "no_real_assertion",
       "method": "GameClient_Dispose_CanBeCalledMultipleTimes",
-      "in_allowlist": true
-    },
-    {
-      "fqn": "DINOForge.Tests.Integration.Tests.GameSandboxIntegrationTests.Sandbox_Gameplay_ApplyStatOverrides",
-      "file": "Integration/Tests/GameSandboxIntegrationTests.cs",
-      "line": 274,
-      "method_line": 274,
-      "signature": "no_real_assertion",
-      "method": "Sandbox_Gameplay_ApplyStatOverrides",
-      "in_allowlist": true
-    },
-    {
-      "fqn": "DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_FirstLaunch_CompletesInReasonableTime",
-      "file": "Integration/Tests/ParallelGameE2ETests.cs",
-      "line": 778,
-      "method_line": 776,
-      "signature": "Assert.True(true)",
-      "method": "FreshInstall_FirstLaunch_CompletesInReasonableTime",
-      "in_allowlist": true
-    },
-    {
-      "fqn": "DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_PackValidation_BeforeFirstLaunch",
-      "file": "Integration/Tests/ParallelGameE2ETests.cs",
-      "line": 824,
-      "method_line": 824,
-      "signature": "no_real_assertion",
-      "method": "FreshInstall_PackValidation_BeforeFirstLaunch",
-      "in_allowlist": true
-    },
-    {
-      "fqn": "DINOForge.Tests.Integration.Tests.FreshInstallTests.FreshInstall_TESTInstance_ConfiguredCorrectly",
-      "file": "Integration/Tests/ParallelGameE2ETests.cs",
-      "line": 863,
-      "method_line": 856,
-      "signature": "Assert.True(true)",
-      "method": "FreshInstall_TESTInstance_ConfiguredCorrectly",
       "in_allowlist": true
     },
     {
@@ -180,8 +144,8 @@
     {
       "fqn": "DINOForge.Tests.SDKCoverageTests.PackRegistryClient_InvalidateCache_ClearsCache",
       "file": "SDKCoverageTests.cs",
-      "line": 80,
-      "method_line": 80,
+      "line": 82,
+      "method_line": 82,
       "signature": "no_real_assertion",
       "method": "PackRegistryClient_InvalidateCache_ClearsCache",
       "in_allowlist": true
@@ -225,5 +189,5 @@
   ],
   "scan_root": "C:/Users/koosh/Dino/src/Tests",
   "allowlist_path": "C:/Users/koosh/Dino/docs/qa/known-tautological-tests.txt",
-  "files_scanned": 219
+  "files_scanned": 356
 }

@@ -25,13 +25,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@6bd8b7f7d58d76bb371f91465f0c7d208eccb313 # v4.0.0
         with:
           dotnet-version: 8.0.x
           global-json-file: global.json
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@820e3160e279568db735cee8ed8f8e77a6da7818 # v3
         with:
           languages: csharp
 
@@ -54,6 +54,6 @@ jobs:
           dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore /p:BuildInParallel=false
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@820e3160e279568db735cee8ed8f8e77a6da7818 # v3
         with:
           category: "/language:csharp"

@@ -52,3 +52,11 @@ hardcoded_temp_path|DINOForge.Tests.GameClientCoverageTests|74|GameClientCoverag
 hardcoded_temp_path|DINOForge.Tests.RustAssetPipelineTests|214|NativeInteropTests.cs
 hardcoded_temp_path|DINOForge.Tests.FileDiscoveryServiceTests|49|SDKCovGapTests.cs
 hardcoded_temp_path|DINOForge.Tests.FileDiscoveryServiceTests|181|SDKCovGapTests.cs
+
+# --- Helper class (not a test) — EnvVarScope provides the snapshot/restore
+# pattern that test classes use INSIDE their own [Collection(EnvVarMutation)].
+# The detector flags the helper because it calls Environment.SetEnvironmentVariable,
+# but the helper itself never runs except from within an opted-in [Collection]
+# test method. Allowlist the helper; the gate still catches real test classes.
+env_mutation_without_collection|DINOForge.Tests.EnvVarScope|35|NativeInteropIntegrationTests.cs
+env_mutation_without_collection|DINOForge.Tests.EnvVarScope|38|NativeInteropIntegrationTests.cs

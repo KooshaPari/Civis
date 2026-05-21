@@ -52,6 +52,11 @@ pre-push:
       # game during pre-push. All consumers skip gracefully via _gameAvailable /
       # _infrastructureAvailable guards, avoiding ConnectAsync-cancellation OCE
       # escapes that previously broke VSTestTask (iter-144 wave-1 push fix).
+      #
+      # NOTE: Integration csproj is NOT in DINOForge.CI.NoRuntime.sln, so the
+      # `build` step above does not produce its artifacts. We omit --no-build
+      # here so `dotnet test` restores+compiles the Integration project (and
+      # its transitive deps) on demand. Iter-144 P0 push-blocker fix.
       env:
         DINO_DISABLE_TEST_LAUNCH: "1"
-      run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj -c Release --no-build --verbosity normal
+      run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj -c Release --verbosity normal

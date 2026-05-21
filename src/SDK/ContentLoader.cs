@@ -116,6 +116,15 @@ namespace DINOForge.SDK
         /// <returns>Result indicating success or failure with errors.</returns>
         public ContentLoadResult LoadPack(string packDirectory)
         {
+            return LoadPackInternal(packDirectory, skipDependencyCheck: false);
+        }
+
+        // #837 follow-up: LoadPacks() runs topological dependency resolution before invoking
+        // per-pack load. When it calls into the single-pack path, the depends_on gate must NOT
+        // fail-fast — peers will have been loaded by then via the ordered iteration. Surface
+        // this distinction via an internal entry point rather than overloading public LoadPack.
+        private ContentLoadResult LoadPackInternal(string packDirectory, bool skipDependencyCheck)
+        {
             if (packDirectory == null)
             {
                 throw new ArgumentNullException(nameof(packDirectory));
@@ -156,15 +165,16 @@ namespace DINOForge.SDK
                 return ContentLoadResult.Failure(LastLoadErrors);
             }
 
+            // #762 follow-up: Compatibility *warnings* are diagnostic — they do not affect
+            // load success. Per ContentLoadResult contract, only Errors populate Errors[] and
+            // gate IsSuccess. Warnings (e.g. unknown current BepInEx/Unity version when running
+            // outside the game host) would otherwise cause every unit test pack to come back
+            // as Partial (IsSuccess=False), regressing #523/#728/#762 tests.
             List<string> loadErrors = new List<string>();
-            foreach (string warning in compatResult.Warnings)
-            {
-                loadErrors.Add($"Pack '{manifest.Id}' compatibility warning: {warning}");
-            }
 
             // #837: Single-pack load mode cannot resolve depends_on against an empty peer set.
             // Fail fast and direct callers to LoadPacks() which performs topological resolution.
-            if (manifest.DependsOn != null && manifest.DependsOn.Count > 0)
+            if (!skipDependencyCheck && manifest.DependsOn != null && manifest.DependsOn.Count > 0)
             {
                 List<string> depErrors = new List<string>(loadErrors);
                 foreach (string dep in manifest.DependsOn)
@@ -252,7 +262,7 @@ namespace DINOForge.SDK
                     continue;
                 }
 
-                ContentLoadResult packResult = LoadPack(packDirectory);
+                ContentLoadResult packResult = LoadPackInternal(packDirectory, skipDependencyCheck: true);
                 loadedPacks.AddRange(packResult.LoadedPacks);
                 if (!packResult.IsSuccess)
                 {

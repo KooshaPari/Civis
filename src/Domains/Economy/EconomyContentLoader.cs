@@ -70,7 +70,12 @@ namespace DINOForge.Domains.Economy
                     if (resource != null)
                     {
                         // Task #319 — IValidatable semantic check at the deserialize site.
-                        JsonGuard.ValidateOrThrow(resource, file);
+                        // Unwrap to ArgumentException so InnerException type matches the
+                        // contract pinned by EconomyContentLoaderValidationTests (Pattern
+                        // #95/#210): registry Register() throws ArgumentException; the
+                        // pre-register semantic guard must surface as the same type.
+                        try { JsonGuard.ValidateOrThrow(resource, file); }
+                        catch (InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
                         _resourceRegistry.Register(resource);
                     }
                 }
@@ -98,8 +103,10 @@ namespace DINOForge.Domains.Economy
                     {
                         foreach (TradeRouteDefinition route in wrapper.Routes)
                         {
-                            // Task #319 — IValidatable semantic check at the deserialize site.
-                            JsonGuard.ValidateOrThrow(route, file);
+                            // Task #319 — IValidatable semantic check at deserialize site.
+                            // See LoadResources for unwrap rationale (Pattern #95/#210).
+                            try { JsonGuard.ValidateOrThrow(route, file); }
+                            catch (InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
                             _tradeRouteRegistry.Register(route);
                         }
                     }
@@ -126,8 +133,10 @@ namespace DINOForge.Domains.Economy
                     EconomyProfile profile = _deserializer.Deserialize<EconomyProfile>(yaml);
                     if (profile != null)
                     {
-                        // Task #319 — IValidatable semantic check at the deserialize site.
-                        JsonGuard.ValidateOrThrow(profile, file);
+                        // Task #319 — IValidatable semantic check at deserialize site.
+                        // See LoadResources for unwrap rationale (Pattern #95/#210).
+                        try { JsonGuard.ValidateOrThrow(profile, file); }
+                        catch (InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
                         _profileRegistry.Register(profile);
                     }
                 }

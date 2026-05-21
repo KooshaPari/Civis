@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -25,7 +26,7 @@ namespace DINOForge.Runtime.Aviation
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("AerialMovementSystem.OnCreate");
+            DebugLog.Write("AerialMovement", "AerialMovementSystem.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -66,18 +67,5 @@ namespace DINOForge.Runtime.Aviation
                 .Run();
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialMovementSystem: {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AerialMovementSystem debug log write failed: {ex.Message}");
-            }
-        }
     }
 }

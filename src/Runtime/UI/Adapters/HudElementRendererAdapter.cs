@@ -178,7 +178,7 @@ namespace DINOForge.Runtime.UI.Adapters
         /// Sentinel inner reference used when <see cref="Render"/> is called before
         /// <see cref="SetCanvasRoot"/>. Lets unit tests exercise the renderer contract
         /// without UnityEngine and lets packs queue HUD elements that the runtime can
-        /// drain on canvas-ready (currently a TODO; see remarks).
+        /// drain on canvas-ready (see TODO(#NNN-followup-iter145): canvas-ready drain).
         /// </summary>
         internal sealed class DeferredHudMount
         {

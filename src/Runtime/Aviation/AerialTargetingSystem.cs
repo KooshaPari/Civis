@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using DINOForge.Runtime.Bridge;
+using DINOForge.Runtime.Diagnostics;
 
 namespace DINOForge.Runtime.Aviation
 {
@@ -55,7 +56,7 @@ namespace DINOForge.Runtime.Aviation
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("AerialTargetingSystem.OnCreate — attempting enemy ground query init");
+            DebugLog.Write("AerialTargeting", "AerialTargetingSystem.OnCreate — attempting enemy ground query init");
             TryInitEnemyGroundQuery();
         }
 
@@ -68,7 +69,7 @@ namespace DINOForge.Runtime.Aviation
             if (_enemyGroundUnitQuery == null)
             {
                 // Components.Enemy still unresolvable — skip this frame.
-                WriteDebug("OnUpdate: Components.Enemy unresolved, skipping target acquisition");
+                DebugLog.Write("AerialTargeting", "OnUpdate: Components.Enemy unresolved, skipping target acquisition");
                 return;
             }
 
@@ -138,7 +139,7 @@ namespace DINOForge.Runtime.Aviation
             if (enemyType == null)
             {
                 // DNO.Main.dll may not be loaded yet — will retry next frame.
-                WriteDebug("TryInitEnemyGroundQuery: Components.Enemy not yet resolvable, will retry");
+                DebugLog.Write("AerialTargeting", "TryInitEnemyGroundQuery: Components.Enemy not yet resolvable, will retry");
                 return;
             }
 
@@ -159,26 +160,12 @@ namespace DINOForge.Runtime.Aviation
                 };
 
                 _enemyGroundUnitQuery = EntityManager.CreateEntityQuery(desc);
-                WriteDebug("TryInitEnemyGroundQuery: enemy ground query initialized successfully");
+                DebugLog.Write("AerialTargeting", "TryInitEnemyGroundQuery: enemy ground query initialized successfully");
             }
             catch (Exception ex)
             {
                 _enemyQueryResolveFailed = true;
-                WriteDebug($"TryInitEnemyGroundQuery: failed to create query — {ex.Message}");
-            }
-        }
-
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialTargetingSystem: {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AerialTargetingSystem debug log write failed: {ex.Message}");
+                DebugLog.Write("AerialTargeting", $"TryInitEnemyGroundQuery: failed to create query — {ex.Message}");
             }
         }
     }

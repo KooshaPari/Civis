@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using BepInEx;
 using BepInEx.Logging;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Entities;
 
 namespace DINOForge.Runtime
@@ -27,7 +28,7 @@ namespace DINOForge.Runtime
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("DumpSystem.OnCreate called");
+            DebugLog.Write("DumpSystem", "DumpSystem.OnCreate called");
         }
 
         protected override void OnUpdate()
@@ -36,13 +37,19 @@ namespace DINOForge.Runtime
 
             if (_frameCount <= 3 || _frameCount % 100 == 0)
             {
-                WriteDebug($"DumpSystem.OnUpdate frame={_frameCount} entities={EntityManager.GetAllEntities(Unity.Collections.Allocator.Temp).Length}");
+                // P0 #810: must include prefab entities — DINO entities are all ECS Prefab entities
+                using var query = EntityManager.CreateEntityQuery(new EntityQueryDesc {
+                    Options = EntityQueryOptions.IncludePrefab
+                });
+                var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+                DebugLog.Write("DumpSystem", $"DumpSystem.OnUpdate frame={_frameCount} entities={entities.Length}");
+                entities.Dispose();
             }
 
             // Wait ~30s (1800 frames at 60fps) to capture gameplay entities
             if (!_dumpCompleted && _frameCount >= 1800)
             {
-                WriteDebug("DumpSystem triggering dump");
+                DebugLog.Write("DumpSystem", "DumpSystem triggering dump");
                 try
                 {
                     if (_log != null && _outputDir != null)
@@ -58,7 +65,7 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"Dump failed: {ex}");
+                    DebugLog.Write("DumpSystem", $"Dump failed: {ex}");
                     _log?.LogError($"ECS dump failed: {ex}");
                 }
                 _dumpCompleted = true;
@@ -68,14 +75,5 @@ namespace DINOForge.Runtime
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 }

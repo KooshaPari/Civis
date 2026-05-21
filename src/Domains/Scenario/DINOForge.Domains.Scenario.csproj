@@ -8,9 +8,6 @@
     <Nullable>enable</Nullable>
     <Description>Scenario scripting, victory conditions, difficulty scaling for custom campaigns</Description>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
-    <Version>0.18.0</Version>
-    <AssemblyVersion>0.18.0</AssemblyVersion>
-    <PackageVersion>0.18.0</PackageVersion>
     <PackageId>DINOForge.Domains.Scenario</PackageId>
     <Authors>DINOForge Agents</Authors>
     <PackageTags>game-modding;scenarios;campaigns;dinoforge</PackageTags>

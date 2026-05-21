@@ -36,14 +36,18 @@ internal static class InstallCommand
         command.Add(gameDirOption);
         command.Add(formatOption);
 
-        command.SetAction((ParseResult parseResult) =>
+        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
+            ct.ThrowIfCancellationRequested();
             string? gameDir = parseResult.GetValue(gameDirOption);
             string format = parseResult.GetValue(formatOption) ?? "table";
 
             string resolvedPath = ResolveGamePath(gameDir);
-            InstallStatus status = InstallVerifier.Verify(resolvedPath);
-            InstallInspection inspection = InstallLifecycle.Inspect(resolvedPath);
+            ct.ThrowIfCancellationRequested();
+            InstallStatus status = await Task.Run(() => InstallVerifier.Verify(resolvedPath), ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            InstallInspection inspection = await Task.Run(() => InstallLifecycle.Inspect(resolvedPath), ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
 
             if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
             {
@@ -120,29 +124,36 @@ internal static class InstallCommand
         command.Add(dryRunOption);
         command.Add(formatOption);
 
-        command.SetAction((ParseResult parseResult) =>
+        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
+            ct.ThrowIfCancellationRequested();
             string? gameDir = parseResult.GetValue(gameDirOption);
             bool dryRun = parseResult.GetValue(dryRunOption);
             string format = parseResult.GetValue(formatOption) ?? "table";
 
             string resolvedPath = ResolveGamePath(gameDir);
-            InstallInspection before = InstallLifecycle.Inspect(resolvedPath);
+            ct.ThrowIfCancellationRequested();
+            InstallInspection before = await Task.Run(() => InstallLifecycle.Inspect(resolvedPath), ct).ConfigureAwait(false);
             int removedLegacy = 0;
             string? manifestPath = null;
 
             if (!dryRun)
             {
-                removedLegacy = InstallLifecycle.CleanupLegacyArtifacts(resolvedPath);
-                InstallLifecycle.MigrateLegacyPacks(resolvedPath);
+                ct.ThrowIfCancellationRequested();
+                removedLegacy = await Task.Run(() => InstallLifecycle.CleanupLegacyArtifacts(resolvedPath), ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                await Task.Run(() => InstallLifecycle.MigrateLegacyPacks(resolvedPath), ct).ConfigureAwait(false);
                 if (before.RuntimeInstalled)
                 {
-                    manifestPath = InstallLifecycle.WriteManifest(resolvedPath, InstallDetector.GetInstalledVersion(resolvedPath));
+                    ct.ThrowIfCancellationRequested();
+                    manifestPath = await Task.Run(() => InstallLifecycle.WriteManifest(resolvedPath, InstallDetector.GetInstalledVersion(resolvedPath)), ct).ConfigureAwait(false);
                 }
             }
 
-            InstallStatus afterStatus = InstallVerifier.Verify(resolvedPath);
-            InstallInspection after = InstallLifecycle.Inspect(resolvedPath);
+            ct.ThrowIfCancellationRequested();
+            InstallStatus afterStatus = await Task.Run(() => InstallVerifier.Verify(resolvedPath), ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            InstallInspection after = await Task.Run(() => InstallLifecycle.Inspect(resolvedPath), ct).ConfigureAwait(false);
 
             if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
             {

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Entities;
 using UnityEngine;
 
@@ -137,7 +138,7 @@ namespace DINOForge.Runtime.Bridge
 
             _discoveredTypes = allTypes;
 
-            WriteDebug(sb.ToString());
+            DebugLog.Write("EcsTypeDiscovery",sb.ToString());
         }
 
         /// <summary>
@@ -200,7 +201,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 sb.AppendLine(type);
             }
-            WriteDebug(sb.ToString());
+            DebugLog.Write("EcsTypeDiscovery",sb.ToString());
         }
 
         private static void VerifyComponentMapTypes(StringBuilder sb, List<(string FullName, string Assembly)> discovered, HashSet<string> discoveredNames)
@@ -279,19 +280,5 @@ namespace DINOForge.Runtime.Bridge
             return lastDot > 0 ? fullTypeName.Substring(0, lastDot) : "(global)";
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
-                Debug.Log($"[EcsTypeDiscovery] {msg.Split('\n')[0]}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"EcsTypeDiscovery debug log write failed: {ex.Message}");
-            }
-        }
     }
 }

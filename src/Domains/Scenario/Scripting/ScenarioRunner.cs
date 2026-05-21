@@ -130,11 +130,26 @@ namespace DINOForge.Domains.Scenario.Scripting
                     return gameState.CurrentWave >= condition.TargetValue;
 
                 case VictoryConditionType.DestroyTarget:
-                    // Target destruction is tracked by checking if the target ID is absent
-                    // from active buildings (simplified: the target building must not be built).
-                    // In a full implementation this would query the ECS for entity liveness.
-                    return !string.IsNullOrEmpty(condition.TargetId)
-                           && !gameState.BuildingsBuilt.Contains(condition.TargetId!);
+                    // DestroyTarget checks GameState.DestroyedEntities (populated by ECS callers
+                    // on the Runtime side) — falls back to BuildingsBuilt for backward compat
+                    // with callers that only track construction. The Scenario domain does not
+                    // query ECS directly; Runtime-side bridges populate Live/DestroyedEntities.
+                    if (string.IsNullOrEmpty(condition.TargetId)) return false;
+                    string destroyTargetId = condition.TargetId!;
+                    // Primary path: explicit destruction observed by ECS bridge.
+                    if (gameState.DestroyedEntities.Contains(destroyTargetId)) return true;
+                    // Secondary path: target was alive (tracked) but is no longer live.
+                    if (gameState.LiveEntities.Count > 0)
+                    {
+                        if (!gameState.LiveEntities.Contains(destroyTargetId)
+                            && (gameState.BuildingsBuilt.Contains(destroyTargetId)
+                                || gameState.DestroyedEntities.Count > 0))
+                        {
+                            return true;
+                        }
+                    }
+                    // Legacy fallback: target absent from BuildingsBuilt (pre-ECS callers).
+                    return !gameState.BuildingsBuilt.Contains(destroyTargetId);
 
                 case VictoryConditionType.ReachPopulation:
                     return gameState.Population >= condition.TargetValue;

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Entities;
 using UnityEngine;
 
@@ -119,12 +120,12 @@ namespace DINOForge.Runtime.Bridge
                     }
                 }
 
-                WriteDebug("LODManager.GetCameraPosition: No camera found, returning zero");
+                DebugLog.Write("LODManager","LODManager.GetCameraPosition: No camera found, returning zero");
                 return Vector3.zero;
             }
             catch (Exception ex)
             {
-                WriteDebug($"LODManager.GetCameraPosition failed: {ex.Message}");
+                DebugLog.Write("LODManager",$"LODManager.GetCameraPosition failed: {ex.Message}");
                 return Vector3.zero;
             }
         }
@@ -163,14 +164,5 @@ namespace DINOForge.Runtime.Bridge
             };
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:HH:mm:ss.fff}] [LODManager] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 }

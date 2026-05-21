@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK.Models;
 using Unity.Entities;
 
@@ -44,12 +45,12 @@ namespace DINOForge.Runtime.Aviation
                     if (!em.HasComponent<AerialUnitComponent>(entity))
                     {
                         em.AddComponentData(entity, aerialComp);
-                        WriteDebug($"Applied AerialUnitComponent to {unitDef.Id} (altitude={aerialComp.CruiseAltitude})");
+                        DebugLog.Write("AerialUnitMapper", $"Applied AerialUnitComponent to {unitDef.Id} (altitude={aerialComp.CruiseAltitude})");
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"Failed to add AerialUnitComponent to {unitDef.Id}: {ex.Message}");
+                    DebugLog.Write("AerialUnitMapper", $"Failed to add AerialUnitComponent to {unitDef.Id}: {ex.Message}");
                 }
             }
 
@@ -65,12 +66,12 @@ namespace DINOForge.Runtime.Aviation
                     if (!em.HasComponent<AntiAirComponent>(entity))
                     {
                         em.AddComponentData(entity, antiAir);
-                        WriteDebug($"Applied AntiAirComponent to {unitDef.Id}");
+                        DebugLog.Write("AerialUnitMapper", $"Applied AntiAirComponent to {unitDef.Id}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"Failed to add AntiAirComponent to {unitDef.Id}: {ex.Message}");
+                    DebugLog.Write("AerialUnitMapper", $"Failed to add AntiAirComponent to {unitDef.Id}: {ex.Message}");
                 }
             }
         }
@@ -97,18 +98,5 @@ namespace DINOForge.Runtime.Aviation
             };
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialUnitMapper: {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AerialUnitMapper debug log write failed: {ex.Message}");
-            }
-        }
     }
 }

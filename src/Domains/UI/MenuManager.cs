@@ -107,7 +107,9 @@ namespace DINOForge.Domains.UI
         /// </summary>
         public IReadOnlyDictionary<string, bool> GetPanelStates()
         {
-            return new Dictionary<string, bool>(_panelStates, StringComparer.OrdinalIgnoreCase);
+            var snapshot = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in _panelStates) snapshot[kvp.Key] = kvp.Value;
+            return snapshot;
         }
     }
 }

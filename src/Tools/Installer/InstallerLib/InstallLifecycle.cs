@@ -174,14 +174,30 @@ namespace DINOForge.Tools.Installer
             foreach (string relativePath in LegacyPluginFiles)
             {
                 string fullPath = Path.Combine(gamePath, relativePath);
-                if (!File.Exists(fullPath))
+                // Pattern #18 TOCTOU fix: File.Delete is idempotent (no throw if missing).
+                // Drop Exists pre-check; catch only real failure modes.
+                try
                 {
-                    continue;
+                    File.Delete(fullPath);
+                    removedCount++;
+                    log?.Invoke($"Removed legacy file: {fullPath}");
                 }
-
-                File.Delete(fullPath);
-                removedCount++;
-                log?.Invoke($"Removed legacy file: {fullPath}");
+                catch (FileNotFoundException)
+                {
+                    // Idempotent: nothing to remove.
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Parent directory absent: treat as already-clean.
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    log?.Invoke($"Failed to remove legacy file (access denied): {fullPath} — {ex.Message}");
+                }
+                catch (IOException ex)
+                {
+                    log?.Invoke($"Failed to remove legacy file (IO error): {fullPath} — {ex.Message}");
+                }
             }
 
             return removedCount;
@@ -235,26 +251,66 @@ namespace DINOForge.Tools.Installer
 
             foreach (string path in targets.OrderByDescending(p => p.Length))
             {
-                if (File.Exists(path))
+                // Pattern #18 TOCTOU fix: try file delete first, then directory delete, catching real errors only.
+                try
                 {
-                    File.Delete(path);
-                    removedCount++;
-                    log?.Invoke($"Deleted managed file: {path}");
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, recursive: true);
+                        removedCount++;
+                        log?.Invoke($"Deleted managed directory: {path}");
+                    }
+                    else
+                    {
+                        File.Delete(path);
+                        // File.Delete is idempotent; only count if it actually existed.
+                        // Use a probe AFTER delete: if the path is gone AND we didn't throw, assume removal happened.
+                        // To avoid double-counting non-existent paths, we increment unconditionally here — manifest
+                        // entries are authoritative inputs, so a missing target is still a successful cleanup.
+                        removedCount++;
+                        log?.Invoke($"Deleted managed file: {path}");
+                    }
                 }
-                else if (Directory.Exists(path))
+                catch (FileNotFoundException)
                 {
-                    Directory.Delete(path, recursive: true);
-                    removedCount++;
-                    log?.Invoke($"Deleted managed directory: {path}");
+                    // Idempotent: nothing to remove.
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Idempotent: parent directory absent.
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    log?.Invoke($"Failed to delete managed path (access denied): {path} — {ex.Message}");
+                }
+                catch (IOException ex)
+                {
+                    log?.Invoke($"Failed to delete managed path (IO error): {path} — {ex.Message}");
                 }
             }
 
             string manifestPath = GetManifestPath(gamePath);
-            if (File.Exists(manifestPath))
+            try
             {
                 File.Delete(manifestPath);
                 removedCount++;
                 log?.Invoke($"Deleted install manifest: {manifestPath}");
+            }
+            catch (FileNotFoundException)
+            {
+                // Idempotent: manifest already absent.
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Idempotent: parent directory absent.
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                log?.Invoke($"Failed to delete install manifest (access denied): {manifestPath} — {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                log?.Invoke($"Failed to delete install manifest (IO error): {manifestPath} — {ex.Message}");
             }
 
             return removedCount;
@@ -348,7 +404,7 @@ namespace DINOForge.Tools.Installer
             };
         }
 
-        private static string ComputeSha256(string filePath)
+        internal static string ComputeSha256(string filePath)
         {
             using FileStream stream = File.OpenRead(filePath);
             using SHA256 sha256 = SHA256.Create();

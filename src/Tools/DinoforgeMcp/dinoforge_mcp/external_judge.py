@@ -1,9 +1,17 @@
 """
-External VLM judge tier: Kimi via Moonshot API.
+External VLM judge tier: Kimi via Fireworks AI (preferred) or Moonshot API (fallback).
 
-Provides deterministic verdicts on game screenshots without fallback.
-If MOONSHOT_API_KEY is unset, raises ExternalJudgeUnavailable.
-If API fails after retry, raises (no silent fallback to Claude).
+Provides deterministic verdicts on game screenshots without silent fallback to Claude.
+
+Provider selection (in order of preference):
+  1. Fireworks AI — if FIREWORKS_API_KEY is set. Uses Kimi K2 via OpenAI-compatible
+     Chat Completions API at https://api.fireworks.ai/inference/v1/chat/completions.
+     Default model: accounts/fireworks/models/kimi-k2-instruct.
+  2. Moonshot — if MOONSHOT_API_KEY is set. Uses moonshot-v1-8k-vision-preview at
+     https://api.moonshot.cn/v1/chat/completions.
+
+If neither key is set, raises ExternalJudgeUnavailable.
+If the chosen provider's API fails after retry, raises (no silent fallback).
 """
 
 import base64
@@ -19,14 +27,25 @@ import httpx
 
 
 class ExternalJudgeUnavailable(RuntimeError):
-    """Raised when Moonshot API is unavailable or key is missing."""
+    """Raised when no external judge API is available or key is missing."""
 
     pass
 
 
+# Provider constants
+PROVIDER_FIREWORKS = "fireworks"
+PROVIDER_MOONSHOT = "moonshot"
+
+FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
+FIREWORKS_DEFAULT_MODEL = "accounts/fireworks/models/kimi-k2-instruct"
+
+MOONSHOT_URL = "https://api.moonshot.cn/v1/chat/completions"
+MOONSHOT_DEFAULT_MODEL = "moonshot-v1-8k-vision-preview"
+
+
 @dataclass
 class JudgeReceipt:
-    """Immutable record of a judgment call to Moonshot."""
+    """Immutable record of a judgment call to an external VLM judge."""
 
     model: str
     model_version: str
@@ -43,37 +62,104 @@ class JudgeReceipt:
 
 
 class KimiJudgeTier:
-    """Calls Moonshot (Kimi) vision API to judge game screenshots."""
+    """
+    Calls an external Kimi-class vision API to judge game screenshots.
+
+    Selects provider based on environment variables:
+      - FIREWORKS_API_KEY -> Fireworks (Kimi K2)
+      - MOONSHOT_API_KEY  -> Moonshot (Kimi v1 vision preview)
+    """
 
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "moonshot-v1-8k-vision-preview",
+        model: str | None = None,
         timeout: float = 30.0,
+        provider: str | None = None,
     ):
         """
         Initialize Kimi judge tier.
 
         Args:
-            api_key: Moonshot API key. If None, reads from MOONSHOT_API_KEY env var.
-            model: Moonshot model ID (default v1-8k-vision-preview).
+            api_key: Explicit API key. If None, reads from FIREWORKS_API_KEY then
+                MOONSHOT_API_KEY env vars (in that preference order).
+            model: Model ID override. If None, uses a provider-appropriate default.
             timeout: HTTP request timeout in seconds.
+            provider: Explicit provider id ("fireworks" or "moonshot"). If None,
+                auto-detected from env vars (fireworks preferred).
 
         Raises:
-            ExternalJudgeUnavailable: If MOONSHOT_API_KEY is not set and api_key is None.
+            ExternalJudgeUnavailable: If no API key can be located.
         """
-        key = api_key or os.environ.get("MOONSHOT_API_KEY")
-        if not key:
-            raise ExternalJudgeUnavailable(
-                "MOONSHOT_API_KEY not set; refusing silent fallback to Claude"
-            )
-        self._key = key
+        # Resolve provider + key
+        resolved_provider, resolved_key = self._resolve_provider(api_key, provider)
+        self._provider = resolved_provider
+        self._key = resolved_key
+
+        # Choose default model per provider
+        if model is None:
+            if self._provider == PROVIDER_FIREWORKS:
+                model = FIREWORKS_DEFAULT_MODEL
+            else:
+                model = MOONSHOT_DEFAULT_MODEL
         self._model = model
         self._timeout = timeout
 
+    @staticmethod
+    def _resolve_provider(
+        api_key: str | None, provider: str | None
+    ) -> tuple[str, str]:
+        """
+        Resolve (provider, key) from explicit args + env vars.
+
+        Preference order when both env vars are set: Fireworks > Moonshot.
+
+        Raises:
+            ExternalJudgeUnavailable: If neither an explicit key nor any env var key is set.
+        """
+        # Explicit provider requested
+        if provider is not None:
+            if provider == PROVIDER_FIREWORKS:
+                key = api_key or os.environ.get("FIREWORKS_API_KEY")
+                if not key:
+                    raise ExternalJudgeUnavailable(
+                        "FIREWORKS_API_KEY not set; refusing silent fallback to Claude"
+                    )
+                return PROVIDER_FIREWORKS, key
+            if provider == PROVIDER_MOONSHOT:
+                key = api_key or os.environ.get("MOONSHOT_API_KEY")
+                if not key:
+                    raise ExternalJudgeUnavailable(
+                        "MOONSHOT_API_KEY not set; refusing silent fallback to Claude"
+                    )
+                return PROVIDER_MOONSHOT, key
+            raise ExternalJudgeUnavailable(f"Unknown provider: {provider}")
+
+        # Auto-detect
+        if api_key:
+            # Caller passed a bare key without specifying provider.
+            # Default to Moonshot for backwards compatibility with prior signature
+            # (api_key was previously a Moonshot key). Callers wanting Fireworks
+            # should pass provider="fireworks" explicitly.
+            return PROVIDER_MOONSHOT, api_key
+
+        fireworks_key = os.environ.get("FIREWORKS_API_KEY")
+        if fireworks_key:
+            return PROVIDER_FIREWORKS, fireworks_key
+
+        moonshot_key = os.environ.get("MOONSHOT_API_KEY")
+        if moonshot_key:
+            return PROVIDER_MOONSHOT, moonshot_key
+
+        raise ExternalJudgeUnavailable(
+            "No external VLM judge API key set "
+            "(checked FIREWORKS_API_KEY, MOONSHOT_API_KEY); "
+            "refusing silent fallback to Claude"
+        )
+
     def judge(self, screenshot_path: Path, prompt: str) -> JudgeReceipt:
         """
-        Judge a screenshot via Moonshot API.
+        Judge a screenshot via the configured external VLM API.
 
         Args:
             screenshot_path: Path to screenshot file (PNG, JPEG, WebP, GIF).
@@ -86,8 +172,8 @@ class KimiJudgeTier:
             ExternalJudgeUnavailable: If API fails after retry or file is unreadable.
 
         Side effects:
-            - Persists the JudgeReceipt as JSON to docs/proof/judge-receipts/<utc>-<sha8>.json
-              (relative to the repo root). Atomic write via .tmp file rename.
+            Persists JudgeReceipt as JSON to docs/proof/judge-receipts/<utc>-<sha8>.json
+            relative to the repo root. Atomic write via .tmp file rename.
         """
         # Read and hash the image
         try:
@@ -109,14 +195,14 @@ class KimiJudgeTier:
         }
         media_type = media_type_map.get(ext, "image/png")
 
-        # Call Moonshot API (OpenAI-compatible format)
+        # Call the provider API
         timestamp_utc = datetime.utcnow().isoformat() + "Z"
-        verdict, confidence, raw_response = self._call_moonshot(
+        verdict, confidence, raw_response = self._call_api(
             image_base64, media_type, prompt
         )
 
         receipt = JudgeReceipt(
-            model="moonshot",
+            model=self._provider,
             model_version=self._model,
             timestamp_utc=timestamp_utc,
             prompt=prompt,
@@ -131,21 +217,53 @@ class KimiJudgeTier:
 
         return receipt
 
-    def _call_moonshot(self, image_base64: str, media_type: str, prompt: str) -> tuple:
+    def judge_text(self, prompt: str) -> JudgeReceipt:
         """
-        Call Moonshot API with vision message.
+        Text-only sanity check (no image). Useful for smoke testing the provider.
+
+        Returns a JudgeReceipt with screenshot_sha256 set to sha256("<text-only>")
+        and the parsed verdict. Receipt is NOT persisted to disk (no image hash).
+        """
+        timestamp_utc = datetime.utcnow().isoformat() + "Z"
+        verdict, confidence, raw_response = self._call_api_text(prompt)
+
+        return JudgeReceipt(
+            model=self._provider,
+            model_version=self._model,
+            timestamp_utc=timestamp_utc,
+            prompt=prompt,
+            screenshot_sha256=hashlib.sha256(b"<text-only>").hexdigest(),
+            raw_response=raw_response,
+            verdict=verdict,
+            confidence=confidence,
+        )
+
+    def _build_url_and_headers(self) -> tuple[str, dict]:
+        """Return the (url, headers) for the configured provider."""
+        if self._provider == PROVIDER_FIREWORKS:
+            url = FIREWORKS_URL
+        else:
+            url = MOONSHOT_URL
+        headers = {
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        return url, headers
+
+    def _call_api(self, image_base64: str, media_type: str, prompt: str) -> tuple:
+        """
+        Call the provider's Chat Completions API with a vision message.
 
         Returns:
             (verdict, confidence, raw_response)
             verdict: "pass" | "fail" | "uncertain"
             confidence: float or None
         """
-        url = "https://api.moonshot.cn/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self._key}",
-            "Content-Type": "application/json",
-        }
+        url, headers = self._build_url_and_headers()
 
+        # Both Fireworks and Moonshot use the OpenAI Chat Completions shape.
+        # Fireworks Kimi K2 (kimi-k2-instruct) accepts the same image_url content part.
         payload = {
             "model": self._model,
             "messages": [
@@ -163,10 +281,25 @@ class KimiJudgeTier:
                 }
             ],
             "temperature": 0.0,
+            "max_tokens": 512,
         }
 
-        # Try once, retry on 5xx
-        last_error = None
+        return self._post_with_retry(url, headers, payload)
+
+    def _call_api_text(self, prompt: str) -> tuple:
+        """Text-only Chat Completions call (smoke test path, no image)."""
+        url, headers = self._build_url_and_headers()
+        payload = {
+            "model": self._model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.0,
+            "max_tokens": 256,
+        }
+        return self._post_with_retry(url, headers, payload)
+
+    def _post_with_retry(self, url: str, headers: dict, payload: dict) -> tuple:
+        """POST with one retry on 5xx / network error. Returns parsed verdict tuple."""
+        last_error: Exception | None = None
         for attempt in range(2):
             try:
                 with httpx.Client(timeout=self._timeout) as client:
@@ -175,54 +308,64 @@ class KimiJudgeTier:
                 # Non-5xx errors are terminal
                 if 400 <= response.status_code < 500:
                     raise ExternalJudgeUnavailable(
-                        f"Moonshot API error {response.status_code}: {response.text}"
+                        f"{self._provider} API error {response.status_code}: {response.text}"
                     )
 
                 response.raise_for_status()
 
-                # Parse response
                 data = response.json()
                 raw_response = data
 
-                # Extract verdict from response
-                message_content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                verdict, confidence = self._parse_verdict(message_content)
+                message_content = (
+                    data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                )
+                # Some providers may return content as a list of parts; flatten.
+                if isinstance(message_content, list):
+                    message_content = "".join(
+                        part.get("text", "") if isinstance(part, dict) else str(part)
+                        for part in message_content
+                    )
+                verdict, confidence = self._parse_verdict(message_content or "")
 
                 return verdict, confidence, raw_response
 
             except httpx.HTTPError as e:
                 last_error = e
                 if attempt < 1:
-                    continue  # Retry once on network/5xx errors
+                    continue
                 break
 
         raise ExternalJudgeUnavailable(
-            f"Moonshot API failed after retry: {last_error}"
+            f"{self._provider} API failed after retry: {last_error}"
         )
+
+    # Backwards-compat shim: legacy callers / tests reference `_call_moonshot`.
+    # Route through the unified _call_api so existing monkeypatches still work
+    # (tests stub _call_moonshot directly; we keep the name as the call hook).
+    def _call_moonshot(self, image_base64: str, media_type: str, prompt: str) -> tuple:
+        """Legacy alias retained for backwards compatibility. Prefer _call_api."""
+        return self._call_api(image_base64, media_type, prompt)
 
     def _parse_verdict(self, response_text: str) -> tuple:
         """
-        Parse Moonshot response to extract verdict.
+        Parse provider response to extract verdict.
 
         Looks for patterns like "VERDICT: pass" or "CONFIDENCE: 0.95".
         Returns: (verdict, confidence)
         """
         response_lower = response_text.lower()
 
-        # Default to uncertain
         verdict = "uncertain"
-        confidence = None
+        confidence: float | None = None
 
         if "pass" in response_lower or "yes" in response_lower or "correct" in response_lower:
             verdict = "pass"
         elif "fail" in response_lower or "no" in response_lower or "incorrect" in response_lower:
             verdict = "fail"
 
-        # Try to extract numeric confidence
         for line in response_text.split("\n"):
             if "confidence" in line.lower():
                 try:
-                    # Extract float from "confidence: 0.95" or similar
                     parts = line.split(":")
                     if len(parts) > 1:
                         conf_str = parts[1].strip().split()[0]
@@ -241,7 +384,6 @@ class KimiJudgeTier:
         Writes atomically (tmp then rename).
         Returns the path where receipt was written.
         """
-        # Find repo root: walk up from this file
         repo_root = Path(__file__).resolve()
         for _ in range(10):
             repo_root = repo_root.parent
@@ -253,13 +395,11 @@ class KimiJudgeTier:
         receipts_dir = repo_root / "docs" / "proof" / "judge-receipts"
         receipts_dir.mkdir(parents=True, exist_ok=True)
 
-        # Filename: <timestamp>-<sha8>.json
         timestamp = receipt.timestamp_utc.replace(":", "-").replace("Z", "")
         sha8 = receipt.screenshot_sha256[:8]
         filename = f"{timestamp}-{sha8}.json"
         filepath = receipts_dir / filename
 
-        # Write atomically
         tmp_path = filepath.with_suffix(".tmp")
         tmp_path.write_text(json.dumps(receipt.to_dict(), indent=2))
         tmp_path.rename(filepath)

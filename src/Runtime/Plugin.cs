@@ -11,6 +11,7 @@ using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.Runtime.UI;
 using DINOForge.SDK;
 using HarmonyLib;
@@ -32,7 +33,7 @@ namespace DINOForge.Runtime
     /// and attach all persistent MonoBehaviours to it. This matches the pattern
     /// used by devopsdinosaur/dno-mods where ECS systems outlive MonoBehaviours.
     /// </summary>
-    [BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
+    [BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.BEPINEX_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
         private static ManualLogSource Log = null!;
@@ -44,6 +45,7 @@ namespace DINOForge.Runtime
             try
             {
                 string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
+                // unbounded-log-ok: static ctor, one-shot per AppDomain load (diagnostic probe) — Pattern #232 allowlisted
                 File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [STATIC] Plugin class referenced\n");
             }
             catch { } // safe-swallow: diagnostic only
@@ -194,7 +196,20 @@ namespace DINOForge.Runtime
 
             StartResurrectionWatcher();
 
-            WriteDebug("Awake completed");
+            // P0 fix: start the Win32 GetAsyncKeyState background thread so F9/F10
+            // work at the main menu. Without this, the ECS OnUpdate polling only fires
+            // when SimulationSystemGroup is ticking (during gameplay), leaving the
+            // debug overlay unreachable from the menu.
+            try
+            {
+                Bridge.KeyInputSystem.StartKeyPollThread();
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] StartKeyPollThread failed: {ex.Message}");
+            }
+
+            DebugLog.Write("Plugin","Awake completed");
             Log.LogInfo("DINOForge Runtime loaded successfully.");
             Log.LogInfo("[DINOForge] Plugin.Awake() EXIT");
         }
@@ -213,20 +228,25 @@ namespace DINOForge.Runtime
         private static void StartResurrectionWatcher()
         {
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
-            WriteDebug("[Plugin] activeSceneChanged watcher registered (iter-144 #546 fix).");
+            DebugLog.Write("Plugin","[Plugin] activeSceneChanged watcher registered (iter-144 #546 fix).");
             StartResurrectionFallbackThread();
         }
 
         private static void OnActiveSceneChanged(Scene oldScene, Scene newScene)
         {
-            WriteDebug($"[Plugin] OnActiveSceneChanged: old='{oldScene.name}' new='{newScene.name}'");
+            DebugLog.Write("Plugin",$"[Plugin] OnActiveSceneChanged: old='{oldScene.name}' new='{newScene.name}'");
+            // Iter-144 menu-unclickable fix: DINO's MainMenu scene EventSystem is destroyed on
+            // scene transitions, leaving EventSystem.current = null even though our
+            // DontDestroyOnLoad'd EventSystem (DFCanvas) still exists. Re-promote (or recreate)
+            // on every scene change so NativeMenuInjector clicks route correctly.
+            EnsureEventSystemAlive();
             try
             {
                 Bridge.KeyInputSystem.RecreateInCurrentWorld();
             }
             catch (Exception ex)
             {
-                WriteDebug($"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
+                DebugLog.Write("Plugin",$"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
             }
             // RuntimeDriver may have been destroyed when DINO destroyed our root.
             // Trigger resurrection here. IMPORTANT: we defer TryResurrect to the resurrection thread
@@ -238,10 +258,44 @@ namespace DINOForge.Runtime
             bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
             if (NeedsResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null)
             {
-                WriteDebug($"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
+                DebugLog.Write("Plugin",$"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
                 LastSceneNameForResurrection = newScene.name;
                 NeedsDeferredResurrection = true;
-                WriteDebug("[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
+                DebugLog.Write("Plugin","[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
+            }
+        }
+
+        /// <summary>
+        /// Iter-144 menu-unclickable fix. DINO's MainMenu-scene EventSystem is destroyed during
+        /// scene transitions, resetting <c>EventSystem.current</c> to null even when our
+        /// DontDestroyOnLoad EventSystem (created by DFCanvas) is still alive in the hierarchy.
+        /// Idempotent: re-promotes an existing one if found, otherwise creates a new
+        /// DontDestroyOnLoad EventSystem with StandaloneInputModule.
+        /// </summary>
+        internal static void EnsureEventSystemAlive()
+        {
+            try
+            {
+                if (UnityEngine.EventSystems.EventSystem.current != null) return;
+                // Find any EventSystem in scene (incl. DontDestroyOnLoad)
+                var existing = UnityEngine.Object.FindObjectsOfType<UnityEngine.EventSystems.EventSystem>(true);
+                if (existing != null && existing.Length > 0)
+                {
+                    // Re-promote: set as current
+                    UnityEngine.EventSystems.EventSystem.current = existing[0];
+                    DebugLog.Write("Plugin",$"[EventSystem] re-promoted existing ({existing[0].name}) as current.");
+                    return;
+                }
+                // None at all — create
+                var go = new GameObject("DINOForge_EventSystem_Restored");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                go.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                DebugLog.Write("Plugin","[EventSystem] no scene EventSystem found — created DINOForge_EventSystem_Restored.");
+            }
+            catch (Exception ex)
+            {
+                try { DebugLog.Write("Plugin",$"[EventSystem] ensure failed: {ex.GetType().Name}: {ex.Message}"); } catch { /* safe-swallow */ }
             }
         }
 
@@ -252,6 +306,10 @@ namespace DINOForge.Runtime
         // BepInEx assembly is loaded, so this thread persists across scene transitions.
         private static Thread? _resurrectionFallbackThread;
         private static volatile bool _resurrectionFallbackStop;
+        // P2 #879 Pattern #113 fix: ManualResetEventSlim allows the fallback loop to wake
+        // immediately on shutdown instead of waiting out a full 500ms Thread.Sleep tick.
+        // Mirrors _backgroundPollStopEvent pattern (#873).
+        internal static readonly ManualResetEventSlim _resurrectionFallbackStopEvent = new(false);
 
         private static void StartResurrectionFallbackThread()
         {
@@ -262,7 +320,7 @@ namespace DINOForge.Runtime
                 IsBackground = true,
             };
             _resurrectionFallbackThread.Start();
-            WriteDebug("[Plugin] Resurrection fallback thread started.");
+            DebugLog.Write("Plugin","[Plugin] Resurrection fallback thread started.");
         }
 
         private static void ResurrectionFallbackLoop()
@@ -275,19 +333,20 @@ namespace DINOForge.Runtime
             // from "no scene events firing yet" in the post-OnDestroy gray-freeze window. Previous 10s
             // cadence left ambiguous gaps where probe timing missed the window entirely.
             const int HeartbeatEveryNIterations = 4;
-            WriteDebug("[Plugin] ResurrectionFallback: loop entered.");
+            DebugLog.Write("Plugin","[Plugin] ResurrectionFallback: loop entered.");
             while (!_resurrectionFallbackStop)
             {
                 try
                 {
-                    Thread.Sleep(PollIntervalMs);
+                    // P2 #879 Pattern #113 fix: cancellation-aware wait instead of Thread.Sleep.
+                    if (_resurrectionFallbackStopEvent.Wait(PollIntervalMs)) break;
                     iterationCount++;
                     // Iter-144 #547 H5: emit periodic heartbeat to prove Mono runtime + this thread are alive.
                     // If the gray-freeze is a native deadlock at runtime level, heartbeats stop appearing
                     // immediately after OnDestroy. If they keep appearing, the hang is elsewhere.
                     if (iterationCount % HeartbeatEveryNIterations == 0)
                     {
-                        WriteDebug($"[Plugin] ResurrectionFallback heartbeat #{iterationCount} NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootNull={PersistentRoot == null}");
+                        DebugLog.Write("Plugin",$"[Plugin] ResurrectionFallback heartbeat #{iterationCount} NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootNull={PersistentRoot == null}");
                     }
                     // Iter-144 #543 fix: OR in s_rootJustDestroyed flag — when RuntimeDriver.OnDestroy
                     // fires, PersistentRoot may hold a destroyed-but-not-nulled Unity fake-null reference,
@@ -303,7 +362,7 @@ namespace DINOForge.Runtime
                     if (lastNeedsObservedUtc == DateTime.MinValue)
                     {
                         lastNeedsObservedUtc = DateTime.UtcNow;
-                        WriteDebug("[Plugin] ResurrectionFallback: NeedsResurrection observed, starting grace timer.");
+                        DebugLog.Write("Plugin","[Plugin] ResurrectionFallback: NeedsResurrection observed, starting grace timer.");
                         continue;
                     }
                     TimeSpan since = DateTime.UtcNow - lastNeedsObservedUtc;
@@ -312,12 +371,12 @@ namespace DINOForge.Runtime
                     if (_resurrectionLog == null || _resurrectionConfig == null)
                     {
                         // Plugin.Awake never completed; can't resurrect. Reset timer to retry later.
-                        WriteDebug("[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Will retry.");
+                        DebugLog.Write("Plugin","[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Will retry.");
                         lastNeedsObservedUtc = DateTime.UtcNow;
                         continue;
                     }
                     string sceneName = LastSceneNameForResurrection ?? "fallback-unknown";
-                    WriteDebug($"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms exceeded — invoking TryResurrect (scene='{sceneName}').");
+                    DebugLog.Write("Plugin",$"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms exceeded — invoking TryResurrect (scene='{sceneName}').");
                     try
                     {
                         TryResurrect(sceneName, "ResurrectionFallbackThread");
@@ -326,12 +385,12 @@ namespace DINOForge.Runtime
                         NeedsDeferredResurrection = false;
                         s_rootJustDestroyed = false;
                         s_skipBundleUnload = false;
-                        WriteDebug("[Plugin] Resurrection complete via ResurrectionFallbackThread (flags cleared).");
+                        DebugLog.Write("Plugin","[Plugin] Resurrection complete via ResurrectionFallbackThread (flags cleared).");
                         lastNeedsObservedUtc = DateTime.MinValue;
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
+                        DebugLog.Write("Plugin",$"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
                         lastNeedsObservedUtc = DateTime.UtcNow; // back off, retry next grace window
                     }
                 }
@@ -341,10 +400,10 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[Plugin] ResurrectionFallback loop error: {ex.Message}");
+                    DebugLog.Write("Plugin",$"[Plugin] ResurrectionFallback loop error: {ex.Message}");
                 }
             }
-            WriteDebug("[Plugin] Resurrection fallback thread exiting.");
+            DebugLog.Write("Plugin","[Plugin] Resurrection fallback thread exiting.");
         }
 
         /// <summary>
@@ -356,7 +415,7 @@ namespace DINOForge.Runtime
         internal static void MarkNeedsDeferredResurrection(string trigger)
         {
             if (NeedsDeferredResurrection) return; // Already set
-            WriteDebug($"[Plugin] MarkNeedsDeferredResurrection via {trigger}");
+            DebugLog.Write("Plugin",$"[Plugin] MarkNeedsDeferredResurrection via {trigger}");
             NeedsDeferredResurrection = true;
         }
 
@@ -370,7 +429,7 @@ namespace DINOForge.Runtime
                 RuntimeDriver? existing = PersistentRoot.GetComponent<RuntimeDriver>();
                 if (existing != null && existing.IsInitialized)
                 {
-                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, ensuring KeyInputSystem is registered...");
+                    DebugLog.Write("Plugin",$"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, ensuring KeyInputSystem is registered...");
                     // CRITICAL: Always ensure KeyInputSystem is registered in the current world,
                     // even if RuntimeDriver is already initialized. Scene transitions may have
                     // created a new world that KeyInputSystem needs to be registered in.
@@ -380,18 +439,18 @@ namespace DINOForge.Runtime
                 // RuntimeDriver exists but wasn't initialized — initialize it
                 if (existing != null)
                 {
-                    WriteDebug($"[Plugin] TryResurrect ({trigger}): RuntimeDriver exists but not initialized, initializing...");
+                    DebugLog.Write("Plugin",$"[Plugin] TryResurrect ({trigger}): RuntimeDriver exists but not initialized, initializing...");
                     existing.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
                     return;
                 }
                 // No RuntimeDriver component — create one
-                WriteDebug($"[Plugin] TryResurrect ({trigger}): PersistentRoot exists but no RuntimeDriver, adding component...");
+                DebugLog.Write("Plugin",$"[Plugin] TryResurrect ({trigger}): PersistentRoot exists but no RuntimeDriver, adding component...");
                 RuntimeDriver driver = PersistentRoot.AddComponent<RuntimeDriver>();
                 driver.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
                 return;
             }
 
-            WriteDebug($"[Plugin] PersistentRoot null via {trigger} on '{sceneName}' — resurrecting...");
+            DebugLog.Write("Plugin",$"[Plugin] PersistentRoot null via {trigger} on '{sceneName}' — resurrecting...");
             try
             {
                 // Try to attach RuntimeDriver to DINO's main camera — DINO never destroys its own camera
@@ -400,7 +459,7 @@ namespace DINOForge.Runtime
                 if (cam != null)
                 {
                     host = cam.gameObject;
-                    WriteDebug($"[Plugin] Attaching to existing camera '{host.name}'");
+                    DebugLog.Write("Plugin",$"[Plugin] Attaching to existing camera '{host.name}'");
                 }
                 else
                 {
@@ -408,7 +467,7 @@ namespace DINOForge.Runtime
                     host = new GameObject("DINOForge_Root");
                     host.hideFlags = HideFlags.HideAndDontSave;
                     UnityEngine.Object.DontDestroyOnLoad(host);
-                    WriteDebug($"[Plugin] No camera found, using new GameObject");
+                    DebugLog.Write("Plugin",$"[Plugin] No camera found, using new GameObject");
                 }
                 PersistentRoot = host;
 
@@ -420,23 +479,14 @@ namespace DINOForge.Runtime
                 // created a new DefaultGameObjectInjectionWorld that the thread hasn't caught yet.
                 // This call bridges the gap so the pump is active without waiting for a poll cycle.
                 Bridge.KeyInputSystem.RecreateInCurrentWorld();
-                WriteDebug($"[Plugin] Resurrection complete via {trigger} on '{sceneName}' host='{host.name}'.");
+                DebugLog.Write("Plugin",$"[Plugin] Resurrection complete via {trigger} on '{sceneName}' host='{host.name}'.");
             }
             catch (Exception ex)
             {
-                WriteDebug($"[Plugin] Resurrection FAILED via {trigger}: {ex.Message}");
+                DebugLog.Write("Plugin",$"[Plugin] Resurrection FAILED via {trigger}: {ex.Message}");
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
 
         private static void LogInstallDiagnostics()
         {
@@ -446,34 +496,34 @@ namespace DINOForge.Runtime
             string backupRuntimePath = Path.Combine(Paths.PluginPath, "DINOForge.Runtime.dll.bak");
 
             Log.LogInfo($"[Plugin] Loaded runtime assembly from: {loadedAssemblyPath}");
-            WriteDebug($"[Plugin] Loaded runtime assembly from: {loadedAssemblyPath}");
+            DebugLog.Write("Plugin",$"[Plugin] Loaded runtime assembly from: {loadedAssemblyPath}");
 
             if (File.Exists(legacyRuntimePath))
             {
                 string message = $"[Plugin] Legacy runtime copy detected at deprecated path: {legacyRuntimePath}";
                 Log.LogWarning(message);
-                WriteDebug(message);
+                DebugLog.Write("Plugin",message);
             }
 
             if (File.Exists(primaryRuntimePath) && File.Exists(legacyRuntimePath))
             {
                 string message = $"[Plugin] Duplicate runtime assemblies detected. Primary='{primaryRuntimePath}', Legacy='{legacyRuntimePath}'";
                 Log.LogWarning(message);
-                WriteDebug(message);
+                DebugLog.Write("Plugin",message);
             }
 
             if (File.Exists(backupRuntimePath))
             {
                 string message = $"[Plugin] Stale runtime backup file detected: {backupRuntimePath}";
                 Log.LogWarning(message);
-                WriteDebug(message);
+                DebugLog.Write("Plugin",message);
             }
 
             if (!string.Equals(loadedAssemblyPath, primaryRuntimePath, StringComparison.OrdinalIgnoreCase))
             {
                 string message = $"[Plugin] Runtime loaded from non-canonical location. Expected '{primaryRuntimePath}', actual '{loadedAssemblyPath}'";
                 Log.LogWarning(message);
-                WriteDebug(message);
+                DebugLog.Write("Plugin",message);
             }
         }
 
@@ -482,7 +532,9 @@ namespace DINOForge.Runtime
             // The BepInEx-managed object is being destroyed (expected in DINO).
             // The persistent root and RuntimeDriver continue running independently.
             Log?.LogInfo("[Plugin] BepInEx plugin object OnDestroy (persistent root still alive).");
-            try { _harmony?.UnpatchSelf(); } catch (Exception ex) { WriteDebug($"OnDestroy Harmony.UnpatchSelf failed: {ex.Message}"); }
+            try { _harmony?.UnpatchSelf(); } catch (Exception ex) { DebugLog.Write("Plugin",$"OnDestroy Harmony.UnpatchSelf failed: {ex.Message}"); }
+            // P0 fix: stop the Win32 F9/F10 polling thread on plugin teardown.
+            try { Bridge.KeyInputSystem.StopKeyPollThread(); } catch (Exception ex) { DebugLog.Write("Plugin",$"OnDestroy StopKeyPollThread failed: {ex.Message}"); }
             // Iter-144 #547 H5 gray-freeze fix: do NOT unsubscribe activeSceneChanged here.
             // The handler is a static method on the Plugin class; the static delegate survives
             // BepInEx Plugin instance destruction. Previously we unsubscribed here, breaking
@@ -492,7 +544,7 @@ namespace DINOForge.Runtime
             // Harmony unpatch is also deliberately skipped — runtime patches must persist across
             // BepInEx Plugin object death since the actual functionality lives on RuntimeDriver/
             // ModPlatform which outlive this BepInEx wrapper.
-            WriteDebug("OnDestroy called (BepInEx object only); activeSceneChanged + fallback thread persist by design (iter-144 #547).");
+            DebugLog.Write("Plugin","OnDestroy called (BepInEx object only); activeSceneChanged + fallback thread persist by design (iter-144 #547).");
         }
     }
 
@@ -669,26 +721,26 @@ namespace DINOForge.Runtime
             {
                 try
                 {
-                    WriteDebug("[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                    DebugLog.Write("Plugin","[RuntimeDriver] F9 pressed (via KeyInputSystem)");
                     if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
                     else _debugOverlay?.Toggle();
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                    DebugLog.Write("Plugin",$"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
                 }
             };
             Bridge.KeyInputSystem.OnF10Pressed = () =>
             {
                 try
                 {
-                    WriteDebug("[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                    DebugLog.Write("Plugin","[RuntimeDriver] F10 pressed (via KeyInputSystem)");
                     if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
                     else _modMenuHost?.Toggle();
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[RuntimeDriver] F10 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                    DebugLog.Write("Plugin",$"[RuntimeDriver] F10 toggle failed: {ex.GetType().Name} - {ex.Message}");
                 }
             };
 
@@ -697,7 +749,7 @@ namespace DINOForge.Runtime
             {
                 try
                 {
-                    WriteDebug("[RuntimeDriver] Pack reload requested (via OnPackReloadRequested)");
+                    DebugLog.Write("Plugin","[RuntimeDriver] Pack reload requested (via OnPackReloadRequested)");
                     if (_modPlatform != null)
                     {
                         _modPlatform.LoadPacks();
@@ -726,7 +778,7 @@ namespace DINOForge.Runtime
                     _uguiReady = true;
                     _uguiChecked = true;
                     _log.LogInfo("[RuntimeDriver] DFCanvas.OnInitSuccess — UGUI canvas ready on main thread.");
-                    WriteDebug("[RuntimeDriver] DFCanvas.OnInitSuccess: UGUI is ready.");
+                    DebugLog.Write("Plugin","[RuntimeDriver] DFCanvas.OnInitSuccess: UGUI is ready.");
                 };
                 _dfCanvas.OnInitFailed = () =>
                 {
@@ -789,7 +841,7 @@ namespace DINOForge.Runtime
             StartBackgroundPollingThread();
 
             // ── Step 6: Log key handler registration ────────────────────────────────
-            WriteDebug($"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
+            DebugLog.Write("Plugin",$"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
@@ -809,12 +861,21 @@ namespace DINOForge.Runtime
         {
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
+                try { System.Threading.Thread.CurrentThread.Name = "DINOForge.HmrWatcher"; } catch { /* safe-swallow: thread name set is best-effort diagnostics */ }
                 try
                 {
                     string signalPath = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "DINOForge_HotReload");
-                    while (true)
+                    // #873: cooperative shutdown — observe _destroyed AND wake immediately via stop-event
+                    // mirrors StartBackgroundPollingThread (line 920+) pattern.
+                    while (!_destroyed)
                     {
-                        System.Threading.Thread.Sleep(2000);
+                        // Wait returns true when the event is signaled (OnDestroy) → exit promptly.
+                        if (_backgroundPollStopEvent.Wait(2000))
+                        {
+                            break;
+                        }
+                        if (_destroyed) break;
+
                         if (System.IO.File.Exists(signalPath))
                         {
                             try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
@@ -825,8 +886,26 @@ namespace DINOForge.Runtime
 
                             try
                             {
-                                // Invoke pack reload via KeyInputSystem callback (works from background thread)
-                                Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
+                                // #874: unify with PackFileWatcher pipeline — both routes must apply stat-modifier reapply.
+                                // Route A (legacy): KeyInputSystem.OnPackReloadRequested → LoadPacks() only.
+                                // Route B (canonical): ModPlatform.TriggerHotReload() → HotReloadBridge.TriggerReload()
+                                //   which fires StatModifierSystem.Reapply() + OnRuntimeUpdated event.
+                                // Prefer Route B; fall back to Route A when bridge is null (e.g., before init).
+                                bool unified = false;
+                                try
+                                {
+                                    unified = _modPlatform?.TriggerHotReload() ?? false;
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] HMR: TriggerHotReload failed, falling back: {ex}");
+                                }
+
+                                if (!unified)
+                                {
+                                    // Fallback: legacy KeyInputSystem callback path (LoadPacks only, no Reapply).
+                                    Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
+                                }
                             }
                             catch (System.Exception ex)
                             {
@@ -854,6 +933,8 @@ namespace DINOForge.Runtime
                             _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");
                         }
                     }
+                    // #873: explicit exit log — proves thread terminated cleanly on OnDestroy.
+                    _log?.LogInfo("[RuntimeDriver] HMR watcher thread exiting (destroyed=true)");
                 }
                 catch { } // safe-swallow: HMR reload best-effort, non-critical
             });
@@ -875,6 +956,7 @@ namespace DINOForge.Runtime
         {
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
+                try { System.Threading.Thread.CurrentThread.Name = "DINOForge.BackgroundPoll"; } catch { /* safe-swallow: thread name set is best-effort diagnostics */ }
                 try
                 {
                     int heartbeatCounter = 0;
@@ -905,12 +987,12 @@ namespace DINOForge.Runtime
                             Plugin.NeedsDeferredResurrection = false;
                             try
                             {
-                                WriteDebug("[RuntimeDriver] Background poll: calling TryResurrect (deferred)");
+                                DebugLog.Write("Plugin","[RuntimeDriver] Background poll: calling TryResurrect (deferred)");
                                 Plugin.TryResurrect(Plugin.LastSceneNameForResurrection ?? "unknown", "BackgroundPoll_Deferred");
                             }
                             catch (Exception ex)
                             {
-                                WriteDebug($"[RuntimeDriver] Deferred TryResurrect failed: {ex.Message}");
+                                DebugLog.Write("Plugin",$"[RuntimeDriver] Deferred TryResurrect failed: {ex.Message}");
                             }
                         }
 
@@ -1326,15 +1408,6 @@ namespace DINOForge.Runtime
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
 
         private void OnDestroy()
         {
@@ -1356,6 +1429,9 @@ namespace DINOForge.Runtime
             s_isBeingDestroyed = true;
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
+            // P2 #879 Pattern #113 fix: wake the static resurrection fallback thread too so it
+            // can observe _resurrectionFallbackStop (if ever set) without burning a 500ms tick.
+            try { Plugin._resurrectionFallbackStopEvent.Set(); } catch { /* safe-swallow: shutdown best-effort */ }
 
             // Iter-144 #547 gray-freeze ROOT CAUSE fix: WinDbg analysis revealed the main thread
             // was parked in mono_jit_cleanup → mono_threads_set_shutting_down waiting on the
@@ -1368,11 +1444,11 @@ namespace DINOForge.Runtime
             try
             {
                 Plugin.SharedBridgeServer?.RequestShutdown();
-                WriteDebug("[RuntimeDriver] OnDestroy: GameBridgeServer.RequestShutdown() invoked (sync pipe unwedge).");
+                DebugLog.Write("Plugin","[RuntimeDriver] OnDestroy: GameBridgeServer.RequestShutdown() invoked (sync pipe unwedge).");
             }
             catch (Exception ex)
             {
-                WriteDebug($"[RuntimeDriver] OnDestroy: RequestShutdown failed (non-fatal): {ex.GetType().Name}: {ex.Message}");
+                DebugLog.Write("Plugin",$"[RuntimeDriver] OnDestroy: RequestShutdown failed (non-fatal): {ex.GetType().Name}: {ex.Message}");
             }
 
             // Iter-144 #547 H5: belt-and-suspenders — the resurrection flags were already set above,
@@ -1399,7 +1475,7 @@ namespace DINOForge.Runtime
                 bridgeThreadAlive = srv != null && srv.IsServerThreadAlive;
             }
             catch { } // safe-swallow: diagnostic-only liveness probe must not throw from OnDestroy
-            WriteDebug(
+            DebugLog.Write("Plugin",
                 "[RuntimeDriver] OnDestroy: background poll stopped, main-thread pump idle until resurrection. " +
                 $"BridgeServerThreadAlive={bridgeThreadAlive}. NeedsResurrection set; awaiting scene transition.");
             // IMPORTANT: Do NOT call _modPlatform.Shutdown() here.
@@ -1414,17 +1490,17 @@ namespace DINOForge.Runtime
                 ModPlatform? mp = _modPlatform;
                 if (mp != null)
                 {
-                    WriteDebug("[RuntimeDriver] OnDestroy: dispatching ShutdownNonBridge to worker thread.");
+                    DebugLog.Write("Plugin","[RuntimeDriver] OnDestroy: dispatching ShutdownNonBridge to worker thread.");
                     Thread shutdownWorker = new Thread(() =>
                     {
                         try
                         {
                             mp.ShutdownNonBridge();
-                            WriteDebug("[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge completed.");
+                            DebugLog.Write("Plugin","[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge completed.");
                         }
                         catch (Exception ex)
                         {
-                            WriteDebug($"[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge threw {ex.GetType().Name}: {ex.Message}");
+                            DebugLog.Write("Plugin",$"[RuntimeDriver] OnDestroy.worker: ShutdownNonBridge threw {ex.GetType().Name}: {ex.Message}");
                         }
                     })
                     {
@@ -1436,9 +1512,9 @@ namespace DINOForge.Runtime
             }
             catch (Exception ex)
             {
-                WriteDebug($"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
+                DebugLog.Write("Plugin",$"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
             }
-            WriteDebug("[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
+            DebugLog.Write("Plugin","[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
         }
     }
 }

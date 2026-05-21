@@ -5,7 +5,7 @@ namespace DINOForge.Domains.Economy.Models
     /// In DINO, gold is obtained exclusively through trading via the merchant dirigible,
     /// making trade routes critical for late-game economy.
     /// </summary>
-    public class TradeRoute
+    public sealed class TradeRoute
     {
         /// <summary>
         /// Unique identifier for this trade route.

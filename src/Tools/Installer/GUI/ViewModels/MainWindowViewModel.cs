@@ -1,3 +1,5 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DINOForge.Installer.Services;
@@ -60,18 +62,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         _currentPageViewModel = _welcomeVm;
 
-        // Wire up welcome page navigation
-        _welcomeVm.PlayerModeSelected += () =>
-        {
-            _optionsVm.IsDevMode = false;
-            NavigateTo(WizardPage.GamePath);
-        };
-
-        _welcomeVm.DevModeSelected += () =>
-        {
-            _optionsVm.IsDevMode = true;
-            NavigateTo(WizardPage.GamePath);
-        };
+        // Wire up welcome page navigation (Pattern #105: named handlers so Dispose
+        // can unsubscribe by reference; lambda captures cannot be unsubscribed).
+        _welcomeVm.PlayerModeSelected += OnWelcomePlayerModeSelected;
+        _welcomeVm.DevModeSelected += OnWelcomeDevModeSelected;
 
         // Re-evaluate CanGoNext whenever GamePath changes so the Next button
         // enables/disables live as the user types or auto-detect resolves.
@@ -111,11 +105,41 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Named handler for <see cref="WelcomePageViewModel.PlayerModeSelected"/>
+    /// (Pattern #105 — stored delegate reference so Dispose can unsubscribe).
+    /// </summary>
+    private void OnWelcomePlayerModeSelected()
+    {
+        _optionsVm.IsDevMode = false;
+        NavigateTo(WizardPage.GamePath);
+    }
+
+    /// <summary>
+    /// Named handler for <see cref="WelcomePageViewModel.DevModeSelected"/>
+    /// (Pattern #105 — stored delegate reference so Dispose can unsubscribe).
+    /// </summary>
+    private void OnWelcomeDevModeSelected()
+    {
+        _optionsVm.IsDevMode = true;
+        NavigateTo(WizardPage.GamePath);
+    }
+
+    /// <summary>
     /// Named handler for <see cref="MaintenancePageViewModel.Cancelled"/> so it
     /// can be unsubscribed by reference in <see cref="Dispose"/>.
+    /// Uses Avalonia's <see cref="IClassicDesktopStyleApplicationLifetime.Shutdown"/>
+    /// for an orderly app exit instead of <c>Environment.Exit(0)</c>, which bypasses
+    /// finalizers and Avalonia teardown.
     /// </summary>
     private void OnMaintenanceCancelled()
     {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Shutdown(0);
+            return;
+        }
+
+        // Fallback for non-desktop lifetimes (e.g. headless tests) — last resort.
         System.Environment.Exit(0);
     }
 
@@ -126,6 +150,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (_disposed) return;
 
+        _welcomeVm.PlayerModeSelected -= OnWelcomePlayerModeSelected;
+        _welcomeVm.DevModeSelected -= OnWelcomeDevModeSelected;
         _gamePathVm.PropertyChanged -= OnGamePathPropertyChanged;
         _maintenanceVm.RepairSelected -= OnRepairSelected;
         _maintenanceVm.UpdateSelected -= OnUpdateSelected;

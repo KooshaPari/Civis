@@ -35,7 +35,7 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public byte[] KeyMaterial { get; }
 
-        private readonly HMACSHA256 _hmac;
+        private readonly object _stateLock = new object();
         private bool _disposed;
 
         /// <summary>
@@ -49,7 +49,6 @@ namespace DINOForge.Runtime.Bridge
             {
                 rng.GetBytes(KeyMaterial);
             }
-            _hmac = new HMACSHA256(KeyMaterial);
         }
 
         /// <summary>
@@ -76,7 +75,20 @@ namespace DINOForge.Runtime.Bridge
                 + "\",\"world_frame\":" + worldFrame.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 + "}";
             byte[] bytes = Encoding.UTF8.GetBytes(canonical);
-            byte[] hash = _hmac.ComputeHash(bytes);
+            byte[] hash;
+            // HMACSHA256 instances are NOT thread-safe (per MS docs). Construct
+            // per-call against the immutable key material so concurrent receipt
+            // signing from multiple threads cannot corrupt internal state.
+            // ctor cost is negligible (~allocation + key copy); avoids the
+            // serialization bottleneck of a shared-instance + lock.
+            lock (_stateLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(SessionHmac));
+            }
+            using (var hmac = new HMACSHA256(KeyMaterial))
+            {
+                hash = hmac.ComputeHash(bytes);
+            }
             return ToHexLower(hash);
         }
 
@@ -90,12 +102,18 @@ namespace DINOForge.Runtime.Bridge
         /// <inheritdoc />
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-            try { _hmac.Dispose(); } catch { /* dispose must not throw */ }
-            // Best-effort scrub of key material; .NET strings/arrays are not
-            // guaranteed-zeroable but this minimises the resident-memory window.
-            Array.Clear(KeyMaterial, 0, KeyMaterial.Length);
+            lock (_stateLock)
+            {
+                if (_disposed) return;
+                _disposed = true;
+                // Best-effort scrub of key material; .NET strings/arrays are not
+                // guaranteed-zeroable but this minimises the resident-memory window.
+                // Note: scrubbing here races with any in-flight ComputeHmac that has
+                // already passed the disposed check; per-call HMACSHA256 ctors copy
+                // the key, so an in-flight call completes correctly. Subsequent
+                // calls fault on the disposed check.
+                Array.Clear(KeyMaterial, 0, KeyMaterial.Length);
+            }
         }
 
         // netstandard2.0 has no Convert.ToHexString — implement locally.

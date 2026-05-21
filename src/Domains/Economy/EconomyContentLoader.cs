@@ -5,6 +5,8 @@ using System.Linq;
 using DINOForge.Domains.Economy.Models;
 using DINOForge.Domains.Economy.Registries;
 using DINOForge.SDK;
+using DINOForge.SDK.IO;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -14,7 +16,7 @@ namespace DINOForge.Domains.Economy
     /// Loads economy definitions from pack directories into economy registries.
     /// Handles resources/, trade_routes/, and economy_profiles/ subdirectories.
     /// </summary>
-    public class EconomyContentLoader
+    public sealed class EconomyContentLoader
     {
         private readonly ResourceRegistry _resourceRegistry;
         private readonly TradeRouteRegistry _tradeRouteRegistry;
@@ -63,10 +65,12 @@ namespace DINOForge.Domains.Economy
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     ResourceDefinition resource = _deserializer.Deserialize<ResourceDefinition>(yaml);
                     if (resource != null)
                     {
+                        // Task #319 — IValidatable semantic check at the deserialize site.
+                        JsonGuard.ValidateOrThrow(resource, file);
                         _resourceRegistry.Register(resource);
                     }
                 }
@@ -88,12 +92,14 @@ namespace DINOForge.Domains.Economy
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     TradeRouteWrapper wrapper = _deserializer.Deserialize<TradeRouteWrapper>(yaml);
                     if (wrapper?.Routes != null)
                     {
                         foreach (TradeRouteDefinition route in wrapper.Routes)
                         {
+                            // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(route, file);
                             _tradeRouteRegistry.Register(route);
                         }
                     }
@@ -116,10 +122,12 @@ namespace DINOForge.Domains.Economy
             {
                 try
                 {
-                    string yaml = File.ReadAllText(file);
+                    string yaml = SafeFileIO.ReadText(file);
                     EconomyProfile profile = _deserializer.Deserialize<EconomyProfile>(yaml);
                     if (profile != null)
                     {
+                        // Task #319 — IValidatable semantic check at the deserialize site.
+                        JsonGuard.ValidateOrThrow(profile, file);
                         _profileRegistry.Register(profile);
                     }
                 }

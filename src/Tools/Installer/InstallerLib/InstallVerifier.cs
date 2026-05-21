@@ -13,6 +13,9 @@ namespace DINOForge.Tools.Installer
     {
         /// <summary>
         /// Performs a full verification of the DINOForge installation.
+        /// Checks file presence, BepInEx layout, and (when an install manifest is
+        /// present) compares the on-disk SHA256 of every managed file against the
+        /// digest recorded in the manifest (#139 / #721).
         /// </summary>
         /// <param name="gamePath">Path to the DINO game directory.</param>
         /// <returns>Install status with any issues found.</returns>
@@ -37,6 +40,7 @@ namespace DINOForge.Tools.Installer
             bool bepInExInstalled = VerifyBepInEx(gamePath, issues);
             bool runtimeInstalled = VerifyRuntime(gamePath, issues);
             bool packsReady = VerifyPacksDirectory(gamePath, issues);
+            VerifyManifestDigests(gamePath, issues);
             InstallInspection inspection = InstallLifecycle.Inspect(gamePath);
 
             foreach (string issue in inspection.Issues)
@@ -164,6 +168,51 @@ namespace DINOForge.Tools.Installer
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Compares the SHA256 digest of every manifest-recorded file against its
+        /// on-disk hash (#139 / #721). No-op when the manifest is absent or
+        /// unparseable (those cases are reported separately by <see cref="InstallLifecycle.Inspect"/>).
+        /// </summary>
+        public static bool VerifyManifestDigests(string gamePath, List<string> issues)
+        {
+            InstallManifest? manifest = InstallLifecycle.TryReadManifest(gamePath);
+            if (manifest == null)
+            {
+                return true;
+            }
+
+            bool allMatch = true;
+            foreach (InstalledFileRecord file in manifest.Files)
+            {
+                string fullPath = Path.Combine(gamePath, file.RelativePath);
+                if (!File.Exists(fullPath))
+                {
+                    // Existence gap is already reported by Inspect(); skip to avoid duplicate noise.
+                    continue;
+                }
+
+                string actual;
+                try
+                {
+                    actual = InstallLifecycle.ComputeSha256(fullPath);
+                }
+                catch (Exception ex)
+                {
+                    issues.Add($"DINOForge: failed to hash managed file {file.RelativePath}: {ex.Message}");
+                    allMatch = false;
+                    continue;
+                }
+
+                if (!string.Equals(actual, file.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    issues.Add($"DINOForge: SHA256 mismatch for {file.RelativePath} (expected {file.Sha256}, actual {actual}).");
+                    allMatch = false;
+                }
+            }
+
+            return allMatch;
         }
     }
 

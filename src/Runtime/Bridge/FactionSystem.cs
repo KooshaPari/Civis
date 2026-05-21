@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
@@ -81,7 +82,7 @@ namespace DINOForge.Runtime.Bridge
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("FactionSystem.OnCreate");
+            DebugLog.Write("FactionSystem","FactionSystem.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -103,7 +104,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (_initialized)
             {
-                WriteDebug("FactionSystem.InitializeFactions already called; skipping re-initialization");
+                DebugLog.Write("FactionSystem","FactionSystem.InitializeFactions already called; skipping re-initialization");
                 return;
             }
 
@@ -123,12 +124,12 @@ namespace DINOForge.Runtime.Bridge
                     };
 
                     _factions[def.Faction.Id] = runtime;
-                    WriteDebug($"Registered faction: {def.Faction.Id} ({def.Faction.DisplayName})");
+                    DebugLog.Write("FactionSystem",$"Registered faction: {def.Faction.Id} ({def.Faction.DisplayName})");
                 }
             }
 
             _initialized = true;
-            WriteDebug($"FactionSystem initialized with {_factions.Count} faction(s)");
+            DebugLog.Write("FactionSystem",$"FactionSystem initialized with {_factions.Count} faction(s)");
         }
 
         /// <summary>
@@ -170,7 +171,7 @@ namespace DINOForge.Runtime.Bridge
             lock (_factions)
             {
                 _factions[faction.Faction.Id] = runtime;
-                WriteDebug($"Registered faction at runtime: {faction.Faction.Id} (isEnemy={isEnemy})");
+                DebugLog.Write("FactionSystem",$"Registered faction at runtime: {faction.Faction.Id} (isEnemy={isEnemy})");
             }
         }
 
@@ -263,14 +264,14 @@ namespace DINOForge.Runtime.Bridge
         {
             if (string.IsNullOrEmpty(factionId))
             {
-                WriteDebug("SetEntityFaction: factionId is empty");
+                DebugLog.Write("FactionSystem","SetEntityFaction: factionId is empty");
                 return;
             }
 
             FactionRuntime? faction = GetFaction(factionId);
             if (faction == null)
             {
-                WriteDebug($"SetEntityFaction: faction {factionId} not registered");
+                DebugLog.Write("FactionSystem",$"SetEntityFaction: faction {factionId} not registered");
                 return;
             }
 
@@ -282,13 +283,13 @@ namespace DINOForge.Runtime.Bridge
             {
                 // Add Enemy tag
                 entityManager.AddComponentData(entity, new Components.Enemy { });
-                WriteDebug($"Added Enemy tag to entity {entity.Index} for faction {factionId}");
+                DebugLog.Write("FactionSystem",$"Added Enemy tag to entity {entity.Index} for faction {factionId}");
             }
             else if (!shouldHaveEnemyTag && currentlyHasEnemyTag)
             {
                 // Remove Enemy tag
                 entityManager.RemoveComponent<Components.Enemy>(entity);
-                WriteDebug($"Removed Enemy tag from entity {entity.Index} for faction {factionId}");
+                DebugLog.Write("FactionSystem",$"Removed Enemy tag from entity {entity.Index} for faction {factionId}");
             }
         }
 
@@ -316,21 +317,11 @@ namespace DINOForge.Runtime.Bridge
         {
             lock (_factions)
             {
-                return new ReadOnlyDictionary<string, FactionRuntime>(
-                    new Dictionary<string, FactionRuntime>(_factions, StringComparer.Ordinal)
-                );
+                var snapshot = new Dictionary<string, FactionRuntime>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in _factions) snapshot[kvp.Key] = kvp.Value;
+                return new ReadOnlyDictionary<string, FactionRuntime>(snapshot);
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [FactionSystem] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 }

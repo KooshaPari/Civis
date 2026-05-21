@@ -14,26 +14,55 @@ from dinoforge_mcp.external_judge import ExternalJudgeUnavailable, KimiJudgeTier
 
 
 class TestMissingKey:
-    """Test that missing MOONSHOT_API_KEY raises, no silent fallback."""
+    """Test that missing API keys raise — no silent fallback to Claude."""
 
     def test_missing_key_raises(self, monkeypatch):
-        """Unset MOONSHOT_API_KEY should raise ExternalJudgeUnavailable."""
-        # Ensure env var is unset
+        """Unset both env vars should raise ExternalJudgeUnavailable."""
         monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
+        monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
 
         with pytest.raises(ExternalJudgeUnavailable) as exc_info:
             KimiJudgeTier()
 
-        assert "MOONSHOT_API_KEY not set" in str(exc_info.value)
-        assert "refusing silent fallback" in str(exc_info.value)
+        msg = str(exc_info.value)
+        assert "FIREWORKS_API_KEY" in msg or "MOONSHOT_API_KEY" in msg
+        assert "refusing silent fallback" in msg
 
     def test_explicit_key_overrides_env(self, monkeypatch):
         """Explicit api_key parameter overrides env var."""
         monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
+        monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
 
         # Should not raise with explicit key
         judge = KimiJudgeTier(api_key="test-key")
         assert judge._key == "test-key"
+
+    def test_fireworks_preferred_over_moonshot(self, monkeypatch):
+        """When both env vars are set, Fireworks is preferred."""
+        monkeypatch.setenv("FIREWORKS_API_KEY", "fw-key")
+        monkeypatch.setenv("MOONSHOT_API_KEY", "ms-key")
+
+        judge = KimiJudgeTier()
+        assert judge._provider == "fireworks"
+        assert judge._key == "fw-key"
+        assert "kimi-k2-instruct" in judge._model
+
+    def test_moonshot_used_when_only_moonshot_set(self, monkeypatch):
+        """Falls back to Moonshot when only MOONSHOT_API_KEY is set."""
+        monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
+        monkeypatch.setenv("MOONSHOT_API_KEY", "ms-key")
+
+        judge = KimiJudgeTier()
+        assert judge._provider == "moonshot"
+        assert judge._key == "ms-key"
+
+    def test_explicit_provider_fireworks(self, monkeypatch):
+        """provider='fireworks' selects Fireworks even if Moonshot key also set."""
+        monkeypatch.setenv("FIREWORKS_API_KEY", "fw-key")
+        monkeypatch.setenv("MOONSHOT_API_KEY", "ms-key")
+
+        judge = KimiJudgeTier(provider="fireworks")
+        assert judge._provider == "fireworks"
 
 
 class TestReceiptPersisted:

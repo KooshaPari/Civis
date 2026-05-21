@@ -7,9 +7,6 @@
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <Description>HUD elements, menu management, themes for UI customization</Description>
-    <Version>0.18.0</Version>
-    <AssemblyVersion>0.18.0</AssemblyVersion>
-    <PackageVersion>0.18.0</PackageVersion>
     <PackageId>DINOForge.Domains.UI</PackageId>
     <Authors>DINOForge Agents</Authors>
     <PackageTags>game-modding;ui;hud;dinoforge</PackageTags>

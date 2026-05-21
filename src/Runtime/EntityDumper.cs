@@ -90,8 +90,12 @@ namespace DINOForge.Runtime
                 {
                     EntityManager em = world.EntityManager;
 
-                    // Get all entities
-                    NativeArray<Entity> entities = em.GetAllEntities(Allocator.Temp);
+                    // P0 #810: must include prefab entities — DINO entities are all ECS Prefab entities;
+                    // GetAllEntities silently excludes them, causing 45,776-entity world to undercount.
+                    using var query = em.CreateEntityQuery(new EntityQueryDesc {
+                        Options = EntityQueryOptions.IncludePrefab
+                    });
+                    NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
                     worldObj["entityCount"] = entities.Length;
                     _log.LogInfo($"  World '{world.Name}': {entities.Length} entities");
 
@@ -112,7 +116,7 @@ namespace DINOForge.Runtime
 
             string worldsPath = Path.Combine(dumpDir, "worlds.json");
             string worldsJson_serialized = JsonConvert.SerializeObject(worldsJson, Formatting.Indented);
-            File.WriteAllText(worldsPath, worldsJson_serialized);
+            File.WriteAllText(worldsPath, worldsJson_serialized, System.Text.Encoding.UTF8);
             _log.LogInfo($"Wrote {worldsPath}");
         }
 
@@ -224,7 +228,7 @@ namespace DINOForge.Runtime
 
             // Write archetype summary
             string summaryPath = Path.Combine(dumpDir, $"archetypes_{worldName}.json");
-            File.WriteAllText(summaryPath, JsonConvert.SerializeObject(archetypesJson, Formatting.Indented));
+            File.WriteAllText(summaryPath, JsonConvert.SerializeObject(archetypesJson, Formatting.Indented), System.Text.Encoding.UTF8);
             _log.LogInfo($"  Wrote {summaryPath}");
 
             return archetypesJson;
@@ -283,7 +287,7 @@ namespace DINOForge.Runtime
             string samplesDir = Path.Combine(dumpDir, "samples");
             Directory.CreateDirectory(samplesDir);
             string samplesPath = Path.Combine(samplesDir, $"{worldName}_archetype_{archetypeIndex}.json");
-            File.WriteAllText(samplesPath, JsonConvert.SerializeObject(samplesJson, Formatting.Indented));
+            File.WriteAllText(samplesPath, JsonConvert.SerializeObject(samplesJson, Formatting.Indented), System.Text.Encoding.UTF8);
         }
 
         private void DumpComponentTypes(string dumpDir)
@@ -356,7 +360,7 @@ namespace DINOForge.Runtime
             }
 
             string typesPath = Path.Combine(dumpDir, "ecs_types.json");
-            File.WriteAllText(typesPath, JsonConvert.SerializeObject(allTypes, Formatting.Indented));
+            File.WriteAllText(typesPath, JsonConvert.SerializeObject(allTypes, Formatting.Indented), System.Text.Encoding.UTF8);
             _log.LogInfo($"Found {allTypes.Count} ECS types, wrote {typesPath}");
         }
 
@@ -401,7 +405,7 @@ namespace DINOForge.Runtime
             }
 
             string nsPath = Path.Combine(dumpDir, "game_namespaces.json");
-            File.WriteAllText(nsPath, JsonConvert.SerializeObject(namespaceDump, Formatting.Indented));
+            File.WriteAllText(nsPath, JsonConvert.SerializeObject(namespaceDump, Formatting.Indented), System.Text.Encoding.UTF8);
             _log.LogInfo($"Wrote {nsPath}");
         }
     }

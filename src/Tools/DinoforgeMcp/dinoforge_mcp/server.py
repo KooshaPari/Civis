@@ -40,6 +40,8 @@ from starlette.responses import JSONResponse
 from starlette.requests import Request
 
 from .vision import VisualValidator
+from .ai_stack.preferences import DEFAULT_PREFERENCE_ORDER, PREF_ENV_VAR
+from .ai_stack.routing import get_provider_status, route_ai_request
 
 # Rust PyO3 asset pipeline module (optional — graceful fallback if not available)
 try:
@@ -1493,24 +1495,155 @@ async def hmr_route(request: Request):
     """
     HTTP endpoint for hot-module-reload notifications.
     Called by scripts/game/hot-reload.ps1 after deploying a new Runtime DLL.
-    Clears internal caches and signals pack change watchers.
+
+    Writes the `DINOForge_HotReload` signal file to the BepInEx root (which the
+    Runtime watcher polls by mtime) and clears MCP-side caches.
     """
+    payload: dict[str, Any] = {"success": True}
+    try:
+        bepinex_root = _resolve_bepinex_root()
+        signal_path = bepinex_root / "DINOForge_HotReload"
+        signal_path.touch(exist_ok=True)
+        payload["signal_path"] = str(signal_path)
+        payload["message"] = "HMR signal written to BepInEx root; MCP caches cleared."
+    except (FileNotFoundError, OSError) as ex:
+        payload["success"] = False
+        payload["error"] = str(ex)
+        payload["message"] = "MCP caches cleared, but Runtime HMR signal NOT written."
+
     _reload_event.set()
     _reload_event.clear()
-    return JSONResponse({"success": True, "message": "HMR event triggered — pack caches cleared"})
+    status_code = 200 if payload["success"] else 500
+    return JSONResponse(payload, status_code=status_code)
+
+
+@mcp.custom_route("/ai/v1/stack/preferences", methods=["GET"])
+@mcp.custom_route("/preferences/stack", methods=["GET"])
+async def ai_stack_preferences_route(_: Request):
+    preference = get_provider_status()
+    return JSONResponse(
+        {
+            "preference_order": list(DEFAULT_PREFERENCE_ORDER),
+            "configured_preference": os.getenv(PREF_ENV_VAR),
+            "provider_status": preference,
+        }
+    )
+
+
+@mcp.custom_route("/ai/v1/router", methods=["POST"])
+@mcp.custom_route("/ai/v1/adapter", methods=["POST"])
+async def ai_stack_route(request: Request):
+    """Preference-aware shim routes for future Vercel AI SDK / Bifrost backends."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "error": "Invalid JSON body"}, status_code=400)
+
+    if not isinstance(payload, dict):
+        return JSONResponse({"status": "error", "error": "JSON body must be an object"}, status_code=400)
+
+    operation = str(payload.get("operation") or "chat")
+    requested_provider_raw = payload.get("provider")
+    preference_raw = payload.get("preferences")
+    explicit_order = payload.get("preference_order")
+    request_payload = payload.get("request")
+    if request_payload is None:
+        request_payload = payload.get("payload")
+    if request_payload is None:
+        request_payload = {}
+    elif not isinstance(request_payload, dict):
+        return JSONResponse({"status": "error", "error": "request/payload must be an object"}, status_code=400)
+
+    if requested_provider_raw is not None and not isinstance(requested_provider_raw, str):
+        return JSONResponse({"status": "error", "error": "provider must be a string"}, status_code=400)
+
+    result = route_ai_request(
+        request_payload,
+        operation=operation,
+        requested_provider=requested_provider_raw,
+        preference_raw=preference_raw if isinstance(preference_raw, str) else None,
+        explicit_preference_order=explicit_order if isinstance(explicit_order, list) else None,
+    )
+
+    status = result.get("status")
+    if status == "unavailable":
+        return JSONResponse(result, status_code=503)
+    return JSONResponse(result)
+
+
+def _resolve_bepinex_root() -> Path:
+    """
+    Resolve the BepInEx root directory used by the Runtime HMR watcher.
+
+    Resolution order:
+      1. $DINOFORGE_BEPINEX_ROOT (explicit override)
+      2. Module-level BEPINEX_DIR (derived from $DINO_GAME_DIR or default game path)
+
+    Raises FileNotFoundError if the resolved directory does not exist, so callers
+    can surface a clear error to the MCP client instead of silently no-oping.
+    """
+    override = os.getenv("DINOFORGE_BEPINEX_ROOT")
+    root = Path(override) if override else BEPINEX_DIR
+    if not root.is_dir():
+        raise FileNotFoundError(
+            f"BepInEx root not found at {root}. "
+            f"Set DINOFORGE_BEPINEX_ROOT or DINO_GAME_DIR to a valid path."
+        )
+    return root
 
 
 @mcp.tool()
 async def notify_hmr(ctx: Context) -> dict:
     """
-    Notify the MCP server that a hot-reload event has occurred (e.g. DLL deployed,
-    packs reloaded). This clears internal caches and signals pack change.
+    Trigger a Runtime hot-reload by writing the `DINOForge_HotReload` signal file
+    to the BepInEx root directory. The Runtime's HMR watcher
+    (RuntimeDriver.StartHmrWatcher) polls that file's mtime and performs a soft
+    reload (pack refresh + ECS swap re-apply) when it changes.
 
-    Typically called via POST http://127.0.0.1:8765/hmr after Runtime rebuild.
+    Also fires the MCP-side `_reload_event` so any in-process caches (pack
+    listings, catalog reads) are invalidated.
+
+    Resolves the BepInEx root via `$DINOFORGE_BEPINEX_ROOT` (preferred) or
+    `$DINO_GAME_DIR`, defaulting to the canonical Steam install path.
+
+    Typically called via POST http://127.0.0.1:8765/hmr after a Runtime rebuild
+    or pack edit.
     """
+    try:
+        bepinex_root = _resolve_bepinex_root()
+    except FileNotFoundError as ex:
+        # Still flip the in-process event so MCP caches clear, but report the
+        # failure to write the on-disk signal so the caller knows the Runtime
+        # watcher will NOT pick this up.
+        _reload_event.set()
+        _reload_event.clear()
+        return {
+            "success": False,
+            "error": str(ex),
+            "message": "MCP caches cleared, but Runtime HMR signal NOT written.",
+        }
+
+    signal_path = bepinex_root / "DINOForge_HotReload"
+    try:
+        # touch() creates the file if missing, otherwise updates mtime — the
+        # Runtime watcher keys off mtime, so either case triggers a reload.
+        signal_path.touch(exist_ok=True)
+    except OSError as ex:
+        _reload_event.set()
+        _reload_event.clear()
+        return {
+            "success": False,
+            "error": f"Failed to write HMR signal at {signal_path}: {ex}",
+            "message": "MCP caches cleared, but Runtime HMR signal NOT written.",
+        }
+
     _reload_event.set()
     _reload_event.clear()
-    return {"success": True, "message": "HMR event triggered — pack caches cleared"}
+    return {
+        "success": True,
+        "signal_path": str(signal_path),
+        "message": "HMR signal written to BepInEx root; MCP caches cleared.",
+    }
 
 
 # ===========================================================================

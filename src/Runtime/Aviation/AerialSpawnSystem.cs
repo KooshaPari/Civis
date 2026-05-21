@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using Unity.Collections;
@@ -65,15 +66,15 @@ namespace DINOForge.Runtime.Aviation
         {
             // Iter-144 H9 probe: ENTER/EXIT timing around mod-side pack-recreation entry point.
             var __sw = System.Diagnostics.Stopwatch.StartNew();
-            WriteDebug($"[AerialSpawnSystem.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            DebugLog.Write("AerialSpawn", $"[AerialSpawnSystem.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
             try
             {
                 _registry = registry;
-                WriteDebug("AerialSpawnSystem.Initialize: Registry set");
+                DebugLog.Write("AerialSpawn", "AerialSpawnSystem.Initialize: Registry set");
             }
             finally
             {
-                WriteDebug($"[AerialSpawnSystem.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
+                DebugLog.Write("AerialSpawn", $"[AerialSpawnSystem.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
             }
         }
 
@@ -137,7 +138,7 @@ namespace DINOForge.Runtime.Aviation
         {
             if (_registry == null)
             {
-                WriteDebug("BuildingAntiAirSweep: registry not initialised, skipping.");
+                DebugLog.Write("AerialSpawn", "BuildingAntiAirSweep: registry not initialised, skipping.");
                 return;
             }
 
@@ -152,17 +153,17 @@ namespace DINOForge.Runtime.Aviation
 
             if (antiAirDefs.Count == 0)
             {
-                WriteDebug("BuildingAntiAirSweep: no AntiAir building definitions found, nothing to do.");
+                DebugLog.Write("AerialSpawn", "BuildingAntiAirSweep: no AntiAir building definitions found, nothing to do.");
                 return;
             }
 
-            WriteDebug($"BuildingAntiAirSweep: {antiAirDefs.Count} AntiAir building definition(s) found. Querying live building entities.");
+            DebugLog.Write("AerialSpawn", $"BuildingAntiAirSweep: {antiAirDefs.Count} AntiAir building definition(s) found. Querying live building entities.");
 
             // Resolve Components.BuildingBase via the EntityQueries helper.
             ComponentType? buildingBaseType = Bridge.EntityQueries.ResolveComponentType("Components.BuildingBase");
             if (buildingBaseType == null)
             {
-                WriteDebug("BuildingAntiAirSweep: Components.BuildingBase could not be resolved. Skipping sweep.");
+                DebugLog.Write("AerialSpawn", "BuildingAntiAirSweep: Components.BuildingBase could not be resolved. Skipping sweep.");
                 return;
             }
 
@@ -179,11 +180,11 @@ namespace DINOForge.Runtime.Aviation
 
             if (buildings.Length == 0)
             {
-                WriteDebug("BuildingAntiAirSweep: no untagged building entities found.");
+                DebugLog.Write("AerialSpawn", "BuildingAntiAirSweep: no untagged building entities found.");
                 return;
             }
 
-            WriteDebug($"BuildingAntiAirSweep: {buildings.Length} building entit(ies) without AntiAirComponent. " +
+            DebugLog.Write("AerialSpawn", $"BuildingAntiAirSweep: {buildings.Length} building entit(ies) without AntiAirComponent. " +
                        $"Applying components from {antiAirDefs.Count} AntiAir definition(s).");
 
             // Use the first AntiAir definition's parameters as the authoritative values.
@@ -200,29 +201,11 @@ namespace DINOForge.Runtime.Aviation
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"BuildingAntiAirSweep: error on entity {building.Index}: {ex.Message}");
+                    DebugLog.Write("AerialSpawn", $"BuildingAntiAirSweep: error on entity {building.Index}: {ex.Message}");
                 }
             }
 
-            WriteDebug($"BuildingAntiAirSweep: applied AntiAirComponent to {applied}/{buildings.Length} building entities.");
-        }
-
-        // -------------------------------------------------------------------------
-        // Debug logging
-        // -------------------------------------------------------------------------
-
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialSpawnSystem: {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AerialSpawnSystem debug log write failed: {ex.Message}");
-            }
+            DebugLog.Write("AerialSpawn", $"BuildingAntiAirSweep: applied AntiAirComponent to {applied}/{buildings.Length} building entities.");
         }
     }
 }

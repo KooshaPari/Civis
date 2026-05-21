@@ -15,6 +15,69 @@ using YamlDotNet.Serialization;
 namespace DINOForge.Tools.Cli.Assetctl;
 
 /// <summary>
+/// Path containment helper (#775 P0). Ensures user/external-data-derived
+/// path segments cannot escape an intended root directory via traversal
+/// sequences (".." / absolute paths / alternate separators). Crafted Sketchfab
+/// metadata such as <c>externalId=../../etc/passwd</c> or
+/// <c>OriginalFormat=../../../../tmp/x</c> would otherwise flow into
+/// <see cref="Path.Combine(string, string)"/> and escape the pipeline root.
+/// </summary>
+internal static class PathSafety
+{
+    /// <summary>
+    /// Resolves <paramref name="candidate"/> relative to <paramref name="root"/> and
+    /// throws <see cref="UnauthorizedAccessException"/> if the resolved path escapes
+    /// the root. Returns the fully qualified, canonical path on success.
+    /// </summary>
+    public static string EnsureWithin(string root, string candidate)
+    {
+        if (string.IsNullOrEmpty(root))
+        {
+            throw new ArgumentException("Root must be non-empty.", nameof(root));
+        }
+        if (candidate is null)
+        {
+            throw new ArgumentNullException(nameof(candidate));
+        }
+
+        string fullRoot = Path.GetFullPath(root);
+        if (!fullRoot.EndsWith(Path.DirectorySeparatorChar) && !fullRoot.EndsWith(Path.AltDirectorySeparatorChar))
+        {
+            fullRoot += Path.DirectorySeparatorChar;
+        }
+        string fullCandidate = Path.GetFullPath(Path.Combine(root, candidate));
+        if (!fullCandidate.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(fullCandidate + Path.DirectorySeparatorChar, fullRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                $"Path traversal blocked: '{candidate}' escapes root '{root}'.");
+        }
+        return fullCandidate;
+    }
+
+    /// <summary>
+    /// Validates that <paramref name="segment"/> is a safe single path component:
+    /// non-empty, contains no directory separators, no traversal tokens, no invalid
+    /// filename chars, no drive/UNC prefix.
+    /// </summary>
+    public static string EnsureSafeSegment(string segment, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            throw new ArgumentException($"Segment '{paramName}' must be non-empty.", paramName);
+        }
+        if (segment.Contains("..", StringComparison.Ordinal) ||
+            segment.IndexOfAny(new[] { '/', '\\', ':' }) >= 0 ||
+            segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new UnauthorizedAccessException(
+                $"Unsafe path segment in '{paramName}': '{segment}'.");
+        }
+        return segment;
+    }
+}
+
+/// <summary>
 /// Pre-implementation asset intake pipeline used by <c>assetctl</c> commands.
 /// </summary>
 internal sealed class AssetctlPipeline
@@ -125,11 +188,29 @@ internal sealed class AssetctlPipeline
         }
 
         SourceTier sourceTier = GetSourceTier(source);
+
+        // #776 Pattern #137 enforcement: block intake when policy ReleaseAllowed=false.
+        // Previously this advisory was only stamped onto the manifest (ReleaseAllowed field) but never enforced.
+        if (_rules.RiskRules.TryGetValue(candidate.IpStatus, out RiskRule? riskRule) && riskRule is not null && !riskRule.ReleaseAllowed)
+        {
+            return new AssetctlIntakeResult
+            {
+                Success = false,
+                Message = $"Blocked by source-rules policy: ip_status='{candidate.IpStatus}' is not release-allowed ({riskRule.Note})",
+                Candidate = candidate
+            };
+        }
+
         string assetId = BuildAssetId(source, externalId);
-        string assetDir = Path.Combine(pipelineRoot, "raw", assetId);
+        // #775 P0: assetId is derived from externalId (user/Sketchfab data). Validate as a
+        // single safe path segment and contain the resolved directory beneath pipelineRoot.
+        PathSafety.EnsureSafeSegment(assetId, nameof(assetId));
+        string assetDir = PathSafety.EnsureWithin(pipelineRoot, Path.Combine("raw", assetId));
         Directory.CreateDirectory(assetDir);
 
-        string sourceDownloadPath = Path.Combine(assetDir, $"source_download.{candidate.OriginalFormat}");
+        // #775 P0: OriginalFormat is user-controlled metadata; sanitize to a safe extension.
+        string safeFormat = PathSafety.EnsureSafeSegment(candidate.OriginalFormat, nameof(candidate.OriginalFormat));
+        string sourceDownloadPath = PathSafety.EnsureWithin(assetDir, $"source_download.{safeFormat}");
         if (!File.Exists(sourceDownloadPath))
         {
             File.WriteAllText(sourceDownloadPath, BuildSourceFileContents(candidate));
@@ -198,7 +279,9 @@ internal sealed class AssetctlPipeline
             };
         }
 
-        string workingDir = Path.Combine(pipelineRoot, "working", assetId);
+        // #775 P0: assetId is user-derived; contain under pipelineRoot.
+        PathSafety.EnsureSafeSegment(assetId, nameof(assetId));
+        string workingDir = PathSafety.EnsureWithin(pipelineRoot, Path.Combine("working", assetId));
         Directory.CreateDirectory(workingDir);
 
         try
@@ -351,7 +434,9 @@ internal sealed class AssetctlPipeline
             };
         }
 
-        string workingDir = Path.Combine(pipelineRoot, "working", assetId);
+        // #775 P0: contain assetId under pipelineRoot.
+        PathSafety.EnsureSafeSegment(assetId, nameof(assetId));
+        string workingDir = PathSafety.EnsureWithin(pipelineRoot, Path.Combine("working", assetId));
         string normalizedGlb = Path.Combine(workingDir, "normalized.glb");
         if (!File.Exists(normalizedGlb))
         {
@@ -522,7 +607,13 @@ internal sealed class AssetctlPipeline
             };
         }
 
-        string exportDir = Path.Combine(pipelineRoot, "export", "unity", bundle.ToLowerInvariant(), assetId);
+        // #775 P0: bundle is validated against SupportedBundles above; assetId comes from
+        // BuildAssetId(externalId). Defensively contain under pipelineRoot.
+        string safeBundle = PathSafety.EnsureSafeSegment(bundle.ToLowerInvariant(), nameof(bundle));
+        PathSafety.EnsureSafeSegment(assetId, nameof(assetId));
+        string exportDir = PathSafety.EnsureWithin(
+            pipelineRoot,
+            Path.Combine("export", "unity", safeBundle, assetId));
         Directory.CreateDirectory(exportDir);
         string manifestDir = Path.GetDirectoryName(manifestPath) ?? pipelineRoot;
 
@@ -770,7 +861,7 @@ internal sealed class AssetctlPipeline
             Notes = new[]
             {
                 "Pre-implementation intake placeholder created.",
-                "No distribution policy decision is implied."
+                $"Distribution policy: ReleaseAllowed={releaseAllowed} (enforced via source-rules.yaml, #776)."
             },
             References = new[] { candidate.SourceUrl },
             ReleaseAllowed = releaseAllowed
@@ -793,13 +884,15 @@ internal sealed class AssetctlPipeline
 
     private static string? FindManifestPath(string assetId, string pipelineRoot)
     {
+        // #775 P0: assetId is user-derived; reject traversal segments before lookup.
+        PathSafety.EnsureSafeSegment(assetId, nameof(assetId));
         string[] dirs =
         {
-            Path.Combine(pipelineRoot, "raw", assetId),
-            Path.Combine(pipelineRoot, "working", assetId),
-            Path.Combine(pipelineRoot, "export", "unity", "unit", assetId),
-            Path.Combine(pipelineRoot, "export", "unity", "vehicle", assetId),
-            Path.Combine(pipelineRoot, "export", "unity", "prop", assetId)
+            PathSafety.EnsureWithin(pipelineRoot, Path.Combine("raw", assetId)),
+            PathSafety.EnsureWithin(pipelineRoot, Path.Combine("working", assetId)),
+            PathSafety.EnsureWithin(pipelineRoot, Path.Combine("export", "unity", "unit", assetId)),
+            PathSafety.EnsureWithin(pipelineRoot, Path.Combine("export", "unity", "vehicle", assetId)),
+            PathSafety.EnsureWithin(pipelineRoot, Path.Combine("export", "unity", "prop", assetId))
         };
 
         foreach (string dir in dirs)

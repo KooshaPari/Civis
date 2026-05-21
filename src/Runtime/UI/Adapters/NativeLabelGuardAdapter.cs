@@ -38,7 +38,7 @@ namespace DINOForge.Runtime.UI.Adapters
             if (button is null) throw new System.ArgumentNullException(nameof(button));
             if (string.IsNullOrEmpty(text)) throw new System.ArgumentException("text must not be empty", nameof(text));
 
-            // PHASE2-TODO: when UiGridHarmonyPatch is refactored for multi-label support,
+            // TODO(#NNN-followup-iter145): when UiGridHarmonyPatch is refactored for multi-label support,
             // route the (button, text) pair into a per-button pin map. For now the existing
             // singleton patch is install-once and substitutes "OPTIONS" → "Mods" on the
             // repurposed button identified by NativeMenuInjector.RepurposedModsButtonGoName.
@@ -50,7 +50,7 @@ namespace DINOForge.Runtime.UI.Adapters
         public void UnpinLabel(NativeButtonHandle button)
         {
             if (button is null) throw new System.ArgumentNullException(nameof(button));
-            // PHASE2-TODO: ModsButtonTextPatch is currently single-label, install-once.
+            // TODO(#NNN-followup-iter145): ModsButtonTextPatch is currently single-label, install-once.
             // Unpinning is a no-op until the multi-label refactor lands.
         }
     }

@@ -174,7 +174,7 @@ namespace DINOForge.Runtime.UI
             {
                 try
                 {
-                    File.WriteAllText(filePath, ExportToJson());
+                    File.WriteAllText(filePath, ExportToJson(), System.Text.Encoding.UTF8);
                 }
                 catch
                 {

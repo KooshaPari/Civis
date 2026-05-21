@@ -18,6 +18,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- #775 P0: expose internal PathSafety helper and AssetctlPipeline to the CliTools test project. -->
+    <InternalsVisibleTo Include="DINOForge.Tests.CliTools" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.*" />
     <PackageReference Include="Spectre.Console" Version="0.*" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.*" />

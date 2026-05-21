@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
+using DINOForge.Tools.Cli.Json;
 
 namespace DINOForge.Tools.Cli.Assetctl.Sketchfab;
 
@@ -25,12 +26,13 @@ namespace DINOForge.Tools.Cli.Assetctl.Sketchfab;
 /// </remarks>
 public sealed class SketchfabClient : IDisposable
 {
-    private static readonly HttpClient SharedHttp = new();
+    private static readonly HttpClient SharedHttp = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     private readonly HttpClient _httpClient;
     private readonly string _apiToken;
     private readonly string _apiBaseUrl;
     private readonly SketchfabClientOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly object _rateLimitLock = new();
     private bool _disposed;
 
@@ -45,7 +47,7 @@ public sealed class SketchfabClient : IDisposable
     /// <param name="apiToken">Personal access token from https://sketchfab.com/settings/api</param>
     /// <param name="options">Client configuration options (optional)</param>
     /// <exception cref="ArgumentNullException">Thrown if apiToken is null/empty</exception>
-    public SketchfabClient(string apiToken, SketchfabClientOptions? options = null)
+    public SketchfabClient(string apiToken, SketchfabClientOptions? options = null, TimeProvider? timeProvider = null)
     {
         if (string.IsNullOrWhiteSpace(apiToken))
             throw new ArgumentNullException(nameof(apiToken));
@@ -53,6 +55,7 @@ public sealed class SketchfabClient : IDisposable
         _apiToken = apiToken;
         _options = options ?? new SketchfabClientOptions();
         _apiBaseUrl = _options.ApiBaseUrl;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         _httpClient = SharedHttp;
         _httpClient.Timeout = TimeSpan.FromSeconds(_options.HttpTimeoutSeconds);
@@ -63,8 +66,8 @@ public sealed class SketchfabClient : IDisposable
     /// <summary>
     /// Internal constructor for dependency injection (testing).
     /// </summary>
-    internal SketchfabClient(string apiToken, HttpClient httpClient, SketchfabClientOptions? options = null)
-        : this(apiToken, options)
+    internal SketchfabClient(string apiToken, HttpClient httpClient, SketchfabClientOptions? options = null, TimeProvider? timeProvider = null)
+        : this(apiToken, options, timeProvider)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
@@ -150,7 +153,7 @@ public sealed class SketchfabClient : IDisposable
             if (_rateLimitRemaining >= 0 && _rateLimitRemaining <= 2 && _rateLimitResetUnix > 0)
             {
                 var resetAt = UnixTimeStampToDateTime(_rateLimitResetUnix);
-                var now = DateTime.UtcNow;
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
                 if (resetAt > now)
                 {
                     var waitMs = (int)Math.Ceiling((resetAt - now).TotalMilliseconds);
@@ -175,7 +178,7 @@ public sealed class SketchfabClient : IDisposable
                     var content = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                     var searchResult = System.Text.Json.JsonSerializer.Deserialize<SketchfabSearchResponse>(
                         content,
-                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        CliJsonOptions.SketchfabApi);
 
                     return searchResult?.Results ?? new List<SketchfabModelInfo>();
                 }
@@ -281,7 +284,7 @@ public sealed class SketchfabClient : IDisposable
                     var content = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                     var metadata = System.Text.Json.JsonSerializer.Deserialize<SketchfabModelMetadata>(
                         content,
-                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        CliJsonOptions.SketchfabApi);
 
                     if (metadata == null)
                         throw new SketchfabApiException("Failed to deserialize model metadata");
@@ -424,7 +427,7 @@ public sealed class SketchfabClient : IDisposable
         var infoJson = await infoResponse.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         var downloadUrls = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, DownloadUrlEntry>>(
             infoJson,
-            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            CliJsonOptions.SketchfabApi);
 
         if (downloadUrls is null || !downloadUrls.ContainsKey(format.ToLowerInvariant()))
             throw new SketchfabApiException($"Format '{format}' not available for model {modelId}");
@@ -522,7 +525,7 @@ public sealed class SketchfabClient : IDisposable
 
             var resetAt = UnixTimeStampToDateTime(_rateLimitResetUnix);
             var remaining = _rateLimitRemaining;
-            var resetInSeconds = (int)Math.Max(0, (resetAt - DateTime.UtcNow).TotalSeconds);
+            var resetInSeconds = (int)Math.Max(0, (resetAt - _timeProvider.GetUtcNow().UtcDateTime).TotalSeconds);
 
             return new SketchfabRateLimitState
             {
@@ -653,7 +656,7 @@ public sealed class SketchfabClient : IDisposable
     {
         lock (_rateLimitLock)
         {
-            _lastRateLimitCheck = DateTime.UtcNow;
+            _lastRateLimitCheck = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (response.Headers.TryGetValues("X-RateLimit-Remaining", out var remaining))
             {

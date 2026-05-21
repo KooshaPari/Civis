@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -15,19 +16,21 @@ namespace DINOForge.Runtime.Bridge
     public class ProjectileVFXSystem : SystemBase
     {
         private static ParticlePoolManager? _poolManager;
+        private EntityQuery _projectileQuery;
+        private bool _queryInitialized;
         private int _frameCount;
         private const int MinFrameDelay = 600;
 
         public static void SetPoolManager(ParticlePoolManager? poolManager)
         {
             _poolManager = poolManager;
-            WriteDebug("ProjectileVFXSystem.SetPoolManager: Pool initialized");
+            DebugLog.Write("ProjectileVFX", "SetPoolManager: Pool initialized");
         }
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("ProjectileVFXSystem.OnCreate");
+            DebugLog.Write("ProjectileVFX", "OnCreate");
         }
 
         protected override void OnUpdate()
@@ -40,24 +43,29 @@ namespace DINOForge.Runtime.Bridge
             if (_poolManager == null)
             {
                 if (_frameCount == MinFrameDelay + 1)
-                    WriteDebug("ProjectileVFXSystem: Pool manager not initialized, skipping");
+                    DebugLog.Write("ProjectileVFX", "Pool manager not initialized, skipping");
                 return;
             }
 
             EntityManager em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-            // Note: EntityQueries is in the same namespace (DINOForge.Runtime.Bridge)
-            ComponentType? projectileType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.ProjectileDataBase");
-            if (projectileType == null)
-                return;
-
-            EntityQueryDesc desc = new EntityQueryDesc
+            if (!_queryInitialized)
             {
-                All = new[] { ComponentType.ReadOnly(projectileType.Value.TypeIndex) }
-            };
+                // Note: EntityQueries is in the same namespace (DINOForge.Runtime.Bridge)
+                ComponentType? projectileType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.ProjectileDataBase");
+                if (projectileType == null)
+                    return;
 
-            EntityQuery query = em.CreateEntityQuery(desc);
-            using NativeArray<Entity> projectiles = query.ToEntityArray(Allocator.Temp);
+                EntityQueryDesc desc = new EntityQueryDesc
+                {
+                    All = new[] { ComponentType.ReadOnly(projectileType.Value.TypeIndex) }
+                };
+
+                _projectileQuery = em.CreateEntityQuery(desc);
+                _queryInitialized = true;
+            }
+
+            using NativeArray<Entity> projectiles = _projectileQuery.ToEntityArray(Allocator.Temp);
 
             try
             {
@@ -77,7 +85,7 @@ namespace DINOForge.Runtime.Bridge
                         GameObject? vfxInstance = _poolManager.Get(vfxPoolKey);
                         if (vfxInstance == null)
                         {
-                            WriteDebug($"ProjectileVFXSystem: Pool returned null for '{vfxPoolKey}'");
+                            DebugLog.Write("ProjectileVFX", $"Pool returned null for '{vfxPoolKey}'");
                             continue;
                         }
 
@@ -87,12 +95,12 @@ namespace DINOForge.Runtime.Bridge
                         if (ps != null)
                         {
                             ps.Play();
-                            WriteDebug($"ProjectileVFXSystem: Spawned {vfxPoolKey} at {impactPos}");
+                            DebugLog.Write("ProjectileVFX", $"Spawned {vfxPoolKey} at {impactPos}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"ProjectileVFXSystem: Error processing projectile: {ex.Message}");
+                        DebugLog.Write("ProjectileVFX", $"Error processing projectile: {ex.Message}");
                     }
                 }
             }
@@ -102,15 +110,6 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [ProjectileVFXSystem] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 
     public interface IParticlePoolManager

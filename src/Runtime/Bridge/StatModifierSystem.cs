@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -162,21 +163,21 @@ namespace DINOForge.Runtime.Bridge
             ComponentMapping? mapping = ComponentMap.Find(modification.SdkPath);
             if (mapping == null)
             {
-                WriteDebug($"[ApplyImmediate] No ComponentMapping for '{modification.SdkPath}'");
+                DebugLog.Write("StatModifier",$"[ApplyImmediate] No ComponentMapping for '{modification.SdkPath}'");
                 return -1;
             }
 
             Type? componentType = mapping.ResolvedType;
             if (componentType == null)
             {
-                WriteDebug($"[ApplyImmediate] Cannot resolve ECS type: {mapping.EcsComponentType}");
+                DebugLog.Write("StatModifier",$"[ApplyImmediate] Cannot resolve ECS type: {mapping.EcsComponentType}");
                 return 0;
             }
 
             ComponentType? ct = Bridge.EntityQueries.ResolveComponentType(mapping.EcsComponentType);
             if (ct == null)
             {
-                WriteDebug($"[ApplyImmediate] Cannot create ComponentType for: {mapping.EcsComponentType}");
+                DebugLog.Write("StatModifier",$"[ApplyImmediate] Cannot create ComponentType for: {mapping.EcsComponentType}");
                 return 0;
             }
 
@@ -208,7 +209,7 @@ namespace DINOForge.Runtime.Bridge
 
                 if (field == null)
                 {
-                    WriteDebug($"[ApplyImmediate] No target field on {componentType.FullName}");
+                    DebugLog.Write("StatModifier",$"[ApplyImmediate] No target field on {componentType.FullName}");
                     entities.Dispose();
                     query.Dispose();
                     return 0;
@@ -245,12 +246,13 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"[ApplyImmediate] Failed entity {entities[i].Index}: {ex.Message}");
+                        Exception root = ex is TargetInvocationException tie ? (tie.InnerException ?? ex) : ex;
+                        DebugLog.Write("StatModifier",$"[ApplyImmediate] Failed entity {entities[i].Index}: {root.GetType().Name}: {root.Message}");
                     }
                 }
             }
 
-            WriteDebug($"[ApplyImmediate] Modified {modifiedCount}/{entities.Length} entities for {modification.SdkPath}");
+            DebugLog.Write("StatModifier",$"[ApplyImmediate] Modified {modifiedCount}/{entities.Length} entities for {modification.SdkPath}");
 
             entities.Dispose();
             query.Dispose();
@@ -260,7 +262,7 @@ namespace DINOForge.Runtime.Bridge
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("StatModifierSystem.OnCreate");
+            DebugLog.Write("StatModifier","StatModifierSystem.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -291,7 +293,7 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            WriteDebug($"StatModifierSystem applying {batch.Count} modifications");
+            DebugLog.Write("StatModifier",$"StatModifierSystem applying {batch.Count} modifications");
 
             int successCount = 0;
             int failCount = 0;
@@ -315,17 +317,18 @@ namespace DINOForge.Runtime.Bridge
                             StatModification retryMod = new StatModification(
                                 mod.SdkPath, mod.Value, mod.Mode, mod.FilterComponentType, mod.RetryCount + 1);
                             retryQueue.Add(retryMod);
-                            WriteDebug($"Queuing retry {retryMod.RetryCount}/{MaxRetries} for {mod.SdkPath}");
+                            DebugLog.Write("StatModifier",$"Queuing retry {retryMod.RetryCount}/{MaxRetries} for {mod.SdkPath}");
                         }
                         else
                         {
-                            WriteDebug($"Max retries exhausted for {mod.SdkPath}");
+                            DebugLog.Write("StatModifier",$"Max retries exhausted for {mod.SdkPath}");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"StatModifierSystem: Failed to apply {mod.SdkPath}: {ex.Message}");
+                    Exception root = ex is TargetInvocationException tie ? (tie.InnerException ?? ex) : ex;
+                    DebugLog.Write("StatModifier",$"StatModifierSystem: Failed to apply {mod.SdkPath}: {root.GetType().Name}: {root.Message}");
                     failCount++;
                     // Queue for retry if retries remain
                     if (mod.RetryCount < MaxRetries)
@@ -333,12 +336,12 @@ namespace DINOForge.Runtime.Bridge
                         StatModification retryMod = new StatModification(
                             mod.SdkPath, mod.Value, mod.Mode, mod.FilterComponentType, mod.RetryCount + 1);
                         retryQueue.Add(retryMod);
-                        WriteDebug($"Queuing retry {retryMod.RetryCount}/{MaxRetries} for {mod.SdkPath} after exception");
+                        DebugLog.Write("StatModifier",$"Queuing retry {retryMod.RetryCount}/{MaxRetries} for {mod.SdkPath} after exception");
                     }
                 }
             }
 
-            WriteDebug($"StatModifierSystem: Applied {successCount}, failed {failCount}, queued {retryQueue.Count} for retry");
+            DebugLog.Write("StatModifier",$"StatModifierSystem: Applied {successCount}, failed {failCount}, queued {retryQueue.Count} for retry");
 
             // Re-queue failed modifications for retry
             if (retryQueue.Count > 0)
@@ -367,14 +370,14 @@ namespace DINOForge.Runtime.Bridge
                 // Silently skip unmapped paths — retrying will never help, so return true
                 // to prevent infinite retry spam for stats like "unit.stats.damage" that
                 // have no direct writable ECS field (damage is baked into projectile blobs).
-                WriteDebug($"No ComponentMapping for '{mod.SdkPath}' — skipping (not retryable)");
+                DebugLog.Write("StatModifier",$"No ComponentMapping for '{mod.SdkPath}' — skipping (not retryable)");
                 return true;
             }
 
             Type? componentType = mapping.ResolvedType;
             if (componentType == null)
             {
-                WriteDebug($"Cannot resolve ECS type: {mapping.EcsComponentType}");
+                DebugLog.Write("StatModifier",$"Cannot resolve ECS type: {mapping.EcsComponentType}");
                 return false;
             }
 
@@ -382,7 +385,7 @@ namespace DINOForge.Runtime.Bridge
             ComponentType? ct = Bridge.EntityQueries.ResolveComponentType(mapping.EcsComponentType);
             if (ct == null)
             {
-                WriteDebug($"Cannot create ComponentType for: {mapping.EcsComponentType}");
+                DebugLog.Write("StatModifier",$"Cannot create ComponentType for: {mapping.EcsComponentType}");
                 return false;
             }
 
@@ -396,7 +399,7 @@ namespace DINOForge.Runtime.Bridge
                 ComponentType? filterCt = Bridge.EntityQueries.ResolveComponentType(mod.FilterComponentType);
                 if (filterCt == null)
                 {
-                    WriteDebug($"Cannot resolve filter type: {mod.FilterComponentType}");
+                    DebugLog.Write("StatModifier",$"Cannot resolve filter type: {mod.FilterComponentType}");
                     return false;
                 }
 
@@ -422,13 +425,13 @@ namespace DINOForge.Runtime.Bridge
             {
                 // Log total entity count to diagnose whether scene is loaded
                 int totalEntities = EntityManager.UniversalQuery.CalculateEntityCount();
-                WriteDebug($"No entities matched for {mapping.EcsComponentType} (total entities in world: {totalEntities}, ct={ct.Value})");
+                DebugLog.Write("StatModifier",$"No entities matched for {mapping.EcsComponentType} (total entities in world: {totalEntities}, ct={ct.Value})");
                 entities.Dispose();
                 query.Dispose();
                 return false;
             }
 
-            WriteDebug($"Matched {entities.Length} entities for {mapping.EcsComponentType}");
+            DebugLog.Write("StatModifier",$"Matched {entities.Length} entities for {mapping.EcsComponentType}");
 
             // Resolve the target field name from the mapping.
             // Confirmed field layouts from entity dump analysis (ecs_types.json):
@@ -457,11 +460,12 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"Failed to modify entity {entities[i].Index}: {ex.Message}");
+                    Exception root = ex is TargetInvocationException tie ? (tie.InnerException ?? ex) : ex;
+                    DebugLog.Write("StatModifier",$"Failed to modify entity {entities[i].Index}: {root.GetType().Name}: {root.Message}");
                 }
             }
 
-            WriteDebug($"Modified {modifiedCount}/{entities.Length} entities for {mod.SdkPath}");
+            DebugLog.Write("StatModifier",$"Modified {modifiedCount}/{entities.Length} entities for {mod.SdkPath}");
 
             entities.Dispose();
             query.Dispose();
@@ -485,7 +489,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (getMethod == null || setMethod == null)
             {
-                WriteDebug("Cannot find GetComponentData/SetComponentData methods on EntityManager");
+                DebugLog.Write("StatModifier","Cannot find GetComponentData/SetComponentData methods on EntityManager");
                 return false;
             }
 
@@ -505,7 +509,7 @@ namespace DINOForge.Runtime.Bridge
 
                 if (field == null)
                 {
-                    WriteDebug($"Field '{targetFieldName}' not found on {componentType.FullName}");
+                    DebugLog.Write("StatModifier",$"Field '{targetFieldName}' not found on {componentType.FullName}");
                     return false;
                 }
             }
@@ -515,7 +519,7 @@ namespace DINOForge.Runtime.Bridge
                 field = FindFirstNumericField(componentType);
                 if (field == null)
                 {
-                    WriteDebug($"No numeric field found on {componentType.FullName}");
+                    DebugLog.Write("StatModifier",$"No numeric field found on {componentType.FullName}");
                     return false;
                 }
             }
@@ -571,15 +575,5 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 }

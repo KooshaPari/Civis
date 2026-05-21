@@ -13,7 +13,7 @@ namespace DINOForge.Domains.Economy
     /// Entry point for the Economy domain plugin. Provides access to all economy subsystems:
     /// production calculation, trade route evaluation, balance analysis, and pack validation.
     /// </summary>
-    public class EconomyPlugin
+    public sealed class EconomyPlugin
     {
         /// <summary>
         /// Calculator for building and faction production rates.

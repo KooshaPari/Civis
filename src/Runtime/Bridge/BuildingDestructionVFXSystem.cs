@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace DINOForge.Runtime.Bridge
         private static ParticlePoolManager? _poolManager;
         private readonly HashSet<Entity> _processedDestructions = new HashSet<Entity>();
         private readonly Dictionary<GameObject, float> _activeVFX = new Dictionary<GameObject, float>();
+        private EntityQuery _buildingQuery;
+        private bool _queryInitialized;
         private int _frameCount;
         private const int MinFrameDelay = 600;
         private const float VFXLifetime = 5.0f;
@@ -26,13 +29,13 @@ namespace DINOForge.Runtime.Bridge
         public static void SetPoolManager(ParticlePoolManager? poolManager)
         {
             _poolManager = poolManager;
-            WriteDebug("BuildingDestructionVFXSystem.SetPoolManager: Pool initialized");
+            DebugLog.Write("BuildingDestructionVFX", "SetPoolManager: Pool initialized");
         }
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("BuildingDestructionVFXSystem.OnCreate");
+            DebugLog.Write("BuildingDestructionVFX", "OnCreate");
         }
 
         protected override void OnUpdate()
@@ -45,7 +48,7 @@ namespace DINOForge.Runtime.Bridge
             if (_poolManager == null)
             {
                 if (_frameCount == MinFrameDelay + 1)
-                    WriteDebug("BuildingDestructionVFXSystem: Pool manager not initialized, skipping");
+                    DebugLog.Write("BuildingDestructionVFX", "Pool manager not initialized, skipping");
                 return;
             }
 
@@ -53,23 +56,28 @@ namespace DINOForge.Runtime.Bridge
 
             EntityManager em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-            ComponentType? buildingType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.BuildingBase");
-            ComponentType? healthType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Health");
-
-            if (buildingType == null || healthType == null)
-                return;
-
-            EntityQueryDesc desc = new EntityQueryDesc
+            if (!_queryInitialized)
             {
-                All = new[]
-                {
-                    ComponentType.ReadOnly(buildingType.Value.TypeIndex),
-                    ComponentType.ReadOnly(healthType.Value.TypeIndex)
-                }
-            };
+                ComponentType? buildingType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.BuildingBase");
+                ComponentType? healthType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Health");
 
-            EntityQuery query = em.CreateEntityQuery(desc);
-            using NativeArray<Entity> buildings = query.ToEntityArray(Allocator.Temp);
+                if (buildingType == null || healthType == null)
+                    return;
+
+                EntityQueryDesc desc = new EntityQueryDesc
+                {
+                    All = new[]
+                    {
+                        ComponentType.ReadOnly(buildingType.Value.TypeIndex),
+                        ComponentType.ReadOnly(healthType.Value.TypeIndex)
+                    }
+                };
+
+                _buildingQuery = em.CreateEntityQuery(desc);
+                _queryInitialized = true;
+            }
+
+            using NativeArray<Entity> buildings = _buildingQuery.ToEntityArray(Allocator.Temp);
 
             try
             {
@@ -98,7 +106,7 @@ namespace DINOForge.Runtime.Bridge
                         GameObject? vfxInstance = _poolManager.Get(vfxPoolKey);
                         if (vfxInstance == null)
                         {
-                            WriteDebug($"BuildingDestructionVFXSystem: Pool returned null for '{vfxPoolKey}'");
+                            DebugLog.Write("BuildingDestructionVFX", $"Pool returned null for '{vfxPoolKey}'");
                             continue;
                         }
 
@@ -113,12 +121,12 @@ namespace DINOForge.Runtime.Bridge
                             emission.rateOverTime = emission.rateOverTime.constant * sizeMultiplier;
 
                             _activeVFX[vfxInstance] = VFXLifetime;
-                            WriteDebug($"BuildingDestructionVFXSystem: Spawned {vfxPoolKey} at {buildingPos} (scale: {sizeMultiplier:F2}x)");
+                            DebugLog.Write("BuildingDestructionVFX", $"Spawned {vfxPoolKey} at {buildingPos} (scale: {sizeMultiplier:F2}x)");
                         }
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"BuildingDestructionVFXSystem: Error processing building: {ex.Message}");
+                        DebugLog.Write("BuildingDestructionVFX", $"Error processing building: {ex.Message}");
                     }
                 }
             }
@@ -142,15 +150,17 @@ namespace DINOForge.Runtime.Bridge
 
                 return 1.0f;
             }
-            catch
+            catch (Exception)
             {
+                // safe-swallow: lifetime read failed, default to full life
                 return 1.0f;
             }
         }
 
         private void UpdateActiveVFX()
         {
-            List<GameObject> expired = new List<GameObject>();
+            List<GameObject> expired = new List<GameObject>(_activeVFX.Count);
+            List<KeyValuePair<GameObject, float>> updates = new List<KeyValuePair<GameObject, float>>(_activeVFX.Count);
             float deltaTime = Time.DeltaTime;
 
             foreach (var kvp in _activeVFX)
@@ -164,8 +174,14 @@ namespace DINOForge.Runtime.Bridge
                 }
                 else
                 {
-                    _activeVFX[vfxInstance] = remainingLifetime;
+                    updates.Add(new KeyValuePair<GameObject, float>(vfxInstance, remainingLifetime));
                 }
+            }
+
+            // Apply updates after iteration to avoid mid-enumeration dictionary mutation (Pattern #51)
+            foreach (var update in updates)
+            {
+                _activeVFX[update.Key] = update.Value;
             }
 
             foreach (GameObject vfxInstance in expired)
@@ -179,26 +195,14 @@ namespace DINOForge.Runtime.Bridge
                     string poolKey = vfxInstance.name.Replace("(Clone)", "").Trim();
                     _poolManager?.Return(vfxInstance, poolKey);
                     _activeVFX.Remove(vfxInstance);
-                    WriteDebug($"BuildingDestructionVFXSystem: Returned {poolKey} to pool");
+                    DebugLog.Write("BuildingDestructionVFX", $"Returned {poolKey} to pool");
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"BuildingDestructionVFXSystem: Error returning VFX to pool: {ex.Message}");
+                    DebugLog.Write("BuildingDestructionVFX", $"Error returning VFX to pool: {ex.Message}");
                 }
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [BuildingDestructionVFXSystem] {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"BuildingDestructionVFXSystem debug log write failed: {ex.Message}");
-            }
-        }
     }
 }

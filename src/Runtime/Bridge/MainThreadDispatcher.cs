@@ -119,8 +119,7 @@ namespace DINOForge.Runtime.Bridge
         /// <returns>A task that completes when the work finishes on the main thread.</returns>
         public static Task<T> RunOnMainThread<T>(Func<T> work)
         {
-            // tcs-sync-continuation-ok: Intentional sync continuations on main thread for thread-safety.
-            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Fast-fail when the main-thread pump is known dead (e.g. KeyInputSystem
             // destroyed during scene transition). Without this, callers that block on
@@ -145,8 +144,7 @@ namespace DINOForge.Runtime.Bridge
         /// <returns>A task that completes when the action finishes.</returns>
         public static Task RunOnMainThread(Action action)
         {
-            // tcs-sync-continuation-ok: Intentional sync continuations on main thread for thread-safety.
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Fast-fail when the main-thread pump is known dead — see RunOnMainThread<T>.
             if (!_pumpIsAlive)

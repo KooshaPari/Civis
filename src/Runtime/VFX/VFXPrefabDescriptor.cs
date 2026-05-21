@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DINOForge.Runtime.VFX
@@ -199,7 +200,7 @@ namespace DINOForge.Runtime.VFX
         private static readonly Color CISRed = new Color(1.0f, 0.267f, 0.0f, 1.0f);                // #FF4400
         private static readonly Color CISAccent = new Color(0.702f, 0.353f, 0.0f, 1.0f);           // #B35A00
 
-        public static VFXPrefabDescriptor BlasterBoltRep => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BlasterBoltRep = new VFXPrefabDescriptor(
             id: "BlasterBolt_Rep",
             displayName: "Republic Blaster Bolt",
             faction: "rep",
@@ -219,7 +220,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor BlasterBoltCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BlasterBoltCIS = new VFXPrefabDescriptor(
             id: "BlasterBolt_CIS",
             displayName: "CIS Blaster Bolt",
             faction: "cis",
@@ -239,7 +240,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor LightsaberVFXRep => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor LightsaberVFXRep = new VFXPrefabDescriptor(
             id: "LightsaberVFX_Rep",
             displayName: "Republic Lightsaber VFX",
             faction: "rep",
@@ -259,7 +260,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor LightsaberVFXCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor LightsaberVFXCIS = new VFXPrefabDescriptor(
             id: "LightsaberVFX_CIS",
             displayName: "CIS Lightsaber VFX",
             faction: "cis",
@@ -279,7 +280,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor BlasterImpactRep => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BlasterImpactRep = new VFXPrefabDescriptor(
             id: "BlasterImpact_Rep",
             displayName: "Republic Blaster Impact",
             faction: "rep",
@@ -299,7 +300,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.4f));
 
-        public static VFXPrefabDescriptor BlasterImpactCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BlasterImpactCIS = new VFXPrefabDescriptor(
             id: "BlasterImpact_CIS",
             displayName: "CIS Blaster Impact",
             faction: "cis",
@@ -319,7 +320,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.4f));
 
-        public static VFXPrefabDescriptor UnitDeathVFXRep => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor UnitDeathVFXRep = new VFXPrefabDescriptor(
             id: "UnitDeathVFX_Rep",
             displayName: "Republic Unit Death",
             faction: "rep",
@@ -339,7 +340,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor UnitDeathVFXCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor UnitDeathVFXCIS = new VFXPrefabDescriptor(
             id: "UnitDeathVFX_CIS",
             displayName: "CIS Unit Death",
             faction: "cis",
@@ -359,7 +360,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor BuildingCollapseRep => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BuildingCollapseRep = new VFXPrefabDescriptor(
             id: "BuildingCollapse_Rep",
             displayName: "Republic Building Collapse",
             faction: "rep",
@@ -379,7 +380,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor BuildingCollapseCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor BuildingCollapseCIS = new VFXPrefabDescriptor(
             id: "BuildingCollapse_CIS",
             displayName: "CIS Building Collapse",
             faction: "cis",
@@ -399,7 +400,7 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        public static VFXPrefabDescriptor ExplosionCIS => new VFXPrefabDescriptor(
+        public static readonly VFXPrefabDescriptor ExplosionCIS = new VFXPrefabDescriptor(
             id: "Explosion_CIS",
             displayName: "CIS Large Explosion",
             faction: "cis",
@@ -419,10 +420,10 @@ namespace DINOForge.Runtime.VFX
             },
             lodConfig: new LODConfig(0.6f, 0.3f));
 
-        /// <summary>
-        /// Get all 11 prefab descriptors as an array.
-        /// </summary>
-        public static VFXPrefabDescriptor[] GetAllPrefabs() => new[]
+        // Memoized init-once list of all 11 prefab descriptors (avoids per-call allocation
+        // in VFX hot-path; see Pattern #121 / #123 — public mutability removed by exposing
+        // IReadOnlyList<T> instead of the mutable backing array).
+        private static readonly VFXPrefabDescriptor[] _allPrefabs = new[]
         {
             BlasterBoltRep,
             BlasterBoltCIS,
@@ -436,5 +437,18 @@ namespace DINOForge.Runtime.VFX
             BuildingCollapseCIS,
             ExplosionCIS
         };
+
+        /// <summary>
+        /// All 11 prefab descriptors as an init-once read-only list. Preferred accessor
+        /// in hot-paths (VFX spawn, pool warmup) — no allocation per call.
+        /// </summary>
+        public static IReadOnlyList<VFXPrefabDescriptor> AllPrefabs { get; } = _allPrefabs;
+
+        /// <summary>
+        /// Get all 11 prefab descriptors. Returns the same cached <see cref="IReadOnlyList{T}"/>
+        /// as <see cref="AllPrefabs"/>; no allocation per call. Callers must not cast to a
+        /// mutable list.
+        /// </summary>
+        public static IReadOnlyList<VFXPrefabDescriptor> GetAllPrefabs() => _allPrefabs;
     }
 }

@@ -2,9 +2,11 @@
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Unity.Entities;
 using UnityEngine;
 using DINOForge.Runtime;
+using DINOForge.Runtime.Diagnostics;
 
 namespace DINOForge.Runtime.Bridge
 {
@@ -65,13 +67,13 @@ namespace DINOForge.Runtime.Bridge
             // If cached/default world is null or disposed, scan all worlds for a valid one.
             if (result == null || !result.IsCreated)
             {
-                WriteDebug("[KeyInputSystem.GetActiveWorld] cached/default world invalid — scanning all worlds...");
+                DebugLog.Write("KeyInput","[KeyInputSystem.GetActiveWorld] cached/default world invalid — scanning all worlds...");
                 foreach (World w in World.All)
                 {
                     if (w.IsCreated)
                     {
                         result = w;
-                        WriteDebug($"[KeyInputSystem.GetActiveWorld] Found valid world: '{w.Name}'.");
+                        DebugLog.Write("KeyInput",$"[KeyInputSystem.GetActiveWorld] Found valid world: '{w.Name}'.");
                         break;
                     }
                 }
@@ -87,6 +89,79 @@ namespace DINOForge.Runtime.Bridge
 
         /// <summary>Called when pack reload is requested (set by RuntimeDriver if alive). Can be invoked from background thread.</summary>
         public static System.Action? OnPackReloadRequested;
+
+        // ── P0 fix: Win32 background polling thread ─────────────────────────────────
+        // CLAUDE.md claims F9/F10 work via a Win32 GetAsyncKeyState background thread.
+        // Reality (pre-fix): polling lived in OnUpdate, which only ticks inside
+        // SimulationSystemGroup — DORMANT at the main menu. Result: F9/F10 don't fire
+        // until the user has actually started a game, making the debug overlay
+        // unreachable from the menu.
+        //
+        // This thread polls GetAsyncKeyState every 50ms regardless of ECS group state,
+        // so F9/F10 fire from the moment Plugin.Awake completes. Per CLAUDE.md, invoking
+        // SetActive / OnF9Pressed from a background thread is safe in Mono 2021.3 for
+        // DontDestroyOnLoad objects. OnUpdate polling is kept as a redundant backup.
+        private static Thread? _keyPollThread;
+        private static volatile bool _keyPollRunning;
+        private static bool _bgF9PreviousState;
+        private static bool _bgF10PreviousState;
+
+        /// <summary>
+        /// Starts the background Win32 key-polling thread. Idempotent — safe to call
+        /// multiple times. Must be called from Plugin.Awake so F9/F10 work at the main
+        /// menu (before SimulationSystemGroup begins ticking).
+        /// </summary>
+        public static void StartKeyPollThread()
+        {
+            if (_keyPollRunning) return;
+            _keyPollRunning = true;
+            _keyPollThread = new Thread(KeyPollLoop)
+            {
+                IsBackground = true,
+                Name = "DINOForge-F9F10-Hook",
+            };
+            _keyPollThread.Start();
+            DebugLog.Write("KeyInput", "[KeyInputSystem.StartKeyPollThread] Background F9/F10 poll thread started.");
+        }
+
+        /// <summary>
+        /// Stops the background polling thread cleanly. Called from Plugin.OnDestroy.
+        /// </summary>
+        public static void StopKeyPollThread()
+        {
+            _keyPollRunning = false;
+            _keyPollThread = null;
+            DebugLog.Write("KeyInput", "[KeyInputSystem.StopKeyPollThread] Background F9/F10 poll thread stopped.");
+        }
+
+        private static void KeyPollLoop()
+        {
+            while (_keyPollRunning)
+            {
+                try
+                {
+                    bool f9Now = (GetAsyncKeyState(VK_F9) & KEY_PRESSED) != 0;
+                    bool f10Now = (GetAsyncKeyState(VK_F10) & KEY_PRESSED) != 0;
+                    if (f9Now && !_bgF9PreviousState)
+                    {
+                        DebugLog.Write("KeyInput", "[KeyPollLoop] F9 edge detected (background thread).");
+                        try { OnF9Pressed?.Invoke(); } catch (Exception ex) { DebugLog.Write("KeyInput", $"[KeyPollLoop] OnF9Pressed threw: {ex.Message}"); }
+                    }
+                    _bgF9PreviousState = f9Now;
+                    if (f10Now && !_bgF10PreviousState)
+                    {
+                        DebugLog.Write("KeyInput", "[KeyPollLoop] F10 edge detected (background thread).");
+                        try { OnF10Pressed?.Invoke(); } catch (Exception ex) { DebugLog.Write("KeyInput", $"[KeyPollLoop] OnF10Pressed threw: {ex.Message}"); }
+                    }
+                    _bgF10PreviousState = f10Now;
+                }
+                catch (Exception ex)
+                {
+                    try { DebugLog.Write("KeyInput", $"[KeyPollLoop] iter exception: {ex.Message}"); } catch { /* safe-swallow */ }
+                }
+                try { Thread.Sleep(50); } catch (ThreadInterruptedException) { break; }
+            }
+        }
 
         /// <summary>
         /// Cached entity count updated by OnUpdate every tick.
@@ -108,7 +183,7 @@ namespace DINOForge.Runtime.Bridge
 
         protected override void OnCreate()
         {
-            WriteDebug($"KeyInputSystem.OnCreate: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
+            DebugLog.Write("KeyInput",$"KeyInputSystem.OnCreate: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
             Enabled = true;
             // Attempt resurrection in OnCreate — this fires when a new ECS world starts,
             // which happens after DINO tears down the previous world (and our RuntimeDriver).
@@ -119,7 +194,7 @@ namespace DINOForge.Runtime.Bridge
             // would fail because _resurrectionLog/_resurrectionConfig are null.
             if (Plugin.NeedsResurrection || ReferenceEquals(Plugin.PersistentRoot, null))
             {
-                WriteDebug($"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))}");
+                DebugLog.Write("KeyInput",$"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))}");
                 Plugin.NeedsResurrection = false;
                 // Defer to background thread which runs after Plugin.Awake() completes
                 Plugin.NeedsDeferredResurrection = true;
@@ -131,12 +206,12 @@ namespace DINOForge.Runtime.Bridge
             _cachedWorld = World;
             _lastDefaultWorld = World.DefaultGameObjectInjectionWorld;
 
-            WriteDebug($"KeyInputSystem.OnCreate complete, Enabled={Enabled}");
+            DebugLog.Write("KeyInput",$"KeyInputSystem.OnCreate complete, Enabled={Enabled}");
         }
 
         protected override void OnDestroy()
         {
-            WriteDebug($"KeyInputSystem.OnDestroy: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
+            DebugLog.Write("KeyInput",$"KeyInputSystem.OnDestroy: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
             // Clear the cached world reference so GetActiveWorld() falls back to scanning
             // all worlds until a new KeyInputSystem is registered in the new world.
             _cachedWorld = null;
@@ -160,7 +235,7 @@ namespace DINOForge.Runtime.Bridge
                 _updateFrame++;
                 // Log every 600 frames (once per ~10 seconds at 60 FPS)
                 if (_updateFrame % 600 == 0)
-                    WriteDebug($"[KeyInputSystem.OnUpdate] frame={_updateFrame} enabled={Enabled} overlayEnsured={_overlayEnsured} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
+                    DebugLog.Write("KeyInput",$"[KeyInputSystem.OnUpdate] frame={_updateFrame} enabled={Enabled} overlayEnsured={_overlayEnsured} PersistentRoot={(Plugin.PersistentRoot != null ? "alive" : "null")}");
 
                 // Drain the MainThreadDispatcher queue from ECS OnUpdate.
                 // MonoBehaviour.Update() never fires in DINO (custom PlayerLoop),
@@ -189,17 +264,17 @@ namespace DINOForge.Runtime.Bridge
                 World? currentDefault = World.DefaultGameObjectInjectionWorld;
                 if (currentDefault != null && !ReferenceEquals(currentDefault, _lastDefaultWorld))
                 {
-                    WriteDebug($"[KeyInputSystem.OnUpdate] DefaultGameObjectInjectionWorld changed: " +
+                    DebugLog.Write("KeyInput",$"[KeyInputSystem.OnUpdate] DefaultGameObjectInjectionWorld changed: " +
                         $"'{_lastDefaultWorld?.Name ?? "null"}' → '{currentDefault.Name}'. " +
                         $"Re-registering in new world.");
                     try
                     {
                         currentDefault.GetOrCreateSystem<KeyInputSystem>();
-                        WriteDebug("[KeyInputSystem.OnUpdate] KeyInputSystem registered in new default world.");
+                        DebugLog.Write("KeyInput","[KeyInputSystem.OnUpdate] KeyInputSystem registered in new default world.");
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"[KeyInputSystem.OnUpdate] Re-registration failed: {ex.Message}");
+                        DebugLog.Write("KeyInput",$"[KeyInputSystem.OnUpdate] Re-registration failed: {ex.Message}");
                     }
                     _lastDefaultWorld = currentDefault;
                 }
@@ -208,12 +283,12 @@ namespace DINOForge.Runtime.Bridge
                 if (Plugin.PendingF9Toggle)
                 {
                     Plugin.PendingF9Toggle = false;
-                    WriteDebug("Consumed PendingF9Toggle");
+                    DebugLog.Write("KeyInput","Consumed PendingF9Toggle");
                 }
                 if (Plugin.PendingF10Toggle)
                 {
                     Plugin.PendingF10Toggle = false;
-                    WriteDebug("Consumed PendingF10Toggle");
+                    DebugLog.Write("KeyInput","Consumed PendingF10Toggle");
                 }
 
                 // Ensure overlay component is attached to a surviving GameObject
@@ -229,7 +304,7 @@ namespace DINOForge.Runtime.Bridge
                 // F9: trigger on transition from not-pressed to pressed
                 if (f9Current && !_f9PreviousState)
                 {
-                    WriteDebug("F9 pressed (transition detected)");
+                    DebugLog.Write("KeyInput","F9 pressed (transition detected)");
                     if (OnF9Pressed != null)
                         OnF9Pressed.Invoke();
                     else
@@ -240,7 +315,7 @@ namespace DINOForge.Runtime.Bridge
                 // F10: trigger on transition from not-pressed to pressed
                 if (f10Current && !_f10PreviousState)
                 {
-                    WriteDebug("F10 pressed (transition detected)");
+                    DebugLog.Write("KeyInput","F10 pressed (transition detected)");
                     OnF10Pressed?.Invoke();
                 }
                 _f10PreviousState = f10Current;
@@ -282,7 +357,7 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (System.Exception ex)
             {
-                WriteDebug($"KeyInputSystem.OnUpdate EXCEPTION: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                DebugLog.Write("KeyInput",$"KeyInputSystem.OnUpdate EXCEPTION: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
@@ -303,32 +378,32 @@ namespace DINOForge.Runtime.Bridge
                 World? current = World.DefaultGameObjectInjectionWorld;
                 if (current == null || !current.IsCreated)
                 {
-                    WriteDebug("[KeyInputSystem.RecreateInCurrentWorld] DefaultWorld null/disposed — scanning all worlds...");
+                    DebugLog.Write("KeyInput","[KeyInputSystem.RecreateInCurrentWorld] DefaultWorld null/disposed — scanning all worlds...");
                     foreach (World w in World.All)
                     {
                         if (w.IsCreated)
                         {
                             current = w;
-                            WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Found valid world: '{w.Name}'.");
+                            DebugLog.Write("KeyInput",$"[KeyInputSystem.RecreateInCurrentWorld] Found valid world: '{w.Name}'.");
                             break;
                         }
                     }
                 }
                 if (current == null || !current.IsCreated)
                 {
-                    WriteDebug("[KeyInputSystem.RecreateInCurrentWorld] No valid world found.");
+                    DebugLog.Write("KeyInput","[KeyInputSystem.RecreateInCurrentWorld] No valid world found.");
                     return;
                 }
-                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Calling GetOrCreateSystem in '{current.Name}' (IsCreated={current.IsCreated}).");
+                DebugLog.Write("KeyInput",$"[KeyInputSystem.RecreateInCurrentWorld] Calling GetOrCreateSystem in '{current.Name}' (IsCreated={current.IsCreated}).");
                 KeyInputSystem sys = current.GetOrCreateSystem<KeyInputSystem>();
-                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Got system: World={sys.World?.Name ?? "null"} IsCreated={sys.World?.IsCreated ?? false}");
+                DebugLog.Write("KeyInput",$"[KeyInputSystem.RecreateInCurrentWorld] Got system: World={sys.World?.Name ?? "null"} IsCreated={sys.World?.IsCreated ?? false}");
                 // Update the cached world so GetActiveWorld() returns the current world.
                 _cachedWorld = current;
-                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Registered in '{current.Name}'.");
+                DebugLog.Write("KeyInput",$"[KeyInputSystem.RecreateInCurrentWorld] Registered in '{current.Name}'.");
             }
             catch (Exception ex)
             {
-                WriteDebug($"[KeyInputSystem.RecreateInCurrentWorld] Failed: {ex.Message}\n{ex.StackTrace}");
+                DebugLog.Write("KeyInput",$"[KeyInputSystem.RecreateInCurrentWorld] Failed: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
@@ -353,33 +428,9 @@ namespace DINOForge.Runtime.Bridge
             {
                 cam.gameObject.AddComponent<DebugOverlayBehaviour>();
                 _overlayEnsured = true;
-                WriteDebug($"EnsureOverlay: attached DebugOverlayBehaviour to camera '{cam.name}'");
+                DebugLog.Write("KeyInput",$"EnsureOverlay: attached DebugOverlayBehaviour to camera '{cam.name}'");
             }
         }
 
-        private const long DebugLogMaxBytes = 100L * 1024 * 1024;  // 100 MB
-
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-
-                // Pattern #232: rotate at 100 MB to prevent unbounded growth (iter-142 incident — 3.3GB file caused disk exhaustion)
-                if (System.IO.File.Exists(debugLog) && new System.IO.FileInfo(debugLog).Length >= DebugLogMaxBytes)
-                {
-                    string rotated = debugLog + ".1";
-                    if (System.IO.File.Exists(rotated)) System.IO.File.Delete(rotated);
-                    System.IO.File.Move(debugLog, rotated);
-                }
-
-                System.IO.File.AppendAllText(debugLog, $"[{System.DateTime.UtcNow:o}] [KeyInputSystem] {msg}\n");
-            }
-            catch (System.Exception ex)
-            {
-                // Pattern #111: fallback to BepInEx logger so append failures don't lose messages
-                BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"WriteDebug fallback: {ex} (msg: {msg})");
-            }
-        }
     }
 }

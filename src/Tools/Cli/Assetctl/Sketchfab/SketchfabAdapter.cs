@@ -18,20 +18,23 @@ public sealed class SketchfabAdapter : ISketchfabAdapter
 {
     private readonly SketchfabClient _client;
     private readonly ILogger<SketchfabAdapter> _logger;
+    private readonly TimeProvider _timeProvider;
 
     // Rate limit tracking (Gap Filler #1: Quota tracking)
     private int _rateLimitRemaining = -1;
-    private DateTime _rateLimitReset = DateTime.UtcNow.AddHours(1);
+    private DateTime _rateLimitReset;
     private DateTime _lastQuotaCheck = DateTime.MinValue;
     private readonly SemaphoreSlim _rateLimitLock = new(1, 1);
 
     /// <summary>
     /// Initializes a new Sketchfab adapter.
     /// </summary>
-    public SketchfabAdapter(SketchfabClient client, ILogger<SketchfabAdapter> logger)
+    public SketchfabAdapter(SketchfabClient client, ILogger<SketchfabAdapter> logger, TimeProvider? timeProvider = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _rateLimitReset = _timeProvider.GetUtcNow().UtcDateTime.AddHours(1);
     }
 
     public async Task<IReadOnlyList<SketchfabModelInfo>> SearchAsync(
@@ -288,13 +291,13 @@ public sealed class SketchfabAdapter : ISketchfabAdapter
         try
         {
             // Return cached quota if fresh (< 1 minute old)
-            if (_rateLimitRemaining >= 0 && DateTime.UtcNow - _lastQuotaCheck < TimeSpan.FromSeconds(60))
+            if (_rateLimitRemaining >= 0 && _timeProvider.GetUtcNow().UtcDateTime - _lastQuotaCheck < TimeSpan.FromSeconds(60))
             {
                 return new SketchfabRateLimitState
                 {
                     Remaining = _rateLimitRemaining,
                     ResetAtUtc = _rateLimitReset,
-                    ResetInSeconds = (int)Math.Max(0, (_rateLimitReset - DateTime.UtcNow).TotalSeconds),
+                    ResetInSeconds = (int)Math.Max(0, (_rateLimitReset - _timeProvider.GetUtcNow().UtcDateTime).TotalSeconds),
                     LastCheckedUtc = _lastQuotaCheck
                 };
             }
@@ -312,7 +315,7 @@ public sealed class SketchfabAdapter : ISketchfabAdapter
                     // Update cached state
                     _rateLimitRemaining = quotaState.Remaining;
                     _rateLimitReset = quotaState.ResetAtUtc;
-                    _lastQuotaCheck = DateTime.UtcNow;
+                    _lastQuotaCheck = _timeProvider.GetUtcNow().UtcDateTime;
 
                     _logger.LogInformation(
                         "Quota refreshed: {Remaining} requests remaining, resets in {ResetIn}s",

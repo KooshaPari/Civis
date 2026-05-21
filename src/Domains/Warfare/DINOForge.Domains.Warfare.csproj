@@ -7,9 +7,6 @@
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <Description>Combat simulation, factions, doctrines, combat roles for game modding</Description>
-    <Version>0.18.0</Version>
-    <AssemblyVersion>0.18.0</AssemblyVersion>
-    <PackageVersion>0.18.0</PackageVersion>
     <PackageId>DINOForge.Domains.Warfare</PackageId>
     <Authors>DINOForge Agents</Authors>
     <PackageTags>game-modding;combat;warfare;dinoforge</PackageTags>

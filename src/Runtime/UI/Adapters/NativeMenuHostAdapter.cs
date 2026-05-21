@@ -94,7 +94,7 @@ namespace DINOForge.Runtime.UI.Adapters
                 _screens[menuId] = screen;
             }
 
-            // PHASE2-TODO (M11.5 / WI-004a): when NativeMainMenuModMenu.CanUseNativeScreen
+            // TODO(#NNN-followup-iter145, M11.5 / WI-004a): when NativeMainMenuModMenu.CanUseNativeScreen
             // returns true, route the registration into ContextualModMenuHost so the screen
             // mounts on the vanilla main-menu canvas. Until then the registration is intent-only.
         }
@@ -106,7 +106,7 @@ namespace DINOForge.Runtime.UI.Adapters
                 _screens.Remove(menuId);
             }
 
-            // PHASE2-TODO (M11.5 / WI-004a): mirror Register's wire-up — drop the screen from
+            // TODO(#NNN-followup-iter145, M11.5 / WI-004a): mirror Register's wire-up — drop the screen from
             // the Runtime menu host so the vanilla canvas reverts.
         }
     }

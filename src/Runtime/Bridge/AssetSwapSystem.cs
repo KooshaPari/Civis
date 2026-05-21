@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK.Assets;
-using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
+// #613 dedup: was alias to DINOForge.Runtime.Assets.AssetService (retired); now points to SDK canonical impl.
+using RuntimeAssetService = DINOForge.SDK.Assets.AssetService;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -64,9 +66,25 @@ namespace DINOForge.Runtime.Bridge
         private int _frameCount;
 
         private static volatile bool _resetPending;
+        // Iter-144: dump EntityManager shared-component methods once on reflection failure
+        // so we can diagnose Pattern #101 against DINO's actual Unity 2021.3 EntityManager surface.
+        private static bool _dumpedEmMethods;
 
         /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
-        public static void ScheduleReset() => _resetPending = true;
+        public static void ScheduleReset()
+        {
+            _resetPending = true;
+            // #608 P2: reset diagnostic dump latch so retries re-dump EntityManager methods
+            // (HRV1↔HRV2 transitions, Unity-version upgrades, or scene-reload-induced surface
+            // changes all benefit from a fresh dump on the next failure).
+            _dumpedEmMethods = false;
+            // Also clear the RenderMesh type cache so a different DOTS variant
+            // (HRV1 RenderMesh → HRV2 RenderMeshUnmanaged / MaterialMeshInfo) is re-resolved
+            // after a scene transition or hot-reload.
+            _renderMeshResolved = false;
+            _renderMeshType = null;
+            _renderMeshVariantLogged = false;
+        }
 
         /// <summary>
         /// Minimum frames to wait before applying swaps.
@@ -83,7 +101,7 @@ namespace DINOForge.Runtime.Bridge
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("AssetSwapSystem.OnCreate");
+            DebugLog.Write("AssetSwap","AssetSwapSystem.OnCreate");
         }
 
         /// <inheritdoc/>
@@ -94,7 +112,7 @@ namespace DINOForge.Runtime.Bridge
                 _resetPending = false;
                 _frameCount = 0;
                 _reportedFailures.Clear();
-                WriteDebug("AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
+                DebugLog.Write("AssetSwap","AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
             _frameCount++;
@@ -106,7 +124,7 @@ namespace DINOForge.Runtime.Bridge
             if (pending.Count == 0)
                 return;
 
-            WriteDebug($"AssetSwapSystem: processing {pending.Count} pending swap(s)");
+            DebugLog.Write("AssetSwap",$"AssetSwapSystem: processing {pending.Count} pending swap(s)");
 
             string patchDir = Path.Combine(BepInEx.Paths.BepInExRootPath, PatchedBundlesDir);
             RuntimeAssetService assetService = new RuntimeAssetService(BepInEx.Paths.GameRootPath);
@@ -123,7 +141,7 @@ namespace DINOForge.Runtime.Bridge
                     {
                         AssetSwapRegistry.MarkApplied(request.AssetAddress);
                         succeeded++;
-                        WriteDebug($"AssetSwapSystem: swap applied — address='{request.AssetAddress}' " +
+                        DebugLog.Write("AssetSwap",$"AssetSwapSystem: swap applied — address='{request.AssetAddress}' " +
                                    $"asset='{request.AssetName}'");
                     }
                     else
@@ -133,12 +151,12 @@ namespace DINOForge.Runtime.Bridge
                         int newCount = request.FailCount;
                         if (newCount >= AssetSwapRegistry.MaxRetries)
                         {
-                            WriteDebug($"AssetSwapSystem: giving up on '{request.AssetAddress}' " +
+                            DebugLog.Write("AssetSwap",$"AssetSwapSystem: giving up on '{request.AssetAddress}' " +
                                        $"after {newCount} failures");
                         }
                         else if (_reportedFailures.Add(request.AssetAddress))
                         {
-                            WriteDebug($"AssetSwapSystem: swap failed — address='{request.AssetAddress}' " +
+                            DebugLog.Write("AssetSwap",$"AssetSwapSystem: swap failed — address='{request.AssetAddress}' " +
                                        $"(attempt {newCount}/{AssetSwapRegistry.MaxRetries})");
                         }
                     }
@@ -149,13 +167,13 @@ namespace DINOForge.Runtime.Bridge
                     failed++;
                     if (_reportedFailures.Add(request.AssetAddress))
                     {
-                        WriteDebug($"AssetSwapSystem: swap exception for '{request.AssetAddress}': {ex.Message}");
+                        DebugLog.Write("AssetSwap",$"AssetSwapSystem: swap exception for '{request.AssetAddress}': {ex.Message}");
                     }
                 }
             }
 
             assetService.Dispose();
-            WriteDebug($"AssetSwapSystem: batch complete — {succeeded} succeeded, {failed} failed");
+            DebugLog.Write("AssetSwap",$"AssetSwapSystem: batch complete — {succeeded} succeeded, {failed} failed");
         }
 
         /// <summary>
@@ -169,7 +187,7 @@ namespace DINOForge.Runtime.Bridge
             string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
             if (!File.Exists(modBundleFullPath))
             {
-                WriteDebug($"ApplySwap: mod bundle not found: {modBundleFullPath}");
+                DebugLog.Write("AssetSwap",$"ApplySwap: mod bundle not found: {modBundleFullPath}");
                 return false;
             }
 
@@ -192,7 +210,7 @@ namespace DINOForge.Runtime.Bridge
                     if (string.IsNullOrEmpty(vanillaBundlePath))
                     {
                         if (_reportedFailures.Add($"resolve:{request.AssetAddress}"))
-                            WriteDebug($"ApplySwap: unable to resolve vanilla bundle path for '{request.AssetAddress}'");
+                            DebugLog.Write("AssetSwap",$"ApplySwap: unable to resolve vanilla bundle path for '{request.AssetAddress}'");
                     }
                     else if (File.Exists(vanillaBundlePath))
                     {
@@ -206,25 +224,25 @@ namespace DINOForge.Runtime.Bridge
                             outputPath);
 
                         if (patchResult)
-                            WriteDebug($"ApplySwap: patched bundle written to '{outputPath}'");
+                            DebugLog.Write("AssetSwap",$"ApplySwap: patched bundle written to '{outputPath}'");
                         else
-                            WriteDebug($"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                            DebugLog.Write("AssetSwap",$"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
                     }
                 }
                 else if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
                 {
-                    WriteDebug($"ApplySwap: address '{request.AssetAddress}' not in catalog — skipping disk patch, using entity swap only");
+                    DebugLog.Write("AssetSwap",$"ApplySwap: address '{request.AssetAddress}' not in catalog — skipping disk patch, using entity swap only");
                 }
             }
             else if (_reportedFailures.Add($"extract:{request.AssetAddress}"))
             {
-                WriteDebug($"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}' — using entity swap only");
+                DebugLog.Write("AssetSwap",$"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}' — using entity swap only");
             }
 
             // Best-effort live RenderMesh swap on ECS entities.
             bool entitySwapResult = TrySwapRenderMeshFromBundle(
                 modBundleFullPath, request.AssetName, request.VanillaMapping);
-            WriteDebug($"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
+            DebugLog.Write("AssetSwap",$"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
 
             return patchResult || entitySwapResult;
         }
@@ -274,13 +292,13 @@ namespace DINOForge.Runtime.Bridge
                     }
 
                     if (replacementMesh != null || replacementMat != null)
-                        WriteDebug($"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
+                        DebugLog.Write("AssetSwap",$"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
                 }
             }
 
             if (replacementMesh == null && replacementMat == null)
             {
-                WriteDebug(
+                DebugLog.Write("AssetSwap",
                     $"TrySwapRenderMeshFromBundle: no Mesh/Material named '{assetName}' in bundle");
                 return false;
             }
@@ -288,7 +306,16 @@ namespace DINOForge.Runtime.Bridge
             Type? renderMeshType = ResolveRenderMeshType();
             if (renderMeshType == null)
             {
-                WriteDebug("TrySwapRenderMeshFromBundle: Unity.Rendering.RenderMesh type not found");
+                DebugLog.Write("AssetSwap","TrySwapRenderMeshFromBundle: Unity.Rendering.RenderMesh type not found");
+                return false;
+            }
+
+            // #608 P2: HRV2 (RenderMeshUnmanaged / MaterialMeshInfo) uses blittable structs
+            // with readonly mesh/material data — the legacy FieldInfo.SetValue path doesn't
+            // apply. Bail out gracefully until HRV2 mesh-swap is implemented (separate task).
+            if (IsHrv2Type(_renderMeshVariantName))
+            {
+                DebugLog.Write("AssetSwap",$"TrySwapRenderMeshFromBundle: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
                 return false;
             }
 
@@ -308,13 +335,13 @@ namespace DINOForge.Runtime.Bridge
                         ComponentType.ReadOnly(renderMeshType),
                         ComponentType.ReadOnly(archetypeType),
                     };
-                    WriteDebug(
+                    DebugLog.Write("AssetSwap",
                         $"TrySwapRenderMeshFromBundle: filtering by '{archetypeTypeName}' " +
                         $"for vanilla_mapping='{vanillaMapping}'");
                 }
                 else
                 {
-                    WriteDebug(
+                    DebugLog.Write("AssetSwap",
                         $"TrySwapRenderMeshFromBundle: archetype type '{archetypeTypeName}' not " +
                         $"found in assemblies; falling back to RenderMesh-only query");
                     queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
@@ -332,9 +359,18 @@ namespace DINOForge.Runtime.Bridge
             // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
             // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
             // for entities that have multiple instances of T (e.g. a unit with shadow+main mesh).
-            MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethod(
-                "GetSharedComponentData",
-                new[] { typeof(Entity), typeof(ComponentType) });
+            // Iter-144 fix: GetMethod(name, types[]) returns null at runtime against DINO's
+            // Unity 2021.3 EntityManager (overload-resolution mismatch). Mirror the arity-filter
+            // pattern used below for SetSharedComponentData: enumerate methods, filter on name,
+            // non-generic, arity=2, first param Entity, second param ComponentType.
+            MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(m =>
+                    m.Name == "GetSharedComponentData"
+                    && !m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 2
+                    && m.GetParameters()[0].ParameterType == typeof(Entity)
+                    && m.GetParameters()[1].ParameterType == typeof(ComponentType));
             // #101: SetSharedComponentData<T> has multiple overloads (Entity, EntityQuery,
             // NativeArray<Entity>), so plain GetMethod("SetSharedComponentData") throws
             // AmbiguousMatchException. GetMethod(name, types[]) also can't disambiguate
@@ -350,8 +386,24 @@ namespace DINOForge.Runtime.Bridge
 
             if (getSharedNonGeneric == null || setSharedGeneric == null)
             {
-                WriteDebug(
-                    "TrySwapRenderMeshFromBundle: GetSharedComponentData/SetSharedComponentData not found");
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: reflection lookup failed " +
+                    $"(getSharedNonGeneric={getSharedNonGeneric != null}, setSharedGeneric={setSharedGeneric != null}). " +
+                    $"Dumping available EntityManager methods for diagnosis:");
+                if (!_dumpedEmMethods)
+                {
+                    _dumpedEmMethods = true;
+                    var allMethods = typeof(EntityManager).GetMethods(
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                    foreach (var m in allMethods)
+                    {
+                        if (m.Name == "GetSharedComponentData" || m.Name == "SetSharedComponentData")
+                        {
+                            var ps = string.Join(", ", m.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                            DebugLog.Write("AssetSwap",$"  EM.{m.Name}(<{ps}>) generic={m.IsGenericMethodDefinition} retType={m.ReturnType.Name}");
+                        }
+                    }
+                }
                 entities.Dispose();
                 query.Dispose();
                 return false;
@@ -382,7 +434,7 @@ namespace DINOForge.Runtime.Bridge
                         object? currentMesh = meshField.GetValue(renderMesh);
                         if (currentMesh == null)
                         {
-                            WriteDebug(
+                            DebugLog.Write("AssetSwap",
                                 $"TrySwapRenderMeshFromBundle: mesh field is null on entity {entity.Index} " +
                                 $"(building/entity not yet loaded — skipping)");
                             continue;
@@ -395,7 +447,7 @@ namespace DINOForge.Runtime.Bridge
                         object? currentMat = materialField.GetValue(renderMesh);
                         if (currentMat == null)
                         {
-                            WriteDebug(
+                            DebugLog.Write("AssetSwap",
                                 $"TrySwapRenderMeshFromBundle: material field is null on entity {entity.Index} " +
                                 $"(building/entity not yet loaded — skipping)");
                             continue;
@@ -415,18 +467,18 @@ namespace DINOForge.Runtime.Bridge
                 {
                     // Entity has multiple RenderMesh instances (shadow + main mesh).
                     // Skip — unit swaps only need one mesh visible anyway.
-                    WriteDebug(
+                    DebugLog.Write("AssetSwap",
                         $"TrySwapRenderMeshFromBundle: entity {entity.Index} has multiple " +
                         $"RenderMesh instances — skipping (ambiguous match)");
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug(
+                    DebugLog.Write("AssetSwap",
                         $"TrySwapRenderMeshFromBundle: failed on entity {entity.Index}: {ex.Message}");
                 }
             }
 
-            WriteDebug($"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities");
+            DebugLog.Write("AssetSwap",$"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities");
             entities.Dispose();
             query.Dispose();
 
@@ -437,30 +489,134 @@ namespace DINOForge.Runtime.Bridge
 
         private static Type? _renderMeshType;
         private static bool _renderMeshResolved;
+        // #608 P2: tracks which HRV variant was resolved so callers (mesh-swap path) can
+        // bail out gracefully on HRV2 (MaterialMeshInfo/RenderMeshUnmanaged) where the
+        // public-mutable-field path doesn't apply.
+        private static string? _renderMeshVariantName;
+        private static bool _renderMeshVariantLogged;
+        private static bool _unityRenderingVersionLogged;
 
         /// <summary>
-        /// Resolves the Unity.Rendering.RenderMesh type from loaded assemblies.
-        /// DINO uses Hybrid Renderer V1 which provides RenderMesh as a shared component.
+        /// HRV2 type names (RenderMeshUnmanaged, MaterialMeshInfo). When the resolved
+        /// RenderMesh type matches one of these, the legacy FieldInfo.SetValue("mesh"/"material")
+        /// swap path is NOT supported and must be skipped (see TrySwapRenderMeshFromBundle).
+        /// </summary>
+        private static readonly string[] Hrv2TypeNames =
+        {
+            "Unity.Rendering.RenderMeshUnmanaged",
+            "Unity.Rendering.MaterialMeshInfo",
+        };
+
+        /// <summary>
+        /// Resolves the Unity.Rendering RenderMesh shared-component type from loaded assemblies.
+        /// Tries HRV1 ("Unity.Rendering.RenderMesh") first, then falls back to HRV2 variants
+        /// ("RenderMeshUnmanaged", "MaterialMeshInfo") so newer DOTS installations are detected
+        /// (#608 P2). Caller is responsible for checking <see cref="IsHrv2Type"/> before
+        /// attempting field mutation — HRV2 has readonly properties / blittable structs and
+        /// requires a different swap strategy (not yet implemented).
         /// </summary>
         private static Type? ResolveRenderMeshType()
         {
             if (_renderMeshResolved) return _renderMeshType;
             _renderMeshResolved = true;
 
-            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            LogUnityRenderingVersionOnce();
+
+            // Try HRV1 first (DINO 2021.3 baseline), then HRV2 variants.
+            string[] candidates =
             {
-                try
+                "Unity.Rendering.RenderMesh",
+                "Unity.Rendering.RenderMeshUnmanaged",
+                "Unity.Rendering.MaterialMeshInfo",
+            };
+
+            foreach (string typeName in candidates)
+            {
+                foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    _renderMeshType = asm.GetType("Unity.Rendering.RenderMesh", throwOnError: false);
-                    if (_renderMeshType != null) return _renderMeshType;
-                }
-                catch (Exception ex)
-                {
-                    /* safe-swallow: type resolution failure is expected when assembly does not contain Unity.Rendering */
-                    System.Diagnostics.Debug.WriteLine($"RenderMesh type lookup in {asm.GetName().Name} failed: {ex.Message}");
+                    try
+                    {
+                        Type? t = asm.GetType(typeName, throwOnError: false);
+                        if (t != null)
+                        {
+                            _renderMeshType = t;
+                            _renderMeshVariantName = typeName;
+                            if (!_renderMeshVariantLogged)
+                            {
+                                _renderMeshVariantLogged = true;
+                                DebugLog.Write("AssetSwap",$"ResolveRenderMeshType: resolved '{typeName}' from assembly '{asm.GetName().Name}' v{asm.GetName().Version}");
+                                if (IsHrv2Type(typeName))
+                                {
+                                    DebugLog.Write("AssetSwap",$"ResolveRenderMeshType: HRV2 variant detected ('{typeName}') — HRV2 mesh-swap not yet implemented, falling back to no-op for entity swaps. Bundle-disk patching (Phase 1) remains functional.");
+                                }
+                            }
+                            return _renderMeshType;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        /* safe-swallow: type resolution failure is expected when assembly does not contain Unity.Rendering */
+                        System.Diagnostics.Debug.WriteLine($"RenderMesh type lookup for '{typeName}' in {asm.GetName().Name} failed: {ex.Message}");
+                    }
                 }
             }
+
+            DebugLog.Write("AssetSwap","ResolveRenderMeshType: no HRV1 or HRV2 RenderMesh type found in any loaded assembly. Entity mesh-swap disabled.");
             return null;
+        }
+
+        /// <summary>Returns true if the resolved type is an HRV2 variant (no mutable mesh/material fields).</summary>
+        private static bool IsHrv2Type(string? typeName)
+        {
+            if (string.IsNullOrEmpty(typeName)) return false;
+            for (int i = 0; i < Hrv2TypeNames.Length; i++)
+            {
+                if (Hrv2TypeNames[i] == typeName) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Logs the Unity.Rendering assembly version once at first init. Helps future agents
+        /// diagnose Unity-version-dependent reflection bugs (#608 P2). Scans both the currently
+        /// loaded assemblies and the executing assembly's referenced assemblies so we capture
+        /// the version regardless of whether Unity.Rendering has been JIT-loaded yet.
+        /// </summary>
+        private static void LogUnityRenderingVersionOnce()
+        {
+            if (_unityRenderingVersionLogged) return;
+            _unityRenderingVersionLogged = true;
+
+            try
+            {
+                // Pass 1: loaded assemblies (most reliable — actual runtime version).
+                foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    AssemblyName name = asm.GetName();
+                    if (name.Name == "Unity.Rendering" || name.Name == "Unity.Rendering.Hybrid")
+                    {
+                        DebugLog.Write("AssetSwap",$"Unity.Rendering assembly: name='{name.Name}' version={name.Version} (loaded)");
+                        return;
+                    }
+                }
+
+                // Pass 2: referenced (but not yet loaded) assemblies from this DLL.
+                foreach (AssemblyName refName in Assembly.GetExecutingAssembly().GetReferencedAssemblies())
+                {
+                    if (refName.Name == "Unity.Rendering" || refName.Name == "Unity.Rendering.Hybrid")
+                    {
+                        DebugLog.Write("AssetSwap",$"Unity.Rendering assembly: name='{refName.Name}' version={refName.Version} (referenced, not yet loaded)");
+                        return;
+                    }
+                }
+
+                DebugLog.Write("AssetSwap","Unity.Rendering assembly: NOT FOUND in loaded or referenced assemblies. RenderMesh resolution will fail.");
+            }
+            catch (Exception ex)
+            {
+                /* safe-swallow: diagnostic logging must never throw */
+                System.Diagnostics.Debug.WriteLine($"LogUnityRenderingVersionOnce failed: {ex.Message}");
+            }
         }
 
         private static readonly Dictionary<string, Type?> _resolvedTypeCache =
@@ -517,7 +673,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (!File.Exists(fullPath))
             {
-                WriteDebug($"LoadBundle: file not found: {fullPath}");
+                DebugLog.Write("AssetSwap",$"LoadBundle: file not found: {fullPath}");
                 return null;
             }
 
@@ -527,13 +683,13 @@ namespace DINOForge.Runtime.Bridge
                 if (bundle != null)
                 {
                     _loadedBundles.Set(path, bundle);
-                    WriteDebug($"LoadBundle: loaded '{fullPath}'");
+                    DebugLog.Write("AssetSwap",$"LoadBundle: loaded '{fullPath}'");
                 }
                 return bundle;
             }
             catch (Exception ex)
             {
-                WriteDebug($"LoadBundle: failed '{fullPath}': {ex.Message}");
+                DebugLog.Write("AssetSwap",$"LoadBundle: failed '{fullPath}': {ex.Message}");
                 return null;
             }
         }
@@ -563,7 +719,7 @@ namespace DINOForge.Runtime.Bridge
             // (e.g. defensive bundle-unload guards elsewhere) behaves consistently.
             Plugin.s_skipBundleUnload = true;
             Plugin.NeedsResurrection = true;
-            WriteDebug($"[AssetSwapSystem] OnDestroy SKIPPED bundle unload — bundles preserved across scene transition (NeedsResurrection={Plugin.NeedsResurrection} s_skipBundleUnload={Plugin.s_skipBundleUnload}). Companion flags set for downstream observers.");
+            DebugLog.Write("AssetSwap",$"[AssetSwapSystem] OnDestroy SKIPPED bundle unload — bundles preserved across scene transition (NeedsResurrection={Plugin.NeedsResurrection} s_skipBundleUnload={Plugin.s_skipBundleUnload}). Companion flags set for downstream observers.");
 
             try
             {
@@ -571,34 +727,9 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (Exception ex)
             {
-                WriteDebug($"AssetSwapSystem.OnDestroy - base.OnDestroy threw {ex.GetType().Name}: {ex.Message}");
+                DebugLog.Write("AssetSwap",$"AssetSwapSystem.OnDestroy - base.OnDestroy threw {ex.GetType().Name}: {ex.Message}");
             }
         }
 
-        private const long DebugLogMaxBytes = 100L * 1024 * 1024;  // 100 MB
-
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-
-                // Pattern #232: rotate at 100 MB to prevent unbounded growth (iter-142 incident — 3.3GB file caused disk exhaustion)
-                if (File.Exists(debugLog) && new FileInfo(debugLog).Length >= DebugLogMaxBytes)
-                {
-                    string rotated = debugLog + ".1";
-                    if (File.Exists(rotated)) File.Delete(rotated);
-                    File.Move(debugLog, rotated);
-                }
-
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [AssetSwapSystem] {msg}\n");
-            }
-            catch (System.Exception ex)
-            {
-                // Pattern #111: fallback to BepInEx logger so append failures don't lose messages
-                BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"WriteDebug fallback: {ex} (msg: {msg})");
-            }
-        }
     }
 }

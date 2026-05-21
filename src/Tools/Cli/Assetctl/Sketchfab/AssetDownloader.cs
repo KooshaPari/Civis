@@ -32,16 +32,19 @@ public sealed class AssetDownloader
 {
     private readonly SketchfabClient _sketchfabClient;
     private readonly AssetDownloaderOptions _options;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new asset downloader.
     /// </summary>
     /// <param name="sketchfabClient">Sketchfab API client</param>
     /// <param name="options">Configuration options</param>
-    public AssetDownloader(SketchfabClient sketchfabClient, AssetDownloaderOptions? options = null)
+    /// <param name="timeProvider">Time provider for testability (default: TimeProvider.System)</param>
+    public AssetDownloader(SketchfabClient sketchfabClient, AssetDownloaderOptions? options = null, TimeProvider? timeProvider = null)
     {
         _sketchfabClient = sketchfabClient ?? throw new ArgumentNullException(nameof(sketchfabClient));
         _options = options ?? new AssetDownloaderOptions();
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -140,7 +143,7 @@ public sealed class AssetDownloader
             // Filter by publication date if specified
             if (criteria.MaxDaysOld.HasValue && model.PublishedAt.HasValue)
             {
-                var age = (DateTime.UtcNow - model.PublishedAt.Value).Days;
+                var age = (_timeProvider.GetUtcNow().UtcDateTime - model.PublishedAt.Value).Days;
                 if (age > criteria.MaxDaysOld.Value)
                 {
                     continue;
@@ -262,7 +265,7 @@ public sealed class AssetDownloader
 
                     if (criteria.MaxDaysOld.HasValue && model.PublishedAt.HasValue)
                     {
-                        var age = (DateTime.UtcNow - model.PublishedAt.Value).Days;
+                        var age = (_timeProvider.GetUtcNow().UtcDateTime - model.PublishedAt.Value).Days;
                         if (age > criteria.MaxDaysOld.Value)
                         {
                             continue;
@@ -399,7 +402,7 @@ public sealed class AssetDownloader
                 LicenseLabel = candidate.License ?? "unknown",
                 LicenseUrl = licenseUrl,
                 AcquisitionMode = "api",
-                AcquiredAtUtc = DateTime.UtcNow.ToString("O"),
+                AcquiredAtUtc = _timeProvider.GetUtcNow().UtcDateTime.ToString("O"),
                 OriginalFormat = "glb",
                 DownloadUrl = candidate.ModelUrl,
                 LocalPath = Path.Combine(assetId, "raw", "source_download.glb"),
@@ -422,7 +425,7 @@ public sealed class AssetDownloader
                 Directory.CreateDirectory(manifestDir);
             }
 
-            var manifestJson = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+            var manifestJson = JsonSerializer.Serialize(manifest, CliJsonOptions.Indented);
             await File.WriteAllTextAsync(manifestPath, manifestJson, ct);
 
             return new DownloadAssetResult
@@ -785,7 +788,7 @@ public sealed class AssetDownloader
         var recencyScore = 0.5; // Default if no publish date
         if (model.PublishedAt.HasValue)
         {
-            var age = (DateTime.UtcNow - model.PublishedAt.Value).Days;
+            var age = (_timeProvider.GetUtcNow().UtcDateTime - model.PublishedAt.Value).Days;
             var yearAgo = 365;
             recencyScore = Math.Max(0.0, 1.0 - ((double)age / yearAgo));
         }

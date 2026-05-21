@@ -62,6 +62,7 @@ internal static class Program
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
             string message = $"[{DateTime.Now:u}] {context}:{Environment.NewLine}{ex}{Environment.NewLine}";
+            // unbounded-log-ok: terminal crash handler in short-lived installer process — Pattern #232 allowlisted
             File.AppendAllText(LogPath, message);
         }
         catch { /* best-effort */ }

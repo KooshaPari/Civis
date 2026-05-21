@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace DINOForge.Runtime.Bridge
         private static ParticlePoolManager? _poolManager;
         private readonly HashSet<Entity> _processedDeaths = new HashSet<Entity>();
         private readonly Dictionary<GameObject, float> _activeVFX = new Dictionary<GameObject, float>();
+        private EntityQuery _unitQuery;
+        private bool _queryInitialized;
         private int _frameCount;
         private const int MinFrameDelay = 600;
         private const float VFXLifetime = 2.5f;
@@ -24,13 +27,13 @@ namespace DINOForge.Runtime.Bridge
         public static void SetPoolManager(ParticlePoolManager? poolManager)
         {
             _poolManager = poolManager;
-            WriteDebug("UnitDeathVFXSystem.SetPoolManager: Pool initialized");
+            DebugLog.Write("UnitDeathVFX", "SetPoolManager: Pool initialized");
         }
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            WriteDebug("UnitDeathVFXSystem.OnCreate");
+            DebugLog.Write("UnitDeathVFX", "OnCreate");
         }
 
         protected override void OnUpdate()
@@ -43,7 +46,7 @@ namespace DINOForge.Runtime.Bridge
             if (_poolManager == null)
             {
                 if (_frameCount == MinFrameDelay + 1)
-                    WriteDebug("UnitDeathVFXSystem: Pool manager not initialized, skipping");
+                    DebugLog.Write("UnitDeathVFX", "Pool manager not initialized, skipping");
                 return;
             }
 
@@ -51,23 +54,28 @@ namespace DINOForge.Runtime.Bridge
 
             EntityManager em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-            ComponentType? unitType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Unit");
-            ComponentType? healthType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Health");
-
-            if (unitType == null || healthType == null)
-                return;
-
-            EntityQueryDesc desc = new EntityQueryDesc
+            if (!_queryInitialized)
             {
-                All = new[]
-                {
-                    ComponentType.ReadOnly(unitType.Value.TypeIndex),
-                    ComponentType.ReadOnly(healthType.Value.TypeIndex)
-                }
-            };
+                ComponentType? unitType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Unit");
+                ComponentType? healthType = global::DINOForge.Runtime.Bridge.EntityQueries.ResolveComponentType("Components.Health");
 
-            EntityQuery query = em.CreateEntityQuery(desc);
-            using NativeArray<Entity> units = query.ToEntityArray(Allocator.Temp);
+                if (unitType == null || healthType == null)
+                    return;
+
+                EntityQueryDesc desc = new EntityQueryDesc
+                {
+                    All = new[]
+                    {
+                        ComponentType.ReadOnly(unitType.Value.TypeIndex),
+                        ComponentType.ReadOnly(healthType.Value.TypeIndex)
+                    }
+                };
+
+                _unitQuery = em.CreateEntityQuery(desc);
+                _queryInitialized = true;
+            }
+
+            using NativeArray<Entity> units = _unitQuery.ToEntityArray(Allocator.Temp);
 
             try
             {
@@ -94,7 +102,7 @@ namespace DINOForge.Runtime.Bridge
                         GameObject? vfxInstance = _poolManager.Get(vfxPoolKey);
                         if (vfxInstance == null)
                         {
-                            WriteDebug($"UnitDeathVFXSystem: Pool returned null for '{vfxPoolKey}'");
+                            DebugLog.Write("UnitDeathVFX", $"Pool returned null for '{vfxPoolKey}'");
                             continue;
                         }
 
@@ -105,12 +113,12 @@ namespace DINOForge.Runtime.Bridge
                         {
                             ps.Play();
                             _activeVFX[vfxInstance] = VFXLifetime;
-                            WriteDebug($"UnitDeathVFXSystem: Spawned {vfxPoolKey} at {unitPos}");
+                            DebugLog.Write("UnitDeathVFX", $"Spawned {vfxPoolKey} at {unitPos}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"UnitDeathVFXSystem: Error processing unit: {ex.Message}");
+                        DebugLog.Write("UnitDeathVFX", $"Error processing unit: {ex.Message}");
                     }
                 }
             }
@@ -122,7 +130,8 @@ namespace DINOForge.Runtime.Bridge
 
         private void UpdateActiveVFX()
         {
-            List<GameObject> expired = new List<GameObject>();
+            List<GameObject> expired = new List<GameObject>(_activeVFX.Count);
+            List<KeyValuePair<GameObject, float>> updates = new List<KeyValuePair<GameObject, float>>(_activeVFX.Count);
             float deltaTime = Time.DeltaTime;
 
             foreach (var kvp in _activeVFX)
@@ -136,8 +145,14 @@ namespace DINOForge.Runtime.Bridge
                 }
                 else
                 {
-                    _activeVFX[vfxInstance] = remainingLifetime;
+                    updates.Add(new KeyValuePair<GameObject, float>(vfxInstance, remainingLifetime));
                 }
+            }
+
+            // Apply updates after iteration to avoid mid-enumeration dictionary mutation (Pattern #51)
+            foreach (var update in updates)
+            {
+                _activeVFX[update.Key] = update.Value;
             }
 
             foreach (GameObject vfxInstance in expired)
@@ -151,23 +166,14 @@ namespace DINOForge.Runtime.Bridge
                     string poolKey = vfxInstance.name.Replace("(Clone)", "").Trim();
                     _poolManager?.Return(vfxInstance, poolKey);
                     _activeVFX.Remove(vfxInstance);
-                    WriteDebug($"UnitDeathVFXSystem: Returned {poolKey} to pool");
+                    DebugLog.Write("UnitDeathVFX", $"Returned {poolKey} to pool");
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"UnitDeathVFXSystem: Error returning VFX to pool: {ex.Message}");
+                    DebugLog.Write("UnitDeathVFX", $"Error returning VFX to pool: {ex.Message}");
                 }
             }
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] [UnitDeathVFXSystem] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
     }
 }

@@ -6,10 +6,14 @@ using Microsoft.Extensions.Logging;
 
 namespace DINOForge.Tools.McpServer;
 
+// DEPRECATED (#800): Legacy C# MCP server. Canonical server is FastMCP Python at src/Tools/DinoforgeMcp/.
 /// <summary>
 /// Entry point for the DINOForge MCP server.
 /// Runs as a stdio-based MCP process that Claude Code connects to,
 /// bridging game operations through the named pipe GameClient.
+///
+/// DEPRECATED (#800): This is the legacy C# MCP server. The canonical MCP server is the
+/// FastMCP Python server at src/Tools/DinoforgeMcp/. Retained for historical reference only.
 /// </summary>
 public static class Program
 {

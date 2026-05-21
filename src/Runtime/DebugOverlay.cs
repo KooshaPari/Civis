@@ -72,7 +72,7 @@ namespace DINOForge.Runtime
         {
             World? defaultWorld = null;
             try { defaultWorld = World.DefaultGameObjectInjectionWorld; }
-            catch { /* not ready */ }
+            catch (Exception) { /* safe-swallow: ECS world accessor may throw before initialization; header falls back to "waiting for ECS" */ }
 
             if (defaultWorld != null && defaultWorld.IsCreated)
             {
@@ -85,7 +85,7 @@ namespace DINOForge.Runtime
                     entities.Dispose();
                     systemCount = defaultWorld.Systems.Count;
                 }
-                catch { /* ignore */ }
+                catch (Exception) { /* safe-swallow: per-frame header counters; transient ECS race during world teardown/scene change must not break IMGUI window draw */ }
 
                 return $"[DF] DEBUG  {defaultWorld.Name}  {entityCount} ent / {systemCount} sys";
             }
@@ -245,7 +245,7 @@ namespace DINOForge.Runtime
                         GUILayout.EndHorizontal();
                     }
                 }
-                catch { /* ignore */ }
+                catch (Exception) { /* safe-swallow: per-frame systems enumeration; world may dispose mid-iteration during scene transitions, skip this world's row */ }
             }
         }
 
@@ -280,7 +280,7 @@ namespace DINOForge.Runtime
                             archetypeCounts[key]++;
                             types.Dispose();
                         }
-                        catch { /* ignore */ }
+                        catch (Exception) { /* safe-swallow: per-entity component-type read; entity may be destroyed mid-iteration, skip and continue archetype tally */ }
                     }
 
                     foreach (KeyValuePair<string, int> kvp in archetypeCounts.OrderByDescending(k => k.Value).Take(20))
@@ -290,7 +290,7 @@ namespace DINOForge.Runtime
 
                     entities.Dispose();
                 }
-                catch { /* ignore */ }
+                catch (Exception) { /* safe-swallow: per-frame archetype scan; EntityManager.GetAllEntities can throw during world teardown, skip this world */ }
             }
         }
 

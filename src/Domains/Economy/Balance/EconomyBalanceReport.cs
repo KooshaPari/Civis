@@ -5,7 +5,7 @@ namespace DINOForge.Domains.Economy.Balance
     /// <summary>
     /// Per-faction economy summary within a balance report.
     /// </summary>
-    public class FactionEconomySummary
+    public sealed class FactionEconomySummary
     {
         /// <summary>
         /// The faction identifier.
@@ -79,7 +79,7 @@ namespace DINOForge.Domains.Economy.Balance
     /// Comprehensive economy balance analysis report across all factions in a pack.
     /// Includes per-faction summaries, trade metrics, and sustainability assessments.
     /// </summary>
-    public class EconomyBalanceReport
+    public sealed class EconomyBalanceReport
     {
         /// <summary>
         /// The pack identifier this report was generated for.

@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.Runtime.UI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -22,7 +23,7 @@ namespace DINOForge.Runtime.Bridge
     /// Runs on a background thread and dispatches Unity-thread-required operations
     /// through <see cref="MainThreadDispatcher"/>.
     /// </summary>
-    public sealed class GameBridgeServer : IDisposable
+    public sealed partial class GameBridgeServer : IDisposable
     {
         /// <summary>The well-known pipe name used by the DINOForge bridge.</summary>
         public const string PipeName = "dinoforge-game-bridge";
@@ -53,7 +54,7 @@ namespace DINOForge.Runtime.Bridge
         /// (iter-144 #535 re-fix.)
         /// </summary>
         public bool IsServerThreadAlive => _running && _serverThread != null && _serverThread.IsAlive;
-        private NamedPipeServerStream? _currentPipe;
+        private volatile NamedPipeServerStream? _currentPipe;
         private readonly ManualResetEventSlim _shutdownEvent = new(false);
         private SessionHmac? _session;
 
@@ -103,7 +104,7 @@ namespace DINOForge.Runtime.Bridge
                 IsBackground = false
             };
             _serverThread.Start();
-            WriteDebug("[GameBridgeServer] Started on pipe: " + PipeName);
+            DebugLog.Write("GameBridgeServer","[GameBridgeServer] Started on pipe: " + PipeName);
         }
 
         /// <summary>
@@ -124,7 +125,7 @@ namespace DINOForge.Runtime.Bridge
 
                 if (_running)
                 {
-                    WriteDebug("[GameBridgeServer] Server loop exited — restarting in 2s...");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Server loop exited — restarting in 2s...");
                     try
                     {
                         new Thread(() =>
@@ -136,7 +137,7 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (Exception ex)
                     {
-                        WriteDebug($"[GameBridgeServer] Restart failed: {ex.Message}");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Restart failed: {ex.Message}");
                     }
                 }
             }
@@ -165,7 +166,7 @@ namespace DINOForge.Runtime.Bridge
             }
             catch { /* safe-swallow: pipe dispose during shutdown — kernel I/O will unblock */ }
 
-            WriteDebug("[GameBridgeServer] shutdown requested — pipe disposed, accept loop will exit.");
+            DebugLog.Write("GameBridgeServer","[GameBridgeServer] shutdown requested — pipe disposed, accept loop will exit.");
         }
 
         /// <summary>
@@ -182,7 +183,7 @@ namespace DINOForge.Runtime.Bridge
             catch { /* safe-swallow: session disposal during shutdown can race */ }
 
             _session = null;
-            WriteDebug("[GameBridgeServer] Stopped.");
+            DebugLog.Write("GameBridgeServer","[GameBridgeServer] Stopped.");
         }
 
         /// <summary>
@@ -201,7 +202,7 @@ namespace DINOForge.Runtime.Bridge
         public void UpdatePlatform(ModPlatform platform)
         {
             _platform = platform;
-            WriteDebug("[GameBridgeServer] Platform reference updated (post-resurrection).");
+            DebugLog.Write("GameBridgeServer","[GameBridgeServer] Platform reference updated (post-resurrection).");
             EnsureServerAlive();
         }
 
@@ -219,13 +220,13 @@ namespace DINOForge.Runtime.Bridge
             // in the current ECS world, ensuring DrainQueue and F9/F10 work.
             if (Plugin.PersistentRoot == null)
             {
-                WriteDebug("[GameBridgeServer] PersistentRoot is null — triggering resurrection...");
+                DebugLog.Write("GameBridgeServer","[GameBridgeServer] PersistentRoot is null — triggering resurrection...");
                 Plugin.TryResurrect("(Bridge supervisor)", "EnsureServerAlive");
             }
 
             if (_running && (_serverThread == null || !_serverThread.IsAlive))
             {
-                WriteDebug("[GameBridgeServer] Server thread is dead — restarting...");
+                DebugLog.Write("GameBridgeServer","[GameBridgeServer] Server thread is dead — restarting...");
                 Stop();
                 // Create fresh thread — the old thread object is abandoned after abort.
                 Start();
@@ -263,7 +264,7 @@ namespace DINOForge.Runtime.Bridge
                         PipeOptions.Asynchronous);
 
                     _currentPipe = pipe;
-                    WriteDebug("[GameBridgeServer] Waiting for connection (async-cancellable)...");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Waiting for connection (async-cancellable)...");
 
                     IAsyncResult connectAr = pipe.BeginWaitForConnection(null, null);
                     WaitHandle[] handles = { connectAr.AsyncWaitHandle, _shutdownEvent.WaitHandle };
@@ -271,7 +272,7 @@ namespace DINOForge.Runtime.Bridge
                     if (sigIdx == 1 || !_running)
                     {
                         // Shutdown signaled — dispose pipe to unblock the pending I/O cleanly.
-                        WriteDebug("[GameBridgeServer] pipe disposed, accept loop exiting (shutdown).");
+                        DebugLog.Write("GameBridgeServer","[GameBridgeServer] pipe disposed, accept loop exiting (shutdown).");
                         try { pipe.Dispose(); } catch { /* safe-swallow: pipe dispose during shutdown */ }
                         _currentPipe = null;
                         return;
@@ -279,9 +280,9 @@ namespace DINOForge.Runtime.Bridge
 
                     // Connection completed — call EndWaitForConnection to observe any exception.
                     pipe.EndWaitForConnection(connectAr);
-                    WriteDebug("[GameBridgeServer] Client connected.");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Client connected.");
 
-                    WriteDebug("[GameBridgeServer] Setting up line reader");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Setting up line reader");
                     // Read lines manually byte-by-byte to avoid StreamReader buffering issues
                     // on Mono with synchronous named pipes.
                     while (_running && pipe.IsConnected)
@@ -380,9 +381,9 @@ namespace DINOForge.Runtime.Bridge
                         }
                     }
 
-                    WriteDebug("[GameBridgeServer] Exited read loop");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Exited read loop");
 
-                    WriteDebug("[GameBridgeServer] Client disconnected.");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] Client disconnected.");
                 }
                 catch (ObjectDisposedException)
                 {
@@ -393,7 +394,7 @@ namespace DINOForge.Runtime.Bridge
                     // DINO/Unity may abort threads during scene transitions.
                     // Reset the abort and continue the loop — the bridge must survive.
                     System.Threading.Thread.ResetAbort();
-                    WriteDebug("[GameBridgeServer] [OUTER] ThreadAbortException caught — closing pipe to unblock client.");
+                    DebugLog.Write("GameBridgeServer","[GameBridgeServer] [OUTER] ThreadAbortException caught — closing pipe to unblock client.");
                     try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after ThreadAbort recovery */ }
                 }
                 catch (IOException ex)
@@ -401,21 +402,21 @@ namespace DINOForge.Runtime.Bridge
                     // Thread.Abort may manifest as IOException with COR_E_THREADABORT HResult
                     // (0x80131623) when the abort interrupts a blocking synchronous I/O call.
                     // See: https://github.com/dotnet/runtime/issues/30675
-                    WriteDebug($"[GameBridgeServer] [OUTER-IO] IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] [OUTER-IO] IOException: {ex.Message} (HResult=0x{ex.HResult:X8})");
                     if (ex.HResult == COR_E_THREADABORT)
                     {
                         Thread.ResetAbort();
-                        WriteDebug("[GameBridgeServer] [OUTER-IO] COR_E_THREADABORT — resetting and restarting.");
+                        DebugLog.Write("GameBridgeServer","[GameBridgeServer] [OUTER-IO] COR_E_THREADABORT — resetting and restarting.");
                     }
                     else
                     {
-                        WriteDebug($"[GameBridgeServer] [OUTER-IO] Non-abort IOException.");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] [OUTER-IO] Non-abort IOException.");
                     }
                     try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after IO error */ }
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[GameBridgeServer] [OUTER] Error in server loop: {ex.Message}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] [OUTER] Error in server loop: {ex.Message}");
                     try { pipe?.Dispose(); } catch { /* safe-swallow: pipe dispose after outer exception */ }
                 }
                 finally
@@ -467,12 +468,12 @@ namespace DINOForge.Runtime.Bridge
                 // Reset the abort so the thread can continue. Return a valid response so the client
                 // unblocks — otherwise the pipe breaks without a response and the client hangs forever.
                 Thread.ResetAbort();
-                WriteDebug($"[GameBridgeServer] ThreadAbortException during '{request.Method}': {tae.Message}");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] ThreadAbortException during '{request.Method}': {tae.Message}");
                 return SerializeError(request.Id, -32603, "Bridge thread abort — retry later");
             }
             catch (Exception ex)
             {
-                WriteDebug($"[GameBridgeServer] Handler error for '{request.Method}': {ex}");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Handler error for '{request.Method}': {ex}");
                 return SerializeError(request.Id, -32603, "Internal error: " + ex.Message);
             }
         }
@@ -574,7 +575,7 @@ namespace DINOForge.Runtime.Bridge
                 ["session_key_b64"] = _session.KeyMaterialB64(),
             };
 
-            WriteDebug($"[GameBridgeServer] HandleConnect: minted session_id={_session.SessionId}");
+            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleConnect: minted session_id={_session.SessionId}");
             return envelope;
         }
 
@@ -591,10 +592,10 @@ namespace DINOForge.Runtime.Bridge
 
         private JToken HandleStatus()
         {
-            WriteDebug("[GameBridgeServer] HandleStatus ENTER");
+            DebugLog.Write("GameBridgeServer","[GameBridgeServer] HandleStatus ENTER");
             GameStatus status = new GameStatus
             {
-                Running = true,
+                Running = _running && IsPlatformAlive,
                 WorldReady = IsPlatformAlive && _platform.IsWorldReady,
                 ModPlatformReady = IsPlatformAlive && _platform.IsInitialized,
                 Version = PluginInfo.VERSION,
@@ -613,7 +614,7 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (Exception worldEx)
             {
-                WriteDebug($"[GameBridgeServer] KeyInputSystem.CachedWorldName failed: {worldEx.Message}");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] KeyInputSystem.CachedWorldName failed: {worldEx.Message}");
             }
 
             // Try entity count from KeyInputSystem cached value (updated each OnUpdate frame).
@@ -625,7 +626,7 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (Exception ex)
             {
-                WriteDebug($"[GameBridgeServer] KeyInputSystem.LastEntityCount failed: {ex.Message}");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] KeyInputSystem.LastEntityCount failed: {ex.Message}");
             }
 
             // Populate loaded pack names from platform
@@ -643,9 +644,9 @@ namespace DINOForge.Runtime.Bridge
                 catch { /* safe-swallow: pack-status enumeration is best-effort diagnostic */ }
             }
 
-            WriteDebug($"[GameBridgeServer] HandleStatus EXIT: worldName='{status.WorldName}' entityCount={status.EntityCount}");
+            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleStatus EXIT: worldName='{status.WorldName}' entityCount={status.EntityCount}");
             try { return JToken.FromObject(status); }
-            catch { return JToken.FromObject(new { EntityCount = -1, Running = true }); /* safe-swallow: JToken serialization fallback */ }
+            catch { return JToken.FromObject(new { EntityCount = -1, Running = _running && IsPlatformAlive }); /* safe-swallow: JToken serialization fallback */ }
         }
 
         private JToken HandleGetCatalog()
@@ -953,7 +954,7 @@ namespace DINOForge.Runtime.Bridge
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             if (!statTask.Wait(MainThreadWaitTimeoutMs))
             {
-                WriteDebug($"[GameBridgeServer] HandleGetStat timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleGetStat timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
                 statResult = new StatResult
                 {
                     SdkPath = mapping.SdkModelPath,
@@ -1027,7 +1028,7 @@ namespace DINOForge.Runtime.Bridge
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             if (!overrideTask.Wait(MainThreadWaitTimeoutMs))
             {
-                WriteDebug($"[GameBridgeServer] HandleApplyOverride timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleApplyOverride timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
                 result = new OverrideResult
                 {
                     Success = false,
@@ -1059,7 +1060,7 @@ namespace DINOForge.Runtime.Bridge
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             if (!queryTask.Wait(MainThreadWaitTimeoutMs))
             {
-                WriteDebug($"[GameBridgeServer] HandleQueryEntities timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead (componentType='{componentType}' category='{category}')");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleQueryEntities timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead (componentType='{componentType}' category='{category}')");
                 queryResult = new QueryResult
                 {
                     Count = 0
@@ -1099,7 +1100,7 @@ namespace DINOForge.Runtime.Bridge
                 // sync-over-async-unavoidable: ECS-bound, main-thread-required
                 if (!loadTask.Wait(MainThreadHeavyWaitTimeoutMs))
                 {
-                    WriteDebug($"[GameBridgeServer] HandleReloadPacks timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleReloadPacks timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
                     reloadResult = new ReloadResult
                     {
                         Success = false,
@@ -1149,7 +1150,7 @@ namespace DINOForge.Runtime.Bridge
             ResourceSnapshot snapshot = completed ? task.Result : new ResourceSnapshot();
 
             if (!completed)
-                WriteDebug("[GameBridgeServer] HandleGetResources timed out waiting for main thread");
+                DebugLog.Write("GameBridgeServer","[GameBridgeServer] HandleGetResources timed out waiting for main thread");
 
             return JToken.FromObject(snapshot);
         }
@@ -1166,7 +1167,7 @@ namespace DINOForge.Runtime.Bridge
             var loadResult = MainThreadDispatcher.RunOnMainThread(() =>
             {
                 int count = UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings;
-                WriteDebug($"[GameBridgeServer] LoadScene: buildIndex={buildIndex} sceneName={sceneName} totalScenes={count}");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] LoadScene: buildIndex={buildIndex} sceneName={sceneName} totalScenes={count}");
                 try
                 {
                     if (buildIndex >= 0)
@@ -1177,7 +1178,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[GameBridgeServer] LoadScene failed: {ex.Message}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] LoadScene failed: {ex.Message}");
                     return new { success = false, sceneCount = count };
                 }
             });
@@ -1230,7 +1231,7 @@ namespace DINOForge.Runtime.Bridge
                     // ScreenshotResult.Success=false is preserved as the wire signal; the DTO is shared
                     // with Bridge.Protocol so we don't add a new field here, but the runtime log
                     // captures the exception type, message, and stack for diagnosis.
-                    WriteDebug($"[GameBridgeServer] HandleScreenshot failed for '{path}' ({ex.GetType().Name}): {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleScreenshot failed for '{path}' ({ex.GetType().Name}): {ex}");
                     return new ScreenshotResult
                     {
                         Success = false,
@@ -1242,7 +1243,7 @@ namespace DINOForge.Runtime.Bridge
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             if (!ssTask.Wait(MainThreadWaitTimeoutMs))
             {
-                WriteDebug($"[GameBridgeServer] HandleScreenshot timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleScreenshot timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
                 ssResult = new ScreenshotResult
                 {
                     Success = false,
@@ -1280,7 +1281,7 @@ namespace DINOForge.Runtime.Bridge
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             if (!dumpTask.Wait(MainThreadHeavyWaitTimeoutMs))
             {
-                WriteDebug($"[GameBridgeServer] HandleDumpState timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleDumpState timed out ({MainThreadHeavyWaitTimeoutMs}ms) — dispatcher pump may be dead");
                 snapshot = new CatalogSnapshot();
             }
             else
@@ -1361,10 +1362,10 @@ namespace DINOForge.Runtime.Bridge
                         }
                         else
                         {
-                            WriteDebug($"[GameBridgeServer] HandleWaitForWorld world-name read timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
+                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleWaitForWorld world-name read timed out ({MainThreadWaitTimeoutMs}ms) — dispatcher pump may be dead");
                         }
                     }
-                    catch (Exception ex) { WriteDebug($"[GameBridgeServer] HandleWaitForWorld world-name read failed: {ex}"); }
+                    catch (Exception ex) { DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleWaitForWorld world-name read failed: {ex}"); }
 
                     WaitResult readyResult = new WaitResult
                     {
@@ -1661,21 +1662,6 @@ namespace DINOForge.Runtime.Bridge
             return snapshot;
         }
 
-        /// <summary>
-        /// Converts a ComponentMapping to a protocol ComponentMapEntry.
-        /// </summary>
-        private static ComponentMapEntry MappingToEntry(ComponentMapping mapping)
-        {
-            return new ComponentMapEntry
-            {
-                SdkPath = mapping.SdkModelPath,
-                EcsType = mapping.EcsComponentType,
-                FieldName = mapping.TargetFieldName ?? "",
-                Resolved = mapping.ResolvedType != null,
-                Description = mapping.Description ?? ""
-            };
-        }
-
         private JToken HandleStartGame(JObject? parameters)
         {
             string saveName = parameters?.Value<string>("saveName") ?? "";
@@ -1704,11 +1690,11 @@ namespace DINOForge.Runtime.Bridge
                     // Dump the singleton's fields for diagnostics
                     FieldInfo[] fields = singletonType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     string fieldList = string.Join(", ", System.Array.ConvertAll(fields, f => $"{f.FieldType.Name} {f.Name}"));
-                    WriteDebug($"[GameBridgeServer] BeginGameWorldLoadingSingleton fields: [{fieldList}]");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] BeginGameWorldLoadingSingleton fields: [{fieldList}]");
 
                     ComponentType ct = ComponentType.ReadWrite(singletonType);
                     Entity e = world.EntityManager.CreateEntity(ct);
-                    WriteDebug($"[GameBridgeServer] Created BeginGameWorldLoadingSingleton entity {e.Index}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Created BeginGameWorldLoadingSingleton entity {e.Index}");
 
                     // If the singleton has a NameToLoad field, try to set it via reflection
                     // (ECS components are structs so we use SetComponentData via reflection)
@@ -1716,14 +1702,14 @@ namespace DINOForge.Runtime.Bridge
                     {
                         FieldInfo? nameField = singletonType.GetField("NameToLoad",
                             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        WriteDebug($"[GameBridgeServer] NameToLoad field: {(nameField == null ? "not found" : nameField.FieldType.Name)}");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] NameToLoad field: {(nameField == null ? "not found" : nameField.FieldType.Name)}");
                     }
 
                     return new { success = true, message = $"Created singleton entity {e.Index}, fields=[{fieldList}]" };
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[GameBridgeServer] HandleStartGame failed: {ex.Message}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleStartGame failed: {ex.Message}");
                     return new { success = false, message = ex.Message };
                 }
             });
@@ -1772,7 +1758,7 @@ namespace DINOForge.Runtime.Bridge
                                     del.DynamicInvoke();
                                     return new { success = true, message = $"DynamicInvoked _startAction on LoadingProgressBar" };
                                 }
-                                WriteDebug($"[GameBridgeServer] _startAction type: {(action?.GetType().Name ?? "null")}");
+                                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] _startAction type: {(action?.GetType().Name ?? "null")}");
                             }
 
                             // Fallback: call Update() to simulate time passing with anyKeyDown
@@ -1796,7 +1782,7 @@ namespace DINOForge.Runtime.Bridge
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
-                    WriteDebug($"[GameBridgeServer] DismissDialog handler failed: {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] DismissDialog handler failed: {ex}");
                     return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
@@ -1844,7 +1830,7 @@ namespace DINOForge.Runtime.Bridge
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
-                    WriteDebug($"[GameBridgeServer] PressKey/scanScene failed: {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] PressKey/scanScene failed: {ex}");
                     return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
@@ -1890,7 +1876,7 @@ namespace DINOForge.Runtime.Bridge
 
                         mi.Invoke(mb, null);
                         invoked.Add($"{tName}.{method}()");
-                        WriteDebug($"[GameBridgeServer] InvokeMethod: {tName}.{method}()");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] InvokeMethod: {tName}.{method}()");
                     }
 
                     if (invoked.Count == 0)
@@ -1901,7 +1887,7 @@ namespace DINOForge.Runtime.Bridge
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
-                    WriteDebug($"[GameBridgeServer] InvokeMethod target='{target}' method='{method}' failed: {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] InvokeMethod target='{target}' method='{method}' failed: {ex}");
                     return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
@@ -1965,13 +1951,13 @@ namespace DINOForge.Runtime.Bridge
                         new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current),
                         UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
 
-                    WriteDebug($"[GameBridgeServer] Clicked button: {target.name}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Clicked button: {target.name}");
                     return new { success = true, message = $"Clicked '{target.name}'" };
                 }
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
-                    WriteDebug($"[GameBridgeServer] ClickButton '{buttonName}' failed: {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] ClickButton '{buttonName}' failed: {ex}");
                     return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
@@ -2020,7 +2006,7 @@ namespace DINOForge.Runtime.Bridge
                         if (m != null)
                         {
                             m.Invoke(dfCanvas, null);
-                            WriteDebug($"[GameBridgeServer] ToggleUi: called DFCanvas.{methodName}");
+                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] ToggleUi: called DFCanvas.{methodName}");
                             return new { success = true, message = $"DFCanvas.{methodName}() invoked" };
                         }
                     }
@@ -2034,7 +2020,7 @@ namespace DINOForge.Runtime.Bridge
                         if (toggleMethod != null)
                         {
                             toggleMethod.Invoke(fallback, null);
-                            WriteDebug($"[GameBridgeServer] ToggleUi: called {fallback.GetType().Name}.Toggle()");
+                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] ToggleUi: called {fallback.GetType().Name}.Toggle()");
                             return new { success = true, message = $"{fallback.GetType().Name}.Toggle() invoked" };
                         }
                     }
@@ -2046,7 +2032,7 @@ namespace DINOForge.Runtime.Bridge
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): preserve type info in wire message + full stack in log.
-                    WriteDebug($"[GameBridgeServer] ToggleUi target='{target}' failed: {ex}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] ToggleUi target='{target}' failed: {ex}");
                     return new { success = false, message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
             });
@@ -2148,7 +2134,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    WriteDebug($"[GameBridgeServer] HandleLoadSave: '{saveName}'");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleLoadSave: '{saveName}'");
 
                     // Strategy 0: Create a LoadRequest ECS entity — the game's SaveLoadSystem
                     // reads Components.RawComponents.LoadRequest singletons and triggers a load.
@@ -2165,7 +2151,7 @@ namespace DINOForge.Runtime.Bridge
 
                         if (loadRequestType != null)
                         {
-                            WriteDebug($"[GameBridgeServer] Found LoadRequest type: {loadRequestType.FullName}");
+                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Found LoadRequest type: {loadRequestType.FullName}");
 
                             // Create the component value
                             object loadRequest = System.Activator.CreateInstance(loadRequestType);
@@ -2192,7 +2178,7 @@ namespace DINOForge.Runtime.Bridge
                                     {
                                         object? fs = op.Invoke(null, new object[] { saveName });
                                         nameField.SetValue(loadRequest, fs);
-                                        WriteDebug($"[GameBridgeServer] Set NameToLoad = '{saveName}' via op_Implicit");
+                                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Set NameToLoad = '{saveName}' via op_Implicit");
                                     }
                                     else
                                     {
@@ -2202,17 +2188,17 @@ namespace DINOForge.Runtime.Bridge
                                         {
                                             object? fs = ctor.Invoke(new object[] { saveName });
                                             nameField.SetValue(loadRequest, fs);
-                                            WriteDebug($"[GameBridgeServer] Set NameToLoad via ctor");
+                                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Set NameToLoad via ctor");
                                         }
                                         else
                                         {
-                                            WriteDebug($"[GameBridgeServer] No string ctor or op_Implicit for {fsType.Name}");
+                                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] No string ctor or op_Implicit for {fsType.Name}");
                                         }
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    WriteDebug($"[GameBridgeServer] NameToLoad set failed: {ex.Message}");
+                                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] NameToLoad set failed: {ex.Message}");
                                 }
                             }
 
@@ -2232,18 +2218,18 @@ namespace DINOForge.Runtime.Bridge
                                 {
                                     MethodInfo genSet = setComp.MakeGenericMethod(loadRequestType);
                                     genSet.Invoke(world.EntityManager, new object[] { e, loadRequest });
-                                    WriteDebug($"[GameBridgeServer] Created LoadRequest entity {e.Index} with NameToLoad='{saveName}'");
+                                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Created LoadRequest entity {e.Index} with NameToLoad='{saveName}'");
                                     return new { success = true, message = $"Created LoadRequest entity {e.Index} NameToLoad='{saveName}'", foundPath = "" };
                                 }
                             }
                             catch (Exception ex)
                             {
-                                WriteDebug($"[GameBridgeServer] LoadRequest entity creation failed: {ex.Message}");
+                                DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] LoadRequest entity creation failed: {ex.Message}");
                             }
                         }
                         else
                         {
-                            WriteDebug($"[GameBridgeServer] LoadRequest type NOT found");
+                            DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] LoadRequest type NOT found");
                         }
                     }
 
@@ -2270,17 +2256,17 @@ namespace DINOForge.Runtime.Bridge
                         }
                     }
 
-                    WriteDebug($"[GameBridgeServer] Save file found: '{foundPath}'");
-                    WriteDebug($"[GameBridgeServer] PersistentDataPath: {persistPath}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Save file found: '{foundPath}'");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] PersistentDataPath: {persistPath}");
 
                     // Strategy 3: Find the game's native UI buttons via Unity's UI system
                     // Use Resources.FindObjectsOfTypeAll to find ALL button instances including inactive
                     var allButtons = Resources.FindObjectsOfTypeAll<UnityEngine.UI.Button>();
-                    WriteDebug($"[GameBridgeServer] Found {allButtons.Length} buttons (Resources.FindObjectsOfTypeAll)");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Found {allButtons.Length} buttons (Resources.FindObjectsOfTypeAll)");
 
                     // Also try FindObjectsOfType (scene-only)
                     var sceneButtons = UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.Button>();
-                    WriteDebug($"[GameBridgeServer] Found {sceneButtons.Length} buttons (FindObjectsOfType scene-only)");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Found {sceneButtons.Length} buttons (FindObjectsOfType scene-only)");
 
                     // Dump ALL GameObjects to find what the menu uses
                     if (allButtons.Length == 0 && sceneButtons.Length == 0)
@@ -2295,7 +2281,7 @@ namespace DINOForge.Runtime.Bridge
                             if (tName.Contains("Button") || tName.Contains("Click") || tName.Contains("Menu") || tName.Contains("Interactable"))
                                 interesting.Append($"[{tName}:{mb.gameObject.name}] ");
                         }
-                        WriteDebug($"[GameBridgeServer] Button-like MonoBehaviours: {interesting}");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Button-like MonoBehaviours: {interesting}");
                     }
 
                     var saveNameUpper = saveName.ToUpperInvariant();
@@ -2352,14 +2338,14 @@ namespace DINOForge.Runtime.Bridge
                         }
                     }
 
-                    WriteDebug($"[GameBridgeServer] Active buttons: {buttonSummary}");
-                    WriteDebug($"[GameBridgeServer] okButton={okButton?.name ?? "null"} continueButton={continueButton?.name ?? "null"} targetButton={targetButton?.name ?? "null"}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Active buttons: {buttonSummary}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] okButton={okButton?.name ?? "null"} continueButton={continueButton?.name ?? "null"} targetButton={targetButton?.name ?? "null"}");
 
                     // Priority: explicit name match > CONTINUE > OK fallback
                     UnityEngine.UI.Button? toInvoke = targetButton ?? continueButton ?? okButton;
                     if (toInvoke != null)
                     {
-                        WriteDebug($"[GameBridgeServer] Invoking button: {toInvoke.name}");
+                        DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] Invoking button: {toInvoke.name}");
                         // Try ExecuteEvents for proper UI simulation, fall back to onClick.Invoke
                         try
                         {
@@ -2379,7 +2365,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    WriteDebug($"[GameBridgeServer] HandleLoadSave failed: {ex.Message}");
+                    DebugLog.Write("GameBridgeServer",$"[GameBridgeServer] HandleLoadSave failed: {ex.Message}");
                     return new { success = false, message = ex.Message, foundPath = "" };
                 }
             });
@@ -2455,48 +2441,5 @@ namespace DINOForge.Runtime.Bridge
             return null;
         }
 
-        private const long DebugLogMaxBytes = 100L * 1024 * 1024; // 100 MB rotation threshold
-
-        private static void WriteDebug(string msg)
-        {
-            string? logPath = null;
-            try { logPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log"); } catch { } // safe-swallow: BepInEx path init — non-critical fallback to return
-            if (logPath == null) return;
-            try
-            {
-                // rotation: check size before append to avoid unbounded growth (iter-142 hardening)
-                if (File.Exists(logPath))
-                {
-                    var info = new FileInfo(logPath);
-                    if (info.Length >= DebugLogMaxBytes)
-                    {
-                        var rotated = logPath + ".1";
-                        try
-                        {
-                            if (File.Exists(rotated)) File.Delete(rotated);
-                            File.Move(logPath, rotated);
-                        }
-                        catch (Exception rotEx)
-                        {
-                            // log rotation failure is non-critical; continue with append
-                            try { BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug.Rotate").LogWarning($"rotation failed ({rotEx.GetType().Name}): {rotEx.Message}"); }
-                            catch { } // safe-swallow: BepInEx logger fallback — if even the fallback fails, continue
-                        }
-                    }
-                }
-                File.AppendAllText(logPath, $"[{DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch (ThreadAbortException)
-            {
-                Thread.ResetAbort();
-            }
-            catch (Exception ex)
-            {
-                // safe-swallow: file append failures (e.g., disk full, permissions) are non-critical;
-                // fallback to BepInEx logger to surface the error instead of losing it (rotation above prevents size explosion)
-                try { BepInEx.Logging.Logger.CreateLogSource("DINOForge.WriteDebug").LogWarning($"AppendAllText failed ({ex.GetType().Name}): {ex}; msg: {msg}"); }
-                catch { } // safe-swallow: BepInEx logger fallback — if even the fallback fails, losing the message is acceptable
-            }
-        }
     }
 }

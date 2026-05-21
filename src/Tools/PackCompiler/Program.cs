@@ -224,6 +224,39 @@ namespace DINOForge.Tools.PackCompiler
             return await parseResultObj.InvokeAsync();
         }
 
+        /// <summary>
+        /// [#622] Locates schemas/pack-manifest.schema.json by walking up from the pack path,
+        /// then falling back to AppContext.BaseDirectory ancestors. Throws if not found so
+        /// the validate command fails loudly instead of silently skipping schema validation.
+        /// </summary>
+        private static string LocatePackManifestSchema(string packPath)
+        {
+            const string Relative = "schemas/pack-manifest.schema.json";
+            var searchRoots = new List<string>();
+            try { searchRoots.Add(Path.GetFullPath(packPath)); } catch { /* ignore */ }
+            try { searchRoots.Add(Path.GetFullPath(Environment.CurrentDirectory)); } catch { /* ignore */ }
+            try { searchRoots.Add(Path.GetFullPath(AppContext.BaseDirectory)); } catch { /* ignore */ }
+
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string root in searchRoots)
+            {
+                DirectoryInfo? dir = new DirectoryInfo(root);
+                while (dir != null)
+                {
+                    if (!visited.Add(dir.FullName))
+                        break;
+                    string candidate = Path.Combine(dir.FullName, Relative.Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(candidate))
+                        return candidate;
+                    dir = dir.Parent;
+                }
+            }
+
+            throw new FileNotFoundException(
+                $"[#622] Could not locate '{Relative}' walking up from '{packPath}'. " +
+                "Schema validation requires the repo-tracked schemas/ directory; refusing to skip silently.");
+        }
+
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void ValidatePack(string packPath, string format = "text")
         {
@@ -267,6 +300,42 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode) AnsiConsole.MarkupLine("[yellow]Loading manifest...[/]");
                 var loader = new PackLoader();
                 var manifest = loader.LoadFromFile(manifestPath);
+
+                // [#622] Wire NJsonSchemaValidator into validate command. Previously this
+                // method only deserialized the manifest and printed its fields — it never
+                // exercised any schema validator, so pack.yaml files that deserialized
+                // successfully but violated schema constraints passed silently. Locate
+                // schemas/pack-manifest.schema.json by walking up from the pack directory,
+                // fail loudly if missing, and surface all schema errors with exit code 1.
+                string schemaPath = LocatePackManifestSchema(packPath);
+                string schemaYaml = File.ReadAllText(schemaPath, Encoding.UTF8);
+                string manifestYaml = File.ReadAllText(manifestPath, Encoding.UTF8);
+                var schemaValidator = new NJsonSchemaValidator(new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["pack-manifest"] = schemaYaml,
+                });
+
+                DINOForge.SDK.Validation.ValidationResult schemaResult = schemaValidator.Validate("pack-manifest", manifestYaml);
+                if (!schemaResult.IsValid)
+                {
+                    string[] errMessages = schemaResult.Errors
+                        .Select(e => string.IsNullOrEmpty(e.Path) ? e.Message : $"{e.Path}: {e.Message}")
+                        .ToArray();
+
+                    if (jsonMode)
+                    {
+                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", pack = manifest.Id, errors = errMessages }));
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[bold red]Schema validation failed:[/]");
+                        foreach (string msg in errMessages)
+                        {
+                            AnsiConsole.MarkupLine($"  [red]- {Markup.Escape(msg)}[/]");
+                        }
+                    }
+                    Environment.Exit(1);
+                }
 
                 if (jsonMode)
                 {

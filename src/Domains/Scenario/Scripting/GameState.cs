@@ -36,6 +36,22 @@ namespace DINOForge.Domains.Scenario.Scripting
         public HashSet<string> BuildingsBuilt { get; set; } = new HashSet<string>();
 
         /// <summary>
+        /// Set of entity IDs (units, buildings, etc.) currently alive in the ECS world.
+        /// Populated by Runtime-side callers that have access to the ECS bridge; the
+        /// Scenario domain itself never queries ECS directly (architectural boundary).
+        /// When empty, DestroyTarget falls back to <see cref="BuildingsBuilt"/> for
+        /// backward compatibility with callers that only populate construction state.
+        /// </summary>
+        public HashSet<string> LiveEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Set of entity IDs (units, buildings, etc.) that have been destroyed during the
+        /// scenario. Populated by Runtime-side callers that observe ECS destruction events;
+        /// the Scenario domain itself never queries ECS directly (architectural boundary).
+        /// </summary>
+        public HashSet<string> DestroyedEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
         /// Total number of enemy units killed during the scenario.
         /// </summary>
         public int UnitsKilled { get; set; } = 0;

@@ -4,7 +4,7 @@
     "net11.0-windows7.0": {
       "Avalonia": {
         "type": "Direct",
-        "requested": "[11.*, )",
+        "requested": "[11.3.16, )",
         "resolved": "11.3.16",
         "contentHash": "6BFbfa2NFAaPKFwZLS0f6vS7jUVcz7S3obS+I8BgI8S0KZWNhd9qYM1/lGSKanwG51P2luuXnVlnXHVfjgqdIg==",
         "dependencies": {
@@ -15,7 +15,7 @@
       },
       "Avalonia.Desktop": {
         "type": "Direct",
-        "requested": "[11.*, )",
+        "requested": "[11.3.16, )",
         "resolved": "11.3.16",
         "contentHash": "30M6cD54LwDadLwU7DI27qL4COxXkRW/Xdam6kn8KnJaHk72bPzmnoTF+j8e4OFYKvKx5ghg0YwwAmshaPBdQQ==",
         "dependencies": {
@@ -28,7 +28,7 @@
       },
       "Avalonia.Themes.Fluent": {
         "type": "Direct",
-        "requested": "[11.*, )",
+        "requested": "[11.3.16, )",
         "resolved": "11.3.16",
         "contentHash": "wCPnUrGMN1ngrK9I4AM4qbxqmk4LJjud5D92bFc0/te0/P7FdewjX5KL0VIFyNNq2yyYCpeVhr4c5GlAsfYtNA==",
         "dependencies": {
@@ -37,13 +37,23 @@
       },
       "CommunityToolkit.Mvvm": {
         "type": "Direct",
-        "requested": "[8.*, )",
+        "requested": "[8.4.2, )",
         "resolved": "8.4.2",
         "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
       },
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "G5q7OqtwIyGTkeIOAc3u2ZuV/kicQaec5EaRnc0pIeSnh9LUjj+PYQrJYBURvDt7twGl2PKA7nSN0kz1Zw5bnQ==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "8.0.0",
+          "Microsoft.SourceLink.Common": "8.0.0"
+        }
+      },
       "Octokit": {
         "type": "Direct",
-        "requested": "[13.*, )",
+        "requested": "[13.0.1, )",
         "resolved": "13.0.1",
         "contentHash": "tjXTa2FXzbd3n17VWpi8UXe05EIJqHcWJW8C2kukftIve00duWiZL8x4i1vlZQ0zQ4RbRANbRc7J5K7Co/1spQ=="
       },
@@ -156,6 +166,16 @@
         "resolved": "8.0.0",
         "contentHash": "f5Kr5JepAbiGo7uDmhgvMqhntwxqXNn6/IpTBSSI4cuHhgnJGrLxFRhMjVpRkLPp6zJXO0/G0l3j9p9zSJxa+w=="
       },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+      },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
+      },
       "Namotion.Reflection": {
         "type": "Transitive",
         "resolved": "2.1.2",
@@ -230,8 +250,8 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.18.0, )",
-          "Octokit": "[13.*, )"
+          "DINOForge.SDK": "[0.25.0-dev, )",
+          "Octokit": "[13.0.1, )"
         }
       }
     }

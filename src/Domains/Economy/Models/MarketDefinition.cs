@@ -6,7 +6,7 @@ namespace DINOForge.Domains.Economy.Models
     /// <summary>
     /// Defines a market building configuration: which resources are traded and custom pricing modifiers.
     /// </summary>
-    public class MarketDefinition
+    public sealed class MarketDefinition
     {
         /// <summary>
         /// Unique identifier for this market definition.

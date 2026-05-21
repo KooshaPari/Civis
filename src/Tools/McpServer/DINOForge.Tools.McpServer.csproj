@@ -9,6 +9,8 @@
     <PlatformTarget>x64</PlatformTarget>
     <!-- ScreenRecorderLib requires Platform=x64 explicitly (not AnyCPU) -->
     <Platform>x64</Platform>
+    <Description>DEPRECATED: Legacy C# MCP server. The canonical MCP server is the FastMCP Python server at src/Tools/DinoforgeMcp/. Retained for historical reference only — do not extend.</Description>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

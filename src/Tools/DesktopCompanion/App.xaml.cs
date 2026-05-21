@@ -1,7 +1,7 @@
 using System;
-using System.IO;
 using DINOForge.DesktopCompanion.Data;
 using DINOForge.DesktopCompanion.ViewModels;
+using DINOForge.Tools.DesktopCompanion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
@@ -13,10 +13,6 @@ namespace DINOForge.DesktopCompanion
     /// </summary>
     public partial class App : Application
     {
-        private static readonly string LogPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DINOForge.DesktopCompanion", "app.log");
-
         /// <summary>Application-wide DI service provider.</summary>
         public static IServiceProvider Services { get; private set; } = null!;
 
@@ -27,16 +23,15 @@ namespace DINOForge.DesktopCompanion
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] App ctor start\n");
+                CompanionLogger.Append("App ctor start");
                 InitializeComponent();
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] InitializeComponent done\n");
+                CompanionLogger.Append("InitializeComponent done");
                 Services = BuildServiceProvider();
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] DI done\n");
+                CompanionLogger.Append("DI done");
             }
             catch (Exception ex)
             {
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] ERROR: {ex}\n");
+                CompanionLogger.Append($"ERROR: {ex}");
                 throw;
             }
         }
@@ -46,15 +41,15 @@ namespace DINOForge.DesktopCompanion
         {
             try
             {
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] OnLaunched\n");
+                CompanionLogger.Append("OnLaunched");
                 _mainWindow = new MainWindow();
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] MainWindow created\n");
+                CompanionLogger.Append("MainWindow created");
                 _mainWindow.Activate();
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] Activate done\n");
+                CompanionLogger.Append("Activate done");
             }
             catch (Exception ex)
             {
-                File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] ERROR: {ex}\n");
+                CompanionLogger.Append($"ERROR: {ex}");
                 throw;
             }
         }

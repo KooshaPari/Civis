@@ -101,7 +101,9 @@ namespace DINOForge.Runtime.UI.Adapters
             lock (_lock)
             {
                 // Copy under lock so callers can iterate without holding the adapter lock.
-                return new Dictionary<string, IModSettingsPanel>(_panels, StringComparer.Ordinal);
+                var snapshot = new Dictionary<string, IModSettingsPanel>(StringComparer.Ordinal);
+                foreach (var kvp in _panels) snapshot[kvp.Key] = kvp.Value;
+                return snapshot;
             }
         }
 

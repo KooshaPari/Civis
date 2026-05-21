@@ -130,7 +130,7 @@ public sealed class GameInputTool
 
             return type switch
             {
-                "key" => SendKeyInput(key),
+                "key" => await SendKeyInput(key).ConfigureAwait(false),
                 "click" => SendMouseClick(x, y, button),
                 "move" => SendMouseMove(x, y),
                 _ => GameClientHelper.ToJson(new { success = false, error = $"Unknown input type: {type}" })
@@ -142,7 +142,7 @@ public sealed class GameInputTool
         }
     }
 
-    private static string SendKeyInput(string? keyName)
+    private static async Task<string> SendKeyInput(string? keyName)
     {
         if (string.IsNullOrEmpty(keyName))
         {
@@ -151,8 +151,8 @@ public sealed class GameInputTool
 
         try
         {
-            // Try bare-cua first if available
-            if (TryBareCuaPressKey(keyName).Result)
+            // Pattern #116 fix (#800): await instead of .Result to avoid sync-over-async deadlock risk.
+            if (await TryBareCuaPressKey(keyName).ConfigureAwait(false))
             {
                 return GameClientHelper.ToJson(new
                 {

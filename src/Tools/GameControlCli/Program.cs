@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tools.GameControlCli.Json;
 using Spectre.Console;
 
 namespace DINOForge.Tools.GameControlCli;
@@ -945,7 +946,7 @@ public static class Program
             await client.ConnectAsync();
             var result = await client.InvokeBridgeMethodAsync("discover-types",
                 pattern != null ? new { pattern } : new { });
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, GameControlCliJsonOptions.Indented));
             client.Disconnect();
             return 0;
         }

@@ -1,3 +1,11 @@
+// #613 dedup (P2 / #856) — RETIRE CANDIDATE — 2026-05-21
+// This file is no longer referenced. All callers (AssetSwapSystem, tests, PackCompiler)
+// route through DINOForge.SDK.Assets.AssetService (which carries the canonical impl plus
+// TimeProvider hook for Pattern #112). The only behavioral delta was DebugLog routing,
+// which the SDK version's temp-file logger already covers acceptably in BepInEx context.
+// FOLLOW-UP: Send this file to the Windows Recycle Bin (File Deletion Protocol) once
+// the next build verifies green and the retirement is committed in a separate PR.
+// DO NOT add new references to DINOForge.Runtime.Assets.AssetService.
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -6,6 +14,7 @@ using System.Linq;
 using AssetsTools.NET;
 using System.Diagnostics.CodeAnalysis;
 using AssetsTools.NET.Extra;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK.Assets;
 
 namespace DINOForge.Runtime.Assets
@@ -411,6 +420,24 @@ namespace DINOForge.Runtime.Assets
         /// <returns>True if the replacement succeeded; false on any error.</returns>
         public bool ReplaceAsset(string bundlePath, string assetName, byte[] newData, string outputPath)
         {
+            if (string.IsNullOrEmpty(bundlePath))
+            {
+                LogWarning($"ReplaceAsset: bundlePath is null or empty (asset '{assetName}')");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                LogWarning($"ReplaceAsset: assetName is null or empty (bundle '{bundlePath}')");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(outputPath))
+            {
+                LogWarning($"ReplaceAsset: outputPath is null or empty (asset '{assetName}')");
+                return false;
+            }
+
             if (!File.Exists(bundlePath))
             {
                 LogWarning($"ReplaceAsset: source bundle not found: {bundlePath}");
@@ -549,20 +576,12 @@ namespace DINOForge.Runtime.Assets
         }
 
         /// <summary>
-        /// Writes a warning message to a local log file (best-effort; never throws).
+        /// Writes a warning message to the central DINOForge debug log (best-effort; never throws).
+        /// Pattern #644 PHASE 2D: migrated from local helper to <see cref="DebugLog"/>.
         /// </summary>
         private static void LogWarning(string message)
         {
-            try
-            {
-                string logPath = Path.Combine(
-                    Path.GetTempPath(), "dinoforge_assetsvc.log");
-                File.AppendAllText(logPath, $"[{DateTime.UtcNow:u}] WARN {message}\n");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AssetService diagnostic log write failed: {ex.Message}");
-            }
+            DebugLog.Write("AssetService", "WARN " + message);
         }
 
         /// <inheritdoc/>

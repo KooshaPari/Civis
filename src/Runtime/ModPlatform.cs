@@ -59,7 +59,10 @@ namespace DINOForge.Runtime
         private bool _initialized;
         private bool _worldReady;
         private ContentLoadResult? _lastLoadResult;
-        private readonly HashSet<string> _disabledPacks = new HashSet<string>();
+        // Pattern #99: pack IDs are schema-driven (YAML manifest), ordinal-comparison-only.
+        // Keep ALL pack-ID lookups (HashSet, Equals, Dictionary) on StringComparer.Ordinal
+        // to avoid drift between case-sensitive and case-insensitive paths (see L703 fix).
+        private readonly HashSet<string> _disabledPacks = new HashSet<string>(StringComparer.Ordinal);
         private const string DisabledPacksFile = "disabled_packs.json";
 
         /// <summary>The registry manager containing all loaded content.</summary>
@@ -585,13 +588,16 @@ namespace DINOForge.Runtime
 
             try
             {
+                // #611: PackFileWatcher debounce defaults to 15000ms (15s) per SDK convention.
+                // Previously this passed 500ms explicitly which thrashed pack-reload on rapid
+                // editor saves. Production hot-reload uses the SDK default; tests pass
+                // shorter values explicitly (HotReloadTests: 50/100/200ms).
                 _packFileWatcher = new PackFileWatcher(
                     packsDir,
                     _contentLoader,
                     _registryManager,
                     schemaValidator: null,
-                    log: msg => _log.LogInfo(msg),
-                    debounceMs: 500);
+                    log: msg => _log.LogInfo(msg));
 
                 _hotReloadBridge = new HotReloadBridge(
                     _packFileWatcher,
@@ -697,7 +703,7 @@ namespace DINOForge.Runtime
                             bool isLoaded = false;
                             foreach (string loadedId in result.LoadedPacks)
                             {
-                                if (string.Equals(loadedId, manifest.Id, StringComparison.OrdinalIgnoreCase))
+                                if (string.Equals(loadedId, manifest.Id, StringComparison.Ordinal))
                                 {
                                     isLoaded = true;
                                     break;
@@ -765,6 +771,35 @@ namespace DINOForge.Runtime
             {
                 _modMenuHost.OnReloadRequested = OnReloadRequested;
                 _modMenuHost.OnPackToggled = OnPackToggled;
+            }
+        }
+
+        /// <summary>
+        /// #874: Public accessor for unifying HMR signal-file pipeline with PackFileWatcher pipeline.
+        /// Returns true if HotReloadBridge ran (which fires StatModifierSystem.Reapply + OnRuntimeUpdated).
+        /// Falls back to LoadPacks() if bridge unavailable.
+        /// </summary>
+        public bool TriggerHotReload()
+        {
+            try
+            {
+                if (_hotReloadBridge != null)
+                {
+                    HotReloadResult result = _hotReloadBridge.TriggerReload();
+                    _log.LogInfo($"[ModPlatform] TriggerHotReload (HMR signal): success={result.IsSuccess}");
+                    if (result.IsSuccess)
+                    {
+                        LoadPacks();
+                    }
+                    return true;
+                }
+                LoadPacks();
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[ModPlatform] TriggerHotReload failed: {ex}");
+                return false;
             }
         }
 
@@ -846,7 +881,7 @@ namespace DINOForge.Runtime
                 if (string.IsNullOrEmpty(packsDir)) return;
                 string filePath = Path.Combine(packsDir, DisabledPacksFile);
                 string json = JsonConvert.SerializeObject(_disabledPacks.ToList());
-                File.WriteAllText(filePath, json);
+                File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
                 _log.LogInfo($"[ModPlatform] Saved {_disabledPacks.Count} disabled pack(s) to {DisabledPacksFile}");
             }
             catch (Exception ex)
@@ -931,7 +966,15 @@ namespace DINOForge.Runtime
             {
                 if (_gameBridgeServer != null)
                 {
-                    _gameBridgeServer.Dispose();
+                    // #793: Avoid disposing the singleton if a newer ModPlatform instance owns it.
+                    if (object.ReferenceEquals(Plugin.SharedBridgeServer, _gameBridgeServer))
+                    {
+                        _gameBridgeServer?.Dispose();
+                    }
+                    else
+                    {
+                        _log?.LogDebug("[ModPlatform] Skipping bridge dispose — newer ModPlatform owns the singleton.");
+                    }
                     _gameBridgeServer = null;
                 }
 

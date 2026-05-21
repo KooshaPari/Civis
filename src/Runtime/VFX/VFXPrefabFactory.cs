@@ -150,7 +150,7 @@ namespace DINOForge.Runtime.VFX
             GameObject poolRoot = new GameObject("DINOForge_VFXPrefabPool_Runtime");
             poolRoot.SetActive(false);
 
-            VFXPrefabDescriptor[] allDescriptors = VFXPrefabCatalog.GetAllPrefabs();
+            var allDescriptors = VFXPrefabCatalog.GetAllPrefabs();
 
             foreach (var descriptor in allDescriptors)
             {

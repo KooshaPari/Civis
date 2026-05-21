@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Unity.Collections;
 using Unity.Entities;
 using DINOForge.Runtime;
+using DINOForge.Runtime.Diagnostics;
 
 namespace DINOForge.Runtime.Bridge
 {
@@ -103,7 +105,7 @@ namespace DINOForge.Runtime.Bridge
             // world, producing the gray-screen hang.
             if (RuntimeDriver.IsBeingDestroyed)
             {
-                WriteDebug("VanillaCatalog.Build: aborted — RuntimeDriver.IsBeingDestroyed=true (scene teardown in progress)");
+                DebugLog.Write("VanillaCatalog","VanillaCatalog.Build: aborted — RuntimeDriver.IsBeingDestroyed=true (scene teardown in progress)");
                 return;
             }
 
@@ -112,7 +114,7 @@ namespace DINOForge.Runtime.Bridge
             // EntityManager + World directly, since DINO's native teardown happens before our flag flips.
             if (em == default)
             {
-                WriteDebug("VanillaCatalog.Build: aborted — EntityManager is default (uninitialized)");
+                DebugLog.Write("VanillaCatalog","VanillaCatalog.Build: aborted — EntityManager is default (uninitialized)");
                 return;
             }
             World? currentWorld;
@@ -122,12 +124,12 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (Exception ex)
             {
-                WriteDebug($"VanillaCatalog.Build: aborted — EntityManager.World threw {ex.GetType().Name}: {ex.Message}");
+                DebugLog.Write("VanillaCatalog",$"VanillaCatalog.Build: aborted — EntityManager.World threw {ex.GetType().Name}: {ex.Message}");
                 return;
             }
             if (currentWorld == null || !currentWorld.IsCreated)
             {
-                WriteDebug("VanillaCatalog.Build: aborted — em.World null or not created (world torn down)");
+                DebugLog.Write("VanillaCatalog","VanillaCatalog.Build: aborted — em.World null or not created (world torn down)");
                 return;
             }
             // Cross-check the default world is also alive (some pathways pass an em whose World
@@ -135,30 +137,36 @@ namespace DINOForge.Runtime.Bridge
             World? defaultWorld = World.DefaultGameObjectInjectionWorld;
             if (defaultWorld == null || !defaultWorld.IsCreated)
             {
-                WriteDebug("VanillaCatalog.Build: aborted — Default world null or not created");
+                DebugLog.Write("VanillaCatalog","VanillaCatalog.Build: aborted — Default world null or not created");
                 return;
             }
 
-            WriteDebug("VanillaCatalog.Build starting scan");
+            DebugLog.Write("VanillaCatalog","VanillaCatalog.Build starting scan");
 
+            // #552: Allocator.Temp is main-thread-only and per-frame rewind. If Build is invoked
+            // from a worker thread or before DINO's PlayerLoop has pumped, Allocator.Temp resolves
+            // to an unbacked thread-local allocator and GetAllEntities throws ArgumentNullException
+            // deep inside UnsafeUtility.MemClear. Allocator.Persistent is process-global, thread-safe,
+            // and not subject to frame rewind. All exit paths already Dispose() the array.
             NativeArray<Entity> allEntities;
             try
             {
-                allEntities = em.GetAllEntities(Allocator.Temp);
+                allEntities = em.GetAllEntities(Allocator.Persistent);
             }
             catch (Exception ex)
             {
-                // World was torn down between our pre-check and the GetAllEntities call.
-                // Surface full detail per Pattern #96 so future races are visible.
-                WriteDebug($"VanillaCatalog.Build: GetAllEntities threw {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                // World was torn down between our pre-check and the GetAllEntities call,
+                // OR the entity store is half-initialized (no entities yet). Surface full
+                // detail per Pattern #96 so future races are visible.
+                DebugLog.Write("VanillaCatalog",$"VanillaCatalog.Build: GetAllEntities threw {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
                 return;
             }
-            WriteDebug($"VanillaCatalog: scanning {allEntities.Length} entities");
+            DebugLog.Write("VanillaCatalog",$"VanillaCatalog: scanning {allEntities.Length} entities");
 
             // Skip if no entities (e.g., still on MainMenu scene)
             if (allEntities.Length == 0)
             {
-                WriteDebug("VanillaCatalog.Build: No entities found. Skipping catalog build.");
+                DebugLog.Write("VanillaCatalog","VanillaCatalog.Build: No entities found. Skipping catalog build.");
                 allEntities.Dispose();
                 return;
             }
@@ -169,9 +177,14 @@ namespace DINOForge.Runtime.Bridge
 
             foreach (Entity entity in allEntities)
             {
+                // #552 + #612: same allocator hazard as outer GetAllEntities — use Persistent.
+                // Pre-#552 Allocator.Temp auto-rewound at frame end so the catch-swallow leak
+                // self-healed. Allocator.Persistent does NOT rewind — we MUST dispose on every
+                // exit path. Declare outside try so finally can see it; track validity via Length>=0.
+                NativeArray<ComponentType> types = default;
                 try
                 {
-                    NativeArray<ComponentType> types = em.GetComponentTypes(entity, Allocator.Temp);
+                    types = em.GetComponentTypes(entity, Allocator.Persistent);
 
                     string[] typeNames = new string[types.Length];
                     for (int i = 0; i < types.Length; i++)
@@ -189,18 +202,20 @@ namespace DINOForge.Runtime.Bridge
                         archetypeGroups[signature] = group;
                     }
                     group.Count++;
-
-                    types.Dispose();
                 }
                 catch
                 {
-                    // Skip entities we can't inspect
+                    // Skip entities we can't inspect (silent-swallow scoped to single entity).
+                }
+                finally
+                {
+                    if (types.IsCreated) types.Dispose();
                 }
             }
 
             allEntities.Dispose();
 
-            WriteDebug($"VanillaCatalog: found {archetypeGroups.Count} unique archetypes");
+            DebugLog.Write("VanillaCatalog",$"VanillaCatalog: found {archetypeGroups.Count} unique archetypes");
 
             // Classify each archetype group
             foreach (ArchetypeGroup group in archetypeGroups.Values)
@@ -231,7 +246,7 @@ namespace DINOForge.Runtime.Bridge
 
             _isBuilt = true;
 
-            WriteDebug($"VanillaCatalog built: {_units.Count} unit types, " +
+            DebugLog.Write("VanillaCatalog",$"VanillaCatalog built: {_units.Count} unit types, " +
                         $"{_buildings.Count} building types, " +
                         $"{_projectiles.Count} projectile types, " +
                         $"{_other.Count} other");
@@ -345,16 +360,6 @@ namespace DINOForge.Runtime.Bridge
             return "generic_building";
         }
 
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] {msg}\n");
-            }
-            catch { } // safe-swallow: best-effort debug I/O, non-critical
-        }
 
         /// <summary>
         /// Internal grouping of entities by their component archetype.

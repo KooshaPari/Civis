@@ -42,7 +42,9 @@ namespace DINOForge.Domains.Warfare.Archetypes
             Id = id ?? throw new ArgumentNullException(nameof(id));
             DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
             Description = description ?? throw new ArgumentNullException(nameof(description));
-            BaseModifiers = new Dictionary<string, float>(baseModifiers, StringComparer.OrdinalIgnoreCase);
+            var modifiers = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in baseModifiers) modifiers[kvp.Key] = kvp.Value;
+            BaseModifiers = modifiers;
         }
     }
 }

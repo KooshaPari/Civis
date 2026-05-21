@@ -27,4 +27,21 @@ public static class CliJsonOptions
         PropertyNameCaseInsensitive = true,
         WriteIndented = true,
     };
+
+    /// <summary>
+    /// Case-insensitive deserialization for external HTTP/JSON APIs (Sketchfab, etc.).
+    /// </summary>
+    public static JsonSerializerOptions SketchfabApi { get; } = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
+    /// <summary>
+    /// Indented JSON for human-readable CLI output (e.g. <c>discover-types</c>, manifest dumps).
+    /// </summary>
+    public static JsonSerializerOptions Indented { get; } = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+    };
 }

@@ -8,9 +8,6 @@
     <Nullable>enable</Nullable>
     <Description>Resource management, trade, production balancing for economic gameplay</Description>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
-    <Version>0.18.0</Version>
-    <AssemblyVersion>0.18.0</AssemblyVersion>
-    <PackageVersion>0.18.0</PackageVersion>
     <PackageId>DINOForge.Domains.Economy</PackageId>
     <Authors>DINOForge Agents</Authors>
     <PackageTags>game-modding;economy;resources;dinoforge</PackageTags>

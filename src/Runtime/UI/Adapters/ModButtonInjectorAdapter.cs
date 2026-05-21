@@ -165,7 +165,7 @@ namespace DINOForge.Runtime.UI.Adapters
                 _injections[key] = record;
             }
 
-            // PHASE2-TODO (M11.5 / WI-004b): when NativeMenuInjector routes through this seam,
+            // TODO(#NNN-followup-iter145, M11.5 / WI-004b): when NativeMenuInjector routes through this seam,
             // find the vanilla "Mods" button on the supplied canvas via INativeButtonAdapter,
             // rewire its onClick to invoke target.Toggle(), and wrap the real UnityEngine.UI.Button
             // in the returned handle. Until then the handle's Inner is the target reference —

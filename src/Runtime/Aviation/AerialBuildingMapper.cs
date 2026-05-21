@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using DINOForge.Runtime.Diagnostics;
 using DINOForge.SDK.Models;
 using Unity.Entities;
 
@@ -69,30 +70,16 @@ namespace DINOForge.Runtime.Aviation
                         AntiAirDamageBonus = damageBonus
                     };
                     em.AddComponentData(entity, antiAir);
-                    WriteDebug($"Applied AntiAirComponent to building '{buildingDef.Id}' (range={range}, damageBonus={damageBonus})");
+                    DebugLog.Write("AerialBuildingMapper", $"Applied AntiAirComponent to building '{buildingDef.Id}' (range={range}, damageBonus={damageBonus})");
                 }
                 else
                 {
-                    WriteDebug($"Building '{buildingDef.Id}' already has AntiAirComponent — skipped");
+                    DebugLog.Write("AerialBuildingMapper", $"Building '{buildingDef.Id}' already has AntiAirComponent — skipped");
                 }
             }
             catch (Exception ex)
             {
-                WriteDebug($"Failed to add AntiAirComponent to building '{buildingDef.Id}': {ex.Message}");
-            }
-        }
-
-        private static void WriteDebug(string msg)
-        {
-            try
-            {
-                string debugLog = Path.Combine(
-                    BepInEx.Paths.BepInExRootPath, "dinoforge_debug.log");
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] AerialBuildingMapper: {msg}\n");
-            }
-            catch (Exception ex)
-            {
-                BepInEx.Logging.Logger.CreateLogSource("AerialBuildingMapper").LogWarning($"Failed to write debug log: {ex}");
+                DebugLog.Write("AerialBuildingMapper", $"Failed to add AntiAirComponent to building '{buildingDef.Id}': {ex.Message}");
             }
         }
     }

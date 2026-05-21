@@ -175,12 +175,12 @@ namespace DINOForge.SDK.Dependencies
             var packs = ListPacks();
             foreach (var pack in packs)
             {
-                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct);
+                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct).ConfigureAwait(false);
                 lockEntries.Add(string.Format("{0} {1}", pack.Path, sha));
             }
 
             string lockPath = System.IO.Path.Combine(_workingDirectory, "packs.lock");
-            File.WriteAllLines(lockPath, lockEntries);
+            File.WriteAllLines(lockPath, lockEntries, System.Text.Encoding.UTF8);
         }
 
         /// <summary>
@@ -257,7 +257,7 @@ namespace DINOForge.SDK.Dependencies
                 CreateNoWindow = true
             };
 
-            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct);
+            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -265,7 +265,8 @@ namespace DINOForge.SDK.Dependencies
         /// </summary>
         private static async Task<string> RunGitCommandWithOutputAsync(ProcessStartInfo psi, string commandName, CancellationToken ct = default)
         {
-            Process process = Process.Start(psi);
+            // Pattern #102: wrap Process.Start in `using` to release handle deterministically.
+            using var process = Process.Start(psi);
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
@@ -275,8 +276,8 @@ namespace DINOForge.SDK.Dependencies
 
             process.WaitForExit();
 
-            string output = await outputTask;
-            string error = await errorTask;
+            string output = await outputTask.ConfigureAwait(false);
+            string error = await errorTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
@@ -291,7 +292,8 @@ namespace DINOForge.SDK.Dependencies
         {
             return Task.Run(() =>
             {
-                Process process = Process.Start(psi);
+                // Pattern #102: wrap Process.Start in `using` to release handle deterministically.
+                using var process = Process.Start(psi);
                 if (process == null)
                     throw new InvalidOperationException("Failed to start git process");
 

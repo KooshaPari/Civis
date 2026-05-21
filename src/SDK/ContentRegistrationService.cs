@@ -109,8 +109,14 @@ namespace DINOForge.SDK
             }
             catch (Exception ex)
             {
-                _log($"[ContentLoader] Schema validation skipped for {yamlFilePath}: {ex.Message}");
-                return true;
+                // #764: Do not silently swallow schema validator failures.
+                // A broken schema or infrastructure failure must surface as a validation
+                // failure rather than being treated as "valid", which previously masked
+                // misconfigured schemas and validator initialization bugs.
+                string message = $"Schema validation failed for {yamlFilePath} (schema='{schemaName}'): {ex.GetType().Name}: {ex.Message}";
+                _log($"[ContentLoader] WARNING: {message}");
+                errors.Add(message);
+                return false;
             }
         }
 

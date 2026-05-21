@@ -96,7 +96,7 @@ namespace DINOForge.SDK.NativeInterop
             {
                 try
                 {
-                    return await ImportAssetViaRustAsync(assetId, filePath);
+                    return await ImportAssetViaRustAsync(assetId, filePath).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -106,7 +106,7 @@ namespace DINOForge.SDK.NativeInterop
             }
 
             // Fallback to C# AssimpNet
-            return await ImportAssetViaCSharpAsync(assetId, filePath);
+            return await ImportAssetViaCSharpAsync(assetId, filePath).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace DINOForge.SDK.NativeInterop
                 asset_id = assetId
             };
 
-            var response = await CallMcpAsync("asset_import", request);
+            var response = await CallMcpAsync("asset_import", request).ConfigureAwait(false);
 
             if (response == null)
                 throw new InvalidOperationException("MCP server returned no data");
@@ -151,7 +151,7 @@ namespace DINOForge.SDK.NativeInterop
                 Materials = new List<MaterialData>(),
                 Skeleton = null,
                 Metadata = new AssetMetadata()
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace DINOForge.SDK.NativeInterop
             {
                 try
                 {
-                    return await OptimizeAssetViaRustAsync(imported, definition);
+                    return await OptimizeAssetViaRustAsync(imported, definition).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -175,7 +175,7 @@ namespace DINOForge.SDK.NativeInterop
             }
 
             // Fallback to C# optimization
-            return await OptimizeAssetViaCSharpAsync(imported, definition);
+            return await OptimizeAssetViaCSharpAsync(imported, definition).ConfigureAwait(false);
         }
 
         private static async Task<OptimizedAsset> OptimizeAssetViaRustAsync(
@@ -189,7 +189,7 @@ namespace DINOForge.SDK.NativeInterop
                 lod_targets = definition.LOD?.Levels ?? new[] { 100, 60, 30 }
             };
 
-            var response = await CallMcpAsync("asset_optimize", request);
+            var response = await CallMcpAsync("asset_optimize", request).ConfigureAwait(false);
             var json = response.ToString();
             return JsonSerializer.Deserialize<OptimizedAsset>(json, JsonOptions.Default)
                 ?? throw new InvalidOperationException("Failed to deserialize optimization result");
@@ -206,7 +206,7 @@ namespace DINOForge.SDK.NativeInterop
                 LOD0 = imported.Mesh,
                 LOD1 = imported.Mesh,
                 LOD2 = imported.Mesh
-            });
+            }).ConfigureAwait(false);
         }
 
         // ===== Private MCP Integration =====
@@ -225,7 +225,7 @@ namespace DINOForge.SDK.NativeInterop
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var url = $"{McpServerUrl}/api/tools/{toolName}";
 
-                var response = await _httpClient.PostAsync(url, content);
+                var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -233,7 +233,7 @@ namespace DINOForge.SDK.NativeInterop
                     return null;
                 }
 
-                var responseBody = await response.Content.ReadAsStringAsync();
+                var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 // Parse as JSON and return the parsed object
                 using (JsonDocument doc = JsonDocument.Parse(responseBody))

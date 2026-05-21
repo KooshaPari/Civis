@@ -16,7 +16,12 @@ pre-commit:
   commands:
     format-check:
       glob: "**/*.cs"
-      run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --include {staged_files}
+      # Scope: whitespace + style only. Analyzers category is excluded because
+      # pre-existing DF warnings (Pattern #94/#105/#106/#111/#114/#123) have no
+      # auto-fix and would stall every commit. Analyzer drift is gated in CI.
+      run: |
+        dotnet format whitespace src/DINOForge.CI.NoRuntime.sln --verify-no-changes --include {staged_files} && \
+        dotnet format style src/DINOForge.CI.NoRuntime.sln --verify-no-changes --include {staged_files}
 
     check-yaml:
       glob: "**/*.{yaml,yml}"

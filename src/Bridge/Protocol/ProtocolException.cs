@@ -7,6 +7,7 @@ namespace DINOForge.Bridge.Protocol;
 /// Thrown when a protocol violation is detected in the JSON-RPC communication.
 /// Examples: malformed frames, incomplete messages, size violations.
 /// </summary>
+// unsealed-by-design: exception convention — allows downstream subclassing
 public class ProtocolException : InvalidOperationException
 {
     /// <summary>

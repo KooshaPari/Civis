@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DINOForge.SDK.Dependencies;
+using DINOForge.SDK.Json;
 using DINOForge.SDK.Validation;
 
 namespace DINOForge.SDK.NativeInterop
@@ -86,8 +87,8 @@ namespace DINOForge.SDK.NativeInterop
                     Target = target
                 };
 
-                var json = JsonSerializer.Serialize(input, new JsonSerializerOptions { WriteIndented = false });
-                File.WriteAllText(tempInput, json);
+                var json = JsonSerializer.Serialize(input, JsonOptions.Compact);
+                File.WriteAllText(tempInput, json, System.Text.Encoding.UTF8);
 
                 // Invoke Go binary
                 var process = new Process
@@ -124,7 +125,7 @@ namespace DINOForge.SDK.NativeInterop
                     throw new InvalidOperationException("Go resolver produced no output file");
 
                 var outputJson = File.ReadAllText(tempOutput, Encoding.UTF8);
-                var output = JsonSerializer.Deserialize<ResolverOutput>(outputJson)
+                var output = JsonSerializer.Deserialize<ResolverOutput>(outputJson, JsonOptions.Default)
                     ?? throw new InvalidOperationException("Failed to parse resolver output");
 
                 // Convert to DependencyResult

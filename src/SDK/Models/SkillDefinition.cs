@@ -21,7 +21,7 @@ namespace DINOForge.SDK.Models
     /// Maps to DINO's Components.Skills.* ECS components (HealSkillData, RageSkillData,
     /// MeteorCastSkillData, SummonSkillData, etc.).
     /// </summary>
-    public class SkillDefinition : IValidatable
+    public sealed class SkillDefinition : IValidatable
     {
         /// <summary>Unique skill identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -77,8 +77,7 @@ namespace DINOForge.SDK.Models
         /// Stat effects applied by this skill.
         /// </summary>
         [YamlMember(Alias = "effects")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<SkillEffect> Effects { get; set; } = new List<SkillEffect>();
+        public List<SkillEffect> Effects { get; set; } = new List<SkillEffect>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// The vanilla DINO skill component this maps to (e.g. "Components.Skills.HealSkillData").
@@ -117,7 +116,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// A single stat modifier effect applied by a skill.
     /// </summary>
-    public class SkillEffect : IValidatable
+    public sealed class SkillEffect : IValidatable
     {
         /// <summary>
         /// Stat to modify (e.g. health, speed, damage, armor).

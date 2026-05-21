@@ -8,6 +8,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace DINOForge.Analyzers
 {
+    // #747 + #780: cover Deserialize<T>, DeserializeAsync, and non-generic Deserialize(string, Type);
+    // also flag when JsonSerializerOptions arg is literal null/default rather than only missing.
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class JsonDeserializeWithoutOptionsAnalyzer : DiagnosticAnalyzer
     {
@@ -47,8 +49,13 @@ namespace DINOForge.Analyzers
         {
             var invocation = (InvocationExpressionSyntax)context.Node;
 
-            // Check if this is a JsonSerializer.Deserialize call
-            if (!IsJsonSerializerDeserialize(invocation))
+            // Check if this is a JsonSerializer.Deserialize call (syntactic + semantic)
+            if (!IsJsonSerializerDeserialize(invocation, context.SemanticModel))
+                return;
+
+            // Suppress source-gen overloads: if any argument is a JsonTypeInfo, skip
+            // (e.g. JsonSerializer.Deserialize(json, MyContext.Default.Foo))
+            if (HasJsonTypeInfoArgument(invocation, context.SemanticModel))
                 return;
 
             // Check argument count:
@@ -88,10 +95,63 @@ namespace DINOForge.Analyzers
             }
         }
 
-        private static bool IsJsonSerializerDeserialize(InvocationExpressionSyntax invocation)
+        private static bool HasJsonTypeInfoArgument(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+        {
+            foreach (var arg in invocation.ArgumentList.Arguments)
+            {
+                var typeInfo = semanticModel.GetTypeInfo(arg.Expression);
+                var t = typeInfo.Type ?? typeInfo.ConvertedType;
+                if (t == null) continue;
+                // Match JsonTypeInfo or JsonTypeInfo<T> (System.Text.Json.Serialization.Metadata)
+                var name = t.Name;
+                if (name == "JsonTypeInfo")
+                {
+                    var ns = t.ContainingNamespace?.ToDisplayString();
+                    if (ns == "System.Text.Json.Serialization.Metadata")
+                        return true;
+                }
+                // Also check base type for JsonTypeInfo<T>
+                var baseType = t.BaseType;
+                while (baseType != null)
+                {
+                    if (baseType.Name == "JsonTypeInfo" &&
+                        baseType.ContainingNamespace?.ToDisplayString() == "System.Text.Json.Serialization.Metadata")
+                        return true;
+                    baseType = baseType.BaseType;
+                }
+            }
+            return false;
+        }
+
+        private static bool IsJsonSerializerDeserialize(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
         {
             var methodName = GetMethodName(invocation.Expression);
-            return methodName == "Deserialize" && IsJsonSerializerMemberAccess(invocation.Expression);
+            if (methodName != "Deserialize")
+                return false;
+
+            // Fast syntactic path (preserves prior behavior, no semantic round-trip cost)
+            if (IsJsonSerializerMemberAccess(invocation.Expression))
+                return true;
+
+            // Semantic fallback — handles:
+            //   using static System.Text.Json.JsonSerializer;  Deserialize<T>(json)
+            //   using JS = System.Text.Json.JsonSerializer;    JS.Deserialize<T>(json)
+            //   any other alias / qualifier form
+            var symbolInfo = semanticModel.GetSymbolInfo(invocation);
+            var methodSymbol = symbolInfo.Symbol as IMethodSymbol
+                ?? symbolInfo.CandidateSymbols.FirstOrDefault() as IMethodSymbol;
+            if (methodSymbol == null)
+                return false;
+
+            var containingType = methodSymbol.ContainingType;
+            if (containingType == null)
+                return false;
+
+            if (containingType.Name != "JsonSerializer")
+                return false;
+
+            var ns = containingType.ContainingNamespace?.ToDisplayString();
+            return ns == "System.Text.Json";
         }
 
         private static string GetMethodName(ExpressionSyntax expr)
@@ -115,9 +175,14 @@ namespace DINOForge.Analyzers
 
         private static bool IsJsonSerializerMemberAccess(ExpressionSyntax expr)
         {
-            // Check for JsonSerializer.Deserialize<T>
-            if (expr is GenericNameSyntax gns)
-                return gns.Identifier.Text == "Deserialize";
+            // NOTE: A bare GenericNameSyntax like `Deserialize<T>(...)` (no receiver) is NOT
+            // syntactically a JsonSerializer call — it could be any local/static method named
+            // Deserialize (e.g. YamlLoader.Deserialize<T>, _deserializer.Deserialize<T>, or a
+            // `using static System.Text.Json.JsonSerializer;` invocation). The semantic
+            // fallback in IsJsonSerializerDeserialize handles the legitimate `using static`
+            // case by checking IMethodSymbol.ContainingType == System.Text.Json.JsonSerializer.
+            // Returning true here for any "Deserialize"-named GenericNameSyntax was the root
+            // cause of #780 false positives on YamlLoader.Deserialize.
 
             // Check for JsonSerializer.Deserialize
             if (expr is MemberAccessExpressionSyntax mas)
@@ -130,17 +195,24 @@ namespace DINOForge.Analyzers
                 if (rightName != "Deserialize")
                     return false;
 
-                // Check if left side is JsonSerializer
+                // Check if left side is JsonSerializer (could also be an alias — semantic path handles it)
                 if (left is IdentifierNameSyntax leftId && leftId.Identifier.Text == "JsonSerializer")
                     return true;
 
-                // Check for System.Text.Json.JsonSerializer
+                // Check for System.Text.Json.JsonSerializer (qualified)
                 if (left is MemberAccessExpressionSyntax leftMas)
                 {
+                    // Tail-segment must be JsonSerializer (e.g. System.Text.Json.JsonSerializer)
+                    if (leftMas.Name is IdentifierNameSyntax tail && tail.Identifier.Text == "JsonSerializer")
+                        return true;
                     var parts = GetNamespaceChain(leftMas);
-                    if (parts.Any(p => p == "JsonSerializer"))
+                    if (parts.Length > 0 && parts[parts.Length - 1] == "JsonSerializer")
                         return true;
                 }
+
+                // global::System.Text.Json.JsonSerializer.Deserialize
+                if (left is AliasQualifiedNameSyntax aqn && aqn.Name.Identifier.Text == "JsonSerializer")
+                    return true;
             }
 
             return false;

@@ -56,6 +56,7 @@ namespace DINOForge.Analyzers
             if (methodDecl.Body == null)
                 return;
 
+            // #1015 fix: dispatcher exemption (5+ case labels) + GeneratedCode + CompilerGenerated suppression
             // Check for long-method-ok comment
             if (HasLongMethodOkComment(methodDecl))
                 return;

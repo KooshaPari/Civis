@@ -1,3 +1,4 @@
+// DUPLICATE CODE WARNING: src/SDK/Assets/AssetService.cs and src/Runtime/Assets/AssetService.cs are near-duplicate implementations. Changes to one MUST be ported to the other until #613 deduplication lands.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,17 +22,20 @@ namespace DINOForge.SDK.Assets
         private readonly string _gameDir;
         private readonly AssetsManager _assetsManager;
         private readonly string _streamingAssetsDir;
+        private readonly TimeProvider _timeProvider;
         private bool _disposed;
 
         /// <summary>
         /// Initializes the asset service for the given game installation directory.
         /// </summary>
         /// <param name="gameDir">Root game installation directory (e.g. G:\SteamLibrary\...\Diplomacy is Not an Option).</param>
+        /// <param name="timeProvider">Optional time source for testable timestamps (Pattern #112). Defaults to <see cref="TimeProvider.System"/>.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="gameDir"/> is null.</exception>
-        public AssetService(string gameDir)
+        public AssetService(string gameDir, TimeProvider? timeProvider = null)
         {
             _gameDir = gameDir ?? throw new ArgumentNullException(nameof(gameDir));
             _assetsManager = new AssetsManager();
+            _timeProvider = timeProvider ?? TimeProvider.System;
             _streamingAssetsDir = Path.Combine(
                 gameDir,
                 "Diplomacy is Not an Option_Data",
@@ -564,16 +568,38 @@ namespace DINOForge.SDK.Assets
             return matching;
         }
 
+        // Pattern #232: cap log file growth; rotate at 10 MB to a single .1 backup.
+        private const long MaxLogBytes = 10 * 1024 * 1024;
+
         /// <summary>
         /// Writes a warning message to a local log file (best-effort; never throws).
         /// </summary>
-        private static void LogWarning(string message)
+        private void LogWarning(string message)
         {
             try
             {
                 string logPath = Path.Combine(
                     Path.GetTempPath(), "dinoforge_assetsvc.log");
-                File.AppendAllText(logPath, $"[{DateTime.UtcNow:u}] WARN {message}\n");
+
+                try
+                {
+                    var fi = new FileInfo(logPath);
+                    if (fi.Exists && fi.Length >= MaxLogBytes)
+                    {
+                        var rotatedPath = logPath + ".1";
+                        if (File.Exists(rotatedPath))
+                        {
+                            File.Delete(rotatedPath);
+                        }
+                        File.Move(logPath, rotatedPath);
+                    }
+                }
+                catch
+                {
+                    // safe-swallow: rotation is best-effort; continue to append
+                }
+
+                File.AppendAllText(logPath, $"[{_timeProvider.GetUtcNow().UtcDateTime:u}] WARN {message}\n");
             }
             catch (Exception ex)
             {

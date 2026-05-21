@@ -136,7 +136,7 @@ public sealed class GameClient : IGameClient, IDisposable
     /// <exception cref="GameClientException">Thrown when the connection fails.</exception>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        await ConnectAsync(connectTimeout: null, ct);
+        await ConnectAsync(connectTimeout: null, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -213,12 +213,13 @@ public sealed class GameClient : IGameClient, IDisposable
     /// the default-flip (sub-task B) land separately under #249.
     /// </para>
     /// <para>
-    /// Tolerant by design — if the server doesn't reply with the expected
-    /// <c>session_id</c>/<c>session_key_b64</c> envelope (e.g. older bridge
-    /// build that lacks a <c>connect</c> handler), this method logs a warning
-    /// and returns. Callers that demand strict session capture should also set
-    /// <see cref="HmacVerificationMode"/> to <see cref="VerificationMode.Strict"/>,
-    /// which fails fast on the first un-verified response.
+    /// Behavior is gated on <see cref="HmacVerificationMode"/>:
+    /// in <see cref="VerificationMode.Strict"/> (the default), handshake failures
+    /// (missing/malformed session envelope, transport errors, etc.) throw
+    /// <see cref="GameClientException"/> so ConnectAsync fails fast.
+    /// In <see cref="VerificationMode.WarnOnly"/> or <see cref="VerificationMode.Off"/>,
+    /// failures are logged as warnings and the client proceeds without a session key
+    /// (legacy fixture compatibility for older bridge builds lacking a <c>connect</c> handler).
     /// </para>
     /// </remarks>
     internal async Task PerformHandshakeAsync(CancellationToken ct = default)
@@ -241,8 +242,14 @@ public sealed class GameClient : IGameClient, IDisposable
 
             if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(sessionKeyB64))
             {
+                if (HmacVerificationMode == VerificationMode.Strict)
+                {
+                    throw new GameClientException(
+                        "Connect handshake reply missing session envelope (session_id or session_key_b64); Strict mode requires a session.");
+                }
                 _logger.Warning(
-                    "Connect handshake reply missing session envelope (session_id or session_key_b64); falling back to no-session mode");
+                    "Connect handshake reply missing session envelope (session_id or session_key_b64); falling back to no-session mode (HmacVerificationMode={Mode})",
+                    HmacVerificationMode);
                 return;
             }
 
@@ -253,15 +260,24 @@ public sealed class GameClient : IGameClient, IDisposable
             }
             catch (FormatException ex)
             {
-                _logger.Warning(ex, "Connect handshake session_key_b64 is not valid base64; ignoring");
+                if (HmacVerificationMode == VerificationMode.Strict)
+                {
+                    throw new GameClientException("Connect handshake session_key_b64 is not valid base64", ex);
+                }
+                _logger.Warning(ex, "Connect handshake session_key_b64 is not valid base64; ignoring (HmacVerificationMode={Mode})", HmacVerificationMode);
                 return;
             }
 
             if (keyBytes.Length != 32)
             {
+                if (HmacVerificationMode == VerificationMode.Strict)
+                {
+                    throw new GameClientException(
+                        $"Connect handshake session key has invalid length {keyBytes.Length} (expected 32)");
+                }
                 _logger.Warning(
-                    "Connect handshake session key has invalid length {Length} (expected 32); ignoring",
-                    keyBytes.Length);
+                    "Connect handshake session key has invalid length {Length} (expected 32); ignoring (HmacVerificationMode={Mode})",
+                    keyBytes.Length, HmacVerificationMode);
                 return;
             }
 
@@ -269,13 +285,22 @@ public sealed class GameClient : IGameClient, IDisposable
             SessionId = sessionId;
             _logger.Information("Captured session_id {SessionId} from connect handshake", sessionId);
         }
+        catch (GameClientException)
+        {
+            // Already-shaped Strict-mode failure from the inner gates — propagate.
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            // Phase 4c sub-task A is groundwork — until sub-task B flips the
-            // default, a missing connect handler must not fail ConnectAsync for
-            // legacy fixtures. We log and let the caller proceed; Strict-mode
-            // verification will catch the missing session on the next call.
-            _logger.Warning(ex, "Connect handshake failed; continuing without session key");
+            if (HmacVerificationMode == VerificationMode.Strict)
+            {
+                throw new GameClientException("Connect handshake required but failed", ex);
+            }
+            _logger.Warning(ex, "Connect handshake failed; continuing without session key (HmacVerificationMode={Mode})", HmacVerificationMode);
         }
     }
 
@@ -477,9 +502,9 @@ public sealed class GameClient : IGameClient, IDisposable
                     {
                         await ConnectAsync(ct).ConfigureAwait(false);
                     }
-                    catch
+                    catch // safe-swallow: reconnect attempt; retry loop will surface terminal failure
                     {
-                        // Will retry on next iteration
+                        // empty-catch-ok: reconnect best-effort; outer retry loop handles terminal failure
                     }
                 }
             }
@@ -712,16 +737,22 @@ public sealed class GameClient : IGameClient, IDisposable
         if (_pipe is null || !_pipe.IsConnected)
             throw new IOException("Pipe not connected");
 
-        // Read 4-byte frame length header
+        // Read 4-byte frame length header. Named-pipe Byte mode may return
+        // fewer than the requested bytes per call, so loop until we have all 4.
         var lengthBuffer = new byte[4];
-        int headerRead = await _pipe.ReadAsync(lengthBuffer, 0, 4, ct).ConfigureAwait(false);
-
-        if (headerRead == 0)
-            throw new IOException("Connection closed by peer while reading frame header");
-
-        if (headerRead != 4)
-            throw new ProtocolException(
-                $"Expected 4-byte frame header, received {headerRead} bytes");
+        int totalRead = 0;
+        while (totalRead < 4)
+        {
+            int n = await _pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead, ct).ConfigureAwait(false);
+            if (n == 0)
+            {
+                if (totalRead == 0)
+                    throw new IOException("Connection closed by peer while reading frame header");
+                throw new ProtocolException(
+                    $"Unexpected EOF reading length-prefix header; got {totalRead} of 4 bytes");
+            }
+            totalRead += n;
+        }
 
         // Decode length (big-endian)
         uint frameLength = BitConverter.ToUInt32(lengthBuffer, 0);
@@ -762,9 +793,10 @@ public sealed class GameClient : IGameClient, IDisposable
 
     private void CleanupPipe()
     {
-        try { _reader?.Dispose(); } catch { }
-        try { _writer?.Dispose(); } catch { }
-        try { _pipe?.Dispose(); } catch { }
+        // safe-swallow: Dispose during cleanup is best-effort; ObjectDisposedException/IOException are expected on already-closed streams
+        try { _reader?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
+        try { _writer?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
+        try { _pipe?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
         _reader = null;
         _writer = null;
         _pipe = null;

@@ -10,7 +10,7 @@ namespace DINOForge.SDK.Models
     /// Components.FormationArrowData, Components.FormationDrawParameters,
     /// Components.FormationViewMainColor, and Components.FormationViewBackColor ECS components.
     /// </summary>
-    public class SquadDefinition : IValidatable
+    public sealed class SquadDefinition : IValidatable
     {
         /// <summary>Unique squad identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -74,8 +74,7 @@ namespace DINOForge.SDK.Models
         /// Behavior tags for AI control. Valid values: hold_position, aggressive, defensive, patrol.
         /// </summary>
         [YamlMember(Alias = "behavior_tags")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> BehaviorTags { get; set; } = new List<string>();
+        public List<string> BehaviorTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Validates that the squad definition is semantically valid.

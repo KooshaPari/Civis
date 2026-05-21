@@ -106,6 +106,12 @@ namespace DINOForge.SDK
         /// <summary>
         /// Loads a single pack from a directory containing pack.yaml.
         /// </summary>
+        /// <remarks>
+        /// #837: Single-pack load mode cannot resolve <c>depends_on</c> references because no
+        /// peer manifests are visible. If the manifest declares dependencies, this method fails
+        /// fast with an error directing callers to <see cref="LoadPacks(string)"/>, which performs
+        /// full dependency resolution via <see cref="PackDependencyResolver"/>.
+        /// </remarks>
         /// <param name="packDirectory">Path to the pack directory.</param>
         /// <returns>Result indicating success or failure with errors.</returns>
         public ContentLoadResult LoadPack(string packDirectory)
@@ -135,7 +141,42 @@ namespace DINOForge.SDK
                 return ContentLoadResult.Failure(LastLoadErrors);
             }
 
+            // #762: Enforce framework_version compatibility. CheckPack uses
+            // CompatibilityChecker.FrameworkVersion (resolved from SDK assembly) as the
+            // installed SDK version. Errors abort the pack load; warnings are surfaced
+            // through the load-errors collection but do not block.
+            CompatibilityResult compatResult = CompatibilityChecker.CheckPack(manifest);
+            if (!compatResult.IsCompatible)
+            {
+                List<string> errors = new List<string>
+                {
+                    $"Pack '{manifest.Id}' incompatible with DINOForge SDK {CompatibilityChecker.FrameworkVersion}: {string.Join("; ", compatResult.Errors)}"
+                };
+                LastLoadErrors = errors.AsReadOnly();
+                return ContentLoadResult.Failure(LastLoadErrors);
+            }
+
             List<string> loadErrors = new List<string>();
+            foreach (string warning in compatResult.Warnings)
+            {
+                loadErrors.Add($"Pack '{manifest.Id}' compatibility warning: {warning}");
+            }
+
+            // #837: Single-pack load mode cannot resolve depends_on against an empty peer set.
+            // Fail fast and direct callers to LoadPacks() which performs topological resolution.
+            if (manifest.DependsOn != null && manifest.DependsOn.Count > 0)
+            {
+                List<string> depErrors = new List<string>(loadErrors);
+                foreach (string dep in manifest.DependsOn)
+                {
+                    depErrors.Add(
+                        $"Pack '{manifest.Id}' declares dependency '{dep}' but was loaded via single-pack LoadPack(); " +
+                        "dependencies cannot be resolved in single-pack mode. Use LoadPacks(packsRootDirectory) to load packs in dependency order.");
+                }
+                LastLoadErrors = depErrors.AsReadOnly();
+                return ContentLoadResult.Failure(LastLoadErrors);
+            }
+
             LoadManifestContent(packDirectory, manifest, loadErrors);
 
             // Wire AssetSwapRegistry for all units and buildings with visual_asset references.

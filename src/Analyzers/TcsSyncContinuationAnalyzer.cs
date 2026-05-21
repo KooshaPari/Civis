@@ -17,10 +17,10 @@ namespace DINOForge.Analyzers
             (LocalizableString)"TaskCompletionSource missing RunContinuationsAsynchronously";
 
         private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"TaskCompletionSource ctor without TaskCreationOptions.RunContinuationsAsynchronously risks sync-continuation deadlock. Pass `TaskCreationOptions.RunContinuationsAsynchronously` to the constructor.";
+            (LocalizableString)"TaskCompletionSource ctor without TaskCreationOptions.RunContinuationsAsynchronously risks sync-continuation deadlock. Pass `TaskCreationOptions.RunContinuationsAsynchronously` to the constructor, or document an intentional sync continuation with `// tcs-sync-ok: <reason>`.";
 
         private static readonly LocalizableString Description =
-            (LocalizableString)"TaskCompletionSource without TaskCreationOptions.RunContinuationsAsynchronously runs continuations synchronously on the producer's thread, causing main-thread starvation and potential deadlocks in cross-thread marshalling contexts. Always pass TaskCreationOptions.RunContinuationsAsynchronously.";
+            (LocalizableString)"TaskCompletionSource without TaskCreationOptions.RunContinuationsAsynchronously runs continuations synchronously on the producer's thread, causing main-thread starvation and potential deadlocks in cross-thread marshalling contexts. Always pass TaskCreationOptions.RunContinuationsAsynchronously. For intentional sync continuation, suppress with `// tcs-sync-ok: <reason>` (the trailing colon + reason are required, per Pattern #111 convention).";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -54,9 +54,67 @@ namespace DINOForge.Analyzers
             if (HasRunContinuationsAsynchronouslyArgument(objectCreation.ArgumentList))
                 return;
 
+            // Check for `// tcs-sync-ok: <reason>` suppression marker
+            if (HasTcsSyncOkMarker(objectCreation))
+                return;
+
             // Report diagnostic
             var diagnostic = Diagnostic.Create(Rule, objectCreation.GetLocation());
             context.ReportDiagnostic(diagnostic);
+        }
+
+        /// <summary>
+        /// Scans for a <c>// tcs-sync-ok: &lt;reason&gt;</c> marker in trivia around the
+        /// object-creation expression. The trailing colon + reason are REQUIRED — bare
+        /// <c>// tcs-sync-ok</c> (no colon) is rejected to force authors to document why.
+        /// Mirrors <see cref="SilentCatchAnalyzer.HasSafeSwallowComment"/>.
+        /// </summary>
+        private static bool HasTcsSyncOkMarker(ObjectCreationExpressionSyntax objectCreation)
+        {
+            // 1. Leading trivia directly on the object-creation node
+            foreach (var trivia in objectCreation.GetLeadingTrivia())
+            {
+                if (CheckTrivia(trivia))
+                    return true;
+            }
+
+            // 2. Trailing trivia on the object-creation node (same-line marker after the expression)
+            foreach (var trivia in objectCreation.GetTrailingTrivia())
+            {
+                if (CheckTrivia(trivia))
+                    return true;
+            }
+
+            // 3. Leading + trailing trivia on the containing statement (e.g., the var-decl line)
+            var containingStatement = objectCreation.FirstAncestorOrSelf<StatementSyntax>();
+            if (containingStatement != null)
+            {
+                foreach (var trivia in containingStatement.GetLeadingTrivia())
+                {
+                    if (CheckTrivia(trivia))
+                        return true;
+                }
+                foreach (var trivia in containingStatement.GetTrailingTrivia())
+                {
+                    if (CheckTrivia(trivia))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool CheckTrivia(SyntaxTrivia trivia)
+        {
+            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
+                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+            {
+                // Require the trailing colon to force a documented reason
+                // (bare `// tcs-sync-ok` without colon is NOT recognized).
+                if (trivia.ToFullString().Contains("tcs-sync-ok:"))
+                    return true;
+            }
+            return false;
         }
 
         private static bool IsTaskCompletionSourceCreation(ObjectCreationExpressionSyntax objectCreation)

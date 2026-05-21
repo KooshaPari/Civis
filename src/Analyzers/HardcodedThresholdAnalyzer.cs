@@ -47,6 +47,21 @@ namespace DINOForge.Analyzers
         {
             var literalNode = (LiteralExpressionSyntax)context.Node;
 
+            // #749 fix: attribute exemption walks Ancestors().OfType<AttributeSyntax>() (was short-circuit on ExpressionSyntax) + self-exemption on /Analyzers/ paths
+            // Self-exemption: skip the analyzer's own source files to avoid recursive flagging
+            var filePath = literalNode.SyntaxTree?.FilePath;
+            if (filePath is not null && filePath.Length > 0)
+            {
+                var normalized = filePath.Replace('\\', '/');
+                if (normalized.Contains("/src/Analyzers/") ||
+                    normalized.Contains("/Analyzers/HardcodedThresholdAnalyzer"))
+                    return;
+            }
+
+            // Attribute argument exemption: literals inside attributes (e.g. [Range(0, 100)]) are not thresholds
+            if (IsInsideAttribute(literalNode))
+                return;
+
             // Check for threshold-ok comment in leading trivia
             if (HasThresholdOkComment(literalNode))
                 return;
@@ -90,10 +105,6 @@ namespace DINOForge.Analyzers
             {
                 // Don't flag if this is inside a const/readonly field declaration
                 if (IsInsideConstOrReadonlyDeclaration(literalNode))
-                    return;
-
-                // Don't flag if this is inside an attribute
-                if (IsInsideAttribute(literalNode))
                     return;
 
                 var diagnostic = Diagnostic.Create(Rule, literalNode.GetLocation(), numValue);
@@ -195,18 +206,17 @@ namespace DINOForge.Analyzers
 
         private static bool IsInsideAttribute(SyntaxNode node)
         {
-            var current = node.Parent;
-
-            while (current != null)
+            // Walk ancestors looking for an AttributeSyntax (or AttributeArgumentSyntax).
+            // Stop only at a MemberDeclaration or StatementSyntax — those mark the end of an
+            // attribute argument expression context. Do NOT stop on the first ExpressionSyntax
+            // ancestor (the literal itself, BinaryExpression, etc. ARE ExpressionSyntax).
+            foreach (var ancestor in node.Ancestors())
             {
-                if (current is AttributeSyntax)
+                if (ancestor is AttributeSyntax || ancestor is AttributeArgumentSyntax || ancestor is AttributeArgumentListSyntax)
                     return true;
 
-                // Stop searching once we leave the attribute context
-                if (current is MemberDeclarationSyntax or StatementSyntax or ExpressionSyntax && !(current is AttributeArgumentSyntax))
+                if (ancestor is MemberDeclarationSyntax || ancestor is StatementSyntax)
                     return false;
-
-                current = current.Parent;
             }
 
             return false;

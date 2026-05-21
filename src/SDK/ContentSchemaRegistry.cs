@@ -23,7 +23,7 @@ namespace DINOForge.SDK
             };
 
         /// <inheritdoc />
-        public IReadOnlyCollection<string> ContentTypes => SchemaNames.Keys.ToList();
+        public IReadOnlyCollection<string> ContentTypes => SchemaNames.Keys;
 
         /// <inheritdoc />
         public bool TryResolveSchemaName(string contentType, out string schemaName)

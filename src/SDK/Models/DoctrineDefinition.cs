@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
@@ -7,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Stub model for a DINOForge doctrine definition (doctrines/*.yaml).
     /// </summary>
-    public class DoctrineDefinition : IValidatable
+    public sealed class DoctrineDefinition : IValidatable
     {
         /// <summary>Unique doctrine identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -33,7 +34,7 @@ namespace DINOForge.SDK.Models
         /// Keys are stat or system identifiers; values are multiplier or additive amounts.
         /// </summary>
         [YamlMember(Alias = "modifiers")]
-        public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>();
+        public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
 
         /// <summary>
         /// Validates that the doctrine definition is semantically valid.

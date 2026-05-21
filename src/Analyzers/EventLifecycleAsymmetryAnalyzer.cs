@@ -8,10 +8,13 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace DINOForge.Analyzers
 {
+    // #849: pair `+=` with `-=` lifecycle check; recognize OnEnable/OnDisable and
+    // ctor/Dispose pairs as valid symmetric subscription/unsubscription sites.
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class EventLifecycleAsymmetryAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "DF0105";
+        public const string NoCleanupDiagnosticId = "DF0105a";
         private const string Category = "Resource Management";
 
         private static readonly LocalizableString Title =
@@ -19,6 +22,9 @@ namespace DINOForge.Analyzers
 
         private static readonly LocalizableString MessageFormat =
             (LocalizableString)"Found `{0} += {1}` in class with Dispose/OnDestroy but no matching `-= {1}` in cleanup. Add `{0} -= {1}` in Dispose/OnDestroy to prevent listener leaks.";
+
+        private static readonly LocalizableString NoCleanupMessageFormat =
+            (LocalizableString)"{0} has event subscription '{1} += {2}' but no Dispose/OnDestroy/OnDisable/Close method - handler can never unsubscribe";
 
         private static readonly LocalizableString Description =
             (LocalizableString)"Event handler subscriptions (+=) without matching unsubscriptions (-=) in cleanup methods (Dispose, OnDestroy, OnDisable, Close) can cause memory leaks by preventing listener cleanup. Always add a matching -= in the same cleanup method where the += is registered. Use `// event-lifecycle-ok: <reason>` inline comment to suppress.";
@@ -33,8 +39,18 @@ namespace DINOForge.Analyzers
             description: Description,
             helpLinkUri: null);
 
+        private static readonly DiagnosticDescriptor NoCleanupRule = new DiagnosticDescriptor(
+            NoCleanupDiagnosticId,
+            Title,
+            NoCleanupMessageFormat,
+            Category,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: Description,
+            helpLinkUri: null);
+
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            ImmutableArray.Create(Rule);
+            ImmutableArray.Create(Rule, NoCleanupRule);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -70,7 +86,18 @@ namespace DINOForge.Analyzers
 
             // Check if class has cleanup hook (Dispose, OnDestroy, etc.)
             if (!HasCleanupHook(classDeclaration))
+            {
+                // Gap #4 fix: no cleanup hook at all is the worst leak case — report instead of skip
+                var className = classDeclaration.Identifier.ValueText;
+                var noCleanupDiagnostic = Diagnostic.Create(
+                    NoCleanupRule,
+                    assignment.GetLocation(),
+                    className,
+                    eventName,
+                    handlerExpression);
+                context.ReportDiagnostic(noCleanupDiagnostic);
                 return;
+            }
 
             // Check if matching -= exists in cleanup method
             if (HasMatchingUnsubscription(classDeclaration, eventName, handlerExpression))

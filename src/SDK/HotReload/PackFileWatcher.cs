@@ -47,14 +47,14 @@ namespace DINOForge.SDK.HotReload
         /// <param name="registryManager">The registry manager to update on reload.</param>
         /// <param name="schemaValidator">Optional schema validator for re-validation.</param>
         /// <param name="log">Logging callback.</param>
-        /// <param name="debounceMs">Debounce window in milliseconds (default 500).</param>
+        /// <param name="debounceMs">Debounce window in milliseconds (default 15000; floor 500).</param>
         public PackFileWatcher(
             string packsDirectory,
             ContentLoader contentLoader,
             RegistryManager registryManager,
             ISchemaValidator? schemaValidator = null,
             Action<string>? log = null,
-            int debounceMs = 500)
+            int debounceMs = 15000)
         {
             _packsDirectory = packsDirectory ?? throw new ArgumentNullException(nameof(packsDirectory));
             _packReloadService = contentLoader ?? throw new ArgumentNullException(nameof(contentLoader));
@@ -62,7 +62,7 @@ namespace DINOForge.SDK.HotReload
             _ = registryManager ?? throw new ArgumentNullException(nameof(registryManager));
             _ = schemaValidator;
             _log = log ?? (_ => { });
-            _debounceMs = debounceMs > 0 ? debounceMs : 500;
+            _debounceMs = debounceMs > 0 ? debounceMs : 15000;
         }
 
         /// <summary>

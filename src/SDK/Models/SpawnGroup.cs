@@ -7,7 +7,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Represents a group of units to spawn together in a wave or squad.
     /// </summary>
-    public class SpawnGroup : IValidatable
+    public sealed class SpawnGroup : IValidatable
     {
         /// <summary>
         /// The unit ID to spawn (e.g. "unit-knight").

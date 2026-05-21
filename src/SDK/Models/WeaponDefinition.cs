@@ -6,7 +6,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Strongly-typed representation of a DINOForge weapon definition (weapons/*.yaml).
     /// </summary>
-    public class WeaponDefinition : IValidatable
+    public sealed class WeaponDefinition : IValidatable
     {
         /// <summary>Unique weapon identifier.</summary>
         [YamlMember(Alias = "id")]

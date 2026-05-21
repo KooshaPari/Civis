@@ -8,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// Strongly-typed representation of a DINOForge unit definition (units/*.yaml).
     /// Corresponds to schemas/unit.schema.yaml.
     /// </summary>
-    public class UnitDefinition : IValidatable
+    public sealed class UnitDefinition : IValidatable
     {
         /// <summary>Unique unit identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -56,16 +56,14 @@ namespace DINOForge.SDK.Models
         /// Fortified, Shielded, Mechanical, Biological, Heroic.
         /// </summary>
         [YamlMember(Alias = "defense_tags")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> DefenseTags { get; set; } = new List<string>();
+        public List<string> DefenseTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Behavior tags. Valid values: HoldLine, AdvanceFire, Charge, Kite,
         /// Swarm, SiegePriority, AntiStructure, AntiMass, AntiArmor, MoralePressure.
         /// </summary>
         [YamlMember(Alias = "behavior_tags")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> BehaviorTags { get; set; } = new List<string>();
+        public List<string> BehaviorTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Addressables key for the unit's 3D visual asset (LOD0 prefab).
@@ -124,7 +122,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Combat and movement statistics for a unit definition.
     /// </summary>
-    public class UnitStats
+    public sealed class UnitStats
     {
         /// <summary>Hit points. Default 1.</summary>
         [YamlMember(Alias = "hp")]
@@ -172,7 +170,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Visual asset overrides for a unit (icon, portrait, model, VFX).
     /// </summary>
-    public class UnitVisuals
+    public sealed class UnitVisuals
     {
         /// <summary>Icon asset path for the unit selection panel.</summary>
         [YamlMember(Alias = "icon")]
@@ -198,7 +196,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Audio asset overrides for a unit (attack, death, selection, movement).
     /// </summary>
-    public class UnitAudio
+    public sealed class UnitAudio
     {
         /// <summary>Sound effect played when the unit attacks.</summary>
         [YamlMember(Alias = "attack_sound")]

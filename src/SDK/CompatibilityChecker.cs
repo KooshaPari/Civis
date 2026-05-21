@@ -54,19 +54,88 @@ namespace DINOForge.SDK
         }
 
         /// <summary>
+        /// Resolves the current BepInEx version by reflecting on any loaded
+        /// BepInEx assembly in the AppDomain. Returns "*" (skip check) when
+        /// BepInEx is not loaded (e.g. CLI tools, unit tests).
+        /// </summary>
+        public static string CurrentBepInExVersion
+        {
+            get
+            {
+                try
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        var name = asm.GetName().Name;
+                        if (string.Equals(name, "BepInEx", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(name, "BepInEx.Core", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var v = asm.GetName().Version;
+                            if (v != null && v.Major > 0)
+                                return $"{v.Major}.{v.Minor}.{v.Build}";
+                        }
+                    }
+                }
+                catch
+                {
+                    // Reflection failures fall through to "*" (skip check). safe-swallow: best-effort version probe
+                }
+                return "*";
+            }
+        }
+
+        /// <summary>
+        /// Resolves the current Unity engine version by reflecting on the
+        /// UnityEngine.CoreModule assembly. Returns "*" when not loaded.
+        /// </summary>
+        public static string CurrentUnityVersion
+        {
+            get
+            {
+                try
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        var name = asm.GetName().Name;
+                        if (string.Equals(name, "UnityEngine.CoreModule", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(name, "UnityEngine", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Unity puts the editor version in InformationalVersion (e.g. "2021.3.45f2")
+                            var info = (AssemblyInformationalVersionAttribute?)Attribute.GetCustomAttribute(
+                                asm, typeof(AssemblyInformationalVersionAttribute));
+                            if (info != null && !string.IsNullOrWhiteSpace(info.InformationalVersion))
+                                return info.InformationalVersion;
+                            var v = asm.GetName().Version;
+                            if (v != null && v.Major > 0)
+                                return v.ToString();
+                        }
+                    }
+                }
+                catch
+                {
+                    // safe-swallow: best-effort version probe
+                }
+                return "*";
+            }
+        }
+
+        /// <summary>
         /// Checks if a pack manifest is compatible with the specified versions.
+        /// Pass null for bepinexVersion/unityVersion to auto-detect from loaded assemblies.
         /// </summary>
         /// <param name="manifest">The pack manifest to validate.</param>
         /// <param name="dinoGameVersion">Current DINO game version, e.g. "1.0.0".</param>
-        /// <param name="bepinexVersion">Current BepInEx version.</param>
-        /// <param name="unityVersion">Current Unity version, e.g. "2021.3.45f2".</param>
+        /// <param name="bepinexVersion">Current BepInEx version, or null to auto-detect.</param>
+        /// <param name="unityVersion">Current Unity version, or null to auto-detect.</param>
         /// <returns>A CompatibilityResult with compatibility status and any warnings/errors.</returns>
         public static CompatibilityResult CheckPack(
             PackManifest manifest,
             string dinoGameVersion = "*",
-            string bepinexVersion = "*",
-            string unityVersion = "*")
+            string? bepinexVersion = null,
+            string? unityVersion = null)
         {
+            bepinexVersion ??= CurrentBepInExVersion;
+            unityVersion ??= CurrentUnityVersion;
             var result = new CompatibilityResult();
 
             // Check framework version
@@ -280,11 +349,11 @@ namespace DINOForge.SDK
         /// <summary>
         /// List of warning messages (compatibility issues that don't block loading).
         /// </summary>
-        public List<string> Warnings { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>(); // public-mutable-ok: result accumulator, callers append during validation
 
         /// <summary>
         /// List of error messages (compatibility issues that block loading).
         /// </summary>
-        public List<string> Errors { get; set; } = new List<string>();
+        public List<string> Errors { get; set; } = new List<string>(); // public-mutable-ok: result accumulator, callers append during validation
     }
 }

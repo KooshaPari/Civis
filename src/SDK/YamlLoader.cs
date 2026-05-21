@@ -70,7 +70,7 @@ namespace DINOForge.SDK
                 return;
 
             string yaml = Serialize(obj);
-            File.WriteAllText(filePath, yaml);
+            File.WriteAllText(filePath, yaml, System.Text.Encoding.UTF8);
         }
 
         /// <summary>

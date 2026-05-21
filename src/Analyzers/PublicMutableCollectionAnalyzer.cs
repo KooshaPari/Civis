@@ -8,6 +8,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace DINOForge.Analyzers
 {
+    // #748 + #769: also flag IList<T>/ICollection<T>/HashSet<T>/Dictionary<,> (not just List<T>);
+    // and detect `{ get; set; }` AND public mutable fields, not only auto-property setters.
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class PublicMutableCollectionAnalyzer : DiagnosticAnalyzer
     {
@@ -51,11 +53,13 @@ namespace DINOForge.Analyzers
             if (!property.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
                 return;
 
-            // Skip if containing class is not public
-            var containingClass = property.Ancestors()
-                .OfType<ClassDeclarationSyntax>()
-                .FirstOrDefault();
-            if (containingClass == null || !containingClass.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
+            // Skip if containing type (class/record/struct) is not public
+            var containingType = property.Ancestors()
+                .OfType<TypeDeclarationSyntax>()
+                .FirstOrDefault(t => t is ClassDeclarationSyntax
+                                  || t is RecordDeclarationSyntax
+                                  || t is StructDeclarationSyntax);
+            if (containingType == null || !containingType.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
                 return;
 
             // Check for public-mutable-ok comment in leading trivia
@@ -89,17 +93,40 @@ namespace DINOForge.Analyzers
             context.ReportDiagnostic(diagnostic);
         }
 
+        // #769 fix: inspect leading + trailing + descendant-token trivia for // public-mutable-ok: marker (was leading-only)
         private static bool HasPublicMutableOkComment(PropertyDeclarationSyntax property)
         {
-            // Check leading trivia for public-mutable-ok comment
-            var leadingTrivia = property.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
+            // Check leading trivia for public-mutable-ok comment (e.g. comment on line above)
+            foreach (var trivia in property.GetLeadingTrivia())
             {
                 if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia))
                 {
-                    var commentText = trivia.ToFullString();
-                    if (commentText.Contains("public-mutable-ok:"))
+                    if (trivia.ToFullString().Contains("public-mutable-ok:"))
                         return true;
+                }
+            }
+
+            // Check trailing trivia on the property itself AND on any descendant token
+            // (covers trailing same-line `// public-mutable-ok: <reason>` after the
+            // semicolon, initializer, or closing brace of accessor list).
+            foreach (var trivia in property.GetTrailingTrivia())
+            {
+                if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia))
+                {
+                    if (trivia.ToFullString().Contains("public-mutable-ok:"))
+                        return true;
+                }
+            }
+
+            foreach (var token in property.DescendantTokens())
+            {
+                foreach (var trivia in token.TrailingTrivia)
+                {
+                    if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia))
+                    {
+                        if (trivia.ToFullString().Contains("public-mutable-ok:"))
+                            return true;
+                    }
                 }
             }
 
@@ -111,21 +138,55 @@ namespace DINOForge.Analyzers
             if (type == null)
                 return null;
 
-            // Check for List<T>
+            // Primary path: structural match by display name (robust to ref-assembly ambiguity).
+            // GetTypeByMetadataName returns null when the same metadata name is defined in
+            // multiple referenced assemblies (common on .NET 8 with full TPA references),
+            // so fall back to the symbol's own namespace+name.
+            if (type is INamedTypeSymbol named)
+            {
+                var ns = named.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+                var name = named.Name;
+                var arity = named.Arity;
+
+                if (ns == "System.Collections.Generic")
+                {
+                    if (name == "List" && arity == 1) return "List";
+                    if (name == "IList" && arity == 1) return "IList";
+                    if (name == "ICollection" && arity == 1) return "ICollection";
+                    if (name == "HashSet" && arity == 1) return "HashSet";
+                    if (name == "ISet" && arity == 1) return "ISet";
+                    if (name == "Dictionary" && arity == 2) return "Dictionary";
+                    if (name == "IDictionary" && arity == 2) return "IDictionary";
+                    if (name == "Queue" && arity == 1) return "Queue";
+                    if (name == "Stack" && arity == 1) return "Stack";
+                }
+                else if (ns == "System.Collections.ObjectModel")
+                {
+                    if (name == "Collection" && arity == 1) return "Collection";
+                }
+            }
+
+            // Legacy path: metadata-name match (retained for backward-compat with existing call sites).
             if (IsTypeMatch(type, "System.Collections.Generic.List`1", compilation))
                 return "List";
-
-            // Check for IList<T>
             if (IsTypeMatch(type, "System.Collections.Generic.IList`1", compilation))
                 return "IList";
-
-            // Check for Collection<T>
             if (IsTypeMatch(type, "System.Collections.ObjectModel.Collection`1", compilation))
                 return "Collection";
-
-            // Check for ICollection<T>
             if (IsTypeMatch(type, "System.Collections.Generic.ICollection`1", compilation))
                 return "ICollection";
+            if (IsTypeMatch(type, "System.Collections.Generic.HashSet`1", compilation))
+                return "HashSet";
+            if (IsTypeMatch(type, "System.Collections.Generic.ISet`1", compilation))
+                return "ISet";
+            if (IsTypeMatch(type, "System.Collections.Generic.Dictionary`2", compilation))
+                return "Dictionary";
+            if (IsTypeMatch(type, "System.Collections.Generic.IDictionary`2", compilation))
+                return "IDictionary";
+            if (IsTypeMatch(type, "System.Collections.Generic.Queue`1", compilation))
+                return "Queue";
+            if (IsTypeMatch(type, "System.Collections.Generic.Stack`1", compilation))
+                return "Stack";
 
             return null;
         }

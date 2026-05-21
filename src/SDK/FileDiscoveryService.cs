@@ -17,6 +17,9 @@ namespace DINOForge.SDK
         private static readonly string[] DefaultExclusionsArray = new[]
         {
             "archived",
+            "_archived",
+            "_temp",
+            "_scratch",
             "export",
             "generated",
             "bin",
@@ -268,7 +271,22 @@ namespace DINOForge.SDK
             var segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             foreach (var segment in segments)
             {
+                if (string.IsNullOrEmpty(segment))
+                {
+                    continue;
+                }
+
                 if (_exclusions.Contains(segment))
+                {
+                    return true;
+                }
+
+                // Convention: any directory segment starting with "_" is treated as
+                // an internal/archived/scratch area and is excluded from discovery.
+                // This catches _archived, _temp, _scratch, _wip, etc. uniformly
+                // (fix #852: packs/_archived/ was being silently re-discovered
+                // because only the literal "archived" was excluded).
+                if (_useDefaults && segment[0] == '_')
                 {
                     return true;
                 }

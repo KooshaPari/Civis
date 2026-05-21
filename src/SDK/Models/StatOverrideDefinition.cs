@@ -24,14 +24,13 @@ namespace DINOForge.SDK.Models
     /// Represents a collection of stat overrides loaded from a pack's stats YAML file.
     /// Each override targets a specific model path and applies a value modification.
     /// </summary>
-    public class StatOverrideDefinition : IValidatable
+    public sealed class StatOverrideDefinition : IValidatable
     {
         /// <summary>
         /// The list of stat override entries to apply.
         /// </summary>
         [YamlMember(Alias = "overrides")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<StatOverrideEntry> Overrides { get; set; } = new List<StatOverrideEntry>();
+        public List<StatOverrideEntry> Overrides { get; set; } = new List<StatOverrideEntry>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Validates that the stat override definition is semantically valid.
@@ -63,7 +62,7 @@ namespace DINOForge.SDK.Models
     /// A single stat override entry that targets a specific model path
     /// and applies a value using the specified mode.
     /// </summary>
-    public class StatOverrideEntry : IValidatable
+    public sealed class StatOverrideEntry : IValidatable
     {
         /// <summary>
         /// SDK model path to target (e.g. "unit.stats.hp").

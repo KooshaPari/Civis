@@ -14,6 +14,20 @@ namespace DINOForge.SDK.Registry
         private readonly Dictionary<string, List<RegistryEntry<T>>> _entries =
             new Dictionary<string, List<RegistryEntry<T>>>(StringComparer.Ordinal);
 
+        // #771: case-insensitive shadow set for detecting case-variant collisions.
+        // IDs in DINOForge should use lowercase-kebab; registering both 'Clone-Trooper' and
+        // 'clone-trooper' is almost always a bug because the case-sensitive primary store
+        // will silently accept both as distinct entries while pack authors expect one.
+        private readonly HashSet<string> _shadow = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly Action<string> _log;
+
+        /// <summary>Creates a Registry with an optional warning logger sink (used for case-variant detection).</summary>
+        public Registry(Action<string>? log = null)
+        {
+            _log = log ?? (_ => { });
+        }
+
         /// <inheritdoc />
         public void Register(string id, T entry, RegistrySource source, string sourcePackId, int loadOrder = 100)
         {
@@ -23,6 +37,15 @@ namespace DINOForge.SDK.Registry
             {
                 list = new List<RegistryEntry<T>>();
                 _entries[id] = list;
+            }
+
+            // #771: case-variant collision detection. _shadow.Add returns false if a case-
+            // insensitive duplicate already exists; if the case-sensitive store does NOT yet
+            // contain this exact id, the only way the shadow can already have it is via a
+            // different-casing entry — emit a warning.
+            if (!_shadow.Add(id) && list.Count == 0)
+            {
+                _log($"[Registry<{typeof(T).Name}>] Case-variant collision: '{id}' conflicts with an existing case-variant ID. IDs should use lowercase-kebab convention.");
             }
 
             list.Add(registryEntry);

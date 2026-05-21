@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
@@ -7,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Strongly-typed representation of a DINOForge building definition (buildings/*.yaml).
     /// </summary>
-    public class BuildingDefinition : IValidatable
+    public sealed class BuildingDefinition : IValidatable
     {
         /// <summary>Unique building identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -43,7 +44,7 @@ namespace DINOForge.SDK.Models
         /// Keys are resource or unit identifiers; values are production amounts per tick.
         /// </summary>
         [YamlMember(Alias = "production")]
-        public Dictionary<string, int> Production { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> Production { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>
         /// Addressables key for the building's 3D visual asset (LOD0 prefab).
@@ -59,8 +60,7 @@ namespace DINOForge.SDK.Models
         /// attached to its ECS entity on world load by <c>AerialBuildingMapper</c>.
         /// </summary>
         [YamlMember(Alias = "defense_tags")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> DefenseTags { get; set; } = new List<string>();
+        public List<string> DefenseTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Anti-air parameters. Only relevant when <see cref="DefenseTags"/> contains "AntiAir".
@@ -93,7 +93,7 @@ namespace DINOForge.SDK.Models
     /// These values are mapped to <c>AntiAirComponent</c>
     /// when a building with the <c>AntiAir</c> defense_tag is initialised on world load.
     /// </summary>
-    public class BuildingAntiAirProperties
+    public sealed class BuildingAntiAirProperties
     {
         /// <summary>
         /// Maximum engagement range in world units at which this building can

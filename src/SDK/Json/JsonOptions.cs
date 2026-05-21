@@ -24,5 +24,31 @@ namespace DINOForge.SDK.Json
             AllowTrailingCommas = true,
             Converters = { new JsonStringEnumConverter() },
         };
+
+        /// <summary>
+        /// Same as <see cref="Default"/> but with <c>WriteIndented = true</c>. Use for
+        /// human-readable manifest and dump output.
+        /// </summary>
+        public static readonly JsonSerializerOptions Indented = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() },
+        };
+
+        /// <summary>
+        /// Same as <see cref="Default"/> but with <c>WriteIndented = false</c> (compact). Use for
+        /// IPC payloads and on-the-wire serialization where size matters.
+        /// </summary>
+        public static readonly JsonSerializerOptions Compact = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+            WriteIndented = false,
+            Converters = { new JsonStringEnumConverter() },
+        };
     }
 }

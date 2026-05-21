@@ -23,7 +23,7 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>All individual values read from matching entities.</summary>
         [JsonProperty("values")]
-        // public-mutable-ok: JSON deserialization requires mutable List<T> for Newtonsoft.Json
+        // public-mutable-ok: JSON deserializer requires mutable List
         public List<float> Values { get; set; } = new List<float>();
 
         /// <summary>The resolved ECS component type name.</summary>

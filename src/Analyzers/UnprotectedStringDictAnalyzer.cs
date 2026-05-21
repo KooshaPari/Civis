@@ -7,6 +7,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace DINOForge.Analyzers
 {
+    // #706 + #719: detect PredefinedTypeSyntax (e.g. `string`) in addition to IdentifierName,
+    // and scan ALL constructor args for StringComparer (not just position 0).
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class UnprotectedStringDictAnalyzer : DiagnosticAnalyzer
     {
@@ -60,17 +62,33 @@ namespace DINOForge.Analyzers
                 return;
             }
 
-            // Check if first argument looks like a StringComparer (heuristic: contains "StringComparer" or "Ordinal")
-            var firstArg = argumentList.Arguments[0];
-            var argText = firstArg.ToString();
-            if (!argText.Contains("StringComparer", StringComparison.Ordinal) &&
-                !argText.Contains("Ordinal", StringComparison.Ordinal) &&
-                !argText.Contains("IgnoreCase", StringComparison.Ordinal))
+            // #719 fix: scan ALL arguments for StringComparer (was Arguments[0] only)
+            // Check ALL arguments: Dictionary<string,T> constructors accept the comparer at
+            // varying positions depending on overload (1-arg comparer; 2-arg (capacity, comparer);
+            // 2-arg (sourceDict, comparer); 3-arg (capacity, comparer) etc.). The comparer is
+            // recognized if any argument is `StringComparer.<member>` or textually contains the
+            // StringComparer/Ordinal/IgnoreCase tokens.
+            foreach (var arg in argumentList.Arguments)
             {
-                // First argument doesn't look like a StringComparer — flag it
-                var diagnostic = Diagnostic.Create(Rule, objectCreation.GetLocation());
-                context.ReportDiagnostic(diagnostic);
+                if (arg.Expression is MemberAccessExpressionSyntax memberAccess &&
+                    memberAccess.Expression is IdentifierNameSyntax id &&
+                    id.Identifier.ValueText == "StringComparer")
+                {
+                    return;
+                }
+
+                var argText = arg.ToString();
+                if (argText.Contains("StringComparer", StringComparison.Ordinal) ||
+                    argText.Contains("Ordinal", StringComparison.Ordinal) ||
+                    argText.Contains("IgnoreCase", StringComparison.Ordinal))
+                {
+                    return;
+                }
             }
+
+            // No argument matched a StringComparer — flag it
+            var noComparerDiagnostic = Diagnostic.Create(Rule, objectCreation.GetLocation());
+            context.ReportDiagnostic(noComparerDiagnostic);
         }
 
         private static bool IsStringDictionaryCreation(ObjectCreationExpressionSyntax objectCreation)
@@ -91,6 +109,13 @@ namespace DINOForge.Analyzers
                         var baseName = genericName.Identifier.ValueText;
                         return baseName == "Dictionary" || baseName == "ConcurrentDictionary";
                     }
+                    // #706 fix: also recognize PredefinedTypeSyntax 'string' keyword (was IdentifierNameSyntax only)
+                    if (firstTypeArg is PredefinedTypeSyntax predefinedArg &&
+                        predefinedArg.Keyword.IsKind(SyntaxKind.StringKeyword))
+                    {
+                        var baseName = genericName.Identifier.ValueText;
+                        return baseName == "Dictionary" || baseName == "ConcurrentDictionary";
+                    }
                 }
             }
 
@@ -105,6 +130,12 @@ namespace DINOForge.Analyzers
                         var firstTypeArg = typeArgumentList.Arguments[0];
                         if (firstTypeArg is IdentifierNameSyntax identifierArg &&
                             identifierArg.Identifier.ValueText == "string")
+                        {
+                            var baseName = rightGeneric.Identifier.ValueText;
+                            return baseName == "Dictionary" || baseName == "ConcurrentDictionary";
+                        }
+                        if (firstTypeArg is PredefinedTypeSyntax predefinedArg &&
+                            predefinedArg.Keyword.IsKind(SyntaxKind.StringKeyword))
                         {
                             var baseName = rightGeneric.Identifier.ValueText;
                             return baseName == "Dictionary" || baseName == "ConcurrentDictionary";

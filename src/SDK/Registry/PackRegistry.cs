@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using DINOForge.SDK.Json;
 
 namespace DINOForge.SDK.Registry
 {
@@ -232,12 +233,7 @@ namespace DINOForge.SDK.Registry
                     .GetStringAsync(_registryUrl)
                     .ConfigureAwait(false);
 
-                JsonSerializerOptions options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                };
-
-                RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, options);
+                RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, JsonOptions.Default);
 
                 _cache = doc?.Packs ?? new List<RegistryPackEntry>();
                 _cacheExpiry = _timeProvider.GetUtcNow().UtcDateTime.Add(CacheDuration);

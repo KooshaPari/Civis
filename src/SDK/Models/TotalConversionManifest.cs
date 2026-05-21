@@ -1,5 +1,7 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -8,7 +10,7 @@ namespace DINOForge.SDK.Models
     /// Manifest for a total conversion pack — replaces all vanilla game content
     /// with themed alternatives (e.g. Star Wars, Modern Warfare).
     /// </summary>
-    public class TotalConversionManifest
+    public sealed class TotalConversionManifest : IValidatable
     {
         /// <summary>
         /// Unique identifier for the total conversion pack.
@@ -53,13 +55,12 @@ namespace DINOForge.SDK.Models
 
         /// <summary>Maps vanilla faction IDs to replacement faction IDs.</summary>
         [YamlMember(Alias = "replaces_vanilla")]
-        public Dictionary<string, string> ReplacesVanilla { get; set; } = new();
+        public Dictionary<string, string> ReplacesVanilla { get; set; } = new(StringComparer.Ordinal);
 
         /// <summary>
         /// List of faction replacements defined in this total conversion.
         /// </summary>
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<TcFactionEntry> Factions { get; set; } = new();
+        public List<TcFactionEntry> Factions { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Asset replacement mappings (textures, audio, UI).
@@ -71,15 +72,52 @@ namespace DINOForge.SDK.Models
         /// List of pack IDs that conflict with this total conversion.
         /// </summary>
         [YamlMember(Alias = "conflicts_with")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> ConflictsWith { get; set; } = new();
+        public List<string> ConflictsWith { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>If true, only one total conversion can be active at a time.</summary>
         public bool Singleton { get; set; } = true;
+
+        /// <summary>
+        /// Validates that the total conversion manifest is semantically valid.
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "Id is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(Name))
+                errors.Add(new ValidationError("name", "Name is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(Version))
+                errors.Add(new ValidationError("version", "Version is required.", "validation"));
+            if (string.IsNullOrWhiteSpace(Type))
+                errors.Add(new ValidationError("type", "Type is required.", "validation"));
+            else if (Type != "total_conversion")
+                errors.Add(new ValidationError("type", "Type must be 'total_conversion'.", "validation"));
+            if (string.IsNullOrWhiteSpace(FrameworkVersion))
+                errors.Add(new ValidationError("framework_version", "FrameworkVersion is required.", "validation"));
+
+            if (Factions != null)
+            {
+                for (int i = 0; i < Factions.Count; i++)
+                {
+                    var f = Factions[i];
+                    if (f == null) continue;
+                    if (string.IsNullOrWhiteSpace(f.Id))
+                        errors.Add(new ValidationError($"factions[{i}].id", "Faction entry Id is required.", "validation"));
+                    if (string.IsNullOrWhiteSpace(f.Replaces))
+                        errors.Add(new ValidationError($"factions[{i}].replaces", "Faction entry Replaces is required.", "validation"));
+                    if (string.IsNullOrWhiteSpace(f.Name))
+                        errors.Add(new ValidationError($"factions[{i}].name", "Faction entry Name is required.", "validation"));
+                }
+            }
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 
     /// <summary>A single faction replacement entry in a total conversion.</summary>
-    public class TcFactionEntry
+    public sealed class TcFactionEntry
     {
         /// <summary>
         /// Unique identifier for this faction entry.
@@ -107,32 +145,30 @@ namespace DINOForge.SDK.Models
         /// <summary>
         /// List of unit IDs that belong to this faction.
         /// </summary>
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> Units { get; set; } = new();
+        public List<string> Units { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// List of building IDs that this faction can construct.
         /// </summary>
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<string> Buildings { get; set; } = new();
+        public List<string> Buildings { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
     }
 
     /// <summary>Asset replacement mappings for a total conversion.</summary>
-    public class TcAssetReplacements
+    public sealed class TcAssetReplacements
     {
         /// <summary>
         /// Maps vanilla texture asset paths to replacement texture asset paths.
         /// </summary>
-        public Dictionary<string, string> Textures { get; set; } = new();
+        public Dictionary<string, string> Textures { get; set; } = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Maps vanilla audio asset paths to replacement audio asset paths.
         /// </summary>
-        public Dictionary<string, string> Audio { get; set; } = new();
+        public Dictionary<string, string> Audio { get; set; } = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Maps vanilla UI asset paths to replacement UI asset paths.
         /// </summary>
-        public Dictionary<string, string> Ui { get; set; } = new();
+        public Dictionary<string, string> Ui { get; set; } = new(StringComparer.Ordinal);
     }
 }

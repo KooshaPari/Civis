@@ -8,7 +8,7 @@ namespace DINOForge.SDK.Models
     /// Strongly-typed representation of a DINOForge faction definition (factions/*.yaml).
     /// Corresponds to schemas/faction.schema.yaml.
     /// </summary>
-    public class FactionDefinition : IValidatable
+    public sealed class FactionDefinition : IValidatable
     {
         /// <summary>Core faction identity (id, name, theme, archetype).</summary>
         [YamlMember(Alias = "faction")]
@@ -85,7 +85,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Core identity block for a faction definition.
     /// </summary>
-    public class FactionInfo
+    public sealed class FactionInfo
     {
         /// <summary>Unique faction identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -125,7 +125,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Economy modifiers applied to a faction's resource gathering, upkeep, research, and building.
     /// </summary>
-    public class FactionEconomy
+    public sealed class FactionEconomy
     {
         /// <summary>
         /// Resource gather rate multiplier. Default 1.0.
@@ -155,7 +155,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Army-wide modifiers applied to a faction's military capabilities.
     /// </summary>
-    public class FactionArmy
+    public sealed class FactionArmy
     {
         /// <summary>
         /// Morale style. Valid values: disciplined, mechanical, fanatical, irregular, custom.
@@ -185,7 +185,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Maps abstract unit role slots to concrete unit definition IDs for a faction.
     /// </summary>
-    public class FactionRoster
+    public sealed class FactionRoster
     {
         /// <summary>Unit ID for the cheap infantry role slot.</summary>
         [YamlMember(Alias = "cheap_infantry")]
@@ -235,7 +235,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Maps abstract building roles to concrete building definition IDs for a faction.
     /// </summary>
-    public class FactionBuildings
+    public sealed class FactionBuildings
     {
         /// <summary>Building ID for the barracks role.</summary>
         [YamlMember(Alias = "barracks")]
@@ -281,7 +281,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Visual theme overrides for a faction (colors, projectile effects, UI skin).
     /// </summary>
-    public class FactionVisuals
+    public sealed class FactionVisuals
     {
         /// <summary>
         /// Hex color string, e.g. "#FF0000".
@@ -307,7 +307,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Audio pack overrides for a faction (weapons, structures, ambient, music).
     /// </summary>
-    public class FactionAudio
+    public sealed class FactionAudio
     {
         /// <summary>Weapon sound effects pack asset ID.</summary>
         [YamlMember(Alias = "weapon_pack")]

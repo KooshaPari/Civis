@@ -117,8 +117,12 @@ public static class BridgeReceiptVerifier
         }
 
         // 2) Recompute the receipt HMAC over the canonical (state, timestamp, frame) triple.
+        // SECURITY (#614): use constant-time comparison on the decoded HMAC bytes to
+        // avoid a hex-prefix timing side-channel. StringComparer.Ordinal.Equals short-
+        // circuits on the first differing character and would leak the byte index of
+        // the first mismatch to a remote attacker who can measure response latency.
         string expectedHmac = ComputeReceiptHmac(key, receipt.TimestampUtc, receipt.WorldFrame, receipt.StateSha256Hex);
-        if (!StringComparer.Ordinal.Equals(expectedHmac, receipt.HmacHex))
+        if (!ConstantTimeHexEquals(expectedHmac, receipt.HmacHex))
         {
             return new VerificationResult(mode != VerificationMode.Strict, mode, "hmac mismatch");
         }
@@ -171,6 +175,51 @@ public static class BridgeReceiptVerifier
     {
         using var sha = SHA256.Create();
         return ToHexLower(sha.ComputeHash(input));
+    }
+
+    /// <summary>
+    /// Constant-time comparison of two lowercase hex strings representing
+    /// equal-length byte digests (e.g. HMAC-SHA256 outputs). Decodes both
+    /// strings to bytes and XOR-accumulates differences to avoid the early-
+    /// exit timing side-channel inherent in <see cref="string.Equals(string, string)"/>.
+    /// </summary>
+    /// <remarks>
+    /// netstandard2.0 polyfill — <c>Convert.FromHexString</c> and
+    /// <c>CryptographicOperations.FixedTimeEquals</c> are .NET 5+ only.
+    /// The length-mismatch branch is acceptable per RFC 6234 / dotnet runtime
+    /// reference impl: HMAC outputs have a fixed, public length, so the length
+    /// itself is not secret.
+    /// </remarks>
+    internal static bool ConstantTimeHexEquals(string? a, string? b)
+    {
+        if (a == null || b == null) return false;
+        if (a.Length != b.Length) return false;
+        if ((a.Length & 1) != 0) return false; // malformed hex — reject
+
+        int diff = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            int da = HexNibble(a[i]);
+            int db = HexNibble(b[i]);
+            // OR malformed-nibble flag into diff so a non-hex char forces inequality
+            // without an early return that would leak position.
+            diff |= (da | db) >> 8;
+            diff |= (da ^ db) & 0xFF;
+        }
+        return diff == 0;
+    }
+
+    /// <summary>
+    /// Returns 0..15 for valid hex chars, or a value with bit 8 set (>=256)
+    /// for invalid input. Branchless so the caller can fold the validity flag
+    /// into its accumulator without leaking position.
+    /// </summary>
+    private static int HexNibble(char c)
+    {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        return 0x100; // sentinel: invalid
     }
 
     private static string ToHexLower(byte[] bytes)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK.Models
@@ -8,7 +9,7 @@ namespace DINOForge.SDK.Models
     /// Maps to DINO's Components.WaveHolder, Components.SpawnWaveTrigger,
     /// Components.FinalWaveTrigger, and Components.EnemySpawner ECS components.
     /// </summary>
-    public class WaveDefinition
+    public sealed class WaveDefinition : IValidatable
     {
         /// <summary>Unique wave identifier.</summary>
         [YamlMember(Alias = "id")]
@@ -45,20 +46,67 @@ namespace DINOForge.SDK.Models
         /// Groups of units to spawn in this wave.
         /// </summary>
         [YamlMember(Alias = "spawn_groups")]
-        // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
-        public List<SpawnGroup> SpawnGroups { get; set; } = new List<SpawnGroup>();
+        public List<SpawnGroup> SpawnGroups { get; set; } = new List<SpawnGroup>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Optional difficulty scaling multipliers for this wave.
         /// </summary>
         [YamlMember(Alias = "difficulty_scaling")]
         public DifficultyScaling? DifficultyScaling { get; set; }
+
+        /// <summary>
+        /// Validates that the wave definition is semantically valid.
+        /// Aggregates child SpawnGroup validations (chain delegation).
+        /// </summary>
+        public ValidationResult Validate()
+        {
+            var errors = new List<ValidationError>();
+
+            if (string.IsNullOrWhiteSpace(Id))
+                errors.Add(new ValidationError("id", "WaveId is required.", "validation"));
+            if (WaveNumber < 1)
+                errors.Add(new ValidationError("wave_number", "WaveNumber must be >= 1.", "validation"));
+            if (DelaySeconds < 0f)
+                errors.Add(new ValidationError("delay_seconds", "DelaySeconds must be >= 0.", "validation"));
+
+            if (DifficultyScaling != null)
+            {
+                if (DifficultyScaling.CountMultiplier <= 0f)
+                    errors.Add(new ValidationError("difficulty_scaling.count_multiplier", "CountMultiplier must be > 0.", "validation"));
+                if (DifficultyScaling.HealthMultiplier <= 0f)
+                    errors.Add(new ValidationError("difficulty_scaling.health_multiplier", "HealthMultiplier must be > 0.", "validation"));
+                if (DifficultyScaling.DamageMultiplier <= 0f)
+                    errors.Add(new ValidationError("difficulty_scaling.damage_multiplier", "DamageMultiplier must be > 0.", "validation"));
+            }
+
+            if (SpawnGroups != null)
+            {
+                for (int i = 0; i < SpawnGroups.Count; i++)
+                {
+                    var child = SpawnGroups[i];
+                    if (child == null) continue;
+                    var childResult = child.Validate();
+                    if (!childResult.IsValid)
+                    {
+                        foreach (var childErr in childResult.Errors)
+                        {
+                            errors.Add(new ValidationError(
+                                $"spawn_groups[{i}].{childErr.Path}",
+                                childErr.Message,
+                                childErr.Rule));
+                        }
+                    }
+                }
+            }
+
+            return errors.Count > 0 ? ValidationResult.Failure(errors) : ValidationResult.Success();
+        }
     }
 
     /// <summary>
     /// Difficulty scaling multipliers applied to a wave.
     /// </summary>
-    public class DifficultyScaling
+    public sealed class DifficultyScaling
     {
         /// <summary>
         /// Multiplier for unit count. Default 1.0.

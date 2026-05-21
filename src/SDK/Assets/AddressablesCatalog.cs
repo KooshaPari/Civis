@@ -93,18 +93,17 @@ namespace DINOForge.SDK.Assets
                     byte[] entryData = Convert.FromBase64String(entryDataString);
                     ParseEntryData(entryData, internalIds, bundleIndices, keyToBundleMap);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // If entry data parsing fails, fall back to assigning all
-                    // non-bundle assets to the first/largest bundle (defaultlocalgroup).
-                    string fallbackBundle = bundlePaths.Count > 0 ? bundlePaths[0] : string.Empty;
-                    for (int i = 0; i < internalIds.Count; i++)
-                    {
-                        if (!bundleIndices.Contains(i) && !string.IsNullOrEmpty(fallbackBundle))
-                        {
-                            keyToBundleMap[internalIds[i]] = fallbackBundle;
-                        }
-                    }
+                    // [Pattern #111] Surface the parse failure instead of silently swallowing it.
+                    // Previous fallback assigned every non-bundle asset to bundlePaths[0], which is
+                    // wrong whenever the catalog contains >1 bundle. Per CLAUDE.md Phase 1 swap is
+                    // "best-effort": we clear the map so callers skip Phase 1 cleanly, and log the
+                    // full exception so the failure is diagnosable rather than invisible.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[AddressablesCatalog] Failed to parse m_EntryDataString; " +
+                        $"key->bundle map will be empty (Phase 1 swap unavailable). Exception: {ex}");
+                    keyToBundleMap.Clear();
                 }
             }
 

@@ -107,7 +107,7 @@ namespace DINOForge.SDK.Universe
 
             string path = Path.Combine(outputDir, "pack.yaml");
             string yaml = _serializer.Serialize(manifest);
-            File.WriteAllText(path, yaml);
+            File.WriteAllText(path, yaml, System.Text.Encoding.UTF8);
             _log($"[PackGenerator] Generated manifest: {path}");
             return path;
         }
@@ -149,7 +149,7 @@ namespace DINOForge.SDK.Universe
 
             string path = Path.Combine(factionsDir, $"{faction.Id}.yaml");
             string yaml = _serializer.Serialize(factionDef);
-            File.WriteAllText(path, yaml);
+            File.WriteAllText(path, yaml, System.Text.Encoding.UTF8);
             return path;
         }
 
@@ -190,7 +190,7 @@ namespace DINOForge.SDK.Universe
             string safeFileName = entry.ThemedId.Replace("*", "_").Replace("/", "_");
             string path = Path.Combine(unitsDir, $"{safeFileName}.yaml");
             string yaml = _serializer.Serialize(unitDef);
-            File.WriteAllText(path, yaml);
+            File.WriteAllText(path, yaml, System.Text.Encoding.UTF8);
             return path;
         }
     }

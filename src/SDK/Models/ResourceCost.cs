@@ -7,7 +7,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Shared resource cost model used by units, buildings, and other definitions.
     /// </summary>
-    public class ResourceCost : IValidatable
+    public sealed class ResourceCost : IValidatable
     {
         /// <summary>Food resource cost.</summary>
         [YamlMember(Alias = "food")]

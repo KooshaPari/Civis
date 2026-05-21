@@ -28,7 +28,7 @@ public static class PollingHelper
     /// <remarks>
     /// Loop: probe → if non-null return; else delay → double delay (capped); respect ct + timeout.
     /// Supports both fire-and-forget fire-and-forget probes and stateful re-queries.
-    /// Example: await PollingHelper.RetryUntilAsync(() => GetSessionIdIfReady(), timeout: TimeSpan.FromSeconds(5));
+    /// Example: await PollingHelper.RetryUntilAsync(() => GetSessionIdIfReady(), timeout: TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     /// </remarks>
     public static async Task<T?> RetryUntilAsync<T>(
         Func<T?> probe,
@@ -84,7 +84,7 @@ public static class PollingHelper
     /// <returns>True if probe succeeds, false if timeout or cancellation.</returns>
     /// <remarks>
     /// Loop: probe → if true return; else delay → double delay (capped); respect ct + timeout.
-    /// Example: await PollingHelper.RetryUntilTrueAsync(() => process.HasExited, timeout: TimeSpan.FromSeconds(10));
+    /// Example: await PollingHelper.RetryUntilTrueAsync(() => process.HasExited, timeout: TimeSpan.FromSeconds(10)).ConfigureAwait(false);
     /// </remarks>
     public static async Task<bool> RetryUntilTrueAsync(
         Func<bool> probe,

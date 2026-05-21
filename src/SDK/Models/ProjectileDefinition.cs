@@ -6,7 +6,7 @@ namespace DINOForge.SDK.Models
     /// <summary>
     /// Stub model for a DINOForge projectile definition (projectiles/*.yaml).
     /// </summary>
-    public class ProjectileDefinition : IValidatable
+    public sealed class ProjectileDefinition : IValidatable
     {
         /// <summary>Unique projectile identifier.</summary>
         [YamlMember(Alias = "id")]

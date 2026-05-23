@@ -1,7 +1,7 @@
 //! civ-agents — civilian agent ECS components + LOD tick + per-civilian
 //! wardrobe / tools state.
 //!
-//! Components live in `civ-engine`'s shared `hecs::World`. This crate ships:
+//! Components live in a shared `hecs::World`. This crate ships:
 //!
 //! - `Civilian` — identity + age + faction
 //! - `Wardrobe` — current clothing era + material slot (diffusion-driven)
@@ -23,6 +23,7 @@
 
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};
 use civ_voxel::{MaterialId, WorldCoord};
+use hecs::World;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
@@ -91,6 +92,127 @@ pub enum LodTier {
 pub struct Position3d {
     /// `WorldCoord` from `civ-voxel`.
     pub coord: WorldCoord,
+}
+
+/// Utility-AI action priority derived from unmet needs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NeedAction {
+    /// Seek food.
+    FindFood,
+    /// Seek shelter.
+    FindShelter,
+    /// Escape danger.
+    Flee,
+    /// Seek social contact.
+    Socialize,
+    /// No urgent action.
+    Idle,
+}
+
+/// Utility weights used when scoring unmet needs.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct UtilityWeights {
+    /// Food weight.
+    pub food: f32,
+    /// Shelter weight.
+    pub shelter: f32,
+    /// Safety weight.
+    pub safety: f32,
+    /// Belonging weight.
+    pub belonging: f32,
+}
+
+/// Spawn one civilian entity in a `hecs::World`.
+pub fn spawn_civilian(
+    world: &mut World,
+    civilian: Civilian,
+    position: Position3d,
+    wardrobe: Wardrobe,
+    tools: Tools,
+    needs: Needs,
+    lod: LodTier,
+) -> hecs::Entity {
+    world.spawn((civilian, position, wardrobe, tools, needs, lod))
+}
+
+/// Spawn a deterministic batch of civilians with sequential IDs.
+pub fn spawn_many(
+    world: &mut World,
+    count: u32,
+    seed_civilian_id: u64,
+    faction: u32,
+) -> Vec<hecs::Entity> {
+    let mut entities = Vec::with_capacity(count as usize);
+    for offset in 0..count {
+        let civilian = Civilian {
+            id: seed_civilian_id + u64::from(offset),
+            faction,
+            age: 18 + (offset % 50) as u16,
+        };
+        let position = Position3d {
+            coord: WorldCoord { x: 0, y: 0, z: 0 },
+        };
+        let wardrobe = Wardrobe {
+            era: 0,
+            material: MaterialId(0),
+        };
+        let tools = Tools {
+            era: 0,
+            material: MaterialId(0),
+        };
+        let needs = Needs {
+            food: 0.25,
+            shelter: 0.25,
+            safety: 0.25,
+            belonging: 0.25,
+        };
+        let lod = match offset % 3 {
+            0 => LodTier::Hot,
+            1 => LodTier::Warm,
+            _ => LodTier::Cold,
+        };
+        entities.push(spawn_civilian(
+            world, civilian, position, wardrobe, tools, needs, lod,
+        ));
+    }
+    entities
+}
+
+/// Count civilian entities in the world.
+pub fn count_civilians(world: &World) -> usize {
+    world.query::<&Civilian>().iter().count()
+}
+
+/// Score unmet needs using utility weights.
+pub fn score_needs(needs: &Needs, weights: &UtilityWeights) -> f32 {
+    needs.food * weights.food
+        + needs.shelter * weights.shelter
+        + needs.safety * weights.safety
+        + needs.belonging * weights.belonging
+}
+
+/// Pick the highest-priority unmet need.
+pub fn top_action(needs: &Needs, weights: &UtilityWeights) -> NeedAction {
+    let scores = [
+        (needs.food * weights.food, NeedAction::FindFood),
+        (needs.shelter * weights.shelter, NeedAction::FindShelter),
+        (needs.safety * weights.safety, NeedAction::Flee),
+        (needs.belonging * weights.belonging, NeedAction::Socialize),
+    ];
+    scores
+        .into_iter()
+        .max_by(|(a, _), (b, _)| a.total_cmp(b))
+        .map(|(_, action)| action)
+        .unwrap_or(NeedAction::Idle)
+}
+
+/// Return whether a civilian should tick on the current simulation tick.
+pub fn should_tick_now(tier: LodTier, current_tick: u64) -> bool {
+    match tier {
+        LodTier::Hot => true,
+        LodTier::Warm => current_tick % 4 == 0,
+        LodTier::Cold => current_tick % 16 == 0,
+    }
 }
 
 /// Drive era propagation for one tick on one civilian's [`Wardrobe`]. The
@@ -206,5 +328,114 @@ mod tests {
             faction: 1,
             age: 30,
         };
+    }
+
+    /// FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
+    #[test]
+    fn spawn_civilian_inserts_components() {
+        let mut world = World::new();
+        let civ = Civilian {
+            id: 11,
+            faction: 7,
+            age: 24,
+        };
+        let pos = Position3d {
+            coord: WorldCoord { x: 0, y: 0, z: 0 },
+        };
+        let wardrobe = Wardrobe {
+            era: 2,
+            material: MaterialId(3),
+        };
+        let tools = Tools {
+            era: 4,
+            material: MaterialId(5),
+        };
+        let needs = Needs {
+            food: 0.1,
+            shelter: 0.2,
+            safety: 0.3,
+            belonging: 0.4,
+        };
+        let lod = LodTier::Warm;
+        let entity = spawn_civilian(&mut world, civ.clone(), pos, wardrobe, tools, needs, lod);
+
+        assert_eq!(&*world.get::<&Civilian>(entity).unwrap(), &civ);
+        assert_eq!(&*world.get::<&Position3d>(entity).unwrap(), &pos);
+        assert_eq!(&*world.get::<&Wardrobe>(entity).unwrap(), &wardrobe);
+        assert_eq!(&*world.get::<&Tools>(entity).unwrap(), &tools);
+        assert_eq!(&*world.get::<&Needs>(entity).unwrap(), &needs);
+        assert_eq!(&*world.get::<&LodTier>(entity).unwrap(), &lod);
+    }
+
+    /// FR-CIV-AGENTS-021 — spawn_many produces sequential IDs.
+    #[test]
+    fn spawn_many_produces_sequential_ids() {
+        let mut world = World::new();
+        let entities = spawn_many(&mut world, 4, 100, 9);
+        assert_eq!(entities.len(), 4);
+        let mut ids = Vec::new();
+        for entity in entities {
+            let civ = world.get::<&Civilian>(entity).unwrap();
+            ids.push(civ.id);
+        }
+        assert_eq!(ids, vec![100, 101, 102, 103]);
+    }
+
+    /// FR-CIV-AGENTS-022 — count_civilians reports the current world total.
+    #[test]
+    fn count_civilians_reports_correctly() {
+        let mut world = World::new();
+        assert_eq!(count_civilians(&world), 0);
+        spawn_many(&mut world, 3, 1, 2);
+        assert_eq!(count_civilians(&world), 3);
+    }
+
+    /// FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.
+    #[test]
+    fn score_needs_returns_deterministic_sums() {
+        let needs = Needs {
+            food: 0.5,
+            shelter: 0.25,
+            safety: 0.75,
+            belonging: 0.125,
+        };
+        let weights = UtilityWeights {
+            food: 2.0,
+            shelter: 3.0,
+            safety: 4.0,
+            belonging: 5.0,
+        };
+        assert_eq!(
+            score_needs(&needs, &weights),
+            0.5 * 2.0 + 0.25 * 3.0 + 0.75 * 4.0 + 0.125 * 5.0
+        );
+    }
+
+    /// FR-CIV-AGENTS-024 — top_action selects the highest-weighted unmet need.
+    #[test]
+    fn top_action_picks_highest_weighted_unmet_need() {
+        let needs = Needs {
+            food: 0.1,
+            shelter: 0.9,
+            safety: 0.2,
+            belonging: 0.3,
+        };
+        let weights = UtilityWeights {
+            food: 1.0,
+            shelter: 10.0,
+            safety: 2.0,
+            belonging: 3.0,
+        };
+        assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
+    }
+
+    /// FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.
+    #[test]
+    fn should_tick_now_respects_lod_modulo() {
+        assert!(should_tick_now(LodTier::Hot, 1));
+        assert!(should_tick_now(LodTier::Warm, 4));
+        assert!(!should_tick_now(LodTier::Warm, 5));
+        assert!(should_tick_now(LodTier::Cold, 16));
+        assert!(!should_tick_now(LodTier::Cold, 17));
     }
 }

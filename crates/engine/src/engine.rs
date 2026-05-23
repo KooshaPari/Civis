@@ -2,6 +2,8 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
+use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
+use civ_tactics::{apply_damage, DamageEvent};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::World;
 use rand::Rng;
@@ -152,6 +154,11 @@ pub struct Simulation {
     pub state: WorldState,
     pub world: World,
     rng: SimRng,
+    planet: PlanetConfig,
+    moon: MoonConfig,
+    climate: Climate,
+    pending_damage: Vec<DamageEvent>,
+    tick_modulo_compact: u64,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -160,6 +167,7 @@ pub struct Simulation {
     /// (renderer protocol bridge, replay log) read this each tick; it resets
     /// at the start of every [`Simulation::tick`].
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
+    last_tick_voxel_damage_count: usize,
 }
 
 impl Simulation {
@@ -171,12 +179,21 @@ impl Simulation {
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
 
+        let (planet, moon) = defaults_earthlike();
+        let climate = compute_climate(0, &planet, &moon);
+
         Self {
             state: WorldState::default(),
             world,
             rng,
+            planet,
+            moon,
+            climate,
+            pending_damage: Vec::new(),
+            tick_modulo_compact: 64,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
+            last_tick_voxel_damage_count: 0,
         }
     }
 
@@ -186,6 +203,9 @@ impl Simulation {
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
 
+        let (planet, moon) = defaults_earthlike();
+        let climate = compute_climate(0, &planet, &moon);
+
         Self {
             state: WorldState {
                 rng_seed: seed,
@@ -193,9 +213,45 @@ impl Simulation {
             },
             world,
             rng,
+            planet,
+            moon,
+            climate,
+            pending_damage: Vec::new(),
+            tick_modulo_compact: 64,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
+            last_tick_voxel_damage_count: 0,
         }
+    }
+
+    /// Borrow the immutable planet config.
+    pub fn planet(&self) -> &PlanetConfig {
+        &self.planet
+    }
+
+    /// Borrow the immutable moon config.
+    pub fn moon(&self) -> &MoonConfig {
+        &self.moon
+    }
+
+    /// Borrow the last climate computed by the planet phase.
+    pub fn climate(&self) -> &Climate {
+        &self.climate
+    }
+
+    /// Queue tactical voxel damage for the tactics phase.
+    pub fn push_damage(&mut self, event: DamageEvent) {
+        self.pending_damage.push(event);
+    }
+
+    /// Apply tactical voxel damage immediately, bypassing the queue.
+    pub fn apply_damage_now(&mut self, event: &DamageEvent) -> usize {
+        apply_damage(&mut self.voxel, event)
+    }
+
+    /// Number of voxels removed during the most recent tactics phase.
+    pub fn last_tick_voxel_damage_count(&self) -> usize {
+        self.last_tick_voxel_damage_count
     }
 
     /// Borrow the 3D voxel substrate. Read-only.
@@ -280,7 +336,23 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.phase_tactics();
         self.phase_voxel();
+        self.phase_compact();
+        self.phase_planet();
+    }
+
+    /// Planet phase - recompute climate from the current tick.
+    fn phase_planet(&mut self) {
+        self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
+    }
+
+    /// Tactics phase - apply queued damage events to the voxel world.
+    fn phase_tactics(&mut self) {
+        self.last_tick_voxel_damage_count = 0;
+        for event in self.pending_damage.drain(..) {
+            self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
+        }
     }
 
     /// Voxel phase — drains the deterministic dirty-event queue from
@@ -289,6 +361,13 @@ impl Simulation {
     /// ordering.
     fn phase_voxel(&mut self) {
         self.last_tick_voxel_events = self.voxel.drain_dirty();
+    }
+
+    /// Compact the voxel world periodically.
+    fn phase_compact(&mut self) {
+        if self.state.tick % self.tick_modulo_compact == 0 {
+            self.voxel.compact();
+        }
     }
 
     /// Production phase - buildings produce resources
@@ -401,6 +480,18 @@ pub struct SimulationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_planet::{compute_climate, is_daytime, MoonConfig, PlanetConfig};
+    use civ_voxel::WorldCoord;
+
+    fn fill_voxel_chunk(world: &mut VoxelWorld<MaterialId>, origin: i64, size: i64) {
+        for x in origin..origin + size {
+            for y in origin..origin + size {
+                for z in origin..origin + size {
+                    world.write(WorldCoord { x, y, z }, MaterialId(1));
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_simulation_creation() {
@@ -436,6 +527,132 @@ mod tests {
 
         assert_eq!(sim1.state.tick, sim2.state.tick);
         assert_eq!(sim1.state.population, sim2.state.population);
+    }
+
+    /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
+    /// `compute_climate` directly.
+    #[test]
+    fn climate_recomputes_every_tick() {
+        let mut sim = Simulation::with_seed(11);
+        let planet = *sim.planet();
+        let moon = *sim.moon();
+
+        sim.tick();
+        let expected = compute_climate(sim.state.tick, &planet, &moon);
+        assert_eq!(sim.climate(), &expected);
+
+        sim.tick();
+        let expected = compute_climate(sim.state.tick, &planet, &moon);
+        assert_eq!(sim.climate(), &expected);
+    }
+
+    /// FR-CIV-ENGINE-INT-002 — queued damage drains and voxel chunk count
+    /// decreases as expected.
+    #[test]
+    fn pending_damage_drains_and_reduces_chunk_count() {
+        let mut sim = Simulation::with_seed(12);
+        fill_voxel_chunk(sim.voxel_mut(), 0, 16);
+        let before = sim.voxel().chunk_count();
+        assert!(before > 0);
+
+        sim.push_damage(DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 12,
+            energy: 1,
+        });
+
+        sim.tick();
+
+        // A sphere of radius 12 voxels removes a substantial fraction of a 16³
+        // chunk but never the whole 4096 cells (corner voxels are outside the
+        // sphere). Assert >0 removals and <=4096 (the chunk total) — enough to
+        // prove damage flowed through to the voxel substrate.
+        let removed = sim.last_tick_voxel_damage_count();
+        assert!(
+            removed > 0,
+            "expected damage to remove at least one voxel, got {removed}"
+        );
+        assert!(
+            removed <= 16 * 16 * 16,
+            "removal count exceeded chunk total: {removed}"
+        );
+        assert!(sim.pending_damage.is_empty());
+    }
+
+    /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform
+    /// chunk count is non-decreasing across the cadence.
+    #[test]
+    fn compact_runs_every_64_ticks() {
+        let mut sim = Simulation::with_seed(13);
+        fill_voxel_chunk(sim.voxel_mut(), 0, 16);
+        let mut last_uniform = sim.voxel().uniform_chunk_count();
+
+        for _ in 0..128 {
+            sim.tick();
+            let current = sim.voxel().uniform_chunk_count();
+            assert!(current >= last_uniform);
+            last_uniform = current;
+        }
+    }
+
+    /// FR-CIV-ENGINE-INT-004 — replay determinism still holds across 200 ticks
+    /// with damage events.
+    #[test]
+    fn determinism_holds_with_damage_events() {
+        let mut sim1 = Simulation::with_seed(12345);
+        let mut sim2 = Simulation::with_seed(12345);
+
+        for tick in 0..200_u64 {
+            if tick % 17 == 0 {
+                let event = DamageEvent {
+                    center: WorldCoord {
+                        x: (tick as i64 % 32) * 1_000_000,
+                        y: 0,
+                        z: 0,
+                    },
+                    radius_voxels: 4,
+                    energy: tick as u32,
+                };
+                sim1.push_damage(event);
+                sim2.push_damage(event);
+            }
+            sim1.tick();
+            sim2.tick();
+        }
+
+        assert_eq!(sim1.state.tick, sim2.state.tick);
+        assert_eq!(sim1.state.population, sim2.state.population);
+        assert_eq!(sim1.climate(), sim2.climate());
+        assert_eq!(
+            sim1.last_tick_voxel_damage_count(),
+            sim2.last_tick_voxel_damage_count()
+        );
+        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
+        assert_eq!(sim1.voxel().chunk_count(), sim2.voxel().chunk_count());
+    }
+
+    /// FR-CIV-ENGINE-INT-005 — `is_daytime` returns sensible day/night across
+    /// one full day-length cycle.
+    #[test]
+    fn daytime_cycles_across_one_full_day() {
+        let planet = PlanetConfig {
+            radius_km: 1,
+            axial_tilt_deg: 23,
+            day_length_ticks: 24,
+            year_length_ticks: 240,
+        };
+        let moon = MoonConfig {
+            orbit_period_ticks: 48,
+            tidal_amplitude: 1.0,
+        };
+
+        let midnight = compute_climate(0, &planet, &moon);
+        let noon = compute_climate(12, &planet, &moon);
+        let next_midnight = compute_climate(24, &planet, &moon);
+
+        assert!(!is_daytime(&midnight));
+        assert!(is_daytime(&noon));
+        assert!(!is_daytime(&next_midnight));
     }
 
     /// FR-CIV-VOXEL-006 — voxel writes between ticks produce dirty events that

@@ -11,6 +11,8 @@
 use std::collections::BTreeMap;
 
 use civ_voxel::{MaterialId, WorldCoord};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 /// Provenance tag carried by every building diff so the renderer can style
@@ -72,6 +74,90 @@ pub struct FacadeStyle {
     pub roof_pitch_deg: u16,
     /// Window density from sparse to dense.
     pub window_density: u8,
+}
+
+/// Input signals that drive procedural parcel allocation.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DemandSignals {
+    /// Residential demand in the inclusive range [0.0, 1.0].
+    pub residential: f32,
+    /// Commercial demand in the inclusive range [0.0, 1.0].
+    pub commercial: f32,
+    /// Industrial demand in the inclusive range [0.0, 1.0].
+    pub industrial: f32,
+    /// Civic demand in the inclusive range [0.0, 1.0].
+    pub civic: f32,
+}
+
+/// Deterministic allocator that grows parcels from demand signals.
+#[derive(Debug, Clone)]
+pub struct Allocator {
+    rng: ChaCha8Rng,
+    next_id: u64,
+}
+
+impl Allocator {
+    /// Creates a deterministic allocator from a seed.
+    #[must_use]
+    pub fn new(seed: u64) -> Self {
+        Self {
+            rng: ChaCha8Rng::seed_from_u64(seed),
+            next_id: 1,
+        }
+    }
+
+    /// Allocates one parcel per saturated demand signal.
+    pub fn allocate(
+        &mut self,
+        graph: &mut BuildingGraph,
+        signals: &DemandSignals,
+        era: u16,
+        origin: WorldCoord,
+        region_extent_voxels: u32,
+    ) -> Vec<BuildingId> {
+        let mut allocated = Vec::new();
+        let extent = region_extent_voxels.max(1);
+        let kinds = [
+            (ParcelKind::Residential, signals.residential),
+            (ParcelKind::Commercial, signals.commercial),
+            (ParcelKind::Industrial, signals.industrial),
+            (ParcelKind::Civic, signals.civic),
+        ];
+
+        for (kind, signal) in kinds {
+            if signal <= 0.5 {
+                continue;
+            }
+
+            let id = BuildingId(self.next_id);
+            self.next_id += 1;
+
+            let parcel = Parcel {
+                id,
+                kind,
+                origin: WorldCoord {
+                    x: origin
+                        .x
+                        .saturating_add(i64::from(self.rng.gen_range(0..extent))),
+                    y: origin
+                        .y
+                        .saturating_add(i64::from(self.rng.gen_range(0..extent))),
+                    z: origin
+                        .z
+                        .saturating_add(i64::from(self.rng.gen_range(0..extent))),
+                },
+                size: [extent.min(u16::MAX as u32) as u16; 3],
+                era_min: era,
+            };
+
+            graph.insert_parcel(parcel);
+            graph.set_provenance(id, BuildingProvenance::Procedural);
+            graph.set_facade(id, default_facade_for_era(era));
+            allocated.push(id);
+        }
+
+        allocated
+    }
 }
 
 /// Shared building graph for both autonomous growth and freehand authoring.
@@ -279,5 +365,146 @@ mod tests {
             back.provenance.get(&id),
             Some(&BuildingProvenance::Freehand)
         );
+    }
+
+    /// FR-CIV-BUILD-010 — zero signals produce no parcels.
+    #[test]
+    fn build_010_zero_signals_produce_no_parcels() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(7);
+        let signals = DemandSignals {
+            residential: 0.0,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+
+        let ids = allocator.allocate(&mut graph, &signals, 1, WorldCoord { x: 0, y: 0, z: 0 }, 16);
+
+        assert!(ids.is_empty());
+        assert!(graph.parcels.is_empty());
+    }
+
+    /// FR-CIV-BUILD-011 — high residential signal places at least one Residential parcel.
+    #[test]
+    fn build_011_high_residential_signal_places_residential_parcel() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(7);
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+
+        let ids = allocator.allocate(
+            &mut graph,
+            &signals,
+            2,
+            WorldCoord {
+                x: 10,
+                y: 20,
+                z: 30,
+            },
+            32,
+        );
+
+        assert!(!ids.is_empty());
+        assert!(graph
+            .parcels
+            .iter()
+            .any(|parcel| parcel.kind == ParcelKind::Residential));
+    }
+
+    /// FR-CIV-BUILD-012 — deterministic placement with same seed and input.
+    #[test]
+    fn build_012_deterministic_placement_is_reproducible() {
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 1.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let origin = WorldCoord { x: 4, y: 5, z: 6 };
+
+        let mut graph_a = BuildingGraph::new();
+        let mut graph_b = BuildingGraph::new();
+        let mut allocator_a = Allocator::new(99);
+        let mut allocator_b = Allocator::new(99);
+
+        let ids_a = allocator_a.allocate(&mut graph_a, &signals, 3, origin, 24);
+        let ids_b = allocator_b.allocate(&mut graph_b, &signals, 3, origin, 24);
+
+        assert_eq!(ids_a, ids_b);
+        assert_eq!(graph_a.parcels, graph_b.parcels);
+    }
+
+    /// FR-CIV-BUILD-013 — mixed signals produce one parcel per saturated kind.
+    #[test]
+    fn build_013_mixed_signals_produce_one_parcel_per_saturated_kind() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(123);
+        let signals = DemandSignals {
+            residential: 0.9,
+            commercial: 0.75,
+            industrial: 0.0,
+            civic: 0.6,
+        };
+
+        let ids = allocator.allocate(&mut graph, &signals, 4, WorldCoord { x: 0, y: 0, z: 0 }, 8);
+
+        assert_eq!(ids.len(), 3);
+        assert_eq!(graph.parcels.len(), 3);
+        assert!(graph
+            .parcels
+            .iter()
+            .any(|parcel| parcel.kind == ParcelKind::Residential));
+        assert!(graph
+            .parcels
+            .iter()
+            .any(|parcel| parcel.kind == ParcelKind::Commercial));
+        assert!(graph
+            .parcels
+            .iter()
+            .any(|parcel| parcel.kind == ParcelKind::Civic));
+    }
+
+    /// FR-CIV-BUILD-014 — facade era matches the era argument.
+    #[test]
+    fn build_014_facade_era_matches_era_argument() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(5);
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+
+        let ids = allocator.allocate(&mut graph, &signals, 5, WorldCoord { x: 0, y: 0, z: 0 }, 12);
+
+        assert_eq!(ids.len(), 1);
+        let id = ids[0];
+        assert_eq!(graph.facades.get(&id).map(|facade| facade.era), Some(5));
+        assert_eq!(graph.facades.get(&id), Some(&default_facade_for_era(5)));
+    }
+
+    /// FR-CIV-BUILD-015 — 100 ticks of high signals produce around 100 parcels.
+    #[test]
+    fn build_015_hundred_ticks_of_high_signals_produce_around_hundred_parcels() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(11);
+        let signals = DemandSignals {
+            residential: 0.9,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+
+        for _ in 0..100 {
+            allocator.allocate(&mut graph, &signals, 1, WorldCoord { x: 0, y: 0, z: 0 }, 4);
+        }
+
+        assert!((95..=105).contains(&graph.parcels.len()));
     }
 }

@@ -21,6 +21,8 @@ pub use engine::{
     Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
 };
 
+pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
+pub use civ_tactics::{apply_damage, DamageEvent};
 pub use metrics::{compute, Metrics};
 pub use policy::{effective_consumption, PolicyInput};
 

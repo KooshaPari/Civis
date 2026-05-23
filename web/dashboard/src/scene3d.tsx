@@ -220,28 +220,39 @@ export function Scene3d() {
       const current = stateRef.current;
       const basePayload = { x: cellX, y: cellY };
 
+      // Convert grid cell (0..size) to fixed-point world coords used by the
+      // Rust civ-watch endpoints. SpawnCivilianReq uses normalised (0..1)
+      // f32 x/y so the server can place the agent against the terrain;
+      // PlaceVoxelReq / DamageReq use i64 world coords at FIXED_SCALE (10^6).
+      const SCALE = 1_000_000;
+      const normX = cellX / terrain.size;
+      const normY = cellY / terrain.size;
+      const worldX = cellX * SCALE;
+      const worldZ = cellY * SCALE;
+      const worldY = Math.max(0, Math.round(hit.point.y)) * SCALE;
+
       try {
         if (current.selectedTool === "SpawnCivilian") {
           await postControl("/control/spawn_civilian", {
-            x: cellX,
-            y: Math.max(0, Math.round(hit.point.y)),
-            z: cellY,
-            era: current.selectedEra,
+            x: normX,
+            y: normY,
+            faction: 0,
           });
         } else if (current.selectedTool === "DamageBomb") {
           await postControl("/control/damage", {
-            x: cellX,
-            y: Math.max(0, Math.round(hit.point.y)),
-            z: cellY,
+            x: worldX,
+            y: worldY,
+            z: worldZ,
             radius: current.damageRadius,
+            energy: 100,
           });
         } else if (current.selectedTool === "InspectAgent") {
           dispatch({ type: "set_toast", message: `Terrain cell ${basePayload.x}, ${basePayload.y}` });
         } else {
           await postControl("/control/place_voxel", {
-            x: cellX,
-            y: Math.max(0, Math.round(hit.point.y)),
-            z: cellY,
+            x: worldX,
+            y: worldY,
+            z: worldZ,
             material: current.selectedMaterial,
           });
         }

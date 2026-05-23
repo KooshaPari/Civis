@@ -1,0 +1,24 @@
+[package]
+name = "civ-bevy-ref"
+description = "Civis Bevy reference 3D client: CI + determinism + agent-driven daily-driver renderer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "civ-bevy-ref"
+path = "src/main.rs"
+
+[dependencies]
+civ-voxel = { path = "../../crates/voxel" }
+civ-engine = { path = "../../crates/engine" }
+
+# Bevy is intentionally not depended on yet — the next P-V1 PR adds it behind a
+# feature flag so workspace `cargo check` stays cheap. The binary currently runs
+# a headless smoke that uses the voxel kernel directly.
+
+[features]
+default = []
+# Once enabled, pulls in bevy 0.16 and a real renderer. Off by default.
+bevy = []

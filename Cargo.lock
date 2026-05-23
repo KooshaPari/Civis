@@ -120,6 +120,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-bevy-ref"
+version = "0.1.0"
+dependencies = [
+ "civ-engine",
+ "civ-voxel",
+]
+
+[[package]]
 name = "civ-build"
 version = "0.1.0"
 dependencies = [

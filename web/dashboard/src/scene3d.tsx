@@ -2,33 +2,56 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { postControl } from "./control";
-import { CivilianFields, useDashboardStore } from "./store";
+import { Biome, CivPin, Terrain, useDashboardStore } from "./store";
 
-const MATERIAL_COLORS: Record<number, number> = {
-  1: 0x7b5c47,
-  2: 0xb46a44,
-  3: 0x8a95a6,
-  4: 0x8b6a45,
-  5: 0xd7bf79,
-  6: 0x4ab866,
-  7: 0x6bbcff,
+const BIOME_COLORS: Record<Biome, number> = {
+  deepwater: 0x0e2659,
+  water: 0x2c64a8,
+  sand: 0xded484,
+  grass: 0x689a3c,
+  forest: 0x2c6434,
+  stone: 0x807c74,
+  snow: 0xf0f0f0,
+};
+
+const JOB_COLORS: Record<NonNullable<CivPin["job"]>, number> = {
+  farmer: 0x7ed957,
+  warrior: 0xff6b6b,
+  scholar: 0x6fb9ff,
+  trader: 0xffd166,
+  priest: 0xc084fc,
+  admin: 0xb7c0cc,
+  unemployed: 0xb7c0cc,
+};
+
+const CIVILIAN_POOL_SIZE = 256;
+const TERRAIN_HEIGHT_SCALE = 12;
+
+type SceneRefs = {
+  terrainMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
+  waterMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
+  civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
+  activeTerrain: Terrain | null;
+  currentTerrainSize: number;
+  terrainWorldSize: number;
+  targetDayFactor: number;
+  dayFactor: number;
 };
 
 export function Scene3d() {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const pulseRef = useRef<THREE.Mesh | null>(null);
-  const voxelGroupRef = useRef<THREE.Group | null>(null);
-  const civilianMeshesRef = useRef<THREE.Mesh[]>([]);
-  const raycasterRef = useRef(new THREE.Raycaster());
-  const pointerRef = useRef(new THREE.Vector2());
-  const keysRef = useRef(new Set<string>());
   const { state, dispatch } = useDashboardStore();
   const stateRef = useRef(state);
+  const refs = useRef<SceneRefs>({
+    terrainMesh: null,
+    waterMesh: null,
+    civilians: [],
+    activeTerrain: null,
+    currentTerrainSize: 0,
+    terrainWorldSize: 0,
+    targetDayFactor: 1,
+    dayFactor: 1,
+  });
 
   useEffect(() => {
     stateRef.current = state;
@@ -39,323 +62,351 @@ export function Scene3d() {
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x07111d);
-    scene.fog = new THREE.Fog(0x07111d, 14, 40);
+    scene.background = new THREE.Color(0x87b7e0);
 
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
-    camera.position.set(10, 9, 12);
-
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight, false);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.target.set(0, 0.8, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-    scene.add(new THREE.AmbientLight(0xb9d7ff, 1.2));
-    const directional = new THREE.DirectionalLight(0xffffff, 2.2);
-    directional.position.set(7, 11, 6);
-    scene.add(directional);
+    const hemisphere = new THREE.HemisphereLight(0x88ccff, 0x442200, 0.6);
+    scene.add(hemisphere);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(0.7, 1.3, 0.4);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 0.1;
+    sun.shadow.camera.far = 300;
+    sun.shadow.camera.left = -120;
+    sun.shadow.camera.right = 120;
+    sun.shadow.camera.top = 120;
+    sun.shadow.camera.bottom = -120;
+    scene.add(sun);
+    scene.add(sun.target);
 
-    const gridHelper = new THREE.GridHelper(16, 16, 0x38506f, 0x1d2c40);
-    gridHelper.position.y = -1.25;
-    scene.add(gridHelper);
+    const terrainGroup = new THREE.Group();
+    scene.add(terrainGroup);
 
-    const axes = new THREE.AxesHelper(3);
-    axes.position.y = -1.2;
-    scene.add(axes);
+    const civilianGroup = new THREE.Group();
+    scene.add(civilianGroup);
 
-    const voxelGroup = new THREE.Group();
-    const voxelGeometry = new THREE.BoxGeometry(0.82, 0.82, 0.82);
-    for (let x = 0; x < 8; x += 1) {
-      for (let y = 0; y < 8; y += 1) {
-        for (let z = 0; z < 8; z += 1) {
-          const voxel = new THREE.Mesh(
-            voxelGeometry,
-            new THREE.MeshStandardMaterial({
-              color: 0x2f4d73,
-              roughness: 0.85,
-              metalness: 0.05,
-              transparent: true,
-              opacity: 0.88,
-            }),
-          );
-          voxel.position.set((x - 3.5) * 0.95, (y - 3.5) * 0.95, (z - 3.5) * 0.95);
-          voxel.userData.baseY = voxel.position.y;
-          voxel.userData.grid = { x, y, z };
-          voxelGroup.add(voxel);
+    const applyTerrain = (terrain: Terrain) => {
+      refs.current.activeTerrain = terrain;
+      refs.current.currentTerrainSize = terrain.size;
+      refs.current.terrainWorldSize = terrain.size;
+
+      if (refs.current.terrainMesh) {
+        terrainGroup.remove(refs.current.terrainMesh);
+        disposeMesh(refs.current.terrainMesh);
+        refs.current.terrainMesh = null;
+      }
+      if (refs.current.waterMesh) {
+        terrainGroup.remove(refs.current.waterMesh);
+        disposeMesh(refs.current.waterMesh);
+        refs.current.waterMesh = null;
+      }
+
+      const geometry = new THREE.PlaneGeometry(terrain.size, terrain.size, terrain.size - 1, terrain.size - 1);
+      geometry.rotateX(-Math.PI / 2);
+      const positions = geometry.attributes.position as THREE.BufferAttribute;
+      const colors = new Float32Array(terrain.size * terrain.size * 3);
+
+      for (let y = 0; y < terrain.size; y += 1) {
+        for (let x = 0; x < terrain.size; x += 1) {
+          const idx = y * terrain.size + x;
+          const height = terrain.heights[idx] * TERRAIN_HEIGHT_SCALE;
+          positions.setY(idx, height);
+          const color = new THREE.Color(BIOME_COLORS[terrain.biomes[idx]]);
+          color.toArray(colors, idx * 3);
         }
       }
-    }
-    scene.add(voxelGroup);
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
 
-    const pulseCube = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({
-        color: 0x7ee0ff,
-        emissive: 0x19465b,
-        emissiveIntensity: 1.2,
-        roughness: 0.35,
-      }),
-    );
-    scene.add(pulseCube);
+      const terrainMaterial = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        flatShading: true,
+        roughness: 1,
+        metalness: 0.02,
+      });
+      const terrainMesh = new THREE.Mesh(geometry, terrainMaterial);
+      terrainMesh.receiveShadow = true;
+      terrainGroup.add(terrainMesh);
+      refs.current.terrainMesh = terrainMesh;
+
+      const waterGeometry = new THREE.PlaneGeometry(terrain.size, terrain.size);
+      waterGeometry.rotateX(-Math.PI / 2);
+      const waterMaterial = new THREE.MeshStandardMaterial({
+        color: 0x244878,
+        transparent: true,
+        opacity: 0.6,
+        metalness: 0.2,
+        roughness: 0.5,
+      });
+      const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+      waterMesh.position.y = 0;
+      waterMesh.receiveShadow = true;
+      terrainGroup.add(waterMesh);
+      refs.current.waterMesh = waterMesh;
+      controls.target.set(0, terrain.size * 0.12, 0);
+      camera.position.set(terrain.size * 0.6, terrain.size * 0.9, terrain.size * 1.0);
+      camera.lookAt(controls.target);
+      controls.update();
+      updateShadowBounds(sun, terrain.size);
+      resizeRenderer();
+    };
+
+    const updateCivilians = () => {
+      const terrain = refs.current.activeTerrain;
+      if (!terrain) return;
+      const civs = stateRef.current.snapshot?.civ_pins ?? [];
+      while (refs.current.civilians.length < CIVILIAN_POOL_SIZE) {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 1.4, 0.4),
+          new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.03 }),
+        );
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+        mesh.visible = false;
+        civilianGroup.add(mesh);
+        refs.current.civilians.push(mesh);
+      }
+      refs.current.civilians.forEach((mesh, index) => {
+        const pin = civs[index];
+        if (!pin) {
+          mesh.visible = false;
+          return;
+        }
+        mesh.visible = true;
+        const wx = pin.x * terrain.size - terrain.size / 2;
+        const wz = pin.y * terrain.size - terrain.size / 2;
+        const wy = terrainHeightAt(terrain, pin.x, pin.y) + 0.7;
+        mesh.position.set(wx, wy, wz);
+        mesh.material.color.setHex(jobColor(pin.job));
+      });
+    };
+
+    const applyDayNight = () => {
+      const target = stateRef.current.snapshot?.is_day === false ? 0.3 : 1;
+      refs.current.targetDayFactor = target;
+    };
 
     const onPointerDown = async (event: PointerEvent) => {
+      const terrain = refs.current.activeTerrain;
+      const terrainMesh = refs.current.terrainMesh;
+      if (!terrain || !terrainMesh) return;
       const rect = renderer.domElement.getBoundingClientRect();
-      pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointerRef.current.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-      raycasterRef.current.setFromCamera(pointerRef.current, camera);
+      const pointer = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObject(terrainMesh, false)[0];
+      if (!hit) return;
 
-      const hits = raycasterRef.current.intersectObjects(voxelGroup.children, false);
-      const hitPoint = hits[0]?.point ?? intersectGround(raycasterRef.current, camera);
-      if (!hitPoint) return;
-
+      const local = terrainMesh.worldToLocal(hit.point.clone());
+      const cellX = clampIndex(Math.floor(local.x + terrain.size / 2), terrain.size);
+      const cellY = clampIndex(Math.floor(local.z + terrain.size / 2), terrain.size);
       const current = stateRef.current;
-      if (current.selectedTool === "PlaceVoxel") {
-        const grid = snapToGrid(hitPoint);
-        await sendControl(dispatch, "/control/place_voxel", {
-          x: grid.x,
-          y: grid.y,
-          z: grid.z,
-          material: current.selectedMaterial,
-        });
-      } else if (current.selectedTool === "SpawnCivilian") {
-        await sendControl(dispatch, "/control/spawn_civilian", {
-          x: Math.round(hitPoint.x),
-          y: Math.max(0, Math.round(hitPoint.y)),
-          z: Math.round(hitPoint.z),
-          era: current.selectedEra,
-        });
-      } else if (current.selectedTool === "DamageBomb") {
-        await sendControl(dispatch, "/control/damage", {
-          x: Math.round(hitPoint.x),
-          y: Math.max(0, Math.round(hitPoint.y)),
-          z: Math.round(hitPoint.z),
-          radius: current.damageRadius,
-        });
-      } else if (current.selectedTool === "InspectAgent") {
-        const pickedCivilian = pickCivilian(hitPoint, civilianMeshesRef.current);
-        dispatch({ type: "set_selected_civilian", civilian: pickedCivilian });
+      const basePayload = { x: cellX, y: cellY };
+
+      try {
+        if (current.selectedTool === "SpawnCivilian") {
+          await postControl("/control/spawn_civilian", {
+            x: cellX,
+            y: Math.max(0, Math.round(hit.point.y)),
+            z: cellY,
+            era: current.selectedEra,
+          });
+        } else if (current.selectedTool === "DamageBomb") {
+          await postControl("/control/damage", {
+            x: cellX,
+            y: Math.max(0, Math.round(hit.point.y)),
+            z: cellY,
+            radius: current.damageRadius,
+          });
+        } else if (current.selectedTool === "InspectAgent") {
+          dispatch({ type: "set_toast", message: `Terrain cell ${basePayload.x}, ${basePayload.y}` });
+        } else {
+          await postControl("/control/place_voxel", {
+            x: cellX,
+            y: Math.max(0, Math.round(hit.point.y)),
+            z: cellY,
+            material: current.selectedMaterial,
+          });
+        }
+      } catch {
+        dispatch({ type: "set_toast", message: `Failed to ${controlLabel(current.selectedTool)}` });
       }
     };
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      keysRef.current.add(event.key.toLowerCase());
-      if (event.key.toLowerCase() === "r") {
-        controls.target.set(0, 0.8, 0);
-        camera.position.set(10, 9, 12);
-        controls.update();
-      }
-    };
-
-    const onKeyUp = (event: KeyboardEvent) => {
-      keysRef.current.delete(event.key.toLowerCase());
-    };
-
-    const resize = () => {
+    const resizeRenderer = () => {
       const width = mount.clientWidth;
       const height = mount.clientHeight;
+      if (width === 0 || height === 0) return;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
     };
 
-    const observer = new ResizeObserver(resize);
+    const observer = new ResizeObserver(resizeRenderer);
     observer.observe(mount);
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
 
-    sceneRef.current = scene;
-    cameraRef.current = camera;
-    rendererRef.current = renderer;
-    controlsRef.current = controls;
-    voxelGroupRef.current = voxelGroup;
-    pulseRef.current = pulseCube;
+    scene.background = new THREE.Color(0x87b7e0);
+    const fog = new THREE.Fog(0x87b7e0, 0, 1);
+    scene.fog = fog;
 
+    let raf = 0;
     const animate = () => {
-      frameRef.current = window.requestAnimationFrame(animate);
-      handlePan(camera, controls, keysRef);
+      raf = window.requestAnimationFrame(animate);
+      const terrain = refs.current.activeTerrain;
+      if (terrain) {
+        refs.current.dayFactor += (refs.current.targetDayFactor - refs.current.dayFactor) * 0.04;
+        const d = refs.current.dayFactor;
+        hemisphere.intensity = 0.6 * d;
+        sun.intensity = 1.2 * d;
+        sun.position.set(terrain.size * 0.7, terrain.size * 1.3, terrain.size * 0.55);
+        const bg = new THREE.Color().lerpColors(new THREE.Color(0x0a1530), new THREE.Color(0x87b7e0), d);
+        scene.background = bg;
+        fog.color.copy(bg);
+        fog.near = terrain.size * 0.8;
+        fog.far = terrain.size * 2.5;
+      }
       controls.update();
       renderer.render(scene, camera);
     };
 
-    resize();
-    animate();
+    const initialize = async () => {
+      const terrain = stateRef.current.terrain ?? (await terrainLoader());
+      if (!stateRef.current.terrain) {
+        dispatch({ type: "set_terrain", terrain });
+      }
+      applyTerrain(terrain);
+      updateCivilians();
+      applyDayNight();
+      animate();
+    };
+
+    void initialize();
 
     return () => {
       observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
+      window.cancelAnimationFrame(raf);
       controls.dispose();
+      terrainGroup.clear();
+      civilianGroup.clear();
+      disposeScene(scene);
       renderer.dispose();
-      voxelGeometry.dispose();
-      pulseCube.geometry.dispose();
-      (pulseCube.material as THREE.Material).dispose();
-      voxelGroup.children.forEach((child) => {
-        const mesh = child as THREE.Mesh;
-        (mesh.geometry as THREE.BufferGeometry).dispose();
-        (mesh.material as THREE.Material).dispose();
-      });
       mount.removeChild(renderer.domElement);
-      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
-      scene.clear();
     };
+
   }, [dispatch]);
 
   useEffect(() => {
-    const pulse = pulseRef.current;
-    const voxelGroup = voxelGroupRef.current;
-    const scene = sceneRef.current;
-    if (!pulse || !voxelGroup || !scene) return;
+    const terrain = refs.current.activeTerrain;
+    if (!terrain) return;
+    updateCiviliansFromRefs(refs.current, state.snapshot);
+    refs.current.targetDayFactor = state.snapshot?.is_day === false ? 0.3 : 1;
+  }, [state.snapshot]);
 
-    const tick = state.snapshot?.tick ?? 0;
-    pulse.scale.setScalar(1 + Math.sin(((tick % 24) / 24) * Math.PI) * 0.5);
-
-    voxelGroup.children.forEach((child, index) => {
-      const mesh = child as THREE.Mesh;
-      const baseY = mesh.userData.baseY as number;
-      mesh.position.y = baseY + Math.sin(tick * 0.08 + index * 0.18) * 0.08;
-      (mesh.material as THREE.MeshStandardMaterial).color.setHex(MATERIAL_COLORS[state.selectedMaterial] ?? 0x2f4d73);
-    });
-
-    updateCivilianMeshes(scene, civilianMeshesRef, state.snapshot);
-  }, [dispatch, state.selectedMaterial, state.snapshot]);
-
-  return <div ref={mountRef} className="scene3d" aria-label="Three.js voxel scene" />;
+  return <div ref={mountRef} className="scene3d" aria-label="Three.js heightmap scene" />;
 }
 
-async function sendControl(
-  dispatch: React.Dispatch<{ type: "set_toast"; message: string | null } | { type: "clear_toast" }>,
-  path: string,
-  body: Record<string, unknown>,
-) {
-  try {
-    await postControl(path, body);
-  } catch {
-    dispatch({ type: "set_toast", message: `Failed to ${path.replace("/control/", "")}` });
-  }
-}
-
-function intersectGround(raycaster: THREE.Raycaster, camera: THREE.PerspectiveCamera) {
-  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  const point = new THREE.Vector3();
-  return raycaster.ray.intersectPlane(plane, point) ? point : camera.position.clone();
-}
-
-function snapToGrid(point: THREE.Vector3) {
-  return {
-    x: Math.round(point.x),
-    y: Math.max(0, Math.round(point.y)),
-    z: Math.round(point.z),
-  };
-}
-
-function pickCivilian(point: THREE.Vector3, meshes: THREE.Mesh[]): CivilianFields | null {
-  const nearest = meshes.reduce<{ mesh: THREE.Mesh | null; distance: number }>(
-    (best, mesh) => {
-      const distance = mesh.position.distanceTo(point);
-      return distance < best.distance ? { mesh, distance } : best;
-    },
-    { mesh: null, distance: Number.POSITIVE_INFINITY },
-  );
-  return (nearest.mesh?.userData.civilian as CivilianFields | undefined) ?? null;
-}
-
-function handlePan(
-  camera: THREE.PerspectiveCamera,
-  controls: OrbitControls,
-  keysRef: React.MutableRefObject<Set<string>>,
-) {
-  const step = 0.18;
-  const keys = Array.from(keysRef.current);
-  if (keys.includes("w")) camera.position.z -= step;
-  if (keys.includes("s")) camera.position.z += step;
-  if (keys.includes("a")) camera.position.x -= step;
-  if (keys.includes("d")) camera.position.x += step;
-  controls.target.x = camera.position.x * 0.15;
-}
-
-function updateCivilianMeshes(
-  scene: THREE.Scene,
-  civilianMeshesRef: React.MutableRefObject<THREE.Mesh[]>,
-  snapshot: { sample_civilians: { age: number; health: number; ideology: number; welfare: number; job: string | null }[] } | null,
-) {
-  const civilians = snapshot?.sample_civilians ?? [];
-  const existing = civilianMeshesRef.current;
-
-  while (existing.length > civilians.length) {
-    const mesh = existing.pop();
-    if (!mesh) continue;
-    scene.remove(mesh);
-    (mesh.geometry as THREE.SphereGeometry).dispose();
-    (mesh.material as THREE.MeshStandardMaterial).dispose();
-  }
-
-  while (existing.length < civilians.length) {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 20, 20),
-      new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.05 }),
-    );
-    existing.push(mesh);
-    scene.add(mesh);
-  }
-
-  civilians.forEach((civilian, index) => {
-    const mesh = existing[index];
-    mesh.position.copy(deriveCivilianPosition(civilian, index, snapshot?.tick ?? 0));
-    (mesh.material as THREE.MeshStandardMaterial).color.setHex(jobColor(civilian.job));
-    mesh.scale.setScalar(0.9 + civilian.health * 0.35);
-    mesh.userData.civilian = civilian;
-    mesh.userData.type = "civilian";
+function updateCiviliansFromRefs(refs: SceneRefs, snapshot: { civ_pins: CivPin[] } | null) {
+  const terrain = refs.activeTerrain;
+  if (!terrain) return;
+  const civs = snapshot?.civ_pins ?? [];
+  refs.civilians.forEach((mesh, index) => {
+    const pin = civs[index];
+    if (!pin) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = true;
+    const wx = pin.x * terrain.size - terrain.size / 2;
+    const wz = pin.y * terrain.size - terrain.size / 2;
+    const wy = terrainHeightAt(terrain, pin.x, pin.y) + 0.7;
+    mesh.position.set(wx, wy, wz);
+    mesh.material.color.setHex(jobColor(pin.job));
   });
 }
 
-function jobColor(job: string | null) {
-  switch (job) {
-    case "Farmer":
-      return 0x53d36b;
-    case "Warrior":
-      return 0xff6262;
-    case "Scholar":
-      return 0x5db2ff;
-    case "Trader":
-      return 0xffd65a;
-    case "Priest":
-      return 0xc78bff;
-    case "Admin":
-      return 0x8c96a8;
+async function terrainLoader(): Promise<Terrain> {
+  const response = await fetch("/terrain");
+  if (!response.ok) {
+    throw new Error(`GET /terrain failed with ${response.status}`);
+  }
+  return (await response.json()) as Terrain;
+}
+
+function terrainHeightAt(terrain: Terrain, x: number, y: number) {
+  const ix = clampIndex(Math.floor(x), terrain.size);
+  const iy = clampIndex(Math.floor(y), terrain.size);
+  return terrain.heights[iy * terrain.size + ix] * TERRAIN_HEIGHT_SCALE;
+}
+
+function clampIndex(value: number, size: number) {
+  return Math.max(0, Math.min(size - 1, value));
+}
+
+function jobColor(job: CivPin["job"]) {
+  if (!job) return 0xb7c0cc;
+  return JOB_COLORS[job] ?? 0xb7c0cc;
+}
+
+function controlLabel(tool: string) {
+  switch (tool) {
+    case "SpawnCivilian":
+      return "spawn civilian";
+    case "DamageBomb":
+      return "damage";
+    case "InspectAgent":
+      return "inspect";
     default:
-      return 0x9fb3d1;
+      return "place voxel";
   }
 }
 
-function deriveCivilianPosition(
-  civilian: { age: number; health: number; ideology: number; welfare: number },
-  index: number,
-  tick: number,
-) {
-  const seedA = hashCivilian(civilian.age, civilian.health, civilian.ideology, civilian.welfare, index, tick);
-  const seedB = hashCivilian(civilian.age + 11, civilian.health + 17, civilian.ideology + 23, civilian.welfare + 31, index + 7, tick + 13);
-  const seedC = hashCivilian(civilian.age + 29, civilian.health + 37, civilian.ideology + 41, civilian.welfare + 43, index + 19, tick + 3);
-  const radius = 2.2 + civilian.welfare * 1.8;
-  const angle = seedA * Math.PI * 2;
-  const height = (seedB - 0.5) * 4.2 + civilian.ideology * 0.8;
-  const wobble = Math.sin(tick * 0.04 + seedC * Math.PI * 2) * 0.4;
-  return new THREE.Vector3(Math.cos(angle) * (radius + wobble), height, Math.sin(angle) * (radius + wobble));
+function disposeMesh(mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>) {
+  mesh.geometry.dispose();
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((material) => material.dispose());
+  } else {
+    mesh.material.dispose();
+  }
 }
 
-function hashCivilian(...values: number[]) {
-  let state = 2166136261;
-  for (const value of values) {
-    const mixed = Math.floor((value + 1) * 1_000_000);
-    state ^= mixed;
-    state = Math.imul(state, 16777619);
-  }
-  return (state >>> 0) / 4294967295;
+function disposeScene(scene: THREE.Scene) {
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const mesh = object as THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
+    if (mesh.geometry) mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) {
+      mesh.material.forEach((material) => material.dispose());
+    } else if (mesh.material) {
+      mesh.material.dispose();
+    }
+  });
+}
+
+function updateShadowBounds(light: THREE.DirectionalLight, terrainSize: number) {
+  const camera = light.shadow.camera as THREE.OrthographicCamera;
+  const extent = terrainSize * 0.8;
+  camera.left = -extent;
+  camera.right = extent;
+  camera.top = extent;
+  camera.bottom = -extent;
+  camera.updateProjectionMatrix();
 }

@@ -21,10 +21,10 @@
 // (ECS integration, protocol bindings) live alongside this re-export.
 pub use phenotype_voxel as kernel;
 pub use phenotype_voxel::{
-    select_lod, to_chunk_coord, Chunk, ChunkCoord, ChunkId, ChunkView, DirtyChunkEvent, LodLevel,
-    LodPolicy, MaterialId, MaterialPalette, MeshBuffer, MeshError, MeshResult, MeshVertex, Mesher,
-    OctreeNode, VoxelMaterial, VoxelOctree, VoxelScaleMultiplier, VoxelWorld, WorldCoord, WriteSeq,
-    FIXED_SCALE,
+    select_lod, to_chunk_coord, Chunk, ChunkCoord, ChunkId, ChunkView, CubicMesher, CubicVoxel,
+    DirtyChunkEvent, LodLevel, LodPolicy, MaterialId, MaterialPalette, MeshBuffer, MeshError,
+    MeshResult, MeshVertex, Mesher, OctreeNode, VoxelMaterial, VoxelOctree, VoxelScaleMultiplier,
+    VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
@@ -59,6 +59,54 @@ mod stub_tests {
         ];
         evts.sort();
         assert_eq!(evts[0].chunk_id, ChunkId(1));
+    }
+
+    /// FR-CIV-VOXEL-010 (early smoke) — VoxelWorld + CubicMesher round-trip through
+    /// the Civis re-export. Writes a small block, drains dirty events, meshes the
+    /// touched chunk, and asserts the mesh is non-empty + deterministic across
+    /// two identical worlds.
+    #[test]
+    fn voxel_world_to_cubic_mesh_end_to_end() {
+        fn build_block(w: &mut VoxelWorld<MaterialId>) {
+            for ix in 0..3 {
+                for iy in 0..3 {
+                    for iz in 0..3 {
+                        let pos = WorldCoord {
+                            x: ix * 1_000_000,
+                            y: iy * 1_000_000,
+                            z: iz * 1_000_000,
+                        };
+                        w.write(pos, MaterialId(1));
+                    }
+                }
+            }
+        }
+        let mut w1: VoxelWorld<MaterialId> = VoxelWorld::new(1_000_000);
+        let mut w2: VoxelWorld<MaterialId> = VoxelWorld::new(1_000_000);
+        build_block(&mut w1);
+        build_block(&mut w2);
+        assert_eq!(w1.drain_dirty(), w2.drain_dirty());
+
+        // 3×3×3 block in a single 16³ chunk → 9 faces on each of the 6 outward
+        // sides = 54 faces total = 216 vertices.
+        let chunk_voxels: Vec<MaterialId> = {
+            let mut v = vec![MaterialId(0); 16 * 16 * 16];
+            for ix in 0..3 {
+                for iy in 0..3 {
+                    for iz in 0..3 {
+                        v[ix + iy * 16 + iz * 16 * 16] = MaterialId(1);
+                    }
+                }
+            }
+            v
+        };
+        let view = ChunkView {
+            id: ChunkId(0),
+            voxels: &chunk_voxels,
+        };
+        let mesh = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("mesh");
+        assert_eq!(mesh.vertices.len(), 54 * 4);
+        assert_eq!(mesh.indices.len(), 54 * 6);
     }
 
     /// FR-CIV-VOXEL-005 (early smoke) — VoxelWorld replay is bit-identical when

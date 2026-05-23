@@ -1,11 +1,14 @@
 //! Civis Bevy reference 3D client.
 //!
-//! Status: pre-renderer headless smoke. The first real Bevy renderer pass lands
-//! behind the `bevy` feature flag in a follow-up PR. For now this binary builds
-//! a tiny `VoxelWorld`, meshes one chunk with the engine-neutral `CubicMesher`,
-//! and prints the resulting face count — enough to confirm the workspace wires
-//! `civ-voxel` correctly and to give CI something to screenshot once a real
-//! renderer drops in.
+//! Headless by default — builds a tiny `VoxelWorld`, meshes one chunk with the
+//! engine-neutral `CubicMesher`, and prints the resulting face count. Useful
+//! for CI screenshot regressions and agent-driven smoke runs.
+//!
+//! Real interactive Bevy window lives behind the `bevy` feature:
+//!
+//! ```bash
+//! cargo run -p civ-bevy-ref --features bevy
+//! ```
 
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld, WorldCoord};
 

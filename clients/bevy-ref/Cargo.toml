@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "civ-bevy-ref"
 path = "src/main.rs"
@@ -14,11 +17,10 @@ path = "src/main.rs"
 civ-voxel = { path = "../../crates/voxel" }
 civ-engine = { path = "../../crates/engine" }
 
-# Bevy is intentionally not depended on yet — the next P-V1 PR adds it behind a
-# feature flag so workspace `cargo check` stays cheap. The binary currently runs
-# a headless smoke that uses the voxel kernel directly.
+# Bevy is an optional dep behind the `bevy` feature so the default workspace
+# build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
+bevy = { version = "0.14", optional = true }
 
 [features]
 default = []
-# Once enabled, pulls in bevy 0.16 and a real renderer. Off by default.
-bevy = []
+bevy = ["dep:bevy"]

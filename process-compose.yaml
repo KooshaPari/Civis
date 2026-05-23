@@ -10,6 +10,129 @@ environment:
   - CIV_METRICS_PORT=9090
 
 processes:
+  postgres:
+    command: sh
+    args:
+      - -c
+      - |
+        if command -v postgres >/dev/null 2>&1; then
+          exec postgres -D .process-compose/data/pg -p 5432 -h 127.0.0.1
+        fi
+        if command -v docker >/dev/null 2>&1; then
+          exec docker run --rm \
+            -e POSTGRES_USER=civis \
+            -e POSTGRES_PASSWORD=civis \
+            -e POSTGRES_DB=civis \
+            -p 5432:5432 \
+            -v "$PWD/.process-compose/data/pg:/var/lib/postgresql/data" \
+            postgres:16
+        fi
+        echo "postgres or docker is required" >&2
+        exit 1
+    availability:
+      restart: on_failure
+      max_restarts: 5
+      backoff_seconds: 2
+    readiness_probe:
+      exec:
+        command: sh
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':5432 ' || curl -sf http://127.0.0.1:5432/healthz >/dev/null 2>&1"]
+      initial_delay_seconds: 5
+      period_seconds: 5
+      timeout_seconds: 10
+    log_location: .process-compose/logs/postgres.log
+
+  dragonfly:
+    command: sh
+    args:
+      - -c
+      - |
+        if command -v dragonfly >/dev/null 2>&1; then
+          exec dragonfly --bind 127.0.0.1 --port 6379
+        fi
+        if command -v redis-server >/dev/null 2>&1; then
+          exec redis-server --port 6379 --bind 127.0.0.1
+        fi
+        if command -v docker >/dev/null 2>&1; then
+          exec docker run --rm -p 6379:6379 dragonflydb/dragonfly
+        fi
+        echo "dragonfly or redis-server or docker is required" >&2
+        exit 1
+    availability:
+      restart: on_failure
+      max_restarts: 5
+      backoff_seconds: 2
+    readiness_probe:
+      exec:
+        command: sh
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':6379 ' || curl -sf http://127.0.0.1:6379/healthz >/dev/null 2>&1"]
+      initial_delay_seconds: 3
+      period_seconds: 5
+      timeout_seconds: 10
+    log_location: .process-compose/logs/dragonfly.log
+
+  nats:
+    command: sh
+    args:
+      - -c
+      - |
+        if command -v nats-server >/dev/null 2>&1; then
+          exec nats-server --jetstream --port 4222 --addr 127.0.0.1
+        fi
+        if command -v docker >/dev/null 2>&1; then
+          exec docker run --rm -p 4222:4222 nats:2 --jetstream --port 4222 --addr 0.0.0.0
+        fi
+        echo "nats-server or docker is required" >&2
+        exit 1
+    availability:
+      restart: on_failure
+      max_restarts: 5
+      backoff_seconds: 2
+    readiness_probe:
+      exec:
+        command: sh
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':4222 ' || curl -sf http://127.0.0.1:4222/healthz >/dev/null 2>&1"]
+      initial_delay_seconds: 3
+      period_seconds: 5
+      timeout_seconds: 10
+    log_location: .process-compose/logs/nats.log
+
+  minio:
+    command: sh
+    args:
+      - -c
+      - |
+        mkdir -p .process-compose/data/minio
+        if command -v minio >/dev/null 2>&1; then
+          exec minio server .process-compose/data/minio --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+        fi
+        if command -v docker >/dev/null 2>&1; then
+          exec docker run --rm \
+            -e MINIO_ROOT_USER=civis \
+            -e MINIO_ROOT_PASSWORD=civisroot \
+            -p 9000:9000 \
+            -p 9001:9001 \
+            -v "$PWD/.process-compose/data/minio:/data" \
+            minio/minio server /data --address 0.0.0.0:9000 --console-address 0.0.0.0:9001
+        fi
+        echo "minio or docker is required" >&2
+        exit 1
+    environment:
+      - MINIO_ROOT_USER=civis
+      - MINIO_ROOT_PASSWORD=civisroot
+    availability:
+      restart: on_failure
+      max_restarts: 5
+      backoff_seconds: 2
+    readiness_probe:
+      exec:
+        command: sh
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -Eq ':(9000|9001) ' || curl -sf http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1"]
+      initial_delay_seconds: 5
+      period_seconds: 5
+      timeout_seconds: 10
+    log_location: .process-compose/logs/minio.log
+
   sim-server:
     command: cargo
     args: ["run", "-p", "civ-server", "--release"]

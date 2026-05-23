@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import { createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { BottomBar } from "./bottom_bar";
@@ -19,7 +19,6 @@ function App() {
   const reconnectTimerRef = useRef<number | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
   const closedByCleanupRef = useRef(false);
-  const [toastId, setToastId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadSnapshot = async () => {
@@ -92,7 +91,6 @@ function App() {
 
   useEffect(() => {
     if (!state.toast) return;
-    setToastId(state.toast.id);
     const handle = window.setTimeout(() => dispatch({ type: "clear_toast" }), 3000);
     return () => window.clearTimeout(handle);
   }, [dispatch, state.toast]);
@@ -105,7 +103,7 @@ function App() {
       </div>
       <SidePanel />
       <BottomBar />
-      {state.toast && toastId === state.toast.id ? <div className="toast">{state.toast.message}</div> : null}
+      {state.toast ? <div className="toast">{state.toast.message}</div> : null}
     </main>
   );
 }
@@ -117,4 +115,3 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </StoreProvider>
   </React.StrictMode>,
 );
-

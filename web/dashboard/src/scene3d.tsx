@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { postControl } from "./control";
-import { useDashboardStore } from "./store";
+import { CivilianFields, useDashboardStore } from "./store";
 
 const MATERIAL_COLORS: Record<number, number> = {
   1: 0x7b5c47,
@@ -28,6 +28,11 @@ export function Scene3d() {
   const pointerRef = useRef(new THREE.Vector2());
   const keysRef = useRef(new Set<string>());
   const { state, dispatch } = useDashboardStore();
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -109,29 +114,30 @@ export function Scene3d() {
       const hitPoint = hits[0]?.point ?? intersectGround(raycasterRef.current, camera);
       if (!hitPoint) return;
 
-      if (state.selectedTool === "PlaceVoxel") {
+      const current = stateRef.current;
+      if (current.selectedTool === "PlaceVoxel") {
         const grid = snapToGrid(hitPoint);
         await sendControl(dispatch, "/control/place_voxel", {
           x: grid.x,
           y: grid.y,
           z: grid.z,
-          material: state.selectedMaterial,
+          material: current.selectedMaterial,
         });
-      } else if (state.selectedTool === "SpawnCivilian") {
+      } else if (current.selectedTool === "SpawnCivilian") {
         await sendControl(dispatch, "/control/spawn_civilian", {
           x: Math.round(hitPoint.x),
           y: Math.max(0, Math.round(hitPoint.y)),
           z: Math.round(hitPoint.z),
-          era: state.selectedEra,
+          era: current.selectedEra,
         });
-      } else if (state.selectedTool === "DamageBomb") {
+      } else if (current.selectedTool === "DamageBomb") {
         await sendControl(dispatch, "/control/damage", {
           x: Math.round(hitPoint.x),
           y: Math.max(0, Math.round(hitPoint.y)),
           z: Math.round(hitPoint.z),
-          radius: state.damageRadius,
+          radius: current.damageRadius,
         });
-      } else if (state.selectedTool === "InspectAgent") {
+      } else if (current.selectedTool === "InspectAgent") {
         const pickedCivilian = pickCivilian(hitPoint, civilianMeshesRef.current);
         dispatch({ type: "set_selected_civilian", civilian: pickedCivilian });
       }
@@ -173,7 +179,7 @@ export function Scene3d() {
 
     const animate = () => {
       frameRef.current = window.requestAnimationFrame(animate);
-      handlePan(camera, controls);
+      handlePan(camera, controls, keysRef);
       controls.update();
       renderer.render(scene, camera);
     };
@@ -200,7 +206,7 @@ export function Scene3d() {
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
       scene.clear();
     };
-  }, [dispatch, state.damageRadius, state.selectedEra, state.selectedMaterial, state.selectedTool]);
+  }, [dispatch]);
 
   useEffect(() => {
     const pulse = pulseRef.current;
@@ -218,7 +224,7 @@ export function Scene3d() {
       (mesh.material as THREE.MeshStandardMaterial).color.setHex(MATERIAL_COLORS[state.selectedMaterial] ?? 0x2f4d73);
     });
 
-    updateCivilianMeshes(scene, civilianMeshesRef, state.snapshot, dispatch);
+    updateCivilianMeshes(scene, civilianMeshesRef, state.snapshot);
   }, [dispatch, state.selectedMaterial, state.snapshot]);
 
   return <div ref={mountRef} className="scene3d" aria-label="Three.js voxel scene" />;
@@ -250,7 +256,7 @@ function snapToGrid(point: THREE.Vector3) {
   };
 }
 
-function pickCivilian(point: THREE.Vector3, meshes: THREE.Mesh[]) {
+function pickCivilian(point: THREE.Vector3, meshes: THREE.Mesh[]): CivilianFields | null {
   const nearest = meshes.reduce<{ mesh: THREE.Mesh | null; distance: number }>(
     (best, mesh) => {
       const distance = mesh.position.distanceTo(point);
@@ -258,12 +264,16 @@ function pickCivilian(point: THREE.Vector3, meshes: THREE.Mesh[]) {
     },
     { mesh: null, distance: Number.POSITIVE_INFINITY },
   );
-  return (nearest.mesh?.userData.civilian as unknown as Record<string, unknown>) ?? null;
+  return (nearest.mesh?.userData.civilian as CivilianFields | undefined) ?? null;
 }
 
-function handlePan(camera: THREE.PerspectiveCamera, controls: OrbitControls) {
+function handlePan(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  keysRef: React.MutableRefObject<Set<string>>,
+) {
   const step = 0.18;
-  const keys = Array.from((window as unknown as { __civisKeys?: Set<string> }).__civisKeys ?? []);
+  const keys = Array.from(keysRef.current);
   if (keys.includes("w")) camera.position.z -= step;
   if (keys.includes("s")) camera.position.z += step;
   if (keys.includes("a")) camera.position.x -= step;
@@ -275,7 +285,6 @@ function updateCivilianMeshes(
   scene: THREE.Scene,
   civilianMeshesRef: React.MutableRefObject<THREE.Mesh[]>,
   snapshot: { sample_civilians: { age: number; health: number; ideology: number; welfare: number; job: string | null }[] } | null,
-  dispatch: React.Dispatch<{ type: "set_selected_civilian"; civilian: unknown }>,
 ) {
   const civilians = snapshot?.sample_civilians ?? [];
   const existing = civilianMeshesRef.current;
@@ -304,7 +313,6 @@ function updateCivilianMeshes(
     mesh.scale.setScalar(0.9 + civilian.health * 0.35);
     mesh.userData.civilian = civilian;
     mesh.userData.type = "civilian";
-    if (index === 0) dispatch({ type: "set_selected_civilian", civilian });
   });
 }
 
@@ -351,4 +359,3 @@ function hashCivilian(...values: number[]) {
   }
   return (state >>> 0) / 4294967295;
 }
-

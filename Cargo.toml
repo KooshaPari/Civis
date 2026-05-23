@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/engine",
+  "crates/infra",
   "crates/server",
   "crates/voxel",
   "crates/build",

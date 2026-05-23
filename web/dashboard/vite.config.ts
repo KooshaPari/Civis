@@ -1,12 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const WATCH = "http://localhost:9090";
+
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/events": "http://localhost:9090",
-      "/snapshot": "http://localhost:9090",
+      "/events": WATCH,
+      "/snapshot": WATCH,
+      "/terrain": WATCH,
+      "/control": WATCH,
     },
   },
   build: {

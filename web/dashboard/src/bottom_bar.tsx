@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { postControl } from "./control";
 import { useDashboardStore } from "./store";
 
@@ -15,6 +16,7 @@ const ERAS = ["Mud-brick", "Bronze", "Iron", "Steam", "Modern", "Arcology"];
 
 export function BottomBar() {
   const { state, dispatch } = useDashboardStore();
+  const miniMapRef = useRef<HTMLCanvasElement | null>(null);
 
   const runControl = async (path: string) => {
     try {
@@ -23,6 +25,39 @@ export function BottomBar() {
       dispatch({ type: "set_toast", message: `Failed to ${path.replace("/control/", "")}` });
     }
   };
+
+  useEffect(() => {
+    const canvas = miniMapRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const terrain = state.terrain;
+    const snapshot = state.snapshot;
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#07101d";
+    ctx.fillRect(0, 0, width, height);
+    if (!terrain) return;
+
+    const cellW = width / terrain.size;
+    const cellH = height / terrain.size;
+    for (let y = 0; y < terrain.size; y += 1) {
+      for (let x = 0; x < terrain.size; x += 1) {
+        const idx = y * terrain.size + x;
+        const biome = terrain.biomes[idx];
+        ctx.fillStyle = biomeColor(biome);
+        ctx.fillRect(x * cellW, y * cellH, Math.ceil(cellW), Math.ceil(cellH));
+      }
+    }
+
+    snapshot?.factions.forEach((faction) => {
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${faction.color[0]}, ${faction.color[1]}, ${faction.color[2]}, 0.95)`;
+      ctx.arc(faction.capital[0] * width, faction.capital[1] * height, Math.max(2, faction.radius * 0.25), 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }, [state.snapshot, state.terrain]);
 
   return (
     <footer className="bottom-bar">
@@ -91,6 +126,14 @@ export function BottomBar() {
           </select>
         </label>
       </div>
+
+      <div className="minimap-shell">
+        <div className="minimap-head">
+          <span>Minimap</span>
+          <strong>{state.snapshot?.factions.length ?? 0} factions</strong>
+        </div>
+        <canvas ref={miniMapRef} width={160} height={160} className="minimap" aria-label="Terrain minimap" />
+      </div>
     </footer>
   );
 }
@@ -112,4 +155,25 @@ function ToolButton({
       <small>{title}</small>
     </button>
   );
+}
+
+function biomeColor(biome: string) {
+  switch (biome) {
+    case "deepwater":
+      return "#0b2149";
+    case "water":
+      return "#294f86";
+    case "sand":
+      return "#cbbf73";
+    case "grass":
+      return "#567d39";
+    case "forest":
+      return "#254f2c";
+    case "stone":
+      return "#68645c";
+    case "snow":
+      return "#e7edf1";
+    default:
+      return "#334155";
+  }
 }

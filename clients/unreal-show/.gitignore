@@ -1,0 +1,6 @@
+Binaries/
+Build/
+Intermediate/
+Saved/
+DerivedDataCache/
+Source/Civis/rust-shim/target/

@@ -1,31 +1,30 @@
-# civ-godot-ref
+# Civis Godot Ref
 
-Civis Godot 4 reference client. Per `docs/adr/ADR-007-three-renderers.md`:
+Civis 3D reference client for Godot 4. Per `docs/adr/ADR-007-three-renderers.md`,
+this is the UX iteration surface for the WorldBox-style spawn editor.
 
-> **UX iteration + WorldBox-style spawn editor.** Fastest editor + node tree for
-> prototyping the spawn-anything UX. Voxel via `Zylann/godot_voxel` (Voxel Tools).
+## Run
 
-## Layout (planned)
+1. Install Godot 4.3+
+2. `cd clients/godot-ref/rust && cargo build`
+3. Open `clients/godot-ref/project.godot` in Godot 4
+4. Press F5 - connects to `civ-watch` on `http://127.0.0.1:9090`
+
+## Layout
 
 ```
 clients/godot-ref/
-├── README.md                  ← you are here
-├── project.godot              ← Godot 4 project (added in the godot-ref PR)
-├── rust/                      ← Rust GDExtension sub-crate
-│   ├── Cargo.toml             ← cdylib; depends on civ-voxel + civ-agents
-│   └── src/lib.rs             ← GDExt bindings using gdext crate
+├── README.md
+├── .gitignore
+├── civis.gdextension
+├── justfile
+├── project.godot
+├── rust/
+│   ├── Cargo.toml
+│   └── src/lib.rs
 ├── scenes/
-│   └── main.tscn              ← root scene
-└── scripts/                   ← GDScript-side UX (spawn editor, era timelapse)
+│   └── main.tscn
+└── scripts/
+    ├── main.gd
+    └── ui.tscn
 ```
-
-## Status
-
-Scaffold-only README. The Godot project skeleton and `gdext` Rust crate land in
-follow-up phase PRs (P-U1 for the WorldBox-style spawn UX surface).
-
-## Why a separate dir, not a workspace member
-
-The Rust sub-crate (`clients/godot-ref/rust/`) WILL be a workspace member; the
-Godot project files (`project.godot`, scenes, scripts) live alongside it but
-are not part of the Cargo workspace.

@@ -11,11 +11,11 @@
 //! `MeshBuffer` chunks via PBR. Per-tick streaming + voxel-delta integration
 //! land in a follow-up PR once the protocol bridge is wired.
 
-use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::render::render_asset::RenderAssetUsages;
 
-use crate::{MeshBuffer, MeshVertex};
+use crate::MeshBuffer;
 
 /// Convert an engine-neutral [`MeshBuffer`] into a Bevy [`Mesh`].
 ///
@@ -72,7 +72,11 @@ pub fn spawn_voxel_mesh(
         metallic: 0.0,
         ..default()
     });
-    commands.spawn((Mesh3d(handle), MeshMaterial3d(material)));
+    commands.spawn(PbrBundle {
+        mesh: handle,
+        material,
+        ..default()
+    });
 }
 
 #[cfg(test)]

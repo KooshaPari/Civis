@@ -1,0 +1,45 @@
+[gd_scene load_steps=1 format=3]
+
+[node name="UI" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="BottomBar" type="PanelContainer" parent="."]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = -96.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="BottomBar"]
+
+[node name="Place Voxel" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Place Voxel"
+
+[node name="Spawn Civilian" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Spawn Civilian"
+
+[node name="Damage" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Damage"
+
+[node name="Inspect" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Inspect"
+
+[node name="Camera" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Camera"
+
+[node name="Speed" type="OptionButton" parent="BottomBar/HBoxContainer"]
+item_count = 5
+selected = 1
+
+[node name="Material" type="SpinBox" parent="BottomBar/HBoxContainer"]
+min_value = 0.0
+max_value = 7.0
+step = 1.0
+
+[node name="TickLabel" type="Label" parent="BottomBar/HBoxContainer"]
+text = "Tick: 0"
+
+[node name="PopulationLabel" type="Label" parent="BottomBar/HBoxContainer"]
+text = "Population: 0"

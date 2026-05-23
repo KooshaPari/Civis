@@ -54,6 +54,11 @@ civis-3d-bevy-smoke:
 civis-3d-bevy-window:
     cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
 
+# Run the live Bevy reference client against civ-server's WebSocket bridge.
+# Requires civ-server to be running first.
+civis-3d-bevy-live:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
     cd ../phenotype-voxel && cargo test

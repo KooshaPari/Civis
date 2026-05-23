@@ -7,6 +7,12 @@ export function TopBar() {
     reconnecting: "Reconnecting",
     disconnected: "Disconnected",
   }[state.connection];
+  const tick = state.snapshot?.tick ?? 0;
+  const eraIndex = Math.floor(tick / 600) % 6;
+  const eras = ["Mud-brick", "Timber", "Stone", "Brick", "Concrete", "Arcology"];
+  const dayPhase = state.snapshot
+    ? deriveClockLabel(state.snapshot.is_day, tick)
+    : "06:00 — Dawn";
 
   return (
     <header className="top-bar">
@@ -19,7 +25,8 @@ export function TopBar() {
         <Metric label="Population" value={state.snapshot?.population ?? 0} />
         <Metric label="Voxel chunks" value={state.snapshot?.voxel_chunk_count ?? 0} />
         <Metric label="Voxel dirty" value={state.snapshot?.voxel_dirty_count ?? 0} />
-        <Metric label="Day / Night" value={state.snapshot ? ((state.snapshot.tick % 24) < 12 ? "Day" : "Night") : "Day"} />
+        <Metric label="Era" value={`${eraIndex} · ${eras[eraIndex]}`} />
+        <Metric label="Clock" value={dayPhase} />
       </div>
       <span className={`connection-pill ${state.connection}`}>Connection: {connectionLabel}</span>
     </header>
@@ -35,3 +42,9 @@ function Metric({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+function deriveClockLabel(isDay: boolean, tick: number) {
+  const labels = isDay
+    ? ["06:00 — Dawn", "12:00 — Noon"]
+    : ["18:00 — Dusk", "00:00 — Midnight"];
+  return labels[tick % 2];
+}

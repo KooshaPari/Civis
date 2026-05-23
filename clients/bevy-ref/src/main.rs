@@ -10,6 +10,9 @@
 //! ```bash
 //! cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
 //! ```
+//!
+//! The live WebSocket attach path only exists in that feature-gated binary,
+//! so this default headless smoke stays valid without a running server.
 
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld, WorldCoord};
 

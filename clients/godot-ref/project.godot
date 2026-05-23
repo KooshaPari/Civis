@@ -1,0 +1,11 @@
+[application]
+config/name="Civis 3D — Godot ref"
+run/main_scene="res://scenes/main.tscn"
+
+[rendering]
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="forward_plus"
+driver/driver_name="vulkan"
+
+[autoload]
+civis_rust="*res://civis.gdextension"

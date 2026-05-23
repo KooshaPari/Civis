@@ -1,40 +1,49 @@
-# civ-unreal-show
+# Civis Unreal 5 visual showcase
 
-Civis Unreal 5 visual showcase + shipping client. Per `docs/adr/ADR-007-three-renderers.md`:
+## Open question
 
-> **Visual showcase + shipping client.** Lumen + Nanite + Chaos. Lighter
-> iteration cadence than Bevy/Godot. Attaches via the same WebSocket protocol;
-> no sim logic duplication.
+Ship under the standard Epic EULA, which carries royalty surface, or constrain this to a shell-only renderer with no game logic in UE5 so the royalty surface stays minimized. That decision should be made before the MVP hardens.
 
-## Layout (planned)
+## Run instructions
+
+1. Install Unreal Engine 5.4
+2. `cd clients/unreal-show/Source/Civis/rust-shim && cargo build --release`
+3. Right-click `CivShow.uproject` -> Generate Visual Studio project files
+4. Open `CivShow.sln` in Visual Studio, build `Development Editor | Win64`
+5. Open `CivShow.uproject` in Unreal Editor
+6. Press Play. The client connects to `civ-watch` on `http://127.0.0.1:9090` and renders the live terrain
+
+## Layout
 
 ```
 clients/unreal-show/
-├── README.md                  ← you are here
-├── CivShow.uproject           ← Unreal 5 project (added in the unreal-show PR)
-├── Source/CivShow/            ← C++ game module
-│   ├── CivShow.Build.cs
-│   ├── CivProtocolClient.h/cpp ← WebSocket attach to Civis core
-│   └── VoxelMesher.h/cpp      ← consumes phenotype-voxel DirtyChunkEvents via FFI
-├── Content/                   ← .uasset (kept in Git LFS; large blobs)
-└── Plugins/                   ← any third-party voxel-destruction plugins
+├── CivShow.uproject
+├── Content/
+├── README.md
+└── Source/
+    ├── CivShow/
+    │   ├── CivShow.Build.cs
+    │   ├── CivShowGameMode.cpp
+    │   ├── CivShowGameMode.h
+    │   ├── CivProtocolClient.cpp
+    │   ├── CivProtocolClient.h
+    │   ├── CivilianActor.cpp
+    │   ├── CivilianActor.h
+    │   ├── VoxelTerrain.cpp
+    │   └── VoxelTerrain.h
+    └── Civis/
+        ├── include/
+        │   └── civis_ffi.h
+        └── rust-shim/
+            ├── Cargo.toml
+            ├── build.rs
+            ├── cbindgen.toml
+            └── src/
+                └── lib.rs
 ```
 
-## Status
+## Notes
 
-Scaffold-only README. Project files land later behind a decision on EULA / scope
-(open question in `docs/roadmap/civis-3d-extension.md`).
-
-## Why a separate dir, not a workspace member
-
-Unreal is C++ + UnrealBuildTool, not Cargo. The FFI bindings into
-`phenotype-voxel` will be generated via `cbindgen` (Civis-side Rust shim) and
-consumed as a static library by the Unreal module. The Rust shim ships as a
-separate crate (`clients/unreal-show/rust-shim/`) once the project lands.
-
-## Open questions
-
-- Standard Epic EULA (with royalty surface) vs shell-only renderer (no game
-  logic in Unreal → no royalty surface)?
-- Acceptable iteration cadence — full re-build after each Civis sim API change,
-  or pin the FFI surface and bump only on intentional version bumps?
+- Unreal is the visual showcase client and stays on a lighter iteration cadence than the Bevy and Godot references.
+- The runtime HTTP surface matches `civ-watch`: `/terrain`, `/snapshot`, and `/control/*`.
+- The Rust shim is detached from the workspace so the Unreal build can consume a standalone MSVC static library.

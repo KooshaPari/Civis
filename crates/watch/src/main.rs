@@ -84,17 +84,49 @@ struct CivPin {
     idx: u32,
     x: f32,
     y: f32,
+    dx: f32,
+    dy: f32,
     job: Option<JobLabel>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct Faction {
+    id: u32,
+    color: [u8; 3],
+    capital: [f32; 2],
+    radius: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "PascalCase")]
+enum BuildingKind {
+    Residential,
+    Commercial,
+    Industrial,
+    Civic,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct Building {
+    id: u32,
+    x: f32,
+    y: f32,
+    kind: BuildingKind,
+    era: u8,
+    faction_id: u32,
 }
 
 #[derive(Debug, Clone, Serialize)]
 struct Snapshot {
     tick: u64,
+    tick_dt_ms: u32,
     population: u64,
     voxel_dirty_count: usize,
     voxel_chunk_count: usize,
     sample_civilians: Vec<SampleCivilian>,
     civ_pins: Vec<CivPin>,
+    factions: Vec<Faction>,
+    buildings: Vec<Building>,
     is_day: bool,
     speed: u8,
 }
@@ -246,19 +278,25 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
+    let factions = factions(sim.state.tick);
+    let buildings = buildings(&factions, sim.state.tick);
     let _ = build_voxel_delta_frame(sim.state.tick, events, sim.voxel()).map_err(|err| {
         warn!(?err, "voxel frame build failed for current tick");
     });
     let climate = sim.climate();
     let is_day = climate.day_phase >= 0.25 && climate.day_phase < 0.75;
+    let tick_dt_ms = 100u32 / u32::from(speed.max(1));
 
     Snapshot {
         tick: sim.state.tick,
+        tick_dt_ms,
         population: sim.state.population,
         voxel_dirty_count: events.len(),
         voxel_chunk_count: sim.voxel().chunk_count(),
         sample_civilians,
         civ_pins,
+        factions,
+        buildings,
         is_day,
         speed,
     }
@@ -287,16 +325,87 @@ fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
         .enumerate()
         .map(|(idx, (_, citizen))| {
             let seed = u64::from(idx as u32).wrapping_mul(2_654_435_761) ^ u64::from(citizen.age);
-            let x = ((seed & 0xffff) as f32) / 65535.0;
-            let y = (((seed >> 16) & 0xffff) as f32) / 65535.0;
+            let base_x = ((seed & 0xffff) as f32) / 65535.0;
+            let base_y = (((seed >> 16) & 0xffff) as f32) / 65535.0;
+            let angle = ((seed >> 32) as f32 / u32::MAX as f32) * std::f32::consts::TAU;
+            let drift = 0.0015 + ((seed >> 48) as f32 / 65535.0) * 0.0025;
+            let dx = angle.cos() * drift;
+            let dy = angle.sin() * drift;
+            let tick_phase = (sim.state.tick as f32) * 0.1;
+            let x = wrap01(base_x + dx * tick_phase);
+            let y = wrap01(base_y + dy * tick_phase);
             CivPin {
                 idx: idx as u32,
                 x,
                 y,
+                dx,
+                dy,
                 job: citizen.job.map(JobLabel::from),
             }
         })
         .collect()
+}
+
+fn factions(tick: u64) -> Vec<Faction> {
+    let territory_radius_t = 18.0 + (tick as f32 * 0.018);
+    let capitals = [
+        (0.22, 0.24, [214, 174, 110]),
+        (0.76, 0.27, [112, 176, 122]),
+        (0.27, 0.73, [103, 151, 214]),
+        (0.72, 0.74, [184, 118, 196]),
+    ];
+
+    capitals
+        .iter()
+        .enumerate()
+        .map(|(idx, (x, y, color))| Faction {
+            id: idx as u32,
+            color: *color,
+            capital: [*x, *y],
+            radius: territory_radius_t + idx as f32 * 2.75,
+        })
+        .collect()
+}
+
+fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
+    let kinds = [
+        BuildingKind::Residential,
+        BuildingKind::Commercial,
+        BuildingKind::Industrial,
+        BuildingKind::Civic,
+    ];
+    let mut buildings = Vec::new();
+    for faction in factions {
+        for i in 0..3 {
+            let idx = faction.id * 3 + i;
+            let seed = u64::from(idx)
+                .wrapping_mul(1_103_515_245)
+                .wrapping_add(tick / 120);
+            let x = wrap01(faction.capital[0] + noise_offset(seed, 0));
+            let y = wrap01(faction.capital[1] + noise_offset(seed, 1));
+            buildings.push(Building {
+                id: idx,
+                x,
+                y,
+                kind: kinds[(idx as usize) % kinds.len()].clone(),
+                era: ((tick / 600) % 6) as u8,
+                faction_id: faction.id,
+            });
+        }
+    }
+    buildings
+}
+
+fn noise_offset(seed: u64, lane: u64) -> f32 {
+    let mixed = seed
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(lane.wrapping_mul(0xBF58_476D_1CE4_E5B9));
+    let unit = ((mixed >> 40) as f32) / ((1u64 << 24) as f32);
+    (unit - 0.5) * 0.10
+}
+
+fn wrap01(value: f32) -> f32 {
+    value.rem_euclid(1.0)
 }
 
 async fn snapshot_handler(State(state): State<AppState>) -> Json<Option<Snapshot>> {

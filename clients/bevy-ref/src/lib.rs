@@ -37,6 +37,10 @@ impl Default for CameraTarget {
 #[cfg(feature = "bevy")]
 pub mod bevy_render;
 
+#[cfg(feature = "bevy")]
+/// Live Bevy/WebSocket attach path for the 3D reference client.
+pub mod ws_client;
+
 #[cfg(test)]
 mod tests {
     use super::*;

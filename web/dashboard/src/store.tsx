@@ -25,16 +25,39 @@ export type CivPin = {
   idx: number;
   x: number;
   y: number;
+  dx: number;
+  dy: number;
   job: JobLabel | null;
+};
+
+export type Faction = {
+  id: number;
+  color: [number, number, number];
+  capital: [number, number];
+  radius: number;
+};
+
+export type BuildingKind = "Residential" | "Commercial" | "Industrial" | "Civic";
+
+export type Building = {
+  id: number;
+  x: number;
+  y: number;
+  kind: BuildingKind;
+  era: number;
+  faction_id: number;
 };
 
 export type Snapshot = {
   tick: number;
+  tick_dt_ms: number;
   population: number;
   voxel_dirty_count: number;
   voxel_chunk_count: number;
   sample_civilians: SampleCivilian[];
   civ_pins: CivPin[];
+  factions: Faction[];
+  buildings: Building[];
   is_day: boolean;
   speed: TimeSpeed;
 };

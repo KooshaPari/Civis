@@ -8,3 +8,16 @@ publish = false
 
 [dependencies]
 civ-engine = { path = "../engine", version = "0.1.0" }
+civ-voxel = { path = "../voxel" }
+civ-protocol-3d = { path = "../protocol-3d" }
+thiserror = "1"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "civ-server"
+path = "src/main.rs"
+
+[dev-dependencies]
+proptest = "1.4"

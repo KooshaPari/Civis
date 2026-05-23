@@ -224,6 +224,10 @@ name = "civ-server"
 version = "0.1.0"
 dependencies = [
  "civ-engine",
+ "civ-protocol-3d",
+ "civ-voxel",
+ "proptest",
+ "thiserror",
 ]
 
 [[package]]

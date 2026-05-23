@@ -50,6 +50,10 @@ civis-3d-verify:
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref
 
+# Run the Bevy windowed reference client behind the optional bevy feature.
+civis-3d-bevy-window:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
     cd ../phenotype-voxel && cargo test

@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/events": "http://localhost:8080",
-      "/snapshot": "http://localhost:8080",
+      "/events": "http://localhost:9090",
+      "/snapshot": "http://localhost:9090",
     },
   },
   build: {

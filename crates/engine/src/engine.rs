@@ -2,6 +2,11 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
+use civ_agents::{
+    count_civilians, propagate_cohort_tools, propagate_cohort_wardrobe, spawn_many, CohortStats,
+};
+use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_diffusion::DiffusionParams;
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
 use civ_tactics::{apply_damage, DamageEvent};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
@@ -11,8 +16,13 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
+use crate::replay::ReplayLog;
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResearchCache;
 
 /// Seeded RNG for reproducible simulation
 pub type SimRng = ChaCha8Rng;
@@ -159,6 +169,12 @@ pub struct Simulation {
     climate: Climate,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
+    building_graph: BuildingGraph,
+    allocator: Allocator,
+    diffusion_params: DiffusionParams,
+    target_era: u16,
+    last_cohort_stats: Option<CohortStats>,
+    research_cache: ResearchCache,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -168,6 +184,7 @@ pub struct Simulation {
     /// at the start of every [`Simulation::tick`].
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
+    replay_log: ReplayLog,
 }
 
 impl Simulation {
@@ -178,6 +195,7 @@ impl Simulation {
 
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
+        spawn_many(&mut world, 32, 10_000, 0);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
@@ -191,9 +209,19 @@ impl Simulation {
             climate,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
+            building_graph: BuildingGraph::new(),
+            allocator: Allocator::new(42),
+            diffusion_params: DiffusionParams::default(),
+            target_era: 1,
+            last_cohort_stats: None,
+            research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
+            replay_log: ReplayLog {
+                seed: 42,
+                ..ReplayLog::default()
+            },
         }
     }
 
@@ -202,6 +230,7 @@ impl Simulation {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
+        spawn_many(&mut world, 32, 10_000, 0);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
@@ -218,9 +247,19 @@ impl Simulation {
             climate,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
+            building_graph: BuildingGraph::new(),
+            allocator: Allocator::new(seed),
+            diffusion_params: DiffusionParams::default(),
+            target_era: 1,
+            last_cohort_stats: None,
+            research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
+            replay_log: ReplayLog {
+                seed,
+                ..ReplayLog::default()
+            },
         }
     }
 
@@ -241,12 +280,49 @@ impl Simulation {
 
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
+        self.replay_log.record_damage(self.state.tick, event);
         self.pending_damage.push(event);
+    }
+
+    /// Apply a voxel write and record it in the replay log.
+    pub fn push_voxel_write(&mut self, pos: civ_voxel::WorldCoord, value: MaterialId) {
+        self.voxel.write(pos, value);
+        self.replay_log
+            .record_voxel_write(self.state.tick, pos, value);
     }
 
     /// Apply tactical voxel damage immediately, bypassing the queue.
     pub fn apply_damage_now(&mut self, event: &DamageEvent) -> usize {
         apply_damage(&mut self.voxel, event)
+    }
+
+    pub(crate) fn apply_replay_voxel_write(
+        &mut self,
+        tick: u64,
+        pos: civ_voxel::WorldCoord,
+        value: MaterialId,
+    ) {
+        self.state.tick = tick;
+        self.voxel.write(pos, value);
+    }
+
+    pub(crate) fn apply_replay_damage(&mut self, tick: u64, event: &DamageEvent) {
+        self.state.tick = tick;
+        let _ = apply_damage(&mut self.voxel, event);
+    }
+
+    pub(crate) fn apply_replay_research(
+        &mut self,
+        tick: u64,
+        snapshot_hash: Vec<u8>,
+        accepted: bool,
+    ) {
+        self.state.tick = tick;
+        let _ = (snapshot_hash, accepted);
+    }
+
+    pub(crate) fn apply_replay_tick(&mut self, tick: u64) {
+        self.state.tick = tick;
     }
 
     /// Number of voxels removed during the most recent tactics phase.
@@ -262,8 +338,8 @@ impl Simulation {
 
     /// Mutable borrow of the voxel substrate. Writes accumulated here drain
     /// through [`Simulation::phase_voxel`] on the next tick.
-    pub fn voxel_mut(&mut self) -> &mut VoxelWorld<MaterialId> {
-        &mut self.voxel
+    pub fn voxel_mut(&mut self) -> VoxelWriteProxy<'_> {
+        VoxelWriteProxy { sim: self }
     }
 
     /// Dirty voxel events produced during the most recent tick. Replay logs,
@@ -273,6 +349,21 @@ impl Simulation {
     #[must_use]
     pub fn last_tick_voxel_events(&self) -> &[DirtyChunkEvent] {
         &self.last_tick_voxel_events
+    }
+
+    /// Borrow the building graph.
+    pub fn building_graph(&self) -> &BuildingGraph {
+        &self.building_graph
+    }
+
+    /// Borrow the most recent cohort diffusion statistics.
+    pub fn last_cohort_stats(&self) -> Option<&CohortStats> {
+        self.last_cohort_stats.as_ref()
+    }
+
+    /// Borrow the research cache.
+    pub fn research_cache(&self) -> &ResearchCache {
+        &self.research_cache
     }
 
     /// Spawn initial world entities
@@ -340,6 +431,14 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_planet();
+        self.phase_buildings();
+        self.phase_diffusion();
+        self.replay_log.record_tick(self.state.tick);
+    }
+
+    /// Borrow the replay log.
+    pub fn replay_log(&self) -> &ReplayLog {
+        &self.replay_log
     }
 
     /// Planet phase - recompute climate from the current tick.
@@ -368,6 +467,61 @@ impl Simulation {
         if self.state.tick % self.tick_modulo_compact == 0 {
             self.voxel.compact();
         }
+    }
+
+    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
+    fn phase_buildings(&mut self) {
+        if self.state.tick % 16 != 0 {
+            return;
+        }
+
+        let signals = DemandSignals {
+            residential: 0.75,
+            commercial: 0.25,
+            industrial: 0.25,
+            civic: 0.75,
+        };
+
+        if [
+            signals.residential,
+            signals.commercial,
+            signals.industrial,
+            signals.civic,
+        ]
+        .iter()
+        .any(|signal| *signal > 0.5)
+        {
+            let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
+            let _ = self.allocator.allocate(
+                &mut self.building_graph,
+                &signals,
+                self.target_era,
+                origin,
+                16,
+            );
+        }
+    }
+
+    /// Diffusion phase - propagates wardrobe and tools eras across civilians.
+    fn phase_diffusion(&mut self) {
+        let wardrobe_stats = propagate_cohort_wardrobe(
+            &mut self.world,
+            self.target_era,
+            self.diffusion_params,
+            &mut self.rng,
+        );
+        let _tools_stats = propagate_cohort_tools(
+            &mut self.world,
+            self.target_era,
+            self.diffusion_params,
+            &mut self.rng,
+        );
+
+        debug_assert_eq!(
+            wardrobe_stats.total_civilians,
+            count_civilians(&self.world) as u32
+        );
+        self.last_cohort_stats = Some(wardrobe_stats);
     }
 
     /// Production phase - buildings produce resources
@@ -456,6 +610,31 @@ impl Simulation {
     }
 }
 
+/// Replay-aware mutable voxel access wrapper.
+pub struct VoxelWriteProxy<'a> {
+    sim: &'a mut Simulation,
+}
+
+impl<'a> VoxelWriteProxy<'a> {
+    pub fn write(&mut self, pos: civ_voxel::WorldCoord, value: MaterialId) {
+        self.sim.push_voxel_write(pos, value);
+    }
+}
+
+impl<'a> Deref for VoxelWriteProxy<'a> {
+    type Target = VoxelWorld<MaterialId>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.sim.voxel
+    }
+}
+
+impl<'a> DerefMut for VoxelWriteProxy<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sim.voxel
+    }
+}
+
 impl Default for Simulation {
     fn default() -> Self {
         Self::new()
@@ -480,8 +659,11 @@ pub struct SimulationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::replay::{ReplayEvent, ReplayLog};
+    use civ_agents::{count_civilians, Wardrobe};
     use civ_planet::{compute_climate, is_daytime, MoonConfig, PlanetConfig};
-    use civ_voxel::WorldCoord;
+    use civ_voxel::{MaterialId, WorldCoord};
+    use tempfile::NamedTempFile;
 
     fn fill_voxel_chunk(world: &mut VoxelWorld<MaterialId>, origin: i64, size: i64) {
         for x in origin..origin + size {
@@ -493,10 +675,12 @@ mod tests {
         }
     }
 
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
     #[test]
-    fn test_simulation_creation() {
+    fn startup_spawns_32_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
+        assert_eq!(count_civilians(&sim.world), 32);
     }
 
     #[test]
@@ -551,7 +735,7 @@ mod tests {
     #[test]
     fn pending_damage_drains_and_reduces_chunk_count() {
         let mut sim = Simulation::with_seed(12);
-        fill_voxel_chunk(sim.voxel_mut(), 0, 16);
+        fill_voxel_chunk(&mut sim.voxel_mut(), 0, 16);
         let before = sim.voxel().chunk_count();
         assert!(before > 0);
 
@@ -584,7 +768,7 @@ mod tests {
     #[test]
     fn compact_runs_every_64_ticks() {
         let mut sim = Simulation::with_seed(13);
-        fill_voxel_chunk(sim.voxel_mut(), 0, 16);
+        fill_voxel_chunk(&mut sim.voxel_mut(), 0, 16);
         let mut last_uniform = sim.voxel().uniform_chunk_count();
 
         for _ in 0..128 {
@@ -595,10 +779,47 @@ mod tests {
         }
     }
 
-    /// FR-CIV-ENGINE-INT-004 — replay determinism still holds across 200 ticks
-    /// with damage events.
+    /// FR-CIV-ENGINE-INT-011 — phase_buildings allocates over time when signals are high.
     #[test]
-    fn determinism_holds_with_damage_events() {
+    fn phase_buildings_allocates_over_time_when_signals_are_high() {
+        let mut sim = Simulation::with_seed(77);
+        let before = sim.building_graph().parcels.len();
+
+        for _ in 0..200 {
+            sim.tick();
+        }
+
+        assert!(sim.building_graph().parcels.len() > before);
+    }
+
+    /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.
+    #[test]
+    fn phase_diffusion_bumps_wardrobe_eras() {
+        let mut sim = Simulation::with_seed(91);
+        let before = sim
+            .world
+            .query::<&Wardrobe>()
+            .iter()
+            .filter(|(_, wardrobe)| wardrobe.era >= sim.target_era)
+            .count();
+
+        for _ in 0..200 {
+            sim.tick();
+        }
+
+        let after = sim
+            .world
+            .query::<&Wardrobe>()
+            .iter()
+            .filter(|(_, wardrobe)| wardrobe.era >= sim.target_era)
+            .count();
+        assert!(after > before);
+    }
+
+    /// FR-CIV-ENGINE-INT-013 — replay determinism still holds across 200 ticks
+    /// with all phases on.
+    #[test]
+    fn determinism_holds_with_all_phases_enabled() {
         let mut sim1 = Simulation::with_seed(12345);
         let mut sim2 = Simulation::with_seed(12345);
 
@@ -629,6 +850,18 @@ mod tests {
         );
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
         assert_eq!(sim1.voxel().chunk_count(), sim2.voxel().chunk_count());
+        assert_eq!(sim1.building_graph(), sim2.building_graph());
+        assert_eq!(sim1.last_cohort_stats(), sim2.last_cohort_stats());
+    }
+
+    /// FR-CIV-ENGINE-INT-014 — last_cohort_stats reflects the population.
+    #[test]
+    fn last_cohort_stats_reflects_population() {
+        let mut sim = Simulation::with_seed(19);
+        sim.tick();
+
+        let stats = sim.last_cohort_stats().expect("cohort stats");
+        assert_eq!(stats.total_civilians as usize, count_civilians(&sim.world));
     }
 
     /// FR-CIV-ENGINE-INT-005 — `is_daytime` returns sensible day/night across
@@ -745,5 +978,102 @@ mod tests {
         sim1.tick();
         sim2.tick();
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
+    }
+
+    /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
+    #[test]
+    fn replay_log_round_trips_through_save_load() {
+        let mut log = ReplayLog {
+            seed: 99,
+            ..ReplayLog::default()
+        };
+        log.record_tick(1);
+        log.record_voxel_write(1, WorldCoord { x: 1, y: 2, z: 3 }, MaterialId(7));
+        log.record_damage(
+            2,
+            DamageEvent {
+                center: WorldCoord { x: 0, y: 0, z: 0 },
+                radius_voxels: 2,
+                energy: 11,
+            },
+        );
+        log.record_research(3, vec![1, 2, 3], true);
+
+        let file = NamedTempFile::new().unwrap();
+        log.save(file.path()).unwrap();
+        let loaded = ReplayLog::load(file.path()).unwrap();
+        assert_eq!(loaded, log);
+    }
+
+    /// FR-CIV-ENGINE-REPLAY-002 — Simulation tick produces a ReplayEvent::Tick.
+    #[test]
+    fn simulation_tick_produces_replay_tick_event() {
+        let mut sim = Simulation::with_seed(1);
+        sim.tick();
+        assert!(matches!(
+            sim.replay_log().events.last(),
+            Some(ReplayEvent::Tick { tick: 1 })
+        ));
+    }
+
+    /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
+    #[test]
+    fn push_damage_records_damage_event() {
+        let mut sim = Simulation::with_seed(1);
+        let event = DamageEvent {
+            center: WorldCoord { x: 1, y: 1, z: 1 },
+            radius_voxels: 3,
+            energy: 4,
+        };
+        sim.push_damage(event);
+        assert!(matches!(
+            sim.replay_log().events.last(),
+            Some(ReplayEvent::Damage { tick: 0, event: recorded }) if recorded == &event
+        ));
+    }
+
+    /// FR-CIV-ENGINE-REPLAY-004 — replay reproduces final voxel chunk count and tick.
+    #[test]
+    fn replay_reproduces_final_voxel_chunk_count_and_tick() {
+        let mut sim = Simulation::with_seed(2);
+        sim.voxel_mut()
+            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        sim.push_damage(DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 1,
+            energy: 1,
+        });
+        sim.tick();
+
+        let log = sim.replay_log().clone();
+        let mut replayed = Simulation::with_seed(2);
+        log.replay(&mut replayed).unwrap();
+        assert_eq!(replayed.state.tick, sim.state.tick);
+        assert_eq!(replayed.voxel().chunk_count(), sim.voxel().chunk_count());
+    }
+
+    /// FR-CIV-ENGINE-REPLAY-005 — identical replay logs converge to identical voxel state.
+    #[test]
+    fn replay_logs_converge_to_identical_voxel_state() {
+        let mut sim1 = Simulation::with_seed(3);
+        sim1.voxel_mut()
+            .write(WorldCoord { x: 4, y: 5, z: 6 }, MaterialId(9));
+        sim1.voxel_mut()
+            .write(WorldCoord { x: 8, y: 9, z: 10 }, MaterialId(8));
+        sim1.tick();
+
+        let log = sim1.replay_log().clone();
+        let mut sim2 = Simulation::with_seed(3);
+        log.replay(&mut sim2).unwrap();
+
+        assert_eq!(sim1.state.tick, sim2.state.tick);
+        assert_eq!(
+            sim1.voxel().read(WorldCoord { x: 4, y: 5, z: 6 }),
+            sim2.voxel().read(WorldCoord { x: 4, y: 5, z: 6 })
+        );
+        assert_eq!(
+            sim1.voxel().read(WorldCoord { x: 8, y: 9, z: 10 }),
+            sim2.voxel().read(WorldCoord { x: 8, y: 9, z: 10 })
+        );
     }
 }

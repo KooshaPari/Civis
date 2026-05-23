@@ -15,6 +15,7 @@ pub mod engine;
 pub mod io;
 pub mod metrics;
 pub mod policy;
+pub mod replay;
 
 pub use engine::{
     Building, BuildingType, Citizen, JobType, MilitaryUnit, Position, Production, ResourceType,
@@ -25,6 +26,7 @@ pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{apply_damage, DamageEvent};
 pub use metrics::{compute, Metrics};
 pub use policy::{effective_consumption, PolicyInput};
+pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

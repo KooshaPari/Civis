@@ -101,13 +101,21 @@ async fn main() {
         .with_state(state)
         .layer(CorsLayer::permissive());
 
-    let addr: SocketAddr = "0.0.0.0:8080".parse().expect("valid listen address");
+    // Bindable port from CIV_WATCH_PORT (default 9090 — 8080 is reserved by
+    // Windows dynamic port range on many systems).
+    let port: u16 = std::env::var("CIV_WATCH_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(9090);
+    let addr: SocketAddr = format!("0.0.0.0:{port}")
+        .parse()
+        .expect("valid listen address");
     info!("civ-watch listening on http://{addr}");
-    info!("dashboard: http://localhost:8080");
+    info!("dashboard: http://localhost:{port}");
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .expect("bind 8080");
+        .unwrap_or_else(|e| panic!("bind {port}: {e}"));
     axum::serve(listener, app).await.expect("axum server");
 }
 

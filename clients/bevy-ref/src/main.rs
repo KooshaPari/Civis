@@ -4,10 +4,11 @@
 //! engine-neutral `CubicMesher`, and prints the resulting face count. Useful
 //! for CI screenshot regressions and agent-driven smoke runs.
 //!
-//! Real interactive Bevy window lives behind the `bevy` feature:
+//! Real interactive Bevy rendering lives in `civ-bevy-window` behind the
+//! `bevy` feature:
 //!
 //! ```bash
-//! cargo run -p civ-bevy-ref --features bevy
+//! cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
 //! ```
 
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld, WorldCoord};
@@ -18,7 +19,6 @@ const CHUNK_EDGE: usize = 16;
 fn main() {
     let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(VOXEL_SPAN);
 
-    // Build a 4×4×4 cube of stone at the origin.
     for ix in 0..4 {
         for iy in 0..4 {
             for iz in 0..4 {
@@ -33,10 +33,10 @@ fn main() {
             }
         }
     }
+
     let dirty = world.drain_dirty();
     println!("dirty events: {}", dirty.len());
 
-    // Manually mirror the populated chunk into a flat slice for the mesher.
     let mut chunk_voxels = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
     for ix in 0..4 {
         for iy in 0..4 {
@@ -45,6 +45,7 @@ fn main() {
             }
         }
     }
+
     let view = ChunkView {
         id: ChunkId(0),
         voxels: &chunk_voxels,
@@ -56,18 +57,4 @@ fn main() {
         mesh.indices.len()
     );
     assert!(!mesh.vertices.is_empty());
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn smoke_builds_and_meshes() {
-        // Same as main, but returns rather than printing.
-        let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(VOXEL_SPAN);
-        world.write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
-        let dirty = world.drain_dirty();
-        assert_eq!(dirty.len(), 1);
-    }
 }

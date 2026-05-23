@@ -7,8 +7,8 @@
 //!   arrays. Currently this just re-exposes the kernel `MeshBuffer` and adds
 //!   small utility shapes.
 //! - **`bevy` feature** — the Bevy renderer (`pub mod bevy_render`). Pulls
-//!   bevy 0.14 + default features. Off by default so the workspace build stays
-//!   fast for CI / agent-driven smoke runs.
+//!   Bevy 0.14 behind an optional feature set. Off by default so the workspace
+//!   build stays fast for CI / agent-driven smoke runs.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

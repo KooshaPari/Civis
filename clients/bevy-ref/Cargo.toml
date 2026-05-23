@@ -15,12 +15,25 @@ path = "src/main.rs"
 
 [dependencies]
 civ-voxel = { path = "../../crates/voxel" }
-civ-engine = { path = "../../crates/engine" }
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
-bevy = { version = "0.14", optional = true }
+bevy = { version = "0.14", optional = true, default-features = false, features = [
+    "bevy_asset",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_winit",
+    "default_font",
+    "x11",
+    "wayland",
+] }
 
 [features]
 default = []
 bevy = ["dep:bevy"]
+
+[[bin]]
+name = "civ-bevy-window"
+path = "src/bin/bevy_window.rs"
+required-features = ["bevy"]

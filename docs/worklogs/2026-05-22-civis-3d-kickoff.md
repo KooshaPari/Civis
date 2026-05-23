@@ -54,9 +54,60 @@ autonomous city growth, Star Wars EAW:FOC + Call to Arms warfare layering, Galim
 ## Next iteration
 
 1. Bootstrap `KooshaPari/phenotype-voxel` repo per
-   `~/.claude/plans/civis-3d-scratch/phenotype-voxel-design.md` (P-V0).
-2. Wire `crates/voxel` as a path-dep on the new repo (once available locally).
-3. Begin FR-CIV-VOXEL-001 / 002 / 003 implementation (P-V1).
+   `~/.claude/plans/civis-3d-scratch/phenotype-voxel-design.md` (P-V0). ✅
+2. Wire `crates/voxel` as a path-dep on the new repo (once available locally). ✅
+3. Begin FR-CIV-VOXEL-001 / 002 / 003 implementation (P-V1). ✅ (storage,
+   write+drain, replay-determinism)
+
+## Iteration 2 — 2026-05-22 continued
+
+Landed on the same kickoff day; PR #296 now has 8 commits:
+
+1. **phenotype-voxel kernel** — bootstrapped at
+   <https://github.com/KooshaPari/phenotype-voxel> (private). 9 modules
+   (chunk, coord, cubic_mesher, delta, lod, material, mesh, octree, world).
+   **21 passing tests.** Working `VoxelWorld<T>` with deterministic
+   write+drain (FR-PHENO-VOXEL-WORLD-001..005) plus an engine-neutral
+   reference `CubicMesher` with face culling (FR-PHENO-VOXEL-CUBIC-001..005).
+2. **Civis civ-voxel** — re-exports kernel types + `VoxelWorld` + `CubicMesher`;
+   adds FR-CIV-VOXEL-005 replay-determinism smoke and FR-CIV-VOXEL-010
+   `VoxelWorld → CubicMesher` end-to-end smoke.
+3. **Civis civ-protocol-3d** — first real types (`VoxelDeltaFrame`,
+   `BuildingDiffFrame`, `AgentAppearanceFrame`, `Frame3d` union). Versioned
+   `SCHEMA_VERSION = 0`. JSON round-trip verified as a determinism floor.
+4. **Civis `clients/`** — three reference renderers scaffolded:
+   - `clients/bevy-ref` is a real workspace member; headless binary builds a
+     4³ voxel cube and meshes it with `CubicMesher` (`cargo run -p civ-bevy-ref`
+     → `dirty events: 64 / mesh: 384 vertices, 576 indices`).
+   - `clients/godot-ref` ships a README scaffold describing the Godot 4 +
+     GDExt/Rust layout (project files land in the godot-ref PR).
+   - `clients/unreal-show` ships a README scaffold describing the UE5 + cbindgen
+     layout (project files land in the unreal-show PR, gated on the EULA
+     decision).
+5. **Justfile** — added `just civis-3d-verify`, `civis-3d-bevy-smoke`,
+   `civis-3d-voxel-kernel` targets so the standard gate is one command.
+
+**Workspace state:** 30 passing tests; `cargo build / test / clippy
+--all-targets -D warnings / fmt --check` all green via `just civis-3d-verify`.
+
+## Resolved this iteration
+
+- **Cargo edition2024 transitive deps** — local toolchain bumped 1.83 → 1.95
+  via `rustup update stable` (after removing the deprecated `wasm32-wasi`
+  target). Resolves proptest/blake3 chains.
+- **Pre-existing clippy lint in `civ-engine` tests** —
+  `field-reassign-with-default` exposed by the toolchain bump, fixed.
+- **`WriteSeq::next` name collision with `Iterator::next`** — renamed to
+  `advance`.
+- **`MaterialId` derivable default** — derived `Default` (id 0 = "air"
+  convention).
+
+## Still open
+
+- LLM tick budget (resolved as async-multi-tick per build.md).
+- Modding day-1 vs post-MVP — owner.
+- Unreal client EULA path — owner.
+- phenotype-voxel public/private visibility — owner.
 
 ## Cross-references
 

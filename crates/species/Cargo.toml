@@ -1,0 +1,15 @@
+[package]
+name = "civ-species"
+description = "Phenotype expression: DNA → morphology + behavior weights; multi-species tagging"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+civ-genetics = { path = "../genetics" }
+
+[dev-dependencies]
+proptest = "1.4"

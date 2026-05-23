@@ -1,8 +1,8 @@
-use civ_engine::{step, WorldState, metrics, Fixed};
+use civ_engine::{metrics, step, Fixed, WorldState};
 
 fn main() {
     let state = WorldState::default();
-    
+
     // Direct Fixed calculation instead of going through policy module
     let base = Fixed::from_num(5_000_000_000i64); // 5e9 joules
     let consumption = base; // No scarcity multiplier for now

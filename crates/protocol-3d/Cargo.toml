@@ -1,0 +1,17 @@
+[package]
+name = "civ-protocol-3d"
+description = "WebSocket binary protocol extensions for voxel deltas, building diffs, agent appearance"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+civ-voxel = { path = "../voxel" }
+civ-build = { path = "../build" }
+civ-agents = { path = "../agents" }
+
+[dev-dependencies]
+proptest = "1.4"

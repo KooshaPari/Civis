@@ -1,0 +1,16 @@
+[package]
+name = "civ-research"
+description = "LLM R&D proposal/validation pipeline; replay-safe hash-keyed cache"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+civ-engine = { path = "../engine" }
+civ-laws = { path = "../laws" }
+
+[dev-dependencies]
+proptest = "1.4"

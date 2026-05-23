@@ -36,6 +36,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
+name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -55,6 +61,9 @@ name = "bitflags"
 version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "bumpalo"
@@ -93,6 +102,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-agents"
+version = "0.1.0"
+dependencies = [
+ "civ-engine",
+ "civ-species",
+ "hecs",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-build"
+version = "0.1.0"
+dependencies = [
+ "civ-voxel",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-diffusion"
+version = "0.1.0"
+dependencies = [
+ "civ-agents",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
@@ -109,10 +150,94 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-genetics"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-laws"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "ron",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-planet"
+version = "0.1.0"
+dependencies = [
+ "civ-engine",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-protocol-3d"
+version = "0.1.0"
+dependencies = [
+ "civ-agents",
+ "civ-build",
+ "civ-voxel",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-research"
+version = "0.1.0"
+dependencies = [
+ "civ-engine",
+ "civ-laws",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "civ-server"
 version = "0.1.0"
 dependencies = [
  "civ-engine",
+]
+
+[[package]]
+name = "civ-species"
+version = "0.1.0"
+dependencies = [
+ "civ-genetics",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-tactics"
+version = "0.1.0"
+dependencies = [
+ "civ-agents",
+ "civ-voxel",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "civ-voxel"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -508,6 +633,18 @@ name = "regex-syntax"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+
+[[package]]
+name = "ron"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+dependencies = [
+ "base64",
+ "bitflags",
+ "serde",
+ "serde_derive",
+]
 
 [[package]]
 name = "rustix"

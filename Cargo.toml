@@ -2,6 +2,17 @@
 members = [
   "crates/engine",
   "crates/server",
+  "crates/voxel",
+  "crates/build",
+  "crates/genetics",
+  "crates/species",
+  "crates/agents",
+  "crates/diffusion",
+  "crates/laws",
+  "crates/research",
+  "crates/tactics",
+  "crates/planet",
+  "crates/protocol-3d",
 ]
 resolver = "2"
 

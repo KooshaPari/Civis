@@ -1,0 +1,17 @@
+[package]
+name = "civ-agents"
+description = "Civilian agent ECS components + LOD tick + per-civilian wardrobe/tools state"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+civ-engine = { path = "../engine" }
+civ-species = { path = "../species" }
+hecs = "0.10"
+
+[dev-dependencies]
+proptest = "1.4"

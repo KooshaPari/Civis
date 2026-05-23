@@ -23,7 +23,7 @@ mod tests {
     fn test_read_write() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test content").unwrap();
-        
+
         let contents = read_text(file.path()).unwrap();
         assert_eq!(contents, "test content");
     }

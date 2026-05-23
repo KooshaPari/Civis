@@ -115,3 +115,17 @@ Landed on the same kickoff day; PR #296 now has 8 commits:
 - Build/progression design: `~/.claude/plans/civis-3d-scratch/build.md`
 - Voxel kernel design: `~/.claude/plans/civis-3d-scratch/phenotype-voxel-design.md`
 - PR: [#296](https://github.com/KooshaPari/Civis/pull/296)
+
+## Iteration 3 — 2026-05-22 watch harness
+
+- Added `civ-watch` as the local live-view harness. It ticks a background
+  `Simulation` at ~10 Hz, publishes SSE snapshots at `GET /events`, serves
+  the latest snapshot at `GET /snapshot`, and exposes the dashboard static
+  build at `GET /`.
+- Added `web/dashboard/` as a Bun/Vite/React/TanStack Router app. The UI
+  subscribes to `/events`, falls back to `/snapshot` for the first poll, shows
+  live/disconnected state, and renders a top-down canvas placeholder for voxel
+  chunk dots.
+- Added `just` targets for the combined watch/dev flow and the dashboard build
+  path, plus `.gitignore` entries for `web/dashboard/node_modules/` and
+  `web/dashboard/dist/`.

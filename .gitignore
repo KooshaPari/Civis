@@ -1,5 +1,7 @@
 /target
 /node_modules
+/web/dashboard/node_modules/
+/web/dashboard/dist/
 /.task
 .DS_Store
 .env

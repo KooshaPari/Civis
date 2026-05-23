@@ -53,3 +53,12 @@ civis-3d-bevy-smoke:
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
     cd ../phenotype-voxel && cargo test
+
+# Run the Civis 3D watch harness and dashboard together.
+civis-3d-watch:
+    cargo run -p civ-watch &
+    cd web/dashboard && bun run dev
+
+# Install and build the dashboard for the watch harness.
+civis-3d-watch-build:
+    cd web/dashboard && bun install && bun run build

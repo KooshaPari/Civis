@@ -1,0 +1,26 @@
+[package]
+name = "civ-watch"
+description = "Civis 3D live-dev hot-reload harness: SSE-streamed Simulation snapshots for a web dashboard"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "civ-watch"
+path = "src/main.rs"
+
+[dependencies]
+civ-engine = { path = "../engine" }
+civ-voxel = { path = "../voxel" }
+civ-protocol-3d = { path = "../protocol-3d" }
+civ-server = { path = "../server" }
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+futures = "0.3"

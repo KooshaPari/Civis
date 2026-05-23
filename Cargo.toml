@@ -13,6 +13,7 @@ members = [
   "crates/tactics",
   "crates/planet",
   "crates/protocol-3d",
+  "crates/watch",
   "clients/bevy-ref",
 ]
 resolver = "2"

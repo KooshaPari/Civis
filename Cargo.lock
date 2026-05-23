@@ -1345,11 +1345,17 @@ dependencies = [
 name = "civ-agents"
 version = "0.1.0"
 dependencies = [
+ "civ-diffusion",
  "civ-engine",
+ "civ-genetics",
  "civ-species",
+ "civ-voxel",
  "hecs",
  "proptest",
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
  "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -1376,7 +1382,6 @@ dependencies = [
 name = "civ-diffusion"
 version = "0.1.0"
 dependencies = [
- "civ-agents",
  "proptest",
  "serde",
  "tracing",

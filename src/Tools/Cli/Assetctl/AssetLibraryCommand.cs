@@ -513,7 +513,7 @@ public static class AssetLibraryCommand
 
             if (source.StartsWith("local:", StringComparison.OrdinalIgnoreCase))
             {
-                count = await ImportFromLocalAsync(store, repoRoot, logger, ct);
+                count = await ImportFromLocalAsync(store, repoRoot, logger, ct).ConfigureAwait(false);
             }
             else if (source.StartsWith("json:", StringComparison.OrdinalIgnoreCase))
             {
@@ -522,7 +522,7 @@ public static class AssetLibraryCommand
             }
             else if (source.Equals("local", StringComparison.OrdinalIgnoreCase))
             {
-                count = await ImportFromLocalAsync(store, repoRoot, logger, ct);
+                count = await ImportFromLocalAsync(store, repoRoot, logger, ct).ConfigureAwait(false);
             }
             else if (File.Exists(source))
             {
@@ -620,7 +620,7 @@ public static class AssetLibraryCommand
             EnsureCatalogDirectory(catalogPath, logger);
             using var store = new AssetCatalogStore(catalogPath, null);
 
-            int count = await ImportFromLocalAsync(store, repoRoot, logger, ct, force);
+            int count = await ImportFromLocalAsync(store, repoRoot, logger, ct, force).ConfigureAwait(false);
 
             AnsiConsole.MarkupLine($"[green]✓[/] Synced {count} assets into catalog.");
         });
@@ -638,7 +638,7 @@ public static class AssetLibraryCommand
         int count = 0;
 
         var localAdapter = new LocalSourceAdapter(repoRoot, null);
-        IEnumerable<AssetCandidate> candidates = await localAdapter.SearchAsync("", ct);
+        IEnumerable<AssetCandidate> candidates = await localAdapter.SearchAsync("", ct).ConfigureAwait(false);
 
         foreach (var candidate in candidates)
         {

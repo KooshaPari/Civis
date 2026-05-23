@@ -38,44 +38,51 @@ public class MockGameBridgeServerTests
     {
         // Arrange — fresh pipe per test (Pattern #78).
         string pipeName = $"dinoforge-test-pipe-{Guid.NewGuid():N}";
-        await using var server = new MockGameBridgeServer(pipeName);
-        await server.StartAsync();
-
-        var client = new GameClient(new GameClientOptions
-        {
-            PipeName = pipeName,
-            UseMessageFraming = false,
-            // Phase 4c sub-task A: explicitly opt in. The default stays false
-            // (sub-task B will flip it after all consumers are migrated).
-            PerformConnectHandshake = true,
-        });
-
+        MockGameBridgeServer server = new MockGameBridgeServer(pipeName);
         try
         {
-            // Act — ConnectAsync sends the `connect` JSON-RPC request and
-            // captures session_id + session_key_b64 from the reply.
-            await client.ConnectAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
-            // Assert — internal accessors expose the captured handshake state.
-            client.SessionId.Should().NotBeNull(
-                "the mock server's connect handler must reply with a session_id");
-            client.SessionId.Should().HaveLength(32,
-                "the mock emits Guid.ToString(\"N\") (32 hex chars) per the GameBridgeServer shape");
+            var client = new GameClient(new GameClientOptions
+            {
+                PipeName = pipeName,
+                UseMessageFraming = false,
+                // Phase 4c sub-task A: explicitly opt in. The default stays false
+                // (sub-task B will flip it after all consumers are migrated).
+                PerformConnectHandshake = true,
+            });
 
-            client.SessionKeys.TryGet(client.SessionId!, out byte[]? key)
-                .Should().BeTrue("the per-session HMAC key must be cached under the returned session_id");
-            key.Should().NotBeNull();
-            key!.Length.Should().Be(32,
-                "the spec mandates a 256-bit ephemeral key (32 bytes), matching SessionHmac.KeyMaterial");
+            try
+            {
+                // Act — ConnectAsync sends the `connect` JSON-RPC request and
+                // captures session_id + session_key_b64 from the reply.
+                await client.ConnectAsync().ConfigureAwait(true);
 
-            // Sanity check: the receipt-verification machinery has the data it
-            // needs for sub-task B's strict-mode flip — we don't drive a follow-up
-            // call here because the mock does not yet emit BridgeReceipts on
-            // non-handshake responses (groundwork only).
+                // Assert — internal accessors expose the captured handshake state.
+                client.SessionId.Should().NotBeNull(
+                    "the mock server's connect handler must reply with a session_id");
+                client.SessionId.Should().HaveLength(32,
+                    "the mock emits Guid.ToString(\"N\") (32 hex chars) per the GameBridgeServer shape");
+
+                client.SessionKeys.TryGet(client.SessionId!, out byte[]? key)
+                    .Should().BeTrue("the per-session HMAC key must be cached under the returned session_id");
+                key.Should().NotBeNull();
+                key!.Length.Should().Be(32,
+                    "the spec mandates a 256-bit ephemeral key (32 bytes), matching SessionHmac.KeyMaterial");
+
+                // Sanity check: the receipt-verification machinery has the data it
+                // needs for sub-task B's strict-mode flip — we don't drive a follow-up
+                // call here because the mock does not yet emit BridgeReceipts on
+                // non-handshake responses (groundwork only).
+            }
+            finally
+            {
+                client.Dispose();
+            }
         }
         finally
         {
-            client.Dispose();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -96,31 +103,38 @@ public class MockGameBridgeServerTests
     {
         // Arrange
         string pipeName = $"dinoforge-test-pipe-{Guid.NewGuid():N}";
-        await using var server = new MockGameBridgeServer(pipeName);
-        await server.StartAsync();
-
-        var options = new GameClientOptions
-        {
-            PipeName = pipeName,
-            UseMessageFraming = false,
-            // Explicit opt-out — Phase 4c sub-task B made handshake the
-            // default; tests that pin the no-handshake behavior must say so.
-            PerformConnectHandshake = false,
-        };
-
-        var client = new GameClient(options);
-
+        MockGameBridgeServer server = new MockGameBridgeServer(pipeName);
         try
         {
-            // Act
-            await client.ConnectAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
-            // Assert — no handshake means no session_id captured.
-            client.SessionId.Should().BeNull();
+            var options = new GameClientOptions
+            {
+                PipeName = pipeName,
+                UseMessageFraming = false,
+                // Explicit opt-out — Phase 4c sub-task B made handshake the
+                // default; tests that pin the no-handshake behavior must say so.
+                PerformConnectHandshake = false,
+            };
+
+            var client = new GameClient(options);
+
+            try
+            {
+                // Act
+                await client.ConnectAsync().ConfigureAwait(true);
+
+                // Assert — no handshake means no session_id captured.
+                client.SessionId.Should().BeNull();
+            }
+            finally
+            {
+                client.Dispose();
+            }
         }
         finally
         {
-            client.Dispose();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -150,40 +164,47 @@ public class MockGameBridgeServerTests
         // overridden because MockGameBridgeServer uses line-delimited JSON.
         // Otherwise we rely on the post-flip defaults.
         string pipeName = $"dinoforge-test-pipe-{Guid.NewGuid():N}";
-        await using var server = new MockGameBridgeServer(pipeName);
-        await server.StartAsync();
-
-        var options = new GameClientOptions
-        {
-            PipeName = pipeName,
-            UseMessageFraming = false,
-            // PerformConnectHandshake intentionally NOT set — we are pinning
-            // the post-flip default (sub-task B).
-        };
-
-        // Defensive guard — fires if a future agent rolls back the flip.
-        options.PerformConnectHandshake.Should().BeTrue(
-            "Phase 4c sub-task B flipped this default to true; rollback must be intentional");
-
-        var client = new GameClient(options);
-
+        MockGameBridgeServer server = new MockGameBridgeServer(pipeName);
         try
         {
-            // Act — defaults must drive the full handshake + ping path.
-            await client.ConnectAsync();
-            var ping = await client.PingAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
-            // Assert — handshake populated SessionId; ping returned a result
-            // (under the WarnOnly default, an unsigned receipt would log but
-            // not throw, so a non-null ping result is the strongest signal we
-            // can extract without changing the verification mode here).
-            client.SessionId.Should().NotBeNull(
-                "the post-flip default exercises the connect handshake");
-            ping.Should().NotBeNull("ping must complete end-to-end under default options");
+            var options = new GameClientOptions
+            {
+                PipeName = pipeName,
+                UseMessageFraming = false,
+                // PerformConnectHandshake intentionally NOT set — we are pinning
+                // the post-flip default (sub-task B).
+            };
+
+            // Defensive guard — fires if a future agent rolls back the flip.
+            options.PerformConnectHandshake.Should().BeTrue(
+                "Phase 4c sub-task B flipped this default to true; rollback must be intentional");
+
+            var client = new GameClient(options);
+
+            try
+            {
+                // Act — defaults must drive the full handshake + ping path.
+                await client.ConnectAsync().ConfigureAwait(true);
+                var ping = await client.PingAsync().ConfigureAwait(true);
+
+                // Assert — handshake populated SessionId; ping returned a result
+                // (under the WarnOnly default, an unsigned receipt would log but
+                // not throw, so a non-null ping result is the strongest signal we
+                // can extract without changing the verification mode here).
+                client.SessionId.Should().NotBeNull(
+                    "the post-flip default exercises the connect handshake");
+                ping.Should().NotBeNull("ping must complete end-to-end under default options");
+            }
+            finally
+            {
+                client.Dispose();
+            }
         }
         finally
         {
-            client.Dispose();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -212,42 +233,49 @@ public class MockGameBridgeServerTests
     {
         // Arrange — fresh pipe per test (Pattern #78).
         string pipeName = $"dinoforge-test-pipe-{Guid.NewGuid():N}";
-        await using var server = new MockGameBridgeServer(pipeName);
-        await server.StartAsync();
-
-        var client = new GameClient(new GameClientOptions
-        {
-            PipeName = pipeName,
-            UseMessageFraming = false,
-            // Phase 4c sub-task A: opt into the connect handshake so the
-            // session key is cached client-side. Sub-task B will flip this
-            // default; until then we set it explicitly here.
-            PerformConnectHandshake = true,
-        })
-        {
-            // Phase 4c sub-task C is gated under explicit Strict here so the
-            // existing WarnOnly default is unaffected (sub-task B owns the
-            // default-flip — separate dispatch).
-            HmacVerificationMode = VerificationMode.Strict,
-        };
-
+        MockGameBridgeServer server = new MockGameBridgeServer(pipeName);
         try
         {
-            // Act — Connect handshake (frame=0 sentinel allowed) + a real call
-            // (PingAsync) which exercises the receipt-attach path on the mock.
-            await client.ConnectAsync();
-            var ping = await client.PingAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
-            // Assert — Strict mode would have thrown GameClientException
-            // ("hmac_invalid: ...") if the mock's receipt didn't match. The
-            // ping returning a populated result is sufficient evidence that
-            // verification passed.
-            ping.Should().NotBeNull("Strict-mode PingAsync only returns when the mock's receipt verifies");
-            client.SessionId.Should().NotBeNull("handshake must have populated SessionId");
+            var client = new GameClient(new GameClientOptions
+            {
+                PipeName = pipeName,
+                UseMessageFraming = false,
+                // Phase 4c sub-task A: opt into the connect handshake so the
+                // session key is cached client-side. Sub-task B will flip this
+                // default; until then we set it explicitly here.
+                PerformConnectHandshake = true,
+            })
+            {
+                // Phase 4c sub-task C is gated under explicit Strict here so the
+                // existing WarnOnly default is unaffected (sub-task B owns the
+                // default-flip — separate dispatch).
+                HmacVerificationMode = VerificationMode.Strict,
+            };
+
+            try
+            {
+                // Act — Connect handshake (frame=0 sentinel allowed) + a real call
+                // (PingAsync) which exercises the receipt-attach path on the mock.
+                await client.ConnectAsync().ConfigureAwait(true);
+                var ping = await client.PingAsync().ConfigureAwait(true);
+
+                // Assert — Strict mode would have thrown GameClientException
+                // ("hmac_invalid: ...") if the mock's receipt didn't match. The
+                // ping returning a populated result is sufficient evidence that
+                // verification passed.
+                ping.Should().NotBeNull("Strict-mode PingAsync only returns when the mock's receipt verifies");
+                client.SessionId.Should().NotBeNull("handshake must have populated SessionId");
+            }
+            finally
+            {
+                client.Dispose();
+            }
         }
         finally
         {
-            client.Dispose();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -273,46 +301,53 @@ public class MockGameBridgeServerTests
     {
         // Arrange
         string pipeName = $"dinoforge-test-pipe-{Guid.NewGuid():N}";
-        await using var server = new MockGameBridgeServer(pipeName);
-        await server.StartAsync();
-
-        var client = new GameClient(new GameClientOptions
-        {
-            PipeName = pipeName,
-            UseMessageFraming = false,
-            PerformConnectHandshake = true,
-        });
-        // Post-flip default (Phase 4c sub-task B #249): HmacVerificationMode.Strict.
-        // The docstring specifies Strict-mode frame monotonicity verification;
-        // we rely on the default to enforce it without explicit assignment.
-
+        MockGameBridgeServer server = new MockGameBridgeServer(pipeName);
         try
         {
-            await client.ConnectAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
-            // Act — three sequential RPCs. Under Strict, GameClient tracks
-            // _lastFrame internally; any non-strictly-increasing frame on the
-            // 2nd or 3rd response would throw GameClientException.
-            var firstFrameBefore = client.LastFrame;
-            await client.PingAsync();
-            long frame1 = client.LastFrame;
-            await client.PingAsync();
-            long frame2 = client.LastFrame;
-            await client.PingAsync();
-            long frame3 = client.LastFrame;
+            var client = new GameClient(new GameClientOptions
+            {
+                PipeName = pipeName,
+                UseMessageFraming = false,
+                PerformConnectHandshake = true,
+            });
+            // Post-flip default (Phase 4c sub-task B #249): HmacVerificationMode.Strict.
+            // The docstring specifies Strict-mode frame monotonicity verification;
+            // we rely on the default to enforce it without explicit assignment.
 
-            // Assert — frames advance strictly. The handshake's frame=0 is
-            // not recorded into _lastFrame (handshake-tolerance branch in
-            // BridgeReceiptVerifier line ~120), so the first ping's frame
-            // is the first observable advance.
-            firstFrameBefore.Should().Be(0, "no non-handshake RPCs have happened yet");
-            frame1.Should().BeGreaterThan(firstFrameBefore, "first ping must advance the world frame");
-            frame2.Should().BeGreaterThan(frame1, "second ping must strictly advance");
-            frame3.Should().BeGreaterThan(frame2, "third ping must strictly advance");
+            try
+            {
+                await client.ConnectAsync().ConfigureAwait(true);
+
+                // Act — three sequential RPCs. Under Strict, GameClient tracks
+                // _lastFrame internally; any non-strictly-increasing frame on the
+                // 2nd or 3rd response would throw GameClientException.
+                var firstFrameBefore = client.LastFrame;
+                await client.PingAsync().ConfigureAwait(true);
+                long frame1 = client.LastFrame;
+                await client.PingAsync().ConfigureAwait(true);
+                long frame2 = client.LastFrame;
+                await client.PingAsync().ConfigureAwait(true);
+                long frame3 = client.LastFrame;
+
+                // Assert — frames advance strictly. The handshake's frame=0 is
+                // not recorded into _lastFrame (handshake-tolerance branch in
+                // BridgeReceiptVerifier line ~120), so the first ping's frame
+                // is the first observable advance.
+                firstFrameBefore.Should().Be(0, "no non-handshake RPCs have happened yet");
+                frame1.Should().BeGreaterThan(firstFrameBefore, "first ping must advance the world frame");
+                frame2.Should().BeGreaterThan(frame1, "second ping must strictly advance");
+                frame3.Should().BeGreaterThan(frame2, "third ping must strictly advance");
+            }
+            finally
+            {
+                client.Dispose();
+            }
         }
         finally
         {
-            client.Dispose();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 }

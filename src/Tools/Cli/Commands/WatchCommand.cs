@@ -19,7 +19,7 @@ internal static class WatchCommand
         Command command = new("watch", "Real-time game state monitoring");
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
-            using GameClient? client = await CommandHelper.ConnectAsync(ct);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct).ConfigureAwait(false);
             if (client is null) return;
 
             AnsiConsole.MarkupLine("[dim]Watching game state. Press Ctrl+C to stop.[/]");
@@ -32,8 +32,8 @@ internal static class WatchCommand
                     {
                         try
                         {
-                            GameStatus status = await client.StatusAsync(ct);
-                            ResourceSnapshot resources = await client.GetResourcesAsync(ct);
+                            GameStatus status = await client.StatusAsync(ct).ConfigureAwait(false);
+                            ResourceSnapshot resources = await client.GetResourcesAsync(ct).ConfigureAwait(false);
 
                             Table table = new Table()
                                 .Border(TableBorder.Rounded)
@@ -71,9 +71,9 @@ internal static class WatchCommand
                             ctx.UpdateTarget(errorTable);
                         }
 
-                        await Task.Delay(2000, ct);
+                        await Task.Delay(2000, ct).ConfigureAwait(false);
                     }
-                });
+                }).ConfigureAwait(false);
         });
         return command;
     }

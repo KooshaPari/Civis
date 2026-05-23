@@ -32,7 +32,7 @@ internal static class UiWaitCommand
             int timeout = parseResult.GetValue(timeoutOpt);
             if (timeout == 0) timeout = 5000;
 
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -43,7 +43,7 @@ internal static class UiWaitCommand
                 return;
             }
 
-            UiWaitResult result = await client.WaitForUiAsync(selector, state, timeout, ct);
+            UiWaitResult result = await client.WaitForUiAsync(selector, state, timeout, ct).ConfigureAwait(false);
 
             if (json)
             {

@@ -76,7 +76,7 @@ public class GameTestContainerHarness : IAsyncDisposable
 
         // Run PowerShell script to create pool
         var psScript = $"& '{scriptPath}' -Count {count} -BaseDir '{_baseDir}' | ConvertTo-Json";
-        var result = await RunPowerShellAsync(psScript);
+        var result = await RunPowerShellAsync(psScript).ConfigureAwait(true);
 
         // Parse JSON result into containers
         var containers = ParsePoolJson(result);
@@ -96,7 +96,7 @@ public class GameTestContainerHarness : IAsyncDisposable
 
         // Run launcher script
         var psScript = $"& '{scriptPath}' -BoxPath '{container.BoxPath}' -PipeName '{container.PipeName}' -Hidden -TimeoutSeconds {timeoutSeconds}";
-        await RunPowerShellAsync(psScript);
+        await RunPowerShellAsync(psScript).ConfigureAwait(true);
 
         // Now actively poll for the game process and bridge connection
         var startTime = DateTime.UtcNow;
@@ -116,7 +116,7 @@ public class GameTestContainerHarness : IAsyncDisposable
 
                 // Try to connect to bridge
                 var client = new GameClient(new GameClientOptions { PipeName = container.PipeName });
-                await client.ConnectAsync();
+                await client.ConnectAsync().ConfigureAwait(true);
 
                 if (client.IsConnected)
                 {
@@ -130,7 +130,7 @@ public class GameTestContainerHarness : IAsyncDisposable
                 // Not ready yet, continue polling
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(true);
         }
 
         return false;
@@ -155,7 +155,7 @@ public class GameTestContainerHarness : IAsyncDisposable
         {
             try
             {
-                var status = await client.StatusAsync();
+                var status = await client.StatusAsync().ConfigureAwait(true);
                 if (status?.EntityCount > 0)
                 {
                     return true;
@@ -166,7 +166,7 @@ public class GameTestContainerHarness : IAsyncDisposable
                 // Bridge not fully ready yet
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(true);
         }
 
         return false;
@@ -196,7 +196,7 @@ public class GameTestContainerHarness : IAsyncDisposable
             try
             {
                 proc.Kill(true);
-                await Task.Delay(100);
+                await Task.Delay(100).ConfigureAwait(true);
             }
             catch { }
         }
@@ -209,7 +209,7 @@ public class GameTestContainerHarness : IAsyncDisposable
             {
                 break;
             }
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(true);
         }
     }
 
@@ -261,10 +261,10 @@ public class GameTestContainerHarness : IAsyncDisposable
             throw new InvalidOperationException("Failed to start PowerShell process");
         }
 
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
+        var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(true);
+        var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(true);
 
-        await process.WaitForExitAsync();
+        await process.WaitForExitAsync().ConfigureAwait(true);
 
         if (process.ExitCode != 0)
         {
@@ -357,7 +357,7 @@ public class GameTestContainerHarness : IAsyncDisposable
         if (_disposed)
             return;
 
-        await KillAllAsync();
+        await KillAllAsync().ConfigureAwait(true);
 
         foreach (var client in _clients.Values)
         {

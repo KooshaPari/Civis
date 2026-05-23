@@ -73,7 +73,7 @@ namespace DINOForge.Domains.Warfare.Balance
 
                 float power = CalculatePowerRating(unit, archetype, doctrine);
                 unitPowerRatings[unit.Id] = power;
-                totalPower += power;
+                totalPower = totalPower + power;
             }
 
             int count = unitPowerRatings.Count;

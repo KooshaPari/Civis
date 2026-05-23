@@ -12,6 +12,12 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.*, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
       "Spectre.Console": {
         "type": "Direct",
         "requested": "[0.*, )",
@@ -31,6 +37,19 @@
         "type": "Transitive",
         "resolved": "3.0.4",
         "contentHash": "NqYy5UIucwKwdkpamFTi8lr53hD+V8qQmbHzztQj1v4Pq1G4TjNlpkUWOhktTLBqBm4aPRaAkpFgB+3TDEuomw=="
+      },
+      "es6numberserializer": {
+        "type": "Transitive",
+        "resolved": "1.0.0",
+        "contentHash": "+PtPayBof2su9cmSsw/PIGY5d4DfT1to6+EZXYqztxkcgWoiM6pWQGW6YEjT91W16AcpwvsR0RBRKuPwUZ3Nog=="
+      },
+      "jsoncanonicalizer": {
+        "type": "Transitive",
+        "resolved": "1.0.0",
+        "contentHash": "NVJ+/qBOLe0BHyFIDx6v9zFC4TLgfnBpX0OIvqkBWoPjssNar3dBlTtaHy8XXQ0YEkgvYxpdL/U7zCARpJl2uQ==",
+        "dependencies": {
+          "es6numberserializer": "1.0.0"
+        }
       },
       "Microsoft.Bcl.TimeProvider": {
         "type": "Transitive",
@@ -65,6 +84,11 @@
           "Namotion.Reflection": "2.1.2",
           "Newtonsoft.Json": "9.0.1"
         }
+      },
+      "QuikGraph": {
+        "type": "Transitive",
+        "resolved": "2.5.0",
+        "contentHash": "sG+mrPpXwxlXknRK5VqWUGiOmDACa9X+3ftlkQIMgOZUqxVOQSe0+HIU9PTjwqazy0pqSf8MPDXYFGl0GYWcKw=="
       },
       "Serilog": {
         "type": "Transitive",
@@ -111,7 +135,8 @@
       "dinoforge.bridge.protocol": {
         "type": "Project",
         "dependencies": {
-          "Newtonsoft.Json": "[13.*, )"
+          "Newtonsoft.Json": "[13.*, )",
+          "jsoncanonicalizer": "[1.0.0, )"
         }
       },
       "dinoforge.sdk": {
@@ -121,6 +146,7 @@
           "Microsoft.Bcl.TimeProvider": "[8.0.0, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
+          "QuikGraph": "[2.5.0, )",
           "YamlDotNet": "[16.*, )"
         }
       }

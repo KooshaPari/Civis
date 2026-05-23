@@ -6,6 +6,8 @@
 #pragma warning disable DF0111 // empty catch block (pre-existing safe-swallows, tracked)
 #pragma warning disable DF1006 // disposable field (pre-existing BepInEx-owned, tracked)
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using BepInEx;
@@ -127,17 +129,6 @@ namespace DINOForge.Runtime
                 Log.LogWarning($"Version detection failed: {ex}");
             }
 
-            // ECS Type Discovery - log all available component types for diagnostics
-            try
-            {
-                Bridge.EcsTypeDiscovery.DiscoverAndLog();
-                Log.LogInfo("[Plugin] ECS type discovery complete - check dinoforge_debug.log for details");
-            }
-            catch (Exception ex)
-            {
-                Log.LogWarning($"[Plugin] ECS type discovery failed: {ex}");
-            }
-
             // Harmony — apply patches from this assembly
             // ModsButtonTextPatch (UI/UiGridHarmonyPatch.cs) intercepts Text/TMP_Text setters
             // to prevent DINO's UiGrid from overwriting our repurposed Mods button label.
@@ -157,6 +148,8 @@ namespace DINOForge.Runtime
             {
                 Log.LogError($"Harmony init/patch failed: {ex}");
             }
+
+            StartCoroutine(DeferredAwake());
 
             // Create a dedicated persistent GameObject that won't be destroyed.
             // The BepInEx-managed gameObject gets cleaned up during DINO's scene
@@ -212,6 +205,25 @@ namespace DINOForge.Runtime
             DebugLog.Write("Plugin","Awake completed");
             Log.LogInfo("DINOForge Runtime loaded successfully.");
             Log.LogInfo("[DINOForge] Plugin.Awake() EXIT");
+        }
+
+        /// <summary>
+        /// Defers ECS type discovery until after the first Unity frame so the loading
+        /// screen can dismiss before the diagnostic walk starts.
+        /// </summary>
+        private IEnumerator DeferredAwake()
+        {
+            yield return null;
+
+            try
+            {
+                Bridge.EcsTypeDiscovery.DiscoverAndLog();
+                Log.LogInfo("[Plugin] ECS type discovery complete - check dinoforge_debug.log for details");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] ECS type discovery failed: {ex}");
+            }
         }
 
         /// <summary>
@@ -276,27 +288,106 @@ namespace DINOForge.Runtime
         {
             try
             {
-                if (UnityEngine.EventSystems.EventSystem.current != null) return;
-                // Find any EventSystem in scene (incl. DontDestroyOnLoad)
-                var existing = UnityEngine.Object.FindObjectsOfType<UnityEngine.EventSystems.EventSystem>(true);
-                if (existing != null && existing.Length > 0)
+                UnityEngine.EventSystems.EventSystem[] existing = UnityEngine.Object.FindObjectsOfType<UnityEngine.EventSystems.EventSystem>();
+                UnityEngine.EventSystems.EventSystem? preferred = null;
+                int activeCount = 0;
+                string[] names = new string[existing.Length];
+
+                for (int i = 0; i < existing.Length; i++)
                 {
-                    // Re-promote: set as current
-                    UnityEngine.EventSystems.EventSystem.current = existing[0];
-                    DebugLog.Write("Plugin",$"[EventSystem] re-promoted existing ({existing[0].name}) as current.");
-                    return;
+                    UnityEngine.EventSystems.EventSystem? system = existing[i];
+                    if (system == null)
+                    {
+                        names[i] = "NULL";
+                        continue;
+                    }
+
+                    names[i] = system.gameObject.name;
+                    if (system.enabled) activeCount++;
+                    if (preferred == null && IsDinoForgeEventSystem(system))
+                    {
+                        preferred = system;
+                    }
                 }
-                // None at all — create
-                var go = new GameObject("DINOForge_EventSystem_Restored");
-                UnityEngine.Object.DontDestroyOnLoad(go);
-                go.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                DebugLog.Write("Plugin","[EventSystem] no scene EventSystem found — created DINOForge_EventSystem_Restored.");
+
+                if (preferred == null)
+                {
+                    if (UnityEngine.EventSystems.EventSystem.current != null &&
+                        IsDinoForgeEventSystem(UnityEngine.EventSystems.EventSystem.current))
+                    {
+                        preferred = UnityEngine.EventSystems.EventSystem.current;
+                    }
+                }
+
+                if (preferred == null)
+                {
+                    // None at all — create the authoritative DINOForge EventSystem.
+                    var go = new GameObject("DINOForge_EventSystem_Restored");
+                    UnityEngine.Object.DontDestroyOnLoad(go);
+                    preferred = go.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                    go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                    DebugLog.Write("Plugin","[EventSystem] no scene EventSystem found — created DINOForge_EventSystem_Restored.");
+                    existing = UnityEngine.Object.FindObjectsOfType<UnityEngine.EventSystems.EventSystem>();
+                    names = new string[existing.Length];
+                    for (int i = 0; i < existing.Length; i++)
+                    {
+                        names[i] = existing[i] != null ? existing[i].gameObject.name : "NULL";
+                    }
+                }
+                else if (preferred.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null)
+                {
+                    preferred.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                }
+
+                if (!preferred.enabled)
+                {
+                    preferred.enabled = true;
+                }
+
+                for (int i = 0; i < existing.Length; i++)
+                {
+                    UnityEngine.EventSystems.EventSystem? system = existing[i];
+                    if (system == null || ReferenceEquals(system, preferred))
+                    {
+                        continue;
+                    }
+
+                    if (system.enabled)
+                    {
+                        system.enabled = false;
+                    }
+                }
+
+                if (!ReferenceEquals(UnityEngine.EventSystems.EventSystem.current, preferred))
+                {
+                    UnityEngine.EventSystems.EventSystem.current = preferred;
+                }
+
+                activeCount = 0;
+                for (int i = 0; i < existing.Length; i++)
+                {
+                    UnityEngine.EventSystems.EventSystem? system = existing[i];
+                    if (system != null && system.enabled)
+                    {
+                        activeCount++;
+                    }
+                }
+
+                string currentName = UnityEngine.EventSystems.EventSystem.current != null
+                    ? UnityEngine.EventSystems.EventSystem.current.gameObject.name
+                    : "NULL";
+                DebugLog.Write("Plugin",$"[EventSystem] reconcile: preferred={preferred.gameObject.name}, current={currentName}, total={existing.Length}, enabled={activeCount}, systems=[{string.Join(", ", names)}]");
             }
             catch (Exception ex)
             {
                 try { DebugLog.Write("Plugin",$"[EventSystem] ensure failed: {ex.GetType().Name}: {ex.Message}"); } catch { /* safe-swallow */ }
             }
+        }
+
+        private static bool IsDinoForgeEventSystem(UnityEngine.EventSystems.EventSystem system)
+        {
+            return system != null &&
+                system.gameObject.name.StartsWith("DINOForge_", StringComparison.Ordinal);
         }
 
         // Iter-144 #546 fallback: Win32 background thread independent of any MonoBehaviour.
@@ -565,8 +656,6 @@ namespace DINOForge.Runtime
         private ConfigFile _config = null!;
         private bool _dumpOnStartup;
         private string _dumpOutputPath = "";
-
-
         private ModPlatform? _modPlatform;
 
         // UGUI system (preferred). Null if UGUI setup failed.
@@ -624,6 +713,13 @@ namespace DINOForge.Runtime
         // checks this to avoid calling OnWorldReady after the RuntimeDriver is destroyed.
         private volatile bool _destroyed;
         private readonly ManualResetEventSlim _backgroundPollStopEvent = new(false);
+        private readonly object _deferredWorkLock = new();
+        private bool _bootSequenceStarted;
+        private bool _worldReadyProcessing;
+        private World? _pendingWorldReady;
+        private bool _hasPendingWorldReady;
+        private bool _pendingPackReload;
+        private string? _pendingPackReloadReason;
 
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
@@ -648,203 +744,472 @@ namespace DINOForge.Runtime
             _dumpOutputPath = dumpOutputPath;
             _initialized = true;
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() ENTRY");
-
-            CleanupUiInterceptors();
-
-            // Initialize Kenney CC0 UI asset loader.
-            // Sprites are expected at BepInEx/plugins/dinoforge-ui-assets/ (deployed by MSBuild target).
-            // If the directory or files are absent UiAssets falls back silently — all properties return null.
-            try
+            if (_bootSequenceStarted)
             {
-                UiAssets.Initialize(BepInEx.Paths.PluginPath);
-                if (UiAssets.MissingFiles.Count > 0)
-                {
-                    _log.LogInfo($"[RuntimeDriver] UiAssets: {UiAssets.MissingFiles.Count} sprite(s) not found " +
-                        $"— flat-colour fallback active. See src/Runtime/UI/Assets/README.md for download instructions.");
-                }
-                else
-                {
-                    _log.LogInfo("[RuntimeDriver] UiAssets: sprites loaded from disk.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[RuntimeDriver] UiAssets initialization failed: {ex}");
+                _log.LogWarning("[RuntimeDriver] Initialize() called after boot sequence already started.");
+                return;
             }
 
-            // Initialize ModPlatform orchestrator
-            try
-            {
-                _modPlatform = new ModPlatform();
-                _modPlatform.Initialize(_log, _config, gameObject);
-                _log.LogInfo("[RuntimeDriver] ModPlatform initialized.");
-            }
-            catch (Exception ex)
-            {
-                _log.LogError($"[RuntimeDriver] ModPlatform initialization failed: {ex}");
-                _modPlatform = null;
-            }
+            _bootSequenceStarted = true;
+            StartCoroutine(InitializeRoutine());
+        }
 
-            // Add MainThreadDispatcher for IPC bridge support
-            try
-            {
-                gameObject.AddComponent<Bridge.MainThreadDispatcher>();
-                _log.LogInfo("[RuntimeDriver] Added MainThreadDispatcher.");
-            }
-            catch (Exception ex)
-            {
-                _log.LogError($"[RuntimeDriver] MainThreadDispatcher setup failed: {ex}");
-            }
+        private IEnumerator InitializeRoutine()
+        {
+            yield return null;
 
-            // ── Step 1: Always add DebugOverlayBehaviour ────────────────────────────
-            // This component owns the IMGUI F9 debug panel and must always be present
-            // so F9 works even when UGUI is active or fails.  DFCanvas also shows a
-            // UGUI debug panel (DebugPanel) when healthy, but DebugOverlayBehaviour
-            // is the guaranteed fallback.
-            try
-            {
-                _debugOverlay = gameObject.AddComponent<DebugOverlayBehaviour>();
-                _log.LogInfo("[RuntimeDriver] Added DebugOverlayBehaviour (guaranteed F9 handler).");
-            }
-            catch (Exception ex)
-            {
-                _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex}");
-            }
+            RunPhaseWithAbortGuard("CleanupUiInterceptors", CleanupUiInterceptors);
+            yield return null;
 
-            // ── KeyInputSystem ECS callbacks (DISABLED) ────────────────────────────────
-            // ECS callbacks are the reliable toggle path — KeyInputSystem.OnUpdate runs
-            // in the ECS loop and correctly sees both physical and synthetic key presses.
-            // The background thread's GetAsyncKeyState DOES NOT reliably see synthetic
-            // keybd_event input from external processes, so ECS callbacks are preferred.
-            // Background thread F9/F10 polling is disabled to prevent double-toggles.
-            Bridge.KeyInputSystem.OnF9Pressed = () =>
+            RunPhaseWithAbortGuard("UiAssets.Initialize", () =>
             {
+                // Initialize Kenney CC0 UI asset loader.
+                // Sprites are expected at BepInEx/plugins/dinoforge-ui-assets/ (deployed by MSBuild target).
+                // If the directory or files are absent UiAssets falls back silently — all properties return null.
                 try
                 {
-                    DebugLog.Write("Plugin","[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
-                    else _debugOverlay?.Toggle();
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Write("Plugin",$"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
-                }
-            };
-            Bridge.KeyInputSystem.OnF10Pressed = () =>
-            {
-                try
-                {
-                    DebugLog.Write("Plugin","[RuntimeDriver] F10 pressed (via KeyInputSystem)");
-                    if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                    else _modMenuHost?.Toggle();
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Write("Plugin",$"[RuntimeDriver] F10 toggle failed: {ex.GetType().Name} - {ex.Message}");
-                }
-            };
-
-            // ── Wire HMR pack reload callback (can be invoked from background thread) ──
-            Bridge.KeyInputSystem.OnPackReloadRequested = () =>
-            {
-                try
-                {
-                    DebugLog.Write("Plugin","[RuntimeDriver] Pack reload requested (via OnPackReloadRequested)");
-                    if (_modPlatform != null)
+                    UiAssets.Initialize(BepInEx.Paths.PluginPath);
+                    if (UiAssets.MissingFiles.Count > 0)
                     {
-                        _modPlatform.LoadPacks();
-                        _log?.LogInfo("[RuntimeDriver] Packs reloaded via HMR.");
+                        _log.LogInfo($"[RuntimeDriver] UiAssets: {UiAssets.MissingFiles.Count} sprite(s) not found " +
+                            $"— flat-colour fallback active. See src/Runtime/UI/Assets/README.md for download instructions.");
+                    }
+                    else
+                    {
+                        _log.LogInfo("[RuntimeDriver] UiAssets: sprites loaded from disk.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _log?.LogWarning($"[RuntimeDriver] Pack reload failed: {ex}");
+                    _log.LogWarning($"[RuntimeDriver] UiAssets initialization failed: {ex}");
                 }
-            };
+            });
+            yield return null;
+
+            RunPhaseWithAbortGuard("ModPlatform.Initialize", () =>
+            {
+                try
+                {
+                    _modPlatform = new ModPlatform();
+                    _modPlatform.Initialize(_log, _config, gameObject);
+                    _log.LogInfo("[RuntimeDriver] ModPlatform initialized.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError($"[RuntimeDriver] ModPlatform initialization failed: {ex}");
+                    _modPlatform = null;
+                }
+            });
+            yield return null;
+
+            RunPhaseWithAbortGuard("MainThreadDispatcher/DebugOverlay", () =>
+            {
+                // Add MainThreadDispatcher for IPC bridge support.
+                try
+                {
+                    gameObject.AddComponent<Bridge.MainThreadDispatcher>();
+                    _log.LogInfo("[RuntimeDriver] Added MainThreadDispatcher.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError($"[RuntimeDriver] MainThreadDispatcher setup failed: {ex}");
+                }
+
+                // ── Step 1: Always add DebugOverlayBehaviour ────────────────────────────
+                // This component owns the IMGUI F9 debug panel and must always be present
+                // so F9 works even when UGUI is active or fails.  DFCanvas also shows a
+                // UGUI debug panel (DebugPanel) when healthy, but DebugOverlayBehaviour
+                // is the guaranteed fallback.
+                try
+                {
+                    _debugOverlay = gameObject.AddComponent<DebugOverlayBehaviour>();
+                    _log.LogInfo("[RuntimeDriver] Added DebugOverlayBehaviour (guaranteed F9 handler).");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError($"[RuntimeDriver] DebugOverlayBehaviour setup failed: {ex}");
+                }
+
+                // ── KeyInputSystem ECS callbacks (DISABLED) ────────────────────────────────
+                // ECS callbacks are the reliable toggle path — KeyInputSystem.OnUpdate runs
+                // in the ECS loop and correctly sees both physical and synthetic key presses.
+                // The background thread's GetAsyncKeyState DOES NOT reliably see synthetic
+                // keybd_event input from external processes, so ECS callbacks are preferred.
+                // Background thread F9/F10 polling is disabled to prevent double-toggles.
+                Bridge.KeyInputSystem.OnF9Pressed = () =>
+                {
+                    try
+                    {
+                        DebugLog.Write("Plugin","[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+                        else _debugOverlay?.Toggle();
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Write("Plugin",$"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                    }
+                };
+                Bridge.KeyInputSystem.OnF10Pressed = () =>
+                {
+                    try
+                    {
+                        DebugLog.Write("Plugin","[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                        else _modMenuHost?.Toggle();
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Write("Plugin",$"[RuntimeDriver] F10 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                    }
+                };
+
+                // ── Wire HMR pack reload callback (can be invoked from background thread) ──
+                Bridge.KeyInputSystem.OnPackReloadRequested = () =>
+                {
+                    try
+                    {
+                        DebugLog.Write("Plugin","[RuntimeDriver] Pack reload requested (via OnPackReloadRequested)");
+                        RequestPackReload("OnPackReloadRequested");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.LogWarning($"[RuntimeDriver] Pack reload request failed: {ex}");
+                    }
+                };
+            });
+            yield return null;
 
             // ── Step 2: Attempt UGUI canvas setup ───────────────────────────────────
             // DFCanvas.Initialize() builds the canvas hierarchy synchronously and calls
             // OnInitSuccess immediately if successful, or OnInitFailed if it throws.
             // We register both callbacks so that _uguiReady is set on the main thread,
             // not from the background polling thread (which would cause UnityException).
-            bool uguiAddedOk = false;
-            try
+            RunPhaseWithAbortGuard("DFCanvas.Initialize", () =>
             {
-                _dfCanvas = gameObject.AddComponent<DFCanvas>();
+                bool uguiAddedOk = false;
+                try
+                {
+                    _dfCanvas = gameObject.AddComponent<DFCanvas>();
 
-                // Register callbacks BEFORE Initialize() — Initialize() calls them synchronously.
-                _dfCanvas.OnInitSuccess = () =>
+                    // Register callbacks BEFORE Initialize() — Initialize() calls them synchronously.
+                    _dfCanvas.OnInitSuccess = () =>
+                    {
+                        _uguiReady = true;
+                        _uguiChecked = true;
+                        _log.LogInfo("[RuntimeDriver] DFCanvas.OnInitSuccess — UGUI canvas ready on main thread.");
+                        DebugLog.Write("Plugin","[RuntimeDriver] DFCanvas.OnInitSuccess: UGUI is ready.");
+                        WireUguiToModPlatform();
+                    };
+                    _dfCanvas.OnInitFailed = () =>
+                    {
+                        _log.LogWarning("[RuntimeDriver] DFCanvas.OnInitFailed — activating IMGUI fallback.");
+                        _uguiReady = false;
+                        _uguiChecked = true;
+                        ActivateImguiFallback();
+                    };
+
+                    _dfCanvas.Initialize(_log);
+
+                    uguiAddedOk = true;
+                    _log.LogInfo("[RuntimeDriver] Added DFCanvas — UGUI canvas built in Initialize().");
+                }
+                catch (Exception ex)
                 {
-                    _uguiReady = true;
-                    _uguiChecked = true;
-                    _log.LogInfo("[RuntimeDriver] DFCanvas.OnInitSuccess — UGUI canvas ready on main thread.");
-                    DebugLog.Write("Plugin","[RuntimeDriver] DFCanvas.OnInitSuccess: UGUI is ready.");
-                };
-                _dfCanvas.OnInitFailed = () =>
+                    _log.LogWarning($"[RuntimeDriver] DFCanvas AddComponent failed, falling back to IMGUI immediately: {ex}");
+
+                    if (_dfCanvas != null)
+                    {
+                        Destroy(_dfCanvas);
+                        _dfCanvas = null;
+                    }
+                }
+
+                if (!uguiAddedOk)
                 {
-                    _log.LogWarning("[RuntimeDriver] DFCanvas.OnInitFailed — activating IMGUI fallback.");
-                    _uguiReady = false;
+                    // UGUI component could not even be added — activate IMGUI now.
                     _uguiChecked = true;
                     ActivateImguiFallback();
-                };
-
-                _dfCanvas.Initialize(_log);
-
-                uguiAddedOk = true;
-                _log.LogInfo("[RuntimeDriver] Added DFCanvas — UGUI canvas built in Initialize().");
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[RuntimeDriver] DFCanvas AddComponent failed, falling back to IMGUI immediately: {ex}");
-
-                if (_dfCanvas != null)
-                {
-                    Destroy(_dfCanvas);
-                    _dfCanvas = null;
                 }
-            }
+            });
+            yield return null;
 
-            if (!uguiAddedOk)
+            RunPhaseWithAbortGuard("NativeMenuInjector/HMR/startup", () =>
             {
-                // UGUI component could not even be added — activate IMGUI now.
-                _uguiChecked = true;
-                ActivateImguiFallback();
-            }
+                // ── Step 3: Add NativeMenuInjector for main menu button injection ──────
+                // This component monitors scene changes and injects a "Mods" button into
+                // the native game menus (main menu, pause menu) next to Settings/Options.
+                try
+                {
+                    _nativeMenuInjector = gameObject.AddComponent<NativeMenuInjector>();
+                    _nativeMenuInjector.SetLogger(_log);
+                    // We'll wire the overlay reference later once it's created
+                    _log.LogInfo("[RuntimeDriver] Added NativeMenuInjector — will inject Mods button into native menus.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] NativeMenuInjector setup failed: {ex}");
+                }
 
-            // ── Step 3: Add NativeMenuInjector for main menu button injection ──────
-            // This component monitors scene changes and injects a "Mods" button into
-            // the native game menus (main menu, pause menu) next to Settings/Options.
-            try
-            {
-                _nativeMenuInjector = gameObject.AddComponent<NativeMenuInjector>();
-                _nativeMenuInjector.SetLogger(_log);
-                // We'll wire the overlay reference later once it's created
-                _log.LogInfo("[RuntimeDriver] Added NativeMenuInjector — will inject Mods button into native menus.");
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[RuntimeDriver] NativeMenuInjector setup failed: {ex}");
-            }
+                // ── Step 3b: UiEventInterceptor intentionally disabled ──
+                // Interceptor diagnostics mutate button object names and can interfere with
+                // NativeMenuInjector idempotency and click routing in production runtime.
+                _log.LogInfo("[RuntimeDriver] UiEventInterceptor disabled for native menu stability.");
 
-            // ── Step 3b: UiEventInterceptor intentionally disabled ──
-            // Interceptor diagnostics mutate button object names and can interfere with
-            // NativeMenuInjector idempotency and click routing in production runtime.
-            _log.LogInfo("[RuntimeDriver] UiEventInterceptor disabled for native menu stability.");
+                // ── Step 4: Start HMR (Hot Module Reload) signal watcher ─────────────
+                // Watches for DINOForge_HotReload signal file in BepInEx root
+                // When detected, triggers soft UI + pack reload without full game restart
+                StartHmrWatcher();
 
-            // ── Step 4: Start HMR (Hot Module Reload) signal watcher ─────────────
-            // Watches for DINOForge_HotReload signal file in BepInEx root
-            // When detected, triggers soft UI + pack reload without full game restart
-            StartHmrWatcher();
-
-            // ── Step 5: Start background polling (ECS world, catalog rebuild, heartbeats) ──
-            // MonoBehaviour.Update() NEVER fires in DINO — background thread polling is required.
-            StartBackgroundPollingThread();
+                // ── Step 5: Start background polling (ECS world, catalog rebuild, heartbeats) ──
+                // MonoBehaviour.Update() NEVER fires in DINO — background thread polling is required.
+                StartBackgroundPollingThread();
+            });
 
             // ── Step 6: Log key handler registration ────────────────────────────────
             DebugLog.Write("Plugin",$"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
+
+            // Pump deferred work on the main thread until destruction.
+            while (!_destroyed)
+            {
+                if (TryDequeuePendingWorldReady(out World? pendingWorld))
+                {
+                    yield return ProcessWorldReadyCoroutine(pendingWorld!);
+                    continue;
+                }
+
+                if (TryDequeuePendingPackReload(out string? packReloadReason))
+                {
+                    yield return ProcessPackReloadCoroutine(packReloadReason!);
+                    continue;
+                }
+
+                yield return null;
+            }
+        }
+
+        private void RunPhaseWithAbortGuard(string phaseName, Action phase)
+        {
+            try
+            {
+                phase();
+            }
+            catch (ThreadAbortException)
+            {
+                try
+                {
+                    Thread.ResetAbort();
+                }
+                catch (Exception resetEx)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] {phaseName} abort reset failed: {resetEx}");
+                }
+
+                _log?.LogWarning($"[RuntimeDriver] {phaseName} aborted by Unity thread abort.");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[RuntimeDriver] {phaseName} failed: {ex}");
+            }
+        }
+
+        private void RequestPackReload(string reason)
+        {
+            lock (_deferredWorkLock)
+            {
+                _pendingPackReload = true;
+                _pendingPackReloadReason = reason;
+            }
+        }
+
+        private bool TryDequeuePendingWorldReady(out World? world)
+        {
+            lock (_deferredWorkLock)
+            {
+                if (_hasPendingWorldReady && !_worldReadyProcessing && _pendingWorldReady != null)
+                {
+                    world = _pendingWorldReady;
+                    _pendingWorldReady = null;
+                    _hasPendingWorldReady = false;
+                    _worldReadyProcessing = true;
+                    return true;
+                }
+            }
+
+            world = null;
+            return false;
+        }
+
+        private bool TryDequeuePendingPackReload(out string? reason)
+        {
+            lock (_deferredWorkLock)
+            {
+                if (_pendingPackReload && !_worldReadyProcessing)
+                {
+                    reason = _pendingPackReloadReason ?? "queued";
+                    _pendingPackReload = false;
+                    _pendingPackReloadReason = null;
+                    return true;
+                }
+            }
+
+            reason = null;
+            return false;
+        }
+
+        private IEnumerator ProcessWorldReadyCoroutine(World ecsWorld)
+        {
+            try
+            {
+                _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
+                _registeredWorldInstance = ecsWorld;
+
+                if (_dumpOnStartup)
+                {
+                    try
+                    {
+                        DumpSystem.Configure(_log, _dumpOutputPath);
+                        ecsWorld.GetOrCreateSystem<DumpSystem>();
+                        _log.LogInfo("[RuntimeDriver] DumpSystem registered in default world.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] DumpSystem registration failed: {ex}");
+                    }
+                }
+
+                if (_modPlatform == null)
+                {
+                    yield break;
+                }
+
+                yield return null;
+
+                RunPhaseWithAbortGuard("ModPlatform.OnWorldReady", () =>
+                {
+                    _modPlatform.OnWorldReady(ecsWorld);
+                    _log.LogInfo("[RuntimeDriver] ModPlatform notified of world readiness.");
+                });
+
+                WireUguiToModPlatform();
+
+                yield return null;
+
+                ContentLoadResult? result = null;
+                RunPhaseWithAbortGuard("ModPlatform.LoadPacks", () =>
+                {
+                    result = _modPlatform.LoadPacks();
+                });
+
+                if (result != null)
+                {
+                    _log?.LogInfo($"[RuntimeDriver.diag] LoadPacks returned, modPlatformReady={_modPlatform != null}, packCount={result.LoadedPacks.Count} — entering UGUI push block");
+                    _log.LogInfo($"[RuntimeDriver] Pack loading complete: success={result.IsSuccess}, " +
+                        $"loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+                    _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={_modPlatform != null}");
+                    PushLoadedPacksToUgui("initial load");
+                }
+
+                yield return null;
+
+                RunPhaseWithAbortGuard("ModPlatform.StartHotReload", () =>
+                {
+                    _modPlatform.StartHotReload();
+                    _log.LogInfo("[RuntimeDriver] Hot reload started.");
+                });
+
+                yield return null;
+
+                RunPhaseWithAbortGuard("ModSettingsPanel.DiscoverSettings", () =>
+                {
+                    if (_modSettingsHost is ModSettingsPanel settingsPanel)
+                    {
+                        settingsPanel.DiscoverSettings();
+                        _log.LogInfo("[RuntimeDriver] Mod settings discovered.");
+                    }
+                });
+
+                if (_debugOverlay != null)
+                {
+                    _debugOverlay.SetModPlatform(_modPlatform);
+                }
+            }
+            finally
+            {
+                lock (_deferredWorkLock)
+                {
+                    _worldReadyProcessing = false;
+                }
+            }
+        }
+
+        private IEnumerator ProcessPackReloadCoroutine(string reason)
+        {
+            if (_modPlatform == null)
+            {
+                yield break;
+            }
+
+            _log.LogInfo($"[RuntimeDriver] Processing deferred pack reload ({reason}).");
+            yield return null;
+
+            ContentLoadResult? result = null;
+            RunPhaseWithAbortGuard("ModPlatform.LoadPacks", () =>
+            {
+                result = _modPlatform.LoadPacks();
+            });
+
+            if (result != null)
+            {
+                _log.LogInfo($"[RuntimeDriver] Deferred pack reload complete: success={result.IsSuccess}, " +
+                    $"loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+                _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('deferred reload') — dfCanvas={_dfCanvas != null}, modPlatform={_modPlatform != null}");
+                PushLoadedPacksToUgui("deferred reload");
+            }
+
+            yield return null;
+        }
+
+        private void PushLoadedPacksToUgui(string reason)
+        {
+            _log?.LogInfo($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) ENTRY: dfCanvas={(_dfCanvas != null ? "OK" : "NULL")}, modPlatform={(_modPlatform != null ? "OK" : "NULL")}, modMenuPanel={(_dfCanvas?.ModMenuPanel != null ? "OK" : "NULL")}, hasLastLoadResult={_modPlatform?.HasLastLoadResult.ToString() ?? "NULL"}, lastLoad={_modPlatform?.DescribeLastLoadResult() ?? "modPlatform=NULL"}");
+
+            if (_dfCanvas == null)
+            {
+                _log?.LogWarning($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) skipped — _dfCanvas is NULL.");
+                return;
+            }
+
+            if (_modPlatform == null)
+            {
+                _log?.LogWarning($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) skipped — _modPlatform is NULL.");
+                return;
+            }
+
+            if (_dfCanvas.ModMenuPanel == null)
+            {
+                _log?.LogWarning($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) skipped — ModMenuPanel is NULL.");
+                return;
+            }
+
+            try
+            {
+                IReadOnlyList<PackDisplayInfo> packInfos = _modPlatform.GetLoadedPackDisplayInfos();
+                _log?.LogInfo($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) resolved packInfos.Count={packInfos.Count}; {_modPlatform.DescribeLastLoadResult()}");
+                if (packInfos.Count == 0)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] PushLoadedPacksToUgui({reason}) resolved 0 packs — registry or load-result path may be empty.");
+                }
+
+                _dfCanvas.ModMenuPanel.SetPacks(packInfos);
+                _log?.LogInfo($"[RuntimeDriver] UGUI mod menu refreshed after {reason}.");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[RuntimeDriver] Failed to refresh UGUI mod menu after {reason}: {ex}");
+            }
         }
 
         /// <summary>
@@ -1257,12 +1622,14 @@ namespace DINOForge.Runtime
         private void WireUguiToModPlatform()
         {
             if (_dfCanvas == null || _modPlatform == null) return;
+            if (ReferenceEquals(_modMenuHost, _dfCanvas.ModMenuPanel)) return;
+            ModPlatform platform = _modPlatform;
 
             try
             {
                 if (_dfCanvas.ModMenuPanel != null)
                 {
-                    _dfCanvas.ModMenuPanel.OnReloadRequested = () => _modPlatform?.LoadPacks();
+                    _dfCanvas.ModMenuPanel.OnReloadRequested = () => RequestPackReload("UGUI reload button");
                 }
 
                 IModSettingsHost settingsHost = new NoOpSettingsHost();
@@ -1272,7 +1639,7 @@ namespace DINOForge.Runtime
                     throw new InvalidOperationException("DFCanvas did not create ModMenuPanel.");
                 }
 
-                _modPlatform.SetUI(_dfCanvas.ModMenuPanel, settingsHost);
+                platform.SetUI(_dfCanvas.ModMenuPanel, settingsHost);
 
                 // Fix #30: route the native Mods button through ContextualModMenuHost so
                 // that when NativeMainMenuModMenu.CanUseNativeScreen becomes true (M11.5),
@@ -1290,7 +1657,7 @@ namespace DINOForge.Runtime
                 // Wire UGUI DebugPanel to ModPlatform so it displays platform status
                 if (_dfCanvas.DebugPanel != null && _modPlatform != null)
                 {
-                    _dfCanvas.DebugPanel.SetModPlatform(_modPlatform);
+                    _dfCanvas.DebugPanel.SetModPlatform(platform);
                     _log.LogInfo("[RuntimeDriver] UGUI DebugPanel wired to ModPlatform.");
                 }
 
@@ -1301,20 +1668,23 @@ namespace DINOForge.Runtime
                 if (_dfCanvas.HudStrip != null)
                 {
                     UI.HudStrip hudStrip = _dfCanvas.HudStrip;
-                    _modPlatform.OnHudCountsChanged = (p, e) => hudStrip.SetStatus(p, e);
+                    platform.OnHudCountsChanged = (p, e) => hudStrip.SetStatus(p, e);
                 }
 
                 _log.LogInfo("[RuntimeDriver] UGUI wired to ModPlatform via IModMenuHost.");
+
+                _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('late UGUI wiring') — dfCanvas={_dfCanvas != null}, modPlatform={_modPlatform != null}");
+                PushLoadedPacksToUgui("late UGUI wiring immediate sync");
 
                 // Fix #31/#32: LoadPacks() may have run before the UI host was wired
                 // (ModPlatform.UpdateUI() returns early when _modMenuHost is null).
                 // Now that the host is registered, replay a LoadPacks() so ModMenuPanel
                 // receives the pack list and DebugPanel receives ModPlatform data.
                 // This is a no-op if packs have not been loaded yet.
-                if (_modPlatform.GetLoadedPackIds() != null)
+                if (platform.GetLoadedPackIds() != null)
                 {
-                    _log.LogInfo("[RuntimeDriver] Replaying LoadPacks() to populate UGUI panels after late wiring.");
-                    _modPlatform.LoadPacks();
+                    _log.LogInfo("[RuntimeDriver] Queuing LoadPacks() to populate UGUI panels after late wiring.");
+                    RequestPackReload("late UGUI wiring");
                 }
             }
             catch (Exception ex)
@@ -1334,77 +1704,10 @@ namespace DINOForge.Runtime
         {
             _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
             _registeredWorldInstance = ecsWorld;
-
-            // Register DumpSystem if configured
-            if (_dumpOnStartup)
+            lock (_deferredWorkLock)
             {
-                try
-                {
-                    DumpSystem.Configure(_log, _dumpOutputPath);
-                    ecsWorld.GetOrCreateSystem<DumpSystem>();
-                    _log.LogInfo("[RuntimeDriver] DumpSystem registered in default world.");
-                }
-                catch (Exception ex)
-                {
-                    _log.LogWarning($"[RuntimeDriver] DumpSystem registration failed: {ex}");
-                }
-            }
-
-            // Notify ModPlatform that the world is ready
-            if (_modPlatform != null)
-            {
-                try
-                {
-                    _modPlatform.OnWorldReady(ecsWorld);
-                    _log.LogInfo("[RuntimeDriver] ModPlatform notified of world readiness.");
-                }
-                catch (Exception ex)
-                {
-                    _log.LogError($"[RuntimeDriver] ModPlatform.OnWorldReady failed: {ex}");
-                }
-
-                // Load packs
-                try
-                {
-                    ContentLoadResult result = _modPlatform.LoadPacks();
-                    _log.LogInfo($"[RuntimeDriver] Pack loading complete: success={result.IsSuccess}, " +
-                        $"loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
-                }
-                catch (Exception ex)
-                {
-                    _log.LogError($"[RuntimeDriver] Pack loading failed: {ex}");
-                }
-
-                // Start hot reload
-                try
-                {
-                    _modPlatform.StartHotReload();
-                    _log.LogInfo("[RuntimeDriver] Hot reload started.");
-                }
-                catch (Exception ex)
-                {
-                    _log.LogError($"[RuntimeDriver] Hot reload startup failed: {ex}");
-                }
-
-                // Discover settings for the settings panel
-                try
-                {
-                    if (_modSettingsHost is ModSettingsPanel settingsPanel)
-                    {
-                        settingsPanel.DiscoverSettings();
-                        _log.LogInfo("[RuntimeDriver] Mod settings discovered.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _log.LogWarning($"[RuntimeDriver] Settings discovery failed: {ex}");
-                }
-            }
-
-            // Give the debug overlay a reference to ModPlatform for status display
-            if (_debugOverlay != null)
-            {
-                _debugOverlay.SetModPlatform(_modPlatform);
+                _pendingWorldReady = ecsWorld;
+                _hasPendingWorldReady = true;
             }
         }
 
@@ -1429,9 +1732,13 @@ namespace DINOForge.Runtime
             s_isBeingDestroyed = true;
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
-            // P2 #879 Pattern #113 fix: wake the static resurrection fallback thread too so it
-            // can observe _resurrectionFallbackStop (if ever set) without burning a 500ms tick.
-            try { Plugin._resurrectionFallbackStopEvent.Set(); } catch { /* safe-swallow: shutdown best-effort */ }
+            // iter-145 #882 ROOT CAUSE: Removed _resurrectionFallbackStopEvent.Set() — that was killing
+            // the fallback thread on every RuntimeDriver.OnDestroy (scene transition), preventing the
+            // post-OnDestroy resurrection that's the whole point of the fallback. The "wake without
+            // exit" intent at L433 used `if (Wait(...)) break;` which exits unconditionally on signal
+            // regardless of _resurrectionFallbackStop. Fallback thread now only exits when Plugin
+            // itself unloads (via _resurrectionFallbackStop=true set elsewhere). 500ms poll latency
+            // for resurrection is fine; was never real-time-critical.
 
             // Iter-144 #547 gray-freeze ROOT CAUSE fix: WinDbg analysis revealed the main thread
             // was parked in mono_jit_cleanup → mono_threads_set_shutting_down waiting on the

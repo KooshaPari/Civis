@@ -73,32 +73,32 @@ public static class Program
         string command = remainingArgs[0];
         return command switch
         {
-            "status" => await HandleStatusCommand(),
-            "ping" => await HandlePingCommand(),
-            "wait-world" => await HandleWaitWorldCommand(),
-            "resources" => await HandleResourcesCommand(),
-            "screenshot" => await HandleScreenshotCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "catalog" => await HandleCatalogCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "entities" => await HandleEntitiesCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "load-scene" => await HandleLoadSceneCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "start-game" => await HandleStartGameCommand(),
-            "list-saves" => await HandleListSavesCommand(),
-            "load-save" => await HandleLoadSaveCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "dismiss" => await HandleDismissCommand(),
-            "click-button" => await HandleClickButtonCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "toggle-ui" => await HandleToggleUiCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "scan-scene" => await HandleScanSceneCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "invoke-method" => await HandleInvokeMethodCommand(remainingArgs.Skip(1).ToArray()),
-            "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "demo" => await HandleDemoCommand(),
+            "status" => await HandleStatusCommand().ConfigureAwait(false),
+            "ping" => await HandlePingCommand().ConfigureAwait(false),
+            "wait-world" => await HandleWaitWorldCommand().ConfigureAwait(false),
+            "resources" => await HandleResourcesCommand().ConfigureAwait(false),
+            "screenshot" => await HandleScreenshotCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "catalog" => await HandleCatalogCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "entities" => await HandleEntitiesCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "load-scene" => await HandleLoadSceneCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "start-game" => await HandleStartGameCommand().ConfigureAwait(false),
+            "list-saves" => await HandleListSavesCommand().ConfigureAwait(false),
+            "load-save" => await HandleLoadSaveCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "dismiss" => await HandleDismissCommand().ConfigureAwait(false),
+            "click-button" => await HandleClickButtonCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "toggle-ui" => await HandleToggleUiCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "scan-scene" => await HandleScanSceneCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "invoke-method" => await HandleInvokeMethodCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
+            "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "demo" => await HandleDemoCommand().ConfigureAwait(false),
             // JSON-output bridge commands (used by Python MCP server)
-            "get-stat" => await HandleGetStatCommand(remainingArgs.Skip(1).ToArray()),
-            "apply-override" => await HandleApplyOverrideCommand(remainingArgs.Skip(1).ToArray()),
-            "get-component-map" => await HandleGetComponentMapCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "discover-types" => await HandleDiscoverTypesCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "reload-packs" => await HandleReloadPacksCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "verify-mod" => await HandleVerifyModCommand(remainingArgs.Skip(1).FirstOrDefault()),
-            "dump-state" => await HandleDumpStateJsonCommand(remainingArgs.Skip(1).FirstOrDefault()),
+            "get-stat" => await HandleGetStatCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
+            "apply-override" => await HandleApplyOverrideCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
+            "get-component-map" => await HandleGetComponentMapCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "discover-types" => await HandleDiscoverTypesCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "reload-packs" => await HandleReloadPacksCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "verify-mod" => await HandleVerifyModCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "dump-state" => await HandleDumpStateJsonCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
             "--help" or "-h" => ShowHelpAndReturn(0),
             _ => ShowHelpAndReturn(1)
         };
@@ -166,8 +166,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions(5000));
         try
         {
-            await client.ConnectAsync();
-            var status = await client.StatusAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
+            var status = await client.StatusAsync().ConfigureAwait(false);
 
             if (JsonOutput)
             {
@@ -245,8 +245,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions(5000));
         try
         {
-            await client.ConnectAsync();
-            var ping = await client.PingAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
+            var ping = await client.PingAsync().ConfigureAwait(false);
 
             if (JsonOutput)
             {
@@ -289,15 +289,15 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
 
             await AnsiConsole.Progress()
                 .StartAsync(async progress =>
                 {
                     var task = progress.AddTask("[cyan]Waiting for ECS world...[/]");
-                    await client.WaitForWorldAsync(30000);
+                    await client.WaitForWorldAsync(30000).ConfigureAwait(false);
                     task.Increment(100);
-                });
+                }).ConfigureAwait(false);
 
             AnsiConsole.MarkupLine("[green]✓[/] ECS World is ready");
             client.Disconnect();
@@ -315,8 +315,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            var result = await client.GetResourcesAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
+            var result = await client.GetResourcesAsync().ConfigureAwait(false);
 
             AnsiConsole.MarkupLine("[cyan]Game Resources:[/]");
             AnsiConsole.MarkupLine($"  Food:   [yellow]{result.Food}[/]");
@@ -343,16 +343,16 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
 
             DINOForge.Bridge.Protocol.ScreenshotResult ssResult = null!;
             await AnsiConsole.Progress()
                 .StartAsync(async progress =>
                 {
                     var task = progress.AddTask("[cyan]Taking screenshot...[/]");
-                    ssResult = await client.ScreenshotAsync(outputPath);
+                    ssResult = await client.ScreenshotAsync(outputPath).ConfigureAwait(false);
                     task.Increment(100);
-                });
+                }).ConfigureAwait(false);
 
             AnsiConsole.MarkupLine($"[green]✓[/] Screenshot saved: {ssResult.Path}");
             client.Disconnect();
@@ -370,8 +370,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            var result = await client.DumpStateAsync(category);
+            await client.ConnectAsync().ConfigureAwait(false);
+            var result = await client.DumpStateAsync(category).ConfigureAwait(false);
 
             AnsiConsole.MarkupLine($"[cyan]Catalog dump ({category ?? "all"}):[/]");
 
@@ -413,8 +413,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            var result = await client.QueryEntitiesAsync(componentType);
+            await client.ConnectAsync().ConfigureAwait(false);
+            var result = await client.QueryEntitiesAsync(componentType).ConfigureAwait(false);
 
             AnsiConsole.MarkupLine("[green]✓[/] Query complete");
 
@@ -434,9 +434,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Loading scene:[/] {sceneName}");
-            var result = await client.LoadSceneAsync(sceneName);
+            var result = await client.LoadSceneAsync(sceneName).ConfigureAwait(false);
             if (result.Success)
             {
                 AnsiConsole.MarkupLine($"[green]✓[/] Scene load dispatched: {result.Scene}");
@@ -460,9 +460,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine("[cyan]Triggering game world load via ECS singleton...[/]");
-            var result = await client.StartGameAsync();
+            var result = await client.StartGameAsync().ConfigureAwait(false);
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {result.Message}");
             else
@@ -482,9 +482,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine("[cyan]Dismissing loading screen...[/]");
-            var result = await client.DismissLoadScreenAsync();
+            var result = await client.DismissLoadScreenAsync().ConfigureAwait(false);
             string msg = Markup.Escape(result.Message ?? "");
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {msg}");
@@ -505,9 +505,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine("[cyan]Querying save files...[/]");
-            var result = await client.ListSavesAsync();
+            var result = await client.ListSavesAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Persistent data path:[/] {result["persistentDataPath"]}");
             AnsiConsole.MarkupLine($"[cyan]Save dir:[/] {result["saveDir"]} (exists: {result["saveDirExists"]})");
             AnsiConsole.MarkupLine($"[cyan]Data path:[/] {result["dataPath"]}");
@@ -532,9 +532,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Loading save '{saveName}'...[/]");
-            var result = await client.LoadSaveAsync(saveName);
+            var result = await client.LoadSaveAsync(saveName).ConfigureAwait(false);
             string msg = Markup.Escape(result.Message ?? "");
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {msg}");
@@ -556,12 +556,12 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             if (string.IsNullOrEmpty(buttonName))
                 AnsiConsole.MarkupLine("[cyan]Listing all active buttons...[/]");
             else
                 AnsiConsole.MarkupLine($"[cyan]Clicking button '{buttonName}'...[/]");
-            var result = await client.ClickButtonAsync(buttonName);
+            var result = await client.ClickButtonAsync(buttonName).ConfigureAwait(false);
             string msg = Markup.Escape(result.Message ?? "");
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {msg}");
@@ -583,9 +583,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Toggling UI '{target}'...[/]");
-            var result = await client.ToggleUiAsync(target);
+            var result = await client.ToggleUiAsync(target).ConfigureAwait(false);
             string msg = Markup.Escape(result.Message ?? "");
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {msg}");
@@ -607,9 +607,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Scanning active MonoBehaviours{(string.IsNullOrEmpty(filter) ? "" : $" (filter: {filter})")}...[/]");
-            var result = await client.ScanSceneAsync(filter);
+            var result = await client.ScanSceneAsync(filter).ConfigureAwait(false);
             string msg = result.Message ?? "";
             // Print each line
             foreach (var line in msg.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -636,9 +636,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Invoking {target}.{method}()...[/]");
-            var result = await client.InvokeMethodAsync(target, method);
+            var result = await client.InvokeMethodAsync(target, method).ConfigureAwait(false);
             string msg = Markup.Escape(result.Message ?? "");
             if (result.Success)
                 AnsiConsole.MarkupLine($"[green]✓[/] {msg}");
@@ -659,9 +659,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[cyan]Capturing UI tree{(selector != null ? $" (selector: {selector})" : "")}...[/]");
-            UiTreeResult result = await client.GetUiTreeAsync(selector);
+            UiTreeResult result = await client.GetUiTreeAsync(selector).ConfigureAwait(false);
             if (!result.Success)
             {
                 AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(result.Message)}");
@@ -716,58 +716,58 @@ public static class Program
         {
             // ── Step 1: Connect ───────────────────────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 1:[/] Connecting to game bridge...");
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine("[green]✓[/] Connected");
 
             // ── Step 2: Status at main menu ───────────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 2:[/] Checking status (main menu)...");
-            var status = await client.StatusAsync();
+            var status = await client.StatusAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"  World ready: {status.WorldReady}  |  Entities: {status.EntityCount}  |  Packs: {status.LoadedPacks.Count}");
 
             // ── Step 3: Screenshot main menu ──────────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 3:[/] Screenshot main menu...");
             string ssMenu = Path.Combine(Path.GetTempPath(), "dinoforge_demo_01_mainmenu.png");
-            await client.ScreenshotAsync(ssMenu);
+            await client.ScreenshotAsync(ssMenu).ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[green]✓[/] Screenshot: {Markup.Escape(ssMenu)}");
 
             // ── Step 4: Click native Mods button ─────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 4:[/] Clicking DINOForge_ModsButton (native injected button)...");
-            var clickResult = await client.ClickButtonAsync("DINOForge_ModsButton");
+            var clickResult = await client.ClickButtonAsync("DINOForge_ModsButton").ConfigureAwait(false);
             AnsiConsole.MarkupLine(clickResult.Success
                 ? $"[green]✓[/] {Markup.Escape(clickResult.Message ?? "")}"
                 : $"[red]✗[/] {Markup.Escape(clickResult.Message ?? "")}");
 
-            await Task.Delay(600);
+            await Task.Delay(600).ConfigureAwait(false);
             string ssMods = Path.Combine(Path.GetTempPath(), "dinoforge_demo_02_mods_open.png");
-            await client.ScreenshotAsync(ssMods);
+            await client.ScreenshotAsync(ssMods).ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[green]✓[/] Screenshot (mods menu open): {Markup.Escape(ssMods)}");
 
             // ── Step 5: Close mod menu ────────────────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 5:[/] Closing mod menu (toggle F10 equivalent)...");
-            var closeMenu = await client.ToggleUiAsync("modmenu");
+            var closeMenu = await client.ToggleUiAsync("modmenu").ConfigureAwait(false);
             AnsiConsole.MarkupLine(closeMenu.Success
                 ? $"[green]✓[/] {Markup.Escape(closeMenu.Message ?? "")}"
                 : $"[red]✗[/] {Markup.Escape(closeMenu.Message ?? "")}");
 
             // ── Step 6: Toggle debug panel (F9 equivalent) ───────────────────
             AnsiConsole.MarkupLine("[yellow]Step 6:[/] Toggling debug panel (F9 equivalent)...");
-            await Task.Delay(400);
-            var dbgOn = await client.ToggleUiAsync("debug");
+            await Task.Delay(400).ConfigureAwait(false);
+            var dbgOn = await client.ToggleUiAsync("debug").ConfigureAwait(false);
             AnsiConsole.MarkupLine(dbgOn.Success
                 ? $"[green]✓[/] {Markup.Escape(dbgOn.Message ?? "")}"
                 : $"[red]✗[/] {Markup.Escape(dbgOn.Message ?? "")}");
 
-            await Task.Delay(600);
+            await Task.Delay(600).ConfigureAwait(false);
             string ssDebug = Path.Combine(Path.GetTempPath(), "dinoforge_demo_03_debug_open.png");
-            await client.ScreenshotAsync(ssDebug);
+            await client.ScreenshotAsync(ssDebug).ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[green]✓[/] Screenshot (debug panel): {Markup.Escape(ssDebug)}");
 
             // Close debug panel
-            await client.ToggleUiAsync("debug");
+            await client.ToggleUiAsync("debug").ConfigureAwait(false);
 
             // ── Step 7: Load save ─────────────────────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 7:[/] Loading AUTOSAVE_1 via ECS bridge...");
-            var loadResult = await client.LoadSaveAsync("AUTOSAVE_1");
+            var loadResult = await client.LoadSaveAsync("AUTOSAVE_1").ConfigureAwait(false);
             AnsiConsole.MarkupLine(loadResult.Success
                 ? $"[green]✓[/] {Markup.Escape(loadResult.Message ?? "")}"
                 : $"[red]✗[/] {Markup.Escape(loadResult.Message ?? "")}");
@@ -778,11 +778,11 @@ public static class Program
             GameStatus? worldStatus = null;
             while (waited < 30000)
             {
-                await Task.Delay(1500);
+                await Task.Delay(1500).ConfigureAwait(false);
                 waited += 1500;
                 try
                 {
-                    worldStatus = await client.StatusAsync();
+                    worldStatus = await client.StatusAsync().ConfigureAwait(false);
                     if (worldStatus.EntityCount > 50000)
                         break;
                     AnsiConsole.MarkupLine($"  [grey]Entities: {worldStatus.EntityCount} (waiting for >50k)...[/]");
@@ -794,34 +794,34 @@ public static class Program
 
             // ── Step 9: Dismiss loading screen ───────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 9:[/] Dismissing 'Press Any Key' screen...");
-            await Task.Delay(1000);
-            var dismissResult = await client.DismissLoadScreenAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            var dismissResult = await client.DismissLoadScreenAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine(dismissResult.Success
                 ? $"[green]✓[/] {Markup.Escape(dismissResult.Message ?? "")}"
                 : $"[red]✗[/] {Markup.Escape(dismissResult.Message ?? "")}");
 
-            await Task.Delay(1500);
+            await Task.Delay(1500).ConfigureAwait(false);
 
             // ── Step 10: Gameplay verification ───────────────────────────────
             AnsiConsole.MarkupLine("[yellow]Step 10:[/] Verifying gameplay state...");
 
             // Status
-            var gameStatus = await client.StatusAsync();
+            var gameStatus = await client.StatusAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"  [cyan]Entities:[/] {gameStatus.EntityCount}  |  [cyan]World:[/] {gameStatus.WorldName}");
             foreach (var pack in gameStatus.LoadedPacks)
                 AnsiConsole.MarkupLine($"    Pack: {Markup.Escape(pack)}");
 
             // Resources
-            var resources = await client.GetResourcesAsync();
+            var resources = await client.GetResourcesAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"  [cyan]Resources:[/] Food={resources.Food} Wood={resources.Wood} Stone={resources.Stone} Iron={resources.Iron} Gold={resources.Money}");
 
             // Catalog
-            var catalog = await client.DumpStateAsync();
+            var catalog = await client.DumpStateAsync().ConfigureAwait(false);
             AnsiConsole.MarkupLine($"  [cyan]Catalog:[/] {catalog.Units.Count} unit types, {catalog.Buildings.Count} building types, {catalog.Projectiles.Count} projectile types");
 
             // Final screenshot
             string ssGame = Path.Combine(Path.GetTempPath(), "dinoforge_demo_04_gameplay.png");
-            await client.ScreenshotAsync(ssGame);
+            await client.ScreenshotAsync(ssGame).ConfigureAwait(false);
             AnsiConsole.MarkupLine($"[green]✓[/] Screenshot (gameplay): {Markup.Escape(ssGame)}");
 
             AnsiConsole.MarkupLine("");
@@ -857,8 +857,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            StatResult result = await client.GetStatAsync(sdkPath, entityIndex);
+            await client.ConnectAsync().ConfigureAwait(false);
+            StatResult result = await client.GetStatAsync(sdkPath, entityIndex).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 sdkPath = result.SdkPath,
@@ -891,8 +891,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            OverrideResult result = await client.ApplyOverrideAsync(sdkPath, value, mode, filter);
+            await client.ConnectAsync().ConfigureAwait(false);
+            OverrideResult result = await client.ApplyOverrideAsync(sdkPath, value, mode, filter).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 success = result.Success,
@@ -915,8 +915,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            ComponentMapResult result = await client.GetComponentMapAsync(sdkPathFilter);
+            await client.ConnectAsync().ConfigureAwait(false);
+            ComponentMapResult result = await client.GetComponentMapAsync(sdkPathFilter).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 mappings = result.Mappings.Select(m => new
@@ -943,9 +943,9 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(false);
             var result = await client.InvokeBridgeMethodAsync("discover-types",
-                pattern != null ? new { pattern } : new { });
+                pattern != null ? new { pattern } : new { }).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, GameControlCliJsonOptions.Indented));
             client.Disconnect();
             return 0;
@@ -962,8 +962,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            ReloadResult result = await client.ReloadPacksAsync(path);
+            await client.ConnectAsync().ConfigureAwait(false);
+            ReloadResult result = await client.ReloadPacksAsync(path).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 success = result.Success,
@@ -990,8 +990,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            VerifyResult result = await client.VerifyModAsync(packPath);
+            await client.ConnectAsync().ConfigureAwait(false);
+            VerifyResult result = await client.VerifyModAsync(packPath).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 packId = result.PackId,
@@ -1015,8 +1015,8 @@ public static class Program
         using var client = new GameClient(CreateClientOptions());
         try
         {
-            await client.ConnectAsync();
-            CatalogSnapshot result = await client.DumpStateAsync(category);
+            await client.ConnectAsync().ConfigureAwait(false);
+            CatalogSnapshot result = await client.DumpStateAsync(category).ConfigureAwait(false);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
                 units = result.Units.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),

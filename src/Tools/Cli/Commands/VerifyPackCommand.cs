@@ -26,7 +26,7 @@ internal static class VerifyPackCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string packPath = parseResult.GetRequiredValue(packPathArg);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -37,7 +37,7 @@ internal static class VerifyPackCommand
                 return;
             }
 
-            VerifyResult result = await client.VerifyModAsync(packPath, ct);
+            VerifyResult result = await client.VerifyModAsync(packPath, ct).ConfigureAwait(false);
 
             if (json)
             {

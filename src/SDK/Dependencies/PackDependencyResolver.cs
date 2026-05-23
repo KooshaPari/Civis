@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using QuikGraph;
+using QuikGraph.Algorithms;
+using QuikGraph.Algorithms.TopologicalSort;
 
 namespace DINOForge.SDK.Dependencies
 {
@@ -74,15 +77,15 @@ namespace DINOForge.SDK.Dependencies
         {
             List<PackManifest> packList = packs.ToList();
             Dictionary<string, PackManifest> packById = packList.ToDictionary(p => p.Id, StringComparer.Ordinal);
-
-            // Build in-degree map and adjacency list (dep -> dependents).
-            Dictionary<string, int> inDegree = packList.ToDictionary(p => p.Id, _ => 0, StringComparer.Ordinal);
-            Dictionary<string, List<string>> dependents = packList.ToDictionary(
-                p => p.Id,
-                _ => new List<string>(),
-                StringComparer.Ordinal);
-
+            Dictionary<string, List<string>> outgoing = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            Dictionary<string, int> indegree = new Dictionary<string, int>(StringComparer.Ordinal);
             List<string> errors = new List<string>();
+
+            foreach (PackManifest pack in packList)
+            {
+                indegree[pack.Id] = 0;
+                outgoing[pack.Id] = new List<string>();
+            }
 
             foreach (PackManifest pack in packList)
             {
@@ -93,38 +96,49 @@ namespace DINOForge.SDK.Dependencies
                         errors.Add($"Pack '{pack.Id}' depends on unknown pack '{dep}'.");
                         continue;
                     }
-                    dependents[dep].Add(pack.Id);
-                    inDegree[pack.Id]++;
+
+                    outgoing[dep].Add(pack.Id);
+                    indegree[pack.Id]++;
                 }
             }
 
             if (errors.Count > 0)
                 return DependencyResult.Failure(errors);
 
-            // Kahn's algorithm - use LoadOrder as tiebreaker via sorted queue.
-            SortedSet<(int LoadOrder, string Id)> ready = new SortedSet<(int LoadOrder, string Id)>(
-                packList.Where(p => inDegree[p.Id] == 0)
-                        .Select(p => (p.LoadOrder, p.Id)));
+            List<PackManifest> sorted = new List<PackManifest>(packList.Count);
+            SortedSet<PackManifest> ready = new SortedSet<PackManifest>(Comparer<PackManifest>.Create((left, right) =>
+            {
+                int byLoadOrder = left.LoadOrder.CompareTo(right.LoadOrder);
+                if (byLoadOrder != 0)
+                    return byLoadOrder;
 
-            List<PackManifest> sorted = new List<PackManifest>();
+                return StringComparer.Ordinal.Compare(left.Id, right.Id);
+            }));
+
+            foreach (PackManifest pack in packList)
+            {
+                if (indegree[pack.Id] == 0)
+                    ready.Add(pack);
+            }
 
             while (ready.Count > 0)
             {
-                (int _, string nextId) = ready.Min;
-                ready.Remove(ready.Min);
+                PackManifest current = ready.Min;
+                ready.Remove(current);
+                sorted.Add(current);
 
-                sorted.Add(packById[nextId]);
-
-                foreach (string dependentId in dependents[nextId])
+                foreach (string dependentId in outgoing[current.Id])
                 {
-                    inDegree[dependentId]--;
-                    if (inDegree[dependentId] == 0)
-                        ready.Add((packById[dependentId].LoadOrder, dependentId));
+                    indegree[dependentId]--;
+                    if (indegree[dependentId] == 0)
+                        ready.Add(packById[dependentId]);
                 }
             }
 
             if (sorted.Count != packList.Count)
+            {
                 return DependencyResult.Failure(new List<string> { "Circular dependency detected among packs." });
+            }
 
             return DependencyResult.Success(sorted);
         }

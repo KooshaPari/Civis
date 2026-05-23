@@ -141,7 +141,7 @@ namespace DINOForge.SDK.Registry
     /// for <see cref="CacheDuration"/> (default: 1 hour) before the next network
     /// request is issued.
     /// </remarks>
-    public sealed class PackRegistryClient
+    public sealed class PackRegistryClient : IDisposable
     {
         // ------------------------------------------------------------------
         // Singleton
@@ -167,6 +167,7 @@ namespace DINOForge.SDK.Registry
 
         private readonly string _registryUrl;
         private readonly HttpClient _http;
+        private readonly bool _ownsHttpClient;
 
         // ------------------------------------------------------------------
         // Cache
@@ -207,6 +208,7 @@ namespace DINOForge.SDK.Registry
         {
             _registryUrl = registryUrl ?? throw new ArgumentNullException(nameof(registryUrl));
             _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _ownsHttpClient = !ReferenceEquals(httpClient, SharedHttp);
             _timeProvider = timeProvider ?? TimeProvider.System;
         }
 
@@ -223,15 +225,17 @@ namespace DINOForge.SDK.Registry
         public async Task<IReadOnlyList<RegistryPackEntry>> GetAllPacksAsync(
             CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await _lock.WaitAsync(cancellationToken);
             try
             {
                 if (_cache != null && _timeProvider.GetUtcNow().UtcDateTime < _cacheExpiry)
                     return _cache.AsReadOnly();
 
-                string json = await _http
-                    .GetStringAsync(_registryUrl)
-                    .ConfigureAwait(false);
+                using HttpRequestMessage request = new(HttpMethod.Get, _registryUrl);
+                using HttpResponseMessage response = await _http
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                string json = await Task.Run(() => response.Content.ReadAsStringAsync().GetAwaiter().GetResult(), cancellationToken);
 
                 RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, JsonOptions.Default);
 
@@ -260,7 +264,7 @@ namespace DINOForge.SDK.Registry
             PackRegistryFilter? filter,
             CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken);
 
             if (filter == null)
                 return all;
@@ -326,7 +330,7 @@ namespace DINOForge.SDK.Registry
             string id,
             CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken);
             return all.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -347,6 +351,18 @@ namespace DINOForge.SDK.Registry
             finally
             {
                 _lock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Releases the cached HTTP client and synchronization primitive.
+        /// </summary>
+        public void Dispose()
+        {
+            _lock.Dispose();
+            if (_ownsHttpClient)
+            {
+                _http.Dispose();
             }
         }
     }

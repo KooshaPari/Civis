@@ -17,7 +17,10 @@ internal static class CommandHelper
     /// <returns>A connected <see cref="GameClient"/>, or null if the connection failed.</returns>
     public static async Task<GameClient?> ConnectAsync(CancellationToken ct = default, bool writeErrors = true)
     {
-        GameClient client = new();
+        // Bridge server uses NDJSON line reader (GameBridgeServer.cs:285-310).
+        // Client default is UseMessageFraming=true (length-prefix) which causes
+        // protocol mismatch → handshake stall. Force NDJSON to match server.
+        GameClient client = new(new GameClientOptions { UseMessageFraming = false });
         try
         {
             await client.ConnectAsync(ct).ConfigureAwait(false);

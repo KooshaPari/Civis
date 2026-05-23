@@ -95,6 +95,17 @@ public class CanonicalJsonGoldensTests
     }
 
     [Fact]
+    public void Canonicalize_NegativeZero_ParitiesWithRFC8785Library()
+    {
+        // RFC 8785 canonicalization normalizes negative zero to 0; this
+        // regression test keeps the bridge canonicalizer aligned with the
+        // upstream library behavior for scalar roots.
+        var token = JToken.FromObject(-0.0d);
+        var actual = CanonicalJson.Canonicalize(token);
+        actual.Should().Be("0");
+    }
+
+    [Fact]
     public void Canonicalize_NullToken_ReturnsLiteralNull()
     {
         // The null-input contract: the SHA-256 of "no payload" is well-defined

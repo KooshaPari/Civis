@@ -18,6 +18,12 @@ ADRs document significant architectural decisions made during DINOForge developm
 | [ADR-010](./ADR-010-asset-intake-pipeline.md) | Deterministic Star-Wars Asset Intake Pipeline | Proposed |
 | [ADR-011](./ADR-011-desktop-companion.md) | WinUI 3 Desktop Companion App | Accepted |
 | [ADR-012](./ADR-012-fuzzing-strategy.md) | Fuzzing and Property-Based Testing Strategy | Accepted |
+| [ADR-013](./ADR-013-duplicate-instance-detection-bypass.md) | Duplicate Instance Detection Bypass | Accepted |
+| [ADR-014](./ADR-014-runtime-execution-model.md) | Runtime Execution Model | Accepted |
+| [ADR-015](./ADR-015-native-menu-injector.md) | Native Menu Injector | Accepted |
+| [ADR-016](./ADR-016-no-harmony-patches-on-dino-systems.md) | No Harmony Patches on DINO Systems | Accepted |
+| [ADR-017](./ADR-017-neural-tts-for-proof-videos.md) | Neural TTS for Proof Videos | Accepted |
+| [ADR-018](./ADR-018-second-instance-bypass.md) | Second Instance Bypass | Accepted |
 | [ADR-019](./ADR-019-mod-manager-client.md) | Local Mod Manager Client (M12) | Accepted |
 
 ## Format

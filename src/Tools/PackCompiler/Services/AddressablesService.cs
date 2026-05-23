@@ -37,7 +37,7 @@ namespace DINOForge.Tools.PackCompiler.Services
 
                 Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
                 File.WriteAllLines(outputPath, catalogEntries, Encoding.UTF8);
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace DINOForge.Tools.PackCompiler.Services
 
                 Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
                 File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace DINOForge.Tools.PackCompiler.Services
 
                 Directory.CreateDirectory(outputDirectory);
                 File.WriteAllText(groupFile, sb.ToString(), Encoding.UTF8);
-            });
+            }).ConfigureAwait(false);
         }
 
         private List<string> BuildCatalogEntry(OptimizedAsset asset, AssetDefinition definition)

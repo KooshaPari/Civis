@@ -26,7 +26,7 @@ internal static class QueryCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string path = parseResult.GetRequiredValue(pathArg);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -37,7 +37,7 @@ internal static class QueryCommand
                 return;
             }
 
-            QueryResult result = await client.QueryEntitiesAsync(componentType: path, ct: ct);
+            QueryResult result = await client.QueryEntitiesAsync(componentType: path, ct: ct).ConfigureAwait(false);
 
             if (json)
             {

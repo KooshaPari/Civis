@@ -17,13 +17,13 @@ namespace DINOForge.Analyzers
         private const string Category = "Observability";
 
         private static readonly LocalizableString Title =
-            (LocalizableString)"Bare catch swallows exceptions silently";
+            (LocalizableString)"Catch swallows exceptions silently";
 
         private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Empty catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, \"context\"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch.";
+            (LocalizableString)"Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, \"context\"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch.";
 
         private static readonly LocalizableString Description =
-            (LocalizableString)"Bare catch blocks with no body hide I/O, reflection, or resource-exhaustion failures, breaking observability and making debugging impossible. Always log exceptions, document safe-swallows inline, or remove the try/catch entirely. Use `catch (Exception ex) { _logger.LogWarning(ex, \"context\"); }` for production, or `// safe-swallow: <reason>` for intentional swallows.";
+            (LocalizableString)"Catch blocks that do not produce a warning/error-level signal hide I/O, reflection, or resource-exhaustion failures, breaking observability and making debugging impossible. Always log exceptions at warning/error level, document safe-swallows inline, or remove the try/catch entirely. Use `catch (Exception ex) { _logger.LogWarning(ex, \"context\"); }` for production, or `// safe-swallow: <reason>` for intentional swallows.";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -89,6 +89,15 @@ namespace DINOForge.Analyzers
                 return;
             }
 
+            // #848 Gap Class G: low-signal logging-only body — `catch { _logger.LogTrace(...); }`
+            // or `catch { _logger.LogVerbose(...); }` still swallows the exception without a
+            // warning/error-level signal.
+            if (IsWeakLogOnlyBody(statements))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(Rule, catchClause.GetLocation()));
+                return;
+            }
+
             // #848 Gap Class D: placeholder-only body — body contains no executable work and
             // is annotated solely with a TODO/FIXME/XXX/HACK comment. These are abandoned
             // handlers, not intentional swallows; suppression marker is `// safe-swallow:` or
@@ -133,6 +142,39 @@ namespace DINOForge.Analyzers
                 default:
                     return false;
             }
+        }
+
+        // #848 Gap Class G helper: body contains only low-signal logging invocations such as
+        // `LogTrace` / `LogVerbose`. These are still silent swallow patterns because they do
+        // not surface a production-grade exception signal.
+        private static bool IsWeakLogOnlyBody(SyntaxList<StatementSyntax> statements)
+        {
+            if (statements.Count == 0)
+                return false;
+
+            return statements.All(IsWeakLogOnlyStatement);
+        }
+
+        private static bool IsWeakLogOnlyStatement(StatementSyntax stmt)
+        {
+            switch (stmt)
+            {
+                case EmptyStatementSyntax _:
+                    return true;
+                case BlockSyntax block when block.Statements.All(IsWeakLogOnlyStatement):
+                    return true;
+                case ExpressionStatementSyntax exprStmt when exprStmt.Expression is InvocationExpressionSyntax invocation:
+                    return IsWeakLoggingInvocation(invocation);
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsWeakLoggingInvocation(InvocationExpressionSyntax invocation)
+        {
+            string invocationText = invocation.Expression.ToString();
+            return invocationText.IndexOf("LogTrace", StringComparison.Ordinal) >= 0 ||
+                   invocationText.IndexOf("LogVerbose", StringComparison.Ordinal) >= 0;
         }
 
         // #848 Gap Class D helper: body's only non-trivia content is a placeholder comment

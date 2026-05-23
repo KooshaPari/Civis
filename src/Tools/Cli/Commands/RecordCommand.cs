@@ -105,7 +105,7 @@ internal static partial class RecordCommand
             if (!json)
                 AnsiConsole.MarkupLine($"[cyan]Recording game window for {duration} seconds...[/]");
 
-            RecordResult result = await Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct);
+            RecordResult result = await Task.Run(() => CaptureRecordingAsync(output, duration, width, height, framerate, quality, ct), ct).ConfigureAwait(false);
 
             if (json)
             {

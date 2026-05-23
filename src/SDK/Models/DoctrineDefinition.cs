@@ -34,7 +34,7 @@ namespace DINOForge.SDK.Models
         /// Keys are stat or system identifiers; values are multiplier or additive amounts.
         /// </summary>
         [YamlMember(Alias = "modifiers")]
-        public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
+        public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Validates that the doctrine definition is semantically valid.

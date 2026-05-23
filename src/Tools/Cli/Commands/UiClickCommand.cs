@@ -23,7 +23,7 @@ internal static class UiClickCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string selector = parseResult.GetRequiredValue(selectorArg);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -34,7 +34,7 @@ internal static class UiClickCommand
                 return;
             }
 
-            UiActionResult result = await client.ClickUiAsync(selector, ct);
+            UiActionResult result = await client.ClickUiAsync(selector, ct).ConfigureAwait(false);
 
             if (json)
             {

@@ -60,7 +60,11 @@ namespace DINOForge.Tests
 
             descriptorSource.Should().Contain("RepublicBlue");
             descriptorSource.Should().Contain("CISRed");
-            descriptorSource.Should().Contain("public static VFXPrefabDescriptor[] GetAllPrefabs()");
+            // #589 (iter-144): VFXPrefabCatalog.GetAllPrefabs() return type was refactored from
+            // VFXPrefabDescriptor[] to IReadOnlyList<VFXPrefabDescriptor> per Patterns #121/#123
+            // (eliminate per-call alloc + public mutability). Contract: still exposes all prefab
+            // descriptors via static GetAllPrefabs() — assert on the canonical signature today.
+            descriptorSource.Should().Contain("public static IReadOnlyList<VFXPrefabDescriptor> GetAllPrefabs()");
         }
     }
 }

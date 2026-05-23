@@ -52,7 +52,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
         }
 
         // Create pool of 4 isolated instances
-        _pool = await _harness.CreatePoolAsync(4);
+        _pool = await _harness.CreatePoolAsync(4).ConfigureAwait(true);
         _pool.Should().NotBeEmpty().And.HaveCount(4);
 
         // Verify pool structure
@@ -68,7 +68,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
     {
         if (!_disposed)
         {
-            await _harness.DisposeAsync();
+            await _harness.DisposeAsync().ConfigureAwait(true);
             _disposed = true;
         }
     }
@@ -98,7 +98,7 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
             _harness.LaunchInstanceAsync(container, timeoutSeconds: 30)
         ).ToList();
 
-        var results = await Task.WhenAll(launchTasks);
+        var results = await Task.WhenAll(launchTasks).ConfigureAwait(true);
         var elapsed = DateTime.UtcNow - startTime;
 
         // All launches should succeed
@@ -213,18 +213,18 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
 
         // Launch first instance
         var container = _pool![0];
-        var launched = await _harness.LaunchInstanceAsync(container, timeoutSeconds: 30);
+        var launched = await _harness.LaunchInstanceAsync(container, timeoutSeconds: 30).ConfigureAwait(true);
         launched.Should().BeTrue("Instance should launch successfully");
 
         // Poll for world readiness (should detect >0 entities, not just sleep)
-        var ready = await _harness.WaitForWorldAsync(container, timeoutSeconds: 60);
+        var ready = await _harness.WaitForWorldAsync(container, timeoutSeconds: 60).ConfigureAwait(true);
         ready.Should().BeTrue("ECS world should become ready");
 
         // Get client and verify entity count
         var client = _harness.GetClient(container);
         client.Should().NotBeNull("Client should be connected");
 
-        var status = await client!.StatusAsync();
+        var status = await client!.StatusAsync().ConfigureAwait(true);
         status.Should().NotBeNull();
         status!.EntityCount.Should().BeGreaterThan(0, "World should have entities");
     }
@@ -248,11 +248,11 @@ public class ParallelGameTestsWithHarness : IAsyncLifetime
             // Each "operation" is independent
             var boxValid = System.IO.Directory.Exists(container.BoxPath);
             var exeValid = System.IO.File.Exists(container.ExePath);
-            await Task.Delay(10); // Simulate async work
+            await Task.Delay(10).ConfigureAwait(true); // Simulate async work
             return boxValid && exeValid;
         }).ToList();
 
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(true);
         results.Should().AllSatisfy(r => r.Should().BeTrue("All concurrent operations should succeed"));
     }
 }

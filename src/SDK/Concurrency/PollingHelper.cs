@@ -24,6 +24,7 @@ public static class PollingHelper
     /// <param name="backoffFactor">Exponential backoff multiplier. Default 2.0.</param>
     /// <param name="maxDelay">Cap on retry delay. Default 800ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <param name="timeProvider">Source of current time for deadline calculations. Defaults to <see cref="System.TimeProvider.System"/>.</param>
     /// <returns>Non-null T if probe succeeds, null if timeout or cancellation.</returns>
     /// <remarks>
     /// Loop: probe → if non-null return; else delay → double delay (capped); respect ct + timeout.
@@ -64,7 +65,7 @@ public static class PollingHelper
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;
             TimeSpan delayTime = TimeSpan.FromMilliseconds(Math.Min(currentDelay.TotalMilliseconds, remaining.TotalMilliseconds));
             if (delayTime > TimeSpan.Zero)
-                await Task.Delay(delayTime, ct).ConfigureAwait(false);
+                await Task.Delay(delayTime, ct);
 
             // Exponential backoff (capped at actualMaxDelay)
             double nextDelayMs = currentDelay.TotalMilliseconds * backoffFactor;
@@ -81,6 +82,7 @@ public static class PollingHelper
     /// <param name="backoffFactor">Exponential backoff multiplier. Default 2.0.</param>
     /// <param name="maxDelay">Cap on retry delay. Default 800ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <param name="timeProvider">Source of current time for deadline calculations. Defaults to <see cref="System.TimeProvider.System"/>.</param>
     /// <returns>True if probe succeeds, false if timeout or cancellation.</returns>
     /// <remarks>
     /// Loop: probe → if true return; else delay → double delay (capped); respect ct + timeout.
@@ -119,7 +121,7 @@ public static class PollingHelper
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;
             TimeSpan delayTime = TimeSpan.FromMilliseconds(Math.Min(currentDelay.TotalMilliseconds, remaining.TotalMilliseconds));
             if (delayTime > TimeSpan.Zero)
-                await Task.Delay(delayTime, ct).ConfigureAwait(false);
+                await Task.Delay(delayTime, ct);
 
             // Exponential backoff (capped at actualMaxDelay)
             double nextDelayMs = currentDelay.TotalMilliseconds * backoffFactor;

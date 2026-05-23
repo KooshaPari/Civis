@@ -42,7 +42,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                         );
                     }
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>

@@ -109,7 +109,7 @@ public sealed class AssetDownloader
         };
 
         // 2. Call Sketchfab search
-        var results = await _sketchfabClient.SearchModelsAsync(query, filters, ct);
+        var results = await _sketchfabClient.SearchModelsAsync(query, filters, ct).ConfigureAwait(false);
 
         // 3. Filter results by criteria
         var filtered = new List<SketchfabModelInfo>();
@@ -235,7 +235,7 @@ public sealed class AssetDownloader
                 Cursor = cursor
             };
 
-            var results = await _sketchfabClient.SearchModelsAsync(query, filters, ct);
+            var results = await _sketchfabClient.SearchModelsAsync(query, filters, ct).ConfigureAwait(false);
 
             if (results.Count == 0)
             {
@@ -384,7 +384,7 @@ public sealed class AssetDownloader
                 candidate.ModelId,
                 "glb",
                 downloadPath,
-                ct);
+                ct).ConfigureAwait(false);
 
             sw.Stop();
 
@@ -426,7 +426,7 @@ public sealed class AssetDownloader
             }
 
             var manifestJson = JsonSerializer.Serialize(manifest, CliJsonOptions.Indented);
-            await File.WriteAllTextAsync(manifestPath, manifestJson, ct);
+            await File.WriteAllTextAsync(manifestPath, manifestJson, ct).ConfigureAwait(false);
 
             return new DownloadAssetResult
             {
@@ -523,7 +523,7 @@ public sealed class AssetDownloader
 
             var task = Task.Run(async () =>
             {
-                await semaphore.WaitAsync(ct);
+                await semaphore.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
                     // Report progress: starting
@@ -536,7 +536,7 @@ public sealed class AssetDownloader
                         Elapsed = sw.Elapsed
                     });
 
-                    var downloadResult = await DownloadAssetAsync(candidate, outputDir, ct);
+                    var downloadResult = await DownloadAssetAsync(candidate, outputDir, ct).ConfigureAwait(false);
 
                     lock (resultsLock)
                     {
@@ -585,7 +585,7 @@ public sealed class AssetDownloader
                     semaphore.Release();
 
                     // Add rate limit delay between downloads
-                    await Task.Delay(2500, ct);
+                    await Task.Delay(2500, ct).ConfigureAwait(false);
                 }
             }, ct);
 
@@ -593,7 +593,7 @@ public sealed class AssetDownloader
         }
 
         // Wait for all downloads to complete
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
         sw.Stop();
 
         // Sort results by original index order

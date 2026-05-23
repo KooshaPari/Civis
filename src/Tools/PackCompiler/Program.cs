@@ -24,6 +24,7 @@ namespace DINOForge.Tools.PackCompiler
 {
     class Program
     {
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "PackCompiler command handlers intentionally invoke trim-sensitive serialization helpers in a CLI entrypoint.")]
         static async Task<int> Main(string[] args)
         {
             var packPathArg = new Argument<string>("pack-path") { Description = "Path to the pack directory" };
@@ -221,7 +222,7 @@ namespace DINOForge.Tools.PackCompiler
             Console.WriteLine("[DEBUG] Parse completed, about to invoke...");
             Console.Out.Flush();
 
-            return await parseResultObj.InvokeAsync();
+            return await parseResultObj.InvokeAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -414,6 +415,7 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void BuildPack(string packPath, string? outputDir, string format = "text")
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
@@ -495,6 +497,7 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void GenerateThunderstoreManifest(string packPath, string author, string outputDir)
         {
             try
@@ -854,6 +857,7 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         // Asset Pipeline Commands (v0.7.0+)
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void AssetImport(string packPath)
         {
             try
@@ -1042,6 +1046,7 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void AssetOptimize(string packPath)
         {
             try
@@ -1149,6 +1154,7 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void AssetGenerate(string packPath)
         {
             try
@@ -1270,6 +1276,7 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        [RequiresUnreferencedCode("Calls trim-sensitive asset pipeline helpers that use System.Text.Json serialization.")]
         private static void AssetBuild(string packPath)
         {
             try

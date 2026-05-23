@@ -56,6 +56,6 @@ namespace DINOForge.Domains.Scenario.Models
         /// List of actions to execute when this event triggers.
         /// </summary>
         [YamlMember(Alias = "actions")]
-        public List<EventAction> Actions { get; set; } = new List<EventAction>();
+        public List<EventAction> Actions { get; set; } = new List<EventAction>(); // public-mutable-ok: YAML deserializer requires mutable List for scenario content
     }
 }

@@ -193,7 +193,7 @@ public class GameSandboxIntegrationTests : IDisposable
     public async Task Sandbox_Ping_ReturnsPong()
     {
         SkipIfGameNotAvailable();
-        var result = await _client!.PingAsync();
+        var result = await _client!.PingAsync().ConfigureAwait(true);
         result.Pong.Should().BeTrue();
     }
 
@@ -206,7 +206,7 @@ public class GameSandboxIntegrationTests : IDisposable
     public async Task Sandbox_GetStatus_ShowsGameRunning()
     {
         SkipIfGameNotAvailable();
-        var status = await _client!.StatusAsync();
+        var status = await _client!.StatusAsync().ConfigureAwait(true);
         status.Running.Should().BeTrue();
     }
 
@@ -218,13 +218,13 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        var reloadResult = await _client!.ReloadPacksAsync(null);
+        var reloadResult = await _client!.ReloadPacksAsync(null).ConfigureAwait(true);
         reloadResult.Should().NotBeNull();
 
-        var verifyResult = await _client.VerifyModAsync("DINOForge.Runtime");
+        var verifyResult = await _client.VerifyModAsync("DINOForge.Runtime").ConfigureAwait(true);
         verifyResult.Should().NotBeNull();
 
-        var resources = await _client.GetResourcesAsync();
+        var resources = await _client.GetResourcesAsync().ConfigureAwait(true);
         resources.Should().NotBeNull();
     }
 
@@ -236,13 +236,13 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        var loadResult = await _client!.LoadSaveAsync("NEW_GAME");
+        var loadResult = await _client!.LoadSaveAsync("NEW_GAME").ConfigureAwait(true);
         loadResult.Should().NotBeNull();
 
-        await _client.DismissLoadScreenAsync();
-        await _client.WaitForWorldAsync(10000);
+        await _client.DismissLoadScreenAsync().ConfigureAwait(true);
+        await _client.WaitForWorldAsync(10000).ConfigureAwait(true);
 
-        var finalStatus = await _client.StatusAsync();
+        var finalStatus = await _client.StatusAsync().ConfigureAwait(true);
         finalStatus.EntityCount.Should().BeGreaterThan(0);
     }
 
@@ -254,9 +254,9 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        await _client!.WaitForWorldAsync(5000);
+        await _client!.WaitForWorldAsync(5000).ConfigureAwait(true);
 
-        var units = await _client.QueryEntitiesAsync("Unit", null);
+        var units = await _client.QueryEntitiesAsync("Unit", null).ConfigureAwait(true);
         units.Should().NotBeNull();
     }
 
@@ -268,10 +268,10 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        await _client!.WaitForWorldAsync(5000);
+        await _client!.WaitForWorldAsync(5000).ConfigureAwait(true);
 
-        await _client.ApplyOverrideAsync("unit.stats.hp", 500f, "override", null);
-        await _client.ApplyOverrideAsync("unit.stats.damage", 50f, "override", null);
+        await _client.ApplyOverrideAsync("unit.stats.hp", 500f, "override", null).ConfigureAwait(true);
+        await _client.ApplyOverrideAsync("unit.stats.damage", 50f, "override", null).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        var result = await _client!.ReloadPacksAsync(null);
+        var result = await _client!.ReloadPacksAsync(null).ConfigureAwait(true);
         result.Should().NotBeNull();
         // Pack reload may fail if game is in gameplay state (not main menu)
         // or if no packs are loaded — this is expected in some game states
@@ -300,7 +300,7 @@ public class GameSandboxIntegrationTests : IDisposable
         SkipIfGameNotAvailable();
 
         var screenshotPath = System.IO.Path.Combine(_tempDir, "gameplay.png");
-        var result = await _client!.ScreenshotAsync(screenshotPath);
+        var result = await _client!.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -312,7 +312,7 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        var state = await _client!.DumpStateAsync(null);
+        var state = await _client!.DumpStateAsync(null).ConfigureAwait(true);
         state.Should().NotBeNull();
     }
 }

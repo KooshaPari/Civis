@@ -21,7 +21,7 @@ internal static class StatusCommand
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -32,7 +32,7 @@ internal static class StatusCommand
                 return;
             }
 
-            Bridge.Protocol.GameStatus status = await client.StatusAsync(ct);
+            Bridge.Protocol.GameStatus status = await client.StatusAsync(ct).ConfigureAwait(false);
 
             if (json)
             {

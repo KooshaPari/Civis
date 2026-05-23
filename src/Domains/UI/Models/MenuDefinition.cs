@@ -29,7 +29,7 @@ namespace DINOForge.Domains.UI.Models
         /// <summary>
         /// List of menu items in this menu.
         /// </summary>
-        public List<MenuItemDefinition> Items { get; set; } = new List<MenuItemDefinition>();
+        public List<MenuItemDefinition> Items { get; set; } = new List<MenuItemDefinition>(); // public-mutable-ok: UI content loader deserializes menu items into a mutable list
 
         /// <summary>
         /// Background color of this menu in hex format (e.g. "#1A1A1A").

@@ -28,7 +28,7 @@ jobs:
           global-json-file: global.json
 
       - name: Restore dependencies
-        run: dotnet restore src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj
+        run: dotnet restore src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj /p:RestoreLockedMode=true
 
       - name: Build PackCompiler
         run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Debug --no-restore

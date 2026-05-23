@@ -20,7 +20,7 @@ public static class EntityAssertions
     /// <param name="minCount">Minimum number of expected entities.</param>
     public static async Task ShouldHaveEntities(this GameClient client, string componentType, int minCount)
     {
-        QueryResult result = await client.QueryEntitiesAsync(componentType: componentType);
+        QueryResult result = await client.QueryEntitiesAsync(componentType: componentType).ConfigureAwait(true);
         result.Count.Should().BeGreaterThanOrEqualTo(minCount,
             $"expected at least {minCount} entities with component '{componentType}'");
     }
@@ -35,7 +35,7 @@ public static class EntityAssertions
     /// <param name="tolerance">Acceptable tolerance for float comparison.</param>
     public static async Task ShouldHaveStat(this GameClient client, string sdkPath, float expected, float tolerance = 0.01f)
     {
-        StatResult result = await client.GetStatAsync(sdkPath);
+        StatResult result = await client.GetStatAsync(sdkPath).ConfigureAwait(true);
         result.Value.Should().BeApproximately(expected, tolerance,
             $"expected stat '{sdkPath}' to be approximately {expected}");
     }
@@ -48,7 +48,7 @@ public static class EntityAssertions
     /// <param name="minValue">Minimum expected resource value.</param>
     public static async Task ShouldHaveResources(this GameClient client, string type, int minValue)
     {
-        ResourceSnapshot resources = await client.GetResourcesAsync();
+        ResourceSnapshot resources = await client.GetResourcesAsync().ConfigureAwait(true);
         int actual = type.ToLowerInvariant() switch
         {
             "food" => resources.Food,

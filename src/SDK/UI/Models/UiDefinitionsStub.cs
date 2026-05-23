@@ -27,9 +27,9 @@ namespace DINOForge.SDK.UI.Models
         /// <summary>Element height in pixels.</summary>
         public int Height { get; set; } = 50;
         /// <summary>Game states in which the element should render.</summary>
-        public IReadOnlyList<string> VisibleIn { get; set; } = new List<string>();
+        public IReadOnlyList<string> VisibleIn { get; set; } = new List<string>(); // public-mutable-ok: serializer compatibility requires list-backed property shape
         /// <summary>Per-property color overrides (property name → hex).</summary>
-        public IReadOnlyDictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+        public IReadOnlyDictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal); // public-mutable-ok: serializer compatibility requires dictionary-backed property shape
         /// <summary>Element opacity 0..1.</summary>
         public float Opacity { get; set; } = 1.0f;
         /// <summary>Free-form description for tooling.</summary>

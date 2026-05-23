@@ -14,27 +14,27 @@ namespace DINOForge.Domains.UI.Models
         /// <summary>
         /// Unique identifier for this theme (e.g. "dark-theme", "light-theme", "faction-blue").
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         /// <summary>
         /// Display name for this theme.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Primary color in hex format (e.g. "#FFFFFF"). Used for main UI elements.
         /// </summary>
-        public string PrimaryColor { get; set; }
+        public string PrimaryColor { get; set; } = string.Empty;
 
         /// <summary>
         /// Secondary color in hex format (e.g. "#666666"). Used for secondary UI elements.
         /// </summary>
-        public string SecondaryColor { get; set; }
+        public string SecondaryColor { get; set; } = string.Empty;
 
         /// <summary>
         /// Accent color in hex format (e.g. "#FF6B00"). Used for highlights and interactive elements.
         /// </summary>
-        public string AccentColor { get; set; }
+        public string AccentColor { get; set; } = string.Empty;
 
         /// <summary>
         /// Font family name (e.g. "Arial", "Courier New"). Empty string means use default.

@@ -245,6 +245,59 @@ namespace DINOForge.Tests
         }
 
         [Fact]
+        public void ComputeLoadOrder_SimpleDAG_RespectsDependencyAndIdTiebreak()
+        {
+            // Arrange
+            var packCore = new PackManifest
+            {
+                Id = "core",
+                DependsOn = new List<string>(),
+                LoadOrder = 100
+            };
+            var packAlpha = new PackManifest
+            {
+                Id = "alpha",
+                DependsOn = new List<string> { "core" },
+                LoadOrder = 100
+            };
+            var packBeta = new PackManifest
+            {
+                Id = "beta",
+                DependsOn = new List<string> { "core" },
+                LoadOrder = 100
+            };
+
+            var packs = new List<PackManifest> { packBeta, packCore, packAlpha };
+
+            // Act
+            var result = _resolver.ComputeLoadOrder(packs);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.LoadOrder.Select(p => p.Id).Should().Equal("core", "alpha", "beta");
+        }
+
+        [Fact]
+        public void ComputeLoadOrder_CycleRegression_ReturnsSingleCircularError()
+        {
+            // Arrange
+            var packA = new PackManifest { Id = "pack-a", DependsOn = new List<string> { "pack-c" } };
+            var packB = new PackManifest { Id = "pack-b", DependsOn = new List<string> { "pack-a" } };
+            var packC = new PackManifest { Id = "pack-c", DependsOn = new List<string> { "pack-b" } };
+
+            var packs = new List<PackManifest> { packA, packB, packC };
+
+            // Act
+            var result = _resolver.ComputeLoadOrder(packs);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainSingle();
+            result.Errors[0].Should().Contain("Circular dependency");
+            result.LoadOrder.Should().BeEmpty();
+        }
+
+        [Fact]
         public void ResolveDependencies_MultipleMissingDependencies_ReturnsAllErrors()
         {
             // Arrange

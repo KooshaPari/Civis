@@ -14,6 +14,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
     /// Unit tests for GoResolverService with C# fallback validation.
     /// Tests both the service itself and the underlying C# resolution algorithm.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "These tests intentionally invoke trim-sensitive resolver APIs in the non-trimmed test build.")]
     [Trait("Category", "Polyglot")]
     public class GoResolverServiceTests
     {
@@ -45,7 +46,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             var pack = CreatePack("pack-a", "Pack A", "0.1.0");
 
             // Act
-            var result = await resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack);
+            var result = await resolver.ResolveDependenciesAsync(new List<PackManifest> { pack }, pack).ConfigureAwait(true);
 
             // Assert
             result.Should().ContainSingle().And.Contain("pack-a");
@@ -62,7 +63,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             var available = new List<PackManifest> { packA, packB, packC };
 
             // Act
-            var result = await resolver.ResolveDependenciesAsync(available, packC);
+            var result = await resolver.ResolveDependenciesAsync(available, packC).ConfigureAwait(true);
 
             // Assert
             result.Should().HaveCount(3);
@@ -88,7 +89,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             var available = new List<PackManifest> { packA, packB, packD, packC };
 
             // Act
-            var result = await resolver.ResolveDependenciesAsync(available, packC);
+            var result = await resolver.ResolveDependenciesAsync(available, packC).ConfigureAwait(true);
 
             // Assert
             result.Should().HaveCount(4);
@@ -110,7 +111,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(
                 () => resolver.ResolveDependenciesAsync(available, packA)
-            );
+            ).ConfigureAwait(true);
         }
 
         [Fact]
@@ -126,7 +127,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => resolver.ResolveDependenciesAsync(available, packA)
-            );
+            ).ConfigureAwait(true);
         }
 
         [Fact]
@@ -140,7 +141,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             var available = new List<PackManifest> { packA, packB, packC };
 
             // Act
-            var result = await resolver.ResolveDependenciesAsync(available, packC);
+            var result = await resolver.ResolveDependenciesAsync(available, packC).ConfigureAwait(true);
 
             // Assert
             // All three are independent, so load order should determine order

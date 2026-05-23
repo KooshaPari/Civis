@@ -2,6 +2,7 @@
 using System;
 using BepInEx.Logging;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace DINOForge.Runtime.UI
@@ -37,6 +38,7 @@ namespace DINOForge.Runtime.UI
         private ManualLogSource? _log;
         private Canvas? _canvas;
         private bool _ready;
+        private int _eventSystemDiagTick;
 
         // Mouse tracking for HUD hover
         private RectTransform? _hudStripRt;
@@ -119,7 +121,8 @@ namespace DINOForge.Runtime.UI
             // Canvas component
             _canvas = canvasGo.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 100;
+            _canvas.overrideSorting = true;
+            _canvas.sortingOrder = 32767;
 
             // CanvasScaler — scale with screen size, reference 1920x1080
             CanvasScaler scaler = canvasGo.AddComponent<CanvasScaler>();
@@ -127,13 +130,9 @@ namespace DINOForge.Runtime.UI
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // GraphicRaycaster for pointer events (disabled by default to avoid intercepting main menu clicks)
-            // Child code can re-enable when interactive elements are added
-            GraphicRaycaster raycaster = canvasGo.AddComponent<GraphicRaycaster>();
-            raycaster.enabled = false;
-
-            // Ensure an EventSystem exists so the canvas can dispatch pointer events.
-            // Without it, UI clicks are routed nowhere and input is dead.
+            // Pattern #235: Ensure an EventSystem exists BEFORE adding GraphicRaycaster.
+            // Without it, UI clicks are routed nowhere — kills both plugin overlay AND
+            // vanilla game UI. F-keys still work (Win32 bypasses Unity), masking the issue.
             if (UnityEngine.EventSystems.EventSystem.current == null)
             {
                 var esGo = new GameObject("DINOForge_EventSystem");
@@ -142,6 +141,14 @@ namespace DINOForge.Runtime.UI
                 esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
                 _log?.LogInfo("[DFCanvas] EventSystem not found — created DINOForge_EventSystem.");
             }
+
+            // GraphicRaycaster for pointer events. Enabled at all times; vanilla menu clicks
+            // fall through correctly because our canvas has no fullscreen raycastTarget=true
+            // child. Individual panels (HudStrip, ModMenuPanel, DebugPanel) control their own
+            // click surfaces via per-Image raycastTarget. Previously disabled here as a
+            // misguided guard — that killed clicks on MODS button + every panel inside DFCanvas.
+            GraphicRaycaster raycaster = canvasGo.AddComponent<GraphicRaycaster>();
+            raycaster.enabled = true;
 
             Transform canvasRoot = canvasGo.transform;
 
@@ -166,6 +173,8 @@ namespace DINOForge.Runtime.UI
             debugGo.transform.SetParent(canvasRoot, false);
             DebugPanel = debugGo.AddComponent<DebugPanel>();
             DebugPanel.Build(canvasRoot);
+
+            ForceCanvasGroupRaycasts(canvasRoot, "BuildCanvas");
         }
 
         // ── Input handling ────────────────────────────────────────────────────────
@@ -176,6 +185,23 @@ namespace DINOForge.Runtime.UI
         private void Update()
         {
             if (!_ready) return;
+
+            _eventSystemDiagTick++;
+            bool shouldLogEventSystem = _eventSystemDiagTick % 60 == 1;
+            EventSystem[] systems = UnityEngine.Object.FindObjectsOfType<EventSystem>();
+            string currentName = EventSystem.current != null ? EventSystem.current.gameObject.name : "NULL";
+            if (shouldLogEventSystem || systems.Length != 1 || (EventSystem.current != null && !EventSystem.current.gameObject.name.StartsWith("DINOForge_", StringComparison.Ordinal)))
+            {
+                string[] names = new string[systems.Length];
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    names[i] = systems[i] != null ? systems[i].gameObject.name : "NULL";
+                }
+
+                _log?.LogInfo($"[DFCanvas.Update] EventSystem snapshot: count={systems.Length}, current={currentName}, systems=[{string.Join(", ", names)}]");
+            }
+
+            Plugin.EnsureEventSystemAlive();
 
             if (Input.GetKeyDown(KeyCode.Escape))
                 HideAll();
@@ -203,6 +229,24 @@ namespace DINOForge.Runtime.UI
                 && stripRt.rect.Contains(localPoint);
 
             HudStrip.SetHovered(over);
+        }
+
+        private void ForceCanvasGroupRaycasts(Transform root, string context)
+        {
+            if (root == null) return;
+
+            CanvasGroup[] canvasGroups = root.GetComponentsInChildren<CanvasGroup>(true);
+            for (int i = 0; i < canvasGroups.Length; i++)
+            {
+                CanvasGroup? canvasGroup = canvasGroups[i];
+                if (canvasGroup == null) continue;
+                if (!canvasGroup.blocksRaycasts)
+                {
+                    _log?.LogInfo($"[DFCanvas.{context}] CanvasGroup '{canvasGroup.gameObject.name}' blocksRaycasts false -> true");
+                }
+
+                canvasGroup.blocksRaycasts = true;
+            }
         }
 
         // ── Show/Hide API ─────────────────────────────────────────────────────────

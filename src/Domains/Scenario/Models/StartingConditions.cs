@@ -11,12 +11,12 @@ namespace DINOForge.Domains.Scenario.Models
         /// <summary>
         /// Initial resource amounts keyed by resource ID (e.g. "food", "wood").
         /// </summary>
-        public Dictionary<string, float> StartingResources { get; set; }
+        public Dictionary<string, float> StartingResources { get; set; } = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: runtime scenario setup mutates starting resources
 
         /// <summary>
         /// List of faction IDs that are enabled and playable in this scenario.
         /// </summary>
-        public List<string> EnabledFactions { get; set; }
+        public List<string> EnabledFactions { get; set; } = new List<string>(); // public-mutable-ok: runtime scenario setup mutates enabled factions
 
         /// <summary>
         /// Difficulty multiplier applied to enemy wave strength, resource costs, and timing.

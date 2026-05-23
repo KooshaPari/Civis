@@ -59,7 +59,7 @@ public sealed class GameProcessManagerUnitTests
 
         // Act — With null path, uses Steam or probes default locations
         // This will return false if Steam is unavailable and game exe not found (expected in CI)
-        var result = await manager.LaunchAsync(gamePath: null);
+        var result = await manager.LaunchAsync(gamePath: null).ConfigureAwait(true);
 
         // Assert — Expect false (game cannot launch in test environment)
         // Per Pattern #146: acceptable failure (resource unavailable)
@@ -82,7 +82,7 @@ public sealed class GameProcessManagerUnitTests
         var delayTask = Task.Delay(TimeSpan.FromSeconds(35));
 
         // Assert — launch task should complete before timeout expires
-        var completedTask = await Task.WhenAny(launchTask, delayTask);
+        var completedTask = await Task.WhenAny(launchTask, delayTask).ConfigureAwait(true);
         completedTask.Should().NotBe(delayTask, "LaunchAsync should complete within 35 seconds");
     }
 
@@ -94,7 +94,7 @@ public sealed class GameProcessManagerUnitTests
 
         // Act — If game not running, GetGameProcess() returns null
         // KillAsync should handle gracefully (per line 116-117)
-        var act = async () => await manager.KillAsync();
+        var act = async () => await manager.KillAsync().ConfigureAwait(true);
 
         // Assert
         await act.Should().NotThrowAsync("KillAsync handles null process gracefully");
@@ -111,10 +111,10 @@ public sealed class GameProcessManagerUnitTests
         // - Timeout gracefully if a game happens to be running in the test environment
         // (Pattern #146: test environment resource contamination is acceptable)
         var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-        Func<Task> act = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> act = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
         // Assert — only OperationCanceledException (timeout) is acceptable; nothing else.
-        var exception = await Record.ExceptionAsync(act);
+        var exception = await Record.ExceptionAsync(act).ConfigureAwait(true);
         if (exception is not null)
         {
             exception.Should().BeAssignableTo<OperationCanceledException>(

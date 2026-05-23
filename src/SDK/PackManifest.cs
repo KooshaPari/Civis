@@ -32,7 +32,7 @@ namespace DINOForge.SDK
         /// Framework version constraint for the pack (e.g., "&gt;=0.1.0").
         /// </summary>
         [YamlMember(Alias = "framework_version")]
-        public string FrameworkVersion { get; set; } = ">=0.1.0";
+        public string FrameworkVersion { get; set; } = ">=0.1.0 <1.0.0";
 
         /// <summary>
         /// Author or organization that created the pack.
@@ -56,13 +56,13 @@ namespace DINOForge.SDK
         /// List of pack IDs that this pack depends on.
         /// </summary>
         [YamlMember(Alias = "depends_on")]
-        public List<string> DependsOn { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List
+        public List<string> DependsOn { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// List of pack IDs that conflict with this pack.
         /// </summary>
         [YamlMember(Alias = "conflicts_with")]
-        public List<string> ConflictsWith { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List
+        public List<string> ConflictsWith { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Load order priority for the pack (higher loads later).
@@ -80,7 +80,7 @@ namespace DINOForge.SDK
         /// BepInEx version constraint (e.g., "&gt;=5.4.0").
         /// </summary>
         [YamlMember(Alias = "bepinex_version")]
-        public string BepInExVersion { get; set; } = ">=5.4.0";
+        public string BepInExVersion { get; set; } = ">=5.4.0 <6.0.0";
 
         /// <summary>
         /// Unity version constraint (e.g., "*" for any version).
@@ -111,73 +111,73 @@ namespace DINOForge.SDK
         /// Paths to faction definition files.
         /// </summary>
         [YamlMember(Alias = "factions")]
-        public List<string>? Factions { get; set; }
+        public List<string>? Factions { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to unit definition files.
         /// </summary>
         [YamlMember(Alias = "units")]
-        public List<string>? Units { get; set; }
+        public List<string>? Units { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to building definition files.
         /// </summary>
         [YamlMember(Alias = "buildings")]
-        public List<string>? Buildings { get; set; }
+        public List<string>? Buildings { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to weapon definition files.
         /// </summary>
         [YamlMember(Alias = "weapons")]
-        public List<string>? Weapons { get; set; }
+        public List<string>? Weapons { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to doctrine definition files.
         /// </summary>
         [YamlMember(Alias = "doctrines")]
-        public List<string>? Doctrines { get; set; }
+        public List<string>? Doctrines { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to audio asset files or directories.
         /// </summary>
         [YamlMember(Alias = "audio")]
-        public List<string>? Audio { get; set; }
+        public List<string>? Audio { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to visual asset files or directories.
         /// </summary>
         [YamlMember(Alias = "visuals")]
-        public List<string>? Visuals { get; set; }
+        public List<string>? Visuals { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to localization data files.
         /// </summary>
         [YamlMember(Alias = "localization")]
-        public List<string>? Localization { get; set; }
+        public List<string>? Localization { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to wave template definition files.
         /// </summary>
         [YamlMember(Alias = "wave_templates")]
-        public List<string>? WaveTemplates { get; set; }
+        public List<string>? WaveTemplates { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to technology node definition files.
         /// </summary>
         [YamlMember(Alias = "tech_nodes")]
-        public List<string>? TechNodes { get; set; }
+        public List<string>? TechNodes { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to scenario definition files.
         /// </summary>
         [YamlMember(Alias = "scenarios")]
-        public List<string>? Scenarios { get; set; }
+        public List<string>? Scenarios { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to faction patch definition files.
         /// </summary>
         [YamlMember(Alias = "faction_patches")]
-        public List<string>? FactionPatches { get; set; }
+        public List<string>? FactionPatches { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
     }
 
     /// <summary>
@@ -189,18 +189,18 @@ namespace DINOForge.SDK
         /// Paths to unit override definition files.
         /// </summary>
         [YamlMember(Alias = "units")]
-        public List<string>? Units { get; set; }
+        public List<string>? Units { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to building override definition files.
         /// </summary>
         [YamlMember(Alias = "buildings")]
-        public List<string>? Buildings { get; set; }
+        public List<string>? Buildings { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Paths to stat override definition files.
         /// </summary>
         [YamlMember(Alias = "stats")]
-        public List<string>? Stats { get; set; }
+        public List<string>? Stats { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
     }
 }

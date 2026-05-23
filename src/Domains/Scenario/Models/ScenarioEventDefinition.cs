@@ -31,7 +31,7 @@ namespace DINOForge.Domains.Scenario.Models
         /// - condition: { "condition_expression": "population > 200" }
         /// - resource_threshold: { "resource": "gold", "amount": 100 }
         /// </summary>
-        public Dictionary<string, object> TriggerParameters { get; set; }
+        public Dictionary<string, object> TriggerParameters { get; set; } // public-mutable-ok: runtime scenario authoring mutates trigger parameters
 
         /// <summary>
         /// Event effect type: spawn_wave, resource_change, message, enable_faction, disable_faction, etc.
@@ -45,7 +45,7 @@ namespace DINOForge.Domains.Scenario.Models
         /// - message: { "text": "The enemy approaches!", "duration_seconds": 5 }
         /// - enable_faction: { "faction_id": "ally" }
         /// </summary>
-        public Dictionary<string, object> EffectParameters { get; set; }
+        public Dictionary<string, object> EffectParameters { get; set; } // public-mutable-ok: runtime scenario authoring mutates effect parameters
 
         /// <summary>
         /// Whether this event has already fired (transient, not serialized).

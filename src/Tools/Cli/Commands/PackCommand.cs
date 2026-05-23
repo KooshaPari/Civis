@@ -46,7 +46,7 @@ internal static class PackCommand
             try
             {
                 var manager = new PackSubmoduleManager();
-                await manager.AddPackAsync(repoUrl, path);
+                await manager.AddPackAsync(repoUrl, path).ConfigureAwait(false);
 
                 if (json)
                 {
@@ -157,7 +157,7 @@ internal static class PackCommand
             try
             {
                 var manager = new PackSubmoduleManager();
-                await manager.UpdateAllAsync();
+                await manager.UpdateAllAsync().ConfigureAwait(false);
 
                 if (json)
                 {
@@ -203,7 +203,7 @@ internal static class PackCommand
             try
             {
                 var manager = new PackSubmoduleManager();
-                await manager.GenerateLockFile();
+                await manager.GenerateLockFile().ConfigureAwait(false);
 
                 var lockData = manager.ReadLockFile();
 

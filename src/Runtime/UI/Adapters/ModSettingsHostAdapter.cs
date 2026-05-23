@@ -139,7 +139,7 @@ namespace DINOForge.Runtime.UI.Adapters
             // (pack-supplied) that we must not invoke under the adapter lock.
             if (evicted != null && !ReferenceEquals(evicted, panel))
             {
-                try { evicted.Dispose(); } catch { /* pack Dispose failures must not break re-registration */ }
+                try { evicted.Dispose(); } catch { /* safe-swallow: pack Dispose failures must not break re-registration */ }
             }
         }
 
@@ -157,7 +157,7 @@ namespace DINOForge.Runtime.UI.Adapters
 
             if (removed != null)
             {
-                try { removed.Dispose(); } catch { /* pack Dispose failures must not break unregister */ }
+                try { removed.Dispose(); } catch { /* safe-swallow: pack Dispose failures must not break unregister */ }
             }
         }
     }

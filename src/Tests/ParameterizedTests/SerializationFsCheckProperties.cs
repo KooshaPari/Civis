@@ -70,7 +70,7 @@ public class SerializationFsCheckProperties
             from arr in Gen.ArrayOf<char>(printableAsciiCharGen, len)
             select new string(arr);
 
-        return Prop.ForAll(printableAsciiStringGen.ToArbitrary(), s =>
+        return Prop.ForAll<string>(printableAsciiStringGen.ToArbitrary(), s =>
         {
             var json = JsonSerializer.Serialize(s);
             var deserialized = JsonSerializer.Deserialize<string>(json);
@@ -100,7 +100,7 @@ public class SerializationFsCheckProperties
                                   .Select(i => i * 7919 + offset)
                                   .ToDictionary(k => k, k => k * 2))));
 
-        return Prop.ForAll(dictGen.ToArbitrary(), intDict =>
+        return Prop.ForAll<Dictionary<int, int>>(dictGen.ToArbitrary(), intDict =>
         {
             var dict = intDict.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
             var json = JsonSerializer.Serialize(dict);

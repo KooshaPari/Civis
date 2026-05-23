@@ -79,9 +79,9 @@ namespace DINOForge.SDK
                     {
                         packs.Add(LoadFromFile(packYaml));
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Skip invalid packs
+                        System.Diagnostics.Debug.WriteLine($"[PackLoader] Skipping invalid pack manifest at {packYaml}: {ex.Message}");
                     }
                 }
             }

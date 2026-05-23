@@ -75,7 +75,6 @@ namespace DINOForge.Runtime.Bridge
                 + "\",\"world_frame\":" + worldFrame.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 + "}";
             byte[] bytes = Encoding.UTF8.GetBytes(canonical);
-            byte[] hash;
             // HMACSHA256 instances are NOT thread-safe (per MS docs). Construct
             // per-call against the immutable key material so concurrent receipt
             // signing from multiple threads cannot corrupt internal state.
@@ -85,11 +84,8 @@ namespace DINOForge.Runtime.Bridge
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(SessionHmac));
             }
-            using (var hmac = new HMACSHA256(KeyMaterial))
-            {
-                hash = hmac.ComputeHash(bytes);
-            }
-            return ToHexLower(hash);
+            using var hmac = new HMACSHA256(KeyMaterial);
+            return ToHexLower(hmac.ComputeHash(bytes));
         }
 
         /// <summary>

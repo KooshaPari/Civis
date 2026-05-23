@@ -1,11 +1,13 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using System.IO;
 using System.Numerics;
-using System.Text;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Org.Webpki.JsonCanonicalizer;
 
 namespace DINOForge.Bridge.Protocol;
 
@@ -16,132 +18,219 @@ namespace DINOForge.Bridge.Protocol;
 /// </summary>
 /// <remarks>
 /// <para>
-/// CRITICAL: this is the single source of truth for canonical JSON across
-/// the bridge wire. Both producers and consumers MUST hash the byte-identical
-/// output of <see cref="Canonicalize(JToken)"/> — a single divergent byte
-/// breaks every receipt across the wire.
+/// This implementation delegates structured JSON canonicalization to the
+/// upstream cyberphone <see cref="JsonCanonicalizer"/> package so object-key
+/// ordering, float formatting, and string escaping stay aligned with the RFC
+/// 8785 reference behavior.
 /// </para>
 /// <para>
-/// Rules (mirror RFC 8785 JCS for the parts that matter to us):
-/// <list type="bullet">
-///   <item>UTF-8 output (caller is responsible for encoding the returned <c>string</c>)</item>
-///   <item>Object keys sorted by ordinal Unicode code point (<see cref="StringComparer.Ordinal"/>)</item>
-///   <item>No insignificant whitespace</item>
-///   <item>Integers as decimal (invariant culture); BigInteger fallback for values that don't fit in <see cref="long"/></item>
-///   <item>Floats via <c>"R"</c> round-trip format; <c>NaN</c> / <c>Infinity</c> are rejected (not valid JSON per RFC 8259)</item>
-///   <item>Strings via <see cref="JsonConvert.ToString(string)"/></item>
-///   <item>Null input → literal <c>"null"</c> so the SHA-256 of "no payload" is well-defined</item>
-/// </list>
-/// </para>
-/// <para>
-/// History: lifted from the per-side mirrors in <c>GameBridgeServer.CanonicalizeJson</c>
-/// and <c>Bridge.Client.CanonicalJson</c> in v0.24.x. Drift between the two
-/// copies was the canonical Phase-4b risk; this shared lib closes it.
+/// The legacy null-input contract remains intact because the bridge protocol
+/// hashes <c>"null"</c> for empty payloads.
 /// </para>
 /// </remarks>
 public static class CanonicalJson
 {
     /// <summary>
     /// Returns the canonical JSON serialization of <paramref name="token"/>.
-    /// Returns the literal string <c>"null"</c> for a null input — matching
-    /// the legacy server behavior so the SHA-256 hash of "no payload" is
-    /// well-defined and compatible with existing receipts on the wire.
+    /// Returns the literal string <c>"null"</c> for a null input.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when a <see cref="JTokenType.Float"/> token contains <c>NaN</c>
-    /// or <c>±Infinity</c>; canonical JSON does not have a representation
-    /// for these values (RFC 8259 §6).
-    /// </exception>
     public static string Canonicalize(JToken? token)
     {
-        if (token == null) return "null";
-        return CanonicalizeToken(token);
+        if (token == null)
+        {
+            return "null";
+        }
+
+        if (token is JValue value && IsNonFiniteValue(value))
+        {
+            throw new InvalidOperationException("NaN/Infinity values cannot be canonicalized.");
+        }
+
+        switch (token.Type)
+        {
+            case JTokenType.Object:
+            case JTokenType.Array:
+                return ContainsUnsafeNumericValue(token)
+                    ? WriteCanonicalJson(token)
+                    : new JsonCanonicalizer(token.ToString(Formatting.None)).GetEncodedString();
+            case JTokenType.Float:
+                return CanonicalizeFloat((JValue)token);
+            default:
+                return token.ToString(Formatting.None);
+        }
     }
 
-    private static string CanonicalizeToken(JToken token)
+    private static bool IsNonFiniteValue(JValue value)
+    {
+        object? raw = value.Value;
+
+        if (raw is double doubleValue)
+        {
+            return double.IsNaN(doubleValue) || double.IsInfinity(doubleValue);
+        }
+
+        if (raw is float floatValue)
+        {
+            return float.IsNaN(floatValue) || float.IsInfinity(floatValue);
+        }
+
+        string? rendered = raw?.ToString();
+        return rendered == "NaN" || rendered == "Infinity" || rendered == "-Infinity";
+    }
+
+    private static string CanonicalizeFloat(JValue value)
+    {
+        object? raw = value.Value;
+
+        if (raw is double doubleValue)
+        {
+            return IsNegativeZero(doubleValue) ? "0" : value.ToString(Formatting.None);
+        }
+
+        if (raw is float floatValue)
+        {
+            return IsNegativeZero(floatValue) ? "0" : value.ToString(Formatting.None);
+        }
+
+        return value.ToString(Formatting.None);
+    }
+
+    private static string WriteCanonicalJson(JToken token)
+    {
+        using StringWriter writer = new StringWriter(CultureInfo.InvariantCulture);
+        WriteCanonicalJson(token, writer);
+        return writer.ToString();
+    }
+
+    private static void WriteCanonicalJson(JToken token, TextWriter writer)
     {
         switch (token.Type)
         {
             case JTokenType.Object:
+                writer.Write('{');
+                bool firstProperty = true;
+                IList<JProperty> properties = ((JObject)token).Properties().OrderBy(property => property.Name, StringComparer.Ordinal).ToList();
+                foreach (JProperty property in properties)
                 {
-                    var obj = (JObject)token;
-                    var sb = new StringBuilder("{");
-                    bool first = true;
-                    foreach (var prop in obj.Properties()
-                                            .OrderBy(p => p.Name, StringComparer.Ordinal))
+                    if (!firstProperty)
                     {
-                        if (!first) sb.Append(',');
-                        first = false;
-                        sb.Append(JsonConvert.ToString(prop.Name));
-                        sb.Append(':');
-                        sb.Append(CanonicalizeToken(prop.Value));
+                        writer.Write(',');
                     }
-                    sb.Append('}');
-                    return sb.ToString();
+
+                    firstProperty = false;
+                    writer.Write(JsonConvert.ToString(property.Name));
+                    writer.Write(':');
+                    WriteCanonicalJson(property.Value, writer);
                 }
+
+                writer.Write('}');
+                return;
             case JTokenType.Array:
+                writer.Write('[');
+                bool firstItem = true;
+                foreach (JToken item in (JArray)token)
                 {
-                    var arr = (JArray)token;
-                    var sb = new StringBuilder("[");
-                    bool first = true;
-                    foreach (var item in arr)
+                    if (!firstItem)
                     {
-                        if (!first) sb.Append(',');
-                        first = false;
-                        sb.Append(CanonicalizeToken(item));
+                        writer.Write(',');
                     }
-                    sb.Append(']');
-                    return sb.ToString();
+
+                    firstItem = false;
+                    WriteCanonicalJson(item, writer);
                 }
-            case JTokenType.Null:
-                return "null";
-            case JTokenType.Boolean:
-                return token.Value<bool>() ? "true" : "false";
-            case JTokenType.Integer:
-                // Most integers fit in long. For values outside long range
-                // (e.g. uint64 max+1, BigInteger literals), Newtonsoft surfaces
-                // them as JTokenType.Integer backed by a BigInteger; Value<long>()
-                // routes through Convert.ChangeType which throws
-                // InvalidCastException ("Object must implement IConvertible")
-                // for BigInteger. Some Newtonsoft paths surface OverflowException
-                // instead. Fall back to BigInteger so canonicalization stays lossless.
-                try
-                {
-                    return token.Value<long>().ToString(CultureInfo.InvariantCulture);
-                }
-                catch (OverflowException)
-                {
-                    return token.Value<BigInteger>().ToString(CultureInfo.InvariantCulture);
-                }
-                catch (InvalidCastException)
-                {
-                    // JValue.Value is BigInteger and ChangeType<long> can't bridge it.
-                    var raw = ((JValue)token).Value;
-                    if (raw is BigInteger big)
-                    {
-                        return big.ToString(CultureInfo.InvariantCulture);
-                    }
-                    // Last-resort: stringify the underlying value invariantly.
-                    return Convert.ToString(raw, CultureInfo.InvariantCulture) ?? "0";
-                }
+
+                writer.Write(']');
+                return;
             case JTokenType.Float:
-                {
-                    double d = token.Value<double>();
-                    if (double.IsNaN(d) || double.IsInfinity(d))
-                    {
-                        throw new InvalidOperationException(
-                            "Canonical JSON does not support NaN/Infinity");
-                    }
-                    return d.ToString("R", CultureInfo.InvariantCulture);
-                }
-            case JTokenType.String:
-            case JTokenType.Date:
-            case JTokenType.Guid:
-            case JTokenType.Uri:
-            case JTokenType.TimeSpan:
-                return JsonConvert.ToString(token.Value<string>() ?? "");
+                writer.Write(WriteCanonicalFloat((JValue)token));
+                return;
             default:
-                return JsonConvert.ToString(token.ToString(Formatting.None));
+                writer.Write(token.ToString(Formatting.None));
+                return;
         }
+    }
+
+    private static string WriteCanonicalFloat(JValue value)
+    {
+        object? raw = value.Value;
+
+        if (raw is double doubleValue)
+        {
+            ValidateFinite(doubleValue);
+            return IsNegativeZero(doubleValue) ? "0" : doubleValue.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        if (raw is float floatValue)
+        {
+            ValidateFinite(floatValue);
+            return IsNegativeZero(floatValue) ? "0" : floatValue.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        if (raw is decimal decimalValue)
+        {
+            return decimalValue.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return value.ToString(Formatting.None);
+    }
+
+    private static void ValidateFinite(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            throw new InvalidOperationException("NaN/Infinity values cannot be canonicalized.");
+        }
+    }
+
+    private static void ValidateFinite(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+        {
+            throw new InvalidOperationException("NaN/Infinity values cannot be canonicalized.");
+        }
+    }
+
+    private static bool ContainsUnsafeNumericValue(JToken token)
+    {
+        if (token is JValue value)
+        {
+            object? raw = value.Value;
+
+            if (raw is BigInteger)
+            {
+                return true;
+            }
+
+            if (raw is double doubleValue)
+            {
+                return double.IsNaN(doubleValue) || double.IsInfinity(doubleValue);
+            }
+
+            if (raw is float floatValue)
+            {
+                return float.IsNaN(floatValue) || float.IsInfinity(floatValue);
+            }
+        }
+
+        foreach (JToken child in token.Children())
+        {
+            if (ContainsUnsafeNumericValue(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsNegativeZero(double value)
+    {
+        return value == 0d && BitConverter.DoubleToInt64Bits(value) < 0;
+    }
+
+    private static bool IsNegativeZero(float value)
+    {
+        byte[] bytes = BitConverter.GetBytes(value);
+        return value == 0f && (bytes[3] & 0x80) != 0;
     }
 }

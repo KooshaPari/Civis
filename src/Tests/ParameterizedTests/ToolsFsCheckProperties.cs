@@ -101,7 +101,7 @@ namespace DINOForge.Tests.ParameterizedTests
         [Property(MaxTest = 100)]
         public Property AssetctlCli_TryParseModelRef_ExtractsPartsExactly()
         {
-            return Prop.ForAll(
+            return Prop.ForAll<string, string>(
                 ModelRefIdentGen.ToArbitrary(),
                 ModelRefIdentGen.ToArbitrary(),
                 (source, modelId) =>
@@ -257,7 +257,7 @@ namespace DINOForge.Tests.ParameterizedTests
         [Property(MaxTest = 100)]
         public Property CliTools_TryParseVersionSuffix_ExtractsExactly()
         {
-            return Prop.ForAll(VersionSuffixGen.ToArbitrary(), suffix =>
+            return Prop.ForAll<string>(VersionSuffixGen.ToArbitrary(), suffix =>
             {
                 // Parse: construct the arg and parse it
                 var input = $"--version-suffix={suffix}";

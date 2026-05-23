@@ -30,13 +30,13 @@ jobs:
 
       - name: Restore & build DesktopCompanion
         run: |
-          dotnet restore src/Tools/DesktopCompanion/DesktopCompanion.csproj
+          dotnet restore src/Tools/DesktopCompanion/DesktopCompanion.csproj /p:RestoreLockedMode=true
           dotnet build src/Tools/DesktopCompanion/DesktopCompanion.csproj `
             --configuration Release --no-restore
 
       - name: Restore & build UI Automation tests
         run: |
-          dotnet restore src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj
+          dotnet restore src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj /p:RestoreLockedMode=true
           dotnet build src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj `
             --configuration Release --no-restore
 

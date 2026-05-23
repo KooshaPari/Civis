@@ -30,7 +30,7 @@ namespace DINOForge.SDK.Models
         /// The list of stat override entries to apply.
         /// </summary>
         [YamlMember(Alias = "overrides")]
-        public List<StatOverrideEntry> Overrides { get; set; } = new List<StatOverrideEntry>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<StatOverrideEntry> Overrides { get; set; } = new List<StatOverrideEntry>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Validates that the stat override definition is semantically valid.

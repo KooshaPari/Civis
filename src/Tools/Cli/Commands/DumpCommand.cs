@@ -30,7 +30,7 @@ internal static class DumpCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string? category = parseResult.GetValue(categoryArg);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -42,8 +42,8 @@ internal static class DumpCommand
             }
 
             CatalogSnapshot catalog = category is not null
-                ? await client.DumpStateAsync(category, ct)
-                : await client.GetCatalogAsync(ct);
+                ? await client.DumpStateAsync(category, ct).ConfigureAwait(false)
+                : await client.GetCatalogAsync(ct).ConfigureAwait(false);
 
             if (json)
             {

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
+using DINOForge.Bridge.Protocol;
 using DINOForge.Tests.Integration.Fixtures;
 using FluentAssertions;
 using Xunit;
@@ -37,7 +38,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _fixture = new GameFixture();
-        await _fixture.InitializeAsync();
+        await _fixture.InitializeAsync().ConfigureAwait(true);
 
         // Create temp directory for screenshot storage
         _tempDir = Path.Combine(Path.GetTempPath(), $"dinoforge_screenshot_tests_{Guid.NewGuid():N}");
@@ -48,7 +49,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
     {
         if (_fixture != null)
         {
-            await _fixture.DisposeAsync();
+            await _fixture.DisposeAsync().ConfigureAwait(true);
         }
 
         // Cleanup temp screenshots
@@ -80,7 +81,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshotPath = Path.Combine(_tempDir!, "screenshot_default.png");
 
         // Act
-        var result = await _fixture!.Client.ScreenshotAsync(screenshotPath);
+        var result = await _fixture!.Client.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
 
         // Assert
         result.Should().NotBeNull();
@@ -102,9 +103,9 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshot2Path = Path.Combine(_tempDir!, "screenshot_2.png");
 
         // Act
-        var result1 = await _fixture!.Client.ScreenshotAsync(screenshot1Path);
-        await Task.Delay(100); // Small delay between captures
-        var result2 = await _fixture!.Client.ScreenshotAsync(screenshot2Path);
+        var result1 = await _fixture!.Client.ScreenshotAsync(screenshot1Path).ConfigureAwait(true);
+        await Task.Delay(100).ConfigureAwait(true); // Small delay between captures
+        var result2 = await _fixture!.Client.ScreenshotAsync(screenshot2Path).ConfigureAwait(true);
 
         // Assert
         result1.Should().NotBeNull();
@@ -131,7 +132,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshotPath = Path.Combine(_tempDir!, "screenshot_format.png");
 
         // Act
-        await _fixture!.Client.ScreenshotAsync(screenshotPath);
+        await _fixture!.Client.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
 
         // Assert
         File.Exists(screenshotPath).Should().BeTrue();
@@ -163,7 +164,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshotPath = Path.Combine(customDir, "custom_screenshot.png");
 
         // Act
-        await _fixture!.Client.ScreenshotAsync(screenshotPath);
+        await _fixture!.Client.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
 
         // Assert
         File.Exists(screenshotPath).Should().BeTrue("screenshot should be created at custom path");
@@ -185,11 +186,11 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var timeout = TimeSpan.FromSeconds(5);
 
         // Act
-        var captureTask = _fixture!.Client.ScreenshotAsync(screenshotPath);
+        Task<ScreenshotResult> captureTask = _fixture!.Client.ScreenshotAsync(screenshotPath);
         var completed = await Task.WhenAny(
             captureTask,
             Task.Delay(timeout)
-        );
+        ).ConfigureAwait(true);
 
         sw.Stop();
 
@@ -219,7 +220,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
             captureTasks[i] = _fixture!.Client.ScreenshotAsync(path);
         }
 
-        await Task.WhenAll(captureTasks);
+        await Task.WhenAll(captureTasks).ConfigureAwait(true);
 
         // Assert
         for (int i = 0; i < captureCount; i++)
@@ -250,10 +251,10 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshotPath = Path.Combine(longDir, "screenshot_long_path.png");
 
         // Act
-        Func<Task> action = async () => await _fixture!.Client.ScreenshotAsync(screenshotPath);
+        Func<Task> action = async () => await _fixture!.Client.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
 
         // Assert - should not throw
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
         File.Exists(screenshotPath).Should().BeTrue();
     }
 
@@ -276,8 +277,8 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var path2 = Path.Combine(dir2, "screenshot.png");
 
         // Act
-        var result1 = await _fixture!.Client.ScreenshotAsync(path1);
-        var result2 = await _fixture!.Client.ScreenshotAsync(path2);
+        var result1 = await _fixture!.Client.ScreenshotAsync(path1).ConfigureAwait(true);
+        var result2 = await _fixture!.Client.ScreenshotAsync(path2).ConfigureAwait(true);
 
         // Assert
         File.Exists(path1).Should().BeTrue();
@@ -302,7 +303,7 @@ public class ScreenshotFallbackTests : IAsyncLifetime
         var screenshotPath = Path.Combine(_tempDir!, "screenshot_size.png");
 
         // Act
-        await _fixture!.Client.ScreenshotAsync(screenshotPath);
+        await _fixture!.Client.ScreenshotAsync(screenshotPath).ConfigureAwait(true);
         var fileSize = new FileInfo(screenshotPath).Length;
 
         // Assert

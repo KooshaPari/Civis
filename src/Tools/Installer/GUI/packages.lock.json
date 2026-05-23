@@ -51,6 +51,12 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.*, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
       "Octokit": {
         "type": "Direct",
         "requested": "[13.0.1, )",
@@ -195,6 +201,11 @@
           "Newtonsoft.Json": "9.0.1"
         }
       },
+      "QuikGraph": {
+        "type": "Transitive",
+        "resolved": "2.5.0",
+        "contentHash": "sG+mrPpXwxlXknRK5VqWUGiOmDACa9X+3ftlkQIMgOZUqxVOQSe0+HIU9PTjwqazy0pqSf8MPDXYFGl0GYWcKw=="
+      },
       "SkiaSharp": {
         "type": "Transitive",
         "resolved": "2.88.9",
@@ -244,6 +255,7 @@
           "Microsoft.Bcl.TimeProvider": "[8.0.0, )",
           "NJsonSchema": "[10.*, )",
           "Newtonsoft.Json": "[13.*, )",
+          "QuikGraph": "[2.5.0, )",
           "YamlDotNet": "[16.*, )"
         }
       },

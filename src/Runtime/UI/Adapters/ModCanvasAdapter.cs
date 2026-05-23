@@ -222,7 +222,7 @@ namespace DINOForge.Runtime.UI.Adapters
                 }
                 catch
                 {
-                    // Pack-supplied / engine teardown may raise; never propagate so a single bad
+                    // safe-swallow: pack-supplied / engine teardown may raise; never propagate so a single bad
                     // handle cannot block subsequent destroy / hot-reload work.
                 }
             }

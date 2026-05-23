@@ -56,7 +56,7 @@ namespace DINOForge.Tools.DumpTools
                     return string.Empty;
                 }
 
-                var latestManifest = await File.ReadAllTextAsync(manifests[0]);
+                var latestManifest = await File.ReadAllTextAsync(manifests[0]).ConfigureAwait(false);
                 var failureData = JsonSerializer.Deserialize<FailureManifestDto>(latestManifest);
 
                 if (failureData == null)
@@ -70,7 +70,7 @@ namespace DINOForge.Tools.DumpTools
                 var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
                 var reportPath = Path.Combine(_outputDirectory, $"{timestamp}_failure_analysis.md");
 
-                await File.WriteAllTextAsync(reportPath, report);
+                await File.WriteAllTextAsync(reportPath, report).ConfigureAwait(false);
                 return reportPath;
             }
             catch

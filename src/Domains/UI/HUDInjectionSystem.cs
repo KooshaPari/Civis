@@ -115,6 +115,15 @@ namespace DINOForge.Domains.UI
         /// <summary>Whether this element is currently visible.</summary>
         public bool IsVisible { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HUDElementDefinition"/> class.
+        /// </summary>
+        /// <param name="id">Unique identifier for this HUD element.</param>
+        /// <param name="name">Display name.</param>
+        /// <param name="sourcePackId">The pack that registered this element.</param>
+        /// <param name="anchor">Anchor position on screen.</param>
+        /// <param name="zOrder">Z-order for layering.</param>
+        /// <param name="isVisible">Whether this element is currently visible.</param>
         public HUDElementDefinition(
             string id,
             string name,

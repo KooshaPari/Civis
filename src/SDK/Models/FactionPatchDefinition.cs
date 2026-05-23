@@ -32,7 +32,7 @@ namespace DINOForge.SDK.Models
         /// Optional: override the role of specific unit IDs within the faction.
         /// Key = unit ID, Value = new role string.
         /// </summary>
-        public Dictionary<string, string> RoleOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+        public Dictionary<string, string> RoleOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Validates that the faction patch definition is semantically valid.
@@ -55,12 +55,12 @@ namespace DINOForge.SDK.Models
     public sealed class FactionPatchAdditions
     {
         /// <summary>Unit definition IDs to add to the faction.</summary>
-        public List<string> Units { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> Units { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>Building definition IDs to add to the faction.</summary>
-        public List<string> Buildings { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> Buildings { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>Doctrine definition IDs to add to the faction.</summary>
-        public List<string> Doctrines { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> Doctrines { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
     }
 }

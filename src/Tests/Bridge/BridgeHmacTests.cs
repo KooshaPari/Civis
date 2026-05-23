@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using System.Globalization;
+using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
 using DINOForge.Runtime.Bridge;
@@ -44,6 +46,34 @@ public class BridgeHmacTests
         h1.Should().Be(h2, "HMAC over identical inputs with the same key must be byte-identical");
         h1.Should().HaveLength(64, "HMAC-SHA256 hex output is 64 chars");
         h1.Should().MatchRegex("^[0-9a-f]{64}$", "lowercase hex per spec section 6.7");
+    }
+
+    [Fact]
+    public void SessionHmac_HmacIsStableAcrossParallelCalls()
+    {
+        using var session = new SessionHmac();
+        const int caseCount = 50;
+
+        string[] timestamps = new string[caseCount];
+        long[] frames = new long[caseCount];
+        string[] stateHashes = new string[caseCount];
+        string[] expected = new string[caseCount];
+        string[] actual = new string[caseCount];
+
+        for (int index = 0; index < caseCount; index++)
+        {
+            timestamps[index] = "2026-04-25T12:34:56." + index.ToString("000", CultureInfo.InvariantCulture) + "Z";
+            frames[index] = 10_000L + index;
+            stateHashes[index] = index.ToString("x64", CultureInfo.InvariantCulture);
+            expected[index] = session.ComputeHmac(timestamps[index], frames[index], stateHashes[index]);
+        }
+
+        Parallel.For(0, caseCount, index =>
+        {
+            actual[index] = session.ComputeHmac(timestamps[index], frames[index], stateHashes[index]);
+        });
+
+        actual.Should().Equal(expected, "parallel calls must match the sequential baseline for every input");
     }
 
     [Fact]

@@ -44,7 +44,7 @@ namespace DINOForge.SDK.Models
         /// Keys are resource or unit identifiers; values are production amounts per tick.
         /// </summary>
         [YamlMember(Alias = "production")]
-        public Dictionary<string, int> Production { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        public Dictionary<string, int> Production { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Addressables key for the building's 3D visual asset (LOD0 prefab).
@@ -60,7 +60,7 @@ namespace DINOForge.SDK.Models
         /// attached to its ECS entity on world load by <c>AerialBuildingMapper</c>.
         /// </summary>
         [YamlMember(Alias = "defense_tags")]
-        public List<string> DefenseTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> DefenseTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Anti-air parameters. Only relevant when <see cref="DefenseTags"/> contains "AntiAir".

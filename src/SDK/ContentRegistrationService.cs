@@ -185,9 +185,9 @@ namespace DINOForge.SDK
             {
                 items = _deserializer.Deserialize<List<T>>(yamlContent);
             }
-            catch
+            catch (Exception ex)
             {
-                // Not a list — fall through to single-object parse.
+                _log($"[ContentLoader] List parse failed for {typeof(T).Name}; falling back to single-object parse: {ex.Message}");
             }
 
             if (items != null && items.Count > 0)

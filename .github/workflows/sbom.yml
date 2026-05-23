@@ -28,7 +28,7 @@ jobs:
         run: dotnet tool install --global CycloneDX
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Generate SBOM for SDK
         run: |

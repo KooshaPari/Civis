@@ -55,14 +55,14 @@ public class ErrorPathTests : IAsyncLifetime
         // Create a mock game server for error scenario testing
         _testPipeName = "dinoforge-test-error-" + Guid.NewGuid().ToString("N")[..8];
         _mockServer = new MockGameBridgeServer(_testPipeName);
-        await _mockServer.StartAsync();
+        await _mockServer.StartAsync().ConfigureAwait(true);
     }
 
     public async Task DisposeAsync()
     {
         if (_mockServer != null)
         {
-            await _mockServer.DisposeAsync();
+            await _mockServer.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -79,21 +79,21 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
 
         // Act - stop the server (simulates bridge disconnect)
-        await _mockServer!.DisposeAsync();
-        await Task.Delay(100); // Give client time to notice
+        await _mockServer!.DisposeAsync().ConfigureAwait(true);
+        await Task.Delay(100).ConfigureAwait(true); // Give client time to notice
 
         // Attempt a command
         Func<Task> action = async () =>
         {
-            await client.PingAsync();
+            await client.PingAsync().ConfigureAwait(true);
         };
 
         // Assert - should fail with connection error
-        await action.Should().ThrowAsync<Exception>();
+        await action.Should().ThrowAsync<Exception>().ConfigureAwait(true);
         client.Disconnect();
         client.Dispose();
     }
@@ -117,11 +117,11 @@ public class ErrorPathTests : IAsyncLifetime
         Func<Task> action = async () =>
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            await client.ConnectAsync(cts.Token);
+            await client.ConnectAsync(cts.Token).ConfigureAwait(true);
         };
 
         // Assert
-        await action.Should().ThrowAsync<Exception>();
+        await action.Should().ThrowAsync<Exception>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -158,7 +158,7 @@ public class ErrorPathTests : IAsyncLifetime
             connectTasks.Add(TryConnectAsync(client, TimeSpan.FromSeconds(1)));
         }
 
-        var results = await Task.WhenAll(connectTasks);
+        var results = await Task.WhenAll(connectTasks).ConfigureAwait(true);
 
         // Assert - good clients should succeed, bad should fail
         results[0].Should().BeTrue("first good client should connect");
@@ -192,18 +192,18 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName!, ConnectTimeoutMs = 5000 };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
 
         // Act
         Func<Task> action = async () =>
         {
-            var result = await client.PingAsync();
+            var result = await client.PingAsync().ConfigureAwait(true);
             result.Should().NotBeNull();
             result.Pong.Should().BeTrue();
         };
 
         // Assert
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
         client.Disconnect();
         client.Dispose();
     }
@@ -221,10 +221,10 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
 
         // Act
-        var result = await client.PingAsync();
+        var result = await client.PingAsync().ConfigureAwait(true);
 
         // Assert
         result.Should().NotBeNull();
@@ -247,7 +247,7 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
 
         var commandTasks = new List<Task<PingResult>>();
 
@@ -257,7 +257,7 @@ public class ErrorPathTests : IAsyncLifetime
             commandTasks.Add(client.PingAsync());
         }
 
-        var results = await Task.WhenAll(commandTasks);
+        var results = await Task.WhenAll(commandTasks).ConfigureAwait(true);
 
         // Assert - all should succeed
         results.Should().AllSatisfy(r => r.Pong.Should().BeTrue());
@@ -279,7 +279,7 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
 
         // Act
@@ -289,10 +289,10 @@ public class ErrorPathTests : IAsyncLifetime
         // Assert - operations should fail
         Func<Task> action = async () =>
         {
-            await client.PingAsync();
+            await client.PingAsync().ConfigureAwait(true);
         };
 
-        await action.Should().ThrowAsync<Exception>();
+        await action.Should().ThrowAsync<Exception>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -310,8 +310,8 @@ public class ErrorPathTests : IAsyncLifetime
         var client1 = new GameClient(options);
         var client2 = new GameClient(options);
 
-        await client1.ConnectAsync();
-        await client2.ConnectAsync();
+        await client1.ConnectAsync().ConfigureAwait(true);
+        await client2.ConnectAsync().ConfigureAwait(true);
 
         client1.IsConnected.Should().BeTrue();
         client2.IsConnected.Should().BeTrue();
@@ -323,11 +323,11 @@ public class ErrorPathTests : IAsyncLifetime
         // Assert - second client should still work
         Func<Task> action = async () =>
         {
-            var result = await client2.PingAsync();
+            var result = await client2.PingAsync().ConfigureAwait(true);
             result.Pong.Should().BeTrue();
         };
 
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
 
         // Cleanup
         client2.Disconnect();
@@ -347,20 +347,20 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         var options = new GameClientOptions { PipeName = _testPipeName! };
         var client = new GameClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
 
         // Act - disconnect then reconnect
         client.Disconnect();
         client.IsConnected.Should().BeFalse();
 
-        await client.ConnectAsync();
+        await client.ConnectAsync().ConfigureAwait(true);
 
         // Assert
         client.IsConnected.Should().BeTrue();
 
         // Verify functionality after reconnection
-        var result = await client.PingAsync();
+        var result = await client.PingAsync().ConfigureAwait(true);
         result.Pong.Should().BeTrue();
 
         client.Disconnect();
@@ -385,7 +385,7 @@ public class ErrorPathTests : IAsyncLifetime
 
         // Act - connect all in parallel
         var connectTasks = clients.Select(c => c.ConnectAsync()).ToList();
-        await Task.WhenAll(connectTasks);
+        await Task.WhenAll(connectTasks).ConfigureAwait(true);
 
         // Assert - all should be connected
         foreach (var client in clients)
@@ -395,7 +395,7 @@ public class ErrorPathTests : IAsyncLifetime
 
         // Verify all can send commands
         var pingTasks = clients.Select(c => c.PingAsync()).ToList();
-        var results = await Task.WhenAll(pingTasks);
+        var results = await Task.WhenAll(pingTasks).ConfigureAwait(true);
         results.Should().AllSatisfy(r => r.Pong.Should().BeTrue());
 
         // Cleanup
@@ -424,7 +424,7 @@ public class ErrorPathTests : IAsyncLifetime
 
         foreach (var client in clients)
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
         }
 
         // Act - send pings concurrently from all clients
@@ -434,7 +434,7 @@ public class ErrorPathTests : IAsyncLifetime
             tasks.Add(clients[i].PingAsync().ContinueWith(_ => { }));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - all clients should still be connected
         foreach (var client in clients)
@@ -463,7 +463,7 @@ public class ErrorPathTests : IAsyncLifetime
         try
         {
             using var cts = new CancellationTokenSource(timeout);
-            await client.ConnectAsync(cts.Token);
+            await client.ConnectAsync(cts.Token).ConfigureAwait(true);
             return client.IsConnected;
         }
         catch

@@ -77,7 +77,7 @@ namespace DINOForge.SDK.Models
         /// Stat effects applied by this skill.
         /// </summary>
         [YamlMember(Alias = "effects")]
-        public List<SkillEffect> Effects { get; set; } = new List<SkillEffect>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<SkillEffect> Effects { get; set; } = new List<SkillEffect>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// The vanilla DINO skill component this maps to (e.g. "Components.Skills.HealSkillData").

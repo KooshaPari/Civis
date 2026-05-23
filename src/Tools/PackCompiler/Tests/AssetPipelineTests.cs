@@ -217,7 +217,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             };
 
             // Act
-            var result = await _optimizationService.OptimizeAsync(asset, definition);
+            var result = await _optimizationService.OptimizeAsync(asset, definition).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();
@@ -273,7 +273,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             try
             {
                 // Act
-                await _prefabService.GeneratePrefabAsync(asset, definition, outputPath);
+                await _prefabService.GeneratePrefabAsync(asset, definition, outputPath).ConfigureAwait(true);
 
                 // Assert
                 File.Exists(outputPath).Should().BeTrue();
@@ -332,7 +332,7 @@ namespace DINOForge.Tools.PackCompiler.Tests
             try
             {
                 // Act
-                await _addressablesService.GenerateCatalogAsync(assets, catalogPath);
+                await _addressablesService.GenerateCatalogAsync(assets, catalogPath).ConfigureAwait(true);
 
                 // Assert
                 File.Exists(catalogPath).Should().BeTrue();

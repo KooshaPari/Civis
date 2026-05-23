@@ -671,7 +671,7 @@ internal static class AssetctlCommand
                         ExcludePaid = excludePaid,
                         MaxCandidates = limit
                     },
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!IsJsonOutput(outputFormat))
                 {
@@ -848,7 +848,7 @@ internal static class AssetctlCommand
                         PublishedAt = null
                     },
                     outputDir,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (result.Success)
                 {
@@ -1016,7 +1016,7 @@ internal static class AssetctlCommand
                         ExcludePaid = excludePaid,
                         MaxCandidates = limit
                     },
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (candidates.Count == 0)
                 {
@@ -1044,7 +1044,7 @@ internal static class AssetctlCommand
                     batchCandidates,
                     outputDir,
                     maxConcurrent,
-                    ct: ct)).ToList();
+                    ct: ct).ConfigureAwait(false)).ToList();
 
                 int succeeded = results.Count(r => r.Success);
                 int failed = results.Count - succeeded;
@@ -1131,7 +1131,7 @@ internal static class AssetctlCommand
             ISketchfabAdapter adapter = serviceProvider.GetRequiredService<ISketchfabAdapter>();
             try
             {
-                SketchfabTokenValidation validation = await adapter.ValidateTokenAsync(ct);
+                SketchfabTokenValidation validation = await adapter.ValidateTokenAsync(ct).ConfigureAwait(false);
 
                 string[] recommendations =
                 [
@@ -1193,7 +1193,7 @@ internal static class AssetctlCommand
             SketchfabRateLimitState? state;
             try
             {
-                state = await adapter.GetQuotaAsync(ct);
+                state = await adapter.GetQuotaAsync(ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

@@ -34,7 +34,7 @@ public class SandboxIsolationTests : IAsyncLifetime
         _harness = new GameTestContainerHarness();
         try
         {
-            _containers = await _harness.CreatePoolAsync(TestPoolSize);
+            _containers = await _harness.CreatePoolAsync(TestPoolSize).ConfigureAwait(true);
         }
         catch
         {
@@ -47,7 +47,7 @@ public class SandboxIsolationTests : IAsyncLifetime
     {
         if (_harness != null)
         {
-            await _harness.DisposeAsync();
+            await _harness.DisposeAsync().ConfigureAwait(true);
         }
     }
 

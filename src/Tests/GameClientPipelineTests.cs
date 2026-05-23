@@ -358,7 +358,7 @@ public class GameClientPipelineTests
                 Error = new JsonRpcError { Code = -32000, Message = "boom" }
             });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         await action.Should().ThrowAsync<GameClientException>()
             .WithMessage("Failed to execute*");
@@ -393,7 +393,7 @@ public class GameClientPipelineTests
         MemoryStream requestStream = GetRequestStream(client);
         try
         {
-            T result = await call(client).ConfigureAwait(false);
+            T result = await call(client).ConfigureAwait(true);
             string requestJson = Utf8NoBom.GetString(requestStream.ToArray()).Trim();
             JObject request = JObject.Parse(requestJson);
             return (result, request);

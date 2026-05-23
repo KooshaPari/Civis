@@ -104,14 +104,14 @@ public sealed class GameFixture : IAsyncLifetime
             {
                 try
                 {
-                    await Client.ConnectAsync(cts.Token);
+                    await Client.ConnectAsync(cts.Token).ConfigureAwait(true);
                     if (Client.IsConnected) break;
                 }
                 catch
                 {
                     // Bridge not up yet - keep polling
                 }
-                await Task.Delay(PollIntervalMs, cts.Token).ConfigureAwait(false);
+                await Task.Delay(PollIntervalMs, cts.Token).ConfigureAwait(true);
             }
 
             if (!Client.IsConnected)
@@ -122,7 +122,7 @@ public sealed class GameFixture : IAsyncLifetime
 
             // Wait for the ECS world to be ready (up to 60 seconds)
             using CancellationTokenSource worldCts = new(TimeSpan.FromSeconds(60));
-            WaitResult waitResult = await Client.WaitForWorldAsync(60000, worldCts.Token);
+            WaitResult waitResult = await Client.WaitForWorldAsync(60000, worldCts.Token).ConfigureAwait(true);
 
             GameAvailable = waitResult.Ready && Client.IsConnected;
         }

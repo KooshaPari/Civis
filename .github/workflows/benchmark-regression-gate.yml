@@ -28,7 +28,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.sln
+        run: dotnet restore src/DINOForge.sln /p:RestoreLockedMode=true
 
       - name: Run Benchmarks (Quick)
         run: |

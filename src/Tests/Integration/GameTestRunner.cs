@@ -106,10 +106,10 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
             throw new InvalidOperationException("Game already launched. Call Dispose() first.");
 
         // Kill any existing game processes
-        await KillExistingGameProcessesAsync();
+        await KillExistingGameProcessesAsync().ConfigureAwait(true);
 
         // Wait for any lingering processes to exit
-        await Task.Delay(2000, ct);
+        await Task.Delay(2000, ct).ConfigureAwait(true);
 
         // Launch the game
         var gameDir = Path.GetDirectoryName(GameExePath) ?? throw new InvalidOperationException("Invalid game path");
@@ -148,7 +148,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
             },
             TimeSpan.FromSeconds(10),
             pollMs: 100,
-            ct).ConfigureAwait(false);
+            ct).ConfigureAwait(true);
 
         // Connect to the bridge
         _client = new GameClient(new GameClientOptions
@@ -163,13 +163,13 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
         {
             try
             {
-                await _client.ConnectAsync(ct);
+                await _client.ConnectAsync(ct).ConfigureAwait(true);
                 connected = true;
                 break;
             }
             catch
             {
-                await Task.Delay(1000, ct);
+                await Task.Delay(1000, ct).ConfigureAwait(true);
             }
         }
 
@@ -184,7 +184,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     {
         EnsureConnected();
 
-        var result = await _client!.WaitForWorldAsync(WorldTimeoutMs, ct);
+        var result = await _client!.WaitForWorldAsync(WorldTimeoutMs, ct).ConfigureAwait(true);
         result.Ready.Should().BeTrue("ECS world must be ready for this test");
     }
 
@@ -194,7 +194,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<GameStatus> StatusAsync(CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.StatusAsync(ct);
+        return await _client!.StatusAsync(ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<QueryResult> QueryEntitiesAsync(string? componentType = null, string? category = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.QueryEntitiesAsync(componentType, category, ct);
+        return await _client!.QueryEntitiesAsync(componentType, category, ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -212,7 +212,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<StatResult> GetStatAsync(string sdkPath, int? entityIndex = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.GetStatAsync(sdkPath, entityIndex, ct);
+        return await _client!.GetStatAsync(sdkPath, entityIndex, ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -221,7 +221,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<OverrideResult> ApplyOverrideAsync(string sdkPath, float value, string? mode = null, string? filter = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.ApplyOverrideAsync(sdkPath, value, mode, filter, ct);
+        return await _client!.ApplyOverrideAsync(sdkPath, value, mode, filter, ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -230,7 +230,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<CatalogSnapshot> GetCatalogAsync(CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.GetCatalogAsync(ct);
+        return await _client!.GetCatalogAsync(ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<ReloadResult> ReloadPacksAsync(string? path = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.ReloadPacksAsync(path, ct);
+        return await _client!.ReloadPacksAsync(path, ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -248,7 +248,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<ResourceSnapshot> GetResourcesAsync(CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.GetResourcesAsync(ct);
+        return await _client!.GetResourcesAsync(ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -257,7 +257,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<ComponentMapResult> GetComponentMapAsync(string? sdkPath = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.GetComponentMapAsync(sdkPath, ct);
+        return await _client!.GetComponentMapAsync(sdkPath, ct).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -266,7 +266,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
     public async Task<WaitResult> WaitForWorldAsync(int? timeoutMs = null, CancellationToken ct = default)
     {
         EnsureConnected();
-        return await _client!.WaitForWorldAsync(timeoutMs, ct);
+        return await _client!.WaitForWorldAsync(timeoutMs, ct).ConfigureAwait(true);
     }
 
     private void EnsureConnected()
@@ -286,7 +286,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
             try
             {
                 p.Kill();
-                await p.WaitForExitAsync();
+                await p.WaitForExitAsync().ConfigureAwait(true);
             }
             catch { /* Ignore */ }
         }
@@ -315,7 +315,7 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
                 if (!_gameProcess.HasExited)
                 {
                     _gameProcess.Kill();
-                    await _gameProcess.WaitForExitAsync();
+                    await _gameProcess.WaitForExitAsync().ConfigureAwait(true);
                 }
                 _gameProcess.Dispose();
             }

@@ -36,7 +36,7 @@ public class GameClientCoverageTests
 
         // We can't directly trigger this race condition, but we can verify the method
         // handles it gracefully (already tested indirectly)
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -49,7 +49,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
 
         // If game is not running, the while loop exits immediately on first iteration
-        Func<Task> action = async () => await manager.WaitForExitAsync();
+        Func<Task> action = async () => await manager.WaitForExitAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -61,7 +61,7 @@ public class GameClientCoverageTests
 
         // When Steam launch fails (steam://rungameid fails), catches exception
         // and falls through to direct launch. If no exe found, returns false.
-        Func<Task> action = async () => await manager.LaunchAsync(null);
+        Func<Task> action = async () => await manager.LaunchAsync(null).ConfigureAwait(true);
 
         // Should handle gracefully (exception caught internally)
         action.Should().NotThrowAsync();
@@ -73,7 +73,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
         string nonExistentExe = Path.Combine(Path.GetTempPath(), "nonexistent.exe");
 
-        bool result = await manager.LaunchAsync(nonExistentExe);
+        bool result = await manager.LaunchAsync(nonExistentExe).ConfigureAwait(true);
 
         if (!manager.IsRunning)
         {
@@ -101,9 +101,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", reader);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("timed out");
 
@@ -128,10 +128,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         // No reader set initially - will fail on first attempt
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Should eventually fail with retry exhausted message
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -182,7 +182,7 @@ public class GameClientCoverageTests
         };
         using GameClient client = new(options);
 
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
         await action.Should().ThrowAsync<GameClientException>()
             .WithMessage("*Failed to connect*");
@@ -202,7 +202,7 @@ public class GameClientCoverageTests
         GameClient client = new(options);
         cts.Cancel(); // Cancel immediately
 
-        Func<Task> action = async () => await client.ConnectAsync(cts.Token);
+        Func<Task> action = async () => await client.ConnectAsync(cts.Token).ConfigureAwait(true);
 
         action.Should().ThrowAsync<OperationCanceledException>();
 
@@ -216,7 +216,7 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions { RetryCount = 0, UseMessageFraming = false });
         SetPrivateField(client, "_state", ConnectionState.Connected);
 
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
         client.State.Should().Be(ConnectionState.Connected);
@@ -268,7 +268,7 @@ public class GameClientCoverageTests
             });
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -497,10 +497,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // The retry wrapper adds "Failed to execute 'ping' after 1 attempts." - check inner exception
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.WithInnerException<GameClientException>();
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("null result");
@@ -521,10 +521,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Check inner exception contains the invalid JSON message
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().ContainAny("invalid JSON", "Unexpected", "JSON", "parsing");
 
@@ -549,10 +549,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Check inner exception contains the server error message
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("Invalid request");
 
@@ -572,10 +572,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Should handle gracefully - either throw or return
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -595,10 +595,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Should throw because empty stream causes disconnect
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -617,9 +617,9 @@ public class GameClientCoverageTests
         // First call: reader throws (breaks pipe), state becomes Error (not Connected)
         // Second call: should attempt reconnect
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -639,9 +639,9 @@ public class GameClientCoverageTests
 
         cts.Cancel();
 
-        Func<Task> action = async () => await client.PingAsync(cts.Token);
+        Func<Task> action = async () => await client.PingAsync(cts.Token).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -665,9 +665,9 @@ public class GameClientCoverageTests
         var infiniteStream = new MemoryStream(Utf8NoBom.GetBytes("")); // Empty stream
         SetPrivateField(client, "_reader", new StreamReader(infiniteStream, Utf8NoBom, false, 1024, true));
 
-        Func<Task> action = async () => await client.PingAsync(cts.Token);
+        Func<Task> action = async () => await client.PingAsync(cts.Token).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -686,9 +686,9 @@ public class GameClientCoverageTests
         // Empty stream will return null immediately on ReadLineAsync
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().ContainAny("Connection closed", "closed");
 
@@ -709,9 +709,9 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions { RetryCount = 0 });
         client.Dispose();
 
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<ObjectDisposedException>();
+        await action.Should().ThrowAsync<ObjectDisposedException>().ConfigureAwait(true);
 
         // Clean up
         client.Dispose();
@@ -727,7 +727,7 @@ public class GameClientCoverageTests
         };
         using GameClient client = new(options);
 
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
         await action.Should().ThrowAsync<GameClientException>()
             .WithMessage("*Failed to connect*");
@@ -772,9 +772,9 @@ public class GameClientCoverageTests
         // Cancel immediately
         cts.Cancel();
 
-        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -782,9 +782,9 @@ public class GameClientCoverageTests
     {
         var manager = new GameProcessManager();
 
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
     }
 
     [Fact]
@@ -852,9 +852,9 @@ public class GameClientCoverageTests
     {
         GameClient client = new(new GameClientOptions { RetryCount = 0 });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("Not connected");
 
@@ -868,9 +868,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_state", ConnectionState.Connected);
         // _writer is null but _reader is set
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("Not connected");
 
@@ -885,9 +885,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(new MemoryStream()));
         // _reader is null
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.WithInnerException<GameClientException>();
         ex.And.InnerException!.Message.Should().Contain("Not connected");
 
@@ -914,10 +914,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", reader);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Check inner exception contains the timeout message
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("timed out");
 
@@ -940,9 +940,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         // Deserialization error message may vary - check for any JSON deserialization related message
         ex.And.InnerException!.Message.Should().NotBeEmpty();
@@ -1014,7 +1014,7 @@ public class GameClientCoverageTests
                 await Task.Yield();
                 throw new IOException("Simulated connection failure");
             }
-            return await _inner.ReadLineAsync();
+            return await _inner.ReadLineAsync().ConfigureAwait(true);
         }
     }
 
@@ -1107,7 +1107,7 @@ public class GameClientCoverageTests
             try
             {
                 // Block indefinitely until cancelled
-                await Task.Delay(Timeout.Infinite, cancellationToken);
+                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(true);
                 return 0;
             }
             catch (OperationCanceledException)
@@ -1120,7 +1120,7 @@ public class GameClientCoverageTests
         {
             try
             {
-                await Task.Delay(Timeout.Infinite, cancellationToken);
+                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(true);
                 return 0;
             }
             catch (OperationCanceledException)
@@ -1181,7 +1181,7 @@ public class GameClientCoverageTests
 
         // When gamePath is null and Steam is not available (steam:// fails),
         // it should fall through to FindGameExe which returns null for non-standard paths
-        bool result = await manager.LaunchAsync(null);
+        bool result = await manager.LaunchAsync(null).ConfigureAwait(true);
 
         // Result depends on whether the game is actually installed
         // If not installed, returns false
@@ -1201,7 +1201,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
         string nonExistentPath = Path.Combine(Path.GetTempPath(), $"test_game_{Guid.NewGuid()}", "game.exe");
 
-        bool result = await manager.LaunchAsync(nonExistentPath);
+        bool result = await manager.LaunchAsync(nonExistentPath).ConfigureAwait(true);
 
         // Result depends on game state - if game is already running, returns true
         // If game is not running and path doesn't exist, returns false
@@ -1221,7 +1221,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
 
         // When IsRunning is true, LaunchAsync should return true immediately
-        bool result = await manager.LaunchAsync();
+        bool result = await manager.LaunchAsync().ConfigureAwait(true);
 
         // If game is running, should return true
         if (manager.IsRunning)
@@ -1236,9 +1236,9 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
 
         // When GetGameProcess returns null, KillAsync should return early without throwing
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
     }
 
     [Fact]
@@ -1248,9 +1248,9 @@ public class GameClientCoverageTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -1263,9 +1263,9 @@ public class GameClientCoverageTests
         // Cancel immediately
         cts.Cancel();
 
-        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
     }
 
     // ───────────────── GameClient ConnectAsync error paths ─────────────────
@@ -1279,9 +1279,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_state", ConnectionState.Connected);
 
         // Calling ConnectAsync when already Connected should not throw
-        Func<Task> action = async () => await client.ConnectAsync(CancellationToken.None);
+        Func<Task> action = async () => await client.ConnectAsync(CancellationToken.None).ConfigureAwait(true);
 
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -1292,9 +1292,9 @@ public class GameClientCoverageTests
         var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 1000 });
         client.Dispose();
 
-        Func<Task> action = async () => await client.ConnectAsync(CancellationToken.None);
+        Func<Task> action = async () => await client.ConnectAsync(CancellationToken.None).ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<ObjectDisposedException>();
+        await action.Should().ThrowAsync<ObjectDisposedException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -1360,7 +1360,7 @@ public class GameClientCoverageTests
     {
         var manager = new GameProcessManager();
 
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -1370,7 +1370,7 @@ public class GameClientCoverageTests
     {
         var manager = new GameProcessManager();
 
-        Func<Task> action = async () => await manager.WaitForExitAsync();
+        Func<Task> action = async () => await manager.WaitForExitAsync().ConfigureAwait(true);
 
         // Should return immediately since game is not running
         action.Should().NotThrowAsync();
@@ -1387,7 +1387,7 @@ public class GameClientCoverageTests
 
         // LaunchAsync returns false when game not running and path doesn't exist
         // Returns true if game is already running (even with non-existent path)
-        bool result = await manager.LaunchAsync(nonExistentPath);
+        bool result = await manager.LaunchAsync(nonExistentPath).ConfigureAwait(true);
 
         // Result should match whether game was running before the call
         result.Should().Be(wasRunning);
@@ -1400,7 +1400,7 @@ public class GameClientCoverageTests
 
         // Try launching with null path - will attempt Steam launch first
         // If Steam is not available or game already running, should handle gracefully
-        Func<Task> action = async () => await manager.LaunchAsync(null);
+        Func<Task> action = async () => await manager.LaunchAsync(null).ConfigureAwait(true);
 
         // Should not throw - either succeeds or fails gracefully
         action.Should().NotThrowAsync();
@@ -1413,7 +1413,7 @@ public class GameClientCoverageTests
         var cts = new CancellationTokenSource();
 
         // If game is not running, WaitForExitAsync should return immediately
-        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -1437,7 +1437,7 @@ public class GameClientCoverageTests
         // Cancel immediately
         cts.Cancel();
 
-        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token);
+        Func<Task> action = async () => await manager.WaitForExitAsync(cts.Token).ConfigureAwait(true);
 
         action.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -1465,13 +1465,13 @@ public class GameClientCoverageTests
         // Set to Connecting state manually - this simulates an intermediate state
         // The ConnectAsync will see IsConnected is false and attempt to connect
         // Since there's no server, it will fail and throw
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
         // Should handle gracefully - either succeed or throw GameClientException
         // This test verifies the state machine handles intermediate states
         try
         {
-            await action();
+            await action().ConfigureAwait(true);
         }
         catch (GameClientException)
         {
@@ -1519,10 +1519,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Should fail immediately since retries=0
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -1538,9 +1538,9 @@ public class GameClientCoverageTests
             PipeName = "test-pipe-does-not-exist" // hardcoded-pipe-name-ok: deliberately tests nonexistent pipe error path
         });
 
-        Func<Task> action = async () => await client.ConnectAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -1706,7 +1706,7 @@ public class GameClientCoverageTests
 
         // This test verifies the launch path without Steam available
         // It will try Steam first, fail, then try to find the exe
-        Func<Task> action = async () => await manager.LaunchAsync(null);
+        Func<Task> action = async () => await manager.LaunchAsync(null).ConfigureAwait(true);
 
         // Should handle gracefully - either game launches or it fails without throwing
         action.Should().NotThrowAsync();
@@ -1718,7 +1718,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
         string invalidPath = Path.Combine(Path.GetTempPath(), "nonexistent_" + Guid.NewGuid().ToString() + ".exe");
 
-        bool result = await manager.LaunchAsync(invalidPath);
+        bool result = await manager.LaunchAsync(invalidPath).ConfigureAwait(true);
 
         // Result depends on whether game was already running
         result.Should().Be(manager.IsRunning);
@@ -1731,7 +1731,7 @@ public class GameClientCoverageTests
 
         // When game is not running, WaitForExitAsync should return immediately
         // without throwing
-        Func<Task> action = async () => await manager.WaitForExitAsync();
+        Func<Task> action = async () => await manager.WaitForExitAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -1742,7 +1742,7 @@ public class GameClientCoverageTests
         var manager = new GameProcessManager();
 
         // If the process is not running, KillAsync should return without throwing
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
         action.Should().NotThrowAsync();
     }
@@ -1773,8 +1773,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", reader);
 
-        Func<Task> action = async () => await client.PingAsync();
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
 
         client.Dispose();
@@ -1798,9 +1798,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", reader);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
 
         client.Dispose();
@@ -1865,7 +1865,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        JObject result = await client.ListSavesAsync();
+        JObject result = await client.ListSavesAsync().ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1883,7 +1883,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        StartGameResult result = await client.DismissLoadScreenAsync();
+        StartGameResult result = await client.DismissLoadScreenAsync().ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1901,7 +1901,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        StartGameResult result = await client.LoadSaveAsync("CONTINUE");
+        StartGameResult result = await client.LoadSaveAsync("CONTINUE").ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1919,7 +1919,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        StartGameResult result = await client.ClickButtonAsync("DINOForge_ModsButton");
+        StartGameResult result = await client.ClickButtonAsync("DINOForge_ModsButton").ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1937,7 +1937,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        StartGameResult result = await client.ScanSceneAsync("Canvas");
+        StartGameResult result = await client.ScanSceneAsync("Canvas").ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1955,7 +1955,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        StartGameResult result = await client.InvokeMethodAsync("MyComponent", "OnTrigger");
+        StartGameResult result = await client.InvokeMethodAsync("MyComponent", "OnTrigger").ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -1969,9 +1969,9 @@ public class GameClientCoverageTests
         // When disconnected, any request throws
         GameClient client = new(new GameClientOptions { RetryCount = 0 });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -1989,10 +1989,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Server error is wrapped by retry logic into GameClientException
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.Message.Should().NotBeNullOrEmpty();
 
         client.Dispose();
@@ -2017,7 +2017,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        PingResult result = await client.PingAsync();
+        PingResult result = await client.PingAsync().ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -2042,9 +2042,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2197,9 +2197,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.Message.Should().NotBeNullOrEmpty();
 
         client.Dispose();
@@ -2218,10 +2218,10 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
 
         // Should throw because response is null (JSON is corrupt, can't deserialize)
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2241,7 +2241,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
         // PingAsync should succeed with empty result (Pong defaults to false)
-        PingResult result = await client.PingAsync();
+        PingResult result = await client.PingAsync().ConfigureAwait(true);
 
         result.Should().NotBeNull();
         client.Dispose();
@@ -2266,13 +2266,13 @@ public class GameClientCoverageTests
         });
 
         // Give the process a moment to start
-        await Task.Delay(100);
+        await Task.Delay(100).ConfigureAwait(true);
 
         // Now call KillAsync - it should not throw even if process is already terminating
-        Func<Task> action = async () => await manager.KillAsync();
+        Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
 
         // Should not throw regardless of process state
-        await action.Should().NotThrowAsync();
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
 
         // Clean up the test process if still running
         try
@@ -2306,18 +2306,18 @@ public class GameClientCoverageTests
     private async Task TestApiMethod<T>(Func<GameClient, Task<T>> methodCall) where T : class
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{}}");
-        T result = await methodCall(client);
+        T result = await methodCall(client).ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task StatusAsync_DelegatesCorrectly() => await TestApiMethod(c => c.StatusAsync());
+    public async Task StatusAsync_DelegatesCorrectly() => await TestApiMethod(c => c.StatusAsync()).ConfigureAwait(true);
 
     [Fact]
     public async Task WaitForWorldAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"ready\":true}}");
-        WaitResult result = await client.WaitForWorldAsync(5000);
+        WaitResult result = await client.WaitForWorldAsync(5000).ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2325,7 +2325,7 @@ public class GameClientCoverageTests
     public async Task QueryEntitiesAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"entities\":[]}}");
-        QueryResult result = await client.QueryEntitiesAsync("Unit");
+        QueryResult result = await client.QueryEntitiesAsync("Unit").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2333,7 +2333,7 @@ public class GameClientCoverageTests
     public async Task GetStatAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"value\":100.0}}");
-        StatResult result = await client.GetStatAsync("unit.stats.hp", 0);
+        StatResult result = await client.GetStatAsync("unit.stats.hp", 0).ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2341,18 +2341,18 @@ public class GameClientCoverageTests
     public async Task ApplyOverrideAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"applied\":true}}");
-        OverrideResult result = await client.ApplyOverrideAsync("unit.stats.hp", 150f, "set");
+        OverrideResult result = await client.ApplyOverrideAsync("unit.stats.hp", 150f, "set").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task ReloadPacksAsync_DelegatesCorrectly() => await TestApiMethod(c => c.ReloadPacksAsync());
+    public async Task ReloadPacksAsync_DelegatesCorrectly() => await TestApiMethod(c => c.ReloadPacksAsync()).ConfigureAwait(true);
 
     [Fact]
     public async Task GetCatalogAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"units\":[],\"buildings\":[]}}");
-        CatalogSnapshot result = await client.GetCatalogAsync();
+        CatalogSnapshot result = await client.GetCatalogAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2360,7 +2360,7 @@ public class GameClientCoverageTests
     public async Task DumpStateAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"entities\":0}}");
-        CatalogSnapshot result = await client.DumpStateAsync("units");
+        CatalogSnapshot result = await client.DumpStateAsync("units").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2368,7 +2368,7 @@ public class GameClientCoverageTests
     public async Task GetResourcesAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"food\":1000}}");
-        ResourceSnapshot result = await client.GetResourcesAsync();
+        ResourceSnapshot result = await client.GetResourcesAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2376,7 +2376,7 @@ public class GameClientCoverageTests
     public async Task ScreenshotAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"path\":\"screenshot.png\"}}");
-        ScreenshotResult result = await client.ScreenshotAsync();
+        ScreenshotResult result = await client.ScreenshotAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2384,7 +2384,7 @@ public class GameClientCoverageTests
     public async Task LoadSceneAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"loaded\":true}}");
-        LoadSceneResult result = await client.LoadSceneAsync("gameplay");
+        LoadSceneResult result = await client.LoadSceneAsync("gameplay").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2392,7 +2392,7 @@ public class GameClientCoverageTests
     public async Task StartGameAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}");
-        StartGameResult result = await client.StartGameAsync();
+        StartGameResult result = await client.StartGameAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2400,7 +2400,7 @@ public class GameClientCoverageTests
     public async Task ToggleUiAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"success\":true}}");
-        StartGameResult result = await client.ToggleUiAsync("modmenu");
+        StartGameResult result = await client.ToggleUiAsync("modmenu").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2408,7 +2408,7 @@ public class GameClientCoverageTests
     public async Task VerifyModAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"valid\":true}}");
-        VerifyResult result = await client.VerifyModAsync("packs/my-pack");
+        VerifyResult result = await client.VerifyModAsync("packs/my-pack").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2416,7 +2416,7 @@ public class GameClientCoverageTests
     public async Task GetComponentMapAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"mappings\":[]}}");
-        ComponentMapResult result = await client.GetComponentMapAsync();
+        ComponentMapResult result = await client.GetComponentMapAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2424,7 +2424,7 @@ public class GameClientCoverageTests
     public async Task GetUiTreeAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"nodes\":[]}}");
-        UiTreeResult result = await client.GetUiTreeAsync();
+        UiTreeResult result = await client.GetUiTreeAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2432,7 +2432,7 @@ public class GameClientCoverageTests
     public async Task QueryUiAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"found\":false}}");
-        UiActionResult result = await client.QueryUiAsync("Canvas/Button");
+        UiActionResult result = await client.QueryUiAsync("Canvas/Button").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2440,7 +2440,7 @@ public class GameClientCoverageTests
     public async Task ClickUiAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"clicked\":true}}");
-        UiActionResult result = await client.ClickUiAsync("Canvas/Button");
+        UiActionResult result = await client.ClickUiAsync("Canvas/Button").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2448,7 +2448,7 @@ public class GameClientCoverageTests
     public async Task WaitForUiAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"reached\":true}}");
-        UiWaitResult result = await client.WaitForUiAsync("Canvas/Panel", "visible", 5000);
+        UiWaitResult result = await client.WaitForUiAsync("Canvas/Panel", "visible", 5000).ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2456,7 +2456,7 @@ public class GameClientCoverageTests
     public async Task ExpectUiAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"matched\":true}}");
-        UiExpectationResult result = await client.ExpectUiAsync("Canvas/Text", "text=Hello");
+        UiExpectationResult result = await client.ExpectUiAsync("Canvas/Text", "text=Hello").ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2466,7 +2466,7 @@ public class GameClientCoverageTests
     public async Task PingAsync_DelegatesCorrectly()
     {
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"connected\":true}}");
-        PingResult result = await client.PingAsync();
+        PingResult result = await client.PingAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2484,8 +2484,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
-        await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2503,8 +2503,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         // Inner exception preserves the original "null result" message (outer message is "after 1 attempts" from retry)
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("null result");
@@ -2524,9 +2524,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
         // Whitespace line -> empty object -> response is null -> throws GameClientException
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2551,8 +2551,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.And.InnerException.Should().NotBeNull();
         var msg = ex.And.Message;
         msg.Should().Contain("ping");
@@ -2580,9 +2580,9 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
         // Should throw after exhausting retries (both attempts fail)
-        await action.Should().ThrowAsync<GameClientException>();
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2594,7 +2594,7 @@ public class GameClientCoverageTests
     {
         // Verify ReadLineAsync completes successfully with valid JSON response
         using GameClient client = MakeConnectedClient("{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"connected\":true}}");
-        PingResult result = await client.PingAsync();
+        PingResult result = await client.PingAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
     }
 
@@ -2610,8 +2610,8 @@ public class GameClientCoverageTests
             PipeName = "nonexistent-pipe-connect-timeout" // hardcoded-pipe-name-ok: deliberately tests timeout during connect
         });
 
-        Func<Task> action = async () => await client.ConnectAsync();
-        var ex = await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
+        var ex = await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
         ex.WithMessage("*Failed to connect*");
 
         client.Dispose();
@@ -2662,7 +2662,7 @@ public class GameClientCoverageTests
         client.IsConnected.Should().BeFalse();
 
         // Should throw ObjectDisposedException on further operations
-        Func<Task> action = async () => await client.PingAsync();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
         action.Should().ThrowAsync<ObjectDisposedException>();
     }
 
@@ -2680,7 +2680,7 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes(responseJson)), Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        PingResult result = await client.PingAsync();
+        PingResult result = await client.PingAsync().ConfigureAwait(true);
         result.Should().NotBeNull();
 
         client.Dispose();
@@ -2699,12 +2699,12 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes(responseJson)), Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        QueryResult result = await client.QueryEntitiesAsync("Unit", "infantry");
+        QueryResult result = await client.QueryEntitiesAsync("Unit", "infantry").ConfigureAwait(true);
 
         result.Should().NotBeNull();
         requestStream.Position = 0;
         using var reader = new StreamReader(requestStream);
-        string requestJson = await reader.ReadToEndAsync();
+        string requestJson = await reader.ReadToEndAsync().ConfigureAwait(true);
         requestJson.Should().Contain("\"method\":\"queryEntities\"");
         requestJson.Should().Contain("\"componentType\":\"Unit\"");
 
@@ -2724,8 +2724,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(new MemoryStream(Utf8NoBom.GetBytes("{}" + Environment.NewLine)), Utf8NoBom, false, 1024, true));
         SetPrivateField(client, "_writer", new StreamWriter(throwingStream, Utf8NoBom, 1024, true) { AutoFlush = true });
 
-        Func<Task> action = async () => await client.PingAsync();
-        await action.Should().ThrowAsync<GameClientException>();
+        Func<Task> action = async () => await client.PingAsync().ConfigureAwait(true);
+        await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
 
         client.Dispose();
     }
@@ -2740,8 +2740,8 @@ public class GameClientCoverageTests
         SetPrivateField(client, "_reader", new StreamReader(new MemoryStream()));
 
         // Should not throw - early return when already connected
-        Func<Task> action = async () => await client.ConnectAsync();
-        await action.Should().NotThrowAsync();
+        Func<Task> action = async () => await client.ConnectAsync().ConfigureAwait(true);
+        await action.Should().NotThrowAsync().ConfigureAwait(true);
 
         client.State.Should().Be(ConnectionState.Connected);
         client.Dispose();

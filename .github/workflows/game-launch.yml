@@ -38,7 +38,7 @@ jobs:
 
       - name: Build game launch tests
         run: |
-          dotnet restore src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj
+          dotnet restore src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj /p:RestoreLockedMode=true
           dotnet build src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj `
             --configuration Release --no-restore
 

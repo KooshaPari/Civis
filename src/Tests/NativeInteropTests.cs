@@ -214,8 +214,8 @@ public class NativeInteropTests
             var nonexistentFile = Path.Combine(Path.GetTempPath(), "definitely_does_not_exist.glb");
 
             // Act & Assert
-            Func<Task> act = async () => await RustAssetPipeline.ImportAssetAsync("test-asset", nonexistentFile);
-            await act.Should().ThrowAsync<FileNotFoundException>();
+            Func<Task> act = async () => await RustAssetPipeline.ImportAssetAsync("test-asset", nonexistentFile).ConfigureAwait(true);
+            await act.Should().ThrowAsync<FileNotFoundException>().ConfigureAwait(true);
         }
 
         [Fact]
@@ -226,10 +226,10 @@ public class NativeInteropTests
             try
             {
                 // Create a minimal GLB file (or just any file for fallback testing)
-                await File.WriteAllTextAsync(tempFile, "{}");
+                await File.WriteAllTextAsync(tempFile, "{}").ConfigureAwait(true);
 
                 // Act - RustAssetPipeline should fall back to C# when Rust unavailable
-                var result = await RustAssetPipeline.ImportAssetAsync("test-asset", tempFile);
+                var result = await RustAssetPipeline.ImportAssetAsync("test-asset", tempFile).ConfigureAwait(true);
 
                 // Assert
                 result.Should().NotBeNull();
@@ -261,7 +261,7 @@ public class NativeInteropTests
             };
 
             // Act
-            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition);
+            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();
@@ -276,7 +276,7 @@ public class NativeInteropTests
             var tempFile = Path.GetTempFileName();
             try
             {
-                await File.WriteAllTextAsync(tempFile, "{}");
+                await File.WriteAllTextAsync(tempFile, "{}").ConfigureAwait(true);
                 var imported = new ImportedAsset
                 {
                     AssetId = "empty-asset",
@@ -292,7 +292,7 @@ public class NativeInteropTests
                 };
 
                 // Act - use fallback path
-                var result = await RustAssetPipeline.ImportAssetAsync("empty-asset", tempFile);
+                var result = await RustAssetPipeline.ImportAssetAsync("empty-asset", tempFile).ConfigureAwait(true);
 
                 // Assert
                 result.Mesh.Should().NotBeNull();

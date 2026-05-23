@@ -55,12 +55,12 @@ namespace DINOForge.SDK.Models
 
         /// <summary>Maps vanilla faction IDs to replacement faction IDs.</summary>
         [YamlMember(Alias = "replaces_vanilla")]
-        public Dictionary<string, string> ReplacesVanilla { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> ReplacesVanilla { get; set; } = new(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// List of faction replacements defined in this total conversion.
         /// </summary>
-        public List<TcFactionEntry> Factions { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<TcFactionEntry> Factions { get; set; } = new(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Asset replacement mappings (textures, audio, UI).
@@ -72,7 +72,7 @@ namespace DINOForge.SDK.Models
         /// List of pack IDs that conflict with this total conversion.
         /// </summary>
         [YamlMember(Alias = "conflicts_with")]
-        public List<string> ConflictsWith { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> ConflictsWith { get; set; } = new(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>If true, only one total conversion can be active at a time.</summary>
         public bool Singleton { get; set; } = true;
@@ -145,12 +145,12 @@ namespace DINOForge.SDK.Models
         /// <summary>
         /// List of unit IDs that belong to this faction.
         /// </summary>
-        public List<string> Units { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> Units { get; set; } = new(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// List of building IDs that this faction can construct.
         /// </summary>
-        public List<string> Buildings { get; set; } = new(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> Buildings { get; set; } = new(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
     }
 
     /// <summary>Asset replacement mappings for a total conversion.</summary>
@@ -159,16 +159,16 @@ namespace DINOForge.SDK.Models
         /// <summary>
         /// Maps vanilla texture asset paths to replacement texture asset paths.
         /// </summary>
-        public Dictionary<string, string> Textures { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> Textures { get; set; } = new(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Maps vanilla audio asset paths to replacement audio asset paths.
         /// </summary>
-        public Dictionary<string, string> Audio { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> Audio { get; set; } = new(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Maps vanilla UI asset paths to replacement UI asset paths.
         /// </summary>
-        public Dictionary<string, string> Ui { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, string> Ui { get; set; } = new(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
     }
 }

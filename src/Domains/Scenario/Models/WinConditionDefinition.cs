@@ -12,17 +12,17 @@ namespace DINOForge.Domains.Scenario.Models
         /// <summary>
         /// Unique identifier for this win condition.
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         /// <summary>
         /// Type of win condition: eliminate_faction, reach_population, survive_duration, control_region, etc.
         /// </summary>
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         /// <summary>
         /// Human-readable description of what is required to win.
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// Parameters dictionary for condition evaluation.
@@ -32,7 +32,7 @@ namespace DINOForge.Domains.Scenario.Models
         /// - survive_duration: { "duration_seconds": 300 }
         /// - control_region: { "region_id": "castle", "percentage": 100 }
         /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>(StringComparer.Ordinal); // public-mutable-ok: runtime scenario authoring mutates parameters
 
         /// <summary>
         /// Initializes a new win condition definition with default values.

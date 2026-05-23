@@ -1,0 +1,7 @@
+# Pattern #226 allowlist: public fields in NuGet-published types
+#
+# Format:
+#   HIGH|relative/path.cs|line
+#   relative/path.cs
+#
+# Keep this file empty until a site is explicitly approved.

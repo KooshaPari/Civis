@@ -311,7 +311,7 @@ public class ParallelGameE2ETests : IDisposable
         {
             try
             {
-                var status = await GetGameStatusAsync();
+                var status = await GetGameStatusAsync().ConfigureAwait(true);
                 if (status.Running && status.WorldReady)
                 {
                     return true;
@@ -319,7 +319,7 @@ public class ParallelGameE2ETests : IDisposable
             }
             catch { /* not ready yet */ }
 
-            await Task.Delay(2000);
+            await Task.Delay(2000).ConfigureAwait(true);
         }
         return false;
     }
@@ -350,8 +350,8 @@ public class ParallelGameE2ETests : IDisposable
             using var process = Process.Start(startInfo);
             if (process == null) return new GameStatus { Running = false };
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(true);
+            await process.WaitForExitAsync().ConfigureAwait(true);
 
             if (output.Contains("\"running\": true"))
             {
@@ -401,14 +401,14 @@ public class ParallelGameE2ETests : IDisposable
             try
             {
                 var client = new GameClient();
-                await client.ConnectAsync();
+                await client.ConnectAsync().ConfigureAwait(true);
                 if (client.IsConnected)
                     return client;
                 client.Dispose();
             }
             catch { /* not ready yet */ }
 
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(true);
         }
         return null;
     }
@@ -420,7 +420,7 @@ public class ParallelGameE2ETests : IDisposable
     {
         // Kill any existing game process
         StopGame();
-        await Task.Delay(3000);
+        await Task.Delay(3000).ConfigureAwait(true);
 
         // Launch fresh game
         var process = LaunchGame();
@@ -440,14 +440,14 @@ public class ParallelGameE2ETests : IDisposable
                 catch { return false; }
             },
             TimeSpan.FromSeconds(10),
-            pollMs: 100).ConfigureAwait(false);
+            pollMs: 100).ConfigureAwait(true);
 
         // Check if process exited early
         if (process.HasExited)
             return (process, null);
 
         // Connect to bridge
-        var client = await ConnectToBridgeAsync(30);
+        var client = await ConnectToBridgeAsync(30).ConfigureAwait(true);
         return (process, client);
     }
 
@@ -475,7 +475,7 @@ public class ParallelGameE2ETests : IDisposable
         client.Should().NotBeNull("should have connected game client");
 
         // Ping should succeed
-        var pong = await client.PingAsync();
+        var pong = await client.PingAsync().ConfigureAwait(true);
         pong.Should().NotBeNull("bridge should respond to ping");
     }
 
@@ -496,13 +496,13 @@ public class ParallelGameE2ETests : IDisposable
         var client = fixture.Client;
 
         // Perform multiple operations
-        var pong1 = await client.PingAsync();
+        var pong1 = await client.PingAsync().ConfigureAwait(true);
         pong1.Should().NotBeNull();
 
-        var pong2 = await client.PingAsync();
+        var pong2 = await client.PingAsync().ConfigureAwait(true);
         pong2.Should().NotBeNull();
 
-        var pong3 = await client.PingAsync();
+        var pong3 = await client.PingAsync().ConfigureAwait(true);
         pong3.Should().NotBeNull();
     }
 
@@ -523,7 +523,7 @@ public class ParallelGameE2ETests : IDisposable
         var client = fixture.Client;
 
         // Verify mod is loaded
-        var verifyResult = await client.VerifyModAsync(string.Empty);
+        var verifyResult = await client.VerifyModAsync(string.Empty).ConfigureAwait(true);
         verifyResult.Should().NotBeNull("verify result should be returned");
     }
 
@@ -546,7 +546,7 @@ public class ParallelGameE2ETests : IDisposable
         // Perform multiple operations over time
         for (int i = 0; i < 5; i++)
         {
-            var pong = await client.PingAsync();
+            var pong = await client.PingAsync().ConfigureAwait(true);
             pong.Should().NotBeNull($"operation {i + 1} should succeed");
         }
 
@@ -625,7 +625,7 @@ public class ParallelGameHarness : IDisposable
                 _instances.Add(instance);
 
                 // Wait for world to be ready
-                await instance.WaitForWorldAsync(60);
+                await instance.WaitForWorldAsync(60).ConfigureAwait(true);
             }
         }
         catch (Exception ex)
@@ -656,7 +656,7 @@ public class ParallelGameHarness : IDisposable
         }
 
         // Wait for all to be ready
-        var readyInstances = await Task.WhenAll(instances);
+        var readyInstances = await Task.WhenAll(instances).ConfigureAwait(true);
 
         // Run tests in parallel
         foreach (var instance in readyInstances.Where(i => i.IsHealthy))
@@ -665,7 +665,7 @@ public class ParallelGameHarness : IDisposable
             {
                 try
                 {
-                    return await testFunc(instance);
+                    return await testFunc(instance).ConfigureAwait(true);
                 }
                 catch (Exception ex)
                 {
@@ -679,7 +679,7 @@ public class ParallelGameHarness : IDisposable
             }));
         }
 
-        return await Task.WhenAll(tasks).ContinueWith(t => t.Result.ToList());
+        return await Task.WhenAll(tasks).ContinueWith(t => t.Result.ToList()).ConfigureAwait(true);
     }
 
     public void Dispose()
@@ -722,7 +722,7 @@ public class GameInstance : IDisposable
 
                 // In real implementation, would check via bridge CLI
                 // For now, just wait for startup
-                await Task.Delay(2000);
+                await Task.Delay(2000).ConfigureAwait(true);
                 return true;
             }
             catch
@@ -849,7 +849,7 @@ public class FreshInstallTests : IDisposable
         try
         {
             // Wait up to 30 seconds for startup
-            var started = await Task.Run(() => process.WaitForInputIdle(30000));
+            var started = await Task.Run(() => process.WaitForInputIdle(30000)).ConfigureAwait(true);
             sw.Stop();
 
             started.Should().BeTrue("game should start within 30 seconds");
@@ -891,7 +891,7 @@ public class FreshInstallTests : IDisposable
             }
         }
 
-        await Task.CompletedTask; // Async placeholder
+        await Task.CompletedTask.ConfigureAwait(true); // Async placeholder
     }
 
     /// <summary>
@@ -987,7 +987,7 @@ public class ScenarioParallelTests : IDisposable
             var results = await harness.RunParallelTestsAsync(async instance =>
             {
                 // Simulate pack loading test
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(true);
 
                 return new TestResult
                 {
@@ -995,7 +995,7 @@ public class ScenarioParallelTests : IDisposable
                     InstanceId = instance.DesktopName,
                     Duration = TimeSpan.FromSeconds(1)
                 };
-            }, instanceCount: 2);
+            }, instanceCount: 2).ConfigureAwait(true);
 
             // Skip if no instances were healthy
             if (results.Count == 0) return;
@@ -1035,7 +1035,7 @@ public class ScenarioParallelTests : IDisposable
                 var instanceId = instance.DesktopName;
 
                 // Simulate state modification
-                await Task.Delay(500);
+                await Task.Delay(500).ConfigureAwait(true);
 
                 // Verify state is instance-local
                 return new TestResult
@@ -1047,7 +1047,7 @@ public class ScenarioParallelTests : IDisposable
                         ["state"] = $"modified_by_{instanceId}"
                     }
                 };
-            }, instanceCount: 2);
+            }, instanceCount: 2).ConfigureAwait(true);
 
             // Skip if no instances were healthy
             if (results.Count == 0) return;
@@ -1064,5 +1064,3 @@ public class ScenarioParallelTests : IDisposable
         }
     }
 }
-
-

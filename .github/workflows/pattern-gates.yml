@@ -84,3 +84,98 @@ jobs:
           name: pattern-${{ matrix.pattern.number }}-report
           path: pattern-${{ matrix.pattern.number }}-report.json
           retention-days: 14
+
+  detect-unbounded-constraints:
+    name: Pattern #94 (unbounded-constraints)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Run Pattern #94 detection
+        run: python scripts/ci/detect_unbounded_constraints.py
+
+  detect-unguarded-deserialize:
+    name: Pattern #95 (unguarded-deserialize)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Run Pattern #95 detection
+        run: python scripts/ci/detect_unguarded_deserialize.py
+
+  detect-public-mutable-fields:
+    name: Pattern #226 (public-mutable-fields)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Run Pattern #226 detection
+        run: python scripts/ci/detect_pattern_226.py
+
+  audit-broad-exception-catch:
+    name: Pattern #230 (broad-exception-catch)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Run Pattern #230 detection
+        run: python scripts/ci/audit_broad_exception_catch.py
+
+  audit-todo-without-ticket:
+    name: Pattern #223 (todo-without-ticket)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Run Pattern #223 detection
+        run: python scripts/ci/audit_todo_without_ticket.py

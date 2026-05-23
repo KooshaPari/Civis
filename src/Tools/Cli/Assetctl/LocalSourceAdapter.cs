@@ -62,7 +62,7 @@ public sealed class LocalSourceAdapter : ISourceAdapter
 
                 try
                 {
-                    string json = await File.ReadAllTextAsync(registryPath, cancellationToken);
+                    string json = await File.ReadAllTextAsync(registryPath, cancellationToken).ConfigureAwait(false);
                     var entries = JsonSerializer.Deserialize<List<AssetIndexEntry>>(json, _jsonOptions);
 
                     if (entries is null)
@@ -110,7 +110,7 @@ public sealed class LocalSourceAdapter : ISourceAdapter
                     continue;
                 }
 
-                string json = await File.ReadAllTextAsync(registryPath, cancellationToken);
+                string json = await File.ReadAllTextAsync(registryPath, cancellationToken).ConfigureAwait(false);
                 var entries = JsonSerializer.Deserialize<List<AssetIndexEntry>>(json, _jsonOptions);
 
                 if (entries is null)

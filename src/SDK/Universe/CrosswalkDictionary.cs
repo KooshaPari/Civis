@@ -17,13 +17,13 @@ namespace DINOForge.SDK.Universe
         /// Exact crosswalk entries keyed by vanilla ID.
         /// </summary>
         [YamlMember(Alias = "entries")]
-        public Dictionary<string, CrosswalkEntry> Entries { get; set; } = new Dictionary<string, CrosswalkEntry>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, CrosswalkEntry> Entries { get; set; } = new Dictionary<string, CrosswalkEntry>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Wildcard pattern mappings (e.g. "enemy_*" -> "cis_*").
         /// </summary>
         [YamlMember(Alias = "patterns")]
-        public List<CrosswalkPattern> Patterns { get; set; } = new List<CrosswalkPattern>(); // public-mutable-ok: YAML deserializer requires mutable List
+        public List<CrosswalkPattern> Patterns { get; set; } = new List<CrosswalkPattern>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Looks up a themed entry by vanilla ID. Tries exact match first, then patterns.
@@ -217,7 +217,7 @@ namespace DINOForge.SDK.Universe
         /// Keys are stat names, values are multipliers or absolute values.
         /// </summary>
         [YamlMember(Alias = "stat_modifiers")]
-        public Dictionary<string, float>? StatModifiers { get; set; }
+        public Dictionary<string, float>? StatModifiers { get; set; } // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
     }
 
     /// <summary>
@@ -253,6 +253,6 @@ namespace DINOForge.SDK.Universe
         /// Optional stat modifiers applied to all matches.
         /// </summary>
         [YamlMember(Alias = "stat_modifiers")]
-        public Dictionary<string, float>? StatModifiers { get; set; }
+        public Dictionary<string, float>? StatModifiers { get; set; } // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
     }
 }

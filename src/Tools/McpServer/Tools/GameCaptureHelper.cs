@@ -79,16 +79,22 @@ internal static class GameCaptureHelper
                 return false;
 
             // Start the native process
-            await using var computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+            try
+            {
+                // Capture screenshot by window title
+                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
+                if (pngBytes.Length == 0)
+                    return false;
 
-            // Capture screenshot by window title
-            byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
-            if (pngBytes.Length == 0)
-                return false;
-
-            // Write to output path
-            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+                // Write to output path
+                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {
@@ -111,16 +117,22 @@ internal static class GameCaptureHelper
                 return false;
 
             // Start the native process
-            await using var computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
+            try
+            {
+                // Capture screenshot by window title
+                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
+                if (pngBytes.Length == 0)
+                    return false;
 
-            // Capture screenshot by window title
-            byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
-            if (pngBytes.Length == 0)
-                return false;
-
-            // Write to output path
-            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+                // Write to output path
+                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {

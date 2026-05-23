@@ -189,10 +189,7 @@ namespace DINOForge.Runtime.UI
                 System.Reflection.PropertyInfo? prop = tmpType.GetProperty("text");
                 prop?.SetValue(tmp, text);
             }
-            catch
-            {
-                // TMPro not present or reflection failed — silently ignore
-            }
+            catch { /* safe-swallow: TMPro reflection is optional and best-effort */ }
         }
 
         private static string? TryGetTmpText(GameObject root)

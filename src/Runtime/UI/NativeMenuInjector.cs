@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Text;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
 using UnityEngine;
@@ -115,6 +116,7 @@ namespace DINOForge.Runtime.UI
         // MonoBehaviour lifecycle
         // ------------------------------------------------------------------ //
 
+#pragma warning disable DF0105 // event-lifecycle asymmetry (SceneManager.activeSceneChanged is paired with OnDestroy unsubscribe below)
         private void Awake()
         {
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
@@ -190,25 +192,25 @@ namespace DINOForge.Runtime.UI
                     fi.Refresh();
                     if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAtUtc)
                     {
-                        System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath, System.Text.Encoding.UTF8);
-                        DebugLog.Write("NativeMenuInjector",$"[Screenshot] done (verified {fi.Length} bytes): {_pendingScreenshotPath}");
+                        System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath, Encoding.UTF8);
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] done (verified {fi.Length} bytes): {_pendingScreenshotPath}");
                         _pendingScreenshotPath = null;
                     }
                     else
                     {
-                        DebugLog.Write("NativeMenuInjector",$"[Screenshot] pending, file not ready: {_pendingScreenshotPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff})");
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] pending, file not ready: {_pendingScreenshotPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff})");
                     }
                 }
                 else if (System.IO.File.Exists(reqFile))
                 {
-                    string path = System.IO.File.ReadAllText(reqFile, System.Text.Encoding.UTF8).Trim();
+                    string path = System.IO.File.ReadAllText(reqFile, Encoding.UTF8).Trim();
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
                     // Delete stale file so we can detect when Unity writes the new one
                     try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { /* safe-swallow: stale screenshot file removal is best-effort */ }
                     _screenshotRequestedAtUtc = System.DateTime.UtcNow;
-                    DebugLog.Write("NativeMenuInjector",$"[Screenshot] requested (Update/main thread) at {_screenshotRequestedAtUtc:HH:mm:ss.fff}: {path}");
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] requested (Update/main thread) at {_screenshotRequestedAtUtc:HH:mm:ss.fff}: {path}");
                     ScreenCapture.CaptureScreenshot(path);
                     _pendingScreenshotPath = path;
                 }
@@ -221,6 +223,7 @@ namespace DINOForge.Runtime.UI
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             LogInfo($"[NativeMenuInjector::{_sessionId}] OnDestroy called. Injector cleanup complete.");
         }
+#pragma warning restore DF0105
 
         // ------------------------------------------------------------------ //
         // Text re-enforcement
@@ -312,10 +315,10 @@ namespace DINOForge.Runtime.UI
 
                 Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}: Scan started — found {allCanvases.Length} canvases total");
-                DebugLog.Write("NativeMenuInjector",$"[{_sessionId}] Attempt#{attemptId}: Scan started — {allCanvases.Length} canvases");
-                DebugLog.Write("NativeMenuInjector",$"[{_sessionId}] Attempt#{attemptId}: All canvases dump:");
+                DebugLog.Write("NativeMenuInjector", $"[{_sessionId}] Attempt#{attemptId}: Scan started — {allCanvases.Length} canvases");
+                DebugLog.Write("NativeMenuInjector", $"[{_sessionId}] Attempt#{attemptId}: All canvases dump:");
                 foreach (Canvas c in allCanvases)
-                    DebugLog.Write("NativeMenuInjector",$"[{_sessionId}]   Canvas '{c.name}' active={c.gameObject.activeInHierarchy}");
+                    DebugLog.Write("NativeMenuInjector", $"[{_sessionId}]   Canvas '{c.name}' active={c.gameObject.activeInHierarchy}");
 
                 int activeCount = 0;
 
@@ -331,7 +334,7 @@ namespace DINOForge.Runtime.UI
 
                     // Search all active canvases regardless of name — the DINO menu
                     // canvas name may vary; we rely on finding the Settings/Options button.
-                    DebugLog.Write("NativeMenuInjector",$"[{_sessionId}] Attempt#{attemptId} Canvas '{canvas.name}': searching for buttons...");
+                    DebugLog.Write("NativeMenuInjector", $"[{_sessionId}] Attempt#{attemptId} Canvas '{canvas.name}': searching for buttons...");
 
                     Button? settingsButton = FindSettingsButton(canvas);
                     if (settingsButton == null)
@@ -372,7 +375,7 @@ namespace DINOForge.Runtime.UI
                     {
                         _anyKeyPatchApplied = true;  // prevent re-triggering
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} — InitialGameLoader stuck. Loading scene 1 to skip splash screen.");
-                        DebugLog.Write("NativeMenuInjector",$"[{_sessionId}] InitialGameLoader auto-advance: SceneManager.LoadScene(1)");
+                        DebugLog.Write("NativeMenuInjector", $"[{_sessionId}] InitialGameLoader auto-advance: SceneManager.LoadScene(1)");
                         SceneManager.LoadScene(1);
                         return;  // IMPORTANT: return immediately; OnActiveSceneChanged will re-trigger scan
                     }
@@ -528,7 +531,7 @@ namespace DINOForge.Runtime.UI
                     }
                 }
             }
-            catch { /* swallow — diagnostic helper, must not throw */ }
+            catch { /* safe-swallow: diagnostic helper is best-effort and must not throw */ }
             return string.Empty;
         }
 
@@ -563,7 +566,7 @@ namespace DINOForge.Runtime.UI
             // Ensure targetGraphic is set for visual state transitions
             if (modsButton.targetGraphic == null)
             {
-                Image? fallbackImage = modsButton.GetComponentInChildren<UnityEngine.UI.Image>(true);
+                Image? fallbackImage = FindPreferredButtonGraphic(modsButton.transform);
                 if (fallbackImage != null)
                 {
                     modsButton.targetGraphic = fallbackImage;
@@ -945,14 +948,17 @@ namespace DINOForge.Runtime.UI
             try
             {
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     [7.1] Getting EventSystem.current...");
+                // Pattern #235: Call EnsureEventSystemAlive eagerly (idempotent) BEFORE
+                // reading EventSystem.current — handles Unity fake-null case (stale
+                // current after scene transition destroys vanilla EventSystem).
+                Plugin.EnsureEventSystemAlive();
                 EventSystem es = EventSystem.current;
                 if (es == null)
                 {
                     // #551 race break: Plugin.OnActiveSceneChanged may not have fired yet for the
                     // current scene (per-frame poll runs ahead of the scene event on first MainMenu).
-                    // Call EnsureEventSystemAlive() to recreate/promote immediately, then re-read.
-                    LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     ⚠ EventSystem.current NULL — invoking Plugin.EnsureEventSystemAlive() (race break).");
-                    try { Plugin.EnsureEventSystemAlive(); } catch (Exception exEnsure) { LogWarning($"[NativeMenuInjector::{_sessionId}] EnsureEventSystemAlive threw: {exEnsure.GetType().Name}: {exEnsure.Message}"); }
+                    // Re-read after the eager EnsureEventSystemAlive() above.
+                    LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     ⚠ EventSystem.current NULL — re-reading after eager ensure.");
                     es = EventSystem.current;
                 }
                 if (es != null)
@@ -1023,6 +1029,7 @@ namespace DINOForge.Runtime.UI
 
         private void OnModsButtonClicked()
         {
+            LogInfo($"[NativeMenuInjector::{_sessionId}] NativeMenuInjector.OnModsClick fired");
             _buttonClickCount++;
             long clickId = _buttonClickCount;
 
@@ -1077,22 +1084,31 @@ namespace DINOForge.Runtime.UI
             target.spriteState = source.spriteState;
             target.animationTriggers = source.animationTriggers;
 
+            Image? sourceImage = source.targetGraphic as Image;
+            Graphic? resolvedTargetGraphic = null;
             if (source.targetGraphic != null)
             {
                 string path = GetRelativePath(source.targetGraphic.transform, source.transform);
                 Transform? matching = string.IsNullOrEmpty(path) ? target.transform : target.transform.Find(path);
-                target.targetGraphic = matching?.GetComponent(source.targetGraphic.GetType()) as Graphic;
+                resolvedTargetGraphic = matching?.GetComponent(source.targetGraphic.GetType()) as Graphic;
             }
 
-            // Fallback: if targetGraphic is still null, use the first Image child
-            if (target.targetGraphic == null)
+            // Fallback: prefer the native painterly background image from the clone hierarchy.
+            if (resolvedTargetGraphic == null)
             {
-                target.targetGraphic = target.GetComponentInChildren<UnityEngine.UI.Image>(true);
-                if (target.targetGraphic != null)
+                resolvedTargetGraphic = FindPreferredButtonGraphic(target.transform);
+                if (resolvedTargetGraphic != null)
                 {
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Applied targetGraphic fallback to '{target.targetGraphic.name}'");
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Applied targetGraphic fallback to '{resolvedTargetGraphic.name}'");
                 }
             }
+
+            if (resolvedTargetGraphic is Image resolvedImage && sourceImage != null)
+            {
+                CopyImageVisualStyle(resolvedImage, sourceImage);
+            }
+
+            target.targetGraphic = resolvedTargetGraphic;
 
             Text? sourceText = source.GetComponentInChildren<Text>(includeInactive: true);
             Text? targetText = target.GetComponentInChildren<Text>(includeInactive: true);
@@ -1107,6 +1123,49 @@ namespace DINOForge.Runtime.UI
             }
 
             LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Synced native button visual style");
+        }
+
+        private static Image? FindPreferredButtonGraphic(Transform root)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            Image? firstSpriteImage = null;
+            Image[] images = root.GetComponentsInChildren<Image>(includeInactive: true);
+            foreach (Image image in images)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                if (image.sprite != null && firstSpriteImage == null)
+                {
+                    firstSpriteImage = image;
+                }
+
+                string imageName = image.name;
+                if (imageName.IndexOf("background", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return image;
+                }
+            }
+
+            return firstSpriteImage;
+        }
+
+        private static void CopyImageVisualStyle(Image target, Image source)
+        {
+            if (target == null || source == null)
+            {
+                return;
+            }
+
+            target.sprite = source.sprite;
+            target.type = source.type;
+            target.color = source.color;
         }
 
         private static string GetRelativePath(Transform node, Transform root)
@@ -1174,13 +1233,13 @@ namespace DINOForge.Runtime.UI
             {
                 string bepRoot = BepInEx.Paths.BepInExRootPath;
                 string path = System.IO.Path.Combine(bepRoot, name + ".png");
-                DebugLog.Write("NativeMenuInjector",$"[Screenshot] Auto-checkpoint: scheduled in {delayFrames} frames: {path}");
+                DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: scheduled in {delayFrames} frames: {path}");
                 _pendingAutoCheckpointPath = path;
                 _pendingAutoCheckpointFrames = delayFrames;
             }
             catch (Exception ex)
             {
-                DebugLog.Write("NativeMenuInjector",$"[Screenshot] Auto-checkpoint schedule FAILED: {ex.Message}");
+                DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint schedule FAILED: {ex.Message}");
             }
         }
 
@@ -1192,13 +1251,13 @@ namespace DINOForge.Runtime.UI
             {
                 try
                 {
-                    DebugLog.Write("NativeMenuInjector",$"[Screenshot] Auto-checkpoint: capturing now: {_pendingAutoCheckpointPath}");
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: capturing now: {_pendingAutoCheckpointPath}");
                     ScreenCapture.CaptureScreenshot(_pendingAutoCheckpointPath);
-                    DebugLog.Write("NativeMenuInjector",$"[Screenshot] Auto-checkpoint: CaptureScreenshot called: {_pendingAutoCheckpointPath}");
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: CaptureScreenshot called: {_pendingAutoCheckpointPath}");
                 }
                 catch (Exception ex)
                 {
-                    DebugLog.Write("NativeMenuInjector",$"[Screenshot] Auto-checkpoint capture FAILED: {ex.Message}");
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint capture FAILED: {ex.Message}");
                 }
                 _pendingAutoCheckpointPath = null;
                 _pendingAutoCheckpointFrames = -1;

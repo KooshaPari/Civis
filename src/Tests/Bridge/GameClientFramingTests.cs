@@ -61,7 +61,7 @@ public class GameClientFramingTests
         // Act & Assert
         // Pipe doesn't exist, will fail, but should respect default timeout
         await Assert.ThrowsAsync<GameClientException>(
-            async () => await client.ConnectAsync(CancellationToken.None));
+            async () => await client.ConnectAsync(CancellationToken.None).ConfigureAwait(true));
 
         sw.Stop();
         // Should fail within 4 seconds (3s timeout + overhead)
@@ -81,7 +81,7 @@ public class GameClientFramingTests
         // Act & Assert
         // Pipe doesn't exist, will fail, but should respect custom timeout
         await Assert.ThrowsAsync<GameClientException>(
-            async () => await client.ConnectAsync(customTimeout, CancellationToken.None));
+            async () => await client.ConnectAsync(customTimeout, CancellationToken.None).ConfigureAwait(true));
 
         sw.Stop();
         // Should fail quickly (within 2 seconds), proving custom timeout was used

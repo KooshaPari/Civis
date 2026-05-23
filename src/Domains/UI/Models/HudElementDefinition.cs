@@ -41,12 +41,12 @@ namespace DINOForge.Domains.UI.Models
         /// List of game states where this HUD element is visible.
         /// Possible values: gameplay, pause, main_menu.
         /// </summary>
-        public List<string> VisibleIn { get; set; } = new List<string>();
+        public List<string> VisibleIn { get; set; } = new List<string>(); // public-mutable-ok: UI content loader deserializes visibility states into a mutable list
 
         /// <summary>
         /// Dictionary of color overrides for this HUD element (property name to hex color code, e.g. "background" -> "#FF0000").
         /// </summary>
-        public Dictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: UI content loader deserializes overrides into a mutable dictionary
 
         /// <summary>
         /// Optional opacity value (0.0 to 1.0) for the HUD element.

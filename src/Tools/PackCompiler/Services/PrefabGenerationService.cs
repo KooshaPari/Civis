@@ -26,7 +26,7 @@ namespace DINOForge.Tools.PackCompiler.Services
 
                 Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
                 File.WriteAllText(outputPath, prefab, Encoding.UTF8);
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>

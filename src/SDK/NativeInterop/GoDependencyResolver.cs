@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DINOForge.SDK.Dependencies;
+using DINOForge.SDK.IO;
 using DINOForge.SDK.Json;
 using DINOForge.SDK.Validation;
 
@@ -37,7 +38,7 @@ namespace DINOForge.SDK.NativeInterop
         /// Path to Go binary (dinoforge-resolver.exe on Windows, dinoforge-resolver on Unix).
         /// Can be configured via environment variable DINOFORGE_RESOLVER_PATH.
         /// </summary>
-        private static readonly string ResolverBinaryPath = FindResolverBinary();
+        private static readonly string? ResolverBinaryPath = FindResolverBinary();
 
         /// <summary>
         /// Check if Go resolver binary is available in PATH or configured location.
@@ -77,6 +78,8 @@ namespace DINOForge.SDK.NativeInterop
         {
             var tempInput = Path.Combine(Path.GetTempPath(), $"dinoforge_resolver_{Guid.NewGuid()}.json");
             var tempOutput = Path.Combine(Path.GetTempPath(), $"dinoforge_resolver_out_{Guid.NewGuid()}.json");
+            string resolverBinaryPath = ResolverBinaryPath
+                ?? throw new InvalidOperationException("Go resolver binary is not available.");
 
             try
             {
@@ -88,14 +91,14 @@ namespace DINOForge.SDK.NativeInterop
                 };
 
                 var json = JsonSerializer.Serialize(input, JsonOptions.Compact);
-                File.WriteAllText(tempInput, json, System.Text.Encoding.UTF8);
+                SafeFileIO.WriteText(tempInput, json);
 
                 // Invoke Go binary
-                var process = new Process
+                using Process process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = ResolverBinaryPath,
+                        FileName = resolverBinaryPath,
                         Arguments = $"--input \"{tempInput}\" --output \"{tempOutput}\"",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -124,7 +127,7 @@ namespace DINOForge.SDK.NativeInterop
                 if (!File.Exists(tempOutput))
                     throw new InvalidOperationException("Go resolver produced no output file");
 
-                var outputJson = File.ReadAllText(tempOutput, Encoding.UTF8);
+                var outputJson = SafeFileIO.ReadText(tempOutput);
                 var output = JsonSerializer.Deserialize<ResolverOutput>(outputJson, JsonOptions.Default)
                     ?? throw new InvalidOperationException("Failed to parse resolver output");
 
@@ -157,8 +160,37 @@ namespace DINOForge.SDK.NativeInterop
             finally
             {
                 // Cleanup temp files
-                try { if (File.Exists(tempInput)) File.Delete(tempInput); } catch { } // safe-swallow: temp file cleanup
-                try { if (File.Exists(tempOutput)) File.Delete(tempOutput); } catch { } // safe-swallow: temp file cleanup
+                if (File.Exists(tempInput))
+                {
+                    try
+                    {
+                        File.Delete(tempInput);
+                    }
+                    catch (IOException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Go resolver temp cleanup failed for {tempInput}: {ex.Message}");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Go resolver temp cleanup failed for {tempInput}: {ex.Message}");
+                    }
+                }
+
+                if (File.Exists(tempOutput))
+                {
+                    try
+                    {
+                        File.Delete(tempOutput);
+                    }
+                    catch (IOException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Go resolver temp cleanup failed for {tempOutput}: {ex.Message}");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Go resolver temp cleanup failed for {tempOutput}: {ex.Message}");
+                    }
+                }
             }
         }
 
@@ -225,8 +257,8 @@ namespace DINOForge.SDK.NativeInterop
         /// <summary>JSON input for Go resolver.</summary>
         private class ResolverInput
         {
-            public List<PackManifest> Available { get; set; } // public-mutable-ok: JSON deserializer requires mutable List
-            public PackManifest Target { get; set; }
+            public List<PackManifest> Available { get; set; } = new List<PackManifest>(); // public-mutable-ok: JSON deserializer requires mutable List
+            public PackManifest Target { get; set; } = null!;
         }
 
         /// <summary>JSON output from Go resolver.</summary>
@@ -277,7 +309,6 @@ namespace DINOForge.SDK.NativeInterop
         }
     }
 
-    /// <summary>
     /// <summary>
     /// Interface for dependency resolvers (implemented by both C# and Go interop).
     /// Allows swapping between C# fallback and high-performance Go implementation.

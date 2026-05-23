@@ -334,6 +334,114 @@ public class C
             diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
         }
 
+        // Gap G: `catch { _logger.LogTrace(...); }` — low-signal logging only
+        [Fact]
+        public async Task LogTraceOnlyBody_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public sealed class Logger
+{
+    public void LogTrace(Exception ex, string message) { }
+}
+
+public class C
+{
+    private readonly Logger _logger = new Logger();
+
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception ex)
+        {
+            _logger.LogTrace(ex, ""trace-only"");
+        }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
+        // Gap G: `catch { _logger.LogVerbose(...); }` — low-signal logging only
+        [Fact]
+        public async Task LogVerboseOnlyBody_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public sealed class Logger
+{
+    public void LogVerbose(Exception ex, string message) { }
+}
+
+public class C
+{
+    private readonly Logger _logger = new Logger();
+
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception ex)
+        {
+            _logger.LogVerbose(ex, ""verbose-only"");
+        }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
+        // Multi-catch: every silent catch clause should be analyzed independently.
+        [Fact]
+        public async Task MultipleSilentCatchClauses_ReportsDF0111ForEachClause()
+        {
+            const string source = @"
+using System;
+
+public class C
+{
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (ArgumentException) { }
+        catch (InvalidOperationException) { }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().HaveCount(2);
+            diagnostics.Should().OnlyContain(d => d.Id == "DF0111");
+        }
+
+        // Gap E + G: a filter should not hide a low-signal logging-only catch.
+        [Fact]
+        public async Task FilteredLogTraceOnlyBody_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public sealed class Logger
+{
+    public void LogTrace(Exception ex, string message) { }
+}
+
+public class C
+{
+    private readonly Logger _logger = new Logger();
+
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception ex) when (DateTime.UtcNow.Ticks >= 0)
+        {
+            _logger.LogTrace(ex, ""filtered-trace-only"");
+        }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
         // ---------- Helpers ----------
 
         private static async Task<ImmutableArray<Diagnostic>> RunAnalyzerAsync(string source)

@@ -61,7 +61,7 @@ public sealed class NativeComputer : IAsyncDisposable
         };
 
         // Verify alive.
-        var pong = await computer.CallAsync("ping", null, ct);
+        var pong = await computer.CallAsync("ping", null, ct).ConfigureAwait(false);
         if (pong.ValueKind == JsonValueKind.Undefined || !pong.TryGetProperty("ok", out _))
             throw new InvalidOperationException("laycua-native did not respond to ping");
 
@@ -84,7 +84,7 @@ public sealed class NativeComputer : IAsyncDisposable
         {
             window_title = windowTitle,
             monitor,
-        }, ct);
+        }, ct).ConfigureAwait(false);
 
         var b64 = result.GetProperty("data").GetString()
                   ?? throw new InvalidOperationException("screenshot: missing data field");
@@ -103,15 +103,15 @@ public sealed class NativeComputer : IAsyncDisposable
         string action = "click",
         CancellationToken ct = default)
     {
-        await CallAsync("input.click", new { x, y, button, action }, ct);
+        await CallAsync("input.click", new { x, y, button, action }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Double-click the left button at the given coordinates.</summary>
     public async Task DoubleClickAsync(int x, int y, CancellationToken ct = default)
     {
-        await ClickAsync(x, y, "left", "click", ct);
-        await Task.Delay(50, ct);
-        await ClickAsync(x, y, "left", "click", ct);
+        await ClickAsync(x, y, "left", "click", ct).ConfigureAwait(false);
+        await Task.Delay(50, ct).ConfigureAwait(false);
+        await ClickAsync(x, y, "left", "click", ct).ConfigureAwait(false);
     }
 
     /// <summary>Scroll at coordinates.</summary>
@@ -122,13 +122,13 @@ public sealed class NativeComputer : IAsyncDisposable
         int amount = 3,
         CancellationToken ct = default)
     {
-        await CallAsync("input.scroll", new { x, y, direction, amount }, ct);
+        await CallAsync("input.scroll", new { x, y, direction, amount }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Move the mouse cursor.</summary>
     public async Task MoveMouseAsync(int x, int y, CancellationToken ct = default)
     {
-        await CallAsync("input.move", new { x, y }, ct);
+        await CallAsync("input.move", new { x, y }, ct).ConfigureAwait(false);
     }
 
     // -----------------------------------------------------------------------
@@ -138,25 +138,25 @@ public sealed class NativeComputer : IAsyncDisposable
     /// <summary>Type a string of text.</summary>
     public async Task TypeTextAsync(string text, CancellationToken ct = default)
     {
-        await CallAsync("input.type", new { text }, ct);
+        await CallAsync("input.type", new { text }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Press (down + up) a named key.</summary>
     public async Task PressKeyAsync(string key, CancellationToken ct = default)
     {
-        await CallAsync("input.key", new { key, action = "press" }, ct);
+        await CallAsync("input.key", new { key, action = "press" }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Hold a key down.</summary>
     public async Task KeyDownAsync(string key, CancellationToken ct = default)
     {
-        await CallAsync("input.key", new { key, action = "down" }, ct);
+        await CallAsync("input.key", new { key, action = "down" }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Release a held key.</summary>
     public async Task KeyUpAsync(string key, CancellationToken ct = default)
     {
-        await CallAsync("input.key", new { key, action = "up" }, ct);
+        await CallAsync("input.key", new { key, action = "up" }, ct).ConfigureAwait(false);
     }
 
     // -----------------------------------------------------------------------
@@ -166,7 +166,7 @@ public sealed class NativeComputer : IAsyncDisposable
     /// <summary>List all top-level windows.</summary>
     public async Task<IReadOnlyList<WindowInfo>> ListWindowsAsync(CancellationToken ct = default)
     {
-        var result = await CallAsync("windows.list", new { }, ct);
+        var result = await CallAsync("windows.list", new { }, ct).ConfigureAwait(false);
         var list = JsonSerializer.Deserialize<List<WindowInfo>>(result.GetRawText(), JsonOptions)
                    ?? [];
         return list;
@@ -178,7 +178,7 @@ public sealed class NativeComputer : IAsyncDisposable
         int? pid = null,
         CancellationToken ct = default)
     {
-        var result = await CallAsync("windows.find", new { title, pid }, ct);
+        var result = await CallAsync("windows.find", new { title, pid }, ct).ConfigureAwait(false);
         if (result.ValueKind == JsonValueKind.Null)
             return null;
         return JsonSerializer.Deserialize<WindowInfo>(result.GetRawText(), JsonOptions);
@@ -187,7 +187,7 @@ public sealed class NativeComputer : IAsyncDisposable
     /// <summary>Bring a window to the foreground by HWND.</summary>
     public async Task FocusWindowAsync(long hwnd, CancellationToken ct = default)
     {
-        await CallAsync("windows.focus", new { hwnd }, ct);
+        await CallAsync("windows.focus", new { hwnd }, ct).ConfigureAwait(false);
     }
 
     // -----------------------------------------------------------------------
@@ -201,20 +201,20 @@ public sealed class NativeComputer : IAsyncDisposable
         string? cwd = null,
         CancellationToken ct = default)
     {
-        var result = await CallAsync("process.launch", new { path, args, cwd }, ct);
+        var result = await CallAsync("process.launch", new { path, args, cwd }, ct).ConfigureAwait(false);
         return result.GetProperty("pid").GetInt32();
     }
 
     /// <summary>Kill a process by PID.</summary>
     public async Task KillProcessAsync(int pid, CancellationToken ct = default)
     {
-        await CallAsync("process.kill", new { pid }, ct);
+        await CallAsync("process.kill", new { pid }, ct).ConfigureAwait(false);
     }
 
     /// <summary>Check whether a process is still running.</summary>
     public async Task<ProcessStatus> ProcessStatusAsync(int pid, CancellationToken ct = default)
     {
-        var result = await CallAsync("process.status", new { pid }, ct);
+        var result = await CallAsync("process.status", new { pid }, ct).ConfigureAwait(false);
         return JsonSerializer.Deserialize<ProcessStatus>(result.GetRawText(), JsonOptions)
                ?? new ProcessStatus(false, null);
     }
@@ -235,7 +235,7 @@ public sealed class NativeComputer : IAsyncDisposable
             image_a = Convert.ToBase64String(imageA),
             image_b = Convert.ToBase64String(imageB),
             threshold,
-        }, ct);
+        }, ct).ConfigureAwait(false);
         return result.GetProperty("changed").GetBoolean();
     }
 
@@ -245,7 +245,7 @@ public sealed class NativeComputer : IAsyncDisposable
         var result = await CallAsync("analysis.hash", new
         {
             image = Convert.ToBase64String(image),
-        }, ct);
+        }, ct).ConfigureAwait(false);
         return result.GetProperty("hash").GetString() ?? string.Empty;
     }
 
@@ -258,7 +258,7 @@ public sealed class NativeComputer : IAsyncDisposable
     {
         try
         {
-            var result = await CallAsync("ping", new { }, ct);
+            var result = await CallAsync("ping", new { }, ct).ConfigureAwait(false);
             return result.TryGetProperty("ok", out var ok) && ok.GetBoolean();
         }
         catch
@@ -279,7 +279,7 @@ public sealed class NativeComputer : IAsyncDisposable
         if (_proc is null || _proc.HasExited)
             throw new ObjectDisposedException(nameof(NativeComputer), "Native process is not running");
 
-        await _lock.WaitAsync(ct);
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             int id = Interlocked.Increment(ref _id);
@@ -292,10 +292,10 @@ public sealed class NativeComputer : IAsyncDisposable
             };
 
             string reqJson = JsonSerializer.Serialize(request, JsonOptions) + "\n";
-            await _proc.StandardInput.WriteAsync(reqJson.AsMemory(), ct);
-            await _proc.StandardInput.FlushAsync(ct);
+            await _proc.StandardInput.WriteAsync(reqJson.AsMemory(), ct).ConfigureAwait(false);
+            await _proc.StandardInput.FlushAsync(ct).ConfigureAwait(false);
 
-            string? respLine = await _proc.StandardOutput.ReadLineAsync(ct);
+            string? respLine = await _proc.StandardOutput.ReadLineAsync(ct).ConfigureAwait(false);
             if (respLine is null)
                 throw new InvalidOperationException("laycua-native closed stdout unexpectedly");
 
@@ -335,7 +335,8 @@ public sealed class NativeComputer : IAsyncDisposable
             {
                 _proc.StandardInput.Close();
                 await _proc.WaitForExitAsync(CancellationToken.None)
-                    .WaitAsync(TimeSpan.FromSeconds(3));
+                    .WaitAsync(TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false);
             }
             catch
             {

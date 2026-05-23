@@ -38,16 +38,16 @@ public sealed class GameUIAutomationTool
             if (client == null)
                 return GameClientHelper.ToJson(new { success = false, error = "GameClient not available" });
 
-            await client.ConnectAsync(ct);
+            await client.ConnectAsync(ct).ConfigureAwait(false);
 
             var response = action switch
             {
-                "tree" => await HandleTree(client, selector, ct),
-                "query" => await HandleQuery(client, selector, ct),
-                "wait" => await HandleWait(client, selector, state, timeoutMs, ct),
-                "expect" => await HandleExpect(client, selector, condition, ct),
-                "click" => await HandleClick(client, selector, ct),
-                "screenshot" => await HandleScreenshot(client, selector, ct),
+                "tree" => await HandleTree(client, selector, ct).ConfigureAwait(false),
+                "query" => await HandleQuery(client, selector, ct).ConfigureAwait(false),
+                "wait" => await HandleWait(client, selector, state, timeoutMs, ct).ConfigureAwait(false),
+                "expect" => await HandleExpect(client, selector, condition, ct).ConfigureAwait(false),
+                "click" => await HandleClick(client, selector, ct).ConfigureAwait(false),
+                "screenshot" => await HandleScreenshot(client, selector, ct).ConfigureAwait(false),
                 _ => new { success = false, error = $"Unknown action: {action}" }
             };
 
@@ -136,7 +136,7 @@ public sealed class GameUIAutomationTool
     {
         try
         {
-            var result = await client.ScreenshotAsync(null, ct);
+            var result = await client.ScreenshotAsync(null, ct).ConfigureAwait(false);
 
             return new
             {

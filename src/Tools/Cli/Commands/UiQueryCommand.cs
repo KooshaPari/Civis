@@ -23,7 +23,7 @@ internal static class UiQueryCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string selector = parseResult.GetRequiredValue(selectorArg);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -34,7 +34,7 @@ internal static class UiQueryCommand
                 return;
             }
 
-            UiActionResult result = await client.QueryUiAsync(selector, ct);
+            UiActionResult result = await client.QueryUiAsync(selector, ct).ConfigureAwait(false);
 
             if (json)
             {

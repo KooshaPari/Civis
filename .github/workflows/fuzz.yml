@@ -23,7 +23,7 @@ jobs:
           include-prerelease: true
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Build dependencies (ordered)
         run: |
@@ -71,7 +71,7 @@ jobs:
           include-prerelease: true
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Build dependencies (ordered)
         run: |

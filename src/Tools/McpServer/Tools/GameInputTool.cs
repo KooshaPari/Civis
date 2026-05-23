@@ -248,9 +248,16 @@ public sealed class GameInputTool
             if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
                 return false;
 
-            await using var computer = await NativeComputer.StartAsync(nativePath, "warn", CancellationToken.None).ConfigureAwait(false);
-            await computer.PressKeyAsync(keyName).ConfigureAwait(false);
-            return true;
+            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                await computer.PressKeyAsync(keyName).ConfigureAwait(false);
+                return true;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {

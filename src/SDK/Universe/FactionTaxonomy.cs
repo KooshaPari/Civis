@@ -14,7 +14,7 @@ namespace DINOForge.SDK.Universe
         /// All factions defined in this universe.
         /// </summary>
         [YamlMember(Alias = "factions")]
-        public List<TaxonomyFaction> Factions { get; set; } = new List<TaxonomyFaction>(); // public-mutable-ok: YAML deserializer requires mutable List
+        public List<TaxonomyFaction> Factions { get; set; } = new List<TaxonomyFaction>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <inheritdoc />
         /// <remarks>
@@ -82,13 +82,13 @@ namespace DINOForge.SDK.Universe
         /// Optional sub-factions (e.g. 501st Legion under Republic).
         /// </summary>
         [YamlMember(Alias = "sub_factions")]
-        public List<TaxonomySubFaction>? SubFactions { get; set; }
+        public List<TaxonomySubFaction>? SubFactions { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Unit roster mapping abstract roles to themed unit IDs.
         /// </summary>
         [YamlMember(Alias = "unit_roster")]
-        public Dictionary<string, string>? UnitRoster { get; set; }
+        public Dictionary<string, string>? UnitRoster { get; set; } // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
     }
 
     /// <summary>

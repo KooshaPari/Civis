@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using BepInEx.Logging;
 using Unity.Entities;
 using Newtonsoft.Json;
@@ -16,7 +17,9 @@ namespace DINOForge.Runtime
     /// </summary>
     public class SystemEnumerator
     {
+#pragma warning disable DF1006 // disposable field (ManualLogSource is BepInEx-owned; not owned here)
         private readonly ManualLogSource _log;
+#pragma warning restore DF1006
 
         public SystemEnumerator(ManualLogSource log)
         {
@@ -120,7 +123,7 @@ namespace DINOForge.Runtime
 
                 string systemsPath = Path.Combine(latestDir, $"systems_{world.Name}.json");
                 JArray systemsJson = new JArray(systemList);
-                File.WriteAllText(systemsPath, JsonConvert.SerializeObject(systemsJson, Formatting.Indented));
+                File.WriteAllText(systemsPath, JsonConvert.SerializeObject(systemsJson, Formatting.Indented), Encoding.UTF8);
                 _log.LogInfo($"  Wrote {systemsPath}");
             }
             catch (Exception ex)

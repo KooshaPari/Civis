@@ -446,6 +446,7 @@ stats:
 id: integration-base
 name: Integration Base
 version: 0.1.0
+framework_version: '>=0.1.0 <1.0.0'
 author: Test
 type: content
 loads:
@@ -468,6 +469,7 @@ loads:
 id: integration-ext
 name: Integration Extended
 version: 0.2.0
+framework_version: '>=0.1.0 <1.0.0'
 depends_on:
   - integration-base
 author: Test
@@ -488,12 +490,14 @@ loads:
     damage: 25
 ");
 
-        // Act — load base first
-        ContentLoadResult baseResult = _loader.LoadPack(basePack);
+        // Act — use multi-pack LoadPacks() since extPack declares depends_on (per #837,
+        // single-pack LoadPack() fails fast on depends_on; topological resolution lives in
+        // LoadPacks which discovers all packs under the root and orders them.)
+        ContentLoadResult baseResult = _loader.LoadPacks(_tempRoot);
         baseResult.IsSuccess.Should().BeTrue();
 
-        // Act — load extension (depends on base)
-        ContentLoadResult extResult = _loader.LoadPack(extPack);
+        // Both packs were loaded together; alias for clarity in the assertions below.
+        ContentLoadResult extResult = baseResult;
 
         // Assert
         extResult.IsSuccess.Should().BeTrue();

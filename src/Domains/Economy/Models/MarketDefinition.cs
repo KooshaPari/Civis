@@ -11,27 +11,27 @@ namespace DINOForge.Domains.Economy.Models
         /// <summary>
         /// Unique identifier for this market definition.
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         /// <summary>
         /// Display name for the market building.
         /// </summary>
-        public string DisplayName { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
 
         /// <summary>
         /// Description of this market's role and capabilities.
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// List of resource IDs that can be traded through this market.
         /// </summary>
-        public List<string> ResourcesTradeable { get; set; }
+        public List<string> ResourcesTradeable { get; set; } = new List<string>(); // public-mutable-ok: market definitions are serializer-bound and mutated by loaders
 
         /// <summary>
         /// Per-resource price modifiers (e.g., 0.8 for 20% discount, 1.2 for 20% markup).
         /// </summary>
-        public Dictionary<string, float> PriceModifiers { get; set; }
+        public Dictionary<string, float> PriceModifiers { get; set; } = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: market definitions are serializer-bound and mutated by loaders
 
         /// <summary>
         /// Multiplier for transaction throughput (cargo capacity per transaction).

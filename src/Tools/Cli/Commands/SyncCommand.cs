@@ -44,11 +44,11 @@ internal static class SyncCommand
 
             if (watch)
             {
-                await WatchAndSyncAsync(repoPath, gamePacksPath, ct);
+                await WatchAndSyncAsync(repoPath, gamePacksPath, ct).ConfigureAwait(false);
             }
             else
             {
-                await SyncPacksAsync(repoPath, gamePacksPath);
+                await SyncPacksAsync(repoPath, gamePacksPath).ConfigureAwait(false);
             }
         });
 
@@ -104,7 +104,7 @@ internal static class SyncCommand
         foreach (var pack in toAdd)
         {
             AnsiConsole.MarkupLine($"[green]ADD:[/] {pack.Name}");
-            await CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name));
+            await CopyDirectoryAsync(pack.FullName, Path.Combine(gamePacksPath, pack.Name)).ConfigureAwait(false);
             changes++;
         }
 
@@ -114,7 +114,7 @@ internal static class SyncCommand
             string dest = Path.Combine(gamePacksPath, pack.Name);
             if (Directory.Exists(dest))
                 Directory.Delete(dest, true);
-            await CopyDirectoryAsync(pack.FullName, dest);
+            await CopyDirectoryAsync(pack.FullName, dest).ConfigureAwait(false);
             changes++;
         }
 
@@ -127,7 +127,7 @@ internal static class SyncCommand
             AnsiConsole.MarkupLine($"[green]Synced {changes} pack(s).[/]");
 
             // Trigger reload in game if running
-            await TriggerInGameReloadAsync();
+            await TriggerInGameReloadAsync().ConfigureAwait(false);
         }
     }
 
@@ -146,7 +146,7 @@ internal static class SyncCommand
             if (e.Name?.EndsWith(".yaml") == true || e.Name?.EndsWith(".json") == true)
             {
                 AnsiConsole.MarkupLine($"[cyan]Change detected:[/] {e.Name}");
-                await SyncPacksAsync(repoPath, gamePacksPath);
+                await SyncPacksAsync(repoPath, gamePacksPath).ConfigureAwait(false);
             }
         };
 
@@ -155,7 +155,7 @@ internal static class SyncCommand
             if (e.Name?.EndsWith(".yaml") == true || e.Name?.EndsWith(".json") == true)
             {
                 AnsiConsole.MarkupLine($"[cyan]New file:[/] {e.Name}");
-                await SyncPacksAsync(repoPath, gamePacksPath);
+                await SyncPacksAsync(repoPath, gamePacksPath).ConfigureAwait(false);
             }
         };
 
@@ -163,7 +163,7 @@ internal static class SyncCommand
 
         try
         {
-            await Task.Delay(Timeout.Infinite, ct);
+            await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -175,11 +175,11 @@ internal static class SyncCommand
     {
         try
         {
-            using var client = new GameClient();
-            await client.ConnectAsync();
+            using var client = new GameClient(new GameClientOptions { UseMessageFraming = false });
+            await client.ConnectAsync().ConfigureAwait(false);
 
             AnsiConsole.MarkupLine("[cyan]Triggering in-game pack reload...[/]");
-            var result = await client.ReloadPacksAsync();
+            var result = await client.ReloadPacksAsync().ConfigureAwait(false);
 
             if (result.Success)
             {
@@ -203,13 +203,13 @@ internal static class SyncCommand
         foreach (var file in Directory.GetFiles(source))
         {
             var destFile = Path.Combine(destination, Path.GetFileName(file));
-            await Task.Run(() => File.Copy(file, destFile, true));
+            await Task.Run(() => File.Copy(file, destFile, true)).ConfigureAwait(false);
         }
 
         foreach (var dir in Directory.GetDirectories(source))
         {
             var destDir = Path.Combine(destination, Path.GetFileName(dir));
-            await CopyDirectoryAsync(dir, destDir);
+            await CopyDirectoryAsync(dir, destDir).ConfigureAwait(false);
         }
     }
 }

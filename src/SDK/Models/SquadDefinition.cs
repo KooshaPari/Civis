@@ -74,7 +74,7 @@ namespace DINOForge.SDK.Models
         /// Behavior tags for AI control. Valid values: hold_position, aggressive, defensive, patrol.
         /// </summary>
         [YamlMember(Alias = "behavior_tags")]
-        public List<string> BehaviorTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserialization requires mutable List<T> for YamlDotNet
+        public List<string> BehaviorTags { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
 
         /// <summary>
         /// Validates that the squad definition is semantically valid.

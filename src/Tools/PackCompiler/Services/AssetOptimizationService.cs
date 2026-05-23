@@ -99,7 +99,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                         ex
                     );
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>

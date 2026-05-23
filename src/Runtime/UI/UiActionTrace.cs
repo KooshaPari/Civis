@@ -56,10 +56,7 @@ namespace DINOForge.Runtime.UI
                         var treeResult = UiTreeSnapshotBuilder.Capture(selector);
                         entry.TreeSnapshot = treeResult;
                     }
-                    catch
-                    {
-                        // Ignore snapshot failures
-                    }
+                    catch { /* safe-swallow: trace snapshot capture is best-effort and must not block recording */ }
                 }
 
                 _entries.Add(entry);
@@ -94,10 +91,7 @@ namespace DINOForge.Runtime.UI
                         var treeResult = UiTreeSnapshotBuilder.Capture(selector);
                         entry.TreeSnapshot = treeResult;
                     }
-                    catch
-                    {
-                        // Ignore snapshot failures
-                    }
+                    catch { /* safe-swallow: trace snapshot capture is best-effort and must not block recording */ }
                 }
 
                 _entries.Add(entry);
@@ -174,11 +168,11 @@ namespace DINOForge.Runtime.UI
             {
                 try
                 {
-                    File.WriteAllText(filePath, ExportToJson(), System.Text.Encoding.UTF8);
+                    File.WriteAllText(filePath, ExportToJson(), Encoding.UTF8);
                 }
                 catch
                 {
-                    // Ignore file write failures
+                    // safe-swallow: trace file writes are best-effort diagnostics and must not break UI actions
                 }
             }
         }

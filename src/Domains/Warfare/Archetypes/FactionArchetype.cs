@@ -42,6 +42,7 @@ namespace DINOForge.Domains.Warfare.Archetypes
             Id = id ?? throw new ArgumentNullException(nameof(id));
             DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
             Description = description ?? throw new ArgumentNullException(nameof(description));
+            if (baseModifiers == null) throw new ArgumentNullException(nameof(baseModifiers));
             var modifiers = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             foreach (var kvp in baseModifiers) modifiers[kvp.Key] = kvp.Value;
             BaseModifiers = modifiers;

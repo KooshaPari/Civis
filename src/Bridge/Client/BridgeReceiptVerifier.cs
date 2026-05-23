@@ -148,7 +148,7 @@ public static class BridgeReceiptVerifier
     }
 
     /// <summary>
-    /// Mirrors <see cref="DINOForge.Runtime.Bridge.SessionHmac.ComputeHmac"/>:
+    /// Mirrors the server-side `SessionHmac.ComputeHmac` implementation:
     /// canonical receipt = <c>{"state_sha256":"...","timestamp":"...","world_frame":N}</c>
     /// (keys sorted alphabetically, no whitespace), HMAC-SHA256 with the
     /// session key, lowercase hex output.

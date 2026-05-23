@@ -28,12 +28,12 @@ namespace DINOForge.Domains.Scenario.Scripting
         /// <summary>
         /// Current resource amounts keyed by resource name (food, wood, stone, iron, gold).
         /// </summary>
-        public Dictionary<string, int> Resources { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        public Dictionary<string, int> Resources { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal); // public-mutable-ok: scenario runtime updates resource totals in place
 
         /// <summary>
         /// Set of building IDs that have been constructed at least once during the scenario.
         /// </summary>
-        public HashSet<string> BuildingsBuilt { get; set; } = new HashSet<string>();
+        public HashSet<string> BuildingsBuilt { get; set; } = new HashSet<string>(); // public-mutable-ok: scenario runtime updates tracked buildings in place
 
         /// <summary>
         /// Set of entity IDs (units, buildings, etc.) currently alive in the ECS world.
@@ -42,14 +42,14 @@ namespace DINOForge.Domains.Scenario.Scripting
         /// When empty, DestroyTarget falls back to <see cref="BuildingsBuilt"/> for
         /// backward compatibility with callers that only populate construction state.
         /// </summary>
-        public HashSet<string> LiveEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<string> LiveEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal); // public-mutable-ok: scenario runtime updates entity membership in place
 
         /// <summary>
         /// Set of entity IDs (units, buildings, etc.) that have been destroyed during the
         /// scenario. Populated by Runtime-side callers that observe ECS destruction events;
         /// the Scenario domain itself never queries ECS directly (architectural boundary).
         /// </summary>
-        public HashSet<string> DestroyedEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<string> DestroyedEntities { get; set; } = new HashSet<string>(StringComparer.Ordinal); // public-mutable-ok: scenario runtime updates entity membership in place
 
         /// <summary>
         /// Total number of enemy units killed during the scenario.

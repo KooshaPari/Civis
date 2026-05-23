@@ -151,7 +151,7 @@ namespace DINOForge.Runtime.UI.Adapters
             }
             catch
             {
-                // Pack-supplied teardown may raise; never propagate so a single bad
+                // safe-swallow: pack-supplied teardown may raise; never propagate so a single bad
                 // element cannot block subsequent unrender / hot-reload work.
             }
         }

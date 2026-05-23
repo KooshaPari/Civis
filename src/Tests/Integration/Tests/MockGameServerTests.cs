@@ -42,7 +42,7 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
@@ -56,7 +56,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -70,14 +70,14 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         // Act
-        Func<Task> stopAction = async () => await server.StopAsync();
+        Func<Task> stopAction = async () => await server.StopAsync().ConfigureAwait(true);
 
         // Assert
-        await stopAction.Should().NotThrowAsync();
-        await server.DisposeAsync();
+        await stopAction.Should().NotThrowAsync().ConfigureAwait(true);
+        await server.DisposeAsync().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -95,14 +95,14 @@ public class MockGameServerTests
         try
         {
             // Act
-            await server.StartAsync();
+            await server.StartAsync().ConfigureAwait(true);
 
             // Assert
             server.PipeName.Should().Be(customName);
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -120,14 +120,14 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
 
             // Act
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
 
             // Assert
             client.IsConnected.Should().BeTrue();
@@ -135,7 +135,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -149,15 +149,15 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
 
             // Act
-            PingResult result = await client.PingAsync();
+            PingResult result = await client.PingAsync().ConfigureAwait(true);
 
             // Assert
             result.Pong.Should().BeTrue();
@@ -165,7 +165,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -184,15 +184,15 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
 
             // Act
-            ReloadResult result = await client.ReloadPacksAsync();
+            ReloadResult result = await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Assert
             result.Success.Should().BeTrue();
@@ -201,7 +201,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -215,16 +215,16 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Act
-            GameStatus status = await client.StatusAsync();
+            GameStatus status = await client.StatusAsync().ConfigureAwait(true);
 
             // Assert
             status.WorldReady.Should().BeTrue();
@@ -233,7 +233,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -247,16 +247,16 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Act
-            OverrideResult result = await client.ApplyOverrideAsync("unit.stats.hp", 200f, "override", "rep_clone_trooper");
+            OverrideResult result = await client.ApplyOverrideAsync("unit.stats.hp", 200f, "override", "rep_clone_trooper").ConfigureAwait(true);
 
             // Assert
             result.Success.Should().BeTrue();
@@ -265,7 +265,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -279,15 +279,15 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
 
             // Act
-            StatResult result = await client.GetStatAsync("unit.stats.hp");
+            StatResult result = await client.GetStatAsync("unit.stats.hp").ConfigureAwait(true);
 
             // Assert
             result.Value.Should().Be(100f);
@@ -295,7 +295,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -309,17 +309,17 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
-            await client.ApplyOverrideAsync("unit.stats.hp", 999f, "override", "rep_clone_trooper");
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
+            await client.ApplyOverrideAsync("unit.stats.hp", 999f, "override", "rep_clone_trooper").ConfigureAwait(true);
 
             // Act
-            StatResult result = await client.GetStatAsync("unit.stats.hp");
+            StatResult result = await client.GetStatAsync("unit.stats.hp").ConfigureAwait(true);
 
             // Assert
             result.Value.Should().BeApproximately(999f, 0.01f);
@@ -327,7 +327,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -341,16 +341,16 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Act
-            CatalogSnapshot catalog = await client.GetCatalogAsync();
+            CatalogSnapshot catalog = await client.GetCatalogAsync().ConfigureAwait(true);
 
             // Assert
             catalog.Units.Should().HaveCount(28);
@@ -360,7 +360,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -378,7 +378,7 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
@@ -389,14 +389,14 @@ public class MockGameServerTests
                 tasks.Add(Task.Run(async () =>
                 {
                     var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-                    await client.ConnectAsync();
+                    await client.ConnectAsync().ConfigureAwait(true);
 
                     try
                     {
-                        PingResult ping = await client.PingAsync();
+                        PingResult ping = await client.PingAsync().ConfigureAwait(true);
                         ping.Pong.Should().BeTrue();
 
-                        GameStatus status = await client.StatusAsync();
+                        GameStatus status = await client.StatusAsync().ConfigureAwait(true);
                         status.Running.Should().BeTrue();
                     }
                     finally
@@ -407,11 +407,11 @@ public class MockGameServerTests
             }
 
             // Act & Assert
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(true);
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -430,21 +430,21 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
 
             // Act & Assert
             await Assert.ThrowsAsync<GameClientException>(async () =>
-                await client.InvokeBridgeMethodAsync("nonexistentMethod", new { }));
+                await client.InvokeBridgeMethodAsync("nonexistentMethod", new { }).ConfigureAwait(true)).ConfigureAwait(true);
             client.Disconnect();
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -462,17 +462,17 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Act
-            await client.ApplyOverrideAsync("unit.stats.hp", 50f, "add", null);
-            StatResult result = await client.GetStatAsync("unit.stats.hp");
+            await client.ApplyOverrideAsync("unit.stats.hp", 50f, "add", null).ConfigureAwait(true);
+            StatResult result = await client.GetStatAsync("unit.stats.hp").ConfigureAwait(true);
 
             // Assert (100 + 50 = 150)
             result.Value.Should().Be(150f);
@@ -480,7 +480,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 
@@ -494,17 +494,17 @@ public class MockGameServerTests
     {
         // Arrange
         var server = new MockGameBridgeServer();
-        await server.StartAsync();
+        await server.StartAsync().ConfigureAwait(true);
 
         try
         {
             var client = new GameClient(new GameClientOptions { PipeName = server.PipeName });
-            await client.ConnectAsync();
-            await client.ReloadPacksAsync();
+            await client.ConnectAsync().ConfigureAwait(true);
+            await client.ReloadPacksAsync().ConfigureAwait(true);
 
             // Act
-            await client.ApplyOverrideAsync("unit.stats.hp", 2.0f, "multiply", null);
-            StatResult result = await client.GetStatAsync("unit.stats.hp");
+            await client.ApplyOverrideAsync("unit.stats.hp", 2.0f, "multiply", null).ConfigureAwait(true);
+            StatResult result = await client.GetStatAsync("unit.stats.hp").ConfigureAwait(true);
 
             // Assert (100 * 2.0 = 200)
             result.Value.Should().Be(200f);
@@ -512,7 +512,7 @@ public class MockGameServerTests
         }
         finally
         {
-            await server.DisposeAsync();
+            await server.DisposeAsync().ConfigureAwait(true);
         }
     }
 }

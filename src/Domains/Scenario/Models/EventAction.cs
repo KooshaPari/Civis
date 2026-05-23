@@ -51,6 +51,6 @@ namespace DINOForge.Domains.Scenario.Models
         /// </list>
         /// </summary>
         [YamlMember(Alias = "parameters")]
-        public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+        public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal); // public-mutable-ok: YAML deserializer requires mutable Dictionary for scenario content
     }
 }

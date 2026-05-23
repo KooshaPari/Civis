@@ -35,4 +35,10 @@ features:
   - icon: "\uD83C\uDFAF"
     title: Quality Assurance
     details: "Pattern Catalog with 17 recurring patterns, 11 RETIRED via CI gates, Tier 1 Roslyn analyzers (DF0096/0097/0111/0117/0123). 100% automated detection."
+  - icon: "\uD83D\uDCDC"
+    title: Governance
+    details: "Release process, schema policy, QA index, and research intake keep the v0.26 wave traceable."
+  - icon: "\uD83D\uDCCB"
+    title: Reference Docs
+    details: "ADR index, schema guidance, and release/QA hubs provide the current authority map."
 ---

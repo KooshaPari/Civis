@@ -14,7 +14,7 @@ namespace DINOForge.SDK.Universe
         /// Per-faction visual/audio style definitions.
         /// </summary>
         [YamlMember(Alias = "faction_styles")]
-        public Dictionary<string, FactionStyle> FactionStyles { get; set; } = new Dictionary<string, FactionStyle>(System.StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, FactionStyle> FactionStyles { get; set; } = new Dictionary<string, FactionStyle>(System.StringComparer.OrdinalIgnoreCase); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Global style properties shared across all factions.

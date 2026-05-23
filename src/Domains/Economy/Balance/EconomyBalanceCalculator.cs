@@ -224,7 +224,7 @@ namespace DINOForge.Domains.Economy.Balance
                 if (bestEfficiency > 0)
                 {
                     coverableDeficits++;
-                    totalEfficiency += bestEfficiency;
+                    totalEfficiency = totalEfficiency + bestEfficiency;
                 }
             }
 

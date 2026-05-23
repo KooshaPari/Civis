@@ -47,12 +47,12 @@ public class UpdateCheckerTests
 
         // Delegate that returns our mock release
         UpdateChecker.GetLatestReleaseDelegate mockDelegate = async (owner, repo) =>
-            await Task.FromResult(mockRelease);
+            await Task.FromResult(mockRelease).ConfigureAwait(true);
 
         var checker = new UpdateChecker(mockDelegate);
 
         // Act
-        var result = await checker.CheckAsync();
+        var result = await checker.CheckAsync().ConfigureAwait(true);
 
         // Assert
         result.HasUpdate.Should().BeTrue();
@@ -87,12 +87,12 @@ public class UpdateCheckerTests
 
         // Delegate that returns our mock release
         UpdateChecker.GetLatestReleaseDelegate mockDelegate = async (owner, repo) =>
-            await Task.FromResult(mockRelease);
+            await Task.FromResult(mockRelease).ConfigureAwait(true);
 
         var checker = new UpdateChecker(mockDelegate);
 
         // Act
-        var result = await checker.CheckAsync();
+        var result = await checker.CheckAsync().ConfigureAwait(true);
 
         // Assert
         result.HasUpdate.Should().BeFalse();
@@ -110,7 +110,7 @@ public class UpdateCheckerTests
         var checker = new UpdateChecker(mockDelegate);
 
         // Act
-        var result = await checker.CheckAsync();
+        var result = await checker.CheckAsync().ConfigureAwait(true);
 
         // Assert
         result.HasUpdate.Should().BeFalse();

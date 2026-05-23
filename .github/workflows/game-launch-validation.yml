@@ -50,7 +50,7 @@ jobs:
 
       - name: Restore dependencies
         if: success() && github.event_name != 'pull_request'
-        run: dotnet restore src/DINOForge.sln
+        run: dotnet restore src/DINOForge.sln /p:RestoreLockedMode=true
 
       - name: Build solution
         if: success() && github.event_name != 'pull_request'

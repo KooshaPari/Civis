@@ -90,7 +90,7 @@ namespace DINOForge.Tools.PackCompiler
                                 continue;
                             }
 
-                            var imported = await importService.ImportAsync(asset.Id, assetPath);
+                            var imported = await importService.ImportAsync(asset.Id, assetPath).ConfigureAwait(false);
                             var outputPath = Path.Combine(importedDir, $"{asset.Id}.json");
                             var json = System.Text.Json.JsonSerializer.Serialize(imported, PackCompilerJsonOptions.Indented);
                             File.WriteAllText(outputPath, json);
@@ -154,7 +154,7 @@ namespace DINOForge.Tools.PackCompiler
                             AddressableKey = imported.AssetId,
                             OutputPrefab = $"prefabs/{imported.AssetId}.prefab"
                         };
-                        var optimized = await optimizeService.OptimizeAsync(imported, defaultDef);
+                        var optimized = await optimizeService.OptimizeAsync(imported, defaultDef).ConfigureAwait(false);
                         var outputPath = Path.Combine(optimizedDir, $"{imported.AssetId}_optimized.json");
                         var json = System.Text.Json.JsonSerializer.Serialize(optimized, PackCompilerJsonOptions.Indented);
                         File.WriteAllText(outputPath, json);
@@ -218,7 +218,7 @@ namespace DINOForge.Tools.PackCompiler
                             AddressableKey = optimized.AssetId,
                             OutputPrefab = $"prefabs/{optimized.AssetId}.prefab"
                         };
-                        await prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath);
+                        await prefabService.GeneratePrefabAsync(optimized, prefabDef, prefabPath).ConfigureAwait(false);
 
                         logWriter.WriteLine($"  OK: {optimized.AssetId} → {Path.GetFileName(prefabPath)}");
                         prefabSuccess++;

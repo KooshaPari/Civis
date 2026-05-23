@@ -23,7 +23,7 @@ internal static class UiTreeCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string? selector = parseResult.GetValue(selectorOpt);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -34,7 +34,7 @@ internal static class UiTreeCommand
                 return;
             }
 
-            UiTreeResult result = await client.GetUiTreeAsync(selector, ct);
+            UiTreeResult result = await client.GetUiTreeAsync(selector, ct).ConfigureAwait(false);
 
             if (json)
             {

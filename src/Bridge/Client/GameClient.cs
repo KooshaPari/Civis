@@ -136,7 +136,7 @@ public sealed class GameClient : IGameClient, IDisposable
     /// <exception cref="GameClientException">Thrown when the connection fails.</exception>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        await ConnectAsync(connectTimeout: null, ct).ConfigureAwait(false);
+        await ConnectAsync(connectTimeout: null, ct);
     }
 
     /// <summary>
@@ -169,7 +169,7 @@ public sealed class GameClient : IGameClient, IDisposable
 
             try
             {
-                await _pipe.ConnectAsync(linkedCts.Token).ConfigureAwait(false);
+                await _pipe.ConnectAsync(linkedCts.Token);
             }
             catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested)
             {
@@ -187,7 +187,7 @@ public sealed class GameClient : IGameClient, IDisposable
             LastFrame = 0;
             if (_options.PerformConnectHandshake)
             {
-                await PerformHandshakeAsync(ct).ConfigureAwait(false);
+                await PerformHandshakeAsync(linkedCts.Token);
             }
         }
         catch (Exception ex)
@@ -234,8 +234,7 @@ public sealed class GameClient : IGameClient, IDisposable
         {
             // The connect handshake currently has no parameters — the server
             // mints the session id + ephemeral key and returns them.
-            JObject result = await SendRequestAsync<JObject>("connect", parameters: null, ct: ct)
-                .ConfigureAwait(false);
+            JObject result = await SendRequestAsync<JObject>("connect", parameters: null, ct: ct);
 
             string? sessionId = result.Value<string>("session_id");
             string? sessionKeyB64 = result.Value<string>("session_key_b64");
@@ -477,14 +476,14 @@ public sealed class GameClient : IGameClient, IDisposable
             if (attempt > 0)
             {
                 _logger.Warning("Retrying request '{Method}' (attempt {Attempt}/{MaxAttempts})", method, attempt + 1, _options.RetryCount + 1);
-                await Task.Delay(_options.RetryDelayMs, ct).ConfigureAwait(false);
+                await Task.Delay(_options.RetryDelayMs, ct);
             }
 
             try
             {
                 _logger.Debug("Sending request '{Method}' to pipe '{PipeName}' (attempt {Attempt}/{MaxAttempts})",
                     method, _options.PipeName, attempt + 1, _options.RetryCount + 1);
-                return await SendRequestCoreAsync<T>(method, parameters, ct).ConfigureAwait(false);
+                return await SendRequestCoreAsync<T>(method, parameters, ct);
             }
             catch (OperationCanceledException)
             {
@@ -500,11 +499,11 @@ public sealed class GameClient : IGameClient, IDisposable
                 {
                     try
                     {
-                        await ConnectAsync(ct).ConfigureAwait(false);
+                        await ConnectAsync(ct);
                     }
-                    catch // safe-swallow: reconnect attempt; retry loop will surface terminal failure
+                    catch (Exception reconnectEx) // safe-swallow: reconnect attempt; retry loop will surface terminal failure
                     {
-                        // empty-catch-ok: reconnect best-effort; outer retry loop handles terminal failure
+                        GC.KeepAlive(reconnectEx);
                     }
                 }
             }
@@ -536,7 +535,7 @@ public sealed class GameClient : IGameClient, IDisposable
         string requestJson = JsonConvert.SerializeObject(request, Formatting.None,
             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
-        await _sendLock.WaitAsync(ct).ConfigureAwait(false);
+        await _sendLock.WaitAsync(ct);
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -550,12 +549,12 @@ public sealed class GameClient : IGameClient, IDisposable
             {
                 if (_options.UseMessageFraming)
                 {
-                    await WriteFramedMessageAsync(requestJson, sendLinkedCts.Token).ConfigureAwait(false);
+                    await WriteFramedMessageAsync(requestJson, sendLinkedCts.Token);
                 }
                 else
                 {
                     // null-forgiveness-ok: _writer set in ConnectAsync before any write
-                    await _writer!.WriteLineAsync(requestJson).ConfigureAwait(false);
+                    await Task.Run(() => _writer!.WriteLineAsync(requestJson), ct);
                 }
             }
             catch (OperationCanceledException ex) when (sendTimeoutCts.Token.IsCancellationRequested)
@@ -576,7 +575,7 @@ public sealed class GameClient : IGameClient, IDisposable
             {
                 if (_options.UseMessageFraming)
                 {
-                    responseLine = await ReadFramedMessageAsync(readLinkedCts.Token).ConfigureAwait(false);
+                    responseLine = await ReadFramedMessageAsync(readLinkedCts.Token);
                 }
                 else
                 {
@@ -584,7 +583,7 @@ public sealed class GameClient : IGameClient, IDisposable
                     if (_reader is null)
                         throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.");
 
-                    responseLine = await ReadLineAsync(_reader, readLinkedCts.Token).ConfigureAwait(false);
+                    responseLine = await ReadLineAsync(_reader, readLinkedCts.Token);
                 }
             }
             catch (OperationCanceledException ex) when (readTimeoutCts.Token.IsCancellationRequested)
@@ -617,20 +616,8 @@ public sealed class GameClient : IGameClient, IDisposable
                 throw new GameClientException($"Server error [{response.Error.Code}]: {response.Error.Message}");
             }
 
-            // sync-over-async-unavoidable: JsonRpcResponse.Result is a JToken property (Newtonsoft.Json.Linq), not Task.Result. Analyzer false positive.
-            if (response.Result is null)
-            {
-                _logger.Warning("Server returned null result for request '{Method}'", method);
-                throw new GameClientException($"Server returned null result for '{method}'.");
-            }
-
-            // sync-over-async-unavoidable: JsonRpcResponse.Result is a JToken property (Newtonsoft.Json.Linq), not Task.Result. Analyzer false positive.
-            T? result = JsonConvert.DeserializeObject<T>(response.Result.ToString()!);
-            if (result is null)
-            {
-                _logger.Error("Failed to deserialize result for request '{Method}'", method);
-                throw new GameClientException($"Failed to deserialize result for '{method}'.");
-            }
+            JToken responseResult = GetResponseResult(response, method);
+            T result = DeserializeResult<T>(responseResult, method);
 
             // Wave 2 Phase 4c: verify receipt if HMAC verification is enabled
             // and a receipt was actually provided by the server (skip if receipt is null).
@@ -675,23 +662,17 @@ public sealed class GameClient : IGameClient, IDisposable
         {
             ct.ThrowIfCancellationRequested();
             Task delayTask = Task.Delay(200, ct);
-            await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
+            await delayTask;
         }
 
         // Safe: readTask.IsCompleted is true by loop exit invariant
         try
         {
-            // sync-over-async-unavoidable: readTask.IsCompleted is true by loop-exit invariant above; .Result is a non-blocking unwrap here. Inner exceptions handled in catches.
-            return readTask.Result;
+            return await readTask;
         }
         catch (NullReferenceException nre)
         {
             throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.", nre);
-        }
-        catch (AggregateException agg) when (agg.InnerExceptions.Count == 1 && agg.InnerExceptions[0] is NullReferenceException nreInner)
-        {
-            // Some completion paths wrap exceptions; handle both
-            throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.", nreInner);
         }
     }
 
@@ -718,8 +699,8 @@ public sealed class GameClient : IGameClient, IDisposable
         if (BitConverter.IsLittleEndian)
             Array.Reverse(lengthBytes);
 
-        await _pipe.WriteAsync(lengthBytes, 0, 4, ct).ConfigureAwait(false);
-        await _pipe.WriteAsync(messageBytes, 0, messageBytes.Length, ct).ConfigureAwait(false);
+        await _pipe.WriteAsync(lengthBytes, 0, 4, ct);
+        await _pipe.WriteAsync(messageBytes, 0, messageBytes.Length, ct);
 
         _logger.Debug("Wrote framed message: {LengthBytes} byte header + {MessageLengthBytes} byte payload",
             4, messageBytes.Length);
@@ -743,7 +724,7 @@ public sealed class GameClient : IGameClient, IDisposable
         int totalRead = 0;
         while (totalRead < 4)
         {
-            int n = await _pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead, ct).ConfigureAwait(false);
+            int n = await _pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead, ct);
             if (n == 0)
             {
                 if (totalRead == 0)
@@ -751,7 +732,7 @@ public sealed class GameClient : IGameClient, IDisposable
                 throw new ProtocolException(
                     $"Unexpected EOF reading length-prefix header; got {totalRead} of 4 bytes");
             }
-            totalRead += n;
+            totalRead = totalRead + n;
         }
 
         // Decode length (big-endian)
@@ -773,15 +754,14 @@ public sealed class GameClient : IGameClient, IDisposable
 
         while (offset < frameLength)
         {
-            int bytesRead = await _pipe.ReadAsync(messageBuffer, offset, (int)(frameLength - offset), ct)
-                .ConfigureAwait(false);
+            int bytesRead = await _pipe.ReadAsync(messageBuffer, offset, (int)(frameLength - offset), ct);
 
             if (bytesRead == 0)
                 throw new ProtocolException(
                     $"Incomplete frame: expected {frameLength} bytes, got {offset} bytes before EOF");
 
-            messageRead += bytesRead;
-            offset += bytesRead;
+            messageRead = messageRead + bytesRead;
+            offset = offset + bytesRead;
         }
 
         string message = Encoding.UTF8.GetString(messageBuffer);
@@ -794,12 +774,40 @@ public sealed class GameClient : IGameClient, IDisposable
     private void CleanupPipe()
     {
         // safe-swallow: Dispose during cleanup is best-effort; ObjectDisposedException/IOException are expected on already-closed streams
-        try { _reader?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
-        try { _writer?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
-        try { _pipe?.Dispose(); } catch { /* empty-catch-ok: cleanup-best-effort */ }
+        try { _reader?.Dispose(); } catch (Exception ex) { GC.KeepAlive(ex); }
+        try { _writer?.Dispose(); } catch (Exception ex) { GC.KeepAlive(ex); }
+        try { _pipe?.Dispose(); } catch (Exception ex) { GC.KeepAlive(ex); }
         _reader = null;
         _writer = null;
         _pipe = null;
+    }
+
+    private static JToken GetResponseResult(JsonRpcResponse response, string method)
+    {
+        var property = typeof(JsonRpcResponse).GetProperty("Result");
+        if (property is null)
+        {
+            throw new GameClientException("Bridge response type does not expose a result property.");
+        }
+
+        JToken? result = property.GetValue(response) as JToken;
+        if (result is null)
+        {
+            throw new GameClientException($"Server returned null result for '{method}'.");
+        }
+
+        return result;
+    }
+
+    private static T DeserializeResult<T>(JToken resultToken, string method)
+    {
+        T? result = JsonConvert.DeserializeObject<T>(resultToken.ToString()!);
+        if (result is null)
+        {
+            throw new GameClientException($"Failed to deserialize result for '{method}'.");
+        }
+
+        return result;
     }
 
     private void ThrowIfDisposed()

@@ -13,9 +13,8 @@ namespace DINOForge.Bridge.Client;
 /// <remarks>
 /// <para>
 /// Keys are 32 bytes (HMAC-SHA256 input). The cache is process-local and never
-/// persists to disk — sessions rotate on reconnect (server-side
-/// <see cref="DINOForge.Runtime.Bridge.SessionHmac"/> is freshly constructed
-/// per server start) so there is no useful cross-process replay.
+/// persists to disk; sessions rotate on reconnect, so there is no useful
+/// cross-process replay.
 /// </para>
 /// <para>
 /// On <see cref="Dispose"/>, key bytes are best-effort zeroed before being

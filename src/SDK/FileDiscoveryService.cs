@@ -233,11 +233,11 @@ namespace DINOForge.SDK
             }
             catch (UnauthorizedAccessException)
             {
-                // Skip directories we can't access
+                // safe-swallow: directory may be inaccessible during traversal; skip it
             }
             catch (DirectoryNotFoundException)
             {
-                // Skip directories that were deleted during enumeration
+                // safe-swallow: directory may be deleted during traversal; skip it
             }
         }
 
@@ -257,11 +257,11 @@ namespace DINOForge.SDK
             }
             catch (UnauthorizedAccessException)
             {
-                // Skip directories we can't access
+                // safe-swallow: directory may be inaccessible during traversal; skip it
             }
             catch (DirectoryNotFoundException)
             {
-                // Skip directories that were deleted during enumeration
+                // safe-swallow: directory may be deleted during traversal; skip it
             }
         }
 

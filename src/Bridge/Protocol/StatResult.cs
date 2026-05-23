@@ -23,8 +23,7 @@ namespace DINOForge.Bridge.Protocol
 
         /// <summary>All individual values read from matching entities.</summary>
         [JsonProperty("values")]
-        // public-mutable-ok: JSON deserializer requires mutable List
-        public List<float> Values { get; set; } = new List<float>();
+        public List<float> Values { get; set; } = new List<float>(); // public-mutable-ok: JSON deserializer requires mutable List
 
         /// <summary>The resolved ECS component type name.</summary>
         [JsonProperty("componentType")]

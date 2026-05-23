@@ -26,7 +26,7 @@ internal static class ReloadCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string? path = parseResult.GetValue(pathOpt);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -37,7 +37,7 @@ internal static class ReloadCommand
                 return;
             }
 
-            ReloadResult result = await client.ReloadPacksAsync(path, ct);
+            ReloadResult result = await client.ReloadPacksAsync(path, ct).ConfigureAwait(false);
 
             if (json)
             {

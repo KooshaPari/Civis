@@ -29,8 +29,6 @@ namespace DINOForge.SDK.NativeInterop
     [ExcludeFromCodeCoverage] // Requires Rust/PyO3 toolchain — integration tests only
     public static class RustAssetPipeline
     {
-        // static-init-ok: Pattern #115 canonical HttpClient singleton (no I/O occurs at construction — only socket-pool reservation, deferred until first request)
-        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         private static bool? _mcpAvailable;
         private const string McpServerUrl = "http://127.0.0.1:8765";
 
@@ -190,6 +188,9 @@ namespace DINOForge.SDK.NativeInterop
             };
 
             var response = await CallMcpAsync("asset_optimize", request).ConfigureAwait(false);
+            if (response == null)
+                throw new InvalidOperationException("MCP server returned no data");
+
             var json = response.ToString();
             return JsonSerializer.Deserialize<OptimizedAsset>(json, JsonOptions.Default)
                 ?? throw new InvalidOperationException("Failed to deserialize optimization result");
@@ -225,7 +226,8 @@ namespace DINOForge.SDK.NativeInterop
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var url = $"{McpServerUrl}/api/tools/{toolName}";
 
-                var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
+                using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var response = await httpClient.PostAsync(url, content).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -268,8 +270,9 @@ namespace DINOForge.SDK.NativeInterop
         {
             try
             {
-                var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1));
-                var task = _httpClient.GetAsync($"{McpServerUrl}/health", cts.Token);
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1));
+                using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+                var task = httpClient.GetAsync($"{McpServerUrl}/health", cts.Token);
 
                 // sync-over-async-unavoidable: health check only (1-second timeout)
                 // Block synchronously for availability check (health check only)

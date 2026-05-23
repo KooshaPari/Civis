@@ -95,25 +95,25 @@ namespace DINOForge.Domains.Scenario.Models
         /// List of faction IDs allowed in this scenario. Empty means all factions are allowed.
         /// </summary>
         [YamlMember(Alias = "allowed_factions")]
-        public List<string> AllowedFactions { get; set; } = new List<string>();
+        public List<string> AllowedFactions { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for scenario content
 
         /// <summary>
         /// Conditions that trigger a victory when met.
         /// </summary>
         [YamlMember(Alias = "victory_conditions")]
-        public List<VictoryCondition> VictoryConditions { get; set; } = new List<VictoryCondition>();
+        public List<VictoryCondition> VictoryConditions { get; set; } = new List<VictoryCondition>(); // public-mutable-ok: YAML deserializer requires mutable List for scenario content
 
         /// <summary>
         /// Conditions that trigger a defeat when met.
         /// </summary>
         [YamlMember(Alias = "defeat_conditions")]
-        public List<DefeatCondition> DefeatConditions { get; set; } = new List<DefeatCondition>();
+        public List<DefeatCondition> DefeatConditions { get; set; } = new List<DefeatCondition>(); // public-mutable-ok: YAML deserializer requires mutable List for scenario content
 
         /// <summary>
         /// Scripted events that fire during the scenario based on triggers.
         /// </summary>
         [YamlMember(Alias = "scripted_events")]
-        public List<ScriptedEvent> ScriptedEvents { get; set; } = new List<ScriptedEvent>();
+        public List<ScriptedEvent> ScriptedEvents { get; set; } = new List<ScriptedEvent>(); // public-mutable-ok: YAML deserializer requires mutable List for scenario content
 
         /// <inheritdoc />
         /// <remarks>

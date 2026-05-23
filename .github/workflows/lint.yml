@@ -24,7 +24,7 @@ jobs:
           global-json-file: global.json
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Check formatting
         run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --verbosity diagnostic

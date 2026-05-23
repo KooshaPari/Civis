@@ -21,7 +21,7 @@ namespace DINOForge.SDK.UI.Models
         /// <summary>Construct a Vector2 from components.</summary>
         public Vector2(float x, float y) { X = x; Y = y; }
         /// <inheritdoc/>
-        public bool Equals(Vector2 other) => X == other.X && Y == other.Y;
+        public bool Equals(Vector2 other) => Math.Abs(X - other.X) < 0.0001f && Math.Abs(Y - other.Y) < 0.0001f;
         /// <inheritdoc/>
         public override bool Equals(object? obj) => obj is Vector2 v && Equals(v);
         /// <inheritdoc/>
@@ -53,7 +53,11 @@ namespace DINOForge.SDK.UI.Models
         /// <summary>Fully transparent.</summary>
         public static ColorRgba Transparent => new ColorRgba(0f, 0f, 0f, 0f);
         /// <inheritdoc/>
-        public bool Equals(ColorRgba other) => R == other.R && G == other.G && B == other.B && A == other.A;
+        public bool Equals(ColorRgba other) =>
+            Math.Abs(R - other.R) < 0.0001f &&
+            Math.Abs(G - other.G) < 0.0001f &&
+            Math.Abs(B - other.B) < 0.0001f &&
+            Math.Abs(A - other.A) < 0.0001f;
         /// <inheritdoc/>
         public override bool Equals(object? obj) => obj is ColorRgba c && Equals(c);
         /// <inheritdoc/>

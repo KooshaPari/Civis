@@ -37,7 +37,7 @@ internal static class OverrideCommand
             string? mode = parseResult.GetValue(modeOpt);
             string? filter = parseResult.GetValue(filterOpt);
 
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -48,7 +48,7 @@ internal static class OverrideCommand
                 return;
             }
 
-            OverrideResult result = await client.ApplyOverrideAsync(path, value, mode, filter, ct);
+            OverrideResult result = await client.ApplyOverrideAsync(path, value, mode, filter, ct).ConfigureAwait(false);
 
             if (json)
             {

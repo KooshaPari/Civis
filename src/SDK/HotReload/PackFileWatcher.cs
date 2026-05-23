@@ -257,6 +257,14 @@ namespace DINOForge.SDK.HotReload
         {
             if (_disposed) return;
             _disposed = true;
+
+            if (_watcher != null)
+            {
+                _watcher.Changed -= OnFileChanged;
+                _watcher.Created -= OnFileChanged;
+                _watcher.Renamed -= OnFileRenamed;
+            }
+
             Stop();
         }
     }

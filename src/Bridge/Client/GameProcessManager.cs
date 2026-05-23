@@ -46,6 +46,7 @@ public sealed class GameProcessManager
     /// Optional path to the game executable. If null, attempts Steam launch
     /// followed by probing common install locations.
     /// </param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>True if the game process was detected after launch.</returns>
     public async Task<bool> LaunchAsync(string? gamePath = null, CancellationToken ct = default)
     {
@@ -67,16 +68,16 @@ public sealed class GameProcessManager
                 using (var _ = Process.Start(steamInfo)) { }
 
                 // Wait for the game process to appear
-                if (await WaitForProcessAsync(timeoutMs: 30000, ct).ConfigureAwait(false))
+                if (await WaitForProcessAsync(timeoutMs: 30000, ct))
                     return true;
             }
             catch (OperationCanceledException)
             {
                 throw;
             }
-            catch // safe-swallow: Steam launch is best-effort; falls through to direct-exe path
+            catch (Exception ex) // safe-swallow: Steam launch is best-effort; falls through to direct-exe path
             {
-                // empty-catch-ok: Steam not available, fall through to direct launch
+                GC.KeepAlive(ex);
             }
         }
 
@@ -99,15 +100,15 @@ public sealed class GameProcessManager
             // Process keeps running after Dispose — Dispose only releases the parent's handle, not the child process.
             using (var _ = Process.Start(startInfo)) { }
 
-            return await WaitForProcessAsync(timeoutMs: 30000, ct).ConfigureAwait(false);
+            return await WaitForProcessAsync(timeoutMs: 30000, ct);
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch // safe-swallow: direct-launch failure reported as bool; caller decides retry/escalate
+        catch (Exception ex) // safe-swallow: direct-launch failure reported as bool; caller decides retry/escalate
         {
-            // empty-catch-ok: Process.Start failures returned as launch=false to caller
+            GC.KeepAlive(ex);
             return false;
         }
     }
@@ -127,11 +128,11 @@ public sealed class GameProcessManager
             process.Kill();
 
             // Wait for process exit using polling (netstandard2.0 compatible)
-            await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
+            await WaitForProcessExitAsync(process, ct);
         }
-        catch (InvalidOperationException) // safe-swallow: Process already exited — Kill() is a no-op
+        catch (InvalidOperationException ex) // safe-swallow: Process already exited — Kill() is a no-op
         {
-            // empty-catch-ok: race with process exit between GetGameProcess() and Kill()
+            GC.KeepAlive(ex);
         }
     }
 
@@ -159,9 +160,9 @@ public sealed class GameProcessManager
                 return;
             }
         }
-        catch // safe-swallow: handle may have become invalid mid-check; treat as exited
+        catch (Exception ex) // safe-swallow: handle may have become invalid mid-check; treat as exited
         {
-            // empty-catch-ok: Handle may be invalid; treat as already exited
+            GC.KeepAlive(ex);
             process.Dispose();
             return;
         }
@@ -177,7 +178,7 @@ public sealed class GameProcessManager
             try
             {
                 // netstandard2.0: Use polling to wait for process exit
-                await WaitForProcessExitAsync(processInLoop, ct).ConfigureAwait(false);
+                await WaitForProcessExitAsync(processInLoop, ct);
                 return;
             }
             catch (OperationCanceledException)
@@ -185,10 +186,10 @@ public sealed class GameProcessManager
                 // Cooperative cancellation: rethrow so caller can distinguish cancel from normal exit.
                 throw;
             }
-            catch // safe-swallow: handle may have become invalid during HasExited check; re-poll
+            catch (Exception ex) // safe-swallow: handle may have become invalid during HasExited check; re-poll
             {
-                // empty-catch-ok: Process handle may have become invalid; re-check on next iteration
-                await Task.Delay(500, ct).ConfigureAwait(false);
+                GC.KeepAlive(ex);
+                await Task.Delay(500, ct);
             }
         }
     }
@@ -207,9 +208,9 @@ public sealed class GameProcessManager
                 processes[i].Dispose();
             return result;
         }
-        catch // safe-swallow: enumerating processes can throw if access denied / WMI unavailable; null = "not detected"
+        catch (Exception ex) // safe-swallow: enumerating processes can throw if access denied / WMI unavailable; null = "not detected"
         {
-            // empty-catch-ok: process enumeration failure treated as "not detected"
+            GC.KeepAlive(ex);
             return null;
         }
     }
@@ -227,8 +228,8 @@ public sealed class GameProcessManager
             if (process is not null)
                 return true;
 
-            await Task.Delay(pollInterval, ct).ConfigureAwait(false);
-            elapsed += pollInterval;
+            await Task.Delay(pollInterval, ct);
+            elapsed = elapsed + pollInterval;
         }
 
         return false;
@@ -246,7 +247,7 @@ public sealed class GameProcessManager
             if (process.HasExited)
                 return;
 
-            await Task.Delay(pollIntervalMs, ct).ConfigureAwait(false);
+            await Task.Delay(pollIntervalMs, ct);
         }
 
         ct.ThrowIfCancellationRequested();

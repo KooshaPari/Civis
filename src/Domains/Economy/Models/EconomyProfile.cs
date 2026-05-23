@@ -36,13 +36,13 @@ namespace DINOForge.Domains.Economy.Models
         /// Per-resource production multipliers. Keys are resource types (food, wood, stone, iron, gold).
         /// Values are multipliers applied to all production of that resource. Default 1.0 for unlisted.
         /// </summary>
-        public Dictionary<string, float> ProductionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
+        public Dictionary<string, float> ProductionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal); // public-mutable-ok: economy content deserializes mutable multiplier maps
 
         /// <summary>
         /// Per-resource consumption multipliers. Keys are resource types.
         /// Values less than 1.0 reduce consumption; greater than 1.0 increase it.
         /// </summary>
-        public Dictionary<string, float> ConsumptionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);
+        public Dictionary<string, float> ConsumptionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal); // public-mutable-ok: economy content deserializes mutable multiplier maps
 
         /// <summary>
         /// Global trade exchange rate modifier. Values less than 1.0 give better rates;

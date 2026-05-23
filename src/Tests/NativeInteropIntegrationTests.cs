@@ -319,10 +319,10 @@ exit /b {exitCode}
         {
             // Arrange
             var glbFile = Path.Combine(_tempDir, "test_model.glb");
-            await File.WriteAllBytesAsync(glbFile, new byte[] { 0x67, 0x6C, 0x54, 0x46 }); // GLTF header
+            await File.WriteAllBytesAsync(glbFile, new byte[] { 0x67, 0x6C, 0x54, 0x46 }).ConfigureAwait(true); // GLTF header
 
             // Act
-            var result = await RustAssetPipeline.ImportAssetAsync("test-asset", glbFile);
+            var result = await RustAssetPipeline.ImportAssetAsync("test-asset", glbFile).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();
@@ -337,8 +337,8 @@ exit /b {exitCode}
             var nonexistentFile = Path.Combine(_tempDir, "nonexistent.glb");
 
             // Act & Assert
-            Func<Task> act = async () => await RustAssetPipeline.ImportAssetAsync("test", nonexistentFile);
-            await act.Should().ThrowAsync<FileNotFoundException>();
+            Func<Task> act = async () => await RustAssetPipeline.ImportAssetAsync("test", nonexistentFile).ConfigureAwait(true);
+            await act.Should().ThrowAsync<FileNotFoundException>().ConfigureAwait(true);
         }
 
         [Fact]
@@ -368,7 +368,7 @@ exit /b {exitCode}
             };
 
             // Act
-            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition);
+            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();
@@ -395,7 +395,7 @@ exit /b {exitCode}
             };
 
             // Act
-            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition);
+            var result = await RustAssetPipeline.OptimizeAssetAsync(imported, definition).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();
@@ -407,10 +407,10 @@ exit /b {exitCode}
         {
             // Arrange
             var emptyFile = Path.Combine(_tempDir, "empty.glb");
-            await File.WriteAllBytesAsync(emptyFile, Array.Empty<byte>());
+            await File.WriteAllBytesAsync(emptyFile, Array.Empty<byte>()).ConfigureAwait(true);
 
             // Act
-            var result = await RustAssetPipeline.ImportAssetAsync("empty-asset", emptyFile);
+            var result = await RustAssetPipeline.ImportAssetAsync("empty-asset", emptyFile).ConfigureAwait(true);
 
             // Assert
             result.Should().NotBeNull();

@@ -6,6 +6,7 @@ using System.Linq;
 using AssetsTools.NET;
 using System.Diagnostics.CodeAnalysis;
 using AssetsTools.NET.Extra;
+using DINOForge.SDK.IO;
 
 namespace DINOForge.SDK.Assets
 {
@@ -67,9 +68,9 @@ namespace DINOForge.SDK.Assets
                 {
                     assetCount = CountAssetsInBundle(bundlePath);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Bundle may be corrupt or locked; report 0 assets
+                    LogWarning($"ListBundles: failed to count assets in '{bundlePath}': {ex}");
                 }
 
                 results.Add(new BundleInfo(
@@ -252,7 +253,7 @@ namespace DINOForge.SDK.Assets
             }
             catch (Exception ex)
             {
-                errors.Add($"Failed to read bundle: {ex.Message}");
+                errors.Add($"Failed to read bundle: {ex}");
             }
 
             return new AssetValidationResult(
@@ -302,7 +303,7 @@ namespace DINOForge.SDK.Assets
             }
             catch (Exception)
             {
-                // Not all asset types have m_Name; fall through
+                // safe-swallow: not all asset types expose m_Name; fall through to PathID fallback
             }
 
             return $"PathID_{info.PathId}";
@@ -599,7 +600,7 @@ namespace DINOForge.SDK.Assets
                     // safe-swallow: rotation is best-effort; continue to append
                 }
 
-                File.AppendAllText(logPath, $"[{_timeProvider.GetUtcNow().UtcDateTime:u}] WARN {message}\n");
+                SafeFileIO.AppendText(logPath, $"[{_timeProvider.GetUtcNow().UtcDateTime:u}] WARN {message}\n");
             }
             catch (Exception ex)
             {

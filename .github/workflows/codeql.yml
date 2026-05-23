@@ -36,7 +36,7 @@ jobs:
           languages: csharp
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Build
         run: |

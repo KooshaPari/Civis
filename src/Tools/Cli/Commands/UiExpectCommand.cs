@@ -28,7 +28,7 @@ internal static class UiExpectCommand
             string selector = parseResult.GetRequiredValue(selectorArg);
             string condition = parseResult.GetRequiredValue(conditionArg);
 
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -39,7 +39,7 @@ internal static class UiExpectCommand
                 return;
             }
 
-            UiExpectationResult result = await client.ExpectUiAsync(selector, condition, ct);
+            UiExpectationResult result = await client.ExpectUiAsync(selector, condition, ct).ConfigureAwait(false);
 
             if (json)
             {

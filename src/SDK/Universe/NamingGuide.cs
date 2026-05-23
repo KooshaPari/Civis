@@ -16,7 +16,7 @@ namespace DINOForge.SDK.Universe
         /// Per-faction naming rules.
         /// </summary>
         [YamlMember(Alias = "faction_rules")]
-        public Dictionary<string, FactionNamingRules> FactionRules { get; set; } = new Dictionary<string, FactionNamingRules>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, FactionNamingRules> FactionRules { get; set; } = new Dictionary<string, FactionNamingRules>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Global naming rules applied when no faction-specific rule matches.
@@ -88,7 +88,7 @@ namespace DINOForge.SDK.Universe
         /// Rules for different entity types (unit, building, weapon, vehicle).
         /// </summary>
         [YamlMember(Alias = "rules")]
-        public Dictionary<string, NamingRuleSet> Rules { get; set; } = new Dictionary<string, NamingRuleSet>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, NamingRuleSet> Rules { get; set; } = new Dictionary<string, NamingRuleSet>(StringComparer.OrdinalIgnoreCase); // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Applies the appropriate rule set for the given entity type.
@@ -133,7 +133,7 @@ namespace DINOForge.SDK.Universe
         /// Takes highest precedence.
         /// </summary>
         [YamlMember(Alias = "overrides")]
-        public Dictionary<string, string>? Overrides { get; set; }
+        public Dictionary<string, string>? Overrides { get; set; } // public-mutable-ok: YAML deserializer requires mutable Dictionary for YamlDotNet
 
         /// <summary>
         /// Applies this rule set to transform a base name.

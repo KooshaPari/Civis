@@ -94,6 +94,34 @@ namespace DINOForge.Runtime
         public IReadOnlyList<string>? GetLoadedPackIds() => _lastLoadResult?.LoadedPacks;
 
         /// <summary>
+        /// Builds the current pack list for UI presentation from the latest load result.
+        /// Returns an empty list if packs have not been loaded yet or the registry is unavailable.
+        /// </summary>
+        public IReadOnlyList<PackDisplayInfo> GetLoadedPackDisplayInfos()
+        {
+            if (_lastLoadResult == null || _registryManager == null)
+            {
+                return Array.Empty<PackDisplayInfo>();
+            }
+
+            return BuildPackDisplayInfos(_lastLoadResult);
+        }
+
+        /// <summary>Returns whether the last pack load result is available for diagnostics.</summary>
+        internal bool HasLastLoadResult => _lastLoadResult != null;
+
+        /// <summary>Describes the last pack load result for diagnostics.</summary>
+        internal string DescribeLastLoadResult()
+        {
+            if (_lastLoadResult == null)
+            {
+                return "lastLoadResult=NULL";
+            }
+
+            return $"lastLoadResult=present success={_lastLoadResult.IsSuccess} loaded={_lastLoadResult.LoadedPacks.Count} errors={_lastLoadResult.Errors.Count}";
+        }
+
+        /// <summary>
         /// Initializes the mod platform with all subsystems.
         /// Call this from <see cref="Plugin.Awake"/>.
         /// </summary>
@@ -683,56 +711,7 @@ namespace DINOForge.Runtime
 
             try
             {
-                // Build PackDisplayInfo list from the registry manager's loaded content
-                // We need to re-read manifests since ContentLoadResult only has IDs
-                List<PackDisplayInfo> packInfos = new List<PackDisplayInfo>();
-
-                // Use the packs directory to find manifests for display
-                string packsDir = _packsDirectory.Value;
-                if (Directory.Exists(packsDir))
-                {
-                    PackLoader packLoader = new PackLoader();
-                    foreach (string dir in Directory.GetDirectories(packsDir))
-                    {
-                        string manifestPath = Path.Combine(dir, "pack.yaml");
-                        if (!File.Exists(manifestPath)) continue;
-
-                        try
-                        {
-                            PackManifest manifest = packLoader.LoadFromFile(manifestPath);
-                            bool isLoaded = false;
-                            foreach (string loadedId in result.LoadedPacks)
-                            {
-                                if (string.Equals(loadedId, manifest.Id, StringComparison.Ordinal))
-                                {
-                                    isLoaded = true;
-                                    break;
-                                }
-                            }
-                            // Check if pack is disabled by user
-                            bool isDisabled = _disabledPacks.Contains(manifest.Id);
-
-                            packInfos.Add(new PackDisplayInfo(
-                                id: manifest.Id,
-                                name: manifest.Name,
-                                version: manifest.Version,
-                                author: manifest.Author,
-                                type: manifest.Type,
-                                description: manifest.Description,
-                                loadOrder: manifest.LoadOrder,
-                                isEnabled: isLoaded && !isDisabled,
-                                dependencies: manifest.DependsOn.AsReadOnly(),
-                                conflicts: manifest.ConflictsWith.AsReadOnly(),
-                                errors: new List<string>().AsReadOnly()));
-                        }
-                        catch (Exception ex)
-                        {
-                            _log.LogWarning($"[ModPlatform] Could not read manifest in {dir}: {ex}");
-                        }
-                    }
-                }
-
-                _modMenuHost.SetPacks(packInfos);
+                _modMenuHost.SetPacks(BuildPackDisplayInfos(result));
 
                 // Set status message — include first error detail so it's visible without logs.
                 string statusMsg;
@@ -754,6 +733,60 @@ namespace DINOForge.Runtime
             {
                 _log.LogError($"[ModPlatform] UI update failed: {ex}");
             }
+        }
+
+        private IReadOnlyList<PackDisplayInfo> BuildPackDisplayInfos(ContentLoadResult result)
+        {
+            // Build PackDisplayInfo list from the registry manager's loaded content.
+            // We need to re-read manifests since ContentLoadResult only has IDs.
+            List<PackDisplayInfo> packInfos = new List<PackDisplayInfo>();
+
+            // Use the packs directory to find manifests for display.
+            string packsDir = _packsDirectory.Value;
+            if (Directory.Exists(packsDir))
+            {
+                PackLoader packLoader = new PackLoader();
+                foreach (string dir in Directory.GetDirectories(packsDir))
+                {
+                    string manifestPath = Path.Combine(dir, "pack.yaml");
+                    if (!File.Exists(manifestPath)) continue;
+
+                    try
+                    {
+                        PackManifest manifest = packLoader.LoadFromFile(manifestPath);
+                        bool isLoaded = false;
+                        foreach (string loadedId in result.LoadedPacks)
+                        {
+                            if (string.Equals(loadedId, manifest.Id, StringComparison.Ordinal))
+                            {
+                                isLoaded = true;
+                                break;
+                            }
+                        }
+
+                        bool isDisabled = _disabledPacks.Contains(manifest.Id);
+
+                        packInfos.Add(new PackDisplayInfo(
+                            id: manifest.Id,
+                            name: manifest.Name,
+                            version: manifest.Version,
+                            author: manifest.Author,
+                            type: manifest.Type,
+                            description: manifest.Description,
+                            loadOrder: manifest.LoadOrder,
+                            isEnabled: isLoaded && !isDisabled,
+                            dependencies: manifest.DependsOn.AsReadOnly(),
+                            conflicts: manifest.ConflictsWith.AsReadOnly(),
+                            errors: new List<string>().AsReadOnly()));
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogWarning($"[ModPlatform] Could not read manifest in {dir}: {ex}");
+                    }
+                }
+            }
+
+            return packInfos;
         }
 
         /// <summary>

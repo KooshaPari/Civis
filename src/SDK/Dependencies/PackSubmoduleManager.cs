@@ -8,6 +8,7 @@ using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using DINOForge.SDK.IO;
 
 namespace DINOForge.SDK.Dependencies
 {
@@ -51,9 +52,10 @@ namespace DINOForge.SDK.Dependencies
         /// </summary>
         /// <param name="repoUrl">The repository URL (HTTPS or SSH format).</param>
         /// <param name="path">Optional submodule path. Defaults to packs/{repo-name} if not specified.</param>
+        /// <param name="ct">Cancellation token for the git subprocess.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="InvalidOperationException">Thrown if git command fails.</exception>
-        public Task AddPackAsync(string repoUrl, string? path = null)
+        public Task AddPackAsync(string repoUrl, string? path = null, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(repoUrl))
                 throw new ArgumentException("Repository URL cannot be empty.", nameof(repoUrl));
@@ -66,7 +68,7 @@ namespace DINOForge.SDK.Dependencies
             }
 
             // Normalize path separators for git
-            path = path.Replace("\\", "/");
+            path = (path ?? throw new ArgumentNullException(nameof(path))).Replace("\\", "/");
 
             // Run: git submodule add <repoUrl> <path>
             ProcessStartInfo psi = new ProcessStartInfo
@@ -80,7 +82,7 @@ namespace DINOForge.SDK.Dependencies
                 CreateNoWindow = true
             };
 
-            return RunGitCommandAsync(psi, "git submodule add");
+            return RunGitCommandAsync(psi, "git submodule add", ct);
         }
 
         /// <summary>
@@ -98,7 +100,7 @@ namespace DINOForge.SDK.Dependencies
             var pathToUrl = new Dictionary<string, string>(StringComparer.Ordinal);
 
             // Parse .gitmodules file
-            string content = File.ReadAllText(gitmodulesPath, Encoding.UTF8);
+            string content = SafeFileIO.ReadText(gitmodulesPath);
             string currentPath = string.Empty;
 
             foreach (string line in content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None))
@@ -143,7 +145,7 @@ namespace DINOForge.SDK.Dependencies
         /// </summary>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="InvalidOperationException">Thrown if git command fails.</exception>
-        public Task UpdateAllAsync()
+        public Task UpdateAllAsync(CancellationToken ct = default)
         {
             ProcessStartInfo psi = new ProcessStartInfo
             {
@@ -156,7 +158,7 @@ namespace DINOForge.SDK.Dependencies
                 CreateNoWindow = true
             };
 
-            return RunGitCommandAsync(psi, "git submodule update");
+            return RunGitCommandAsync(psi, "git submodule update", ct);
         }
 
         /// <summary>
@@ -175,12 +177,12 @@ namespace DINOForge.SDK.Dependencies
             var packs = ListPacks();
             foreach (var pack in packs)
             {
-                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct).ConfigureAwait(false);
+                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct);
                 lockEntries.Add(string.Format("{0} {1}", pack.Path, sha));
             }
 
             string lockPath = System.IO.Path.Combine(_workingDirectory, "packs.lock");
-            File.WriteAllLines(lockPath, lockEntries, System.Text.Encoding.UTF8);
+            SafeFileIO.WriteText(lockPath, string.Join(Environment.NewLine, lockEntries) + Environment.NewLine);
         }
 
         /// <summary>
@@ -196,7 +198,7 @@ namespace DINOForge.SDK.Dependencies
 
             var entries = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (string line in File.ReadAllLines(lockPath, Encoding.UTF8))
+            foreach (string line in SafeFileIO.ReadAllLines(lockPath))
             {
                 // Skip comments and empty lines
                 string trimmed = line.Trim();
@@ -257,7 +259,7 @@ namespace DINOForge.SDK.Dependencies
                 CreateNoWindow = true
             };
 
-            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct).ConfigureAwait(false);
+            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct);
         }
 
         /// <summary>
@@ -266,18 +268,14 @@ namespace DINOForge.SDK.Dependencies
         private static async Task<string> RunGitCommandWithOutputAsync(ProcessStartInfo psi, string commandName, CancellationToken ct = default)
         {
             // Pattern #102: wrap Process.Start in `using` to release handle deterministically.
-            using var process = Process.Start(psi);
+            using Process? process = Process.Start(psi);
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
-            // Use Task.Run to avoid deadlocks with synchronous reads in async context
-            Task<string> outputTask = Task.Run(() => process.StandardOutput.ReadToEnd());
-            Task<string> errorTask = Task.Run(() => process.StandardError.ReadToEnd());
+            await Task.Run(() => process.WaitForExit(), ct);
 
-            process.WaitForExit();
-
-            string output = await outputTask.ConfigureAwait(false);
-            string error = await errorTask.ConfigureAwait(false);
+            string output = await Task.Run(() => process.StandardOutput.ReadToEnd(), ct);
+            string error = await Task.Run(() => process.StandardError.ReadToEnd(), ct);
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
@@ -288,23 +286,19 @@ namespace DINOForge.SDK.Dependencies
         /// <summary>
         /// Runs a git command asynchronously.
         /// </summary>
-        private static Task RunGitCommandAsync(ProcessStartInfo psi, string commandName)
+        private static async Task RunGitCommandAsync(ProcessStartInfo psi, string commandName, CancellationToken ct = default)
         {
-            return Task.Run(() =>
+            using Process? process = Process.Start(psi);
+            if (process == null)
+                throw new InvalidOperationException("Failed to start git process");
+
+            await Task.Run(() => process.WaitForExit(), ct);
+
+            if (process.ExitCode != 0)
             {
-                // Pattern #102: wrap Process.Start in `using` to release handle deterministically.
-                using var process = Process.Start(psi);
-                if (process == null)
-                    throw new InvalidOperationException("Failed to start git process");
-
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
-                {
-                    string error = process.StandardError.ReadToEnd();
-                    throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
-                }
-            });
+                string error = await Task.Run(() => process.StandardError.ReadToEnd(), ct);
+                throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
+            }
         }
     }
 }

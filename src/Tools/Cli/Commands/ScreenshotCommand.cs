@@ -26,7 +26,7 @@ internal static class ScreenshotCommand
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             string? output = parseResult.GetValue(outputOpt);
-            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json);
+            using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
             if (client is null)
             {
                 if (json)
@@ -37,7 +37,7 @@ internal static class ScreenshotCommand
                 return;
             }
 
-            ScreenshotResult result = await client.ScreenshotAsync(output, ct);
+            ScreenshotResult result = await client.ScreenshotAsync(output, ct).ConfigureAwait(false);
 
             if (json)
             {

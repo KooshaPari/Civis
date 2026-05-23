@@ -68,22 +68,6 @@
   <!-- Link pure-C# Runtime bridge files directly — no Unity/BepInEx project reference needed -->
   <!-- Step 6: Runtime Extraction Tests (30 tests for pure-C# bridge logic) -->
   <ItemGroup>
-    <Compile Include="..\Runtime\Bridge\PackStatMappings.cs">
-      <Link>RuntimeBridge\PackStatMappings.cs</Link>
-    </Compile>
-    <Compile Include="..\Runtime\Bridge\VanillaArchetypeMapper.cs">
-      <Link>RuntimeBridge\VanillaArchetypeMapper.cs</Link>
-    </Compile>
-    <Compile Include="..\Runtime\Bridge\ComponentMapping.cs">
-      <Link>RuntimeBridge\ComponentMapping.cs</Link>
-    </Compile>
-    <Compile Include="..\Runtime\Bridge\ComponentMap.cs">
-      <Link>RuntimeBridge\ComponentMap.cs</Link>
-    </Compile>
-    <!-- Phase 3: Rust Interop Tests (11 tests for P/Invoke wrapper) -->
-    <Compile Include="..\Runtime\RustAssetPipelineInterop.cs">
-      <Link>RustInterop\RustAssetPipelineInterop.cs</Link>
-    </Compile>
     <!-- Source-link NativeDepResolver from McpServer (net11.0 project) so NativeDepResolverTests
          (in this net8.0 Tests project) can exercise it without a net11.0 ProjectReference. -->
     <Compile Include="..\Tools\McpServer\NativeDepResolver.cs">

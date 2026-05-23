@@ -107,7 +107,7 @@ rootCommand.Add(AssetctlCommand.Create(serviceProvider));
 rootCommand.Add(SyncCommand.Create());
 
 ParseResult parseResult = rootCommand.Parse(args);
-return await parseResult.InvokeAsync();
+return await parseResult.InvokeAsync().ConfigureAwait(false);
 
 static void LoadEnvFile()
 {

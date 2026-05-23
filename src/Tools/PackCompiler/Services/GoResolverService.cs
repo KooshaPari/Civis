@@ -51,7 +51,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             {
                 try
                 {
-                    return await ResolveWithGoAsync(available, target);
+                    return await ResolveWithGoAsync(available, target).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -84,7 +84,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             try
             {
                 string inputJson = JsonSerializer.Serialize(input, JsonOptions);
-                await File.WriteAllTextAsync(tempInputPath, inputJson);
+                await File.WriteAllTextAsync(tempInputPath, inputJson).ConfigureAwait(false);
 
                 // Invoke Go binary
                 var psi = new ProcessStartInfo
@@ -112,13 +112,13 @@ namespace DINOForge.Tools.PackCompiler.Services
 
                     if (process.ExitCode != 0)
                     {
-                        string stderr = await process.StandardError.ReadToEndAsync();
+                        string stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
                         throw new InvalidOperationException($"Go resolver failed with exit code {process.ExitCode}: {stderr}");
                     }
                 }
 
                 // Read output
-                string outputJson = await File.ReadAllTextAsync(tempOutputPath);
+                string outputJson = await File.ReadAllTextAsync(tempOutputPath).ConfigureAwait(false);
                 var output = JsonSerializer.Deserialize<ResolverOutput>(outputJson, JsonOptions)
                     ?? throw new InvalidOperationException("Failed to deserialize Go resolver output");
 

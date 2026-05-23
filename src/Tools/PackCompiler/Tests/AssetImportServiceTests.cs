@@ -156,7 +156,12 @@ namespace DINOForge.Tools.PackCompiler.Tests
 
             // Assert
             result.Bounds.Should().NotBeNull();
-            var (min, max) = result.Bounds.Value;
+            if (result.Bounds is not { } bounds)
+            {
+                throw new InvalidOperationException("Expected bounds to be populated.");
+            }
+
+            var (min, max) = bounds;
             min.Should().HaveCount(3);
             max.Should().HaveCount(3);
             min[0].Should().BeLessThanOrEqualTo(max[0]);

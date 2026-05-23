@@ -15,6 +15,8 @@ civ-engine = { path = "../engine" }
 civ-voxel = { path = "../voxel" }
 civ-protocol-3d = { path = "../protocol-3d" }
 civ-server = { path = "../server" }
+civ-agents = { path = "../agents" }
+civ-tactics = { path = "../tactics" }
 axum = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 tokio-stream = { version = "0.1", features = ["sync"] }

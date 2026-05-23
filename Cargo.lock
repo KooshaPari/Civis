@@ -1384,9 +1384,11 @@ name = "civ-watch"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "civ-agents",
  "civ-engine",
  "civ-protocol-3d",
  "civ-server",
+ "civ-tactics",
  "civ-voxel",
  "futures",
  "serde",

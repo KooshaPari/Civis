@@ -1,16 +1,40 @@
 import React, { useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom/client";
-import { createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
-import { Scene3d } from "./scene3d";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
 
-type JobLabel = "Farmer" | "Warrior" | "Scholar" | "Trader" | "Priest" | "Admin" | "Unemployed";
+// ---------------------------------------------------------------------------
+// Types mirrored from crates/watch/src/main.rs + terrain.rs
+// ---------------------------------------------------------------------------
 
-type SampleCivilian = {
-  age: number;
-  health: number;
-  ideology: number;
-  welfare: number;
-  job: JobLabel | null;
+type Biome =
+  | "deepwater"
+  | "water"
+  | "sand"
+  | "grass"
+  | "forest"
+  | "stone"
+  | "snow";
+
+type Terrain = {
+  size: number;
+  heights: number[];
+  biomes: Biome[];
+};
+
+type Job =
+  | "farmer"
+  | "warrior"
+  | "scholar"
+  | "trader"
+  | "priest"
+  | "admin"
+  | "unemployed";
+
+type CivPin = {
+  idx: number;
+  x: number;
+  y: number;
+  job: Job | null;
 };
 
 type Snapshot = {
@@ -18,263 +42,509 @@ type Snapshot = {
   population: number;
   voxel_dirty_count: number;
   voxel_chunk_count: number;
-  sample_civilians: SampleCivilian[];
+  sample_civilians: Array<{
+    age: number;
+    health: number;
+    ideology: number;
+    welfare: number;
+    job: Job | null;
+  }>;
+  civ_pins: CivPin[];
+  is_day: boolean;
+  speed: number;
 };
 
-type ConnectionState = "live" | "reconnecting" | "disconnected";
-
-const rootRoute = createRootRoute({
-  component: Dashboard,
-});
-
-const router = createRouter({ routeTree: rootRoute });
-
-const JOB_COLORS: Record<JobLabel, string> = {
-  Farmer: "#53d36b",
-  Warrior: "#ff6262",
-  Scholar: "#5db2ff",
-  Trader: "#ffd65a",
-  Priest: "#c78bff",
-  Admin: "#8c96a8",
-  Unemployed: "#111111",
+const BIOME_COLOR: Record<Biome, string> = {
+  deepwater: "rgb(16, 38, 90)",
+  water: "rgb(44, 100, 168)",
+  sand: "rgb(222, 200, 132)",
+  grass: "rgb(104, 154, 60)",
+  forest: "rgb(44, 100, 52)",
+  stone: "rgb(128, 124, 116)",
+  snow: "rgb(240, 240, 240)",
 };
 
-function Dashboard() {
+const JOB_COLOR: Record<Job, string> = {
+  farmer: "#7ed957",
+  warrior: "#e74c3c",
+  scholar: "#5b9bd5",
+  trader: "#f1c40f",
+  priest: "#9b59b6",
+  admin: "#95a5a6",
+  unemployed: "#34495e",
+};
+
+type Tool =
+  | "place_voxel"
+  | "spawn_civilian"
+  | "damage"
+  | "inspect"
+  | "camera";
+
+// ---------------------------------------------------------------------------
+// HTTP helpers
+// ---------------------------------------------------------------------------
+
+async function postControl(path: string, body: unknown): Promise<boolean> {
+  try {
+    const res = await fetch(`/control/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({ ok: false }));
+    return Boolean(data?.ok);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchTerrain(): Promise<Terrain | null> {
+  try {
+    const res = await fetch("/terrain");
+    if (!res.ok) return null;
+    return (await res.json()) as Terrain;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Top-down terrain canvas with civilian overlay
+// ---------------------------------------------------------------------------
+
+function GodView(props: {
+  terrain: Terrain | null;
+  snapshot: Snapshot | null;
+  tool: Tool;
+  material: number;
+  radius: number;
+  faction: number;
+  onToast: (msg: string) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { terrain, snapshot } = props;
+
+  // Render heightmap base into an offscreen pattern when terrain changes.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !terrain) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const size = terrain.size;
+    canvas.width = size * 5;
+    canvas.height = size * 5;
+    // Paint biome cells.
+    const img = ctx.createImageData(canvas.width, canvas.height);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const biome = terrain.biomes[y * size + x];
+        const h = terrain.heights[y * size + x];
+        const [r, g, b] = parseRgb(BIOME_COLOR[biome]);
+        const shade = 0.65 + h * 0.35;
+        const cellR = Math.round(r * shade);
+        const cellG = Math.round(g * shade);
+        const cellB = Math.round(b * shade);
+        for (let dy = 0; dy < 5; dy++) {
+          for (let dx = 0; dx < 5; dx++) {
+            const px = (y * 5 + dy) * canvas.width + (x * 5 + dx);
+            const i = px * 4;
+            img.data[i] = cellR;
+            img.data[i + 1] = cellG;
+            img.data[i + 2] = cellB;
+            img.data[i + 3] = 255;
+          }
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }, [terrain]);
+
+  // Overlay civilian pins + day/night tint every snapshot frame.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !terrain || !snapshot) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // Re-paint base (cheap; ImageData is cached by the engine).
+    const w = canvas.width;
+    const h = canvas.height;
+    // Day/night veil — bluish at night, neutral at day.
+    if (!snapshot.is_day) {
+      ctx.save();
+      ctx.fillStyle = "rgba(10, 14, 40, 0.35)";
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+    // Civilian pins.
+    for (const pin of snapshot.civ_pins) {
+      const px = pin.x * w;
+      const py = pin.y * h;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = pin.job ? JOB_COLOR[pin.job] : "white";
+      ctx.fill();
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.stroke();
+    }
+  }, [snapshot, terrain]);
+
+  function onClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas || !terrain) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) / rect.width;
+    const cy = (e.clientY - rect.top) / rect.height;
+    const gridX = Math.floor(cx * terrain.size);
+    const gridY = Math.floor(cy * terrain.size);
+    const SCALE = 1_000_000;
+    const worldX = BigInt(gridX) * BigInt(SCALE);
+    const worldZ = BigInt(gridY) * BigInt(SCALE);
+    void (async () => {
+      switch (props.tool) {
+        case "place_voxel": {
+          const ok = await postControl("place_voxel", {
+            x: Number(worldX),
+            y: 0,
+            z: Number(worldZ),
+            material: props.material,
+          });
+          props.onToast(
+            ok ? `placed voxel @ ${gridX},${gridY}` : "place_voxel failed",
+          );
+          break;
+        }
+        case "spawn_civilian": {
+          const ok = await postControl("spawn_civilian", {
+            x: cx,
+            y: cy,
+            faction: props.faction,
+          });
+          props.onToast(ok ? `spawned civilian @ ${gridX},${gridY}` : "spawn failed");
+          break;
+        }
+        case "damage": {
+          const ok = await postControl("damage", {
+            x: Number(worldX),
+            y: 0,
+            z: Number(worldZ),
+            radius: props.radius,
+            energy: 100,
+          });
+          props.onToast(
+            ok ? `boom @ ${gridX},${gridY} r=${props.radius}` : "damage failed",
+          );
+          break;
+        }
+        case "inspect":
+          props.onToast(`inspect ${gridX},${gridY} (not wired yet)`);
+          break;
+        case "camera":
+          // Camera tool is a no-op on this 2D view (placeholder for 3D mode).
+          break;
+      }
+    })();
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      onClick={onClick}
+      className="god-canvas"
+      width={640}
+      height={640}
+    />
+  );
+}
+
+function parseRgb(s: string): [number, number, number] {
+  const m = s.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!m) return [255, 0, 255];
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+// ---------------------------------------------------------------------------
+// UI panes
+// ---------------------------------------------------------------------------
+
+function TopBar(props: { snapshot: Snapshot | null; status: string }) {
+  const s = props.snapshot;
+  return (
+    <div className="top-bar">
+      <div className="stat">
+        <div className="stat-label">Tick</div>
+        <div className="stat-value">{s?.tick ?? "—"}</div>
+      </div>
+      <div className="stat">
+        <div className="stat-label">Population</div>
+        <div className="stat-value">{s?.population?.toLocaleString() ?? "—"}</div>
+      </div>
+      <div className="stat">
+        <div className="stat-label">Voxel chunks</div>
+        <div className="stat-value">{s?.voxel_chunk_count ?? "—"}</div>
+      </div>
+      <div className="stat">
+        <div className="stat-label">Dirty / tick</div>
+        <div className="stat-value">{s?.voxel_dirty_count ?? "—"}</div>
+      </div>
+      <div className="stat">
+        <div className="stat-label">Day / Night</div>
+        <div className="stat-value">{s?.is_day ? "☀ Day" : "🌙 Night"}</div>
+      </div>
+      <div className="connection-pill" data-status={props.status}>
+        {props.status === "live"
+          ? "● Live"
+          : props.status === "reconnecting"
+            ? "● Reconnecting"
+            : "● Disconnected"}
+      </div>
+    </div>
+  );
+}
+
+function BottomBar(props: {
+  tool: Tool;
+  setTool: (t: Tool) => void;
+  speed: number;
+  setSpeed: (s: number) => void;
+  material: number;
+  setMaterial: (m: number) => void;
+  radius: number;
+  setRadius: (r: number) => void;
+  faction: number;
+  setFaction: (f: number) => void;
+}) {
+  const tools: Array<{ key: Tool; icon: string; label: string }> = [
+    { key: "place_voxel", icon: "🧱", label: "Voxel" },
+    { key: "spawn_civilian", icon: "👤", label: "Civilian" },
+    { key: "damage", icon: "💥", label: "Damage" },
+    { key: "inspect", icon: "🔍", label: "Inspect" },
+    { key: "camera", icon: "🎥", label: "Camera" },
+  ];
+  const speeds = [0, 1, 2, 4, 8];
+
+  async function applySpeed(s: number) {
+    props.setSpeed(s);
+    await postControl("speed", { speed: s });
+  }
+
+  return (
+    <div className="bottom-bar">
+      <div className="tool-group">
+        {tools.map((t) => (
+          <button
+            key={t.key}
+            className={`tool-btn ${props.tool === t.key ? "active" : ""}`}
+            onClick={() => props.setTool(t.key)}
+            title={t.label}
+          >
+            <span className="tool-icon">{t.icon}</span>
+            <span className="tool-label">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="divider" />
+
+      <div className="picker">
+        <label>Material</label>
+        <select
+          value={props.material}
+          onChange={(e) => props.setMaterial(Number(e.target.value))}
+        >
+          {Array.from({ length: 8 }, (_, i) => (
+            <option key={i} value={i}>
+              {i === 0 ? "(air)" : `material #${i}`}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="picker">
+        <label>Radius</label>
+        <input
+          type="range"
+          min={1}
+          max={32}
+          value={props.radius}
+          onChange={(e) => props.setRadius(Number(e.target.value))}
+        />
+        <span>{props.radius}</span>
+      </div>
+
+      <div className="picker">
+        <label>Faction</label>
+        <select
+          value={props.faction}
+          onChange={(e) => props.setFaction(Number(e.target.value))}
+        >
+          <option value={0}>Player</option>
+          <option value={1}>AI A</option>
+          <option value={2}>AI B</option>
+          <option value={3}>AI C</option>
+        </select>
+      </div>
+
+      <div className="divider" />
+
+      <div className="speed-group">
+        {speeds.map((s) => (
+          <button
+            key={s}
+            className={`speed-btn ${props.speed === s ? "active" : ""}`}
+            onClick={() => void applySpeed(s)}
+            title={s === 0 ? "Pause" : `${s}×`}
+          >
+            {s === 0 ? "⏸" : `${s}×`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SidePanel(props: { snapshot: Snapshot | null }) {
+  const sample = props.snapshot?.sample_civilians ?? [];
+  return (
+    <div className="side-panel">
+      <h3>Civilians (first 8)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Age</th>
+            <th>Health</th>
+            <th>Welfare</th>
+            <th>Ideology</th>
+            <th>Job</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sample.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="empty">
+                waiting for first tick…
+              </td>
+            </tr>
+          ) : (
+            sample.map((c, i) => (
+              <tr key={i}>
+                <td>{c.age}</td>
+                <td>{c.health.toFixed(2)}</td>
+                <td>{c.welfare.toFixed(2)}</td>
+                <td>{c.ideology.toFixed(2)}</td>
+                <td>{c.job ?? "—"}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// App shell
+// ---------------------------------------------------------------------------
+
+function App() {
+  const [terrain, setTerrain] = useState<Terrain | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [connection, setConnection] = useState<ConnectionState>("disconnected");
-  const reconnectTimerRef = useRef<number | null>(null);
-  const sourceRef = useRef<EventSource | null>(null);
-  const closedByCleanupRef = useRef(false);
+  const [status, setStatus] = useState<"live" | "reconnecting" | "disconnected">(
+    "reconnecting",
+  );
+  const [tool, setTool] = useState<Tool>("place_voxel");
+  const [material, setMaterial] = useState<number>(1);
+  const [radius, setRadius] = useState<number>(8);
+  const [faction, setFaction] = useState<number>(0);
+  const [speed, setSpeed] = useState<number>(1);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadSnapshot = async () => {
-      try {
-        const response = await fetch("/snapshot");
-        if (!response.ok) return;
-        const data = (await response.json()) as Snapshot | null;
-        if (data) setSnapshot(data);
-      } catch {
-        // Keep the SSE path as the primary live feed.
-      }
-    };
-
-    void loadSnapshot();
+    void fetchTerrain().then((t) => {
+      if (t) setTerrain(t);
+    });
   }, []);
 
+  // SSE subscription with auto-reconnect.
   useEffect(() => {
-    const scheduleReconnect = () => {
-      if (closedByCleanupRef.current) return;
-      if (reconnectTimerRef.current !== null) return;
-      setConnection((current) => (current === "live" ? "reconnecting" : current));
-      reconnectTimerRef.current = window.setTimeout(() => {
-        reconnectTimerRef.current = null;
-        connect();
-      }, 3000);
-    };
+    let active = true;
+    let es: EventSource | null = null;
+    let backoff: number | null = null;
 
-    const connect = () => {
-      if (closedByCleanupRef.current) return;
-      sourceRef.current?.close();
-      const source = new EventSource("/events");
-      sourceRef.current = source;
-
-      source.onopen = () => {
-        setConnection("live");
-      };
-
-      source.onmessage = () => {
-        setConnection("live");
-      };
-
-      source.addEventListener("snapshot", (event) => {
-        const payload = (event as MessageEvent<string>).data;
-        setSnapshot(JSON.parse(payload) as Snapshot);
-        setConnection("live");
-      });
-
-      source.onerror = () => {
-        if (source.readyState === EventSource.CLOSED) {
-          setConnection("disconnected");
-          scheduleReconnect();
-          return;
+    function connect() {
+      if (!active) return;
+      setStatus("reconnecting");
+      es = new EventSource("/events");
+      es.addEventListener("snapshot", (ev: MessageEvent) => {
+        if (!active) return;
+        try {
+          const snap = JSON.parse(ev.data) as Snapshot;
+          setSnapshot(snap);
+          setSpeed(snap.speed);
+          setStatus("live");
+        } catch {
+          /* ignore */
         }
-        setConnection("reconnecting");
-        scheduleReconnect();
+      });
+      es.onerror = () => {
+        setStatus("disconnected");
+        es?.close();
+        backoff = window.setTimeout(connect, 3000) as unknown as number;
       };
-    };
+    }
 
     connect();
 
     return () => {
-      closedByCleanupRef.current = true;
-      sourceRef.current?.close();
-      if (reconnectTimerRef.current !== null) {
-        window.clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
+      active = false;
+      es?.close();
+      if (backoff) window.clearTimeout(backoff);
     };
   }, []);
 
+  // Toast auto-dismiss.
   useEffect(() => {
-    const handle = window.setInterval(async () => {
-      if (snapshot) return;
-      try {
-        const response = await fetch("/snapshot");
-        if (!response.ok) return;
-        const data = (await response.json()) as Snapshot | null;
-        if (data) setSnapshot(data);
-      } catch {
-        // Polling fallback stays best-effort while SSE reconnects.
-      }
-    }, 3000);
-    return () => window.clearInterval(handle);
-  }, [snapshot]);
-
-  const connectionLabel = {
-    live: "Live",
-    reconnecting: "Reconnecting",
-    disconnected: "Disconnected",
-  }[connection];
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   return (
-    <main className="shell">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">Civis 3D live watch</p>
-          <h1>Simulation dashboard</h1>
-          <p className="subhead">Live snapshot feed with voxel activity and civilian sampling.</p>
+    <div className="app">
+      <TopBar snapshot={snapshot} status={status} />
+      <div className="main">
+        <div className="canvas-pane">
+          <GodView
+            terrain={terrain}
+            snapshot={snapshot}
+            tool={tool}
+            material={material}
+            radius={radius}
+            faction={faction}
+            onToast={setToast}
+          />
         </div>
-        <span className={`status ${connection}`}>Connection: {connectionLabel}</span>
-      </section>
-
-      <section className="metrics">
-        <Metric label="Tick" value={snapshot?.tick ?? 0} />
-        <Metric label="Population" value={snapshot?.population ?? 0} />
-        <Metric label="Voxel dirty" value={snapshot?.voxel_dirty_count ?? 0} />
-        <Metric label="Voxel chunks" value={snapshot?.voxel_chunk_count ?? 0} />
-      </section>
-
-      <section className="grid">
-        <article className="panel canvas-panel">
-          <header>
-          <h2>3D voxel field</h2>
-          <p>Orbit the camera, watch the voxel grid, and track the pulse cube at the origin.</p>
-        </header>
-          <Scene3d snapshot={snapshot} />
-        </article>
-
-        <article className="panel table-panel">
-          <header>
-            <h2>Sample civilians</h2>
-            <p>Up to eight civilians sampled from the latest snapshot.</p>
-          </header>
-          <div className="table-wrap">
-            <table className="civilian-table">
-              <thead>
-                <tr>
-                  <th>Age</th>
-                  <th>Health</th>
-                  <th>Welfare</th>
-                  <th>Ideology</th>
-                  <th>Job</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snapshot?.sample_civilians.length ? (
-                  snapshot.sample_civilians.map((civilian, index) => (
-                    <tr key={`${civilian.age}-${index}`}>
-                      <td>{civilian.age}</td>
-                      <td>{civilian.health.toFixed(2)}</td>
-                      <td>{civilian.welfare.toFixed(2)}</td>
-                      <td>{civilian.ideology.toFixed(2)}</td>
-                      <td>
-                        <span className={`job job-${jobClassName(civilian.job)}`}>{civilian.job ?? "Unemployed"}</span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="empty">
-                      Waiting for first snapshot...
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </section>
-    </main>
+        <SidePanel snapshot={snapshot} />
+      </div>
+      <BottomBar
+        tool={tool}
+        setTool={setTool}
+        speed={speed}
+        setSpeed={setSpeed}
+        material={material}
+        setMaterial={setMaterial}
+        radius={radius}
+        setRadius={setRadius}
+        faction={faction}
+        setFaction={setFaction}
+      />
+      {toast && <div className="toast">{toast}</div>}
+    </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
+const root = document.getElementById("root");
+if (root) {
+  createRoot(root).render(<App />);
 }
-
-function jobClassName(job: JobLabel | null) {
-  return (job ?? "Unemployed").toLowerCase();
-}
-
-document.body.style.margin = "0";
-document.body.style.background = "radial-gradient(circle at top, #111b2f 0%, #05070c 60%)";
-document.body.style.color = "#eef3ff";
-document.body.style.fontFamily = "Inter, system-ui, sans-serif";
-
-const style = document.createElement("style");
-style.textContent = `
-  * { box-sizing: border-box; }
-  body { min-height: 100vh; }
-  .shell { padding: 24px; max-width: 1320px; margin: 0 auto; }
-  .hero { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 20px; }
-  .eyebrow { margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.22em; color: #7ec6ff; font-size: 12px; }
-  .subhead { margin-top: 10px; color: #99a9c8; max-width: 60ch; }
-  h1, h2, p { margin: 0; }
-  h1 { font-size: clamp(2.2rem, 5vw, 4.2rem); line-height: 0.95; }
-  .status { border-radius: 999px; padding: 10px 14px; font-weight: 700; white-space: nowrap; align-self: center; }
-  .status.live { background: rgba(34, 197, 94, 0.16); color: #9ef7b6; }
-  .status.reconnecting { background: rgba(249, 115, 22, 0.18); color: #ffc28f; }
-  .status.disconnected { background: rgba(239, 68, 68, 0.16); color: #ffadad; }
-  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 20px; }
-  .metric, .panel { background: rgba(10, 16, 28, 0.88); border: 1px solid rgba(126, 198, 255, 0.14); border-radius: 20px; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35); backdrop-filter: blur(10px); }
-  .metric { padding: 18px; display: grid; gap: 8px; }
-  .metric span { color: #90a4c6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; }
-  .metric strong { font-size: clamp(1.8rem, 3vw, 2.6rem); line-height: 1; }
-  .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 16px; align-items: start; }
-  .panel { padding: 18px; }
-  .panel header { display: grid; gap: 6px; margin-bottom: 14px; }
-  .panel header p { color: #90a4c6; }
-  .scene3d { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 16px; background: radial-gradient(circle at top, rgba(52, 93, 143, 0.45), rgba(6, 12, 22, 0.92)); border: 1px solid rgba(126, 198, 255, 0.08); overflow: hidden; }
-  .table-wrap { overflow: auto; border-radius: 16px; border: 1px solid rgba(126, 198, 255, 0.08); }
-  .civilian-table { width: 100%; border-collapse: collapse; min-width: 440px; }
-  .civilian-table th, .civilian-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(126, 198, 255, 0.08); }
-  .civilian-table th { color: #9bb0d3; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; background: rgba(255, 255, 255, 0.02); }
-  .civilian-table td { color: #eef3ff; }
-  .civilian-table tbody tr:last-child td { border-bottom: none; }
-  .empty { color: #90a4c6; padding: 20px 14px; text-align: center; }
-  .job { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; color: #08111f; font-weight: 700; font-size: 12px; }
-  .job-farmer { background: ${JOB_COLORS.Farmer}; }
-  .job-warrior { background: ${JOB_COLORS.Warrior}; }
-  .job-scholar { background: ${JOB_COLORS.Scholar}; }
-  .job-trader { background: ${JOB_COLORS.Trader}; }
-  .job-priest { background: ${JOB_COLORS.Priest}; }
-  .job-admin { background: ${JOB_COLORS.Admin}; }
-  .job-unemployed { background: ${JOB_COLORS.Unemployed}; color: #eef3ff; border: 1px solid rgba(255, 255, 255, 0.12); }
-  @media (max-width: 1024px) {
-    .metrics, .grid { grid-template-columns: 1fr; }
-    .hero { flex-direction: column; }
-    .status { align-self: flex-start; }
-  }
-`;
-document.head.appendChild(style);
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-);

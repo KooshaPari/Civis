@@ -23,7 +23,7 @@ pub use phenotype_voxel as kernel;
 pub use phenotype_voxel::{
     select_lod, to_chunk_coord, Chunk, ChunkCoord, ChunkId, ChunkView, DirtyChunkEvent, LodLevel,
     LodPolicy, MaterialId, MaterialPalette, MeshBuffer, MeshError, MeshResult, MeshVertex, Mesher,
-    OctreeNode, VoxelMaterial, VoxelOctree, VoxelScaleMultiplier, WorldCoord, WriteSeq,
+    OctreeNode, VoxelMaterial, VoxelOctree, VoxelScaleMultiplier, VoxelWorld, WorldCoord, WriteSeq,
     FIXED_SCALE,
 };
 
@@ -59,5 +59,44 @@ mod stub_tests {
         ];
         evts.sort();
         assert_eq!(evts[0].chunk_id, ChunkId(1));
+    }
+
+    /// FR-CIV-VOXEL-005 (early smoke) — VoxelWorld replay is bit-identical when
+    /// driven through the Civis re-export.
+    #[test]
+    fn voxel_world_replay_is_bit_identical_through_reexport() {
+        let writes: [(WorldCoord, u8); 3] = [
+            (
+                WorldCoord {
+                    x: 5_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                1,
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 5_000_000,
+                    z: 0,
+                },
+                2,
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 0,
+                    z: 5_000_000,
+                },
+                3,
+            ),
+        ];
+        let mut w1: VoxelWorld<u8> = VoxelWorld::new(1_000_000);
+        let mut w2: VoxelWorld<u8> = VoxelWorld::new(1_000_000);
+        for (pos, v) in writes {
+            w1.write(pos, v);
+            w2.write(pos, v);
+        }
+        assert_eq!(w1.drain_dirty(), w2.drain_dirty());
     }
 }

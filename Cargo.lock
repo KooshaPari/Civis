@@ -182,6 +182,7 @@ dependencies = [
  "proptest",
  "ron",
  "serde",
+ "thiserror",
  "tracing",
 ]
 

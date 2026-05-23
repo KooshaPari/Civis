@@ -25,6 +25,9 @@ tracing-subscriber = "0.3"
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 
+# Civis 3D voxel substrate (sibling Phenotype-org repo via civ-voxel).
+civ-voxel = { path = "../voxel" }
+
 [dev-dependencies]
 proptest = "1.4"
 tempfile = "3"

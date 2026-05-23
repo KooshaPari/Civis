@@ -152,6 +152,7 @@ name = "civ-engine"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "civ-voxel",
  "hecs",
  "proptest",
  "rand 0.8.6",

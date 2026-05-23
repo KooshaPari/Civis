@@ -2,6 +2,7 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
+use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::World;
 use rand::Rng;
 use rand::SeedableRng;
@@ -146,11 +147,19 @@ impl Default for WorldState {
     }
 }
 
-/// Simulation engine combining state + ECS world
+/// Simulation engine combining state + ECS world + 3D voxel substrate.
 pub struct Simulation {
     pub state: WorldState,
     pub world: World,
     rng: SimRng,
+    /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
+    /// structures + tactical combat impacts. Drained per tick by
+    /// [`Simulation::phase_voxel`].
+    voxel: VoxelWorld<MaterialId>,
+    /// Voxel dirty events produced during the most recent tick. Consumers
+    /// (renderer protocol bridge, replay log) read this each tick; it resets
+    /// at the start of every [`Simulation::tick`].
+    last_tick_voxel_events: Vec<DirtyChunkEvent>,
 }
 
 impl Simulation {
@@ -166,6 +175,8 @@ impl Simulation {
             state: WorldState::default(),
             world,
             rng,
+            voxel: VoxelWorld::new(FIXED_SCALE),
+            last_tick_voxel_events: Vec::new(),
         }
     }
 
@@ -182,7 +193,30 @@ impl Simulation {
             },
             world,
             rng,
+            voxel: VoxelWorld::new(FIXED_SCALE),
+            last_tick_voxel_events: Vec::new(),
         }
+    }
+
+    /// Borrow the 3D voxel substrate. Read-only.
+    #[must_use]
+    pub fn voxel(&self) -> &VoxelWorld<MaterialId> {
+        &self.voxel
+    }
+
+    /// Mutable borrow of the voxel substrate. Writes accumulated here drain
+    /// through [`Simulation::phase_voxel`] on the next tick.
+    pub fn voxel_mut(&mut self) -> &mut VoxelWorld<MaterialId> {
+        &mut self.voxel
+    }
+
+    /// Dirty voxel events produced during the most recent tick. Replay logs,
+    /// `civ-protocol-3d` frame builders, and the renderer bridge all read
+    /// from this slice. The vector resets at the start of every
+    /// [`Simulation::tick`].
+    #[must_use]
+    pub fn last_tick_voxel_events(&self) -> &[DirtyChunkEvent] {
+        &self.last_tick_voxel_events
     }
 
     /// Spawn initial world entities
@@ -246,6 +280,15 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.phase_voxel();
+    }
+
+    /// Voxel phase — drains the deterministic dirty-event queue from
+    /// [`VoxelWorld`] into [`Simulation::last_tick_voxel_events`]. Replay-safe
+    /// per ADR-004 + ADR-005: the kernel guarantees `(chunk_id, write_seq)`
+    /// ordering.
+    fn phase_voxel(&mut self) {
+        self.last_tick_voxel_events = self.voxel.drain_dirty();
     }
 
     /// Production phase - buildings produce resources
@@ -393,5 +436,97 @@ mod tests {
 
         assert_eq!(sim1.state.tick, sim2.state.tick);
         assert_eq!(sim1.state.population, sim2.state.population);
+    }
+
+    /// FR-CIV-VOXEL-006 — voxel writes between ticks produce dirty events that
+    /// the engine's voxel phase drains into `last_tick_voxel_events`, in
+    /// `(chunk_id, write_seq)` order.
+    #[test]
+    fn voxel_phase_drains_dirty_events_each_tick() {
+        use civ_voxel::WorldCoord;
+        let mut sim = Simulation::with_seed(42);
+        // Tick once with nothing pending — should be empty.
+        sim.tick();
+        assert!(sim.last_tick_voxel_events().is_empty());
+        // Write four voxels in two chunks, then tick.
+        sim.voxel_mut()
+            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: 1_000_000,
+                y: 0,
+                z: 0,
+            },
+            MaterialId(1),
+        );
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: 100_000_000,
+                y: 0,
+                z: 0,
+            },
+            MaterialId(1),
+        );
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: 101_000_000,
+                y: 0,
+                z: 0,
+            },
+            MaterialId(1),
+        );
+        sim.tick();
+        let events = sim.last_tick_voxel_events();
+        assert_eq!(events.len(), 4);
+        // Sorted ascending by (chunk_id, write_seq).
+        for window in events.windows(2) {
+            assert!(window[0] <= window[1]);
+        }
+        // Next tick clears them.
+        sim.tick();
+        assert!(sim.last_tick_voxel_events().is_empty());
+    }
+
+    /// FR-CIV-VOXEL-007 — voxel state is part of the deterministic simulation:
+    /// two sims with identical seed + identical voxel-write sequences emit
+    /// bit-identical voxel events.
+    #[test]
+    fn voxel_phase_replay_is_bit_identical() {
+        use civ_voxel::WorldCoord;
+        let mut sim1 = Simulation::with_seed(7);
+        let mut sim2 = Simulation::with_seed(7);
+        let writes = [
+            (
+                WorldCoord {
+                    x: 5_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                MaterialId(2),
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 5_000_000,
+                    z: 0,
+                },
+                MaterialId(3),
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 0,
+                    z: 5_000_000,
+                },
+                MaterialId(4),
+            ),
+        ];
+        for (pos, mat) in writes {
+            sim1.voxel_mut().write(pos, mat);
+            sim2.voxel_mut().write(pos, mat);
+        }
+        sim1.tick();
+        sim2.tick();
+        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
     }
 }

@@ -3,7 +3,15 @@ import React, { createContext, useContext, useReducer } from "react";
 export type ToolKind = "PlaceVoxel" | "SpawnCivilian" | "DamageBomb" | "InspectAgent" | "Camera";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
 
-export type JobLabel = "Farmer" | "Warrior" | "Scholar" | "Trader" | "Priest" | "Admin" | "Unemployed";
+export type JobLabel = "farmer" | "warrior" | "scholar" | "trader" | "priest" | "admin" | "unemployed";
+
+export type Biome = "deepwater" | "water" | "sand" | "grass" | "forest" | "stone" | "snow";
+
+export type Terrain = {
+  size: number;
+  heights: number[];
+  biomes: Biome[];
+};
 
 export type SampleCivilian = {
   age: number;
@@ -13,12 +21,22 @@ export type SampleCivilian = {
   job: JobLabel | null;
 };
 
+export type CivPin = {
+  idx: number;
+  x: number;
+  y: number;
+  job: JobLabel | null;
+};
+
 export type Snapshot = {
   tick: number;
   population: number;
   voxel_dirty_count: number;
   voxel_chunk_count: number;
   sample_civilians: SampleCivilian[];
+  civ_pins: CivPin[];
+  is_day: boolean;
+  speed: TimeSpeed;
 };
 
 export type CivilianFields = SampleCivilian & {
@@ -43,9 +61,11 @@ type State = {
   selectedMaterial: number;
   selectedEra: number;
   damageRadius: number;
+  selectedFaction: number;
   selectedCivilian: CivilianFields | null;
   connection: "live" | "reconnecting" | "disconnected";
   snapshot: Snapshot | null;
+  terrain: Terrain | null;
   inspectorOpen: boolean;
   toast: Toast | null;
 };
@@ -56,9 +76,11 @@ type Action =
   | { type: "set_material"; material: number }
   | { type: "set_era"; era: number }
   | { type: "set_damage_radius"; radius: number }
+  | { type: "set_selected_faction"; faction: number }
   | { type: "set_selected_civilian"; civilian: CivilianFields | null }
   | { type: "set_connection"; connection: State["connection"] }
   | { type: "set_snapshot"; snapshot: Snapshot | null }
+  | { type: "set_terrain"; terrain: Terrain | null }
   | { type: "set_inspector_open"; open: boolean }
   | { type: "set_toast"; message: string | null }
   | { type: "clear_toast" };
@@ -68,10 +90,12 @@ const initialState: State = {
   speed: 1,
   selectedMaterial: 1,
   selectedEra: 0,
-  damageRadius: 3,
+  damageRadius: 8,
+  selectedFaction: 0,
   selectedCivilian: null,
   connection: "disconnected",
   snapshot: null,
+  terrain: null,
   inspectorOpen: true,
   toast: null,
 };
@@ -88,12 +112,16 @@ function reducer(state: State, action: Action): State {
       return { ...state, selectedEra: action.era };
     case "set_damage_radius":
       return { ...state, damageRadius: action.radius };
+    case "set_selected_faction":
+      return { ...state, selectedFaction: action.faction };
     case "set_selected_civilian":
       return { ...state, selectedCivilian: action.civilian };
     case "set_connection":
       return { ...state, connection: action.connection };
     case "set_snapshot":
       return { ...state, snapshot: action.snapshot };
+    case "set_terrain":
+      return { ...state, terrain: action.terrain };
     case "set_inspector_open":
       return { ...state, inspectorOpen: action.open };
     case "set_toast":
@@ -128,3 +156,5 @@ export function useDashboardStore() {
   return value;
 }
 
+// postControl lives in `./control` to avoid two competing implementations;
+// import from there.

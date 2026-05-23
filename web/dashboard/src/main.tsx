@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import { Scene3d } from "./scene3d";
 
 type JobLabel = "Farmer" | "Warrior" | "Scholar" | "Trader" | "Priest" | "Admin" | "Unemployed";
 
@@ -41,8 +42,6 @@ const JOB_COLORS: Record<JobLabel, string> = {
 function Dashboard() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [connection, setConnection] = useState<ConnectionState>("disconnected");
-  const [canvasTick, setCanvasTick] = useState(0);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
   const closedByCleanupRef = useRef(false);
@@ -131,24 +130,6 @@ function Dashboard() {
     return () => window.clearInterval(handle);
   }, [snapshot]);
 
-  useEffect(() => {
-    const id = window.setInterval(() => setCanvasTick((value) => value + 1), 120);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const draw = () => {
-      drawCanvas(ctx, snapshot, canvasTick);
-    };
-
-    draw();
-  }, [snapshot, canvasTick]);
-
   const connectionLabel = {
     live: "Live",
     reconnecting: "Reconnecting",
@@ -176,10 +157,10 @@ function Dashboard() {
       <section className="grid">
         <article className="panel canvas-panel">
           <header>
-            <h2>Top-down field</h2>
-            <p>Grid rendered at 50px intervals. Origin pulse reflects the current tick.</p>
-          </header>
-          <canvas ref={canvasRef} className="map" width={600} height={400} aria-label="Top-down simulation view" />
+          <h2>3D voxel field</h2>
+          <p>Orbit the camera, watch the voxel grid, and track the pulse cube at the origin.</p>
+        </header>
+          <Scene3d snapshot={snapshot} />
         </article>
 
         <article className="panel table-panel">
@@ -240,88 +221,6 @@ function jobClassName(job: JobLabel | null) {
   return (job ?? "Unemployed").toLowerCase();
 }
 
-function drawCanvas(ctx: CanvasRenderingContext2D, snapshot: Snapshot | null, canvasTick: number) {
-  const width = 600;
-  const height = 400;
-
-  ctx.clearRect(0, 0, width, height);
-
-  const background = ctx.createLinearGradient(0, 0, width, height);
-  background.addColorStop(0, "#07101d");
-  background.addColorStop(1, "#0d1728");
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.strokeStyle = "rgba(148, 190, 255, 0.14)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= width; x += 50) {
-    ctx.beginPath();
-    ctx.moveTo(x + 0.5, 0);
-    ctx.lineTo(x + 0.5, height);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= height; y += 50) {
-    ctx.beginPath();
-    ctx.moveTo(0, y + 0.5);
-    ctx.lineTo(width, y + 0.5);
-    ctx.stroke();
-  }
-
-  const originX = width / 2;
-  const originY = height / 2;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
-  ctx.beginPath();
-  ctx.arc(originX, originY, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (!snapshot) return;
-
-  const pulse = 6 + Math.sin(canvasTick / 3) * 3;
-  ctx.fillStyle = "rgba(120, 217, 255, 0.2)";
-  ctx.beginPath();
-  ctx.arc(originX, originY, pulse, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(120, 217, 255, 0.8)";
-  ctx.beginPath();
-  ctx.arc(originX, originY, pulse + 3, 0, Math.PI * 2);
-  ctx.stroke();
-
-  snapshot.sample_civilians.slice(0, 8).forEach((civilian, index) => {
-    const job = civilian.job ?? "Unemployed";
-    const color = JOB_COLORS[job];
-    const x = derivePosition(
-      width,
-      40,
-      20,
-      160,
-      civilian.age * 13 + civilian.health * 19 + index * 71 + snapshot.tick * 7,
-    );
-    const y = derivePosition(
-      height,
-      42,
-      20,
-      156,
-      civilian.welfare * 31 + civilian.ideology * 23 + index * 53 + snapshot.tick * 5,
-    );
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, 5.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-    ctx.beginPath();
-    ctx.arc(x, y, 8.5, 0, Math.PI * 2);
-    ctx.stroke();
-  });
-}
-
-function derivePosition(limit: number, min: number, padding: number, range: number, seed: number) {
-  const span = Math.max(limit - padding * 2, 1);
-  const value = Math.abs(Math.sin(seed) * range) % span;
-  return padding + min + value * 0.9;
-}
-
 document.body.style.margin = "0";
 document.body.style.background = "radial-gradient(circle at top, #111b2f 0%, #05070c 60%)";
 document.body.style.color = "#eef3ff";
@@ -350,7 +249,7 @@ style.textContent = `
   .panel { padding: 18px; }
   .panel header { display: grid; gap: 6px; margin-bottom: 14px; }
   .panel header p { color: #90a4c6; }
-  .map { width: 100%; height: auto; aspect-ratio: 3 / 2; display: block; border-radius: 16px; background: #08111f; }
+  .scene3d { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 16px; background: radial-gradient(circle at top, rgba(52, 93, 143, 0.45), rgba(6, 12, 22, 0.92)); border: 1px solid rgba(126, 198, 255, 0.08); overflow: hidden; }
   .table-wrap { overflow: auto; border-radius: 16px; border: 1px solid rgba(126, 198, 255, 0.08); }
   .civilian-table { width: 100%; border-collapse: collapse; min-width: 440px; }
   .civilian-table th, .civilian-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(126, 198, 255, 0.08); }

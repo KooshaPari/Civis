@@ -48,6 +48,28 @@ pub enum ValidationOutcome {
     Reject(RejectReason),
 }
 
+/// Error returned by an LLM client.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LlmError {
+    /// The network or service is unavailable.
+    NetworkUnavailable,
+    /// The client was rate limited.
+    RateLimited,
+    /// The model returned a response that could not be interpreted as a tech card.
+    InvalidResponse(String),
+}
+
+/// Async client for proposing tech cards from a prompt and snapshot hash.
+#[allow(async_fn_in_trait)]
+pub trait LlmClient: Send + Sync {
+    /// Propose a tech card from the given prompt and snapshot hash.
+    async fn propose_tech_card(
+        &self,
+        prompt: &str,
+        snapshot_hash: &[u8],
+    ) -> Result<TechCard, LlmError>;
+}
+
 /// Why a card was rejected.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RejectReason {
@@ -65,6 +87,19 @@ pub enum RejectReason {
     /// The card declared no inputs, outputs, or byproducts — equivalent to
     /// `FictionalExtensionUnderspecified` for tech cards.
     NoEffects,
+}
+
+/// Outcome of a research cycle.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResearchOutcome {
+    /// The proposed card was accepted and inserted into the cache.
+    Accepted(TechCard),
+    /// The proposed card was rejected by the validator.
+    Rejected(RejectReason),
+    /// The cache already had a result for this snapshot hash.
+    CacheHit(TechCard),
+    /// The client failed before producing a usable card.
+    ClientError(LlmError),
 }
 
 /// Validate `card` against `db`. Pure function; no I/O.
@@ -89,6 +124,32 @@ pub fn validate(card: &TechCard, db: &LawDb) -> ValidationOutcome {
         }
     }
     ValidationOutcome::Accept
+}
+
+/// Run the research pipeline for a prompt/snapshot pair.
+pub async fn run_research_cycle<C: LlmClient>(
+    client: &C,
+    cache: &mut ResearchCache,
+    db: &LawDb,
+    prompt: &str,
+    snapshot_hash: &[u8],
+) -> ResearchOutcome {
+    if let Some(card) = cache.get(snapshot_hash) {
+        return ResearchOutcome::CacheHit(card.clone());
+    }
+
+    let card = match client.propose_tech_card(prompt, snapshot_hash).await {
+        Ok(card) => card,
+        Err(err) => return ResearchOutcome::ClientError(err),
+    };
+
+    match validate(&card, db) {
+        ValidationOutcome::Accept => {
+            cache.insert(snapshot_hash, card.clone());
+            ResearchOutcome::Accepted(card)
+        }
+        ValidationOutcome::Reject(reason) => ResearchOutcome::Rejected(reason),
+    }
 }
 
 /// Hash of `(prompt_hash, input_snapshot_hash)` keying the LLM cache.
@@ -128,6 +189,46 @@ impl ResearchCache {
     }
 }
 
+/// Deterministic client for tests.
+#[derive(Debug, Default, Clone)]
+pub struct DummyLlmClient;
+
+impl DummyLlmClient {
+    fn hash_input(prompt: &str, snapshot_hash: &[u8]) -> u64 {
+        let mut state: u64 = 0xcbf29ce484222325;
+        for byte in prompt.as_bytes().iter().chain(snapshot_hash.iter()) {
+            state ^= u64::from(*byte);
+            state = state.wrapping_mul(0x100000001b3);
+        }
+        state
+    }
+
+    fn derived_card(prompt: &str, snapshot_hash: &[u8]) -> TechCard {
+        let hash = Self::hash_input(prompt, snapshot_hash);
+        let era = (hash as u16) % 10 + 1;
+        let id = format!("tech_{hash:016x}");
+        let energy_cost = hash.rotate_left(17) % 10_000 + 1;
+        TechCard {
+            id,
+            era,
+            inputs: vec![format!("input_{:08x}", hash as u32)],
+            energy_cost,
+            byproducts: vec![format!("byproduct_{:08x}", (hash >> 32) as u32)],
+            dependencies: vec!["mass_conservation".into()],
+        }
+    }
+}
+
+impl LlmClient for DummyLlmClient {
+    async fn propose_tech_card(
+        &self,
+        prompt: &str,
+        snapshot_hash: &[u8],
+    ) -> Result<TechCard, LlmError> {
+        Ok(Self::derived_card(prompt, snapshot_hash))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,6 +257,21 @@ mod tests {
                     dependencies: vec!["mass_conservation".into()],
                 },
             ],
+        }
+    }
+
+    fn valid_research_db() -> LawDb {
+        LawDb {
+            version: 0,
+            laws: vec![Law {
+                id: "mass_conservation".into(),
+                kind: LawKind::Conservation,
+                era_min: 0,
+                inputs: vec![],
+                outputs: vec![],
+                losses: vec![],
+                dependencies: vec![],
+            }],
         }
     }
 
@@ -251,5 +367,109 @@ mod tests {
         cache.insert(key, card.clone());
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.get(key), Some(&card));
+    }
+
+    struct StaticClient {
+        card: Result<TechCard, LlmError>,
+    }
+
+    impl LlmClient for StaticClient {
+        async fn propose_tech_card(
+            &self,
+            _prompt: &str,
+            _snapshot_hash: &[u8],
+        ) -> Result<TechCard, LlmError> {
+            self.card.clone()
+        }
+    }
+
+    /// FR-CIV-RESEARCH-030 — cache hit short-circuits client.
+    #[tokio::test]
+    async fn research_cycle_cache_hit_short_circuits_client() {
+        let mut cache = ResearchCache::default();
+        let db = valid_research_db();
+        let key = b"snapshot";
+        let card = TechCard {
+            id: "cached".into(),
+            era: 1,
+            inputs: vec!["ore".into()],
+            energy_cost: 1,
+            byproducts: vec!["slag".into()],
+            dependencies: vec!["mass_conservation".into()],
+        };
+        cache.insert(key, card.clone());
+        let client = StaticClient {
+            card: Ok(TechCard {
+                id: "should_not_be_used".into(),
+                era: 1,
+                inputs: vec!["x".into()],
+                energy_cost: 1,
+                byproducts: vec!["y".into()],
+                dependencies: vec!["mass_conservation".into()],
+            }),
+        };
+
+        let outcome = run_research_cycle(&client, &mut cache, &db, "prompt", key).await;
+        assert_eq!(outcome, ResearchOutcome::CacheHit(card));
+    }
+
+    /// FR-CIV-RESEARCH-031 — valid client output is accepted and cached.
+    #[tokio::test]
+    async fn research_cycle_accepts_valid_card() {
+        let mut cache = ResearchCache::default();
+        let db = valid_research_db();
+        let key = b"snapshot-2";
+        let card = TechCard {
+            id: "new_tech".into(),
+            era: 1,
+            inputs: vec!["ore".into()],
+            energy_cost: 10,
+            byproducts: vec!["dust".into()],
+            dependencies: vec!["mass_conservation".into()],
+        };
+        let client = StaticClient {
+            card: Ok(card.clone()),
+        };
+
+        let outcome = run_research_cycle(&client, &mut cache, &db, "prompt", key).await;
+        assert_eq!(outcome, ResearchOutcome::Accepted(card.clone()));
+        assert_eq!(cache.get(key), Some(&card));
+    }
+
+    /// FR-CIV-RESEARCH-032 — client errors propagate.
+    #[tokio::test]
+    async fn research_cycle_propagates_client_error() {
+        let mut cache = ResearchCache::default();
+        let db = valid_research_db();
+        let key = b"snapshot-3";
+        let client = StaticClient {
+            card: Err(LlmError::NetworkUnavailable),
+        };
+
+        let outcome = run_research_cycle(&client, &mut cache, &db, "prompt", key).await;
+        assert_eq!(
+            outcome,
+            ResearchOutcome::ClientError(LlmError::NetworkUnavailable)
+        );
+        assert!(cache.is_empty());
+    }
+
+    /// FR-CIV-RESEARCH-033 — deterministic dummy client is stable.
+    #[tokio::test]
+    async fn dummy_client_is_deterministic() {
+        let client = DummyLlmClient;
+        let prompt = "build a rail line";
+        let snapshot_hash = b"abc123";
+
+        let first = client
+            .propose_tech_card(prompt, snapshot_hash)
+            .await
+            .expect("card");
+        let second = client
+            .propose_tech_card(prompt, snapshot_hash)
+            .await
+            .expect("card");
+
+        assert_eq!(first, second);
     }
 }

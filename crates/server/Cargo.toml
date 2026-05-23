@@ -10,6 +10,11 @@ publish = false
 civ-engine = { path = "../engine", version = "0.1.0" }
 civ-voxel = { path = "../voxel" }
 civ-protocol-3d = { path = "../protocol-3d" }
+axum = { version = "0.7", features = ["ws"] }
+futures = "0.3"
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net"] }
+tracing = "0.1"
 thiserror = "1"
 
 [lib]

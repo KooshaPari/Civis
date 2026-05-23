@@ -14,3 +14,4 @@ civ-laws = { path = "../laws" }
 
 [dev-dependencies]
 proptest = "1.4"
+tokio = { version = "1", features = ["rt", "macros"] }

@@ -122,6 +122,19 @@ pub struct UtilityWeights {
     pub belonging: f32,
 }
 
+/// Cohort-level diffusion statistics for a target era.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CohortStats {
+    /// Number of civilians promoted this tick.
+    pub promoted_this_tick: u32,
+    /// Number of civilians already at or above the target era after the tick.
+    pub currently_at_target: u32,
+    /// Total civilians considered in the cohort.
+    pub total_civilians: u32,
+    /// Current adoption fraction at the start of the tick.
+    pub current_fraction: f32,
+}
+
 /// Spawn one civilian entity in a `hecs::World`.
 pub fn spawn_civilian(
     world: &mut World,
@@ -238,6 +251,109 @@ pub fn propagate_wardrobe(
         return true;
     }
     false
+}
+
+/// Drive era propagation for one tick on one civilian's [`Tools`].
+pub fn propagate_tools(
+    tools: &mut Tools,
+    target_era: u16,
+    civ_adoption_fraction: f32,
+    params: DiffusionParams,
+    rng: &mut ChaCha8Rng,
+) -> bool {
+    if tools.era >= target_era {
+        return false;
+    }
+    let rate = diffusion_advance(civ_adoption_fraction, params) - civ_adoption_fraction;
+    if rng.gen::<f32>() < rate.max(0.0) {
+        tools.era += 1;
+        return true;
+    }
+    false
+}
+
+/// Propagate wardrobe diffusion across the whole civilian cohort.
+pub fn propagate_cohort_wardrobe(
+    world: &mut World,
+    target_era: u16,
+    params: DiffusionParams,
+    rng: &mut ChaCha8Rng,
+) -> CohortStats {
+    let total_civilians = count_civilians(world) as u32;
+    let mut currently_at_target = world
+        .query::<&Wardrobe>()
+        .iter()
+        .filter(|(_, wardrobe)| wardrobe.era >= target_era)
+        .count() as u32;
+    let current_fraction = if total_civilians == 0 {
+        0.0
+    } else {
+        currently_at_target as f32 / total_civilians as f32
+    };
+
+    let mut promoted_this_tick = 0_u32;
+    for (_, wardrobe) in world.query_mut::<&mut Wardrobe>() {
+        if wardrobe.era < target_era
+            && propagate_wardrobe(wardrobe, target_era, current_fraction, params, rng)
+        {
+            promoted_this_tick += 1;
+        }
+    }
+
+    currently_at_target = world
+        .query::<&Wardrobe>()
+        .iter()
+        .filter(|(_, wardrobe)| wardrobe.era >= target_era)
+        .count() as u32;
+
+    CohortStats {
+        promoted_this_tick,
+        currently_at_target,
+        total_civilians,
+        current_fraction,
+    }
+}
+
+/// Propagate tools diffusion across the whole civilian cohort.
+pub fn propagate_cohort_tools(
+    world: &mut World,
+    target_era: u16,
+    params: DiffusionParams,
+    rng: &mut ChaCha8Rng,
+) -> CohortStats {
+    let total_civilians = count_civilians(world) as u32;
+    let mut currently_at_target = world
+        .query::<&Tools>()
+        .iter()
+        .filter(|(_, tools)| tools.era >= target_era)
+        .count() as u32;
+    let current_fraction = if total_civilians == 0 {
+        0.0
+    } else {
+        currently_at_target as f32 / total_civilians as f32
+    };
+
+    let mut promoted_this_tick = 0_u32;
+    for (_, tools) in world.query_mut::<&mut Tools>() {
+        if tools.era < target_era
+            && propagate_tools(tools, target_era, current_fraction, params, rng)
+        {
+            promoted_this_tick += 1;
+        }
+    }
+
+    currently_at_target = world
+        .query::<&Tools>()
+        .iter()
+        .filter(|(_, tools)| tools.era >= target_era)
+        .count() as u32;
+
+    CohortStats {
+        promoted_this_tick,
+        currently_at_target,
+        total_civilians,
+        current_fraction,
+    }
 }
 
 #[cfg(test)]
@@ -388,6 +504,102 @@ mod tests {
         assert_eq!(count_civilians(&world), 0);
         spawn_many(&mut world, 3, 1, 2);
         assert_eq!(count_civilians(&world), 3);
+    }
+
+    /// FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a
+    /// fixed seed.
+    #[test]
+    fn propagate_cohort_wardrobe_is_deterministic() {
+        let params = DiffusionParams::default();
+        let mut w1 = World::new();
+        let mut w2 = World::new();
+        spawn_many(&mut w1, 8, 10, 1);
+        spawn_many(&mut w2, 8, 10, 1);
+        let mut r1 = rng(99);
+        let mut r2 = rng(99);
+
+        let s1 = propagate_cohort_wardrobe(&mut w1, 4, params, &mut r1);
+        let s2 = propagate_cohort_wardrobe(&mut w2, 4, params, &mut r2);
+
+        assert_eq!(s1, s2);
+        let a: Vec<u16> = w1.query::<&Wardrobe>().iter().map(|(_, w)| w.era).collect();
+        let b: Vec<u16> = w2.query::<&Wardrobe>().iter().map(|(_, w)| w.era).collect();
+        assert_eq!(a, b);
+    }
+
+    /// FR-CIV-AGENTS-031 — stats.total_civilians matches count_civilians.
+    #[test]
+    fn cohort_stats_total_matches_count_civilians() {
+        let params = DiffusionParams::default();
+        let mut world = World::new();
+        spawn_many(&mut world, 5, 20, 3);
+        let mut r = rng(7);
+        let stats = propagate_cohort_wardrobe(&mut world, 3, params, &mut r);
+        assert_eq!(stats.total_civilians as usize, count_civilians(&world));
+    }
+
+    /// FR-CIV-AGENTS-032 — after many ticks, currently_at_target approaches total_civilians.
+    #[test]
+    fn cohort_wardrobe_converges_over_many_ticks() {
+        let params = DiffusionParams::default();
+        let mut world = World::new();
+        spawn_many(&mut world, 12, 30, 4);
+        let mut r = rng(1234);
+        let target = 5;
+        for _ in 0..2000 {
+            propagate_cohort_wardrobe(&mut world, target, params, &mut r);
+        }
+        let stats = propagate_cohort_wardrobe(&mut world, target, params, &mut r);
+        assert_eq!(stats.currently_at_target, stats.total_civilians);
+        assert!((stats.current_fraction - 1.0).abs() < f32::EPSILON);
+    }
+
+    /// FR-CIV-AGENTS-033 — propagate_tools mirrors propagate_wardrobe behaviour.
+    #[test]
+    fn propagate_cohort_tools_mirrors_wardrobe() {
+        let params = DiffusionParams::default();
+        let mut wardrobe_world = World::new();
+        let mut tools_world = World::new();
+        spawn_many(&mut wardrobe_world, 9, 40, 5);
+        spawn_many(&mut tools_world, 9, 40, 5);
+        let mut r1 = rng(222);
+        let mut r2 = rng(222);
+
+        let wardrobe_stats = propagate_cohort_wardrobe(&mut wardrobe_world, 4, params, &mut r1);
+        let tools_stats = propagate_cohort_tools(&mut tools_world, 4, params, &mut r2);
+
+        assert_eq!(wardrobe_stats, tools_stats);
+        let wardrobe_eras: Vec<u16> = wardrobe_world
+            .query::<&Wardrobe>()
+            .iter()
+            .map(|(_, w)| w.era)
+            .collect();
+        let tool_eras: Vec<u16> = tools_world
+            .query::<&Tools>()
+            .iter()
+            .map(|(_, t)| t.era)
+            .collect();
+        assert_eq!(wardrobe_eras, tool_eras);
+    }
+
+    /// FR-CIV-AGENTS-034 — zero civilians produces zero-everything stats without panicking.
+    #[test]
+    fn empty_cohort_returns_zeroed_stats() {
+        let params = DiffusionParams::default();
+        let mut world = World::new();
+        let mut r = rng(1);
+        let wardrobe_stats = propagate_cohort_wardrobe(&mut world, 2, params, &mut r);
+        let tools_stats = propagate_cohort_tools(&mut world, 2, params, &mut r);
+        assert_eq!(
+            wardrobe_stats,
+            CohortStats {
+                promoted_this_tick: 0,
+                currently_at_target: 0,
+                total_civilians: 0,
+                current_fraction: 0.0,
+            }
+        );
+        assert_eq!(tools_stats, wardrobe_stats);
     }
 
     /// FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.

@@ -10,7 +10,7 @@
       },
       "Microsoft.Bcl.TimeProvider": {
         "type": "Direct",
-        "requested": "[7.0.0, )",
+        "requested": "[8.0.0, )",
         "resolved": "8.0.0",
         "contentHash": "f5Kr5JepAbiGo7uDmhgvMqhntwxqXNn6/IpTBSSI4cuHhgnJGrLxFRhMjVpRkLPp6zJXO0/G0l3j9p9zSJxa+w==",
         "dependencies": {
@@ -26,12 +26,6 @@
           "Microsoft.Build.Tasks.Git": "8.0.0",
           "Microsoft.SourceLink.Common": "8.0.0"
         }
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
       },
       "NETStandard.Library": {
         "type": "Direct",
@@ -503,7 +497,7 @@
       },
       "Microsoft.Bcl.TimeProvider": {
         "type": "Direct",
-        "requested": "[7.0.0, )",
+        "requested": "[8.0.0, )",
         "resolved": "8.0.0",
         "contentHash": "f5Kr5JepAbiGo7uDmhgvMqhntwxqXNn6/IpTBSSI4cuHhgnJGrLxFRhMjVpRkLPp6zJXO0/G0l3j9p9zSJxa+w=="
       },
@@ -516,12 +510,6 @@
           "Microsoft.Build.Tasks.Git": "8.0.0",
           "Microsoft.SourceLink.Common": "8.0.0"
         }
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
       },
       "es6numberserializer": {
         "type": "Transitive",

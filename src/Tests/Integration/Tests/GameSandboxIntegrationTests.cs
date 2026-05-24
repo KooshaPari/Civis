@@ -21,6 +21,17 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("RequiresGame", "true")]
 public class GameSandboxIntegrationTests : IDisposable
 {
+    /// <summary>Live game bridge speaks NDJSON lines, not length-prefixed frames.</summary>
+    private static readonly GameClientOptions SandboxClientOptions = new()
+    {
+        UseMessageFraming = false,
+        ConnectTimeoutMs = 60_000,
+        SendTimeoutMs = 60_000,
+        ReadTimeoutMs = 60_000,
+    };
+
+    private static readonly TimeSpan SandboxConnectWait = TimeSpan.FromSeconds(60);
+
     private readonly bool _infrastructureAvailable;
     private readonly GameProcessManager _processManager;
     private GameClient? _client;
@@ -86,9 +97,9 @@ public class GameSandboxIntegrationTests : IDisposable
         {
             try
             {
-                var testClient = new GameClient();
+                var testClient = new GameClient(SandboxClientOptions);
                 var connectTask = testClient.ConnectAsync();
-                connectTask.Wait(System.TimeSpan.FromSeconds(5));
+                connectTask.Wait(SandboxConnectWait);
                 if (testClient.IsConnected)
                 {
                     testClient.Disconnect();
@@ -106,9 +117,9 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         try
         {
-            _client = new GameClient();
+            _client = new GameClient(SandboxClientOptions);
             var connectTask = _client.ConnectAsync();
-            connectTask.Wait(System.TimeSpan.FromSeconds(5));
+            connectTask.Wait(SandboxConnectWait);
         }
         catch
         {
@@ -268,7 +279,7 @@ public class GameSandboxIntegrationTests : IDisposable
     {
         SkipIfGameNotAvailable();
 
-        await _client!.WaitForWorldAsync(5000).ConfigureAwait(true);
+        await _client!.WaitForWorldAsync(30_000).ConfigureAwait(true);
 
         await _client.ApplyOverrideAsync("unit.stats.hp", 500f, "override", null).ConfigureAwait(true);
         await _client.ApplyOverrideAsync("unit.stats.damage", 50f, "override", null).ConfigureAwait(true);

@@ -41,8 +41,7 @@ namespace DINOForge.DesktopCompanion.ViewModels
         [ObservableProperty]
         public partial CatalogEntry? SelectedEntry { get; set; }
 
-        [ObservableProperty]
-        public partial bool HasEntries => Entries.Count > 0;
+        public bool HasEntries => Entries.Count > 0;
 
         /// <summary>Initializes a new instance of <see cref="BrowseViewModel"/>.</summary>
         /// <param name="catalogService">The catalog service for loading pack metadata.</param>

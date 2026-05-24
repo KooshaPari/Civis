@@ -201,7 +201,7 @@ namespace DINOForge.Tests
         public void ValidateOrThrow_WithNullItem_DoesNotThrow()
         {
             // Act
-            var act = () => JsonGuard.ValidateOrThrow((string?)null);
+            var act = () => JsonGuard.ValidateOrThrow<string>(null!);
 
             // Assert
             act.Should().NotThrow();
@@ -211,7 +211,7 @@ namespace DINOForge.Tests
         public void TryValidate_WithNullItem_ReturnsTrueAndNullError()
         {
             // Act
-            var result = JsonGuard.TryValidate((string?)null, out var errorSummary);
+            var result = JsonGuard.TryValidate<string>(null!, out var errorSummary);
 
             // Assert
             result.Should().BeTrue();

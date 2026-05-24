@@ -71,10 +71,10 @@ namespace DINOForge.SDK
         public int LoadOrder { get; set; } = 100;
 
         /// <summary>
-        /// Game version constraint (e.g., "*" for any version).
+        /// Game version constraint (e.g., "&gt;=0.0.0 &lt;2.0.0").
         /// </summary>
         [YamlMember(Alias = "game_version")]
-        public string GameVersion { get; set; } = "*";
+        public string GameVersion { get; set; } = ">=0.0.0 <2.0.0";
 
         /// <summary>
         /// BepInEx version constraint (e.g., "&gt;=5.4.0").
@@ -83,10 +83,10 @@ namespace DINOForge.SDK
         public string BepInExVersion { get; set; } = ">=5.4.0 <6.0.0";
 
         /// <summary>
-        /// Unity version constraint (e.g., "*" for any version).
+        /// Unity version constraint (e.g., "&gt;=2021.3.0 &lt;2022.0.0").
         /// </summary>
         [YamlMember(Alias = "unity_version")]
-        public string UnityVersion { get; set; } = "*";
+        public string UnityVersion { get; set; } = ">=2021.3.0 <2022.0.0";
 
         /// <summary>
         /// Content types and files to load from this pack.

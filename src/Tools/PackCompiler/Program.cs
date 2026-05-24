@@ -214,13 +214,7 @@ namespace DINOForge.Tools.PackCompiler
             rootCommand.Subcommands.Add(bundlesCommand);
             rootCommand.Subcommands.Add(packCommand);
 
-            Console.WriteLine("[DEBUG] About to call Parse...");
-            Console.Out.Flush();
-
             ParseResult parseResultObj = rootCommand.Parse(args);
-
-            Console.WriteLine("[DEBUG] Parse completed, about to invoke...");
-            Console.Out.Flush();
 
             return await parseResultObj.InvokeAsync().ConfigureAwait(false);
         }
@@ -273,41 +267,70 @@ namespace DINOForge.Tools.PackCompiler
 
                 if (!Directory.Exists(packPath))
                 {
-                    if (jsonMode)
-                    {
-                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", pack = (string?)null, errors = new[] { "Pack directory not found" } }));
-                    }
-                    else
-                    {
-                        AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
-                    }
+                    WriteValidationError(jsonMode, null, "Pack directory not found");
                     Environment.Exit(1);
                 }
 
                 string manifestPath = Path.Combine(packPath, "pack.yaml");
                 if (!File.Exists(manifestPath))
                 {
-                    if (jsonMode)
+                    List<string> aggregatePackDirs = Directory
+                        .GetDirectories(packPath)
+                        .Where(dir => File.Exists(Path.Combine(dir, "pack.yaml")))
+                        .OrderBy(dir => dir, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    if (aggregatePackDirs.Count == 0)
                     {
-                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", pack = (string?)null, errors = new[] { "pack.yaml not found in directory" } }));
+                        WriteValidationError(jsonMode, null, "pack.yaml not found in directory");
+                        Environment.Exit(1);
                     }
-                    else
+
+                    bool aggregateSucceeded = true;
+                    foreach (string childPackDir in aggregatePackDirs)
                     {
-                        AnsiConsole.MarkupLine("[bold red]Error:[/] pack.yaml not found in directory");
+                        aggregateSucceeded &= ValidateSinglePack(childPackDir, format);
                     }
-                    Environment.Exit(1);
+
+                    if (!aggregateSucceeded)
+                        Environment.Exit(1);
+
+                    return;
+                }
+
+                ValidateSinglePack(packPath, format);
+            }
+            catch (Exception ex)
+            {
+                WriteValidationError(jsonMode, null, ex.Message);
+                Environment.Exit(1);
+            }
+        }
+
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
+        private static bool ValidateSinglePack(string packPath, string format = "text")
+        {
+            bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                if (!jsonMode)
+                {
+                    AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
+                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.WriteLine();
+                }
+
+                string manifestPath = Path.Combine(packPath, "pack.yaml");
+                if (!File.Exists(manifestPath))
+                {
+                    WriteValidationError(jsonMode, null, "pack.yaml not found in directory");
+                    return false;
                 }
 
                 if (!jsonMode) AnsiConsole.MarkupLine("[yellow]Loading manifest...[/]");
                 var loader = new PackLoader();
                 var manifest = loader.LoadFromFile(manifestPath);
 
-                // [#622] Wire NJsonSchemaValidator into validate command. Previously this
-                // method only deserialized the manifest and printed its fields — it never
-                // exercised any schema validator, so pack.yaml files that deserialized
-                // successfully but violated schema constraints passed silently. Locate
-                // schemas/pack-manifest.schema.json by walking up from the pack directory,
-                // fail loudly if missing, and surface all schema errors with exit code 1.
                 string schemaPath = LocatePackManifestSchema(packPath);
                 string schemaYaml = File.ReadAllText(schemaPath, Encoding.UTF8);
                 string manifestYaml = File.ReadAllText(manifestPath, Encoding.UTF8);
@@ -325,7 +348,16 @@ namespace DINOForge.Tools.PackCompiler
 
                     if (jsonMode)
                     {
-                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", pack = manifest.Id, errors = errMessages }));
+                        WriteJsonLine(writer =>
+                        {
+                            writer.WriteString("status", "error");
+                            writer.WriteString("pack", manifest.Id);
+                            writer.WritePropertyName("errors");
+                            writer.WriteStartArray();
+                            foreach (string err in errMessages)
+                                writer.WriteStringValue(err);
+                            writer.WriteEndArray();
+                        });
                     }
                     else
                     {
@@ -335,13 +367,20 @@ namespace DINOForge.Tools.PackCompiler
                             AnsiConsole.MarkupLine($"  [red]- {Markup.Escape(msg)}[/]");
                         }
                     }
-                    Environment.Exit(1);
+                    return false;
                 }
 
                 if (jsonMode)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new { status = "ok", pack = manifest.Id, errors = Array.Empty<string>() }));
-                    return;
+                    WriteJsonLine(writer =>
+                    {
+                        writer.WriteString("status", "ok");
+                        writer.WriteString("pack", manifest.Id);
+                        writer.WritePropertyName("errors");
+                        writer.WriteStartArray();
+                        writer.WriteEndArray();
+                    });
+                    return true;
                 }
 
                 AnsiConsole.MarkupLine("[bold]Manifest Fields:[/]");
@@ -400,19 +439,47 @@ namespace DINOForge.Tools.PackCompiler
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold green]Validation successful![/]");
+                return true;
             }
             catch (Exception ex)
             {
-                if (jsonMode)
-                {
-                    Console.WriteLine(JsonSerializer.Serialize(new { status = "error", pack = (string?)null, errors = new[] { ex.Message } }));
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine($"[bold red]Validation failed:[/] {ex.Message}");
-                }
-                Environment.Exit(1);
+                WriteValidationError(jsonMode, null, ex.Message);
+                return false;
             }
+        }
+
+        private static void WriteValidationError(bool jsonMode, string? pack, string message)
+        {
+            if (jsonMode)
+            {
+                WriteJsonLine(writer =>
+                {
+                    writer.WriteString("status", "error");
+                    if (pack is null)
+                        writer.WriteNull("pack");
+                    else
+                        writer.WriteString("pack", pack);
+                    writer.WritePropertyName("errors");
+                    writer.WriteStartArray();
+                    writer.WriteStringValue(message);
+                    writer.WriteEndArray();
+                });
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[bold red]Validation failed:[/] {Markup.Escape(message)}");
+            }
+        }
+
+        private static void WriteJsonLine(Action<Utf8JsonWriter> write)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream);
+            writer.WriteStartObject();
+            write(writer);
+            writer.WriteEndObject();
+            writer.Flush();
+            Console.WriteLine(Encoding.UTF8.GetString(stream.ToArray()));
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
@@ -433,7 +500,14 @@ namespace DINOForge.Tools.PackCompiler
                 if (!Directory.Exists(packPath))
                 {
                     if (jsonMode)
-                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", errors = new[] { "Pack directory not found" } }));
+                        WriteJsonLine(writer =>
+                        {
+                            writer.WriteString("status", "error");
+                            writer.WritePropertyName("errors");
+                            writer.WriteStartArray();
+                            writer.WriteStringValue("Pack directory not found");
+                            writer.WriteEndArray();
+                        });
                     else
                         AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
                     Environment.Exit(1);
@@ -443,7 +517,14 @@ namespace DINOForge.Tools.PackCompiler
                 if (!File.Exists(manifestPath))
                 {
                     if (jsonMode)
-                        Console.WriteLine(JsonSerializer.Serialize(new { status = "error", errors = new[] { "pack.yaml not found in directory" } }));
+                        WriteJsonLine(writer =>
+                        {
+                            writer.WriteString("status", "error");
+                            writer.WritePropertyName("errors");
+                            writer.WriteStartArray();
+                            writer.WriteStringValue("pack.yaml not found in directory");
+                            writer.WriteEndArray();
+                        });
                     else
                         AnsiConsole.MarkupLine("[bold red]Error:[/] pack.yaml not found in directory");
                     Environment.Exit(1);
@@ -478,7 +559,12 @@ namespace DINOForge.Tools.PackCompiler
 
                 if (jsonMode)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new { status = "ok", output = finalOutputDir, size = outputSize }));
+                    WriteJsonLine(writer =>
+                    {
+                        writer.WriteString("status", "ok");
+                        writer.WriteString("output", finalOutputDir);
+                        writer.WriteNumber("size", outputSize);
+                    });
                 }
                 else
                 {
@@ -490,7 +576,14 @@ namespace DINOForge.Tools.PackCompiler
             catch (Exception ex)
             {
                 if (jsonMode)
-                    Console.WriteLine(JsonSerializer.Serialize(new { status = "error", errors = new[] { ex.Message } }));
+                    WriteJsonLine(writer =>
+                    {
+                        writer.WriteString("status", "error");
+                        writer.WritePropertyName("errors");
+                        writer.WriteStartArray();
+                        writer.WriteStringValue(ex.Message);
+                        writer.WriteEndArray();
+                    });
                 else
                     AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {ex.Message}");
                 Environment.Exit(1);
@@ -862,16 +955,11 @@ namespace DINOForge.Tools.PackCompiler
         {
             try
             {
-                Console.WriteLine("[DEBUG] AssetImport starting...");
-                Console.Out.Flush();
-
                 AnsiConsole.MarkupLine("[bold blue]Asset Import Pipeline[/]");
                 AnsiConsole.MarkupLine($"Pack: {packPath}");
                 AnsiConsole.WriteLine();
 
                 string configPath = Path.Combine(packPath, "asset_pipeline.yaml");
-                Console.WriteLine($"[DEBUG] Config path: {configPath}");
-                Console.Out.Flush();
 
                 if (!File.Exists(configPath))
                 {
@@ -880,27 +968,15 @@ namespace DINOForge.Tools.PackCompiler
                     return;
                 }
 
-                Console.WriteLine("[DEBUG] Creating DeserializerBuilder...");
-                Console.Out.Flush();
-
                 var deserializer = YamlLoader.Deserializer;
 
-                Console.WriteLine("[DEBUG] DeserializerBuilder created, reading YAML file...");
-                Console.Out.Flush();
-
                 var configYaml = File.ReadAllText(configPath, Encoding.UTF8);
-
-                Console.WriteLine("[DEBUG] YAML file read, deserializing...");
-                Console.Out.Flush();
 
                 // Deserialize with timeout
                 var deserializeTask = Task.Run(() =>
                 {
                     return deserializer.Deserialize<AssetPipelineConfig>(configYaml);
                 });
-
-                Console.WriteLine("[DEBUG] Task.Run created, waiting for result...");
-                Console.Out.Flush();
 
                 if (!deserializeTask.Wait(TimeSpan.FromSeconds(10)))
                 {

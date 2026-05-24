@@ -659,10 +659,25 @@ public class ParallelGameHarness : IDisposable
         var readyInstances = await Task.WhenAll(instances).ConfigureAwait(true);
 
         // Run tests in parallel
-        foreach (var instance in readyInstances.Where(i => i.IsHealthy))
+        foreach (var instance in readyInstances)
         {
             tasks.Add(Task.Run(async () =>
             {
+                if (!instance.IsHealthy)
+                {
+                    return new TestResult
+                    {
+                        Success = false,
+                        Error = instance.Error ?? "Instance failed to become healthy",
+                        InstanceId = instance.DesktopName,
+                        Metadata = new Dictionary<string, object>
+                        {
+                            ["launch_error"] = instance.Error ?? "Instance failed to become healthy",
+                            ["desktop_name"] = instance.DesktopName
+                        }
+                    };
+                }
+
                 try
                 {
                     return await testFunc(instance).ConfigureAwait(true);
@@ -673,13 +688,38 @@ public class ParallelGameHarness : IDisposable
                     {
                         Success = false,
                         Error = ex.Message,
-                        InstanceId = instance.DesktopName
+                        InstanceId = instance.DesktopName,
+                        Metadata = new Dictionary<string, object>
+                        {
+                            ["exception_type"] = ex.GetType().FullName ?? ex.GetType().Name,
+                            ["desktop_name"] = instance.DesktopName
+                        }
                     };
                 }
             }));
         }
 
         return await Task.WhenAll(tasks).ContinueWith(t => t.Result.ToList()).ConfigureAwait(true);
+    }
+
+    public static string BuildUnhealthyInstanceSkipReason(string scenarioName, IReadOnlyCollection<TestResult> results)
+    {
+        var unhealthy = results.Where(r => !r.Success).ToList();
+        if (unhealthy.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var details = string.Join(", ", unhealthy.Select(r =>
+        {
+            var metadataError = r.Metadata.TryGetValue("launch_error", out var launchError)
+                ? launchError?.ToString()
+                : null;
+            var error = r.Error ?? metadataError ?? "unknown";
+            return $"{r.InstanceId}:{error}";
+        }));
+
+        return $"{scenarioName} skipped because one or more parallel instances could not become healthy: {details}";
     }
 
     public void Dispose()
@@ -777,7 +817,6 @@ public class FreshInstallTests : IDisposable
 {
     private readonly bool _infrastructureAvailable;
     private readonly string _testInstancePath;
-    private bool _isDisposed;
 
     public FreshInstallTests()
     {
@@ -809,7 +848,6 @@ public class FreshInstallTests : IDisposable
 
     public void Dispose()
     {
-        _isDisposed = true;
     }
 
     /// <summary>
@@ -997,10 +1035,15 @@ public class ScenarioParallelTests : IDisposable
                 };
             }, instanceCount: 2).ConfigureAwait(true);
 
-            // Skip if no instances were healthy
-            if (results.Count == 0) return;
-
             results.Should().HaveCount(2, "should run 2 parallel tests");
+            var skipReason = ParallelGameHarness.BuildUnhealthyInstanceSkipReason(
+                nameof(Scenario_PackLoading_MultipleInstances_AllSucceed),
+                results);
+            if (!string.IsNullOrEmpty(skipReason))
+            {
+                Skip.If(true, skipReason);
+            }
+
             results.All(r => r.Success).Should().BeTrue("all instances should succeed");
         }
         finally
@@ -1049,13 +1092,18 @@ public class ScenarioParallelTests : IDisposable
                 };
             }, instanceCount: 2).ConfigureAwait(true);
 
-            // Skip if no instances were healthy
-            if (results.Count == 0) return;
-
             results.Should().HaveCount(2);
+            var skipReason = ParallelGameHarness.BuildUnhealthyInstanceSkipReason(
+                nameof(Scenario_StateIsolation_InstancesDontInterfere),
+                results);
+            if (!string.IsNullOrEmpty(skipReason))
+            {
+                Skip.If(true, skipReason);
+            }
 
             // States should be different
-            var states = results.Select(r => r.Metadata["state"].ToString()).ToList();
+            var states = results.Select(r => r.Metadata.TryGetValue("state", out var state) ? state?.ToString() : null).ToList();
+            states.Should().NotContainNulls();
             states.Distinct().Should().HaveCount(2, "each instance should have independent state");
         }
         finally

@@ -84,7 +84,7 @@ namespace DINOForge.Tests
         [Fact]
         public void ParameterizedConstructor_WithNullParentMenuId_ConvertsToEmptyString()
         {
-            var menu = new MenuDefinition("submenu", "Sub Menu", null);
+            var menu = new MenuDefinition("submenu", "Sub Menu", null!);
 
             menu.ParentMenuId.Should().BeEmpty();
         }
@@ -112,7 +112,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankId_ReturnsError(string? id)
         {
-            var menu = new MenuDefinition { Id = id, Title = "Valid Title" };
+            var menu = new MenuDefinition { Id = id!, Title = "Valid Title" };
 
             var result = menu.Validate();
 
@@ -131,7 +131,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankTitle_ReturnsError(string? title)
         {
-            var menu = new MenuDefinition { Id = "test-menu", Title = title };
+            var menu = new MenuDefinition { Id = "test-menu", Title = title! };
 
             var result = menu.Validate();
 

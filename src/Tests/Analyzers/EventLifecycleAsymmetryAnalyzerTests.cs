@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using DINOForge.Analyzers;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Xunit;
 
@@ -14,7 +13,8 @@ namespace DINOForge.Tests.Analyzers
     /// Tests for <see cref="EventLifecycleAsymmetryAnalyzer"/> (DF0105).
     /// Supports `// event-lifecycle-ok: &lt;reason&gt;` marker.
     /// </summary>
-    public class EventLifecycleAsymmetryAnalyzerTests
+    [Trait("Category", "Analyzer")]
+    public class EventLifecycleAsymmetryAnalyzerTests : AnalyzerTestBase<EventLifecycleAsymmetryAnalyzer>
     {
         private static DiagnosticAnalyzer GetAnalyzer() => new EventLifecycleAsymmetryAnalyzer();
 
@@ -22,14 +22,15 @@ namespace DINOForge.Tests.Analyzers
         public void DF0105_HasCorrectId()
         {
             var diagnostics = GetAnalyzer().SupportedDiagnostics;
-            diagnostics.Should().HaveCount(1);
-            diagnostics[0].Id.Should().Be("DF0105");
+            diagnostics.Should().HaveCount(2);
+            diagnostics.Select(d => d.Id).Should().Contain(new[] { "DF0105", "DF0105a" });
             EventLifecycleAsymmetryAnalyzer.DiagnosticId.Should().Be("DF0105");
         }
 
         [Fact]
         public async Task Reports_OnSubscribeWithoutUnsubscribe()
         {
+            // tautological-ok: VerifyAnalyzerAsync throws on unexpected diagnostic count / mismatch — it IS the assertion
             const string source = @"
 using System;
 
@@ -49,14 +50,17 @@ public class C
         // No -= here
     }
 }";
-            var diagnostics = await RunAnalyzerAsync(source);
-            diagnostics.Should().ContainSingle()
-                .Which.Id.Should().Be("DF0105");
+            await VerifyAnalyzerAsync(
+                source,
+                Diagnostic("DF0105")
+                    .WithSpan(10, 9, 10, 21)
+                    .WithArguments("E", "Handler"));
         }
 
         [Fact]
         public async Task DoesNotReport_WhenUnsubscribeInDispose()
         {
+            // tautological-ok: VerifyAnalyzerAsync(source) with no expected diagnostics asserts zero diagnostics produced
             const string source = @"
 using System;
 
@@ -76,13 +80,13 @@ public class C
         E -= Handler;
     }
 }";
-            var diagnostics = await RunAnalyzerAsync(source);
-            diagnostics.Should().BeEmpty();
+            await VerifyAnalyzerAsync(source);
         }
 
         [Fact]
         public async Task DoesNotReport_WhenSuppressionMarkerPresent()
         {
+            // tautological-ok: VerifyAnalyzerAsync(source) with no expected diagnostics asserts zero diagnostics produced
             const string source = @"
 using System;
 
@@ -100,35 +104,7 @@ public class C
 
     public void Dispose() { }
 }";
-            var diagnostics = await RunAnalyzerAsync(source);
-            diagnostics.Should().BeEmpty();
-        }
-
-        private static async Task<ImmutableArray<Diagnostic>> RunAnalyzerAsync(string source)
-        {
-            var tree = CSharpSyntaxTree.ParseText(source);
-            var references = new[]
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Runtime.CompilerServices.RuntimeHelpers).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.EventHandler).Assembly.Location),
-            };
-
-            var compilation = CSharpCompilation.Create(
-                "DF0105Test",
-                new[] { tree },
-                references,
-                new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary,
-                    nullableContextOptions: NullableContextOptions.Enable));
-
-            var compilationWithAnalyzers = compilation.WithAnalyzers(
-                ImmutableArray.Create<DiagnosticAnalyzer>(new EventLifecycleAsymmetryAnalyzer()));
-            var diagnostics = await compilationWithAnalyzers
-                .GetAnalyzerDiagnosticsAsync()
-                .ConfigureAwait(false);
-            return diagnostics.Where(d => d.Id == "DF0105").ToImmutableArray();
+            await VerifyAnalyzerAsync(source);
         }
     }
 }

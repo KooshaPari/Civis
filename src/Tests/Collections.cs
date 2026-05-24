@@ -89,6 +89,12 @@ namespace DINOForge.Tests
         /// completeness.
         /// </remarks>
         public const string GameLaunch = "GameLaunch";
+
+        /// <summary>
+        /// For tests that rely on <see cref="System.IO.FileSystemWatcher"/> under
+        /// Windows. Serializes to avoid OS buffer overflow and startup races.
+        /// </summary>
+        public const string FileSystemWatcher = "FileSystemWatcher";
     }
 
     /// <summary>
@@ -122,6 +128,16 @@ namespace DINOForge.Tests
     /// </summary>
     [CollectionDefinition(Collections.NetworkPort, DisableParallelization = true)]
     public sealed class NetworkPortCollection
+    {
+    }
+
+    /// <summary>
+    /// xUnit collection for <see cref="System.IO.FileSystemWatcher"/> integration
+    /// tests. Disables parallelization to prevent missed events under CI load.
+    /// Pattern #108.
+    /// </summary>
+    [CollectionDefinition(Collections.FileSystemWatcher, DisableParallelization = true)]
+    public sealed class FileSystemWatcherCollection
     {
     }
 }

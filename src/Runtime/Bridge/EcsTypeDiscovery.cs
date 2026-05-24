@@ -53,7 +53,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    /* safe-swallow: assembly metadata read failure is acceptable during ECS type discovery; assembly is skipped */
+                    // safe-swallow: assembly metadata read failure is acceptable during ECS type discovery; assembly is skipped
                     System.Diagnostics.Debug.WriteLine($"ECS type discovery assembly check failed: {ex.Message}");
                 }
             }
@@ -105,7 +105,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch
                 {
-                    // Some assemblies don't allow type enumeration
+                    // safe-swallow: some assemblies do not allow type enumeration; skip and continue
                 }
             }
 
@@ -138,7 +138,7 @@ namespace DINOForge.Runtime.Bridge
 
             _discoveredTypes = allTypes;
 
-            DebugLog.Write("EcsTypeDiscovery",sb.ToString());
+            DebugLog.Write("EcsTypeDiscovery", sb.ToString());
         }
 
         /// <summary>
@@ -201,7 +201,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 sb.AppendLine(type);
             }
-            DebugLog.Write("EcsTypeDiscovery",sb.ToString());
+            DebugLog.Write("EcsTypeDiscovery", sb.ToString());
         }
 
         private static void VerifyComponentMapTypes(StringBuilder sb, List<(string FullName, string Assembly)> discovered, HashSet<string> discoveredNames)

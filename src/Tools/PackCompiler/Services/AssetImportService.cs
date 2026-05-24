@@ -272,6 +272,9 @@ namespace DINOForge.Tools.PackCompiler.Services
             };
         }
 
+        /// <summary>Default shader for imported pack materials (URP Lit per ASSET_PIPELINE.md).</summary>
+        private const string DefaultImportedShaderName = "Universal Render Pipeline/Lit";
+
         /// <summary>Extract material definitions</summary>
         private List<MaterialData> ExtractMaterials(Scene scene)
         {
@@ -279,13 +282,19 @@ namespace DINOForge.Tools.PackCompiler.Services
             foreach (var material in scene.Materials)
             {
                 var baseColor = material.ColorDiffuse;
+                var materialWarnings = new List<string>
+                {
+                    $"Material '{material.Name}' was imported as placeholder URP Lit metadata; authored shader settings were not preserved by the Assimp import path."
+                };
                 materials.Add(new MaterialData
                 {
                     Name = material.Name,
-                    ShaderName = "Standard",
+                    ShaderName = DefaultImportedShaderName,
+                    IsFallbackMaterial = true,
                     BaseColor = new[] { baseColor.R, baseColor.G, baseColor.B, baseColor.A },
                     Roughness = 0.5f,
-                    Metallic = 0f
+                    Metallic = 0f,
+                    MaterialWarnings = materialWarnings
                 });
             }
             return materials;

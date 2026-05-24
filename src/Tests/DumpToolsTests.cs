@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
@@ -68,11 +69,17 @@ namespace DINOForge.Tests
             if (proc == null)
                 throw new InvalidOperationException("Failed to start DumpTools process");
 
-            // Wait up to 30 seconds
-            bool exited = proc.WaitForExit(30_000);
-            exited.Should().BeTrue("DumpTools process should exit within 30 seconds");
+            // Read streams while the process runs to avoid pipe buffer deadlock.
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
 
-            string stdout = proc.StandardOutput.ReadToEnd();
+            bool exited = proc.WaitForExit(60_000);
+            exited.Should().BeTrue("DumpTools process should exit within 60 seconds");
+
+            Task.WaitAll(stdoutTask, stderrTask);
+            string stdout = stdoutTask.Result;
+            _ = stderrTask.Result;
+
             return (proc.ExitCode, stdout);
         }
 

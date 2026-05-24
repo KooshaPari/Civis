@@ -131,7 +131,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankId_ReturnsError(string? id)
         {
-            var hud = new HudElementDefinition { Id = id };
+            var hud = new HudElementDefinition { Id = id! };
 
             var result = hud.Validate();
 

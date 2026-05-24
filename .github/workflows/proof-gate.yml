@@ -72,14 +72,12 @@ jobs:
 
       - name: Soft-pass when no bundle exists yet
         if: steps.bundle.outputs.found != 'true'
-        shell: bash
-        # Only reached on a fresh repo with no bundles committed; in that case the
-        # legacy prove-features-gate.ps1 soft-pass branch keeps CI green so first-
-        # bundle ingestion isn't blocked. Once any bundle is in docs/proof/bundles/
-        # this branch is unreachable and the strict_gate step above is the gate.
+        shell: pwsh
+        # Only reached on a fresh repo with no bundles committed; run SPEC-007
+        # validate-only gate so CI stays green without game or VLM bundles.
         run: |
-          echo "::warning::no proof bundle found — soft-passing first run" >&2
-          ./.claude/commands/prove-features-gate.ps1 -PolicyFile policies/proof-policy.yaml || true
+          Write-Host "::warning::no proof bundle found — running SPEC-007 validate-only gate" -ForegroundColor Yellow
+          pwsh -ExecutionPolicy Bypass -File scripts/game/prove-features-gate.ps1 -ValidateOnly
 
       - name: Summary
         if: always()

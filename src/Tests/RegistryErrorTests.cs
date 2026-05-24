@@ -39,7 +39,7 @@ namespace DINOForge.Tests.SDK
         {
             // Arrange
             var registry = new Dictionary<string, object>();
-            object entry = null;
+            object? entry = null;
 
             // Act & Assert
             entry.Should().BeNull();
@@ -73,7 +73,7 @@ namespace DINOForge.Tests.SDK
             registry["unit-1"] = new { id = "unit-1", health = 100 };
 
             // Act
-            object nullValue = null;
+            object? nullValue = null;
 
             // Assert
             nullValue.Should().BeNull();

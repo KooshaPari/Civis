@@ -311,7 +311,7 @@ public class SdkCompatibilityEdgeCaseTests
         {
             Id = "test-pack",
             Name = "Test",
-            Version = null,
+            Version = null!,
             FrameworkVersion = "*",
             GameVersion = "*",
             BepInExVersion = "*",

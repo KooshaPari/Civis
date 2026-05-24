@@ -82,7 +82,7 @@ namespace DINOForge.Runtime.Bridge
         protected override void OnCreate()
         {
             base.OnCreate();
-            DebugLog.Write("FactionSystem","FactionSystem.OnCreate");
+            DebugLog.Write("FactionSystem", "FactionSystem.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -104,7 +104,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (_initialized)
             {
-                DebugLog.Write("FactionSystem","FactionSystem.InitializeFactions already called; skipping re-initialization");
+                DebugLog.Write("FactionSystem", "FactionSystem.InitializeFactions already called; skipping re-initialization");
                 return;
             }
 
@@ -124,12 +124,12 @@ namespace DINOForge.Runtime.Bridge
                     };
 
                     _factions[def.Faction.Id] = runtime;
-                    DebugLog.Write("FactionSystem",$"Registered faction: {def.Faction.Id} ({def.Faction.DisplayName})");
+                    DebugLog.Write("FactionSystem", $"Registered faction: {def.Faction.Id} ({def.Faction.DisplayName})");
                 }
             }
 
             _initialized = true;
-            DebugLog.Write("FactionSystem",$"FactionSystem initialized with {_factions.Count} faction(s)");
+            DebugLog.Write("FactionSystem", $"FactionSystem initialized with {_factions.Count} faction(s)");
         }
 
         /// <summary>
@@ -171,7 +171,7 @@ namespace DINOForge.Runtime.Bridge
             lock (_factions)
             {
                 _factions[faction.Faction.Id] = runtime;
-                DebugLog.Write("FactionSystem",$"Registered faction at runtime: {faction.Faction.Id} (isEnemy={isEnemy})");
+                DebugLog.Write("FactionSystem", $"Registered faction at runtime: {faction.Faction.Id} (isEnemy={isEnemy})");
             }
         }
 
@@ -264,14 +264,14 @@ namespace DINOForge.Runtime.Bridge
         {
             if (string.IsNullOrEmpty(factionId))
             {
-                DebugLog.Write("FactionSystem","SetEntityFaction: factionId is empty");
+                DebugLog.Write("FactionSystem", "SetEntityFaction: factionId is empty");
                 return;
             }
 
             FactionRuntime? faction = GetFaction(factionId);
             if (faction == null)
             {
-                DebugLog.Write("FactionSystem",$"SetEntityFaction: faction {factionId} not registered");
+                DebugLog.Write("FactionSystem", $"SetEntityFaction: faction {factionId} not registered");
                 return;
             }
 
@@ -283,13 +283,13 @@ namespace DINOForge.Runtime.Bridge
             {
                 // Add Enemy tag
                 entityManager.AddComponentData(entity, new Components.Enemy { });
-                DebugLog.Write("FactionSystem",$"Added Enemy tag to entity {entity.Index} for faction {factionId}");
+                DebugLog.Write("FactionSystem", $"Added Enemy tag to entity {entity.Index} for faction {factionId}");
             }
             else if (!shouldHaveEnemyTag && currentlyHasEnemyTag)
             {
                 // Remove Enemy tag
                 entityManager.RemoveComponent<Components.Enemy>(entity);
-                DebugLog.Write("FactionSystem",$"Removed Enemy tag from entity {entity.Index} for faction {factionId}");
+                DebugLog.Write("FactionSystem", $"Removed Enemy tag from entity {entity.Index} for faction {factionId}");
             }
         }
 

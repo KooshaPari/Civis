@@ -112,13 +112,21 @@ namespace DINOForge.Runtime.VFX
             Shader shader = Shader.Find(config.ShaderName);
             if (shader == null)
             {
-                // Fallback to standard particle shader
+                shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            }
+
+            if (shader == null)
+            {
                 shader = Shader.Find("Particles/Standard Unlit");
             }
 
             if (shader == null)
             {
-                // Last resort: use standard surface shader
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            if (shader == null)
+            {
                 shader = Shader.Find("Standard");
             }
 

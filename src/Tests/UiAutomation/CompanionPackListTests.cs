@@ -19,7 +19,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
     // ── COMP-PACK-001 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void PackList_ListView_Exists()
     {
         GoToPackList();
@@ -32,7 +32,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
     // ── COMP-PACK-002 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void PackList_ListView_HasAtLeastOnePack()
     {
         GoToPackList();
@@ -46,7 +46,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
     // ── COMP-PACK-003 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void PackList_ReloadButton_IsClickable()
     {
         GoToPackList();
@@ -66,7 +66,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
     // ── COMP-PACK-004 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void PackList_FirstPack_HasToggleSwitch()
     {
         GoToPackList();
@@ -89,7 +89,7 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
     // ── COMP-PACK-005 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void PackList_StatusMessage_ShowsPackCount()
     {
         GoToPackList();

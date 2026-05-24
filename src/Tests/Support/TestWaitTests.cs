@@ -67,7 +67,7 @@ public class TestWaitTests
         var result = await TestWait.UntilAsync(
             async () =>
             {
-                await Task.Yield();
+                await Task.CompletedTask.ConfigureAwait(false);
                 return Interlocked.Increment(ref counter) >= 3;
             },
             TimeSpan.FromSeconds(2),

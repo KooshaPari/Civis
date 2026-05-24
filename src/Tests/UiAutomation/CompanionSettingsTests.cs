@@ -18,7 +18,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-UI-004 (original, re-anchored) ──────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_GamePathTextBox_AcceptsInput()
     {
         GoToSettings();
@@ -35,7 +35,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-UI-005 (original) ────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void StatusBar_ShowsDisconnected_WhenBridgeAbsent()
     {
         // Status bar is in MainWindow shell — visible regardless of current page
@@ -51,7 +51,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-SETTINGS-001 ─────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_PacksDirBox_Exists()
     {
         GoToSettings();
@@ -62,7 +62,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-SETTINGS-002 ─────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_PacksDirBox_AcceptsInput()
     {
         GoToSettings();
@@ -78,7 +78,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-SETTINGS-003 ─────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_IntervalSlider_Exists()
     {
         GoToSettings();
@@ -89,7 +89,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-SETTINGS-004 ─────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_SaveButton_Exists()
     {
         GoToSettings();
@@ -101,7 +101,7 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
 
     // ── COMP-SETTINGS-005 ─────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Settings_SaveButton_Click_UpdatesSaveStatus()
     {
         GoToSettings();

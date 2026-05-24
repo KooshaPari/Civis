@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace DINOForge.Runtime.UI
@@ -21,6 +23,7 @@ namespace DINOForge.Runtime.UI
 
         private CanvasGroup? _canvasGroup;
         private RectTransform? _panelRt;
+        private bool _targetVisible;
 
         // Section toggle state
         private bool _showPlatform = true;
@@ -32,6 +35,7 @@ namespace DINOForge.Runtime.UI
         // Content area for dynamic updates
         private RectTransform? _contentRoot;
         private float _refreshTimer;
+        private bool _refreshQueued;
         private const float RefreshInterval = 0.5f;
 
         // ── Bootstrap ─────────────────────────────────────────────────────────────
@@ -57,6 +61,7 @@ namespace DINOForge.Runtime.UI
             _canvasGroup.alpha = 0f;
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
+            _targetVisible = false;
 
             BuildHeader(rootGo.transform);
             BuildScrollContent(rootGo.transform);
@@ -79,6 +84,7 @@ namespace DINOForge.Runtime.UI
         /// <summary>Shows the panel immediately (no animation).</summary>
         public void Show()
         {
+            _targetVisible = true;
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 1f;
@@ -120,6 +126,7 @@ namespace DINOForge.Runtime.UI
         /// <summary>Hides the panel immediately (no animation).</summary>
         public void Hide()
         {
+            _targetVisible = false;
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 0f;
@@ -127,17 +134,11 @@ namespace DINOForge.Runtime.UI
                 _canvasGroup.blocksRaycasts = false;
             }
 
-            // Deactivate panel gameobject
-            if (_panelRt != null)
-            {
-                _panelRt.gameObject.SetActive(false);
-            }
-
             Debug.Log("[DebugPanel] Hide() called.");
         }
 
         /// <summary>Whether the panel is currently visible.</summary>
-        public bool IsVisible => _canvasGroup != null && _canvasGroup.alpha > 0.01f;
+        public bool IsVisible => _targetVisible;
 
         // ── MonoBehaviour ─────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ namespace DINOForge.Runtime.UI
 
             if (!IsVisible) return;
 
-            _refreshTimer += Time.deltaTime;
+            _refreshTimer = _refreshTimer + Time.deltaTime;
             if (_refreshTimer >= RefreshInterval)
             {
                 _refreshTimer = 0f;
@@ -188,7 +189,11 @@ namespace DINOForge.Runtime.UI
             Button closeBtn = UiBuilder.MakeButton(
                 header.transform, "DebugClose", "×",
                 UiBuilder.BgDeep, UiBuilder.TextSecondary,
-                () => Hide());
+                () =>
+                {
+                    ClearCurrentSelection();
+                    Hide();
+                });
             LayoutElement closeLe = closeBtn.gameObject.AddComponent<LayoutElement>();
             closeLe.preferredWidth = 28f;
             closeLe.preferredHeight = 28f;
@@ -216,6 +221,20 @@ namespace DINOForge.Runtime.UI
             scrollRt.sizeDelta = Vector2.zero;
 
             _contentRoot = content;
+            RefreshContent();
+        }
+
+        private void QueueRefreshContent()
+        {
+            if (_refreshQueued) return;
+            _refreshQueued = true;
+            StartCoroutine(RefreshContentNextFrame());
+        }
+
+        private IEnumerator RefreshContentNextFrame()
+        {
+            yield return null;
+            _refreshQueued = false;
             RefreshContent();
         }
 
@@ -371,7 +390,8 @@ namespace DINOForge.Runtime.UI
                 case string s when s.StartsWith("Errors"):
                     _showErrors = !_showErrors; break;
             }
-            RefreshContent();
+            ClearCurrentSelection();
+            QueueRefreshContent();
         }
 
         private void BuildPlatformContent(Transform parent)
@@ -526,7 +546,7 @@ namespace DINOForge.Runtime.UI
         private int GetErrorCount()
         {
             try { return _modPlatform?.ContentLoader?.LastLoadErrorCount ?? 0; }
-            catch { return 0; }
+            catch { return 0; } // safe-swallow: debug panel error badge is best-effort and must never break UI refresh
         }
 
         private void CopyErrorsToClipboard()
@@ -536,6 +556,20 @@ namespace DINOForge.Runtime.UI
             if (errors == null || errors.Count == 0) return;
 
             GUIUtility.systemCopyBuffer = string.Join("\n", errors);
+            ClearCurrentSelection();
+        }
+
+        private static void ClearCurrentSelection()
+        {
+            try
+            {
+                EventSystem current = EventSystem.current;
+                if (current != null)
+                {
+                    current.SetSelectedGameObject(null);
+                }
+            }
+            catch { } // safe-swallow: debug UI selection cleanup is best-effort
         }
 
         private static string TruncatePath(string path, int maxLen)

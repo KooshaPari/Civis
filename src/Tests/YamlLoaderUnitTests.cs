@@ -53,12 +53,13 @@ depends_on:
             var result = YamlLoader.Deserialize<TestPackManifestWithDependencies>(yaml);
 
             // Assert — UnderscoredNamingConvention should map framework_version → FrameworkVersion
-            result.Should().NotBeNull();
-            result!.Name.Should().Be("Underscored Pack");
-            result.FrameworkVersion.Should().Be(">=0.1.0");
-            result.DependsOn.Should().HaveCount(2);
-            result.DependsOn[0].Should().Be("pack-a");
-            result.DependsOn[1].Should().Be("pack-b");
+            var manifest = result ?? throw new Xunit.Sdk.XunitException("Expected YAML deserialization to produce a manifest.");
+            var dependsOn = manifest.DependsOn!;
+            manifest.Name.Should().Be("Underscored Pack");
+            manifest.FrameworkVersion.Should().Be(">=0.1.0");
+            dependsOn.Should().HaveCount(2);
+            dependsOn[0].Should().Be("pack-a");
+            dependsOn[1].Should().Be("pack-b");
         }
 
         // ─── Deserialize: empty string returns default ──────────────────────

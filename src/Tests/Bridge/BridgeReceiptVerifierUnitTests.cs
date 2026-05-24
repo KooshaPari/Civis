@@ -344,7 +344,7 @@ public class BridgeReceiptVerifierUnitTests
     [Fact]
     public void VerificationResult_WithNullReason_DefaultsToEmpty()
     {
-        var result = new VerificationResult(false, VerificationMode.WarnOnly, null);
+        var result = new VerificationResult(false, VerificationMode.WarnOnly, null!);
 
         result.Reason.Should().BeEmpty();
     }

@@ -12,8 +12,24 @@ namespace DINOForge.Tests;
 /// Tests for PollingHelper retry-with-backoff utility.
 /// Pattern #113 D4 (polling primitives) — covers exponential backoff, timeout, and cancellation.
 /// </summary>
+[CollectionDefinition("PollingHelper", DisableParallelization = true)]
+public class PollingHelperCollection;
+
+[Collection("PollingHelper")]
 public class PollingHelperTests
 {
+    /// <summary>Advances virtual time for deadline checks without relying on wall-clock Task.Delay under load.</summary>
+    private sealed class SteppingTimeProvider : TimeProvider
+    {
+        private DateTimeOffset _now;
+
+        public SteppingTimeProvider(DateTimeOffset start) => _now = start;
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void Advance(TimeSpan step) => _now = _now.Add(step);
+    }
+
     [Fact]
     public async Task RetryUntilAsync_SucceedsOnFirstProbe()
     {
@@ -41,10 +57,12 @@ public class PollingHelperTests
         // Arrange
         var expected = new object();
         var callCount = 0;
+        var clock = new SteppingTimeProvider(DateTimeOffset.UtcNow);
 
         object? Probe()
         {
             callCount++;
+            clock.Advance(TimeSpan.FromMilliseconds(1));
             return callCount >= 3 ? expected : null;
         }
 
@@ -52,8 +70,9 @@ public class PollingHelperTests
         var result = await PollingHelper.RetryUntilAsync(
             Probe,
             timeout: TimeSpan.FromSeconds(5),
-            initialDelay: TimeSpan.FromMilliseconds(10),
-            maxDelay: TimeSpan.FromMilliseconds(50));
+            initialDelay: TimeSpan.FromMilliseconds(1),
+            maxDelay: TimeSpan.FromMilliseconds(5),
+            timeProvider: clock);
 
         // Assert
         result.Should().BeSameAs(expected);
@@ -89,6 +108,7 @@ public class PollingHelperTests
     {
         // Arrange
         using var cts = new CancellationTokenSource();
+        cts.Cancel();
         var callCount = 0;
 
         object? Probe()
@@ -98,7 +118,6 @@ public class PollingHelperTests
         }
 
         // Act
-        cts.CancelAfter(TimeSpan.FromMilliseconds(50));
         var act = () => PollingHelper.RetryUntilAsync(
             Probe,
             timeout: TimeSpan.FromSeconds(10),
@@ -107,7 +126,7 @@ public class PollingHelperTests
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
-        callCount.Should().BeGreaterThanOrEqualTo(1);
+        callCount.Should().Be(0);
     }
 
     [Fact]
@@ -133,12 +152,14 @@ public class PollingHelperTests
     [Fact]
     public async Task RetryUntilTrueAsync_SucceedsOnNthProbe()
     {
-        // Arrange
+        // Arrange — virtual clock avoids flaky wall-clock timeouts when the thread pool is saturated.
         var callCount = 0;
+        var clock = new SteppingTimeProvider(DateTimeOffset.UtcNow);
 
         bool Probe()
         {
             callCount++;
+            clock.Advance(TimeSpan.FromMilliseconds(1));
             return callCount >= 3;
         }
 
@@ -146,8 +167,9 @@ public class PollingHelperTests
         var result = await PollingHelper.RetryUntilTrueAsync(
             Probe,
             timeout: TimeSpan.FromSeconds(5),
-            initialDelay: TimeSpan.FromMilliseconds(10),
-            maxDelay: TimeSpan.FromMilliseconds(50));
+            initialDelay: TimeSpan.FromMilliseconds(1),
+            maxDelay: TimeSpan.FromMilliseconds(5),
+            timeProvider: clock);
 
         // Assert
         result.Should().BeTrue();

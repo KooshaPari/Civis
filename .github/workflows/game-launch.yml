@@ -64,6 +64,14 @@ jobs:
             --results-directory ./test-results `
             -- xunit.methodDisplay=classAndMethod
 
+      - name: SPEC-007 regression gate (full, requires game)
+        if: env.DINO_GAME_PATH != ''
+        shell: pwsh
+        env:
+          DINO_GAME_PATH: ${{ secrets.DINO_GAME_PATH }}
+        run: |
+          pwsh -ExecutionPolicy Bypass -File scripts/game/prove-features-gate.ps1 -RequireGame
+
       - name: Upload test results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         if: always()

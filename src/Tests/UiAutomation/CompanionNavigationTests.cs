@@ -16,7 +16,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 {
     // ── COMP-NAV-001 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Window_Title_IsDINOForgeCompanion()
     {
         fixture.MainWindow!.Title.Should().Contain("DINOForge",
@@ -25,7 +25,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 
     // ── COMP-NAV-002 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void NavDashboard_Click_ShowsDashboardContent()
     {
         fixture.GoToDashboard();
@@ -39,7 +39,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 
     // ── COMP-NAV-003 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void NavPackList_Click_ShowsPackListContent()
     {
         fixture.GoToPackList();
@@ -52,7 +52,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 
     // ── COMP-NAV-004 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void NavDebugPanel_Click_ShowsDebugContent()
     {
         fixture.GoToDebugPanel();
@@ -65,7 +65,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 
     // ── COMP-NAV-005 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void NavSettings_Click_ShowsSettingsContent()
     {
         fixture.GoToSettings();
@@ -78,7 +78,7 @@ public sealed class CompanionNavigationTests(CompanionFixture fixture)
 
     // ── COMP-NAV-006 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void ReturningToDashboard_AfterPackList_ShowsDashboard()
     {
         fixture.GoToPackList();

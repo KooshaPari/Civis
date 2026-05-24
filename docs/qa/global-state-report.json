@@ -1,8 +1,8 @@
 {
-  "scan_utc": "2026-05-21T17:46:53.176444Z",
-  "scan_date": "2026-05-21",
-  "total_violations": 13,
-  "allowlist_size": 13,
+  "scan_utc": "2026-05-24T22:19:05.703071Z",
+  "scan_date": "2026-05-24",
+  "total_violations": 14,
+  "allowlist_size": 14,
   "new_violations": 0,
   "strict": false,
   "exit_code": 0,
@@ -192,9 +192,23 @@
       "in_collection": false,
       "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.VFXSystemTests|18|VFXSystemTests.cs",
       "in_allowlist": true
+    },
+    {
+      "rule": "class_static_path_no_guid",
+      "severity": "LOW",
+      "file": "WarfareStarwarsPackRegistryOfflineTests.cs",
+      "line": 23,
+      "fqn": "DINOForge.Tests.WarfareStarwarsPackRegistryOfflineTests",
+      "class": "WarfareStarwarsPackRegistryOfflineTests",
+      "field": "PackRoot",
+      "rhs": "Path.Combine(GetRepoRoot(), \"packs\", PackId)",
+      "detail": "Class-static path field `PackRoot` lacks a Guid/random discriminator \u2014 sister test classes in the same process share the same directory and race on it.",
+      "in_collection": false,
+      "allowlist_key": "class_static_path_no_guid|DINOForge.Tests.WarfareStarwarsPackRegistryOfflineTests|23|WarfareStarwarsPackRegistryOfflineTests.cs",
+      "in_allowlist": true
     }
   ],
   "scan_root": "C:/Users/koosh/Dino/src/Tests",
   "allowlist_path": "C:/Users/koosh/Dino/docs/qa/global-state-allowlist.txt",
-  "files_scanned": 356
+  "files_scanned": 372
 }

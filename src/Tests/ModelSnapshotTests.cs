@@ -378,9 +378,9 @@ namespace DINOForge.Tests
                 DependsOn = new List<string> { "example-balance" },
                 ConflictsWith = new List<string> { "warfare-guerrilla" },
                 LoadOrder = 100,
-                GameVersion = "*",
+                GameVersion = ">=0.0.0 <2.0.0",
                 BepInExVersion = ">=5.4.0",
-                UnityVersion = "*"
+                UnityVersion = ">=2021.3.0 <2022.0.0"
             };
         }
 

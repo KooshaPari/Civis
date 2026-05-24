@@ -100,7 +100,7 @@ namespace DINOForge.Tests
             var service = new FileDiscoveryService();
 
             // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetFiles(_tempDir, (string)null));
+            Assert.Throws<ArgumentNullException>(() => service.GetFiles(_tempDir, (string)null!, SearchOption.TopDirectoryOnly));
         }
 
         [Fact]
@@ -357,7 +357,7 @@ namespace DINOForge.Tests
             var service = new FileDiscoveryService();
 
             // Act
-            string[] result = service.GetFiles(null, "*.txt");
+            string[] result = service.GetFiles(null!, "*.txt");
 
             // Assert
             result.Should().BeEmpty();
@@ -403,7 +403,7 @@ namespace DINOForge.Tests
             Directory.CreateDirectory(Path.Combine(_tempDir, "bin"));
 
             // Act
-            service.RemoveExclusion(null);
+            service.RemoveExclusion(null!);
             string[] result = service.GetDirectories(_tempDir, SearchOption.TopDirectoryOnly);
 
             // Assert

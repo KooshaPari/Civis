@@ -36,7 +36,21 @@ namespace DINOForge.Tests.Runtime;
 ///   still pass. The regex anchors are deliberately resilient to whitespace and
 ///   inline comment changes so they survive cosmetic edits, but they will fail
 ///   loudly if any of the 8 behaviors is dropped or inverted.
+///
+/// SPEC-002 test-plan coverage (see <c>docs/specs/SPEC-002-native-menu-injector.md</c>):
+///   Covered here (source-text, no Unity host): unit + integration items that pin
+///   structure in <c>NativeMenuInjector.cs</c>.
+///   Gaps when <c>GameInstalled=false</c> (no UnityEngine.dll under ManagedDir):
+///     - TryInjectMenuButton_FindsSettingsButton_SetsInjected
+///     - FullBoot_InjectionSucceeds
+///     - OnScanNeeded_TriggersInjection (runtime invoke; see RuntimeDriver_OnScanNeeded_AssignsDelegate)
+///   Gaps requiring live DINO (GameLaunch project, excluded from CI.sln):
+///     - GameLaunchNativeMenuTests NATIVE-001..003
+///   SPEC-002 manual AC #7 (pause menu Mods button):
+///     - NativeMenuInjectorCharacterizationTests pause-menu fixtures (CI)
+///     - GameLaunchNativeMenuTests NATIVE-004 (self-hosted; needs ESC/pause open via invokeMethod)
 /// </summary>
+[Trait("Category", "NativeMenu")]
 public sealed class NativeMenuInjectorCharacterizationTests
 {
     private static readonly Lazy<string> SourceText = new(() => File.ReadAllText(LocateSource(), System.Text.Encoding.UTF8));
@@ -125,6 +139,23 @@ public sealed class NativeMenuInjectorCharacterizationTests
             }
         }
         throw new InvalidOperationException("Brace match failed from index " + openBraceIdx + " — file likely truncated.");
+    }
+
+    /// <summary>
+    /// Extracts the body of a method identified by a unique signature substring.
+    /// Used for SPEC-002 tests outside the <c>InjectButton</c> cluster.
+    /// </summary>
+    private static string GetMethodBodyBySignature(string methodSignature)
+    {
+        var src = SourceText.Value;
+        var sigIdx = src.IndexOf(methodSignature, StringComparison.Ordinal);
+        sigIdx.Should().BeGreaterThan(0, because: $"method signature must exist: {methodSignature}");
+
+        var openBrace = src.IndexOf('{', sigIdx);
+        openBrace.Should().BeGreaterThan(sigIdx, because: "method body must follow the signature");
+
+        int closeBrace = MatchClosingBrace(src, openBrace);
+        return src.Substring(openBrace, closeBrace - openBrace + 1);
     }
 
     // ------------------------------------------------------------------ //
@@ -418,8 +449,12 @@ public sealed class NativeMenuInjectorCharacterizationTests
             .Should().BeTrue(because: "Cluster 3: clone's GO name must be registered for Harmony text-intercept patch");
 
         // Registration MUST occur AFTER CloneButton (it depends on modsButton existing).
+        // Scope includes InjectButtonFromSelectable (also registers name); pin the Button-path
+        // assignment paired with NativeUiHelper.CloneButton, not the first null-clear or Selectable path.
         var cloneIdx = body.IndexOf("NativeUiHelper.CloneButton(cloneSource, \"Mods\")", StringComparison.Ordinal);
-        var regIdx = body.IndexOf("RepurposedModsButtonGoName =", StringComparison.Ordinal);
+        cloneIdx.Should().BeGreaterThan(0, because: "CloneButton must be invoked in CloneAndRegisterModsButton (Cluster 3)");
+        const string regAssignment = "RepurposedModsButtonGoName = modsButton.gameObject.name";
+        var regIdx = body.IndexOf(regAssignment, cloneIdx, StringComparison.Ordinal);
         regIdx.Should().BeGreaterThan(cloneIdx, because: "name registration must happen after clone returns (depends on modsButton)");
     }
 
@@ -475,5 +510,269 @@ public sealed class NativeMenuInjectorCharacterizationTests
             because: "body size must remain within the refactor envelope (pre: ~302 inlined, post: ~420 with helpers per map § Post-Refactor Method Size Estimate). "
                   + $"Actual line count: {lineCount}. If this fails post-refactor with a small count, helpers may have been deleted; "
                   + "if it fails post-refactor with a large count, audit for accidental additions that should be in a separate method.");
+    }
+
+    // ------------------------------------------------------------------ //
+    // SPEC-002 unit: TryInjectMenuButton graceful failure (F-06, N-02)
+    // ------------------------------------------------------------------ //
+
+    /// <summary>
+    /// SPEC-002: <c>TryInjectMenuButton_NoCanvases_DoesNotThrow</c> /
+    /// <c>TryInjectMenuButton_ActiveCanvasNoSettingsButton_DoesNotThrow</c> — outer try/catch
+    /// must swallow exceptions and log a warning instead of propagating.
+    /// </summary>
+    [Fact]
+    public void TryInjectMenuButton_HasOuterTryCatchForGracefulFailure()
+    {
+        var body = GetMethodBodyBySignature("internal void TryInjectMenuButton()");
+        body.Should().Contain("try", because: "TryInjectMenuButton must wrap scan logic in try/catch");
+        Regex.IsMatch(body, @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,800}?TryInjectMenuButton EXCEPTION")
+            .Should().BeTrue(because: "SPEC-002 F-06/N-02: failures must LogWarning with TryInjectMenuButton EXCEPTION marker");
+    }
+
+    /// <summary>
+    /// SPEC-002 F-06: when no Settings/Options button is found, log diagnostic and schedule retry.
+    /// </summary>
+    [Fact]
+    public void TryInjectMenuButton_LogsDiagnosticWhenNoSettingsButtonFound()
+    {
+        var body = GetMethodBodyBySignature("internal void TryInjectMenuButton()");
+        Regex.IsMatch(body, @"0 Settings buttons found")
+            .Should().BeTrue(because: "SPEC-002 F-06: must log when scan finds no injection target");
+        Regex.IsMatch(body, @"Will retry in \{RescanInterval\}s")
+            .Should().BeTrue(because: "SPEC-002 F-06: must indicate automatic retry interval");
+    }
+
+    /// <summary>
+    /// SPEC-002 architecture: scan uses <c>Resources.FindObjectsOfTypeAll&lt;Canvas&gt;()</c>
+    /// and skips inactive canvases via <c>IsCanvasActive</c>.
+    /// </summary>
+    [Fact]
+    public void TryInjectMenuButton_ScansActiveCanvasesViaFindObjectsOfTypeAll()
+    {
+        var body = GetMethodBodyBySignature("internal void TryInjectMenuButton()");
+        body.Should().Contain("Resources.FindObjectsOfTypeAll<Canvas>()",
+            because: "SPEC-002: canvas discovery uses FindObjectsOfTypeAll<Canvas>");
+        Regex.IsMatch(body, @"IsCanvasActive\(\s*canvas\s*\)")
+            .Should().BeTrue(because: "SPEC-002: inactive canvases must be skipped");
+    }
+
+    /// <summary>
+    /// SPEC-002: Settings primary, Options fallback in <c>FindSettingsButton</c>.
+    /// </summary>
+    [Fact]
+    public void FindSettingsButton_SearchesSettingsThenOptions()
+    {
+        var body = GetMethodBodyBySignature("private Button? FindSettingsButton(Canvas canvas)");
+        body.Should().Contain("NativeUiHelper.FindButtonByText(canvas.transform, \"Settings\")",
+            because: "SPEC-002: primary anchor is Settings label");
+        Regex.IsMatch(body, @"IndexOf\(\s*""Options""\s*,\s*StringComparison\.OrdinalIgnoreCase\s*\)")
+            .Should().BeTrue(because: "SPEC-002: Options label is the fallback anchor");
+    }
+
+    // ------------------------------------------------------------------ //
+    // SPEC-002 unit: RewireModsButtonClick, SyncButtonVisualStyle
+    // ------------------------------------------------------------------ //
+
+    /// <summary>
+    /// SPEC-002: <c>RewireModsButtonClick_ClearsInheritedListeners</c>.
+    /// </summary>
+    [Fact]
+    public void RewireModsButtonClick_RemovesAllListenersBeforeAddingToggle()
+    {
+        var body = GetMethodBodyBySignature("private void RewireModsButtonClick(Button modsButton, long attemptId)");
+        var removeIdx = body.IndexOf("onClick.RemoveAllListeners()", StringComparison.Ordinal);
+        var addIdx = body.IndexOf("onClick.AddListener(OnModsButtonClicked)", StringComparison.Ordinal);
+        removeIdx.Should().BeGreaterThan(0);
+        addIdx.Should().BeGreaterThan(removeIdx,
+            because: "SPEC-002: inherited clone listeners must be cleared before wiring Mods toggle");
+    }
+
+    /// <summary>
+    /// SPEC-002 F-03 / unit: <c>SyncButtonVisualStyle_CopiesColorBlock</c>.
+    /// </summary>
+    [Fact]
+    public void SyncButtonVisualStyle_CopiesColorBlockAndTransition()
+    {
+        var body = GetMethodBodyBySignature("private void SyncButtonVisualStyle(Button target, Button source, long attemptId)");
+        body.Should().Contain("target.transition = source.transition");
+        body.Should().Contain("target.colors = source.colors");
+        body.Should().Contain("target.spriteState = source.spriteState");
+    }
+
+    // ------------------------------------------------------------------ //
+    // SPEC-002 unit: OnModsButtonClicked debounce + null host (N-05, F-02)
+    // ------------------------------------------------------------------ //
+
+    /// <summary>
+    /// SPEC-002 N-05: <c>OnModsButtonClicked_Debounce_SecondClickIgnored</c> — 200 ms window.
+    /// </summary>
+    [Fact]
+    public void OnModsButtonClicked_Uses200MsDebounceWindow()
+    {
+        var src = SourceText.Value;
+        src.Should().Contain("private const float ClickDebounceSeconds = 0.2f",
+            because: "SPEC-002 N-05: debounce constant must be 200 ms");
+
+        var body = GetMethodBodyBySignature("private void OnModsButtonClicked()");
+        Regex.IsMatch(body, @"Time\.unscaledTime[\s\S]{0,200}?ClickDebounceSeconds")
+            .Should().BeTrue(because: "SPEC-002 N-05: debounce must compare unscaled time against ClickDebounceSeconds");
+        Regex.IsMatch(body, @"_menuHost\.Toggle\(\)")
+            .Should().BeTrue(because: "SPEC-002 F-02: successful click must toggle mod menu host");
+    }
+
+    /// <summary>
+    /// SPEC-002: <c>OnModsButtonClicked_NullMenuHost_DoesNotThrow</c>.
+    /// </summary>
+    [Fact]
+    public void OnModsButtonClicked_NullMenuHostLogsWarningWithoutThrowing()
+    {
+        var body = GetMethodBodyBySignature("private void OnModsButtonClicked()");
+        Regex.IsMatch(body, @"catch\s*\(\s*Exception\s+ex\s*\)[\s\S]{0,400}?OnModsButtonClicked exception")
+            .Should().BeTrue(because: "OnModsButtonClicked must not throw to Unity event system");
+        Regex.IsMatch(body, @"if\s*\(\s*_menuHost\s*==\s*null\s*\)[\s\S]{0,300}?LogWarning[\s\S]{0,300}?return\s*;")
+            .Should().BeTrue(because: "SPEC-002: null menu host must LogWarning and return");
+    }
+
+    // ------------------------------------------------------------------ //
+    // SPEC-002 integration (source-text): scene change, Update destroy, OnScanNeeded
+    // ------------------------------------------------------------------ //
+
+    /// <summary>
+    /// SPEC-002: <c>SceneChange_ResetsInjectionState</c> (F-05).
+    /// </summary>
+    [Fact]
+    public void OnActiveSceneChanged_ResetsInjectionStateAndRescans()
+    {
+        var body = GetMethodBodyBySignature("private void OnActiveSceneChanged(Scene previous, Scene next)");
+        Regex.IsMatch(body, @"_injected\s*=\s*false\s*;[\s\S]{0,200}?_injectedButton\s*=\s*null")
+            .Should().BeTrue(because: "SPEC-002 F-05: scene change must reset injection state");
+        body.Should().Contain("TryInjectMenuButton()",
+            because: "SPEC-002 F-05: scene change must trigger immediate re-scan");
+    }
+
+    /// <summary>
+    /// SPEC-002: <c>Update_ButtonDestroyed_ResetsAndRescans</c>.
+    /// </summary>
+    [Fact]
+    public void Update_DestroyedInjectedButtonResetsInjectedFlag()
+    {
+        var body = GetMethodBodyBySignature("private void Update()");
+        Regex.IsMatch(body, @"if\s*\(\s*_injected\s*&&\s*_injectedButton\s*==\s*null\s*\)[\s\S]{0,300}?_injected\s*=\s*false")
+            .Should().BeTrue(because: "SPEC-002: destroyed injected button must reset _injected for re-scan");
+        Regex.IsMatch(body, @"_rescanTimer\s*<\s*RescanInterval")
+            .Should().BeTrue(because: "SPEC-002: periodic re-scan uses RescanInterval gate");
+    }
+
+    /// <summary>
+    /// SPEC-002 F-07: static <c>OnScanNeeded</c> delegate for external re-scan triggers.
+    /// </summary>
+    [Fact]
+    public void OnScanNeeded_IsExposedAsNullableStaticAction()
+    {
+        var src = SourceText.Value;
+        Regex.IsMatch(src, @"public\s+static\s+System\.Action\?\s+OnScanNeeded\s*;")
+            .Should().BeTrue(because: "SPEC-002 F-07: OnScanNeeded must be a public static nullable Action");
+    }
+
+    /// <summary>
+    /// SPEC-002 F-07 / <c>OnScanNeeded_TriggersInjection</c>: <c>RuntimeDriver</c> assigns the delegate
+    /// after creating <c>NativeMenuInjector</c> so main-thread callers can request <c>TryInjectMenuButton</c>.
+    /// </summary>
+    [Fact]
+    public void RuntimeDriver_OnScanNeeded_AssignsDelegateToTryInjectMenuButton()
+    {
+        var pluginSrc = File.ReadAllText(LocateRuntimePluginSource(), System.Text.Encoding.UTF8);
+        Regex.IsMatch(pluginSrc, @"NativeMenuInjector\.OnScanNeeded\s*=\s*\(\)\s*=>")
+            .Should().BeTrue(because: "SPEC-002 F-07: RuntimeDriver must assign OnScanNeeded after injector creation");
+        pluginSrc.Should().Contain("TryInjectMenuButton()",
+            because: "SPEC-002 F-07: OnScanNeeded handler must invoke TryInjectMenuButton");
+    }
+
+    private static string LocateRuntimePluginSource()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        for (int i = 0; i < 20 && dir != null; i++, dir = dir.Parent)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "global.json")))
+            {
+                var path = Path.Combine(dir.FullName, "src", "Runtime", "Plugin.cs");
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+        }
+        throw new InvalidOperationException(
+            $"Plugin.cs not located from {AppContext.BaseDirectory}; "
+            + "RuntimeDriver OnScanNeeded characterization test cannot run without source access.");
+    }
+
+    /// <summary>
+    /// SPEC-002 N-03: periodic re-scan interval is at least 1 second (implementation: 2 s).
+    /// </summary>
+    [Fact]
+    public void RescanInterval_IsAtLeastOneSecond()
+    {
+        var src = SourceText.Value;
+        var match = Regex.Match(src, @"private\s+const\s+float\s+RescanInterval\s*=\s*(\d+(?:\.\d+)?)f\s*;");
+        match.Success.Should().BeTrue(because: "RescanInterval constant must exist");
+        float interval = float.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        interval.Should().BeGreaterThanOrEqualTo(1f, because: "SPEC-002 N-03: re-scan interval must be >= 1 second");
+    }
+
+    // ------------------------------------------------------------------ //
+    // SPEC-002 manual AC #7: pause menu injection (same scan path as main menu)
+    // ------------------------------------------------------------------ //
+
+    /// <summary>
+    /// SPEC-002 manual AC #7: pause menu is an explicit injection target alongside main menu.
+    /// </summary>
+    [Fact]
+    public void NativeMenuInjector_DocumentsPauseMenuSupport()
+    {
+        SourceText.Value.Should().Contain("pause menu",
+            because: "SPEC-002 manual AC #7: pause menu must be documented as a native injection surface");
+    }
+
+    /// <summary>
+    /// SPEC-002 manual AC #7: <c>PauseMenu</c> is listed for diagnostics when DINO names the pause canvas.
+    /// </summary>
+    [Fact]
+    public void CanvasCandidateNames_IncludesPauseMenu()
+    {
+        Regex.IsMatch(SourceText.Value, @"""PauseMenu""")
+            .Should().BeTrue(because: "SPEC-002 manual AC #7: PauseMenu must appear in CanvasCandidateNames");
+    }
+
+    /// <summary>
+    /// SPEC-002 manual AC #7: injection scans every active canvas (not MainMenu-only) so pause menus qualify.
+    /// </summary>
+    [Fact]
+    public void TryInjectMenuButton_ScansAllActiveCanvasesForSettingsAnchor()
+    {
+        var body = GetMethodBodyBySignature("internal void TryInjectMenuButton()");
+        body.Should().Contain("foreach (Canvas canvas in allCanvases)",
+            because: "SPEC-002 manual AC #7: pause menu uses the same Settings/Options anchor scan as main menu");
+        body.Should().Contain("FindSettingsButton(canvas)",
+            because: "SPEC-002 manual AC #7: each active canvas (main or pause) is probed for Settings/Options");
+        body.Should().Contain("Search all active canvases regardless of name",
+            because: "SPEC-002 manual AC #7: pause canvas scan is name-agnostic; anchor is button text only");
+        body.Should().NotContain("IsCanvasNameMatch(",
+            because: "SPEC-002 manual AC #7: injection must not be gated to a fixed canvas name list");
+    }
+
+    /// <summary>
+    /// SPEC-002 lifecycle: Awake subscribes to scene changes; OnDestroy unsubscribes (DF0105 pair).
+    /// </summary>
+    [Fact]
+    public void Lifecycle_SubscribesAndUnsubscribesSceneChanged()
+    {
+        var src = SourceText.Value;
+        var awakeBody = GetMethodBodyBySignature("private void Awake()");
+        awakeBody.Should().Contain("SceneManager.activeSceneChanged += OnActiveSceneChanged");
+
+        var destroyBody = GetMethodBodyBySignature("private void OnDestroy()");
+        destroyBody.Should().Contain("SceneManager.activeSceneChanged -= OnActiveSceneChanged");
     }
 }

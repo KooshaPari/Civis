@@ -14,6 +14,9 @@
          for our consumption pattern (we exercise the analyzer via Compilation, not by referencing
          net461 surface). Suppress to keep lefthook stream watchdog from drowning in noise. -->
     <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <!-- KeyInputSystemTests require Unity/BepInEx types from Runtime when the game is installed -->
+    <GameInstalled Condition="Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="!Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
   </PropertyGroup>
 
     <!-- Code coverage disabled (see below) -->
@@ -48,9 +51,31 @@
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <!-- Coverage-guided fuzzing targets (SharpFuzz) -->
     <PackageReference Include="SharpFuzz" Version="2.2.0" />
-    <!-- Roslyn analyzer testing -->
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.*" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.xunit" Version="1.*" />
+  </ItemGroup>
+
+  <!-- SPEC-004 KeyInputSystem tests: compile-time access to KeyInputSystem / Plugin (Unity ECS + BepInEx) -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Unity.Entities">
+      <HintPath>$(ManagedDir)\Unity.Entities.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <Compile Remove="KeyInputSystemTests.cs" />
+    <Compile Remove="KeyInputSystemIntegrationTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -72,6 +97,22 @@
          (in this net8.0 Tests project) can exercise it without a net11.0 ProjectReference. -->
     <Compile Include="..\Tools\McpServer\NativeDepResolver.cs">
       <Link>McpServer\NativeDepResolver.cs</Link>
+    </Compile>
+    <!-- PackCompiler pure-C# services (net11.0 project not referenceable from net8.0 tests) -->
+    <Compile Include="..\Tools\PackCompiler\Services\AssetValidationService.cs">
+      <Link>PackCompiler\AssetValidationService.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Services\DefinitionUpdateService.cs">
+      <Link>PackCompiler\DefinitionUpdateService.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\ImportedAsset.cs">
+      <Link>PackCompiler\Models\ImportedAsset.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\OptimizedAsset.cs">
+      <Link>PackCompiler\Models\OptimizedAsset.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\AssetConfig.cs">
+      <Link>PackCompiler\Models\AssetConfig.cs</Link>
     </Compile>
   </ItemGroup>
 

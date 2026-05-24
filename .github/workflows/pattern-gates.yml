@@ -62,6 +62,14 @@ jobs:
           - { number: 226, name: 'public-mutable-fields', script: 'detect_pattern_226.py', continue_on_error: true }
           - { number: 230, name: 'broad-exception-catch', script: 'audit_broad_exception_catch.py', continue_on_error: true }
           - { number: 223, name: 'todo-without-ticket', script: 'audit_todo_without_ticket.py', continue_on_error: true }
+          # Orphan detectors wired (P1 #739)
+          - { number: 221, name: 'hardcoded-thresholds', script: 'audit_hardcoded_thresholds.py', continue_on_error: true }
+          - { number: 229, name: 'xml-doc-completeness', script: 'audit_xml_doc_completeness.py', continue_on_error: true }
+          - { number: 127, name: 'log-string-interpolation', script: 'audit_log_format_string_interpolation.py', continue_on_error: true }
+          - { number: 9999, name: 'benchmark-regression', script: 'check_benchmark_regression.py', continue_on_error: true }
+          - { number: 118, name: 'empty-catch-blocks', script: 'audit_empty_catch_blocks.py', continue_on_error: true }
+          - { number: 128, name: 'audit-public-fields', script: 'audit_public_fields.py', continue_on_error: true }
+          - { number: 129, name: 'audit-static-init-side-effects', script: 'audit_static_init_side_effects.py', continue_on_error: true }
 
     steps:
       - name: Checkout code

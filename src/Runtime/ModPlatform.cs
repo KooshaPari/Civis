@@ -59,11 +59,29 @@ namespace DINOForge.Runtime
         private bool _initialized;
         private bool _worldReady;
         private ContentLoadResult? _lastLoadResult;
+        private readonly Dictionary<string, CachedPackDisplayInfo> _packDisplayInfoCache =
+            new Dictionary<string, CachedPackDisplayInfo>(StringComparer.OrdinalIgnoreCase);
         // Pattern #99: pack IDs are schema-driven (YAML manifest), ordinal-comparison-only.
         // Keep ALL pack-ID lookups (HashSet, Equals, Dictionary) on StringComparer.Ordinal
         // to avoid drift between case-sensitive and case-insensitive paths (see L703 fix).
         private readonly HashSet<string> _disabledPacks = new HashSet<string>(StringComparer.Ordinal);
         private const string DisabledPacksFile = "disabled_packs.json";
+
+        private sealed class CachedPackDisplayInfo
+        {
+            public CachedPackDisplayInfo(DateTime lastWriteUtc, long length, PackDisplayInfo displayInfo)
+            {
+                LastWriteUtc = lastWriteUtc;
+                Length = length;
+                DisplayInfo = displayInfo;
+            }
+
+            public DateTime LastWriteUtc { get; }
+
+            public long Length { get; }
+
+            public PackDisplayInfo DisplayInfo { get; }
+        }
 
         /// <summary>The registry manager containing all loaded content.</summary>
         public RegistryManager? Registry => _registryManager;
@@ -632,8 +650,10 @@ namespace DINOForge.Runtime
                     _registryManager,
                     _log);
 
+#pragma warning disable DF0105
                 // Wire up events: when hot reload updates, re-apply overrides and refresh UI
                 _hotReloadBridge.OnRuntimeUpdated += OnHotReloadCompleted;
+#pragma warning restore DF0105
 
                 _hotReloadBridge.Start();
                 _log.LogInfo($"[ModPlatform] Hot reload started, watching: {packsDir}");
@@ -753,31 +773,12 @@ namespace DINOForge.Runtime
 
                     try
                     {
-                        PackManifest manifest = packLoader.LoadFromFile(manifestPath);
-                        bool isLoaded = false;
-                        foreach (string loadedId in result.LoadedPacks)
-                        {
-                            if (string.Equals(loadedId, manifest.Id, StringComparison.Ordinal))
-                            {
-                                isLoaded = true;
-                                break;
-                            }
-                        }
+                        PackDisplayInfo displayInfo = GetCachedPackDisplayInfo(manifestPath, packLoader);
+                        bool isLoaded = result.LoadedPacks.Any(
+                            loadedId => string.Equals(loadedId, displayInfo.Id, StringComparison.Ordinal));
+                        bool isDisabled = _disabledPacks.Contains(displayInfo.Id);
 
-                        bool isDisabled = _disabledPacks.Contains(manifest.Id);
-
-                        packInfos.Add(new PackDisplayInfo(
-                            id: manifest.Id,
-                            name: manifest.Name,
-                            version: manifest.Version,
-                            author: manifest.Author,
-                            type: manifest.Type,
-                            description: manifest.Description,
-                            loadOrder: manifest.LoadOrder,
-                            isEnabled: isLoaded && !isDisabled,
-                            dependencies: manifest.DependsOn.AsReadOnly(),
-                            conflicts: manifest.ConflictsWith.AsReadOnly(),
-                            errors: new List<string>().AsReadOnly()));
+                        packInfos.Add(displayInfo.WithEnabled(isLoaded && !isDisabled));
                     }
                     catch (Exception ex)
                     {
@@ -786,7 +787,65 @@ namespace DINOForge.Runtime
                 }
             }
 
+            HashSet<string> displayedIds = new HashSet<string>(
+                packInfos.Select(pack => pack.Id),
+                StringComparer.Ordinal);
+
+            foreach (string loadedId in result.LoadedPacks)
+            {
+                if (displayedIds.Contains(loadedId))
+                {
+                    continue;
+                }
+
+                bool isDisabled = _disabledPacks.Contains(loadedId);
+                packInfos.Add(new PackDisplayInfo(
+                    id: loadedId,
+                    name: loadedId,
+                    version: "unknown",
+                    author: "unknown",
+                    type: "pack",
+                    description: "Loaded pack metadata was not found on disk.",
+                    loadOrder: 0,
+                    isEnabled: !isDisabled,
+                    dependencies: Array.Empty<string>(),
+                    conflicts: Array.Empty<string>(),
+                    errors: new List<string>().AsReadOnly()));
+            }
+
             return packInfos;
+        }
+
+        private PackDisplayInfo GetCachedPackDisplayInfo(string manifestPath, PackLoader packLoader)
+        {
+            FileInfo manifestFile = new FileInfo(manifestPath);
+            if (_packDisplayInfoCache.TryGetValue(manifestPath, out CachedPackDisplayInfo? cached)
+                && cached.LastWriteUtc == manifestFile.LastWriteTimeUtc
+                && cached.Length == manifestFile.Length)
+            {
+                return cached.DisplayInfo;
+            }
+
+            PackManifest manifest = packLoader.LoadFromFile(manifestPath);
+            PackDisplayInfo displayInfo = new PackDisplayInfo(
+                id: manifest.Id,
+                name: manifest.Name,
+                version: manifest.Version,
+                author: manifest.Author,
+                type: manifest.Type,
+                description: manifest.Description,
+                loadOrder: manifest.LoadOrder,
+                isEnabled: true,
+                dependencies: manifest.DependsOn.AsReadOnly(),
+                conflicts: manifest.ConflictsWith.AsReadOnly(),
+                errors: new List<string>().AsReadOnly());
+
+            _packDisplayInfoCache[manifestPath] = new CachedPackDisplayInfo(
+                manifestFile.LastWriteTimeUtc,
+                manifestFile.Length,
+                displayInfo);
+
+            return displayInfo;
         }
 
         /// <summary>
@@ -877,19 +936,11 @@ namespace DINOForge.Runtime
         private void OnPackToggled(string packId, bool enabled)
         {
             _log.LogInfo($"[ModPlatform] Pack '{packId}' toggled: enabled={enabled}");
-            if (enabled)
-            {
-                _disabledPacks.Remove(packId);
-                _log.LogInfo($"[ModPlatform] Pack '{packId}' enabled");
-            }
-            else
-            {
-                _disabledPacks.Add(packId);
-                _log.LogInfo($"[ModPlatform] Pack '{packId}' disabled");
-            }
-            SaveDisabledPacks();
+            SetPackEnabled(packId, enabled);
 
-            // Immediately apply the toggle by reloading packs
+            // Immediately apply the toggle by reloading packs for legacy hosts. RuntimeDriver
+            // overrides UGUI callbacks with a deferred queue so Unity button presses never run
+            // pack IO on the click stack.
             try
             {
                 _log.LogInfo($"[ModPlatform] Reloading packs after toggle...");
@@ -901,6 +952,25 @@ namespace DINOForge.Runtime
                 _log.LogError($"[ModPlatform] Failed to reload after toggle: {ex}");
                 _modMenuHost?.SetStatus($"Reload after toggle failed: {ex.Message}", 1);
             }
+        }
+
+        /// <summary>
+        /// Updates the persisted enabled state for a pack without reloading content.
+        /// The runtime driver uses this from its deferred UI action queue.
+        /// </summary>
+        public void SetPackEnabled(string packId, bool enabled)
+        {
+            if (enabled)
+            {
+                _disabledPacks.Remove(packId);
+                _log.LogInfo($"[ModPlatform] Pack '{packId}' enabled");
+            }
+            else
+            {
+                _disabledPacks.Add(packId);
+                _log.LogInfo($"[ModPlatform] Pack '{packId}' disabled");
+            }
+            SaveDisabledPacks();
         }
 
         /// <summary>
@@ -970,6 +1040,10 @@ namespace DINOForge.Runtime
                 if (_hotReloadBridge != null)
                 {
                     _hotReloadBridge.OnRuntimeUpdated -= OnHotReloadCompleted;
+                }
+
+                if (_hotReloadBridge != null)
+                {
                     _hotReloadBridge.Dispose();
                     _hotReloadBridge = null;
                 }
@@ -1011,6 +1085,11 @@ namespace DINOForge.Runtime
                     _gameBridgeServer = null;
                 }
 
+                if (_hotReloadBridge != null)
+                {
+                    _hotReloadBridge.OnRuntimeUpdated -= OnHotReloadCompleted;
+                }
+
                 ShutdownNonBridge();
             }
             catch (Exception ex)
@@ -1021,6 +1100,14 @@ namespace DINOForge.Runtime
             _initialized = false;
             _worldReady = false;
             _log?.LogInfo("[ModPlatform] Shutdown complete.");
+        }
+
+        /// <summary>
+        /// Disposes the platform by running the full shutdown path.
+        /// </summary>
+        public void Dispose()
+        {
+            Shutdown();
         }
     }
 }

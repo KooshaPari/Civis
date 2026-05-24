@@ -187,7 +187,7 @@ namespace DINOForge.SDK.Universe
                 };
             }
 
-            string safeFileName = entry.ThemedId.Replace("*", "_").Replace("/", "_");
+            string safeFileName = entry.ThemedId.Replace("*", "_").Replace("/", "_"); // unbounded-version-ok: wildcard token is a filename sanitization marker, not a version constraint
             string path = Path.Combine(unitsDir, $"{safeFileName}.yaml");
             string yaml = _serializer.Serialize(unitDef);
             File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(yaml));

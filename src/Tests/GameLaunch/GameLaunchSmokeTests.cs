@@ -15,23 +15,20 @@ namespace DINOForge.Tests.GameLaunch;
 [Trait("Category", "GameLaunch")]
 public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
 {
-    [Fact]
+    [SkippableFact]
     public async Task Bridge_IsHealthy_AfterBootstrap()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
+        fixture.SkipIfNotInitialized();
 
         GameStatus status = await fixture.Client!.StatusAsync();
         status.WorldReady.Should().BeTrue("DINOForge plugin should report world ready after BepInEx bootstrap");
         status.EntityCount.Should().BeGreaterThan(0, "the ECS world should have spawned entities");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Bridge_Ping_RoundTripUnder100Ms()
     {
-        if (!fixture.IsInitialized) return;
+        fixture.SkipIfNotInitialized();
 
         Stopwatch sw = Stopwatch.StartNew();
         await fixture.Client!.PingAsync();

@@ -592,28 +592,33 @@ public sealed class GameClient : IGameClient, IDisposable
                     method, effectiveReadTimeout.TotalMilliseconds);
                 State = ConnectionState.Error;
                 throw new GameClientException(
-                    $"Read timed out for request '{method}' after {effectiveReadTimeout.TotalMilliseconds}ms", ex);
+                    FormatReadTimeoutMessage(method, effectiveReadTimeout.TotalMilliseconds), ex);
             }
 
             if (responseLine is null)
             {
                 State = ConnectionState.Error;
                 _logger.Error("Connection closed by game bridge server for request '{Method}'", method);
-                throw new GameClientException("Connection closed by the game bridge server.");
+                throw new GameClientException(
+                    EnrichBridgeError("Connection closed by the game bridge server."));
             }
 
             JsonRpcResponse? response = JsonConvert.DeserializeObject<JsonRpcResponse>(responseLine);
             if (response is null)
             {
                 _logger.Error("Received invalid JSON-RPC response for request '{Method}': {Response}", method, responseLine);
-                throw new GameClientException("Received invalid JSON-RPC response.");
+                throw new GameClientException(
+                    EnrichBridgeError("Received invalid JSON-RPC response."));
             }
 
             if (response.Error is not null)
             {
                 _logger.Error("Server returned error for request '{Method}': [{ErrorCode}] {ErrorMessage}",
                     method, response.Error.Code, response.Error.Message);
-                throw new GameClientException($"Server error [{response.Error.Code}]: {response.Error.Message}");
+                string errorMsg = $"Server error [{response.Error.Code}]: {response.Error.Message}";
+                if (response.Error.Message.IndexOf("Bridge error", StringComparison.OrdinalIgnoreCase) >= 0)
+                    errorMsg = EnrichBridgeError(errorMsg);
+                throw new GameClientException(errorMsg);
             }
 
             JToken responseResult = GetResponseResult(response, method);
@@ -660,9 +665,18 @@ public sealed class GameClient : IGameClient, IDisposable
 
         while (!readTask.IsCompleted)
         {
-            ct.ThrowIfCancellationRequested();
-            Task delayTask = Task.Delay(200, ct);
-            await delayTask;
+            try
+            {
+                ct.ThrowIfCancellationRequested();
+                Task delayTask = Task.Delay(200, ct);
+                await delayTask;
+            }
+            catch (OperationCanceledException) when (reader.BaseStream is NamedPipeClientStream pipe && !pipe.IsConnected)
+            {
+                // If the caller token fires after the bridge has already dropped
+                // the pipe, surface the disconnect path instead of a raw cancel.
+                return null;
+            }
         }
 
         // Safe: readTask.IsCompleted is true by loop exit invariant
@@ -809,6 +823,40 @@ public sealed class GameClient : IGameClient, IDisposable
 
         return result;
     }
+
+    private static string FormatReadTimeoutMessage(string method, double timeoutMs) =>
+        EnrichBridgeError(
+            $"Read timed out for request '{method}' after {timeoutMs}ms. " +
+            "The pipe connected but the game bridge did not respond. " +
+            "Is the game running with DINOForge loaded (BepInEx + mod DLL)? " +
+            "Confirm GameBridgeServer started in the game log. " +
+            "During scene transitions the bridge may restart — retry after the world loads.");
+
+    private static string EnrichBridgeError(string message)
+    {
+        string? fallback = TryReadBridgeFallbackFile();
+        return fallback is null
+            ? message
+            : $"{message} Bridge fallback ({BridgeFallbackPath}): {fallback}";
+    }
+
+    private static string? TryReadBridgeFallbackFile()
+    {
+        try
+        {
+            if (!File.Exists(BridgeFallbackPath)) return null;
+            string text = File.ReadAllText(BridgeFallbackPath, Encoding.UTF8).Trim();
+            return string.IsNullOrEmpty(text) ? null : text;
+        }
+        // safe-swallow: the bridge fallback file is optional and may disappear between the existence check and read.
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string BridgeFallbackPath =>
+        Path.Combine(Path.GetTempPath(), "DINOForge", "dinoforge_bridge_fallback.txt");
 
     private void ThrowIfDisposed()
     {

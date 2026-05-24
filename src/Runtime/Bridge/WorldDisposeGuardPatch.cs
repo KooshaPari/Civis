@@ -45,7 +45,7 @@ namespace DINOForge.Runtime.Bridge
                     .Select(a =>
                     {
                         try { return a.GetType("Unity.Entities.World", throwOnError: false); }
-                        catch { return null; }
+                        catch { return null; } // safe-swallow: type lookup can fail on partially loaded assemblies during startup
                     })
                     .FirstOrDefault(t => t != null);
 

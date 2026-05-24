@@ -192,7 +192,7 @@ namespace DINOForge.Runtime.UI
                 GUI.Label(toastRect, $"  ✓  {toast.Message}", DinoForgeStyle.SectionLabelStyle);
                 GUI.color = savedColor;
 
-                currentY += ToastHeight + 2f;
+                currentY = currentY + ToastHeight + 2f;
             }
         }
 

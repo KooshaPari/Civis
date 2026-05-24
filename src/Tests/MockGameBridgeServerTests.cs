@@ -17,6 +17,7 @@ namespace DINOForge.Tests;
 /// in explicitly via <see cref="GameClientOptions.PerformConnectHandshake"/>.
 /// </summary>
 [Trait("Category", "BridgeHmac")]
+[Collection(Collections.BridgePipe)]
 public class MockGameBridgeServerTests
 {
     /// <summary>
@@ -311,6 +312,7 @@ public class MockGameBridgeServerTests
                 PipeName = pipeName,
                 UseMessageFraming = false,
                 PerformConnectHandshake = true,
+                ConnectTimeoutMs = 15_000,
             });
             // Post-flip default (Phase 4c sub-task B #249): HmacVerificationMode.Strict.
             // The docstring specifies Strict-mode frame monotonicity verification;

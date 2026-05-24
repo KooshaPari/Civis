@@ -38,7 +38,8 @@ namespace DINOForge.Runtime
             if (_frameCount <= 3 || _frameCount % 100 == 0)
             {
                 // P0 #810: must include prefab entities — DINO entities are all ECS Prefab entities
-                using var query = EntityManager.CreateEntityQuery(new EntityQueryDesc {
+                using var query = EntityManager.CreateEntityQuery(new EntityQueryDesc
+                {
                     Options = EntityQueryOptions.IncludePrefab
                 });
                 var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);

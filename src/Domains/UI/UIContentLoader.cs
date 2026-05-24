@@ -167,7 +167,7 @@ namespace DINOForge.Domains.UI
         /// </summary>
         private class HudElementWrapper
         {
-            public List<HudElementDefinition> HudElements { get; set; } = new List<HudElementDefinition>();
+            public List<HudElementDefinition> HudElements { get; set; } = new List<HudElementDefinition>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
             public HudElementDefinition? HudElement { get; set; }
         }
 
@@ -176,7 +176,7 @@ namespace DINOForge.Domains.UI
         /// </summary>
         private class MenuWrapper
         {
-            public List<MenuDefinition> Menus { get; set; } = new List<MenuDefinition>();
+            public List<MenuDefinition> Menus { get; set; } = new List<MenuDefinition>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
             public MenuDefinition? Menu { get; set; }
         }
 
@@ -185,7 +185,7 @@ namespace DINOForge.Domains.UI
         /// </summary>
         private class ThemeWrapper
         {
-            public List<ThemeDefinition> Themes { get; set; } = new List<ThemeDefinition>();
+            public List<ThemeDefinition> Themes { get; set; } = new List<ThemeDefinition>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
             public ThemeDefinition? Theme { get; set; }
         }
     }

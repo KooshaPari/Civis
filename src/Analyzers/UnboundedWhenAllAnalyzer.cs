@@ -110,17 +110,19 @@ namespace DINOForge.Analyzers
 
         private static bool HasTaskWhenAllOkComment(InvocationExpressionSyntax invocation)
         {
-            // Check leading trivia
-            var leadingTrivia = invocation.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
+            foreach (var node in invocation.AncestorsAndSelf())
             {
-                if (CheckTrivia(trivia))
+                if (HasSuppressionComment(node.GetLeadingTrivia()) ||
+                    HasSuppressionComment(node.GetTrailingTrivia()))
                     return true;
             }
 
-            // Check trailing trivia of the invocation
-            var trailingTrivia = invocation.GetTrailingTrivia();
-            foreach (var trivia in trailingTrivia)
+            return false;
+        }
+
+        private static bool HasSuppressionComment(SyntaxTriviaList triviaList)
+        {
+            foreach (var trivia in triviaList)
             {
                 if (CheckTrivia(trivia))
                     return true;

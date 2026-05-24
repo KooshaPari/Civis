@@ -111,7 +111,7 @@ namespace DINOForge.Runtime
                 catch (Exception ex)
                 {
                     _log.LogWarning($"  Failed to dump world '{world.Name}': {ex}");
-                    worldObj["error"] = ex.Message;
+                    worldObj["error"] = ex.ToString();
                 }
 
                 worldsJson.Add(worldObj);
@@ -403,7 +403,7 @@ namespace DINOForge.Runtime
                 catch (Exception ex)
                 {
                     _log.LogWarning($"  Failed to scan {assemblyName}: {ex}");
-                    namespaceDump[assemblyName] = ex.Message;
+                    namespaceDump[assemblyName] = ex.ToString();
                 }
             }
 

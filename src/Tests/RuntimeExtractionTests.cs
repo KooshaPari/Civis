@@ -147,7 +147,7 @@ public class RuntimeExtractionTests
     public void MapUnitClassToComponentType_NullInput_ReturnsNull()
     {
         // Act
-        string? result = VanillaArchetypeMapper.MapUnitClassToComponentType(null);
+        string? result = VanillaArchetypeMapper.MapUnitClassToComponentType(null!);
 
         // Assert
         result.Should().BeNull();
@@ -232,7 +232,7 @@ public class RuntimeExtractionTests
     {
         // Act
 #pragma warning disable CS8604 // Possible null reference argument
-        bool result = VanillaArchetypeMapper.IsSpawnable(null);
+        bool result = VanillaArchetypeMapper.IsSpawnable(null!);
 #pragma warning restore CS8604
 
         // Assert

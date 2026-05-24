@@ -127,7 +127,7 @@ namespace DINOForge.Tests.ParameterizedTests
                     (26, Gen.Choose('a', 'z').Select(c => (char)c)),
                     (26, Gen.Choose('A', 'Z').Select(c => (char)c)),
                     (10, Gen.Choose('0', '9').Select(c => (char)c)),
-                    (3,  Gen.Constant('-'))),
+                    (3, Gen.Constant('-'))),
                 len)
             select new string(arr);
 
@@ -279,8 +279,8 @@ namespace DINOForge.Tests.ParameterizedTests
                     ((int, Gen<char>))(26, Gen.Choose('a', 'z').Select(c => (char)c)),
                     ((int, Gen<char>))(26, Gen.Choose('A', 'Z').Select(c => (char)c)),
                     ((int, Gen<char>))(10, Gen.Choose('0', '9').Select(c => (char)c)),
-                    ((int, Gen<char>))(3,  Gen.Constant('-')),
-                    ((int, Gen<char>))(3,  Gen.Constant('.'))),
+                    ((int, Gen<char>))(3, Gen.Constant('-')),
+                    ((int, Gen<char>))(3, Gen.Constant('.'))),
                 len)
             select new string(arr);
 

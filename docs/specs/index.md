@@ -54,6 +54,25 @@ DINOForge specifications are divided into two primary documents:
 
 ---
 
+## Numbered Specifications
+
+| ID | Document | Status |
+|----|----------|--------|
+| SPEC-002 | [Native Menu Injector](./SPEC-002-native-menu-injector.md) | Accepted |
+| SPEC-003 | [Prove-Features Skill](./SPEC-003-prove-features-skill.md) | Active — v2 pipeline implemented |
+| SPEC-004 | [Key Input System](./SPEC-004-key-input-system.md) | Implemented — Active |
+| SPEC-005 | [Duplicate Instance Bypass](./SPEC-005-duplicate-instance-bypass.md) | Cancelled / Superseded |
+| SPEC-006 | [Prove-Features Video Pipeline v1](./SPEC-006-prove-features-video-pipeline.md) | Superseded |
+| SPEC-007 | [Runtime Features Baseline](./SPEC-007-runtime-features-baseline.md) | Active |
+| M13 | [Runtime Survival, HMR & Concurrency](./M13-runtime-survival-hmr-concurrency.md) | Draft |
+
+**Supersession notes**:
+- SPEC-005 → `boot.config` `single-instance=0`; see [.claude/commands/launch-game.md](../../.claude/commands/launch-game.md)
+- SPEC-006 → [v2 pipeline design](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md)
+- SPEC-003 v2 → `scripts/game/capture-feature-clips.ps1`, edge-tts, Remotion; [WORK-001](../work-items/WORK-001-prove-features-improvements.md) closed
+
+---
+
 ## Quick Navigation
 
 ### For Modders
@@ -221,6 +240,6 @@ See [CHANGELOG.md](https://github.com/KooshaPari/Dino/blob/main/CHANGELOG.md) fo
 
 ---
 
-**Last Updated**: 2026-03-20
+**Last Updated**: 2026-05-23
 **Status**: Active Documentation
 **Audience**: All Users and Developers

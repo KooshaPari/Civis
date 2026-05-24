@@ -88,6 +88,58 @@ namespace DINOForge.Tools.PackCompiler.Tests
         }
 
         [Fact]
+        public void ValidateConfiguration_WithPlaceholderMetadata_ReturnsError()
+        {
+            var config = new AssetPipelineConfig
+            {
+                Version = "0.7.0",
+                PackId = "test-pack",
+                TargetUnityVersion = "2021.3.45f2",
+                AssetSettings = new AssetSettings { BasePath = "assets", OutputPath = "output" },
+                Materials = new Dictionary<string, MaterialDefinition>
+                {
+                    { "default", new MaterialDefinition { Faction = "test", BaseColor = "#FFFFFF", EmissionColor = "#000000", EmissionIntensity = 1.0f } }
+                },
+                Phases = new Dictionary<string, AssetPhase>
+                {
+                    {
+                        "v0.7.0", new AssetPhase
+                        {
+                            Description = "Initial assets",
+                            Models = new List<AssetDefinition>
+                            {
+                                new AssetDefinition
+                                {
+                                    Id = "asset-placeholder",
+                                    File = "model.glb",
+                                    Type = "infantry",
+                                    Faction = "test",
+                                    PolyCountTarget = 5000,
+                                    Material = "default",
+                                    AddressableKey = "asset/placeholder",
+                                    OutputPrefab = "Prefabs/assetplaceholder",
+                                    LOD = new LODDefinition { Levels = new List<int> { 100, 60, 30 } },
+                                    Metadata = new Dictionary<string, object>
+                                    {
+                                        ["acquisition_mode"] = "manual_placeholder",
+                                        ["technical_status"] = "placeholder_pending_download"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                Build = new BuildConfig { OutputDirectory = "out", AddressablesOutput = "addr" }
+            };
+
+            var result = _validationService.ValidateConfiguration(config);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.Contains("manual_placeholder"));
+            result.Errors.Should().Contain(e => e.Contains("placeholder_pending_download"));
+        }
+
+        [Fact]
         public void ValidateImportedAsset_WithEmptyMesh_ReturnsError()
         {
             // Arrange

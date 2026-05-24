@@ -6,6 +6,7 @@
     <!-- Converters -->
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     <converters:ErrorCountToColorConverter x:Key="ErrorCountToColorConverter" />
+    <converters:DepthToWidthConverter x:Key="DepthToWidthConverter" />
 
     <!-- DINOForge dark colour tokens -->
     <Color x:Key="DFBackground">#FF1A1A1A</Color>
@@ -35,6 +36,24 @@
         <Setter Property="Foreground" Value="White" />
         <Setter Property="Padding" Value="16,8" />
         <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <!-- Secondary (outline) button -->
+    <Style x:Key="DFSecondaryButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource DFTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DFBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <!-- Themed text box -->
+    <Style x:Key="DFTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource DFSurfaceBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource DFTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DFBorderBrush}" />
+        <Setter Property="Padding" Value="8,6" />
     </Style>
 
     <!-- Card panel style -->

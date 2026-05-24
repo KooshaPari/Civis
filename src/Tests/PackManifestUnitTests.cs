@@ -17,16 +17,16 @@ namespace DINOForge.Tests
             manifest.Id.Should().Be("");
             manifest.Name.Should().Be("");
             manifest.Version.Should().Be("0.1.0");
-            manifest.FrameworkVersion.Should().Be(">=0.1.0");
+            manifest.FrameworkVersion.Should().Be(">=0.1.0 <1.0.0");
             manifest.Author.Should().Be("");
             manifest.Type.Should().Be("content");
             manifest.Description.Should().BeNull();
             manifest.DependsOn.Should().BeEmpty();
             manifest.ConflictsWith.Should().BeEmpty();
             manifest.LoadOrder.Should().Be(100);
-            manifest.GameVersion.Should().Be("*");
-            manifest.BepInExVersion.Should().Be(">=5.4.0");
-            manifest.UnityVersion.Should().Be("*");
+            manifest.GameVersion.Should().Be(">=0.0.0 <2.0.0");
+            manifest.BepInExVersion.Should().Be(">=5.4.0 <6.0.0");
+            manifest.UnityVersion.Should().Be(">=2021.3.0 <2022.0.0");
             manifest.Loads.Should().BeNull();
             manifest.Overrides.Should().BeNull();
         }
@@ -67,7 +67,7 @@ namespace DINOForge.Tests
                 Author = "Test Author",
                 Type = "balance",
                 Description = "A test pack",
-                FrameworkVersion = ">=0.20.0",
+                FrameworkVersion = ">=0.20.0 <1.0.0",
                 LoadOrder = 200
             };
 
@@ -78,7 +78,7 @@ namespace DINOForge.Tests
             manifest.Author.Should().Be("Test Author");
             manifest.Type.Should().Be("balance");
             manifest.Description.Should().Be("A test pack");
-            manifest.FrameworkVersion.Should().Be(">=0.20.0");
+            manifest.FrameworkVersion.Should().Be(">=0.20.0 <1.0.0");
             manifest.LoadOrder.Should().Be(200);
         }
 

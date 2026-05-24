@@ -118,6 +118,24 @@ namespace DINOForge.Analyzers
                 return;
             }
 
+            // #848 Gap Class #1: return-only catch — `catch (Exception) { return; }` or
+            // `catch { return; }` with no logging or exception use. Semantically identical to
+            // silent swallow; the method silently exits without signaling the exception.
+            if (IsReturnOnlyBody(catchClause, statements))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(Rule, catchClause.GetLocation()));
+                return;
+            }
+
+            // #848 Gap Class #3: comment-only catch — `catch (Exception ex) { /* comment */ }`
+            // with no executable statements, only a comment. The catch body is syntactically
+            // empty but hidden by a comment, silently swallowing the exception.
+            if (IsCommentOnlyBody(catchClause, statements))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(Rule, catchClause.GetLocation()));
+                return;
+            }
+
             // Case B / #848 Gap Class C: catch-swallow-default — block contains ONLY a
             // return/break/continue with a default-ish value (null, default, false, 0, "",
             // empty collection literal) and no logging, rethrow, or use of the caught exception.
@@ -337,6 +355,74 @@ namespace DINOForge.Analyzers
                     commentText.Contains("test-cleanup-ok"))
                     return true;
             }
+            return false;
+        }
+
+        // #848 Gap Class #1 helper: detect `catch (Exception) { return; }` or `catch { return; }`
+        // with no logging, rethrow, or use of the caught exception. The body is a single plain
+        // return statement (no value, or a default-ish value) — the exception is swallowed silently.
+        private static bool IsReturnOnlyBody(CatchClauseSyntax catchClause, SyntaxList<StatementSyntax> statements)
+        {
+            if (statements.Count != 1)
+                return false;
+
+            var stmt = statements[0];
+
+            // Must be a return statement.
+            if (!(stmt is ReturnStatementSyntax ret))
+                return false;
+
+            // Reject if the return expression logs, rethrows, or uses the caught exception.
+            var exceptionVarName = catchClause.Declaration?.Identifier.ValueText;
+            if (ret.Expression != null)
+            {
+                foreach (var node in ret.Expression.DescendantNodesAndSelf())
+                {
+                    switch (node)
+                    {
+                        case ThrowStatementSyntax _:
+                        case ThrowExpressionSyntax _:
+                            return false;
+                        case InvocationExpressionSyntax invocation:
+                            var text = invocation.Expression.ToString();
+                            if (text.IndexOf("Log", StringComparison.Ordinal) >= 0 ||
+                                text.IndexOf("Debug", StringComparison.Ordinal) >= 0)
+                                return false;
+                            break;
+                        case IdentifierNameSyntax id when exceptionVarName != null && id.Identifier.ValueText == exceptionVarName:
+                            return false;
+                    }
+                }
+            }
+
+            // It's a bare `return;` or `return <default-value>;` with no logging.
+            // This is a silent swallow.
+            return true;
+        }
+
+        // #848 Gap Class #3 helper: detect `catch (Exception ex) { /* comment only */ }` where
+        // the body contains no executable statements, only comments. This is semantically empty
+        // and silently swallows the exception.
+        private static bool IsCommentOnlyBody(CatchClauseSyntax catchClause, SyntaxList<StatementSyntax> statements)
+        {
+            if (statements.Count == 0)
+                return true; // Already flagged by Case A, but double-check here.
+
+            // All statements must be no-ops (empty statements or empty blocks).
+            if (statements.All(IsNoOpStatement))
+            {
+                // Check if the block also contains comments (leading/trailing trivia).
+                // If the block is purely comments + no-ops, it's a comment-only catch.
+                if (catchClause.Block != null &&
+                    (catchClause.Block.OpenBraceToken.HasTrailingTrivia ||
+                     catchClause.Block.CloseBraceToken.HasLeadingTrivia ||
+                     catchClause.Block.CloseBraceToken.HasTrailingTrivia))
+                {
+                    // There's comment trivia; the body is comment-only.
+                    return true;
+                }
+            }
+
             return false;
         }
     }

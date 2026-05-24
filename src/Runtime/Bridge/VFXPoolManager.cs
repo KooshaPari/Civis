@@ -97,11 +97,11 @@ namespace DINOForge.Runtime.Bridge
                 AllocatePool("vfx/BuildingCollapse_CIS.prefab", 4); // Building death — rare
                 AllocatePool("vfx/Explosion_CIS.prefab", 12);       // Heavy weapon AOE — high impact
 
-                DebugLog.Write("VFXPool",$"VFXPoolManager initialized: {_totalInstances} instances across {_pools.Count} pools");
+                DebugLog.Write("VFXPool", $"VFXPoolManager initialized: {_totalInstances} instances across {_pools.Count} pools");
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.Initialize failed: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.Initialize failed: {ex.Message}");
                 throw;
             }
         }
@@ -119,7 +119,7 @@ namespace DINOForge.Runtime.Bridge
                 ParticleSystem? prefab = LoadPrefabFromPack(prefabPath);
                 if (prefab == null)
                 {
-                    DebugLog.Write("VFXPool",$"VFXPoolManager: Prefab not found, skipping allocation: {prefabPath}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager: Prefab not found, skipping allocation: {prefabPath}");
                     return;
                 }
 
@@ -131,8 +131,8 @@ namespace DINOForge.Runtime.Bridge
                 {
                     try
                     {
-                        // null-forgiveness-ok: _poolRoot lazy-initialized at field declaration
-                        ParticleSystem instance = UnityEngine.Object.Instantiate(prefab, _poolRoot!.transform);
+                        Transform poolTransform = _poolRoot != null ? _poolRoot.transform : throw new InvalidOperationException("VFX pool root is not initialized.");
+                        ParticleSystem instance = UnityEngine.Object.Instantiate(prefab, poolTransform);
                         instance.name = $"{prefab.name}_{i}";
                         instance.gameObject.SetActive(false);
 
@@ -144,15 +144,15 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (Exception ex)
                     {
-                        DebugLog.Write("VFXPool",$"VFXPoolManager: Failed to instantiate {prefabPath} ({i}/{count}): {ex.Message}");
+                        DebugLog.Write("VFXPool", $"VFXPoolManager: Failed to instantiate {prefabPath} ({i}/{count}): {ex.Message}");
                     }
                 }
 
-                DebugLog.Write("VFXPool",$"VFXPoolManager: Allocated {poolQueue.Count} instances of {prefabPath}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager: Allocated {poolQueue.Count} instances of {prefabPath}");
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.AllocatePool({prefabPath}) failed: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.AllocatePool({prefabPath}) failed: {ex.Message}");
             }
         }
 
@@ -180,18 +180,18 @@ namespace DINOForge.Runtime.Bridge
                         return ps;
                     }
 
-                    DebugLog.Write("VFXPool",$"VFXPoolManager: Loaded prefab but has no ParticleSystem: {prefabPath}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager: Loaded prefab but has no ParticleSystem: {prefabPath}");
                     return null;
                 }
 
                 // Fallback: Create prefab at runtime from descriptor
                 // This ensures VFX always works even if binary prefabs are missing
-                DebugLog.Write("VFXPool",$"VFXPoolManager: Binary prefab not found ({prefabPath}), creating from descriptor");
+                DebugLog.Write("VFXPool", $"VFXPoolManager: Binary prefab not found ({prefabPath}), creating from descriptor");
                 return CreatePrefabFromDescriptor(prefabPath);
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.LoadPrefabFromPack({prefabPath}) failed: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.LoadPrefabFromPack({prefabPath}) failed: {ex.Message}");
                 return null;
             }
         }
@@ -205,15 +205,15 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public ParticleSystem? Get(string prefabPath)
         {
-            if (!_pools.TryGetValue(prefabPath, out Queue<ParticleSystem> queue))
+            if (!_pools.TryGetValue(prefabPath, out Queue<ParticleSystem>? queue))
             {
                 // Path not in pool — try to allocate on-demand (slower path)
-                DebugLog.Write("VFXPool",$"VFXPoolManager.Get: Pool not initialized for {prefabPath}, creating on-demand");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.Get: Pool not initialized for {prefabPath}, creating on-demand");
                 AllocatePool(prefabPath, 1);
 
                 if (!_pools.TryGetValue(prefabPath, out queue))
                 {
-                    DebugLog.Write("VFXPool",$"VFXPoolManager.Get: Failed to allocate on-demand for {prefabPath}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager.Get: Failed to allocate on-demand for {prefabPath}");
                     return null;
                 }
             }
@@ -227,13 +227,13 @@ namespace DINOForge.Runtime.Bridge
             else
             {
                 // Pool exhausted — log and create fallback
-                DebugLog.Write("VFXPool",$"VFXPoolManager.Get: Pool exhausted for {prefabPath}, creating fallback instance");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.Get: Pool exhausted for {prefabPath}, creating fallback instance");
 
                 ParticleSystem? prefab = LoadPrefabFromPack(prefabPath);
                 if (prefab != null)
                 {
-                    // null-forgiveness-ok: _poolRoot lazy-initialized at field declaration
-                    instance = UnityEngine.Object.Instantiate(prefab, _poolRoot!.transform);
+                    Transform poolTransform = _poolRoot != null ? _poolRoot.transform : throw new InvalidOperationException("VFX pool root is not initialized.");
+                    instance = UnityEngine.Object.Instantiate(prefab, poolTransform);
                     instance.gameObject.SetActive(false);
                     _totalInstances++;
                 }
@@ -279,7 +279,7 @@ namespace DINOForge.Runtime.Bridge
                 // Find which pool this belongs to by matching the prefab name
                 string prefabKey = FindPrefabKey(instance);
 
-                if (!string.IsNullOrEmpty(prefabKey) && _pools.TryGetValue(prefabKey, out Queue<ParticleSystem> queue))
+                if (!string.IsNullOrEmpty(prefabKey) && _pools.TryGetValue(prefabKey, out Queue<ParticleSystem>? queue) && queue != null)
                 {
                     queue.Enqueue(instance);
                     int activeCount = 0;
@@ -292,14 +292,14 @@ namespace DINOForge.Runtime.Bridge
                 else
                 {
                     // Instance not recognized — may be from elsewhere, just disable it
-                    DebugLog.Write("VFXPool",$"VFXPoolManager.Return: Instance not in pool, destroying: {instance.name}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager.Return: Instance not in pool, destroying: {instance.name}");
                     UnityEngine.Object.Destroy(instance.gameObject);
                     _totalInstances--;
                 }
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.Return failed: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.Return failed: {ex.Message}");
             }
         }
 
@@ -339,8 +339,8 @@ namespace DINOForge.Runtime.Bridge
                     active = val;
                 int pooled = _pools[key].Count;
 
-                totalActive += active;
-                totalPooled += pooled;
+                totalActive = totalActive + active;
+                totalPooled = totalPooled + pooled;
             }
 
             return (totalActive, totalPooled, _totalInstances);
@@ -363,11 +363,11 @@ namespace DINOForge.Runtime.Bridge
                 _activeCount.Clear();
                 _totalInstances = 0;
 
-                DebugLog.Write("VFXPool","VFXPoolManager shutdown complete");
+                DebugLog.Write("VFXPool", "VFXPoolManager shutdown complete");
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.Shutdown error: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.Shutdown error: {ex.Message}");
             }
         }
 
@@ -398,7 +398,7 @@ namespace DINOForge.Runtime.Bridge
 
                 if (descriptor == null)
                 {
-                    DebugLog.Write("VFXPool",$"VFXPoolManager: No descriptor found for {prefabName}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager: No descriptor found for {prefabName}");
                     return null;
                 }
 
@@ -406,24 +406,24 @@ namespace DINOForge.Runtime.Bridge
                 GameObject prefabGo = VFXPrefabFactory.CreatePrefabFromDescriptor(descriptor);
                 if (prefabGo == null)
                 {
-                    DebugLog.Write("VFXPool",$"VFXPoolManager: Failed to create prefab from descriptor: {prefabName}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager: Failed to create prefab from descriptor: {prefabName}");
                     return null;
                 }
 
                 ParticleSystem? ps = prefabGo.GetComponent<ParticleSystem>();
                 if (ps == null)
                 {
-                    DebugLog.Write("VFXPool",$"VFXPoolManager: Created prefab has no ParticleSystem: {prefabName}");
+                    DebugLog.Write("VFXPool", $"VFXPoolManager: Created prefab has no ParticleSystem: {prefabName}");
                     UnityEngine.Object.Destroy(prefabGo);
                     return null;
                 }
 
-                DebugLog.Write("VFXPool",$"VFXPoolManager: Created runtime prefab from descriptor: {prefabName}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager: Created runtime prefab from descriptor: {prefabName}");
                 return ps;
             }
             catch (Exception ex)
             {
-                DebugLog.Write("VFXPool",$"VFXPoolManager.CreatePrefabFromDescriptor({prefabPath}) failed: {ex.Message}");
+                DebugLog.Write("VFXPool", $"VFXPoolManager.CreatePrefabFromDescriptor({prefabPath}) failed: {ex.Message}");
                 return null;
             }
         }

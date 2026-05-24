@@ -3,7 +3,7 @@
 **Status**: Active
 **Last Updated**: 2026-03-24
 **Owners**: Runtime Layer (Plugin.cs, RuntimeDriver, UI/KeyInputSystem)
-**Test Coverage**: `/prove-features` autonomous skill
+**Test Coverage**: `/prove-features` autonomous skill; offline CI via `scripts/game/prove-features-gate.ps1 -ValidateOnly`; live proof via `GameLaunch` tests on self-hosted runners (`game-launch.yml`)
 **Baseline Confirmed**: 2026-03-23
 
 ---
@@ -188,12 +188,14 @@ private void Toggle()
 
 ### Verification Checklist
 
+> **CI / GameLaunch** (self-hosted, `DINO_GAME_PATH` set): `GameLaunchOverlayTests` (`Overlay_F9_*`, `Overlay_F9_F10_ToggleDuringGameplay`, `Overlay_F10_ModMenuToggle_PreservesRuntime`, `Overlay_Panels_HiddenByDefault_AtMainMenu`), `GameLaunchUiTests.Overlay_F10_*`. **Offline CI**: `KeyInputSystemTests` when Unity assemblies are present; delegate wiring only.
+
 - [ ] Debug log contains `[RuntimeDriver] F9 pressed` when F9 is pressed
 - [ ] Debug log contains `[RuntimeDriver] F10 pressed` when F10 is pressed
-- [ ] F9 toggles debug overlay visibility at main menu
-- [ ] F9 toggles debug overlay visibility in-game
-- [ ] F10 toggles mod menu visibility at main menu
-- [ ] F10 toggles mod menu visibility in-game
+- [x] F9 toggles debug overlay visibility at main menu *(GameLaunch: `Overlay_F9_AssertDebugPanelVisible_AtMainMenu`, bridge `ToggleUiAsync("debug")`)*
+- [x] F9 toggles debug overlay visibility in-game *(GameLaunch: `Overlay_F9_F10_ToggleDuringGameplay`)*
+- [x] F10 toggles mod menu visibility at main menu *(GameLaunch: `Overlay_F10_*`, `GameLaunchUiTests`)*
+- [x] F10 toggles mod menu visibility in-game *(GameLaunch: `Overlay_F9_F10_ToggleDuringGameplay`)*
 - [ ] No exceptions logged when toggling
 - [ ] No performance degradation from background thread (50ms poll is negligible)
 
@@ -242,7 +244,7 @@ Ensure that UI panels (debug panel, mod menu) start in a hidden state and only a
 
 | Panel | Default State | Appearance | Alpha | Notes |
 |-------|---------------|-----------|-------|-------|
-| **HUD Strip** | Visible | Bottom-right corner, 60% opacity | 0.6f | Intentional always-visible design element |
+| **HUD Strip** | Hidden at rest | Top-right corner, fades in on hover | 0f → 1.0f | **Spec drift**: table once said 0.6f always-visible; see `HudStrip.cs` + `ModMenuTests.HudStrip_*` |
 | **Mod Menu Panel** | Hidden | Centered, expandable | 0.0f (alpha=0) | Opens with F10 |
 | **Debug Panel** | Hidden | Free-floating, minimal | 0.0f (alpha=0) | Opens with F9 |
 
@@ -318,31 +320,31 @@ private void OnEnable()
 
 **Expectation**: Panel should NEVER call `Toggle()` or set `_targetVisible = true` during initialization. Only user F10 press should trigger visibility.
 
-#### 3. HUD Strip Always Visible (0.6f Alpha)
+#### 3. HUD Strip visibility (implementation; historical 0.6f note)
 
-**File**: `src/Runtime/UI/HUDStrip.cs` (or similar)
+**File**: `src/Runtime/UI/HudStrip.cs`
+
+> **Spec drift (2026-05)**: Older text described an always-visible strip at **0.6f** alpha (bottom-right). Current code hides the strip at rest, anchors **top-right**, and fades to **1.0** on pointer hover via `DFCanvas` → `SetHovered`. Offline characterization: `ModMenuTests.HudStrip_Build_StartsHiddenWithZeroAlpha`, `HudStrip_HoverFade_UsesZeroBaseAndFullOpacityOnHover`. Skipped drift sentinel: `HudStrip_SPEC007_AlwaysVisibleAtPointSixAlpha`.
 
 ```csharp
-private void Build()
-{
-    _canvasGroup = GetComponent<CanvasGroup>();
-    _canvasGroup.alpha = 0.6f;  // 60% opacity — intentional, always visible
-    Plugin.ResurrectionLog?.LogInfo("[HUDStrip] Build: always visible at 0.6 alpha");
-}
+_stripGroup.alpha = 0f; // hidden by default; fades in on hover
+// AlphaBase = 0f, AlphaHover = 1.0f in AnimateHover()
 ```
 
-**Note**: The HUD strip is **NOT** toggleable by F9/F10. It remains visible at all times as a design choice.
+**Note**: The HUD strip is **NOT** toggleable by F9/F10. Visibility is hover-driven, not panel-toggle driven.
 
 ### Verification Checklist
 
-- [ ] Game starts with all panels closed (no visible overlays except HUD strip)
+> **GameLaunch**: `Overlay_Panels_HiddenByDefault_AtMainMenu`, `Overlay_F9_AssertDebugPanelVisible_AtMainMenu`. **Offline**: `ModMenuTests.ModMenuPanel_Build_StartsHiddenWithZeroAlpha`, `DebugPanel_Build_StartsHiddenWithZeroAlpha`, `HudStrip_Build_StartsHiddenWithZeroAlpha`, `HudStrip_HoverFade_UsesZeroBaseAndFullOpacityOnHover`, `MenuManager_InitialState_IsClosed`.
+
+- [x] Game starts with all panels closed (no visible overlays except HUD strip) *(GameLaunch: `Overlay_Panels_HiddenByDefault_AtMainMenu`; HUD strip not asserted)*
 - [ ] HUD strip is visible at bottom-right with 60% opacity
-- [ ] Debug panel is invisible (alpha=0) on startup
-- [ ] Mod menu panel is invisible (alpha=0) on startup
-- [ ] Pressing F10 opens mod menu (alpha transitions to 1.0)
-- [ ] Pressing F10 again closes mod menu (alpha transitions to 0.0)
-- [ ] Pressing F9 opens debug panel (alpha transitions to 1.0)
-- [ ] Pressing F9 again closes debug panel (alpha transitions to 0.0)
+- [x] Debug panel is invisible (alpha=0) on startup *(GameLaunch: `Overlay_Panels_HiddenByDefault_AtMainMenu`; offline: `DebugPanel_Build_StartsHiddenWithZeroAlpha`)*
+- [x] Mod menu panel is invisible (alpha=0) on startup *(GameLaunch: `Overlay_Panels_HiddenByDefault_AtMainMenu`; offline: `ModMenuPanel_Build_StartsHiddenWithZeroAlpha`)*
+- [x] Pressing F10 opens mod menu (alpha transitions to 1.0) *(GameLaunch: `Overlay_F10_TogglesModMenu`)*
+- [x] Pressing F10 again closes mod menu (alpha transitions to 0.0) *(GameLaunch: `Overlay_SecondToggle_ClosesModMenu`)*
+- [x] Pressing F9 opens debug panel (alpha transitions to 1.0) *(GameLaunch: `Overlay_F9_AssertDebugPanelVisible_AtMainMenu`)*
+- [x] Pressing F9 again closes debug panel (alpha transitions to 0.0) *(GameLaunch: `Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu`)*
 - [ ] Debug log shows `[ModMenuPanel] Build: hidden by default` on startup
 
 ### Status: WORKING ✓
@@ -495,14 +497,16 @@ public static void Toggle()
 
 ### Verification Checklist
 
-- [ ] Game launches and loads main menu
+> **GameLaunch**: `GameLaunchNativeMenuTests` (NATIVE-001–004). **Offline CI**: `NativeMenuInjectorCharacterizationTests` (source invariants).
+
+- [x] Game launches and loads main menu *(GameLaunch fixture prerequisite for all `GameLaunchNativeMenuTests`)*
 - [ ] Debug log shows `[NativeMenuInjector] Main menu detected: MainMenu`
 - [ ] Debug log shows `[NativeMenuInjector] Injection attempt 1/5`
 - [ ] Debug log shows `✓✓✓✓✓ MODS BUTTON INJECTION FULLY SUCCESSFUL` within 10 seconds
-- [ ] "Mods" button is visible on main menu between Settings and Options
-- [ ] Button has same styling as other menu buttons (font, colors, hover state)
-- [ ] Clicking "Mods" button opens mod menu (same as F10)
-- [ ] Button remains visible after mod menu is closed
+- [x] "Mods" button is visible on main menu between Settings and Options *(GameLaunch: `MainMenu_HasModsButton_AfterInjection`)*
+- [x] Button has same styling as other menu buttons (font, colors, hover state) *(GameLaunch: `MainMenu_ModsButton_StyleMatchesSettings_AfterInjection`)*
+- [x] Clicking "Mods" button opens mod menu (same as F10) *(GameLaunch: `MainMenu_ModsButton_OpensOverlay`)*
+- [x] Button remains visible after mod menu is closed *(GameLaunch: `MainMenu_ModsButton_PersistsAcrossSceneChanges`)*
 
 ### Known Fragilities & Mitigations
 

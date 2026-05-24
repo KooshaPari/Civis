@@ -379,21 +379,23 @@ namespace DINOForge.Tests
         // ── CheckPack: Wildcard Defaults ─────────────────────────────────────
 
         [Fact]
-        public void CheckPack_DefaultWildcards_AcceptsAnyVersion()
+        public void CheckPack_ExplicitWildcards_AcceptsAnyVersion()
         {
             var manifest = new PackManifest
             {
                 Id = "test-pack",
                 Name = "Test Pack",
                 Version = "0.1.0",
-                FrameworkVersion = ">=0.1.0",
-                // GameVersion, BepInExVersion, UnityVersion default to "*"
+                FrameworkVersion = ">=0.1.0 <1.0.0",
+                GameVersion = "*",
+                BepInExVersion = "*",
+                UnityVersion = "*",
             };
 
             var result = CompatibilityChecker.CheckPack(
                 manifest,
                 dinoGameVersion: "99.0.0",
-                bepinexVersion: "99.0.0",
+                bepinexVersion: "5.4.21",
                 unityVersion: "9999.0.0");
 
             result.IsCompatible.Should().BeTrue();

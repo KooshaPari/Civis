@@ -19,8 +19,11 @@ namespace DINOForge.Runtime.Bridge
     {
         private const string RootName = "DINOForge_Root";
 
+#pragma warning disable DF1006
+        // DF1006-ok: ManualLogSource is owned by BepInEx; patch lifetime matches process lifetime.
         private static readonly BepInEx.Logging.ManualLogSource _log =
             BepInEx.Logging.Logger.CreateLogSource("DINOForge.DestroyGuard");
+#pragma warning restore DF1006
 
         /// <summary>
         /// Apply all destroy-guard patches via the shared Harmony instance.

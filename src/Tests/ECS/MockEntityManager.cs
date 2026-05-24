@@ -112,7 +112,7 @@ namespace DINOForge.Tests.ECS
         /// </summary>
         public MockEntityQuery CreateEntityQuery(
             IEnumerable<Type> withAll,
-            IEnumerable<Type> withoutAll = null)
+            IEnumerable<Type>? withoutAll = null)
         {
             return new MockEntityQuery(
                 _registry,

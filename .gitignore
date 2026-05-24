@@ -97,6 +97,8 @@ nupkg/
 docs/sessions/WgcCapture/
 docs/sessions/DINOForgeCompanion/
 docs/screenshots/desktop/
+# interim local capture - not promoted
+docs/qa/evidence/
 scripts/game/desktop/
 
 # Test coverage output

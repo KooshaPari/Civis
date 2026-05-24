@@ -30,7 +30,11 @@
     <ItemGroup>
       <BareCuaBinary Include="bare-cua-native.exe" />
     </ItemGroup>
-    <Copy SourceFiles="@(BareCuaBinary)" DestinationFolder="$(OutputPath)" ContinueOnError="true" />
+    <Copy
+      SourceFiles="@(BareCuaBinary)"
+      DestinationFolder="$(OutputPath)"
+      ContinueOnError="true"
+      Condition="Exists('bare-cua-native.exe')" />
   </Target>
 
 </Project>

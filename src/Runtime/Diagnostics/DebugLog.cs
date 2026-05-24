@@ -79,12 +79,20 @@ namespace DINOForge.Runtime.Diagnostics
 
         /// <summary>
         /// Resolve the absolute path of the debug log file under the BepInEx root.
+        /// Falls back to <c>%TEMP%/DINOForge</c> when BepInEx paths are unavailable (e.g. unit tests).
         /// </summary>
         private static string ResolveLogPath()
         {
             // BepInEx.Paths.BepInExRootPath is the canonical convention used by the existing
             // WriteDebug helpers (see VanillaCatalog.cs line 370 etc.).
-            return Path.Combine(BepInEx.Paths.BepInExRootPath, LogFileName);
+            string? root = BepInEx.Paths.BepInExRootPath;
+            if (string.IsNullOrEmpty(root))
+            {
+                root = Path.Combine(Path.GetTempPath(), "DINOForge");
+                Directory.CreateDirectory(root);
+            }
+
+            return Path.Combine(root, LogFileName);
         }
 
         /// <summary>

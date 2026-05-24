@@ -17,14 +17,11 @@ public sealed class GameLaunchUiTests(GameLaunchFixture fixture)
     /// <summary>
     /// Toggles mod menu via bridge ToggleUiAsync, then queries UI tree.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Overlay_F10_TogglesModMenu()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         StartGameResult openResult = await fixture.Client!.ToggleUiAsync("modmenu");
         openResult.Success.Should().BeTrue("ToggleUiAsync should succeed");
 
@@ -36,10 +33,10 @@ public sealed class GameLaunchUiTests(GameLaunchFixture fixture)
     /// <summary>
     /// Toggles mod menu off by calling ToggleUiAsync again.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Overlay_SecondToggle_ClosesModMenu()
     {
-        if (!fixture.IsInitialized) return;
+        fixture.SkipIfNotInitialized();
 
         await fixture.Client!.ToggleUiAsync("modmenu"); // open
         StartGameResult closeResult = await fixture.Client.ToggleUiAsync("modmenu"); // close

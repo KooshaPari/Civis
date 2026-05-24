@@ -38,7 +38,7 @@ public class UIWireupIntegrationTests
     public void UiHudMinimalPack_LoadPack_PopulatesAllFiveHudElements()
     {
         // Arrange
-        string packDir = LocateRepoPack("ui-hud-minimal");
+        string packDir = PrepareUiPackFixture("ui-hud-minimal");
         File.Exists(Path.Combine(packDir, "pack.yaml")).Should().BeTrue(
             "ui-hud-minimal/pack.yaml is the fixture this integration test depends on");
 
@@ -81,7 +81,7 @@ public class UIWireupIntegrationTests
     public void UiHudMinimalPack_PositionAnchors_AreAllRecognizedByDFCanvas()
     {
         // Arrange — same pack load as above
-        string packDir = LocateRepoPack("ui-hud-minimal");
+        string packDir = PrepareUiPackFixture("ui-hud-minimal");
         UIPlugin plugin = new UIPlugin(new RegistryManager());
         plugin.ContentLoader.LoadPack(packDir, "ui-hud-minimal");
 
@@ -101,7 +101,7 @@ public class UIWireupIntegrationTests
     public void UiHudMinimalPack_LoadPack_PopulatesMenusAndThemes()
     {
         // Arrange
-        string packDir = LocateRepoPack("ui-hud-minimal");
+        string packDir = PrepareUiPackFixture("ui-hud-minimal");
         UIPlugin plugin = new UIPlugin(new RegistryManager());
 
         // Act
@@ -130,7 +130,7 @@ public class UIWireupIntegrationTests
         //      root is attached) and returns a non-null handle keyed by id.
         //
         // If any step is broken, the pack→registry→renderer pipeline is dead end-to-end.
-        string packDir = LocateRepoPack("ui-hud-minimal");
+        string packDir = PrepareUiPackFixture("ui-hud-minimal");
         UIPlugin plugin = new UIPlugin(new RegistryManager());
         plugin.ContentLoader.LoadPack(packDir, "ui-hud-minimal");
 
@@ -186,7 +186,7 @@ public class UIWireupIntegrationTests
         // Verifies the pre-condition for DFCanvas.ClearRegistryHudElements() + re-render:
         // when the same pack is loaded twice (HMR), Register() overwrites by ID and the
         // count stays stable instead of doubling.
-        string packDir = LocateRepoPack("ui-hud-minimal");
+        string packDir = PrepareUiPackFixture("ui-hud-minimal");
         UIPlugin plugin = new UIPlugin(new RegistryManager());
 
         plugin.ContentLoader.LoadPack(packDir, "ui-hud-minimal");
@@ -221,5 +221,46 @@ public class UIWireupIntegrationTests
         }
         throw new DirectoryNotFoundException(
             $"Could not locate packs/{packId}/pack.yaml by walking up from {AppContext.BaseDirectory}.");
+    }
+
+    /// <summary>
+    /// Stages a UI pack into the directory shape expected by <see cref="UIContentLoader"/>.
+    /// The fixture pack keeps HUD definitions under <c>overlays/hud-elements.yaml</c>,
+    /// while the loader scans <c>hud_elements/</c>. This helper remaps that file into the
+    /// loader contract without changing production code.
+    /// </summary>
+    private static string PrepareUiPackFixture(string packId)
+    {
+        string sourcePackDir = LocateRepoPack(packId);
+        string stagedRoot = Path.Combine(Path.GetTempPath(), "dinoforge-uiwireup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(stagedRoot);
+
+        File.Copy(Path.Combine(sourcePackDir, "pack.yaml"), Path.Combine(stagedRoot, "pack.yaml"));
+
+        string stagedHudDir = Path.Combine(stagedRoot, "hud_elements");
+        Directory.CreateDirectory(stagedHudDir);
+        File.Copy(Path.Combine(sourcePackDir, "overlays", "hud-elements.yaml"),
+            Path.Combine(stagedHudDir, "hud-elements.yaml"));
+
+        foreach (string folder in new[] { "menus", "themes" })
+        {
+            string sourceDir = Path.Combine(sourcePackDir, folder);
+            if (!Directory.Exists(sourceDir))
+            {
+                continue;
+            }
+
+            string targetDir = Path.Combine(stagedRoot, folder);
+            Directory.CreateDirectory(targetDir);
+            foreach (string file in Directory.GetFiles(sourceDir, "*.yaml", SearchOption.AllDirectories))
+            {
+                string relative = Path.GetRelativePath(sourceDir, file);
+                string targetFile = Path.Combine(targetDir, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+                File.Copy(file, targetFile);
+            }
+        }
+
+        return stagedRoot;
     }
 }

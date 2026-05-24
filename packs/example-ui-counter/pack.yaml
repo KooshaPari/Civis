@@ -12,8 +12,3 @@ conflicts_with: []
 loads:
   hud_elements:
     - hud_elements/wave-counter.yaml
-
-tags:
-  - ui
-  - example
-  - hud

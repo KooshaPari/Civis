@@ -138,7 +138,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankId_ReturnsError(string? id)
         {
-            var resource = new ResourceDefinition { Id = id, Name = "Valid Name" };
+            var resource = new ResourceDefinition { Id = id!, Name = "Valid Name" };
 
             var result = resource.Validate();
 
@@ -156,7 +156,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankName_ReturnsError(string? name)
         {
-            var resource = new ResourceDefinition { Id = "food", Name = name };
+            var resource = new ResourceDefinition { Id = "food", Name = name! };
 
             var result = resource.Validate();
 

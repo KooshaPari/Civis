@@ -1,8 +1,10 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Logging;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace DINOForge.Runtime.UI
@@ -44,7 +46,6 @@ namespace DINOForge.Runtime.UI
         // ── Animation ────────────────────────────────────────────────────────────
         private CanvasGroup? _canvasGroup;
         private RectTransform? _panelRt;
-        private float _animT;          // 0 = fully hidden, 1 = fully visible
         private bool _targetVisible;
 
         // ── UI references ────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ namespace DINOForge.Runtime.UI
         private Text? _detailDeps;
         private Text? _detailConflicts;
         private Text? _detailLoadOrder;
+        private bool _listRefreshQueued;
 
         // ── Bootstrap ────────────────────────────────────────────────────────────
 
@@ -96,6 +98,11 @@ namespace DINOForge.Runtime.UI
             BuildHeader(rootGo.transform);
             BuildBody(rootGo.transform);
             BuildFooter(rootGo.transform);
+
+            // If packs were already loaded before the UI finished building, render
+            // them immediately so the list does not stay blank until the next refresh.
+            RebuildPackList();
+            RefreshDetail();
 
             _log?.LogInfo($"[ModMenuPanel.Build] UGUI hierarchy complete. _listContent={(_listContent != null ? _listContent.name : "NULL")}");
         }
@@ -157,8 +164,6 @@ namespace DINOForge.Runtime.UI
         {
             // Immediate visibility - no animation (Update() never fires in DINO)
             _targetVisible = true;
-            _animT = 1f;
-
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 1f;
@@ -195,8 +200,6 @@ namespace DINOForge.Runtime.UI
         public void Hide()
         {
             _targetVisible = false;
-            _animT = 0f;
-
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 0f;
@@ -266,7 +269,11 @@ namespace DINOForge.Runtime.UI
             Button closeBtn = UiBuilder.MakeButton(
                 header.transform, "CloseBtn", "×",
                 UiBuilder.BgDeep, UiBuilder.TextSecondary,
-                () => Hide());
+                () =>
+                {
+                    ClearCurrentSelection();
+                    Hide();
+                });
             RectTransform closeBtnRt = closeBtn.GetComponent<RectTransform>();
             LayoutElement closeLe = closeBtn.gameObject.AddComponent<LayoutElement>();
             closeLe.preferredWidth = 28f;
@@ -322,6 +329,15 @@ namespace DINOForge.Runtime.UI
             paneLe.minWidth = ListWidth;
             paneLe.flexibleHeight = 1f;  // CRITICAL: Allow ListPane to expand to fill parent height!
 
+            VerticalLayoutGroup paneLayout = pane.AddComponent<VerticalLayoutGroup>();
+            paneLayout.childForceExpandWidth = true;
+            paneLayout.childForceExpandHeight = false;
+            paneLayout.childControlWidth = true;
+            paneLayout.childControlHeight = false;
+            paneLayout.childAlignment = TextAnchor.UpperLeft;
+            paneLayout.spacing = 0f;
+            paneLayout.padding = new RectOffset(0, 0, 0, 0);
+
             // List header
             GameObject listHeader = UiBuilder.MakePanel(pane.transform, "ListHeader",
                 UiBuilder.BgSurface, new Vector2(ListWidth, 32f));
@@ -336,6 +352,10 @@ namespace DINOForge.Runtime.UI
                 "Loaded Packs", 12, UiBuilder.TextSecondary, bold: false);
             LayoutElement lhTitleLe = lhTitle.gameObject.AddComponent<LayoutElement>();
             lhTitleLe.flexibleWidth = 1f;
+            LayoutElement listHeaderLe = listHeader.AddComponent<LayoutElement>();
+            listHeaderLe.preferredWidth = ListWidth;
+            listHeaderLe.minWidth = ListWidth;
+            listHeaderLe.preferredHeight = 32f;
 
             // Scroll view for pack items
             _log?.LogInfo("[ModMenuPanel.BuildListPane] Creating scroll view...");
@@ -359,6 +379,13 @@ namespace DINOForge.Runtime.UI
             scrollRt.offsetMin = new Vector2(0f, 0f);
             scrollRt.offsetMax = new Vector2(0f, -32f);
             scrollRt.sizeDelta = Vector2.zero;
+            LayoutElement scrollLe = scrollRect.gameObject.AddComponent<LayoutElement>();
+            scrollLe.preferredWidth = ListWidth;
+            scrollLe.minWidth = ListWidth;
+            scrollLe.flexibleHeight = 1f;
+
+            content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth);
+            content.sizeDelta = new Vector2(ListWidth, content.sizeDelta.y);
 
             _listContent = content;
             _log?.LogInfo($"[ModMenuPanel.BuildListPane] Scroll view initialized successfully.");
@@ -495,7 +522,11 @@ namespace DINOForge.Runtime.UI
             Button reloadBtn = UiBuilder.MakeButton(
                 footer.transform, "ReloadBtn", "↺  Reload Packs",
                 UiBuilder.BgDeep, UiBuilder.Accent,
-                () => OnReloadRequested?.Invoke());
+                () =>
+                {
+                    ClearCurrentSelection();
+                    OnReloadRequested?.Invoke();
+                });
             LayoutElement reloadLe = reloadBtn.gameObject.AddComponent<LayoutElement>();
             reloadLe.preferredWidth = 140f;
             reloadLe.preferredHeight = 30f;
@@ -522,6 +553,9 @@ namespace DINOForge.Runtime.UI
             _log?.LogInfo($"[ModMenuPanel.RebuildPackList] _listContent RectTransform: position={_listContent.anchoredPosition}, sizeDelta={_listContent.sizeDelta}");
             _log?.LogInfo($"[ModMenuPanel.RebuildPackList] Clearing {_listContent.childCount} existing items");
 
+            _listContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth);
+            _listContent.sizeDelta = new Vector2(ListWidth, _listContent.sizeDelta.y);
+
             // Remove existing items immediately from the layout tree to avoid
             // same-frame duplicate entries when SetPacks triggers rapid rebuilds.
             for (int i = _listContent.childCount - 1; i >= 0; i--)
@@ -537,6 +571,26 @@ namespace DINOForge.Runtime.UI
             {
                 _log?.LogInfo($"[ModMenuPanel.RebuildPackList] Creating item {i}: '{_presenter.Packs[i].Name}' (ID: {_presenter.Packs[i].Id})");
                 BuildPackListItem(_presenter.Packs[i], i);
+
+                Transform item = _listContent.GetChild(i);
+                RectTransform rt = item.GetComponent<RectTransform>();
+                _log?.LogInfo($"[ModMenuPanel.probe] item[{i}] name={item.name} childCount={item.transform.childCount} rect=({rt.sizeDelta.x}x{rt.sizeDelta.y}) active={item.gameObject.activeSelf}");
+                for (int childIndex = 0; childIndex < item.transform.childCount; childIndex++)
+                {
+                    Transform child = item.transform.GetChild(childIndex);
+                    Text text = child.GetComponent<Text>();
+                    if (text != null)
+                    {
+                        RectTransform textRt = text.GetComponent<RectTransform>();
+                        _log?.LogInfo($"[ModMenuPanel.probe] item[{i}].child[{childIndex}] Text color={text.color} text='{text.text}' active={text.gameObject.activeSelf} rect=({textRt.sizeDelta.x}x{textRt.sizeDelta.y})");
+                    }
+
+                    Image image = child.GetComponent<Image>();
+                    if (image != null)
+                    {
+                        _log?.LogInfo($"[ModMenuPanel.probe] item[{i}].child[{childIndex}] Image color={image.color} spriteNull={image.sprite == null} raycastTarget={image.raycastTarget}");
+                    }
+                }
             }
 
             // CRITICAL FIX: Manually set content height since ContentSizeFitter is not calculating correctly
@@ -572,8 +626,8 @@ namespace DINOForge.Runtime.UI
                     LayoutElement childLe = child.GetComponent<LayoutElement>();
                     if (childLe != null && childLe.preferredHeight > 0)
                     {
-                        expectedHeight += childLe.preferredHeight;
-                        if (i > 0) expectedHeight += vlg.spacing;
+                        expectedHeight = expectedHeight + childLe.preferredHeight;
+                        if (i > 0) expectedHeight = expectedHeight + vlg.spacing;
                     }
                 }
             }
@@ -604,9 +658,13 @@ namespace DINOForge.Runtime.UI
 
             GameObject card = UiBuilder.MakePanel(_listContent, $"PackItem_{pack.Id}", bgColor, new Vector2(0f, ItemHeight));
             RectTransform cardRt = card.GetComponent<RectTransform>();
+            cardRt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth - 8f);
+            cardRt.sizeDelta = new Vector2(ListWidth - 8f, ItemHeight);
             _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} card created: sizeDelta={cardRt.sizeDelta}, active={card.activeSelf}");
 
             LayoutElement cardLe = card.AddComponent<LayoutElement>();
+            cardLe.minWidth = ListWidth - 8f;
+            cardLe.preferredWidth = ListWidth - 8f;
             cardLe.minHeight = ItemHeight;
             cardLe.preferredHeight = ItemHeight;
             cardLe.flexibleWidth = 1f;
@@ -699,8 +757,8 @@ namespace DINOForge.Runtime.UI
         private void SelectPack(int index)
         {
             _presenter.SelectIndex(index);
-            RebuildPackList();
-            RefreshDetail();
+            ClearCurrentSelection();
+            QueueListRefresh();
         }
 
         private void RefreshDetail()
@@ -729,7 +787,7 @@ namespace DINOForge.Runtime.UI
 
                 if (p.Errors.Count > 0)
                 {
-                    descText += "\n\n<color=#e05252>Errors:</color>\n"
+                    descText = descText + "\n\n<color=#e05252>Errors:</color>\n"
                         + string.Join("\n", p.Errors);
                 }
 
@@ -776,9 +834,37 @@ namespace DINOForge.Runtime.UI
         {
             if (!_presenter.TryToggleEnabled(_presenter.SelectedIndex, out PackDisplayInfo updated)) return;
 
+            ClearCurrentSelection();
             OnPackToggled?.Invoke(updated.Id, updated.IsEnabled);
+            QueueListRefresh();
+        }
+
+        private void QueueListRefresh()
+        {
+            if (_listRefreshQueued) return;
+            _listRefreshQueued = true;
+            StartCoroutine(RefreshListNextFrame());
+        }
+
+        private IEnumerator RefreshListNextFrame()
+        {
+            yield return null;
+            _listRefreshQueued = false;
             RebuildPackList();
             RefreshDetail();
+        }
+
+        private static void ClearCurrentSelection()
+        {
+            try
+            {
+                EventSystem current = EventSystem.current;
+                if (current != null)
+                {
+                    current.SetSelectedGameObject(null);
+                }
+            }
+            catch { } // safe-swallow: UI selection cleanup is best-effort
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────────

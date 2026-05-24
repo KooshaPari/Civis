@@ -83,7 +83,8 @@ namespace DINOForge.SDK.HotReload
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
-                EnableRaisingEvents = true
+                // Reduce missed events when many watchers run under xUnit parallel (Pattern #108).
+                InternalBufferSize = 65536,
             };
 
             // Watch YAML files
@@ -91,6 +92,7 @@ namespace DINOForge.SDK.HotReload
             _watcher.Changed += OnFileChanged;
             _watcher.Created += OnFileChanged;
             _watcher.Renamed += OnFileRenamed;
+            _watcher.EnableRaisingEvents = true;
 
             _log($"[PackFileWatcher] Watching packs directory: {_packsDirectory}");
         }
@@ -172,9 +174,16 @@ namespace DINOForge.SDK.HotReload
 
         private void OnDebounceElapsed(object? state)
         {
-            // Collect all pending changes
-            List<string> changedFiles = _pendingChanges.Keys.ToList();
-            _pendingChanges.Clear();
+            // Drain pending changes without Clear() — concurrent EnqueueChange during drain
+            // must survive for the next debounce tick (Pattern #51 / TRUTH_TABLE #175).
+            List<string> changedFiles = new List<string>();
+            foreach (string key in _pendingChanges.Keys.ToList())
+            {
+                if (_pendingChanges.TryRemove(key, out _))
+                {
+                    changedFiles.Add(key);
+                }
+            }
 
             if (changedFiles.Count == 0) return;
 

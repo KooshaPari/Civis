@@ -1,0 +1,87 @@
+{
+  "id": "example-visual-evidence",
+  "intent": "Minimum phenotype journey manifest for visual acceptance — multi-step in-game screenshots with optional capture metadata",
+  "title": "Example — Visual Evidence (template)",
+  "keyframe_count": 3,
+  "passed": false,
+  "steps": [
+    {
+      "index": 0,
+      "slug": "world-day",
+      "intent": "In-game world visible with day lighting and terrain depth",
+      "screenshot_path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-000.png",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 1,
+      "slug": "lighting-variant",
+      "intent": "Observable lighting or shader change versus frame 0",
+      "screenshot_path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-001.png",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 2,
+      "slug": "material-terrain",
+      "intent": "Materials, water, or ground transitions visibly exercised",
+      "screenshot_path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-002.png",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    }
+  ],
+  "keyframes": [
+    {
+      "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-000.png",
+      "caption": "Day lighting baseline"
+    },
+    {
+      "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-001.png",
+      "caption": "Lighting or shader variant"
+    },
+    {
+      "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-002.png",
+      "caption": "Terrain / material close-up"
+    }
+  ],
+  "captures": {
+    "screenshots": [
+      {
+        "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-000.png",
+        "step_index": 0,
+        "slug": "world-day",
+        "caption": "Day lighting baseline"
+      },
+      {
+        "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-001.png",
+        "step_index": 1,
+        "slug": "lighting-variant",
+        "caption": "Lighting or shader variant"
+      },
+      {
+        "path": "docs/qa/evidence/live-bridge-journey_2026-05-23/steps/step-002.png",
+        "step_index": 2,
+        "slug": "material-terrain",
+        "caption": "Terrain / material close-up"
+      }
+    ]
+  },
+  "verification": {
+    "mode": "pending",
+    "timestamp": "2026-05-24T21:50:00Z",
+    "capture_receipt": "docs/qa/evidence/live-bridge-journey_2026-05-23/capture-receipt.json",
+    "captured_count": 3
+  }
+}

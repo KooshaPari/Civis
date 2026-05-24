@@ -168,7 +168,11 @@ namespace DINOForge.Runtime.Bridge
             if (_lruOrder.Count == 0)
                 return;
 
-            var lruPath = _lruOrder.First.Value;
+            LinkedListNode<string>? firstNode = _lruOrder.First;
+            if (firstNode == null)
+                return;
+
+            string lruPath = firstNode.Value;
             if (_cache.TryGetValue(lruPath, out var entry))
             {
                 // unloadAllLoadedObjects:false — see Clear() comment (#534).

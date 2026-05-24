@@ -366,7 +366,7 @@ namespace DINOForge.Runtime.UI
                 }
                 else if (pLower.StartsWith("name="))
                 {
-                    if (transform.name.IndexOf(p.Substring(5), StringComparison.OrdinalIgnoreCase) < 0)
+                    if (!string.Equals(transform.name, p.Substring(5), StringComparison.OrdinalIgnoreCase))
                     {
                         return false;
                     }
@@ -581,6 +581,36 @@ namespace DINOForge.Runtime.UI
             return false;
         }
 
+        private static bool IsNodeVisible(Transform transform)
+        {
+            if (!transform.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            Graphic? graphic = transform.GetComponent<Graphic>();
+            if (graphic != null && (!graphic.enabled || graphic.canvasRenderer.cull))
+            {
+                return false;
+            }
+
+            CanvasGroup[] canvasGroups = transform.GetComponents<CanvasGroup>();
+            foreach (CanvasGroup canvasGroup in canvasGroups)
+            {
+                if (!canvasGroup.enabled)
+                {
+                    continue;
+                }
+
+                if (canvasGroup.alpha <= 0.01f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool EvaluateCondition(Transform transform, string condition, out string message)
         {
             switch (condition)
@@ -590,16 +620,19 @@ namespace DINOForge.Runtime.UI
                     return true;
 
                 case "visible":
-                    if (!transform.gameObject.activeInHierarchy)
+                    if (IsNodeVisible(transform))
                     {
-                        message = "Matched node is inactive.";
-                        return false;
+                        message = "Matched node is visible.";
+                        return true;
                     }
-                    message = "Matched node is visible.";
-                    return true;
+
+                    message = transform.gameObject.activeInHierarchy
+                        ? "Matched node is hidden (CanvasGroup alpha 0)."
+                        : "Matched node is inactive.";
+                    return false;
 
                 case "hidden":
-                    bool hidden = !transform.gameObject.activeInHierarchy;
+                    bool hidden = !IsNodeVisible(transform);
                     message = hidden ? "Matched node is hidden." : "Matched node is still visible.";
                     return hidden;
 

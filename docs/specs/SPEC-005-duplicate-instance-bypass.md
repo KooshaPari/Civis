@@ -1,7 +1,8 @@
 # SPEC-duplicate-instance-bypass: Win32 Mutex Detection & Release Mechanism
 
-**Status**: Draft
-**Last Updated**: 2026-03-24
+**Status**: Cancelled / Superseded
+**Last Updated**: 2026-05-23
+**Superseded by**: `boot.config` `single-instance=0` — see [.claude/commands/launch-game.md](../../.claude/commands/launch-game.md) (“Why another instance is no longer a problem”)
 **Related Issues**: ISSUE-042, ADR-013
 **Implementation Track**: PowerShell utilities + launcher integration
 

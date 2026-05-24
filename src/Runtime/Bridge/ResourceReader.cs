@@ -159,13 +159,13 @@ namespace DINOForge.Runtime.Bridge
                     int result = ReadSingletonInt(em, ecsType, fieldPath);
                     if (result != 0)
                     {
-                        DebugLog.Write("ResourceReader",$"[ResourceReader] {resourceName}: resolved via {ecsType}.{fieldPath} = {result}");
+                        DebugLog.Write("ResourceReader", $"[ResourceReader] {resourceName}: resolved via {ecsType}.{fieldPath} = {result}");
                         return result;
                     }
                 }
             }
 
-            DebugLog.Write("ResourceReader",$"[ResourceReader] {resourceName}: all alternatives returned 0 — check dinoforge_debug.log for field errors");
+            DebugLog.Write("ResourceReader", $"[ResourceReader] {resourceName}: all alternatives returned 0 — check dinoforge_debug.log for field errors");
             return 0;
         }
 
@@ -200,7 +200,7 @@ namespace DINOForge.Runtime.Bridge
                 ComponentType? ct = EntityQueries.ResolveComponentType(ecsTypeName);
                 if (ct == null)
                 {
-                    DebugLog.Write("ResourceReader",$"[ResourceReader] ResolveComponentType failed for {ecsTypeName}");
+                    DebugLog.Write("ResourceReader", $"[ResourceReader] ResolveComponentType failed for {ecsTypeName}");
                     return 0;
                 }
 
@@ -254,7 +254,7 @@ namespace DINOForge.Runtime.Bridge
                         FieldInfo[] available = currentType.GetFields(
                             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                         string fieldList = string.Join(", ", Array.ConvertAll(available, f => f.Name));
-                        DebugLog.Write("ResourceReader",$"[ResourceReader] Field '{seg}' not found on {currentType.FullName}. " +
+                        DebugLog.Write("ResourceReader", $"[ResourceReader] Field '{seg}' not found on {currentType.FullName}. " +
                                    $"Available fields: [{fieldList}]");
                         return 0;
                     }
@@ -268,12 +268,12 @@ namespace DINOForge.Runtime.Bridge
                 if (current is long longVal) return (int)longVal;
                 if (current is double dblVal) return (int)dblVal;
 
-                DebugLog.Write("ResourceReader",$"[ResourceReader] Unexpected value type {current?.GetType().FullName} at path {ecsTypeName}.{fieldPath}");
+                DebugLog.Write("ResourceReader", $"[ResourceReader] Unexpected value type {current?.GetType().FullName} at path {ecsTypeName}.{fieldPath}");
                 return 0;
             }
             catch (Exception ex)
             {
-                DebugLog.Write("ResourceReader",$"[ResourceReader] Exception reading {ecsTypeName}.{fieldPath}: {ex.Message}");
+                DebugLog.Write("ResourceReader", $"[ResourceReader] Exception reading {ecsTypeName}.{fieldPath}: {ex.Message}");
                 return 0;
             }
         }
@@ -294,11 +294,11 @@ namespace DINOForge.Runtime.Bridge
                 var discovered = EcsTypeDiscovery.GetDiscoveredTypes();
                 if (discovered == null || discovered.Count == 0)
                 {
-                    DebugLog.Write("ResourceReader","[ResourceReader] AutoDiscovery: no types discovered yet");
+                    DebugLog.Write("ResourceReader", "[ResourceReader] AutoDiscovery: no types discovered yet");
                     return;
                 }
 
-                DebugLog.Write("ResourceReader",$"[ResourceReader] AutoDiscovery: scanning {discovered.Count} discovered types for resources");
+                DebugLog.Write("ResourceReader", $"[ResourceReader] AutoDiscovery: scanning {discovered.Count} discovered types for resources");
 
                 // Find resource-related types
                 var resourceTypes = discovered
@@ -309,22 +309,22 @@ namespace DINOForge.Runtime.Bridge
                 var resourceTypeList = resourceTypes.ToList();
                 if (resourceTypeList.Any())
                 {
-                    DebugLog.Write("ResourceReader","[ResourceReader] AutoDiscovery found resource types:");
+                    DebugLog.Write("ResourceReader", "[ResourceReader] AutoDiscovery found resource types:");
                     foreach (var t in resourceTypeList.Take(20))
                     {
-                        DebugLog.Write("ResourceReader",$"  - {t}");
+                        DebugLog.Write("ResourceReader", $"  - {t}");
                     }
                     if (resourceTypeList.Count > 20)
-                        DebugLog.Write("ResourceReader",$"  ... and {resourceTypeList.Count - 20} more");
+                        DebugLog.Write("ResourceReader", $"  ... and {resourceTypeList.Count - 20} more");
                 }
                 else
                 {
-                    DebugLog.Write("ResourceReader","[ResourceReader] AutoDiscovery: no resource types found in scanned assemblies");
+                    DebugLog.Write("ResourceReader", "[ResourceReader] AutoDiscovery: no resource types found in scanned assemblies");
                 }
             }
             catch (Exception ex)
             {
-                DebugLog.Write("ResourceReader",$"[ResourceReader] AutoDiscovery failed: {ex.Message}");
+                DebugLog.Write("ResourceReader", $"[ResourceReader] AutoDiscovery failed: {ex.Message}");
             }
         }
 

@@ -153,7 +153,7 @@ namespace DINOForge.Domains.Economy
         /// </summary>
         private class TradeRouteWrapper
         {
-            public List<TradeRouteDefinition> Routes { get; set; } = new List<TradeRouteDefinition>();
+            public List<TradeRouteDefinition> Routes { get; set; } = new List<TradeRouteDefinition>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
         }
     }
 }

@@ -21,6 +21,8 @@ public static class Program
 
     public static string? GlobalPipeName { get; set; }
 
+    private const string DefaultPipeName = "dinoforge-game-bridge";
+
     public static async Task<int> Main(string[] args)
     {
         if (args.Length == 0)
@@ -106,10 +108,79 @@ public static class Program
 
     private static GameClientOptions CreateClientOptions(int readTimeoutMs = 30000)
     {
-        var options = new GameClientOptions { ReadTimeoutMs = readTimeoutMs };
-        if (!string.IsNullOrEmpty(GlobalPipeName))
-            options.PipeName = GlobalPipeName;
+        // Bridge server uses NDJSON line reader; client default is length-prefix framing.
+        var options = new GameClientOptions { ReadTimeoutMs = readTimeoutMs, UseMessageFraming = false };
+        string? pipeName = ResolvePipeName();
+        if (!string.IsNullOrEmpty(pipeName))
+            options.PipeName = pipeName;
         return options;
+    }
+
+    internal static string ResolvePipeName()
+    {
+        if (!string.IsNullOrWhiteSpace(GlobalPipeName))
+            return GlobalPipeName;
+
+        string? envPipeName = Environment.GetEnvironmentVariable("DINOFORGE_PIPE_NAME");
+        if (!string.IsNullOrWhiteSpace(envPipeName))
+            return envPipeName;
+
+        return DefaultPipeName;
+    }
+
+    private static bool TryReadBridgeFallback(out string rawFallback, out string errorMessage)
+    {
+        rawFallback = string.Empty;
+        errorMessage = string.Empty;
+
+        string fallbackPath = Path.Combine(Path.GetTempPath(), "DINOForge", "dinoforge_bridge_fallback.txt");
+        if (!File.Exists(fallbackPath))
+            return false;
+
+        try
+        {
+            rawFallback = File.ReadAllText(fallbackPath, Encoding.UTF8).Trim();
+            File.Delete(fallbackPath);
+            if (string.IsNullOrWhiteSpace(rawFallback))
+            {
+                errorMessage = "Bridge fallback file was empty.";
+                return true;
+            }
+
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(rawFallback);
+                if (doc.RootElement.TryGetProperty("error", out JsonElement errorEl))
+                {
+                    errorMessage = errorEl.ValueKind == JsonValueKind.Object &&
+                                   errorEl.TryGetProperty("message", out JsonElement messageEl)
+                        ? messageEl.GetString() ?? rawFallback
+                        : errorEl.GetString() ?? rawFallback;
+                    return true;
+                }
+
+                if (doc.RootElement.TryGetProperty("success", out JsonElement successEl) &&
+                    successEl.ValueKind == JsonValueKind.False)
+                {
+                    if (doc.RootElement.TryGetProperty("message", out JsonElement messageEl))
+                        errorMessage = messageEl.GetString() ?? rawFallback;
+                    else
+                        errorMessage = rawFallback;
+                    return true;
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall through and treat the raw payload as the diagnostic.
+            }
+
+            errorMessage = rawFallback;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void ShowHelp()
@@ -206,26 +277,25 @@ public static class Program
         catch (Exception ex)
         {
             // If the request timed out (e.g., bridge thread abort), check the fallback response file.
-            string fallbackPath = Path.Combine(
-                Path.GetTempPath(), "DINOForge", "dinoforge_bridge_fallback.txt");
-            if (File.Exists(fallbackPath))
+            if (TryReadBridgeFallback(out string rawFallback, out string fallbackError))
             {
-                try
+                if (JsonOutput)
                 {
-                    string fallback = File.ReadAllText(fallbackPath, Encoding.UTF8).Trim();
-                    if (JsonOutput)
+                    Console.WriteLine(JsonSerializer.Serialize(new
                     {
-                        Console.WriteLine(JsonSerializer.Serialize(new { success = true, raw = fallback }));
-                    }
-                    else
-                    {
-                        AnsiConsole.MarkupLine("[yellow]⚠[/] Bridge response via fallback file (timed out waiting for live response):");
-                        AnsiConsole.MarkupLine($"[cyan]  {fallback}[/]");
-                    }
-                    File.Delete(fallbackPath);
-                    return 0;
+                        success = false,
+                        error = fallbackError,
+                        raw = rawFallback
+                    }));
                 }
-                catch { } // safe-swallow: fallback cache read best-effort
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]⚠[/] Bridge response via fallback file (timed out waiting for live response):");
+                    AnsiConsole.MarkupLine($"[cyan]  {rawFallback}[/]");
+                    if (!string.IsNullOrWhiteSpace(fallbackError))
+                        AnsiConsole.MarkupLine($"[red]✗ Error:[/] {fallbackError}");
+                }
+                return string.IsNullOrWhiteSpace(fallbackError) ? 0 : 1;
             }
 
             if (JsonOutput)
@@ -235,6 +305,8 @@ public static class Program
             else
             {
                 AnsiConsole.MarkupLine($"[red]✗ Error:[/] {ex.Message}");
+                if (ex.Message.Contains("Bridge fallback", StringComparison.OrdinalIgnoreCase))
+                    AnsiConsole.MarkupLine("[dim]  (Server wrote a fallback response while the pipe was broken — see path in message.)[/]");
             }
             return 1;
         }

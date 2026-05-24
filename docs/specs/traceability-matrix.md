@@ -68,6 +68,11 @@ public class PackLoadingTests
 | Test File | Test Method | Traits |
 |-----------|-------------|--------|
 | `ModMenuTests.cs` | `F9_TogglesOverlay_WhenPressed` | `US-F2.1` |
+| `GameLaunchOverlayTests.cs` | `Overlay_F9_AssertDebugPanelVisible_AtMainMenu` | `US-F2.1`, SPEC-007 |
+| `GameLaunchOverlayTests.cs` | `Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu` | `US-F2.1`, SPEC-007 |
+| `GameLaunchOverlayTests.cs` | `Overlay_F9_F10_ToggleDuringGameplay` (debug leg) | `US-F2.1`, SPEC-007 |
+| `GameLaunchOverlayTests.cs` | `Overlay_Panels_HiddenByDefault_AtMainMenu` (DebugPanel) | `US-F2.1`, SPEC-007 |
+| `ModMenuTests.cs` | `DebugPanel_Build_StartsHiddenWithZeroAlpha` | `US-F2.1`, SPEC-007 |
 | `RuntimeExtractionTests.cs` | `GetLoadedPacks_ReturnsAllRegistered` | `US-F2.1` |
 | `EntityInspectorTests.cs` | `GetEntityCount_ByFaction_ReturnsCorrect` | `US-F2.1` |
 | `PerformanceBenchmarkTests.cs` | `OverlayRender_Under1ms` | `US-F2.1` |
@@ -89,6 +94,14 @@ public class PackLoadingTests
 | Test File | Test Method | Traits |
 |-----------|-------------|--------|
 | `ModMenuTests.cs` | `F10_OpensModMenu` | `US-F3.1` |
+| `GameLaunchUiTests.cs` | `Overlay_F10_TogglesModMenu` | `US-F3.1`, SPEC-007 |
+| `GameLaunchUiTests.cs` | `Overlay_SecondToggle_ClosesModMenu` | `US-F3.1`, SPEC-007 |
+| `GameLaunchOverlayTests.cs` | `Overlay_F9_F10_ToggleDuringGameplay` (mod menu leg) | `US-F3.1`, SPEC-007 |
+| `GameLaunchOverlayTests.cs` | `Overlay_Panels_HiddenByDefault_AtMainMenu` (ModMenuPanel) | `US-F3.1`, SPEC-007 |
+| `GameLaunchNativeMenuTests.cs` | `MainMenu_HasModsButton_AfterInjection` | `US-F3.1`, SPEC-007 |
+| `GameLaunchNativeMenuTests.cs` | `MainMenu_ModsButton_OpensOverlay` | `US-F3.1`, SPEC-007 |
+| `GameLaunchNativeMenuTests.cs` | `MainMenu_ModsButton_StyleMatchesSettings_AfterInjection` | `US-F3.1`, SPEC-007 |
+| `ModMenuTests.cs` | `ModMenuPanel_Build_StartsHiddenWithZeroAlpha` | `US-F3.1`, SPEC-007 |
 | `ModMenuTests.cs` | `TogglePack_WritesDisabledPacksJson` | `US-F3.1` |
 | `DisabledPacksPersistenceTests.cs` | `DisabledPacks_LoadedOnStartup` | `US-F3.1` |
 | `ModMenuTests.cs` | `ModMenu_ResponsiveUnderLoad` | `US-F3.1` |
@@ -237,6 +250,9 @@ public class PackLoadingTests
 | Test File | Test Method | Traits |
 |-----------|-------------|--------|
 | `ModMenuTests.cs` | All tests | `Epic-RuntimeUI` |
+| `GameLaunchOverlayTests.cs` | All tests | `Epic-RuntimeUI`, SPEC-007 |
+| `GameLaunchUiTests.cs` | All tests | `Epic-RuntimeUI`, SPEC-007 |
+| `GameLaunchNativeMenuTests.cs` | All tests | `Epic-RuntimeUI`, SPEC-007 |
 | `HotReloadTests.cs` | All tests | `Epic-RuntimeUI` |
 | `DisabledPacksPersistenceTests.cs` | All tests | `Epic-RuntimeUI` |
 
@@ -372,5 +388,19 @@ public class PackLoadingTests
 
 ---
 
-**Last Updated**: 2026-04-01
+## Implementation Specifications
+
+| Spec | Status | Notes |
+|------|--------|-------|
+| [SPEC-002](./SPEC-002-native-menu-injector.md) | Accepted | Native menu Mods button injection |
+| [SPEC-003](./SPEC-003-prove-features-skill.md) | Active — v2 pipeline implemented | [WORK-001](../work-items/WORK-001-prove-features-improvements.md) closed |
+| [SPEC-004](./SPEC-004-key-input-system.md) | Implemented — Active | F9/F10 layered redundancy |
+| [SPEC-005](./SPEC-005-duplicate-instance-bypass.md) | Cancelled / Superseded | `boot.config` `single-instance=0` |
+| [SPEC-006](./SPEC-006-prove-features-video-pipeline.md) | Superseded | [v2 design](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md) |
+| [SPEC-007](./SPEC-007-runtime-features-baseline.md) | Active | Runtime feature baseline; GameLaunch + `ModMenuTests` characterization |
+| [M13](./M13-runtime-survival-hmr-concurrency.md) | Draft | HMR and concurrent instances |
+
+---
+
+**Last Updated**: 2026-05-23
 **Next Review**: After each release

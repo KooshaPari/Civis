@@ -18,7 +18,7 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
     // ── COMP-DASH-001 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Dashboard_LoadedCount_IsDisplayed()
     {
         GoToDashboard();
@@ -36,7 +36,7 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
     // ── COMP-DASH-002 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Dashboard_ErrorCount_IsDisplayed()
     {
         GoToDashboard();
@@ -54,7 +54,7 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
     // ── COMP-DASH-003 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Dashboard_StatusMessage_IsPresent()
     {
         GoToDashboard();
@@ -65,7 +65,7 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
     // ── COMP-DASH-004 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Dashboard_RefreshButton_IsEnabled()
     {
         GoToDashboard();
@@ -77,7 +77,7 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
     // ── COMP-DASH-005 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void Dashboard_RefreshButton_Click_CompletesWithoutException()
     {
         GoToDashboard();

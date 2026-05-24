@@ -22,16 +22,34 @@ namespace DINOForge.Tests.GameLaunch;
 public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
 {
     /// <summary>
+    /// SPEC-007 Feature 2: UGUI debug and mod menu panels start hidden (alpha 0) at main menu.
+    /// </summary>
+    [SkippableFact]
+    public async Task Overlay_Panels_HiddenByDefault_AtMainMenu()
+    {
+        fixture.SkipIfNotInitialized();
+
+        UiActionResult debugPanel = await fixture.Client!.QueryUiAsync("name=DebugPanel");
+        debugPanel.Success.Should().BeTrue("DebugPanel should exist on DFCanvas at main menu");
+        debugPanel.MatchedNode.Should().NotBeNull();
+        debugPanel.MatchedNode!.Visible.Should().BeFalse(
+            "DebugPanel should start hidden (CanvasGroup alpha 0) before F9 toggle");
+
+        UiActionResult modMenuPanel = await fixture.Client.QueryUiAsync("name=ModMenuPanel");
+        modMenuPanel.Success.Should().BeTrue("ModMenuPanel should exist on DFCanvas at main menu");
+        modMenuPanel.MatchedNode.Should().NotBeNull();
+        modMenuPanel.MatchedNode!.Visible.Should().BeFalse(
+            "ModMenuPanel should start hidden (CanvasGroup alpha 0) before F10 toggle");
+    }
+
+    /// <summary>
     /// RT-003: F9 overlay toggles visibility and persists across frames.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Overlay_F9_TogglesPersistentDebugOverlay()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         await fixture.Client!.ToggleUiAsync("debugoverlay");
         await Task.Delay(300);
 
@@ -48,16 +66,97 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     }
 
     /// <summary>
+    /// RT-003 / SPEC-007: F9 opens debug overlay at main menu (bridge UI visibility wait).
+    /// </summary>
+    [SkippableFact]
+    public async Task Overlay_F9_AssertDebugPanelVisible_AtMainMenu()
+    {
+        fixture.SkipIfNotInitialized();
+
+        StartGameResult openResult = await fixture.Client!.ToggleUiAsync("debug");
+        openResult.Success.Should().BeTrue(
+            "ToggleUiAsync(debug) should invoke DFCanvas.ToggleDebug() at main menu");
+
+        UiWaitResult waitResult = await fixture.Client.WaitForUiAsync(
+            "name=DebugPanel", "visible", timeoutMs: 3000);
+        waitResult.Ready.Should().BeTrue(
+            "debug panel should be visible after F9 toggle at main menu");
+    }
+
+    /// <summary>
+    /// RT-003 / SPEC-007: F9 closes debug overlay after second toggle at main menu.
+    /// </summary>
+    [SkippableFact]
+    public async Task Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu()
+    {
+        fixture.SkipIfNotInitialized();
+
+        StartGameResult openResult = await fixture.Client!.ToggleUiAsync("debug");
+        openResult.Success.Should().BeTrue(
+            "first ToggleUiAsync(debug) should open debug panel at main menu");
+
+        UiWaitResult openWait = await fixture.Client.WaitForUiAsync(
+            "name=DebugPanel", "visible", timeoutMs: 5000);
+        openWait.Ready.Should().BeTrue(
+            "debug panel should be visible after first F9 toggle at main menu");
+
+        await Task.Delay(300);
+
+        StartGameResult closeResult = await fixture.Client.ToggleUiAsync("debug");
+        closeResult.Success.Should().BeTrue(
+            "second ToggleUiAsync(debug) should close debug panel at main menu");
+
+        UiWaitResult closeWait = await fixture.Client.WaitForUiAsync(
+            "name=DebugPanel", "hidden", timeoutMs: 5000);
+        closeWait.Ready.Should().BeTrue(
+            "debug panel should be hidden after second F9 toggle at main menu");
+    }
+
+    /// <summary>
+    /// RT-003 / RT-004 / SPEC-007: F9 debug overlay and F10 mod menu toggle during gameplay.
+    /// </summary>
+    [SkippableFact]
+    public async Task Overlay_F9_F10_ToggleDuringGameplay()
+    {
+        fixture.SkipIfNotInitialized();
+
+        StartGameResult startResult = await fixture.Client!.StartGameAsync();
+        startResult.Success.Should().BeTrue(
+            "StartGameAsync should enter gameplay from main menu");
+
+        await Task.Delay(3000);
+
+        GameStatus status = await fixture.Client.StatusAsync();
+        status.WorldReady.Should().BeTrue(
+            "ECS world should be ready after scene transition to gameplay");
+
+        StartGameResult debugResult = await fixture.Client.ToggleUiAsync("debug");
+        debugResult.Success.Should().BeTrue(
+            "ToggleUiAsync(debug) should open debug panel in-game");
+
+        UiWaitResult debugWait = await fixture.Client.WaitForUiAsync(
+            "name=DebugPanel", "visible", timeoutMs: 3000);
+        debugWait.Ready.Should().BeTrue(
+            "debug panel should be visible after F9 toggle during gameplay");
+
+        StartGameResult modResult = await fixture.Client.ToggleUiAsync("modmenu");
+        modResult.Success.Should().BeTrue(
+            "ToggleUiAsync(modmenu) should open mod menu in-game");
+
+        UiWaitResult modWait = await fixture.Client.WaitForUiAsync(
+            "name=ModMenuPanel", "visible", timeoutMs: 3000);
+        modWait.Ready.Should().BeTrue(
+            "mod menu should be visible after F10 toggle during gameplay");
+    }
+
+    /// <summary>
     /// RT-004: F10 mod menu opens and closes without losing entity state.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task Overlay_F10_ModMenuToggle_PreservesRuntime()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         GameStatus initialStatus = await fixture.Client!.StatusAsync();
         int initialEntityCount = initialStatus.EntityCount;
         initialEntityCount.Should().BeGreaterThan(0,
@@ -82,10 +181,10 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     /// RT-005: RuntimeDriver survives 600+ frames (10 seconds) of gameplay.
     /// Verifies that the persistent root GameObject does not get destroyed.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task RuntimeDriver_Survives600FramesAndBeyond()
     {
-        if (!fixture.IsInitialized) return;
+        fixture.SkipIfNotInitialized();
 
         GameStatus initialStatus = await fixture.Client!.StatusAsync();
         initialStatus.EntityCount.Should().BeGreaterThan(0,
@@ -109,7 +208,7 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
                 return sw.Elapsed >= survivalWindow;
             },
             timeout: survivalWindow + TimeSpan.FromSeconds(2),
-            pollMs: 500).ConfigureAwait(false);
+            pollMs: 500);
 
         stayedAlive.Should().BeTrue("status polling should complete within the survival window");
         finalStatus.EntityCount.Should().BeGreaterThan(0,
@@ -117,4 +216,5 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         finalStatus.ModPlatformReady.Should().BeTrue(
             "mod platform should still be ready after extended runtime");
     }
+
 }

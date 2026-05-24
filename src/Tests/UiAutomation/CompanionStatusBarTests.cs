@@ -13,7 +13,7 @@ namespace DINOForge.Tests.UiAutomation;
 [Trait("Category", "UiAutomation")]
 public sealed class CompanionStatusBarTests(CompanionFixture fixture)
 {
-    [Fact]
+    [CompanionFact]
     public void StatusBar_IsVisible()
     {
         // Navigate to Dashboard to ensure status bar is rendered
@@ -27,7 +27,7 @@ public sealed class CompanionStatusBarTests(CompanionFixture fixture)
             "status bar must be present in the companion window");
     }
 
-    [Fact]
+    [CompanionFact]
     public void StatusBar_ShowsBridgeOfflineWhenGameNotRunning()
     {
         // Navigate to Dashboard
@@ -44,7 +44,7 @@ public sealed class CompanionStatusBarTests(CompanionFixture fixture)
             because: "status bar should indicate the bridge is offline when game is not running");
     }
 
-    [Fact]
+    [CompanionFact]
     public void StatusBar_UpdatesWhenBridgeStateChanges()
     {
         fixture.GoToDashboard();

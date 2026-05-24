@@ -13,7 +13,7 @@ namespace DINOForge.Tests.UiAutomation;
 [Trait("Category", "UiAutomation")]
 public sealed class CompanionShortcutTests(CompanionFixture fixture)
 {
-    [Fact]
+    [CompanionFact]
     public void CtrlR_TriggersPkgRefresh()
     {
         // Navigate to Pack List to ensure pack list UI is active
@@ -37,7 +37,7 @@ public sealed class CompanionShortcutTests(CompanionFixture fixture)
             "pack list should still be accessible after Ctrl+R shortcut");
     }
 
-    [Fact]
+    [CompanionFact]
     public void Shortcut_WindowRemainsResponsive()
     {
         fixture.GoToDashboard();

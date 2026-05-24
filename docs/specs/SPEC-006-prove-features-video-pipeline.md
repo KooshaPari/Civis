@@ -1,8 +1,10 @@
 # SPEC: Prove-Features Video Production Pipeline
 
-**Status**: Specification
+**Status**: Superseded
 **Version**: 1.0
 **Date**: 2026-03-24
+**Last Updated**: 2026-05-23
+**Superseded by**: [docs/superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md)
 **Scope**: `/prove-features` command video generation, post-processing, and delivery
 
 ---

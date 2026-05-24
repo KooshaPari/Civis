@@ -64,9 +64,8 @@ public sealed class MockValidatableTests
     public void Validate_OnValidatePrecedesThrowCheck()
     {
         var mock = new MockValidatable();
-        var hookFired = false;
 
-        mock.OnValidate = () => { hookFired = true; };
+        mock.OnValidate = () => { };
         mock.ThrowOnValidate = new InvalidOperationException("Should throw");
 
         var action = () => mock.Validate();

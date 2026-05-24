@@ -64,7 +64,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch
                 {
-                    // Assembly may not be fully loadable — skip
+                    // safe-swallow: assembly type lookup can fail on partially loadable game DLLs; skip this assembly
                 }
             }
 

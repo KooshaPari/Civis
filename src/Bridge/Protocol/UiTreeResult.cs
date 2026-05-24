@@ -83,9 +83,55 @@ namespace DINOForge.Bridge.Protocol
         [JsonProperty("bounds")]
         public UiBounds? Bounds { get; set; }
 
+        /// <summary>
+        /// Best-effort UGUI button/text styling captured for bridge assertions (SPEC-002 F-03).
+        /// Populated for UGUI Button nodes when a live tree snapshot is taken.
+        /// </summary>
+        [JsonProperty("style", NullValueHandling = NullValueHandling.Ignore)]
+        public UiStyleSnapshot? Style { get; set; }
+
         /// <summary>Child nodes in hierarchy order.</summary>
         [JsonProperty("children")]
         public List<UiNode> Children { get; set; } = new List<UiNode>(); // public-mutable-ok: JSON deserializer requires mutable List
+    }
+
+    /// <summary>
+    /// Subset of Unity UGUI button/text styling exposed for live UI tree comparisons.
+    /// Mirrors fields copied by <c>NativeMenuInjector.SyncButtonVisualStyle</c>.
+    /// </summary>
+    public sealed class UiStyleSnapshot
+    {
+        /// <summary>UGUI Selectable transition mode name.</summary>
+        [JsonProperty("transition")]
+        public string Transition { get; set; } = "";
+
+        /// <summary>Normal-state color from the button <c>ColorBlock</c> (#RRGGBBAA).</summary>
+        [JsonProperty("normalColor")]
+        public string NormalColor { get; set; } = "";
+
+        /// <summary>Highlighted-state color from the button <c>ColorBlock</c> (#RRGGBBAA).</summary>
+        [JsonProperty("highlightedColor")]
+        public string HighlightedColor { get; set; } = "";
+
+        /// <summary>Pressed-state color from the button <c>ColorBlock</c> (#RRGGBBAA).</summary>
+        [JsonProperty("pressedColor")]
+        public string PressedColor { get; set; } = "";
+
+        /// <summary>Disabled-state color from the button <c>ColorBlock</c> (#RRGGBBAA).</summary>
+        [JsonProperty("disabledColor")]
+        public string DisabledColor { get; set; } = "";
+
+        /// <summary>Label font size from legacy Text or TextMeshPro.</summary>
+        [JsonProperty("fontSize", NullValueHandling = NullValueHandling.Ignore)]
+        public int? FontSize { get; set; }
+
+        /// <summary>Label text color (#RRGGBBAA).</summary>
+        [JsonProperty("textColor", NullValueHandling = NullValueHandling.Ignore)]
+        public string? TextColor { get; set; }
+
+        /// <summary>Target graphic tint when the button uses a UGUI Image.</summary>
+        [JsonProperty("imageColor", NullValueHandling = NullValueHandling.Ignore)]
+        public string? ImageColor { get; set; }
     }
 
     /// <summary>

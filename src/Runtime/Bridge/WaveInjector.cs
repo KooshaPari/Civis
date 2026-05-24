@@ -60,13 +60,13 @@ namespace DINOForge.Runtime.Bridge
         public static void SetRegistryManager(RegistryManager registry)
         {
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-            DebugLog.Write("WaveInjector","WaveInjector.SetRegistryManager: Registry initialized");
+            DebugLog.Write("WaveInjector", "WaveInjector.SetRegistryManager: Registry initialized");
         }
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            DebugLog.Write("WaveInjector","WaveInjector.OnCreate");
+            DebugLog.Write("WaveInjector", "WaveInjector.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -104,7 +104,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    DebugLog.Write("WaveInjector",$"Error processing wave request {request.WaveDefinitionId}: {ex.Message}");
+                    DebugLog.Write("WaveInjector", $"Error processing wave request {request.WaveDefinitionId}: {ex.Message}");
                 }
             }
 
@@ -116,7 +116,7 @@ namespace DINOForge.Runtime.Bridge
 
                 if (wave.IsComplete)
                 {
-                    DebugLog.Write("WaveInjector",$"Wave {wave.Definition.Id} completed");
+                    DebugLog.Write("WaveInjector", $"Wave {wave.Definition.Id} completed");
                     _activeWaves.RemoveAt(i);
                     completedCount++;
                 }
@@ -129,7 +129,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (newRequests.Count > 0 || completedCount > 0)
             {
-                DebugLog.Write("WaveInjector",$"WaveInjector: Dequeued {newRequests.Count} wave request(s), " +
+                DebugLog.Write("WaveInjector", $"WaveInjector: Dequeued {newRequests.Count} wave request(s), " +
                     $"removed {completedCount} completed wave(s), " +
                     $"active waves: {_activeWaves.Count}");
             }
@@ -142,7 +142,7 @@ namespace DINOForge.Runtime.Bridge
         {
             if (_registry == null)
             {
-                DebugLog.Write("WaveInjector",$"Cannot process wave {request.WaveDefinitionId}: registry not initialized");
+                DebugLog.Write("WaveInjector", $"Cannot process wave {request.WaveDefinitionId}: registry not initialized");
                 return;
             }
 
@@ -150,7 +150,7 @@ namespace DINOForge.Runtime.Bridge
             WaveDefinition? wavedef = _registry.Waves.Get(request.WaveDefinitionId);
             if (wavedef == null)
             {
-                DebugLog.Write("WaveInjector",$"Wave definition not found: {request.WaveDefinitionId}");
+                DebugLog.Write("WaveInjector", $"Wave definition not found: {request.WaveDefinitionId}");
                 return;
             }
 
@@ -167,7 +167,7 @@ namespace DINOForge.Runtime.Bridge
             _activeWaves.Add(activeWave);
             _totalWavesProcessed++;
 
-            DebugLog.Write("WaveInjector",$"Queued wave {wavedef.Id} (display: {wavedef.DisplayName}) " +
+            DebugLog.Write("WaveInjector", $"Queued wave {wavedef.Id} (display: {wavedef.DisplayName}) " +
                 $"with {wavedef.SpawnGroups.Count} spawn group(s)");
         }
 
@@ -199,12 +199,12 @@ namespace DINOForge.Runtime.Bridge
 
                     PackUnitSpawner.RequestSpawnStatic(group.UnitId, spawnX, spawnZ, wave.Request.UseEnemyFaction, spawnY);
 
-                    DebugLog.Write("WaveInjector",$"Spawned unit from wave {wave.Definition.Id}: {group.UnitId} " +
+                    DebugLog.Write("WaveInjector", $"Spawned unit from wave {wave.Definition.Id}: {group.UnitId} " +
                         $"(group {unitIndex}) at ({spawnX}, {spawnY}, {spawnZ})");
                 }
                 catch (Exception ex)
                 {
-                    DebugLog.Write("WaveInjector",$"Failed to spawn unit {group.UnitId} from wave {wave.Definition.Id}: {ex.Message}");
+                    DebugLog.Write("WaveInjector", $"Failed to spawn unit {group.UnitId} from wave {wave.Definition.Id}: {ex.Message}");
                 }
 
                 // Calculate next spawn time
@@ -228,11 +228,11 @@ namespace DINOForge.Runtime.Bridge
                 if (unitCount + groupUnitCount > wave.NextUnitIndex)
                 {
                     // This is the group we need to spawn from
-                    wave.NextUnitIndex++;
+                    wave.NextUnitIndex = wave.NextUnitIndex + 1;
                     return (group, groupIdx);
                 }
 
-                unitCount += groupUnitCount;
+                unitCount = unitCount + groupUnitCount;
             }
 
             return (null, -1);
@@ -338,7 +338,7 @@ namespace DINOForge.Runtime.Bridge
             int total = 0;
             foreach (SpawnGroup group in Definition.SpawnGroups)
             {
-                total += Math.Max(1, group.Count);
+                total = total + Math.Max(1, group.Count);
             }
             return total;
         }

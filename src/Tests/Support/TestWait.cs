@@ -22,10 +22,11 @@ public static class TestWait
     {
         if (predicate is null) throw new ArgumentNullException(nameof(predicate));
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        ct.ThrowIfCancellationRequested();
         while (sw.Elapsed < timeout)
         {
-            ct.ThrowIfCancellationRequested();
             if (predicate()) return true;
+            ct.ThrowIfCancellationRequested();
             try { await Task.Delay(pollMs, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { throw; }
         }
@@ -43,10 +44,11 @@ public static class TestWait
     {
         if (predicate is null) throw new ArgumentNullException(nameof(predicate));
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        ct.ThrowIfCancellationRequested();
         while (sw.Elapsed < timeout)
         {
-            ct.ThrowIfCancellationRequested();
             if (await predicate().ConfigureAwait(false)) return true;
+            ct.ThrowIfCancellationRequested();
             try { await Task.Delay(pollMs, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { throw; }
         }

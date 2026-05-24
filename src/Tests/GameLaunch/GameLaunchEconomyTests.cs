@@ -18,14 +18,11 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-008: Economy pack is in the loaded packs list.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task EconomyPack_IsLoaded_AfterBootstrap()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         GameStatus status = await fixture.Client!.StatusAsync();
         status.LoadedPacks.Should().Contain("economy-balanced",
             "economy-balanced pack should be loaded at startup");
@@ -34,14 +31,11 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-008: Resource snapshot contains expected resource types from economy pack.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task EconomyPack_Resources_AvailableViaSnapshot()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         ResourceSnapshot resources = await fixture.Client!.GetResourcesAsync();
         resources.Should().NotBeNull("resource snapshot should be queryable");
     }
@@ -49,14 +43,11 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-008: Economy pack YAML is accessible and parseable.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task EconomyPack_ManifestIsValid_AndLoadable()
     {
-        if (!fixture.IsInitialized)
-        {
-            return;  // Skip test when game is not available
-        }
-        
+        fixture.SkipIfNotInitialized();
+
         CatalogSnapshot catalog = await fixture.Client!.GetCatalogAsync();
         catalog.Should().NotBeNull("catalog should be queryable");
         catalog.Units.Should().NotBeEmpty(
@@ -70,10 +61,10 @@ public sealed class GameLaunchEconomyTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-008: Resource values are non-negative and within plausible bounds.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task EconomyPack_ResourceValues_AreReasonable()
     {
-        if (!fixture.IsInitialized) return;
+        fixture.SkipIfNotInitialized();
 
         ResourceSnapshot resources = await fixture.Client!.GetResourcesAsync();
 

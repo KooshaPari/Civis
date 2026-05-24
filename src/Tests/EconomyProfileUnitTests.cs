@@ -65,7 +65,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankId_ReturnsError(string? id)
         {
-            var profile = new EconomyProfile { Id = id, DisplayName = "Valid Name" };
+            var profile = new EconomyProfile { Id = id!, DisplayName = "Valid Name" };
 
             var result = profile.Validate();
 
@@ -82,7 +82,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankDisplayName_ReturnsError(string? displayName)
         {
-            var profile = new EconomyProfile { Id = "test-economy", DisplayName = displayName };
+            var profile = new EconomyProfile { Id = "test-economy", DisplayName = displayName! };
 
             var result = profile.Validate();
 

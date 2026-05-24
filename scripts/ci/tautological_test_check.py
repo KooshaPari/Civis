@@ -93,7 +93,14 @@ REAL_ASSERTION_TOKENS = (
     ".ThrowsAsync<",
     "Assert(",        # xUnit Assertion.Assert
     "FluentActions",  # FluentAssertions FluentActions.Invoking(...)
+    "VerifyAnalyzerAsync",   # Roslyn analyzer test helper — throws on mismatch
+    "VerifyCodeFixAsync",    # Roslyn code-fix test helper — throws on mismatch
+    "VerifyRefactoringAsync", # Roslyn refactoring test helper
 )
+
+# Inline suppression marker — method body line containing this phrase opts out
+# of the tautological check. Preferred over allowlist for surgical suppressions.
+INLINE_SUPPRESSION_RE = re.compile(r"//\s*tautological-ok\s*:")
 
 WITH_INNER_EXCEPTION_CHAIN_RE = re.compile(r"\.WithInnerException(?:Exactly)?\b")
 

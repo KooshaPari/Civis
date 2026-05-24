@@ -14,7 +14,7 @@ namespace DINOForge.Tests.UiAutomation;
 [Trait("Category", "UiAutomation")]
 public sealed class CompanionLaunchTests(CompanionFixture fixture)
 {
-    [Fact]
+    [CompanionFact]
     public void MainWindow_IsVisible()
     {
         fixture.MainWindow.Should().NotBeNull();
@@ -22,7 +22,7 @@ public sealed class CompanionLaunchTests(CompanionFixture fixture)
             "the main window should be on screen after launch");
     }
 
-    [Fact]
+    [CompanionFact]
     public void PackList_ListView_ExistsAndHasItems()
     {
         // The pack list is rendered as a ListView with AutomationId "PackListView"

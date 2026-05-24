@@ -36,14 +36,6 @@ type: total_conversion
 depends_on: []
 conflicts_with: []
 
-assets:
-  manifest: assets/manifest.yaml
-  bundle: assets/warfare-starwars-assets.bundle  # not yet built
-  discovery_status: "Round 1 complete - 10 assets discovered"
-  discovery_report: "assets/DISCOVERY_REPORT.md"
-  intake_status: "assets/ASSET_INTAKE_STATUS.md"
-  registry: "assets/registry/asset_index.json"
-
 loads:
   factions:
     - factions

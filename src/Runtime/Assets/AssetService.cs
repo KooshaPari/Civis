@@ -76,7 +76,7 @@ namespace DINOForge.Runtime.Assets
                 }
                 catch (Exception)
                 {
-                    // Bundle may be corrupt or locked; report 0 assets
+                    // safe-swallow: bundle may be corrupt or locked; report 0 assets
                 }
 
                 results.Add(new BundleInfo(
@@ -309,7 +309,7 @@ namespace DINOForge.Runtime.Assets
             }
             catch (Exception)
             {
-                // Not all asset types have m_Name; fall through
+                // safe-swallow: not all asset types expose m_Name; fall through to PathID fallback
             }
 
             return $"PathID_{info.PathId}";

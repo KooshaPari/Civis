@@ -116,7 +116,7 @@ author: Test";
         public void NullManifest_FailsValidation()
         {
             // Arrange
-            string manifest = null;
+            string? manifest = null;
 
             // Act & Assert
             manifest.Should().BeNull();
@@ -179,7 +179,18 @@ name: Test";
             {
                 File.WriteAllText(
                     Path.Combine(tempPackDir, "pack.yaml"),
-                    "id: test-incompat\nname: Test Incompat\nversion: 0.1.0\nframework_version: \">=99.0.0\"\nauthor: Test\ntype: content\n",
+                    @"id: test-incompat
+name: Test Incompat
+version: 0.1.0
+framework_version: "">=99.0.0""
+author: Test
+type: content
+game_version: ""*""
+bepinex_version: ""*""
+unity_version: ""*""
+depends_on: []
+conflicts_with: []
+",
                     Encoding.UTF8);
 
                 var registryManager = new RegistryManager();

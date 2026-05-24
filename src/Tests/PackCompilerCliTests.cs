@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using DINOForge.SDK;
 using DINOForge.SDK.Models;
@@ -79,6 +81,30 @@ namespace DINOForge.Tests
             string manifestPath = Path.Combine(_tempRoot, $"{tcId}.yaml");
             File.WriteAllText(manifestPath, yaml);
             return manifestPath;
+        }
+
+        private (int ExitCode, string StdOut, string StdErr) RunPackCompiler(params string[] args)
+        {
+            string projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Tools", "PackCompiler", "DINOForge.Tools.PackCompiler.csproj"));
+            string joinedArgs = string.Join(" ", args.Select(arg => $"\"{arg}\""));
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"run --project \"{projectPath}\" -- {joinedArgs}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(startInfo);
+            process.Should().NotBeNull();
+            string stdOut = process!.StandardOutput.ReadToEnd();
+            string stdErr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            return (process.ExitCode, stdOut, stdErr);
         }
 
         #endregion
@@ -775,6 +801,88 @@ loads:
         }
 
         [Fact]
+        public void Validate_AggregatePacksDirectory_ValidatesChildPacks()
+        {
+            string aggregateDir = Path.Combine(_tempRoot, "packs");
+            Directory.CreateDirectory(aggregateDir);
+
+            CreateTestPack("alpha", @"
+id: alpha
+name: Alpha Pack
+version: 0.1.0
+author: Test
+type: content
+");
+
+            CreateTestPack("beta", @"
+id: beta
+name: Beta Pack
+version: 0.1.0
+author: Test
+type: content
+");
+
+            string alphaDir = Path.Combine(_tempRoot, "alpha");
+            string betaDir = Path.Combine(_tempRoot, "beta");
+            Directory.Move(alphaDir, Path.Combine(aggregateDir, "alpha"));
+            Directory.Move(betaDir, Path.Combine(aggregateDir, "beta"));
+
+            var result = RunPackCompiler("validate", aggregateDir, "--format", "json");
+
+            result.ExitCode.Should().Be(0, result.StdErr);
+            result.StdOut.Should().Contain("\"status\":\"ok\"");
+            result.StdOut.Should().Contain("\"pack\":\"alpha\"");
+            result.StdOut.Should().Contain("\"pack\":\"beta\"");
+        }
+
+        [Fact]
+        public void Validate_AggregatePacksDirectory_JsonOutput_IsParseableWithoutPrefixNoise()
+        {
+            string aggregateDir = Path.Combine(_tempRoot, "packs-json");
+            Directory.CreateDirectory(aggregateDir);
+
+            CreateTestPack("alpha-json", @"
+id: alpha-json
+name: Alpha JSON Pack
+version: 0.1.0
+author: Test
+type: content
+");
+
+            CreateTestPack("beta-json", @"
+id: beta-json
+name: Beta JSON Pack
+version: 0.1.0
+author: Test
+type: content
+");
+
+            string alphaDir = Path.Combine(_tempRoot, "alpha-json");
+            string betaDir = Path.Combine(_tempRoot, "beta-json");
+            Directory.Move(alphaDir, Path.Combine(aggregateDir, "alpha-json"));
+            Directory.Move(betaDir, Path.Combine(aggregateDir, "beta-json"));
+
+            var result = RunPackCompiler("validate", aggregateDir, "--format", "json");
+
+            result.ExitCode.Should().Be(0, result.StdErr);
+            result.StdOut.Should().NotBeNullOrWhiteSpace();
+            result.StdOut.TrimStart().Should().StartWith("{");
+            result.StdOut.TrimEnd().Should().EndWith("}");
+
+            string[] lines = result.StdOut
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            lines.Should().HaveCount(2);
+            foreach (string line in lines)
+            {
+                using JsonDocument doc = JsonDocument.Parse(line);
+                doc.RootElement.GetProperty("status").GetString().Should().Be("ok");
+                doc.RootElement.GetProperty("pack").GetString().Should().NotBeNullOrWhiteSpace();
+                doc.RootElement.GetProperty("errors").EnumerateArray().Should().BeEmpty();
+            }
+        }
+
+        [Fact]
         public void ValidateTotalConversion_AllVanillaFactionsReplaced_IsValid()
         {
             // Arrange - full vanilla faction replacement
@@ -827,4 +935,3 @@ asset_replacements:
         #endregion
     }
 }
-

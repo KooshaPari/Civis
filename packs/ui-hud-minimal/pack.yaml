@@ -16,8 +16,3 @@ loads:
     - menus/main-menu.yaml
   ui_themes:
     - themes/dark-theme.yaml
-
-tags:
-  - ui
-  - hud
-  - theme

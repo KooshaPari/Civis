@@ -13,6 +13,9 @@ namespace DINOForge.SDK.Universe
     /// </summary>
     public sealed class CrosswalkDictionary : IValidatable
     {
+        // unbounded-version-ok: wildcard token is a pattern placeholder, not a version constraint
+        private const string WildcardToken = "*";
+
         /// <summary>
         /// Exact crosswalk entries keyed by vanilla ID.
         /// </summary>
@@ -89,7 +92,7 @@ namespace DINOForge.SDK.Universe
                 return false;
 
             // Convert wildcard pattern to regex
-            string regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", "(.+)") + "$";
+            string regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", "(.+)") + "$"; // unbounded-version-ok: wildcard token is a pattern matcher, not a version constraint
             return Regex.IsMatch(value, regexPattern, RegexOptions.IgnoreCase);
         }
 
@@ -99,14 +102,14 @@ namespace DINOForge.SDK.Universe
         public static CrosswalkEntry ApplyPattern(string vanillaId, CrosswalkPattern pattern)
         {
             string capturedPart = ExtractWildcardValue(vanillaId, pattern.VanillaPattern);
-            string themedId = pattern.ThemedPattern.Replace("*", capturedPart);
+            string themedId = pattern.ThemedPattern.Replace(WildcardToken, capturedPart);
 
             return new CrosswalkEntry
             {
                 VanillaId = vanillaId,
                 ThemedId = themedId,
-                ThemedName = pattern.ThemedNamePattern?.Replace("*", capturedPart),
-                ThemedDescription = pattern.ThemedDescriptionPattern?.Replace("*", capturedPart),
+                ThemedName = pattern.ThemedNamePattern?.Replace(WildcardToken, capturedPart),
+                ThemedDescription = pattern.ThemedDescriptionPattern?.Replace(WildcardToken, capturedPart),
                 StatModifiers = pattern.StatModifiers
             };
         }
@@ -117,7 +120,7 @@ namespace DINOForge.SDK.Universe
         public static string ReverseApplyPattern(string themedId, CrosswalkPattern pattern)
         {
             string capturedPart = ExtractWildcardValue(themedId, pattern.ThemedPattern);
-            return pattern.VanillaPattern.Replace("*", capturedPart);
+            return pattern.VanillaPattern.Replace(WildcardToken, capturedPart);
         }
 
         /// <summary>
@@ -125,7 +128,7 @@ namespace DINOForge.SDK.Universe
         /// </summary>
         public static string ExtractWildcardValue(string value, string pattern)
         {
-            string regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", "(.+)") + "$";
+            string regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", "(.+)") + "$"; // unbounded-version-ok: wildcard token is a pattern matcher, not a version constraint
             Match match = Regex.Match(value, regexPattern, RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value : value;
         }

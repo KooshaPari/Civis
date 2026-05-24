@@ -78,7 +78,7 @@ namespace DINOForge.Tests
             var winCondition = new WinConditionDefinition(
                 id: "win-001",
                 type: "test_type",
-                description: null,
+                description: null!,
                 parameters: new Dictionary<string, object>());
 
             winCondition.Description.Should().Be(string.Empty);
@@ -91,7 +91,7 @@ namespace DINOForge.Tests
                 id: "win-001",
                 type: "test_type",
                 description: "test",
-                parameters: null);
+                parameters: null!);
 
             winCondition.Parameters.Should().NotBeNull();
             winCondition.Parameters.Should().BeEmpty();

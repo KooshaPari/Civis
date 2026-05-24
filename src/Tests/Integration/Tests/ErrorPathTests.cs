@@ -76,26 +76,39 @@ public class ErrorPathTests : IAsyncLifetime
     {
         SkipIfGameNotAvailable();
 
-        // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        // Arrange — NDJSON line protocol (MockGameBridgeServer); framing causes handshake timeouts.
+        // Connect/handshake need timeouts above ReadLineAsync's 200ms poll cadence; post-disconnect
+        // ping fails fast when the server closes the pipe (no short read timeout required).
+        var options = MockBridgeOptions(_testPipeName!, o =>
+        {
+            o.ConnectTimeoutMs = 5000;
+            o.ReadTimeoutMs = 5000;
+            o.SendTimeoutMs = 5000;
+            o.RetryCount = 0;
+            o.RetryDelayMs = 10;
+        });
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
 
         // Act - stop the server (simulates bridge disconnect)
-        await _mockServer!.DisposeAsync().ConfigureAwait(true);
-        await Task.Delay(100).ConfigureAwait(true); // Give client time to notice
-
-        // Attempt a command
+        await _mockServer!.StopAsync().ConfigureAwait(true);
+        await _mockServer.Stopped.ConfigureAwait(true);
         Func<Task> action = async () =>
         {
-            await client.PingAsync().ConfigureAwait(true);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            await client.PingAsync(cts.Token).ConfigureAwait(true);
         };
 
-        // Assert - should fail with connection error
-        await action.Should().ThrowAsync<Exception>().ConfigureAwait(true);
-        client.Disconnect();
-        client.Dispose();
+        try
+        {
+            await action.Should().ThrowAsync<GameClientException>().ConfigureAwait(true);
+        }
+        finally
+        {
+            client.Disconnect();
+            client.Dispose();
+        }
     }
 
     /// <summary>
@@ -138,8 +151,8 @@ public class ErrorPathTests : IAsyncLifetime
         var goodPipeName = _testPipeName!;
         var badPipeName = "dinoforge-bad-" + Guid.NewGuid().ToString("N");
 
-        var goodOptions1 = new GameClientOptions { PipeName = goodPipeName, ConnectTimeoutMs = 5000 };
-        var goodOptions2 = new GameClientOptions { PipeName = goodPipeName, ConnectTimeoutMs = 5000 };
+        var goodOptions1 = MockBridgeOptions(goodPipeName, o => o.ConnectTimeoutMs = 5000);
+        var goodOptions2 = MockBridgeOptions(goodPipeName, o => o.ConnectTimeoutMs = 5000);
         var badOptions1 = new GameClientOptions { PipeName = badPipeName, ConnectTimeoutMs = 1000 };
         var badOptions2 = new GameClientOptions { PipeName = badPipeName, ConnectTimeoutMs = 1000 };
 
@@ -190,7 +203,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName!, ConnectTimeoutMs = 5000 };
+        var options = MockBridgeOptions(_testPipeName!, o => o.ConnectTimeoutMs = 5000);
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
 
@@ -219,7 +232,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
 
@@ -245,7 +258,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
 
@@ -277,7 +290,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
@@ -306,7 +319,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var client1 = new GameClient(options);
         var client2 = new GameClient(options);
 
@@ -345,7 +358,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var client = new GameClient(options);
         await client.ConnectAsync().ConfigureAwait(true);
         client.IsConnected.Should().BeTrue();
@@ -380,7 +393,7 @@ public class ErrorPathTests : IAsyncLifetime
         // Arrange
         const int clientCount = 4;
         var clients = Enumerable.Range(0, clientCount)
-            .Select(_ => new GameClient(new GameClientOptions { PipeName = _testPipeName! }))
+            .Select(_ => new GameClient(MockBridgeOptions(_testPipeName!)))
             .ToList();
 
         // Act - connect all in parallel
@@ -417,7 +430,7 @@ public class ErrorPathTests : IAsyncLifetime
         SkipIfGameNotAvailable();
 
         // Arrange
-        var options = new GameClientOptions { PipeName = _testPipeName! };
+        var options = MockBridgeOptions(_testPipeName!);
         var clients = Enumerable.Range(0, 3)
             .Select(_ => new GameClient(options))
             .ToList();
@@ -453,6 +466,20 @@ public class ErrorPathTests : IAsyncLifetime
     // ─────────────────────────────────────────────────────────────────────────────
     // Helper methods
     // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Options for clients talking to <see cref="MockGameBridgeServer"/> (NDJSON line protocol).
+    /// </summary>
+    private static GameClientOptions MockBridgeOptions(string pipeName, Action<GameClientOptions>? configure = null)
+    {
+        var options = new GameClientOptions
+        {
+            PipeName = pipeName,
+            UseMessageFraming = false,
+        };
+        configure?.Invoke(options);
+        return options;
+    }
 
     /// <summary>
     /// Attempts to connect a client with a timeout.

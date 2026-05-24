@@ -52,7 +52,6 @@ public class NativeInteropIntegrationTests : IDisposable
 
     private readonly string _tempDir;
     private readonly string _mockGoBinaryPath;
-    private EnvVarScope? _resolverPathScope;
 
     public NativeInteropIntegrationTests()
     {
@@ -63,9 +62,6 @@ public class NativeInteropIntegrationTests : IDisposable
 
     public void Dispose()
     {
-        // Restore original resolver path via scope guard (no raw env mutation here).
-        _resolverPathScope?.Dispose();
-
         // Cleanup temp directory
         try
         {

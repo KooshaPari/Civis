@@ -19,7 +19,7 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
     // ── COMP-DEBUG-001 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void DebugPanel_RefreshButton_Exists()
     {
         GoToDebugPanel();
@@ -30,7 +30,7 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
     // ── COMP-DEBUG-002 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void DebugPanel_RefreshButton_IsEnabled()
     {
         GoToDebugPanel();
@@ -42,7 +42,7 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
     // ── COMP-DEBUG-003 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void DebugPanel_AfterRefresh_SectionsControlExists()
     {
         GoToDebugPanel();
@@ -61,7 +61,7 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
     // ── COMP-DEBUG-004 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void DebugPanel_AfterRefresh_HasExpanderSections()
     {
         GoToDebugPanel();
@@ -81,7 +81,7 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
     // ── COMP-DEBUG-005 ─────────────────────────────────────────────────────────
 
-    [Fact]
+    [CompanionFact]
     public void DebugPanel_AfterRefresh_ContainsExpectedSectionNames()
     {
         GoToDebugPanel();

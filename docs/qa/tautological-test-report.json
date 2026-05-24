@@ -1,7 +1,7 @@
 {
-  "scan_utc": "2026-05-21T17:46:43.284094Z",
-  "scan_date": "2026-05-21",
-  "total_test_methods": 3690,
+  "scan_utc": "2026-05-24T22:19:22.357138Z",
+  "scan_date": "2026-05-24",
+  "total_test_methods": 3725,
   "tautological_count": 20,
   "allowlist_size": 24,
   "new_instances": [],
@@ -189,5 +189,5 @@
   ],
   "scan_root": "C:/Users/koosh/Dino/src/Tests",
   "allowlist_path": "C:/Users/koosh/Dino/docs/qa/known-tautological-tests.txt",
-  "files_scanned": 356
+  "files_scanned": 372
 }

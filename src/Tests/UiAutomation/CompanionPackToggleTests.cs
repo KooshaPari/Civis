@@ -14,7 +14,7 @@ namespace DINOForge.Tests.UiAutomation;
 [Trait("Category", "UiAutomation")]
 public sealed class CompanionPackToggleTests(CompanionFixture fixture)
 {
-    [Fact]
+    [CompanionFact]
     public void TogglePack_FlipsEnabledState()
     {
         // Navigate to Pack List first so the toggle is visible

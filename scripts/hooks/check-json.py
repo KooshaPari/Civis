@@ -9,6 +9,7 @@ SKIP_NAMES = {"asset_manifest.json", "packages.lock.json", "tundra.log.json"}
 SKIP_DIRS  = {
     "FuzzCorpus", ".git", "node_modules",
     "unity-assetbundle-builder", "__pycache__",
+    "packages",
 }
 
 files = []
@@ -23,6 +24,8 @@ for path in glob.glob("**/*.json", recursive=True):
 
 errors = []
 for path in files:
+    if not os.path.isfile(path):
+        continue
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
             json.load(fh)

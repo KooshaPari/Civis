@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <!-- ADR: stable LTS stack (see docs/ADR-companion-tfm-downgrade.md); was net11/net10 + WinApp SDK 2.0 preview -->
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>DINOForge.DesktopCompanion</RootNamespace>
@@ -10,7 +11,7 @@
     <WindowsPackageType>None</WindowsPackageType>
     <SelfContained>false</SelfContained>
     <ImplicitUsings>disable</ImplicitUsings>
-    <LangVersion>12</LangVersion>
+    <LangVersion>preview</LangVersion>
     <!-- Disable auto-generated Main -->
     <DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <!-- Suppress MinVer -->

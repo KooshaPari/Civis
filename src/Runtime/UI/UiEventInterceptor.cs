@@ -44,7 +44,7 @@ namespace DINOForge.Runtime.UI
             {
                 // Add a click listener that logs the button name
                 btn.onClick.AddListener(() => OnAnyButtonClicked(btn));
-                btn.gameObject.name += "_intercepted";
+                btn.gameObject.name = btn.gameObject.name + "_intercepted";
             }
             catch (Exception ex)
             {

@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.25.0-dev] - In Progress
 
+#### Stabilization — Tests, Specs, Journey Viewer Schema (2026-05-23)
+
+**Verification** — ~3853 tests passing, CI green.
+
+**Fixed**
+- **DumpTools integration tests** — `RunDumpToolsCommand` drains stdout/stderr on process exit to avoid pipe-buffer deadlock (3 timeouts fixed).
+- **PollingHelper flaky test** — `RetryUntilTrueAsync_SucceedsOnNthProbe` uses virtual `TimeProvider` + non-parallel collection for CI thread-pool saturation.
+- **DebugLog** — `ResolveLogPath()` falls back to `%TEMP%/DINOForge` when BepInEx root is unavailable (unit-test / headless safety).
+- **Bridge `UseMessageFraming`** — `GameLaunchFixture` and line-protocol clients use `UseMessageFraming=false`; `GameClient` send/read gates honor framing vs `_writer`/`_pipe` mode.
+- **warfare-starwars** — `pack.yaml` validate fix.
+- **Click routing** — H1 `EnsureEventSystemAlive` in `Plugin/DFCanvas`.
+- **UiSelector / bridge / debug** — F9 close-toggle path.
+
+**Added**
+- **SPEC-004** — `KeyInputSystemTests.cs` (10 passing, 1 skipped pending resurrection cap).
+- **KeyInputSystemIntegrationTests** — `PlayerLoopKeyInputInjection` seam (5 tests: marker inject/evict/re-inject, KIS-IT2/IT4; in-memory loop, no game launch).
+- **SDK/PackCompiler** — `SdkPackCompilerValidationGapTests.cs` (schema resolver, registry import, asset validation).
+- **SdkServicesCoverageTests** — +8 (`YamlLoader`, `FileDiscoveryService`, validation helper gaps).
+- **GameLaunch** — `Overlay_F9_AssertDebugPanelVisible_AtMainMenu` (SPEC-007 / RT-003); `MainMenu_ModsButton_StyleMatchesSettings_AfterInjection` (SPEC-002 F-03).
+- **Pester** — `tests/unit/Test-BootConfigSingleInstance.ps1` (SPEC-005 `single-instance=0`); `tests/unit/Test-CaptureFeatureClips.ps1` (SPEC-003 script contract).
+- **SPEC-007 CI gate** — `prove-features-gate.ps1` validate-only mode in `ci.yml`.
+- **Journey viewer schema** — normalized types + `fixtures/example-journey.json` in `tools/phenotype-journeys/npm/journey-viewer/`.
+- **GameLaunch** — `Overlay_F9_F10_ToggleDuringGameplay`.
+- **Bridge** — live `StatusAsync` verified; `GameClientNdjsonMockTests`.
+- **Capture** — Pester 5 (`Test-CaptureFeatureClips.ps1`); pytest `generate_tts` (+2).
+- **Integration** — `MockBridgeOptions` helper for NDJSON `GameClient` tests.
+- **live-bridge-journey-smoke.ps1** — journey smoke script + evidence (PARTIAL).
+- **WarfareStarwarsImportedShaderTests** — imported shader validation tests.
+- **GameLaunch** — F9 close-toggle test; pack-count test.
+- **Phenotype journeys** — example manifest + acceptance (PARTIAL).
+- **HudStrip** — characterization tests.
+
+**Changed**
+- **Spec docs** — SPEC-003/005/006 status synced; traceability matrix and `docs/specs/index.md` updated.
+- **Journey viewer** — `normalizeJourney()` in Vue; `OcrOverlay`, `SvgOverlayLayer`, `StepScreenshotTimeline` in lightbox/timeline.
+- **SPEC-002** — 14+ `NativeMenuInjectorCharacterizationTests`; `OnScanNeeded` wired; 37 NativeMenu tests passing.
+- **Bridge diagnostics** — `GameBridgeServer` fallback errors include handler detail; `GameClient` timeout hints + fallback file read.
+- **Rendering imports** — PackCompiler defaults to URP Lit; `VFXPrefabFactory` prefers URP particle shaders before Built-in fallbacks.
+- **prove-features-gate.ps1** — UTF-8 BOM for Windows PowerShell 5.1.
+- **Journey viewer** — README, `RecordingEmbed`, `types` exports.
+- **SPEC-007** — 8 checkboxes marked.
+- **Journey viewer** — 0.1.1 + `INTEGRATION.md`.
+- **HudStrip** — SPEC drift documented.
+- **DesktopCompanion** — net8 WinUI alignment; CompanionTests 16/16.
+
+---
+
 #### Iter-144 Wave 1 — Gray-Freeze Root Cause + Bundle Preservation
 
 **Status**: Gray-freeze hang on scene transition fixed at the kernel-IO level. WinDbg-confirmed root cause via 1.4GB MDMP. In-game verified `Process.Responding=True` 25s post-launch.

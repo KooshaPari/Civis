@@ -20,6 +20,9 @@
         powershell -ExecutionPolicy Bypass -File scripts/game/capture-feature-clips.ps1
 #>
 
+[CmdletBinding()]
+param()
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -223,5 +226,7 @@ Write-Host "  raw_f10.mp4    : $f10Out"
 Write-Host ""
 Write-Host "NEXT: Orchestrator must call game_analyze_screen for each feature"
 Write-Host "      and write validate_report.json to $outDir"
+Write-Host "Phase 2 (edge-tts): scripts/video/generate_tts.py + vo_spec.json"
+Write-Host "Phase 3 (Remotion): scripts/video/ - compose validated clips into reel MP4"
 Write-Host "========================================================================"
 exit 0

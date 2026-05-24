@@ -54,6 +54,17 @@ namespace DINOForge.Analyzers
             // Extract the string value
             var stringValue = literalExpr.Token.ValueText;
 
+            // Wildcard is a valid unbounded constraint signal even though it is one character.
+            if (stringValue == "*")
+            {
+                if (HasUnboundedVersionOkComment(literalExpr))
+                    return;
+
+                var wildcardDiagnostic = Diagnostic.Create(Rule, literalExpr.GetLocation(), stringValue);
+                context.ReportDiagnostic(wildcardDiagnostic);
+                return;
+            }
+
             // Skip very short strings (unlikely to be version constraints)
             if (stringValue.Length < 3)
                 return;
@@ -72,8 +83,21 @@ namespace DINOForge.Analyzers
 
         private static bool HasUnboundedVersionOkComment(LiteralExpressionSyntax literalExpr)
         {
-            var leadingTrivia = literalExpr.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
+            foreach (var node in literalExpr.AncestorsAndSelf())
+            {
+                if (HasSuppressionComment(node.GetLeadingTrivia()) ||
+                    HasSuppressionComment(node.GetTrailingTrivia()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasSuppressionComment(SyntaxTriviaList triviaList)
+        {
+            foreach (var trivia in triviaList)
             {
                 if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
                     trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))

@@ -33,6 +33,25 @@ namespace DINOForge.Tests.SDK.IO
         }
 
         [Fact]
+        public void ReadText_Utf8Bom_StripsBom()
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"safefileio_bom_{Guid.NewGuid():N}.txt");
+            try
+            {
+                File.WriteAllText(path, "id: test", Encoding.UTF8);
+
+                string content = SafeFileIO.ReadText(path);
+
+                content.Should().Be("id: test");
+                content.Should().NotStartWith("\uFEFF");
+            }
+            finally
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+
+        [Fact]
         public void ReadText_InvalidUtf8_Throws()
         {
             string path = Path.Combine(Path.GetTempPath(), $"safefileio_invalid_{Guid.NewGuid():N}.txt");

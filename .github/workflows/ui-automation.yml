@@ -42,7 +42,7 @@ jobs:
 
       - name: Run UI Automation tests
         env:
-          COMPANION_EXE: ${{ github.workspace }}\src\Tools\DesktopCompanion\bin\Release\net11.0-windows10.0.26100.0\DINOForge.DesktopCompanion.exe
+          COMPANION_EXE: ${{ github.workspace }}\src\Tools\DesktopCompanion\bin\Release\net8.0-windows10.0.19041.0\DINOForge.DesktopCompanion.exe
         run: |
           dotnet test src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj `
             --configuration Release `

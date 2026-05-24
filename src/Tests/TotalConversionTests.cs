@@ -282,7 +282,7 @@ namespace DINOForge.Tests
         {
             var manifest = new TotalConversionManifest();
             manifest.Version.Should().Be("0.1.0");
-            manifest.FrameworkVersion.Should().Be("*");
+            manifest.FrameworkVersion.Should().Be(">=0.1.0 <1.0.0");
             manifest.Factions.Should().BeEmpty();
             manifest.ReplacesVanilla.Should().BeEmpty();
         }

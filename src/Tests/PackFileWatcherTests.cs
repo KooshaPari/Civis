@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DINOForge.SDK;
 using DINOForge.SDK.HotReload;
 using DINOForge.SDK.Registry;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -13,6 +14,7 @@ namespace DINOForge.Tests
     /// <summary>
     /// Tests for <see cref="PackFileWatcher"/> covering lifecycle, debounce, and event firing.
     /// </summary>
+    [Collection(Collections.FileSystemWatcher)]
     public class PackFileWatcherTests : IDisposable
     {
         private readonly string _tempDir;
@@ -151,6 +153,9 @@ namespace DINOForge.Tests
         [Fact]
         public async Task FileChanged_TriggersCallback_WithDebounce()
         {
+            const int debounceMs = 200;
+            TimeSpan waitTimeout = TimeSpan.FromSeconds(15);
+
             // Arrange
             string packsDir = Path.Combine(_tempDir, "packs");
             Directory.CreateDirectory(packsDir);
@@ -158,34 +163,70 @@ namespace DINOForge.Tests
             // Create a valid pack so the reload can succeed
             string packDir = Path.Combine(packsDir, "watch-test-pack");
             Directory.CreateDirectory(packDir);
-            File.WriteAllText(Path.Combine(packDir, "pack.yaml"),
+            string packYaml = Path.Combine(packDir, "pack.yaml");
+            File.WriteAllText(packYaml,
                 "id: watch-test-pack\nname: Watch Test\nversion: 1.0.0\nauthor: Test\ntype: content\n");
 
             ContentLoader loader = new ContentLoader(_registryManager);
             using PackFileWatcher watcher = new PackFileWatcher(
-                packsDir, loader, _registryManager, debounceMs: 200);
+                packsDir, loader, _registryManager, debounceMs: debounceMs);
 
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-            watcher.OnPackReloaded += (_, _) => tcs.TrySetResult(true);
-            watcher.OnPackReloadFailed += (_, _) => tcs.TrySetResult(false);
+            int reloadCount = 0;
+            int contentChangedCount = 0;
+            watcher.OnPackReloaded += (_, _) => Interlocked.Increment(ref reloadCount);
+            watcher.OnPackReloadFailed += (_, _) => Interlocked.Increment(ref reloadCount);
+            watcher.OnPackContentChanged += (_, _) => Interlocked.Increment(ref contentChangedCount);
 
-            // Act — write a YAML file inside the pack directory to trigger the watcher
             watcher.Start();
-            // Pattern #108: Windows FileSystemWatcher needs a generous settle window
-            // before the OS hooks in, especially under push-time lefthook CPU contention
-            // (xUnit parallel + build + test concurrency).
-            await Task.Delay(250);
+            watcher.IsWatching.Should().BeTrue();
 
+            // Pattern #108: warm-up proves FileSystemWatcher + debounce before the assertion write.
+            // Touch existing pack.yaml first (Changed is more reliable than Create on Windows FSW).
+            bool warmupReloaded = false;
+            for (int attempt = 0; attempt < 3 && !warmupReloaded; attempt++)
+            {
+                int contentBefore = Volatile.Read(ref contentChangedCount);
+                int reloadBefore = Volatile.Read(ref reloadCount);
+
+                if (attempt == 0)
+                {
+                    File.SetLastWriteTimeUtc(packYaml, DateTime.UtcNow);
+                }
+                else
+                {
+                    string warmupFile = Path.Combine(packDir, $"_fsw_warmup_{attempt}.yaml");
+                    File.WriteAllText(warmupFile, $"id: fsw-warmup-{attempt}\n");
+                }
+
+                bool fswDelivered = await TestWait.UntilAsync(
+                    () => Volatile.Read(ref contentChangedCount) > contentBefore,
+                    TimeSpan.FromSeconds(5));
+                if (!fswDelivered)
+                {
+                    continue;
+                }
+
+                warmupReloaded = await TestWait.UntilAsync(
+                    () => Volatile.Read(ref reloadCount) > reloadBefore,
+                    waitTimeout);
+            }
+
+            warmupReloaded.Should().BeTrue(
+                "warm-up write should complete debounce and fire a reload callback");
+
+            int reloadCountBeforeTrigger = Volatile.Read(ref reloadCount);
+
+            // Act — second write must trigger another debounced reload
             string yamlFile = Path.Combine(packDir, "trigger.yaml");
             File.WriteAllText(yamlFile, "id: trigger\n");
 
-            // Assert — wait up to 15 seconds for debounce + reload.
-            // Original 3s was too tight under Windows FSW + xUnit parallel + lefthook
-            // CPU contention (push v7 flake). 15s ceiling still fails fast on real bugs
-            // while absorbing OS-level FSW latency spikes (200-2000ms observed).
-            bool completed = await Task.WhenAny(tcs.Task, Task.Delay(15000)) == tcs.Task;
-            // The watcher fires; success or failure both indicate the callback fired
-            completed.Should().BeTrue("the watcher should fire its reload callback within 15 seconds");
+            // Assert — predicate-based wait (no blind Task.Delay)
+            bool triggered = await TestWait.UntilAsync(
+                () => Volatile.Read(ref reloadCount) > reloadCountBeforeTrigger,
+                waitTimeout);
+
+            triggered.Should().BeTrue(
+                "the watcher should fire its reload callback after debounce on a second write");
         }
 
         [Fact]

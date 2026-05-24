@@ -2277,9 +2277,9 @@ public class GameClientCoverageTests
         // Clean up the test process if still running
         try
         {
-            if (!process.HasExited)
+            if (process is not null && !process.HasExited)
                 process.Kill();
-            process.WaitForExit(1000);
+            process?.WaitForExit(1000);
         }
         catch
         {

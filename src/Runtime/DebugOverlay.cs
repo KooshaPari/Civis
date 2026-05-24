@@ -273,7 +273,7 @@ namespace DINOForge.Runtime
                                 .Select(t => t.GetManagedType()?.Name ?? "?")
                                 .OrderBy(n => n)
                                 .Take(5));
-                            if (types.Length > 5) key += $" (+{types.Length - 5} more)";
+                            if (types.Length > 5) key = string.Concat(key, $" (+{types.Length - 5} more)");
 
                             if (!archetypeCounts.ContainsKey(key))
                                 archetypeCounts[key] = 0;

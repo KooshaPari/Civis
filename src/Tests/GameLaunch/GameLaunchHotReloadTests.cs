@@ -19,10 +19,10 @@ public sealed class GameLaunchHotReloadTests(GameLaunchFixture fixture)
     /// <summary>
     /// GL-007: Modifying a pack YAML file triggers reload within 5 seconds.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public async Task HotReload_PackYamlChange_TriggersReloadWithin5Seconds()
     {
-        if (!fixture.IsInitialized) return;
+        fixture.SkipIfNotInitialized();
 
         GameStatus initialStatus = await fixture.Client!.StatusAsync();
         initialStatus.LoadedPacks.Should().NotBeEmpty(

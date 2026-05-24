@@ -120,12 +120,12 @@ namespace DINOForge.Runtime.Bridge
                     }
                 }
 
-                DebugLog.Write("LODManager","LODManager.GetCameraPosition: No camera found, returning zero");
+                DebugLog.Write("LODManager", "LODManager.GetCameraPosition: No camera found, returning zero");
                 return Vector3.zero;
             }
             catch (Exception ex)
             {
-                DebugLog.Write("LODManager",$"LODManager.GetCameraPosition failed: {ex.Message}");
+                DebugLog.Write("LODManager", $"LODManager.GetCameraPosition failed: {ex.Message}");
                 return Vector3.zero;
             }
         }

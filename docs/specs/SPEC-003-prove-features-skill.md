@@ -1,9 +1,12 @@
 # SPEC-003: /prove-features — Autonomous Video Proof System
 
-**Status**: Active — Partially Implemented
-**Version**: 1.1
+**Status**: Active — v2 pipeline implemented
+**Version**: 1.2
 **Date**: 2026-03-24
+**Last Updated**: 2026-05-23
 **Replaces**: SPEC-prove-features-video-pipeline.md (informal, unnumbered)
+**Implementation**: v2 per [prove-features-video-pipeline-v2-design.md](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md) — `scripts/game/capture-feature-clips.ps1`, edge-tts, Remotion
+**Work items**: [WORK-001](../work-items/WORK-001-prove-features-improvements.md) — Closed (v1 gdigrab/SAPI gaps addressed by v2)
 **Scope**: `/prove-features` Claude command — end-to-end autonomous video generation
 
 ---
@@ -259,7 +262,7 @@ $h = $rect.Bottom - $rect.Top
 # Then: -f gdigrab -offset_x $rect.Left -offset_y $rect.Top -video_size "${w}x${h}" -i desktop
 ```
 
-**Status**: Not yet fixed in `.claude/commands/prove-features.md`. Tracked in WORK-001.
+**Status**: Resolved — v2 `scripts/game/capture-feature-clips.ps1` uses window-isolated capture (ScreenRecorderLib), not gdigrab desktop. WORK-001 closed.
 
 ---
 
@@ -278,7 +281,7 @@ $synth.Speak($text)
 
 **Fix**: See Proposed Improvements — TTS Engine Selection.
 
-**Status**: Partially addressed in SPEC-prove-features-video-pipeline.md (edge-tts recommended). Not yet updated in the command skill file. Tracked in WORK-001.
+**Status**: Resolved — v2 pipeline uses edge-tts as primary TTS. WORK-001 closed.
 
 ---
 
@@ -502,20 +505,20 @@ $chapterMetadata | Set-Content "$tmpDir\chapters.txt"
 
 ## Status
 
-| Component | Current State | Target State |
-|-----------|--------------|--------------|
-| Game launch + log polling | Working | Working |
-| Window capture (gdigrab) | Bug: full desktop capture | Fix: title= window capture |
-| Key simulation (SendKeys) | Working | Working |
-| TTS engine | Windows SAPI (robotic) | edge-tts primary / Kokoro fallback |
-| ffmpeg annotations | Working | Working |
-| H.264 encoding | Working | Working |
-| Exit code validation | Missing | Add `$LASTEXITCODE` checks |
-| Filter pre-validation | Not implemented | Add pre-encode syntax check |
-| Animated callout scale-in | Not implemented | Future enhancement |
+| Component | Current State | Notes |
+|-----------|--------------|-------|
+| Game launch + log polling | Working | v2: `capture-feature-clips.ps1` |
+| Window capture | Working | v2: ScreenRecorderLib via CLI — replaces v1 gdigrab desktop/title capture |
+| Key simulation | Working | v2: Win32 SendInput in capture script |
+| TTS engine | Working | v2: edge-tts (`scripts/video/`, `vo_spec.json`) — replaces v1 SAPI primary path |
+| Video composition | Working | v2: Remotion (Phase 3) — replaces v1 ffmpeg drawtext-only path |
+| VLM validation | Working | v2: interleaved per `.claude/commands/prove-features.md` |
+| H.264 encoding | Working | v2: Remotion render output |
+| v1 ffmpeg drawtext path | Superseded | See SPEC-006, v2 design doc |
+| Animated callout scale-in | Implemented (v2) | Remotion spring physics |
 | Chapter markers | Not implemented | Future enhancement |
 
-**Overall status**: The pipeline is functional. Two issues block production-quality output: the window capture bug (ISSUE-1) and SAPI voice quality (ISSUE-2). Both are tracked in WORK-001.
+**Overall status**: v2 pipeline implemented. v1 gdigrab/SAPI issues (ISSUE-1, ISSUE-2) and [WORK-001](../work-items/WORK-001-prove-features-improvements.md) are closed. Authoritative v2 design: [2026-03-27-prove-features-video-pipeline-v2-design.md](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md).
 
 ---
 
@@ -536,7 +539,10 @@ $chapterMetadata | Set-Content "$tmpDir\chapters.txt"
 ## References
 
 - Command skill: `.claude/commands/prove-features.md`
-- Prior spec (informal): `docs/specs/SPEC-prove-features-video-pipeline.md`
+- v2 design: `docs/superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md`
+- v1 pipeline spec (superseded): `docs/specs/SPEC-006-prove-features-video-pipeline.md`
+- Capture script: `scripts/game/capture-feature-clips.ps1`
+- Work item (closed): `docs/work-items/WORK-001-prove-features-improvements.md`
 - ffmpeg gdigrab docs: https://ffmpeg.org/ffmpeg-devices.html#gdigrab
 - ffmpeg drawtext docs: https://ffmpeg.org/ffmpeg-filters.html#drawtext-1
 - edge-tts (PyPI): https://pypi.org/project/edge-tts/

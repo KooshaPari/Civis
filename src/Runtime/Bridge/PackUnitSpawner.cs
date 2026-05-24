@@ -69,22 +69,22 @@ namespace DINOForge.Runtime.Bridge
         {
             // Iter-144 H9 probe: ENTER/EXIT timing around mod-side pack-recreation entry point.
             var __sw = System.Diagnostics.Stopwatch.StartNew();
-            DebugLog.Write("PackUnitSpawner",$"[PackUnitSpawner.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            DebugLog.Write("PackUnitSpawner", $"[PackUnitSpawner.Initialize] ENTER thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
             try
             {
                 _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-                DebugLog.Write("PackUnitSpawner","PackUnitSpawner.Initialize: Registry initialized");
+                DebugLog.Write("PackUnitSpawner", "PackUnitSpawner.Initialize: Registry initialized");
             }
             finally
             {
-                DebugLog.Write("PackUnitSpawner",$"[PackUnitSpawner.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
+                DebugLog.Write("PackUnitSpawner", $"[PackUnitSpawner.Initialize] EXIT elapsed={__sw.ElapsedMilliseconds}ms");
             }
         }
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            DebugLog.Write("PackUnitSpawner","PackUnitSpawner.OnCreate");
+            DebugLog.Write("PackUnitSpawner", "PackUnitSpawner.OnCreate");
         }
 
         protected override void OnUpdate()
@@ -114,7 +114,7 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            DebugLog.Write("PackUnitSpawner",$"PackUnitSpawner processing {batch.Count} spawn requests");
+            DebugLog.Write("PackUnitSpawner", $"PackUnitSpawner processing {batch.Count} spawn requests");
 
             // Process each spawn request
             foreach (UnitSpawnRequest request in batch)
@@ -124,14 +124,14 @@ namespace DINOForge.Runtime.Bridge
                     // Look up unit definition from registry
                     if (_registry == null)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Cannot spawn {request.UnitDefinitionId}: registry not initialized");
+                        DebugLog.Write("PackUnitSpawner", $"Cannot spawn {request.UnitDefinitionId}: registry not initialized");
                         continue;
                     }
 
                     var unitDef = _registry.Units.Get(request.UnitDefinitionId);
                     if (unitDef == null)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Cannot spawn {request.UnitDefinitionId}: unit definition not found");
+                        DebugLog.Write("PackUnitSpawner", $"Cannot spawn {request.UnitDefinitionId}: unit definition not found");
                         continue;
                     }
 
@@ -139,7 +139,7 @@ namespace DINOForge.Runtime.Bridge
                     string? componentTypeName = VanillaArchetypeMapper.MapUnitClassToComponentType(unitDef.UnitClass);
                     if (componentTypeName == null)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Cannot spawn {request.UnitDefinitionId}: unknown unit class '{unitDef.UnitClass}'");
+                        DebugLog.Write("PackUnitSpawner", $"Cannot spawn {request.UnitDefinitionId}: unknown unit class '{unitDef.UnitClass}'");
                         continue;
                     }
 
@@ -151,14 +151,14 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (InvalidOperationException ex)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Cannot spawn {request.UnitDefinitionId}: {ex.Message}");
+                        DebugLog.Write("PackUnitSpawner", $"Cannot spawn {request.UnitDefinitionId}: {ex.Message}");
                         continue;
                     }
 
                     NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
                     if (entities.Length == 0)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Cannot spawn {request.UnitDefinitionId}: no vanilla entities found with archetype '{componentTypeName}'");
+                        DebugLog.Write("PackUnitSpawner", $"Cannot spawn {request.UnitDefinitionId}: no vanilla entities found with archetype '{componentTypeName}'");
                         entities.Dispose();
                         continue;
                     }
@@ -172,7 +172,7 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (Exception ex)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Failed to clone template for {request.UnitDefinitionId}: {ex.Message}");
+                        DebugLog.Write("PackUnitSpawner", $"Failed to clone template for {request.UnitDefinitionId}: {ex.Message}");
                         entities.Dispose();
                         continue;
                     }
@@ -187,7 +187,7 @@ namespace DINOForge.Runtime.Bridge
                     }
                     catch (Exception ex)
                     {
-                        DebugLog.Write("PackUnitSpawner",$"Failed to set position for spawned unit: {ex.Message}");
+                        DebugLog.Write("PackUnitSpawner", $"Failed to set position for spawned unit: {ex.Message}");
                     }
 
                     // Add Enemy component if needed (for faction tagging)
@@ -204,7 +204,7 @@ namespace DINOForge.Runtime.Bridge
                         }
                         catch (Exception ex)
                         {
-                            DebugLog.Write("PackUnitSpawner",$"Failed to add Enemy component to spawned unit: {ex.Message}");
+                            DebugLog.Write("PackUnitSpawner", $"Failed to add Enemy component to spawned unit: {ex.Message}");
                         }
                     }
 
@@ -212,17 +212,17 @@ namespace DINOForge.Runtime.Bridge
                     // (StatModifierSystem will handle applying these based on unit class matching)
 
                     _spawnedCount++;
-                    DebugLog.Write("PackUnitSpawner",$"Spawned unit {request.UnitDefinitionId} at ({request.X}, {request.Y}, {request.Z})");
+                    DebugLog.Write("PackUnitSpawner", $"Spawned unit {request.UnitDefinitionId} at ({request.X}, {request.Y}, {request.Z})");
 
                     entities.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    DebugLog.Write("PackUnitSpawner",$"Unexpected error spawning {request.UnitDefinitionId}: {ex.Message}");
+                    DebugLog.Write("PackUnitSpawner", $"Unexpected error spawning {request.UnitDefinitionId}: {ex.Message}");
                 }
             }
 
-            DebugLog.Write("PackUnitSpawner",$"PackUnitSpawner: Processed {batch.Count} requests, spawned {_spawnedCount} total units");
+            DebugLog.Write("PackUnitSpawner", $"PackUnitSpawner: Processed {batch.Count} requests, spawned {_spawnedCount} total units");
         }
 
         /// <summary>
@@ -275,12 +275,12 @@ namespace DINOForge.Runtime.Bridge
                 // EntityManager throws InvalidOperationException when a component type is
                 // not registered in the world; ArgumentException for malformed query desc.
                 // Unexpected exceptions now propagate so caller can diagnose.
-                DebugLog.Write("PackUnitSpawner",$"CanSpawn '{unitDefinitionId}' query failed (component '{componentType}' not in world): {ex.Message}");
+                DebugLog.Write("PackUnitSpawner", $"CanSpawn '{unitDefinitionId}' query failed (component '{componentType}' not in world): {ex.Message}");
                 return false;
             }
             catch (ArgumentException ex)
             {
-                DebugLog.Write("PackUnitSpawner",$"CanSpawn '{unitDefinitionId}' malformed query for component '{componentType}': {ex.Message}");
+                DebugLog.Write("PackUnitSpawner", $"CanSpawn '{unitDefinitionId}' malformed query for component '{componentType}': {ex.Message}");
                 return false;
             }
         }

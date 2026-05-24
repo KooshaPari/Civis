@@ -1,9 +1,9 @@
 using System;
 using System.IO;
-using System.Text;
 using DINOForge.Domains.Scenario;
 using DINOForge.Domains.Scenario.Models;
 using DINOForge.Domains.Scenario.Registries;
+using DINOForge.SDK.IO;
 using FluentAssertions;
 using Xunit;
 
@@ -88,27 +88,32 @@ namespace DINOForge.Tests
                 // Create a simple scenario YAML file
                 string scenarioYaml = @"
 id: test-scenario
-display_name: Test Scenario
-description: A test scenario
+display_name: ""Test Scenario""
+description: ""A test scenario.""
 difficulty: Normal
 objective_type: Survive
 wave_count: 5
 max_duration: 600
+
 starting_resources:
   food: 100
   wood: 50
+
 allowed_factions:
   - faction1
   - faction2
+
 victory_conditions:
   - condition_type: SurviveWaves
     target_value: 5
+
 defeat_conditions:
   - condition_type: CommandCenterDestroyed
+
 scripted_events: []
 ";
                 string scenarioFile = Path.Combine(scenariosDir, "test.yaml");
-                File.WriteAllText(scenarioFile, scenarioYaml, Encoding.UTF8);
+                SafeFileIO.WriteText(scenarioFile, scenarioYaml);
 
                 loader.LoadPack(tempDir, "test-pack");
 
@@ -143,7 +148,7 @@ display_name: Test
 [invalid yaml content
 ";
                 string scenarioFile = Path.Combine(scenariosDir, "bad.yaml");
-                File.WriteAllText(scenarioFile, malformedYaml, Encoding.UTF8);
+                SafeFileIO.WriteText(scenarioFile, malformedYaml);
 
                 Action act = () => loader.LoadPack(tempDir, "test-pack");
 
@@ -175,25 +180,31 @@ display_name: Test
                 {
                     string scenarioYaml = $@"
 id: scenario-{i}
-display_name: Scenario {i}
-description: Test scenario {i}
+display_name: ""Scenario {i}""
+description: ""Test scenario {i}.""
 difficulty: Normal
 objective_type: Survive
 wave_count: 5
 max_duration: 600
+
 starting_resources:
   food: 100
+  wood: 50
+
 allowed_factions:
   - faction1
+  - faction2
+
 victory_conditions:
   - condition_type: SurviveWaves
     target_value: 5
+
 defeat_conditions:
   - condition_type: CommandCenterDestroyed
 scripted_events: []
 ";
                     string scenarioFile = Path.Combine(scenariosDir, $"scenario-{i}.yaml");
-                    File.WriteAllText(scenarioFile, scenarioYaml, Encoding.UTF8);
+                    SafeFileIO.WriteText(scenarioFile, scenarioYaml);
                 }
 
                 loader.LoadPack(tempDir, "multi-pack");
@@ -227,25 +238,30 @@ scripted_events: []
                 // Create a scenario in nested directory
                 string scenarioYaml = @"
 id: tutorial-1
-display_name: Tutorial 1
-description: First tutorial
+display_name: ""Tutorial 1""
+description: ""First tutorial.""
 difficulty: Easy
 objective_type: Survive
 wave_count: 3
 max_duration: 300
+
 starting_resources:
   food: 200
+
 allowed_factions:
   - player
+
 victory_conditions:
   - condition_type: SurviveWaves
     target_value: 3
+
 defeat_conditions:
   - condition_type: CommandCenterDestroyed
+
 scripted_events: []
 ";
                 string scenarioFile = Path.Combine(nestedDir, "tutorial-1.yaml");
-                File.WriteAllText(scenarioFile, scenarioYaml, Encoding.UTF8);
+                SafeFileIO.WriteText(scenarioFile, scenarioYaml);
 
                 loader.LoadPack(tempDir, "tutorial-pack");
 
@@ -274,31 +290,36 @@ scripted_events: []
             {
                 string scenarioYaml = @"
 id: comprehensive-test
-display_name: Comprehensive Test Scenario
-description: A comprehensive test with all properties
+display_name: ""Comprehensive Test Scenario""
+description: ""A comprehensive test with all properties.""
 difficulty: Hard
 objective_type: Defend
 wave_count: 10
 max_duration: 1800
+
 starting_resources:
   food: 500
   wood: 300
   stone: 200
   iron: 100
   gold: 50
+
 allowed_factions:
   - faction-a
   - faction-b
   - faction-c
+
 victory_conditions:
   - condition_type: SurviveWaves
     target_value: 10
+
 defeat_conditions:
   - condition_type: CommandCenterDestroyed
+
 scripted_events: []
 ";
                 string scenarioFile = Path.Combine(scenariosDir, "comprehensive.yaml");
-                File.WriteAllText(scenarioFile, scenarioYaml, Encoding.UTF8);
+                SafeFileIO.WriteText(scenarioFile, scenarioYaml);
 
                 loader.LoadPack(tempDir, "comprehensive-pack");
 

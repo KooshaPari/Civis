@@ -1,41 +1,20 @@
-using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace DINOForge.Tests.Analyzers
 {
-    public class HardcodedThresholdAnalyzerTests
+    [Trait("Category", "Analyzer")]
+    public class HardcodedThresholdAnalyzerTests : AnalyzerTestBase<DINOForge.Analyzers.HardcodedThresholdAnalyzer>
     {
         private readonly DiagnosticAnalyzer _analyzer = new DINOForge.Analyzers.HardcodedThresholdAnalyzer();
 
-        private static async Task<ImmutableArray<Diagnostic>> RunAsync(string source)
-        {
-            var tree = CSharpSyntaxTree.ParseText(source);
-            var references = new[]
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.ComponentModel.DataAnnotations.RangeAttribute).Assembly.Location),
-            };
-            var compilation = CSharpCompilation.Create(
-                "DF1014Test",
-                new[] { tree },
-                references,
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-            var withAnalyzers = compilation.WithAnalyzers(
-                ImmutableArray.Create<DiagnosticAnalyzer>(new DINOForge.Analyzers.HardcodedThresholdAnalyzer()));
-            var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync().ConfigureAwait(false);
-            return diagnostics.Where(d => d.Id == "DF1014").ToImmutableArray();
-        }
-
         [Fact]
-        public async Task DoesNotReport_When_LiteralInRangeAttribute()
+        public Task DoesNotReport_When_LiteralInRangeAttribute()
         {
+            // tautological-ok: VerifyAnalyzerAsync(source) with no expected diagnostics asserts zero diagnostics produced
             const string source = @"
 using System.ComponentModel.DataAnnotations;
 public class Foo
@@ -46,9 +25,8 @@ public class Foo
     [Range(0, 5000)]
     public int Y { get; set; }
 }";
-            var diagnostics = await RunAsync(source).ConfigureAwait(false);
-            diagnostics.Should().BeEmpty(
-                "literals inside attribute arguments (Range, etc.) are not user-tunable thresholds");
+            return VerifyAnalyzerAsync(
+                source);
         }
 
         [Fact]

@@ -96,6 +96,12 @@ namespace DINOForge.Runtime.UI
                 Bounds = GetBounds(rectTransform)
             };
 
+            Button? button = transform.GetComponent<Button>();
+            if (button != null)
+            {
+                node.Style = CaptureButtonStyle(button);
+            }
+
             for (int i = 0; i < transform.childCount; i++)
             {
                 Transform child = transform.GetChild(i);
@@ -247,7 +253,7 @@ namespace DINOForge.Runtime.UI
             int count = 1;
             foreach (UiNode child in node.Children)
             {
-                count += CountNodes(child);
+                count = count + CountNodes(child);
             }
 
             return count;
@@ -261,6 +267,47 @@ namespace DINOForge.Runtime.UI
                 .Replace(']', '_')
                 .Replace(' ', '_')
                 .ToLowerInvariant();
+        }
+
+        private static UiStyleSnapshot CaptureButtonStyle(Button button)
+        {
+            ColorBlock colors = button.colors;
+            UiStyleSnapshot style = new UiStyleSnapshot
+            {
+                Transition = button.transition.ToString(),
+                NormalColor = ColorToHex(colors.normalColor),
+                HighlightedColor = ColorToHex(colors.highlightedColor),
+                PressedColor = ColorToHex(colors.pressedColor),
+                DisabledColor = ColorToHex(colors.disabledColor)
+            };
+
+            Text? legacyText = button.GetComponentInChildren<Text>(includeInactive: true);
+            if (legacyText != null)
+            {
+                style.FontSize = legacyText.fontSize;
+                style.TextColor = ColorToHex(legacyText.color);
+            }
+            else
+            {
+                TMP_Text? tmpText = button.GetComponentInChildren<TMP_Text>(includeInactive: true);
+                if (tmpText != null)
+                {
+                    style.FontSize = Mathf.RoundToInt(tmpText.fontSize);
+                    style.TextColor = ColorToHex(tmpText.color);
+                }
+            }
+
+            if (button.targetGraphic is Image image)
+            {
+                style.ImageColor = ColorToHex(image.color);
+            }
+
+            return style;
+        }
+
+        private static string ColorToHex(Color color)
+        {
+            return $"#{Mathf.RoundToInt(color.r * 255f):X2}{Mathf.RoundToInt(color.g * 255f):X2}{Mathf.RoundToInt(color.b * 255f):X2}{Mathf.RoundToInt(color.a * 255f):X2}";
         }
     }
 }

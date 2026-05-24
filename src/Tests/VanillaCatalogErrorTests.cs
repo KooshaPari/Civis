@@ -166,7 +166,7 @@ namespace DINOForge.Tests.Runtime
         public void GetEntityArchetype_WithInvalidEntity_ReturnsNull()
         {
             // Arrange
-            object entity = null;
+            object? entity = null;
 
             // Act & Assert
             entity.Should().BeNull();

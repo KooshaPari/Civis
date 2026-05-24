@@ -218,7 +218,7 @@ namespace DINOForge.Tests
         public void TradeRoute_SourceResourceCanBeNull()
         {
             // Arrange & Act
-            var route = new TradeRoute { SourceResource = null };
+            var route = new TradeRoute { SourceResource = null! };
 
             // Assert
             route.SourceResource.Should().BeNull("SourceResource can be null");
@@ -228,7 +228,7 @@ namespace DINOForge.Tests
         public void TradeRoute_TargetResourceCanBeNull()
         {
             // Arrange & Act
-            var route = new TradeRoute { TargetResource = null };
+            var route = new TradeRoute { TargetResource = null! };
 
             // Assert
             route.TargetResource.Should().BeNull("TargetResource can be null");

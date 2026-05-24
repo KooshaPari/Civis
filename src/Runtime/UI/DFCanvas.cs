@@ -130,17 +130,11 @@ namespace DINOForge.Runtime.UI
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // Pattern #235: Ensure an EventSystem exists BEFORE adding GraphicRaycaster.
-            // Without it, UI clicks are routed nowhere — kills both plugin overlay AND
-            // vanilla game UI. F-keys still work (Win32 bypasses Unity), masking the issue.
-            if (UnityEngine.EventSystems.EventSystem.current == null)
-            {
-                var esGo = new GameObject("DINOForge_EventSystem");
-                GameObject.DontDestroyOnLoad(esGo);
-                esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                _log?.LogInfo("[DFCanvas] EventSystem not found — created DINOForge_EventSystem.");
-            }
+            // Pattern #235 / iter-145 H1: reconcile EventSystems BEFORE GraphicRaycaster.
+            // A null-only guard misses dual systems (vanilla scene ES + ours); clicks route to
+            // the wrong/disabled system. MonoBehaviour.Update never runs in DINO, so this is
+            // the authoritative build-time reconcile (PlayerLoop + scene-change also call it).
+            Plugin.EnsureEventSystemAlive();
 
             // GraphicRaycaster for pointer events. Enabled at all times; vanilla menu clicks
             // fall through correctly because our canvas has no fullscreen raycastTarget=true
@@ -174,7 +168,7 @@ namespace DINOForge.Runtime.UI
             DebugPanel = debugGo.AddComponent<DebugPanel>();
             DebugPanel.Build(canvasRoot);
 
-            ForceCanvasGroupRaycasts(canvasRoot, "BuildCanvas");
+            NormalizeCanvasGroupRaycasts(canvasRoot, "BuildCanvas");
         }
 
         // ── Input handling ────────────────────────────────────────────────────────
@@ -231,7 +225,7 @@ namespace DINOForge.Runtime.UI
             HudStrip.SetHovered(over);
         }
 
-        private void ForceCanvasGroupRaycasts(Transform root, string context)
+        private void NormalizeCanvasGroupRaycasts(Transform root, string context)
         {
             if (root == null) return;
 
@@ -240,12 +234,12 @@ namespace DINOForge.Runtime.UI
             {
                 CanvasGroup? canvasGroup = canvasGroups[i];
                 if (canvasGroup == null) continue;
-                if (!canvasGroup.blocksRaycasts)
+                bool shouldBlock = canvasGroup.alpha > 0.01f && canvasGroup.interactable;
+                if (canvasGroup.blocksRaycasts != shouldBlock)
                 {
-                    _log?.LogInfo($"[DFCanvas.{context}] CanvasGroup '{canvasGroup.gameObject.name}' blocksRaycasts false -> true");
+                    _log?.LogInfo($"[DFCanvas.{context}] CanvasGroup '{canvasGroup.gameObject.name}' blocksRaycasts {canvasGroup.blocksRaycasts} -> {shouldBlock}");
+                    canvasGroup.blocksRaycasts = shouldBlock;
                 }
-
-                canvasGroup.blocksRaycasts = true;
             }
         }
 

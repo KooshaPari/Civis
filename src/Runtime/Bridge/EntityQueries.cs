@@ -233,7 +233,7 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch
                 {
-                    // Assembly may fail to enumerate types — skip
+                    // safe-swallow: assembly type lookup can fail while game assemblies are still loading; continue search
                 }
             }
 

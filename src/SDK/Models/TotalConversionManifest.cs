@@ -51,7 +51,7 @@ namespace DINOForge.SDK.Models
         /// Framework version constraint for the total conversion.
         /// </summary>
         [YamlMember(Alias = "framework_version")]
-        public string FrameworkVersion { get; set; } = "*";
+        public string FrameworkVersion { get; set; } = ">=0.1.0 <1.0.0";
 
         /// <summary>Maps vanilla faction IDs to replacement faction IDs.</summary>
         [YamlMember(Alias = "replaces_vanilla")]

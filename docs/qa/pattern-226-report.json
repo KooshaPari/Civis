@@ -1,0 +1,23 @@
+{
+  "scan_utc": "2026-05-23T13:02:48.189086Z",
+  "scan_date": "2026-05-23",
+  "pattern": "226",
+  "pattern_status": "RETIRED (drift gate)",
+  "scan_paths": [
+    "src/SDK/",
+    "src/Bridge/Protocol/",
+    "src/Bridge/Client/",
+    "src/Domains/"
+  ],
+  "files_scanned": 177,
+  "total_hits": 0,
+  "new_hits": 0,
+  "allowlist_size": 0,
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/pattern-226-allowlist.txt",
+  "threshold": 0,
+  "high_count": 0,
+  "med_count": 0,
+  "public_mutable_field_nuget": [],
+  "allowlisted_hits": [],
+  "exit_code": 0
+}

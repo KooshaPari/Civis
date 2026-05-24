@@ -129,7 +129,7 @@ namespace DINOForge.Tests
         [InlineData("   ")]
         public void Validate_WithBlankId_ReturnsError(string? id)
         {
-            var theme = new ThemeDefinition { Id = id };
+            var theme = new ThemeDefinition { Id = id! };
 
             var result = theme.Validate();
 
@@ -149,7 +149,7 @@ namespace DINOForge.Tests
             var theme = new ThemeDefinition
             {
                 Id = "test-id",
-                Name = name,
+                Name = name!,
                 PrimaryColor = "#FFFFFF",
                 SecondaryColor = "#666666",
                 AccentColor = "#FF6B00"

@@ -84,6 +84,7 @@ GAME_CONTROL_PROJ = REPO_ROOT / "src/Tools/GameControlCli/GameControlCli.csproj"
 PACK_COMPILER_PROJ = REPO_ROOT / "src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj"
 ASSET_CLI_PROJ = REPO_ROOT / "src/Tools/Cli/DINOForge.Tools.Cli.csproj"
 PACKS_DIR = REPO_ROOT / "packs"
+DEFAULT_GAME_PIPE_NAME = "dinoforge-game-bridge"
 
 # Dedicated DINOForge Virtual Display Driver (Nefarius/MTT VDD)
 _VDD_INDEX_FILE = REPO_ROOT / ".dinoforge_vdd_index"
@@ -95,6 +96,42 @@ _TEST_INSTANCE_PATH_FILE = REPO_ROOT / ".dino_test_instance_path"
 # GameControlCli client (thin wrapper — avoids dotnet run cold-start overhead
 # by using --no-build; caller should run `dotnet build` once before first use)
 # ---------------------------------------------------------------------------
+
+def _pipe_exists(pipe_name: str) -> bool:
+    """Return True when the given named pipe is visible on the local machine."""
+    if not pipe_name:
+        return False
+
+    try:
+        return Path(r"\\.\pipe" + f"\\{pipe_name}").exists()
+    except Exception:
+        return False
+
+
+def _select_pipe_name(pipe_name: str | None = None, allow_default_fallback: bool = True) -> tuple[str | None, bool]:
+    """
+    Resolve the pipe name to use for GameControlCli.
+
+    Returns:
+        (pipe_name, used_default_fallback)
+    """
+    preferred = pipe_name or os.getenv("DINOFORGE_PIPE_NAME")
+    if not preferred:
+        return DEFAULT_GAME_PIPE_NAME, False
+
+    if preferred == DEFAULT_GAME_PIPE_NAME:
+        return preferred, False
+
+    if allow_default_fallback and not _pipe_exists(preferred) and _pipe_exists(DEFAULT_GAME_PIPE_NAME):
+        logger.warning(
+            "Configured pipe '%s' is unavailable; falling back to default pipe '%s'.",
+            preferred,
+            DEFAULT_GAME_PIPE_NAME,
+        )
+        return DEFAULT_GAME_PIPE_NAME, True
+
+    return preferred, False
+
 
 def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_name: str | None = None) -> dict[str, Any]:
     """
@@ -115,6 +152,7 @@ def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_
     ]
 
     # Add pipe_name as global option if specified
+    pipe_name, _used_default_fallback = _select_pipe_name(pipe_name)
     if pipe_name:
         cmd.extend(["--pipe-name", pipe_name])
 
@@ -127,7 +165,17 @@ def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_
         if not json_output:
             return {"success": True, "raw": r.stdout.strip()}
         try:
-            return json.loads(r.stdout) if r.stdout.strip() else {"success": True}
+            parsed = json.loads(r.stdout) if r.stdout.strip() else {"success": True}
+            if isinstance(parsed, dict):
+                raw_error = parsed.get("error")
+                if parsed.get("success") is False or raw_error:
+                    error_message = raw_error if isinstance(raw_error, str) else json.dumps(raw_error)
+                    return {
+                        **parsed,
+                        "success": False,
+                        "error": error_message or "GameControlCli returned a bridge error.",
+                    }
+            return parsed
         except json.JSONDecodeError:
             return {"success": True, "raw": r.stdout.strip()}
     except subprocess.TimeoutExpired:

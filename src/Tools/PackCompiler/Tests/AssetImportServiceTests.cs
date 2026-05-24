@@ -5,6 +5,7 @@ using System.Linq;
 using Assimp;
 using DINOForge.Tools.PackCompiler.Models;
 using DINOForge.Tools.PackCompiler.Services;
+using DINOForge.SDK.Validation;
 using FluentAssertions;
 using Xunit;
 
@@ -167,6 +168,63 @@ namespace DINOForge.Tools.PackCompiler.Tests
             min[0].Should().BeLessThanOrEqualTo(max[0]);
             min[1].Should().BeLessThanOrEqualTo(max[1]);
             min[2].Should().BeLessThanOrEqualTo(max[2]);
+        }
+
+        [Fact]
+        public void ValidateImportedAsset_FlagsPlaceholderMaterialMetadata()
+        {
+            var imported = new ImportedAsset
+            {
+                AssetId = "test-asset",
+                SourcePath = "source.glb",
+                Mesh = new MeshData
+                {
+                    Name = "ImportedMesh",
+                    Vertices = Enumerable.Range(0, 120).SelectMany(i => new[] { (float)i, 0f, 0f }).ToArray(),
+                    Indices = Enumerable.Range(0, 100).SelectMany(i =>
+                    {
+                        uint baseIndex = (uint)(i % 118);
+                        return new[] { baseIndex, baseIndex + 1, baseIndex + 2 };
+                    }).ToArray(),
+                    Normals = Enumerable.Repeat(new[] { 0f, 0f, 1f }, 120).SelectMany(x => x).ToArray(),
+                    UVs = Enumerable.Repeat(new[] { 0f, 0f }, 120).SelectMany(x => x).ToArray(),
+                    Bounds = (new[] { 0f, 0f, 0f }, new[] { 119f, 0f, 0f })
+                },
+                Materials = new List<MaterialData>
+                {
+                    new()
+                    {
+                        Name = "PlaceholderMaterial",
+                        ShaderName = "Universal Render Pipeline/Lit",
+                        IsFallbackMaterial = true,
+                        BaseColor = new[] { 1f, 1f, 1f, 1f },
+                        MaterialWarnings = new List<string>
+                        {
+                            "Material 'PlaceholderMaterial' was imported as placeholder URP Lit metadata; authored shader settings were not preserved by the Assimp import path."
+                        }
+                    }
+                },
+                Metadata = new AssetMetadata { PolyCount = 2 }
+            };
+
+            var definition = new AssetDefinition
+            {
+                Id = "test-asset",
+                File = "source.glb",
+                Type = "unit",
+                Faction = "test",
+                PolyCountTarget = 2,
+                LOD = new LODDefinition { Levels = new List<int> { 100, 60, 30 } },
+                Material = "default",
+                AddressableKey = "test-asset",
+                OutputPrefab = "prefabs/test-asset.prefab"
+            };
+
+            var validation = new AssetValidationService().ValidateImportedAsset(imported, definition);
+
+            validation.IsValid.Should().BeTrue();
+            validation.Warnings.Should().Contain(w => w.Contains("placeholder URP Lit metadata"));
+            validation.Warnings.Should().Contain(w => w.Contains("authored shader settings were not preserved"));
         }
 
         // ── Helper methods ─────────────────────────────────────────────────

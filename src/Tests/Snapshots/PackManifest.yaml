@@ -10,8 +10,8 @@ depends_on:
 conflicts_with:
 - warfare-guerrilla
 load_order: 100
-game_version: '*'
+game_version: '>=0.0.0 <2.0.0'
 bepinex_version: '>=5.4.0'
-unity_version: '*'
+unity_version: '>=2021.3.0 <2022.0.0'
 loads: 
 overrides: 

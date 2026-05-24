@@ -76,6 +76,21 @@ namespace DINOForge.Tools.PackCompiler.Services
                 warnings.Add("Asset has no materials but material is expected in config");
             }
 
+            foreach (var material in asset.Materials)
+            {
+                if (material.IsFallbackMaterial)
+                {
+                    warnings.Add(
+                        $"Material '{material.Name}' is placeholder URP Lit metadata and may render flat until authored shader settings are imported."
+                    );
+                }
+
+                if (material.MaterialWarnings.Count > 0)
+                {
+                    warnings.AddRange(material.MaterialWarnings);
+                }
+            }
+
             // Check: Material reference exists
             if (string.IsNullOrEmpty(definition.Material) || definition.Material == "default")
             {
@@ -423,6 +438,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             {
                 errors.Add($"Asset '{asset.Id}' missing OutputPrefab path");
             }
+
         }
     }
 

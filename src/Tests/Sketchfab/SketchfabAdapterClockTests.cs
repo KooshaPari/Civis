@@ -37,16 +37,16 @@ public class SketchfabAdapterClockTests
 
     private static SketchfabAdapter NewAdapter(TimeProvider clock)
     {
-        // Internal ctor (string apiToken, HttpClient httpClient, SketchfabClientOptions? options)
+        // Internal ctor (string apiToken, HttpClient httpClient, SketchfabClientOptions? options, TimeProvider? timeProvider)
         // lets us avoid spinning up a real network client.
         var ctor = typeof(SketchfabClient).GetConstructor(
             BindingFlags.Instance | BindingFlags.NonPublic,
             binder: null,
-            types: new[] { typeof(string), typeof(HttpClient), typeof(SketchfabClientOptions) },
+            types: new[] { typeof(string), typeof(HttpClient), typeof(SketchfabClientOptions), typeof(TimeProvider) },
             modifiers: null);
-        ctor.Should().NotBeNull("internal SketchfabClient ctor should remain available for tests");
+        ctor.Should().NotBeNull("internal SketchfabClient ctor with TimeProvider should remain available for tests");
         var http = new HttpClient();
-        var client = (SketchfabClient)ctor!.Invoke(new object?[] { "test-token", http, null });
+        var client = (SketchfabClient)ctor!.Invoke(new object?[] { "test-token", http, null, clock });
 
         return new SketchfabAdapter(client, NullLogger<SketchfabAdapter>.Instance, clock);
     }

@@ -4,7 +4,7 @@
       "url": "http://127.0.0.1:8765",
       "env": {
         "DINOFORGE_CLI_PATH": "src/Tools/Cli",
-        "DINOFORGE_PIPE_NAME": "dinoforge_game",
+        "DINOFORGE_PIPE_NAME": "dinoforge-game-bridge",
         "DINOFORGE_MCP_DEBUG": "false",
         "DINOFORGE_PYTHON": "python"
       },

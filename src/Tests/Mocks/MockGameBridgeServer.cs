@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
@@ -28,10 +29,13 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
     private readonly string _pipeName;
     private readonly ConcurrentBag<(string method, object? request)> _receivedMessages;
     private readonly ConcurrentBag<Task> _clientHandlers;
+    private readonly ConcurrentDictionary<int, PipeStream> _activeClientPipes;
     private CancellationTokenSource? _serverCts;
     private NamedPipeServerStream? _pipeServer;
     private Task? _listenerTask;
+    private TaskCompletionSource _stoppedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _disposed;
+    private int _nextConnectionId;
 
     /// <summary>
     /// Creates a new mock bridge server with optional pipe name and bridge implementation.
@@ -47,6 +51,7 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         _bridge = bridge ?? new FakeGameBridge();
         _receivedMessages = new ConcurrentBag<(string, object?)>();
         _clientHandlers = new ConcurrentBag<Task>();
+        _activeClientPipes = new ConcurrentDictionary<int, PipeStream>();
     }
 
     /// <summary>
@@ -62,6 +67,12 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         => _receivedMessages.ToList().AsReadOnly();
 
     /// <summary>
+    /// Gets a task that completes when the server has fully stopped and all
+    /// tracked client handlers have completed.
+    /// </summary>
+    public Task Stopped => _stoppedTcs.Task;
+
+    /// <summary>
     /// Starts the mock bridge server listening on the named pipe.
     /// If already running, this is a no-op.
     /// </summary>
@@ -72,6 +83,8 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
 
         if (_listenerTask != null && !_listenerTask.IsCompleted)
             return; // Already running
+
+        _stoppedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _serverCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _listenerTask = ListenerLoopAsync(_serverCts.Token);
@@ -97,21 +110,41 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         catch { }
         _pipeServer = null;
 
+        foreach (PipeStream activePipe in _activeClientPipes.Values)
+        {
+            try { activePipe.Dispose(); }
+            catch { }
+        }
+
         if (_listenerTask != null)
         {
             try { await _listenerTask.ConfigureAwait(false); }
             catch (OperationCanceledException) { }
         }
 
-        // Wait for all client handlers to complete (with timeout)
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        try
+        // Wait briefly for client handlers to observe the shutdown, but do not
+        // block indefinitely on a connected client that is still blocked in a read.
+        var incompleteTasks = _clientHandlers.Where(t => !t.IsCompleted).ToList();
+        if (incompleteTasks.Count > 0)
         {
-            var incompleteTasks = _clientHandlers.Where(t => !t.IsCompleted).ToList();
-            if (incompleteTasks.Count > 0)
-                await Task.WhenAll(incompleteTasks).ConfigureAwait(false);
+            Task allHandlersTask = Task.WhenAll(incompleteTasks);
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+
+            try
+            {
+                await Task.WhenAny(allHandlersTask, timeoutTask).ConfigureAwait(false);
+                if (allHandlersTask.IsCompleted)
+                {
+                    await allHandlersTask.ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // StopAsync is a best-effort shutdown path; return once the timeout elapses.
+            }
         }
-        catch (OperationCanceledException) { }
+
+        _stoppedTcs.TrySetResult();
     }
 
     /// <summary>
@@ -147,7 +180,9 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
 
                     // Spawn a handler for this client without blocking the listener
                     var connectedPipe = _pipeServer;
-                    Task handlerTask = HandleClientAsync(connectedPipe);
+                    int connectionId = Interlocked.Increment(ref _nextConnectionId);
+                    _activeClientPipes[connectionId] = connectedPipe;
+                    Task handlerTask = HandleClientAsync(connectionId, connectedPipe);
                     _clientHandlers.Add(handlerTask);
 
                     _pipeServer = null; // Will be recreated for next connection
@@ -170,7 +205,7 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         }
     }
 
-    private async Task HandleClientAsync(PipeStream pipe)
+    private async Task HandleClientAsync(int connectionId, PipeStream pipe)
     {
         // Phase 4c sub-task A + sub-task C (#249/#279):
         // Each connection owns its own SessionHmac instance so the connect
@@ -180,23 +215,31 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         // models real-server behaviour where receipts only appear post-handshake.
         SessionHmac? session = null;
         long worldFrame = 0;
+        MessageProtocol? protocol = null;
 
         try
         {
             using (pipe)
-            using (var reader = new StreamReader(pipe))
-            using (var writer = new StreamWriter(pipe) { AutoFlush = true })
             {
-                string? line;
-                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+                while (true)
                 {
                     try
                     {
+                        (string? line, MessageProtocol? detectedProtocol) = await ReadMessageAsync(pipe, protocol).ConfigureAwait(false);
+                        if (detectedProtocol != null)
+                        {
+                            protocol = detectedProtocol;
+                        }
+                        if (line == null)
+                        {
+                            break;
+                        }
+
                         // Deserialize request
                         var request = JsonConvert.DeserializeObject<JsonRpcRequest>(line);
                         if (request == null)
                         {
-                            await SendErrorAsync(writer, null, -32700, "Parse error").ConfigureAwait(false);
+                            await SendErrorAsync(pipe, null, -32700, "Parse error", protocol).ConfigureAwait(false);
                             continue;
                         }
 
@@ -262,15 +305,15 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
                         // Send response
                         string responseJson = JsonConvert.SerializeObject(response, Formatting.None,
                             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-                        await writer.WriteLineAsync(responseJson).ConfigureAwait(false);
+                        await WriteMessageAsync(pipe, responseJson, protocol ?? MessageProtocol.Framed).ConfigureAwait(false);
                     }
                     catch (JsonReaderException)
                     {
-                        await SendErrorAsync(writer, null, -32700, "Parse error").ConfigureAwait(false);
+                        await SendErrorAsync(pipe, null, -32700, "Parse error", protocol).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
-                        await SendErrorAsync(writer, null, -32603, "Internal server error", ex.Message).ConfigureAwait(false);
+                        await SendErrorAsync(pipe, null, -32603, "Internal server error", protocol, ex.Message).ConfigureAwait(false);
                     }
                 }
             }
@@ -282,10 +325,11 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
         finally
         {
             session?.Dispose();
+            _activeClientPipes.TryRemove(connectionId, out _);
         }
     }
 
-    private static async Task SendErrorAsync(StreamWriter writer, string? id, int code, string message, string? data = null)
+    private static async Task SendErrorAsync(PipeStream pipe, string? id, int code, string message, MessageProtocol? protocol, string? data = null)
     {
         var response = new JsonRpcResponse
         {
@@ -300,7 +344,168 @@ public sealed class MockGameBridgeServer : IAsyncDisposable
 
         string json = JsonConvert.SerializeObject(response, Formatting.None,
             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-        await writer.WriteLineAsync(json).ConfigureAwait(false);
+        await WriteMessageAsync(pipe, json, protocol ?? MessageProtocol.Framed).ConfigureAwait(false);
+    }
+
+    private static async Task<(string? message, MessageProtocol? protocol)> ReadMessageAsync(PipeStream pipe, MessageProtocol? protocol)
+    {
+        if (protocol == MessageProtocol.Line)
+        {
+            return (await ReadLineMessageAsync(pipe).ConfigureAwait(false), protocol);
+        }
+
+        if (protocol == MessageProtocol.Framed)
+        {
+            return (await ReadFramedMessageAsync(pipe).ConfigureAwait(false), protocol);
+        }
+
+        byte[] prefix = new byte[4];
+        int totalRead = 0;
+        while (totalRead < 4)
+        {
+            int bytesRead = await pipe.ReadAsync(prefix, totalRead, 4 - totalRead).ConfigureAwait(false);
+            if (bytesRead == 0)
+            {
+                return (null, null);
+            }
+            totalRead += bytesRead;
+        }
+
+        if (LooksLikeFramedPrefix(prefix))
+        {
+            return (await ReadFramedMessageAsync(pipe, prefix).ConfigureAwait(false), MessageProtocol.Framed);
+        }
+
+        return (await ReadLineMessageAsync(pipe, prefix).ConfigureAwait(false), MessageProtocol.Line);
+    }
+
+    private static bool LooksLikeFramedPrefix(IReadOnlyList<byte> prefix)
+    {
+        // Valid framed messages use a 4-byte big-endian length prefix. With the
+        // current max-frame cap, the high byte must be zero; this keeps normal
+        // JSON-RPC lines from being misclassified when their first 4 bytes happen
+        // to form a plausible small integer after byte swapping.
+        if (prefix[0] != 0)
+        {
+            return false;
+        }
+
+        uint frameLength = BitConverter.ToUInt32(prefix.ToArray(), 0);
+        if (BitConverter.IsLittleEndian)
+        {
+            frameLength = (uint)IPAddress.NetworkToHostOrder((int)frameLength);
+        }
+
+        return frameLength > 0 && frameLength <= 1_000_000;
+    }
+
+    private static async Task<string?> ReadFramedMessageAsync(PipeStream pipe, byte[]? initialPrefix = null)
+    {
+        byte[] lengthBuffer = initialPrefix ?? new byte[4];
+        int totalRead = 0;
+        if (initialPrefix != null)
+        {
+            totalRead = 4;
+        }
+        while (totalRead < 4)
+        {
+            int bytesRead = await pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead).ConfigureAwait(false);
+            if (bytesRead == 0)
+            {
+                return null;
+            }
+            totalRead += bytesRead;
+        }
+
+        uint frameLength = BitConverter.ToUInt32(lengthBuffer, 0);
+        if (BitConverter.IsLittleEndian)
+        {
+            frameLength = (uint)IPAddress.NetworkToHostOrder((int)frameLength);
+        }
+
+        if (frameLength == 0)
+        {
+            return null;
+        }
+
+        var buffer = new byte[frameLength];
+        int offset = 0;
+        while (offset < frameLength)
+        {
+            int bytesRead = await pipe.ReadAsync(buffer, offset, (int)frameLength - offset).ConfigureAwait(false);
+            if (bytesRead == 0)
+            {
+                return null;
+            }
+            offset += bytesRead;
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer);
+    }
+
+    private static async Task<string?> ReadLineMessageAsync(PipeStream pipe, byte[]? initialPrefix = null)
+    {
+        using var buffer = new MemoryStream();
+        if (initialPrefix != null)
+        {
+            buffer.Write(initialPrefix, 0, initialPrefix.Length);
+        }
+
+        var byteBuffer = new byte[1];
+        while (true)
+        {
+            int bytesRead = await pipe.ReadAsync(byteBuffer, 0, 1).ConfigureAwait(false);
+            if (bytesRead == 0)
+            {
+                if (buffer.Length == 0)
+                {
+                    return null;
+                }
+
+                break;
+            }
+
+            if (byteBuffer[0] == (byte)'\n')
+            {
+                break;
+            }
+
+            buffer.WriteByte(byteBuffer[0]);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
+    }
+
+    private static async Task WriteFramedMessageAsync(PipeStream pipe, string message)
+    {
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes(message);
+        byte[] lengthBytes = BitConverter.GetBytes((uint)payload.Length);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(lengthBytes);
+        }
+
+        await pipe.WriteAsync(lengthBytes, 0, lengthBytes.Length).ConfigureAwait(false);
+        await pipe.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+        await pipe.FlushAsync().ConfigureAwait(false);
+    }
+
+    private static async Task WriteLineMessageAsync(PipeStream pipe, string message)
+    {
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes(message + Environment.NewLine);
+        await pipe.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+        await pipe.FlushAsync().ConfigureAwait(false);
+    }
+
+    private static Task WriteMessageAsync(PipeStream pipe, string message, MessageProtocol protocol)
+        => protocol == MessageProtocol.Line
+            ? WriteLineMessageAsync(pipe, message)
+            : WriteFramedMessageAsync(pipe, message);
+
+    private enum MessageProtocol
+    {
+        Framed,
+        Line
     }
 
     private void ThrowIfDisposed()

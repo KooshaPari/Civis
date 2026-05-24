@@ -28,6 +28,18 @@ namespace DINOForge.Tests.Integration.Tests;
 [Trait("RequiresGame", "true")]
 public class LiveGameIntegrationTests : IDisposable
 {
+    /// <summary>
+    /// Iter-145 infrastructure gate: prevents test methods from attempting game connection
+    /// on CI/clean builds where the game sandbox is not available. Mirrors the pattern
+    /// used by GameSandboxIntegrationTests and ParallelGameTestsWithHarness.
+    ///
+    /// When false, all test methods skip gracefully via Skip.IfNot(_infrastructureAvailable, ...).
+    /// This reduces flaky test behavior and prevents stalled connections on headless CI runners.
+    /// </summary>
+    private static readonly bool _infrastructureAvailable =
+        Directory.Exists(@"G:\dino_boxes") ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DINO_GAME_PATH"));
+
     private readonly GameFixture _fixture;
     private readonly string _tempDir;
 
@@ -60,6 +72,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public void LiveGame_ConnectToBridge_Succeeds()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         _fixture.Client.Should().NotBeNull("game client should be initialized");
@@ -74,6 +87,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_Ping_ReturnsPong()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.PingAsync().ConfigureAwait(true);
@@ -94,6 +108,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_GetStatus_ReturnsGameState()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var status = await _fixture.Client.StatusAsync().ConfigureAwait(true);
@@ -114,6 +129,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_GetCatalog_ReturnsEntities()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var catalog = await _fixture.Client.GetCatalogAsync().ConfigureAwait(true);
@@ -130,6 +146,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_QueryUnits_ReturnsUnitData()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.QueryEntitiesAsync("Unit", null).ConfigureAwait(true);
@@ -150,6 +167,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_ReadStat_ReturnsResult()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var stat = await _fixture.Client.GetStatAsync("unit.stats.hp", null).ConfigureAwait(true);
@@ -166,6 +184,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_ApplyOverride_Succeeds()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.ApplyOverrideAsync("unit.stats.hp", 999f, "override", null).ConfigureAwait(true);
@@ -186,6 +205,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_ReloadPacks_Succeeds()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.ReloadPacksAsync(null).ConfigureAwait(true);
@@ -202,6 +222,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_VerifyMod_ReturnsResult()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.VerifyModAsync("DINOForge.Runtime").ConfigureAwait(true);
@@ -223,6 +244,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_GetResources_ReturnsResources()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var resources = await _fixture.Client.GetResourcesAsync().ConfigureAwait(true);
@@ -243,6 +265,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_GetComponentMap_ReturnsMappings()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.GetComponentMapAsync(null).ConfigureAwait(true);
@@ -263,6 +286,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_WaitForWorld_IsReady()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.WaitForWorldAsync(1000).ConfigureAwait(true);
@@ -279,6 +303,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_QueryEntities_ReturnsEntities()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var result = await _fixture.Client.QueryEntitiesAsync("Unit", null).ConfigureAwait(true);
@@ -299,6 +324,7 @@ public class LiveGameIntegrationTests : IDisposable
     [SkippableFact]
     public async Task LiveGame_Screenshot_Succeeds()
     {
+        Skip.IfNot(_infrastructureAvailable, "Game infrastructure not available — integration test skipped.");
         Skip.IfNot(_fixture.GameAvailable, "DINO not available — live-game integration test skipped.");
 
         var screenshotPath = System.IO.Path.Combine(_tempDir, "test_screenshot.png");

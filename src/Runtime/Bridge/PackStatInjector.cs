@@ -90,7 +90,7 @@ namespace DINOForge.Runtime.Bridge
                 try
                 {
                     int unitWrites = ApplyUnitStats(em, unit, componentType, write);
-                    totalWrites += unitWrites;
+                    totalWrites = totalWrites + unitWrites;
                     unitsProcessed++;
                     write($"[PackStatInjector] Unit '{unit.Id}' " +
                           $"({vanillaMapping} → {componentType}): {unitWrites} write(s).");
@@ -136,7 +136,7 @@ namespace DINOForge.Runtime.Bridge
 
                     int affected = StatModifierSystem.ApplyImmediate(em, mod);
                     if (affected > 0)
-                        writes += affected;
+                        writes = writes + affected;
                     else if (affected == -1)
                         log($"[PackStatInjector]   No ComponentMapping for '{sdkPath}' — skipped.");
                 }

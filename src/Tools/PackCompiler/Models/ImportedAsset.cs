@@ -121,11 +121,17 @@ namespace DINOForge.Tools.PackCompiler.Models
         /// <summary>Shader name/path</summary>
         public string? ShaderName { get; init; }
 
+        /// <summary>True when the importer could only preserve placeholder material metadata.</summary>
+        public bool IsFallbackMaterial { get; init; }
+
         /// <summary>Albedo/diffuse color</summary>
         public float[]? BaseColor { get; init; }  // RGBA
 
         /// <summary>Normal map texture path (if embedded)</summary>
         public string? NormalMap { get; init; }
+
+        /// <summary>Material-level import warnings that should be surfaced by validation.</summary>
+        public List<string> MaterialWarnings { get; init; } = new();
 
         /// <summary>Roughness value</summary>
         public float Roughness { get; set; } = 0.5f;

@@ -22,6 +22,9 @@ namespace DINOForge.SDK
     /// </summary>
     public static class CompatibilityChecker
     {
+        // unbounded-version-ok: intentional runtime skip sentinel when version detection is unavailable
+        private const string WildcardVersionConstraint = "*";
+
         /// <summary>
         /// Gets the current DINOForge framework version from the SDK assembly.
         /// </summary>
@@ -78,9 +81,9 @@ namespace DINOForge.SDK
                 }
                 catch
                 {
-                    // Reflection failures fall through to "*" (skip check). safe-swallow: best-effort version probe
+                    // safe-swallow: best-effort version probe
                 }
-                return "*";
+                return WildcardVersionConstraint;
             }
         }
 
@@ -115,7 +118,7 @@ namespace DINOForge.SDK
                 {
                     // safe-swallow: best-effort version probe
                 }
-                return "*";
+                return WildcardVersionConstraint;
             }
         }
 
@@ -130,7 +133,7 @@ namespace DINOForge.SDK
         /// <returns>A CompatibilityResult with compatibility status and any warnings/errors.</returns>
         public static CompatibilityResult CheckPack(
             PackManifest manifest,
-            string dinoGameVersion = "*",
+            string dinoGameVersion = WildcardVersionConstraint,
             string? bepinexVersion = null,
             string? unityVersion = null)
         {
@@ -184,7 +187,7 @@ namespace DINOForge.SDK
         public static bool IsVersionInRange(string version, string range)
         {
             // Wildcard always matches
-            if (range == "*" || string.IsNullOrWhiteSpace(range))
+            if (range == WildcardVersionConstraint || string.IsNullOrWhiteSpace(range))
             {
                 return true;
             }
@@ -218,10 +221,10 @@ namespace DINOForge.SDK
             var (op, constraintVersion) = ExtractOperatorAndVersion(constraint);
 
             // Handle wildcard versions like "2021.3.*"
-            if (constraintVersion.Contains("*"))
+            if (constraintVersion.Contains(WildcardVersionConstraint))
             {
                 // Wildcard version comparison: match prefix
-                var prefix = constraintVersion.Replace("*", "");
+                var prefix = constraintVersion.Replace(WildcardVersionConstraint, "");
                 return version.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
             }
 

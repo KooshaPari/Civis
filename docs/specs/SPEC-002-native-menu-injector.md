@@ -9,7 +9,7 @@
 
 ## Overview
 
-`NativeMenuInjector` locates DINO's in-game UGUI main menu at runtime and injects a "Mods" button as a sibling of the native "Settings" button. When clicked, the button toggles the `ModMenuOverlay` (F10 menu) without requiring the player to know the keyboard shortcut.
+`NativeMenuInjector` locates DINO's in-game UGUI menus (main menu and pause menu) at runtime and injects a "Mods" button adjacent to the native "Settings" or "Options" button. When clicked, the button toggles the `ModMenuOverlay` (F10 menu) without requiring the player to know the keyboard shortcut.
 
 The injector is a `MonoBehaviour` attached to the `DINOForge_Root` persistent `GameObject`. It is self-healing: it detects when the injected button has been destroyed (e.g., on scene unload) and re-injects automatically on the next scan cycle.
 
@@ -28,6 +28,7 @@ The injector is a `MonoBehaviour` attached to the `DINOForge_Root` persistent `G
 | F-05 | On scene change, the injector shall reset its injection state and attempt re-injection into the new scene's canvas. |
 | F-06 | If no suitable canvas or button is found, the injector shall log a diagnostic message and retry without throwing an exception to the caller. |
 | F-07 | A `static Action? OnScanNeeded` delegate shall be exposed to allow external code (e.g., tests, `RuntimeDriver`) to trigger a re-scan from the main thread. |
+| F-08 | When the pause menu canvas is active, the injector shall use the same canvas scan and Settings/Options anchor logic as the main menu (no separate pause-only code path). |
 
 ### Non-Functional
 
@@ -89,7 +90,7 @@ DINO does not expose a stable API surface for its menus. The injector uses a can
 3. For each active canvas, search for a button whose `UnityEngine.UI.Text` child contains the text "Settings" (primary) or "Options" (fallback).
 4. The first canvas that yields a matching button is used as the injection target.
 
-Canvas names are logged for diagnostics but are not used as a filter criterion. The assumption that a "Settings" or "Options" labelled button exists in the main menu has been validated against DINO v1.4.x and is expected to remain stable.
+Canvas names are logged for diagnostics but are not used as a filter criterion. `CanvasCandidateNames` includes `"PauseMenu"` for log correlation only; injection does not call `IsCanvasNameMatch`. The assumption that a "Settings" or "Options" labelled button exists in both main and pause menus has been validated against DINO v1.4.x and is expected to remain stable.
 
 ### Finding the Correct Button Container
 
@@ -186,6 +187,9 @@ This ensures the Mods button matches the game's visual skin without requiring an
 | `SyncButtonVisualStyle_CopiesColorBlock` | Verify color block matches source after sync. |
 | `OnModsButtonClicked_Debounce_SecondClickIgnored` | Fire two clicks within 200 ms; verify `Toggle()` called exactly once. |
 | `OnModsButtonClicked_NullMenuHost_DoesNotThrow` | Click with `_menuHost == null`; verify warning logged, no exception. |
+| `NativeMenuInjector_DocumentsPauseMenuSupport` | Source documents main + pause menu injection surfaces (SPEC-002 manual AC #7). |
+| `CanvasCandidateNames_IncludesPauseMenu` | `"PauseMenu"` appears in `CanvasCandidateNames` for diagnostics. |
+| `TryInjectMenuButton_ScansAllActiveCanvasesForSettingsAnchor` | `TryInjectMenuButton` iterates all active canvases, calls `FindSettingsButton(canvas)`, and does not gate on `IsCanvasNameMatch` (pause menus qualify). |
 
 ### Integration Tests
 
@@ -195,6 +199,7 @@ This ensures the Mods button matches the game's visual skin without requiring an
 | `Update_ButtonDestroyed_ResetsAndRescans` | Destroy `_injectedButton` externally; advance timer; verify `_injected` reset and re-scan. |
 | `OnScanNeeded_TriggersInjection` | Set `OnScanNeeded`, invoke it, verify `TryInjectMenuButton` is called. |
 | `FullBoot_InjectionSucceeds` | End-to-end test with a mock DINO main menu canvas; verify Mods button present and clickable. |
+| `PauseMenu_HasModsButton_WhenOpened` | **GameLaunch** NATIVE-004: start game, open pause via `invokeMethod` discovery, assert `button:contains('Mods')` (self-hosted; skips when pause cannot be opened programmatically). |
 
 ### Manual Acceptance Criteria
 
@@ -223,5 +228,5 @@ This ensures the Mods button matches the game's visual skin without requiring an
 ## Status
 
 **Implementation**: Complete (`src/Runtime/UI/NativeMenuInjector.cs`)
-**Tests**: Partial (manual acceptance passing; automated unit/integration tests pending)
+**Tests**: Partial (manual acceptance passing; source-text unit/integration characterization in `NativeMenuInjectorCharacterizationTests` including pause-menu AC #7 fixtures; live pause-menu coverage via `GameLaunchNativeMenuTests` NATIVE-004 on self-hosted runners when `DINO_GAME_PATH` is set)
 **Documentation**: This specification + ADR-002

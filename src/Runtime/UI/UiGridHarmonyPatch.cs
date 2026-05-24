@@ -21,8 +21,11 @@ namespace DINOForge.Runtime.UI
     /// </summary>
     internal static class ModsButtonTextPatch
     {
+#pragma warning disable DF1006
+        // DF1006-ok: ManualLogSource is owned by BepInEx; patch lifetime matches process lifetime.
         private static readonly BepInEx.Logging.ManualLogSource _log =
             BepInEx.Logging.Logger.CreateLogSource("DINOForge.ModsButtonTextPatch");
+#pragma warning restore DF1006
 
         /// <summary>
         /// Apply all patches manually so we can control exactly which methods are patched

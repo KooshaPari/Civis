@@ -53,6 +53,11 @@ hardcoded_temp_path|DINOForge.Tests.RustAssetPipelineTests|214|NativeInteropTest
 hardcoded_temp_path|DINOForge.Tests.FileDiscoveryServiceTests|49|SDKCovGapTests.cs
 hardcoded_temp_path|DINOForge.Tests.FileDiscoveryServiceTests|181|SDKCovGapTests.cs
 
+# --- Read-only repo source path (WarfareStarwarsPackRegistryOfflineTests) ---
+# PackRoot points at packs/warfare-starwars under the repo root — read-only; same
+# pattern as Phase7VisualAssetIntegrationTests (allowlisted above). No writes.
+class_static_path_no_guid|DINOForge.Tests.WarfareStarwarsPackRegistryOfflineTests|23|WarfareStarwarsPackRegistryOfflineTests.cs
+
 # --- Helper class (not a test) — EnvVarScope provides the snapshot/restore
 # pattern that test classes use INSIDE their own [Collection(EnvVarMutation)].
 # The detector flags the helper because it calls Environment.SetEnvironmentVariable,

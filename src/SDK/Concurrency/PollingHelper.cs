@@ -49,6 +49,8 @@ public static class PollingHelper
         TimeSpan actualMaxDelay = maxDelay == default ? TimeSpan.FromMilliseconds(800) : maxDelay;
         DateTime deadline = timeProvider.GetUtcNow().UtcDateTime.Add(timeout);
 
+        ct.ThrowIfCancellationRequested();
+
         while (true)
         {
             // Probe first (non-null = success)
@@ -56,10 +58,11 @@ public static class PollingHelper
             if (result is not null)
                 return result;
 
-            // Check timeout/cancellation before sleeping
-            ct.ThrowIfCancellationRequested();
+            // Check timeout before sleeping
             if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 return null;
+
+            ct.ThrowIfCancellationRequested();
 
             // Delay with cancellation support
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;
@@ -106,16 +109,19 @@ public static class PollingHelper
         TimeSpan actualMaxDelay = maxDelay == default ? TimeSpan.FromMilliseconds(800) : maxDelay;
         DateTime deadline = timeProvider.GetUtcNow().UtcDateTime.Add(timeout);
 
+        ct.ThrowIfCancellationRequested();
+
         while (true)
         {
             // Probe first (true = success)
             if (probe())
                 return true;
 
-            // Check timeout/cancellation before sleeping
-            ct.ThrowIfCancellationRequested();
+            // Check timeout before sleeping
             if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 return false;
+
+            ct.ThrowIfCancellationRequested();
 
             // Delay with cancellation support
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;

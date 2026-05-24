@@ -139,8 +139,6 @@ func _bind_ui() -> void:
 	var attach_label := "civ-server WS" if attach_mode == "server" else "civ-watch HTTP"
 	var mode_label := "Spectator" if spectator_mode else "Authoring"
 	var hint := "%s — %s. Terrain from civ-watch." % [mode_label, attach_label]
-	if not spectator_mode and attach_mode == "server":
-		hint += " Mutations require attach_mode=watch (no spawn RPC on server yet)."
 	ui.get_node("BottomBar").tooltip_text = hint
 	if spectator_mode:
 		ui.get_node("BottomBar/HBoxContainer/Material").visible = false
@@ -156,7 +154,7 @@ func _apply_speed(speed: int) -> void:
 		_civis_http.post_speed(speed)
 
 func _process(_delta: float) -> void:
-	if attach_mode != "watch" or spectator_mode:
+	if spectator_mode:
 		return
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not _clicking_minimap():
 		_handle_click()
@@ -175,9 +173,17 @@ func _handle_click() -> void:
 		return
 	var pos: Vector3 = hit.position
 	if current_tool == "Place Voxel":
-		_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
+		if attach_mode == "server":
+			_ws_client.place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
+		else:
+			_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
 	elif current_tool == "Spawn Civilian":
-		_civis_http.post_spawn_civilian(pos.x, pos.z, 0)
+		var norm_x := pos.x / float(TERRAIN_GRID_SIZE)
+		var norm_y := pos.z / float(TERRAIN_GRID_SIZE)
+		if attach_mode == "server":
+			_ws_client.spawn_civilian(norm_x, norm_y, 0)
+		else:
+			_civis_http.post_spawn_civilian(norm_x, norm_y, 0)
 		spawn_count += 1
 		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
 

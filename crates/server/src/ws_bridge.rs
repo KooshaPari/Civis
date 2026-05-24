@@ -33,8 +33,8 @@ use tokio::{
 use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
-        parse_role_param, set_sim_command_tick, DispatchContext, DispatchEffect, JsonRpcError,
-        JsonRpcMethod, JsonRpcResponse,
+        parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
+        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     voxel_frame_builder::build_voxel_delta_frame,
 };
@@ -454,6 +454,31 @@ async fn apply_dispatch_effect(
         }
         DispatchEffect::SetSpeed { multiplier } => {
             state.speed_multiplier.store(multiplier, Ordering::Relaxed);
+        }
+        DispatchEffect::SpawnCivilian {
+            x,
+            y,
+            faction,
+            entity_seq,
+        } => {
+            let mut sim = state.sim.lock().await;
+            let mut rng = sim.rng_mut().clone();
+            let entity =
+                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, faction, x, y, &mut rng);
+            *sim.rng_mut() = rng;
+            set_spawn_civilian_result(response, entity.id());
+        }
+        DispatchEffect::PlaceVoxel { x, y, z, material } => {
+            let mut sim = state.sim.lock().await;
+            sim.voxel_mut().write(
+                civ_voxel::WorldCoord { x, y, z },
+                civ_voxel::MaterialId(material),
+            );
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("ok".to_owned(), serde_json::json!(true));
+                }
+            }
         }
     }
 }

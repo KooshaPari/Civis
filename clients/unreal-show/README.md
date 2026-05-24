@@ -32,7 +32,7 @@ Gameplay authority stays on `civ-server`; this client prioritizes presentation.
 | Snapshot pins | `GET /snapshot` | `sim.snapshot` | Yes (HTTP) |
 | Speed / tick | `POST /control/speed` | `sim.set_speed` | HTTP only |
 | F3D0 voxel stream | — | WS binary | Planned |
-| Spawn / build | `POST /control/*` | Planned (FR-CIV-UX-002/003) | Planned |
+| Spawn / build | `POST /control/*` | `sim.spawn_civilian` / `sim.place_voxel` | HTTP only (WS planned) |
 
 ## Next integration steps
 

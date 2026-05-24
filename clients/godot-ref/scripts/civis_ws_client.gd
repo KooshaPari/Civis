@@ -39,6 +39,12 @@ func set_speed(multiplier: int) -> void:
 func request_snapshot() -> void:
 	_call_rpc("sim.snapshot", {})
 
+func spawn_civilian(x: float, y: float, faction: int = 0) -> void:
+	_call_rpc("sim.spawn_civilian", {"x": x, "y": y, "faction": faction})
+
+func place_voxel(x: int, y: int, z: int, material: int) -> void:
+	_call_rpc("sim.place_voxel", {"x": x, "y": y, "z": z, "material": material})
+
 func _close_ws() -> void:
 	if _ws != null:
 		_ws.close()
@@ -121,6 +127,8 @@ func _handle_rpc_response(msg: Dictionary) -> void:
 	var result = msg.get("result")
 	if method == "sim.snapshot" and typeof(result) == TYPE_DICTIONARY:
 		snapshot_received.emit(_normalize_snapshot(result))
+	elif method in ["sim.spawn_civilian", "sim.place_voxel"]:
+		request_snapshot()
 	elif method == "health":
 		pass
 

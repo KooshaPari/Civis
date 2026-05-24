@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { postControl } from "./control";
+import { executeTerrainAuthoring } from "./lib/authoring";
 import {
   Biome,
   Building,
@@ -488,18 +488,53 @@ export function Scene3d() {
       const worldZ = cellY * SCALE;
       const worldY = Math.max(0, Math.round(hit.point.y)) * SCALE;
 
-      if (current.readOnly || current.selectedTool !== "InspectAgent") {
-        if (current.selectedTool === "Camera") return;
+      if (current.selectedTool === "Camera") return;
+
+      if (current.selectedTool === "InspectAgent") {
         dispatch({
           type: "set_toast",
-          message: `Cell ${basePayload.x}, ${basePayload.y} (read-only spectator)`,
+          message: `Terrain cell ${basePayload.x}, ${basePayload.y}`,
         });
         return;
       }
-      dispatch({
-        type: "set_toast",
-        message: `Terrain cell ${basePayload.x}, ${basePayload.y}`,
-      });
+
+      if (current.readOnly) {
+        dispatch({
+          type: "set_toast",
+          message: `Spectator mode — add ?authoring=1 or remove ?spectator=1`,
+        });
+        return;
+      }
+
+      try {
+        const message = await executeTerrainAuthoring(
+          {
+            attachMode: current.attachMode,
+            speed: current.speed,
+            tool: current.selectedTool,
+            cellX,
+            cellY,
+            terrainSize: terrain.size,
+            heightY: hit.point.y,
+            material: current.selectedMaterial,
+            faction: current.selectedFaction,
+            damageRadius: current.damageRadius,
+          },
+          {
+            set_snapshot: (snapshot) =>
+              dispatch({ type: "set_snapshot", snapshot: snapshot as Snapshot }),
+            set_server_metrics: (metrics) =>
+              dispatch({ type: "set_server_metrics", metrics }),
+            set_speed: (speed) => dispatch({ type: "set_speed", speed }),
+          },
+        );
+        dispatch({ type: "set_toast", message });
+      } catch (err) {
+        dispatch({
+          type: "set_toast",
+          message: err instanceof Error ? err.message : "Authoring failed",
+        });
+      }
     };
 
     const resizeRenderer = () => {

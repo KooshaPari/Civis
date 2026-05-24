@@ -1505,3 +1505,41 @@ async fn ws_ten_clients_each_receive_text_frame() {
         "11th client should be closed or receive Close frame"
     );
 }
+
+#[tokio::test]
+async fn ws_jsonrpc_sim_spawn_civilian_returns_entity_id() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
+    let addr = spawn_ws_bridge(sim, 4).await;
+    let url = format!("ws://{addr}/ws");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":7,"method":"sim.spawn_civilian","params":{"x":0.4,"y":0.6,"faction":1}}"#
+                .into(),
+        ))
+        .await
+        .expect("send sim.spawn_civilian");
+
+    let entity_id = timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(7)) {
+                assert_eq!(value.pointer("/result/ok"), Some(&serde_json::json!(true)));
+                return value
+                    .pointer("/result/entity_id")
+                    .and_then(|v| v.as_u64())
+                    .expect("entity_id");
+            }
+        }
+        panic!("ws closed before spawn response");
+    })
+    .await
+    .expect("spawn timeout");
+
+    assert!(entity_id > 0, "entity_id should be non-zero");
+}

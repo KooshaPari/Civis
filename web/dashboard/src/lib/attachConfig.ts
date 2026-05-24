@@ -1,4 +1,15 @@
-/** Resolve attach mode for the dashboard (ADR-009). */
+/** Web L2 authoring (spawn/voxel). Disabled with ?spectator=1 or ?authoring=0. */
+export function resolveAuthoringEnabled(search = ""): boolean {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  const params = new URLSearchParams(query);
+  const spectator = params.get("spectator")?.trim().toLowerCase();
+  if (spectator === "1" || spectator === "true" || spectator === "yes") return false;
+  const authoring = params.get("authoring")?.trim().toLowerCase();
+  if (authoring === "0" || authoring === "false" || authoring === "no") return false;
+  return true;
+}
+
+/** Resolve attach mode for the dashboard. */
 
 export type AttachMode = "watch" | "server";
 

@@ -163,7 +163,7 @@ export type FrameSampleSource = "idle" | "attach" | "mock";
 
 type State = {
   attachMode: AttachMode;
-  /** ADR-009: web never mutates the sim world (placement/spawn/damage). */
+  /** When true, terrain tools are inspect-only (?spectator=1). */
   readOnly: boolean;
   selectedTool: ToolKind;
   speed: TimeSpeed;
@@ -211,6 +211,7 @@ type Action =
   | { type: "set_frame_sample_source"; source: FrameSampleSource }
   | { type: "reset_frame_samples" }
   | { type: "set_attach_mode"; mode: AttachMode }
+  | { type: "set_read_only"; readOnly: boolean }
   | { type: "set_terrain"; terrain: Terrain | null }
   | { type: "set_inspector_open"; open: boolean }
   | { type: "set_economy_panel_open"; open: boolean }
@@ -219,7 +220,7 @@ type Action =
 
 const initialState: State = {
   attachMode: "server",
-  readOnly: true,
+  readOnly: false,
   selectedTool: "InspectAgent",
   speed: 1,
   selectedMaterial: 1,
@@ -314,6 +315,8 @@ function reducer(state: State, action: Action): State {
       };
     case "set_attach_mode":
       return { ...state, attachMode: action.mode };
+    case "set_read_only":
+      return { ...state, readOnly: action.readOnly };
     case "set_terrain":
       return { ...state, terrain: action.terrain };
     case "set_inspector_open":

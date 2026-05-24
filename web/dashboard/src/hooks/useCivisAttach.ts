@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { resolveAttachMode, resolveBrowserWsUrl, resolveWsPreferBinary } from "../lib/attachConfig";
+import {
+  resolveAttachMode,
+  resolveAuthoringEnabled,
+  resolveBrowserWsUrl,
+  resolveWsPreferBinary,
+} from "../lib/attachConfig";
 import { frame3dTick, frame3dVoxelChunkIds, parseWsPayload } from "../lib/frame3d";
 import { frame3dAgentIds, noteAgentIds } from "../lib/agents";
 import { noteChunkIds } from "../lib/minimap";
@@ -106,6 +111,7 @@ export function useCivisAttach(dispatch: Dispatch) {
     const search = window.location.search;
     const mode = resolveAttachMode(search);
     dispatch({ type: "set_attach_mode", mode });
+    dispatch({ type: "set_read_only", readOnly: !resolveAuthoringEnabled(search) });
 
     if (mode === "watch") {
       return connectWatch(dispatch, attachFrameAtRef);

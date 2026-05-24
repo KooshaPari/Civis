@@ -56,8 +56,8 @@ Hover controls for tooltips. Left-click runs the active tool on terrain.
 
 | Service | Default URL | Used by Godot |
 |---------|-------------|----------------|
-| `civ-server` | `ws://127.0.0.1:3000/ws?tick_format=binary` | Default: JSON-RPC (`health`, `sim.snapshot`, `sim.set_speed`) + F3D0 tick → throttled snapshot |
-| `civ-watch` | `http://127.0.0.1:9090` | Always: `GET /terrain`; watch mode also snapshot + `POST /control/*` |
+| `civ-server` | `ws://127.0.0.1:3000/ws?tick_format=binary` | Default: JSON-RPC (`health`, `sim.snapshot`, `sim.set_speed`, **`sim.spawn_civilian`**, **`sim.place_voxel`**) + F3D0 |
+| `civ-watch` | `http://127.0.0.1:9090` | Always: `GET /terrain`; legacy: `POST /control/*` when `attach_mode=watch` |
 
 Spec: [`docs/development-guide/fr-godot-attach.md`](../../docs/development-guide/fr-godot-attach.md).
 

@@ -17,8 +17,8 @@
 
 | FR ID (proposed) | Requirement | Blocker |
 |------------------|-------------|---------|
-| FR-CIV-UX-002 | `sim.spawn_civilian` (or batch) on **civ-server** JSON-RPC | Server command handler + ECS spawn |
-| FR-CIV-UX-003 | `sim.place_voxel` / build graph write on server | P-V2 + protocol |
+| FR-CIV-UX-002 | `sim.spawn_civilian` on **civ-server** JSON-RPC | **implemented** — `sim.spawn_civilian`; Godot `CivisWsClient` |
+| FR-CIV-UX-003 | `sim.place_voxel` on server | **implemented** — `sim.place_voxel`; Godot server attach |
 | FR-CIV-UX-004 | Drag-place vehicles / airports / ports | Asset pipeline + build schema |
 | FR-CIV-UX-005 | Era timelapse **camera** presets (not only tick label) | Godot scene tooling |
 | FR-CIV-UX-006 | Spawn palette UI (species, faction, loadout) | P-G1 genetics API on wire |
@@ -26,8 +26,8 @@
 ## Authoring today
 
 1. Set `spectator_mode = false` on `World` (Godot Inspector).
-2. Set `attach_mode = watch` for mutations (server has no spawn/voxel RPC yet).
-3. Run `civ-watch` + optional `civ-server` for the same seed (pins diverge until RPC lands).
+2. Default `attach_mode = server` — spawn/place via `sim.spawn_civilian` / `sim.place_voxel` (same timeline as web spectator).
+3. Run `civ-server` + `civ-watch` (terrain HTTP). Use `attach_mode = watch` only for legacy HTTP controls.
 
 ## Run
 

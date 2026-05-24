@@ -50,6 +50,10 @@ pub enum JsonRpcMethod {
     SimSetSpeed,
     /// Read simulation tick speed multiplier (`sim.get_speed`).
     SimGetSpeed,
+    /// Spawn one civilian at normalized map coords (`sim.spawn_civilian`, FR-CIV-UX-002).
+    SimSpawnCivilian,
+    /// Write one voxel (`sim.place_voxel`, FR-CIV-UX-003).
+    SimPlaceVoxel,
 }
 
 impl JsonRpcMethod {
@@ -66,6 +70,8 @@ impl JsonRpcMethod {
             Self::SimSetPolicy => "sim.set_policy",
             Self::SimSetSpeed => "sim.set_speed",
             Self::SimGetSpeed => "sim.get_speed",
+            Self::SimSpawnCivilian => "sim.spawn_civilian",
+            Self::SimPlaceVoxel => "sim.place_voxel",
         }
     }
 
@@ -82,6 +88,8 @@ impl JsonRpcMethod {
             "sim.set_policy" => Some(Self::SimSetPolicy),
             "sim.set_speed" => Some(Self::SimSetSpeed),
             "sim.get_speed" => Some(Self::SimGetSpeed),
+            "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
+            "sim.place_voxel" => Some(Self::SimPlaceVoxel),
             _ => None,
         }
     }
@@ -280,8 +288,8 @@ pub fn parse_role_param(params: Option<&Value>) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// Whether `sim.command` tick is permitted under optional role enforcement.
-pub fn role_allows_operator_tick(
+/// Whether operator-only RPCs are permitted under optional role enforcement.
+pub fn role_allows_operator(
     require_role: bool,
     params: Option<&Value>,
     connection_role: Option<&str>,
@@ -292,6 +300,15 @@ pub fn role_allows_operator_tick(
     let param_role = parse_role_param(params);
     let effective = param_role.as_deref().or(connection_role);
     effective == Some(OPERATOR_ROLE)
+}
+
+/// Whether `sim.command` tick is permitted under optional role enforcement.
+pub fn role_allows_operator_tick(
+    require_role: bool,
+    params: Option<&Value>,
+    connection_role: Option<&str>,
+) -> bool {
+    role_allows_operator(require_role, params, connection_role)
 }
 
 /// JSON-RPC error when operator role is missing.
@@ -496,6 +513,28 @@ pub enum DispatchEffect {
     SetSpeed {
         /// Validated multiplier (mirrors civ-watch `/control/speed`).
         multiplier: u32,
+    },
+    /// Spawn one civilian (`sim.spawn_civilian`).
+    SpawnCivilian {
+        /// Normalized X in `[0, 1]` (maps to world X).
+        x: f32,
+        /// Normalized Y in `[0, 1]` (maps to world Z).
+        y: f32,
+        /// Faction id.
+        faction: u32,
+        /// Entity id seed (bridge tick xor constant).
+        entity_seq: u64,
+    },
+    /// Write one voxel (`sim.place_voxel`).
+    PlaceVoxel {
+        /// World X coordinate.
+        x: i64,
+        /// World Y coordinate.
+        y: i64,
+        /// World Z coordinate.
+        z: i64,
+        /// Material id (0–255).
+        material: u16,
     },
 }
 
@@ -747,6 +786,63 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::SimSpawnCivilian => {
+            if !role_allows_operator(
+                ctx.require_role,
+                req.params.as_ref(),
+                ctx.connection_role.as_deref(),
+            ) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                match parse_spawn_civilian_params(req.params.as_ref()) {
+                    Ok((x, y, faction)) => DispatchPlan {
+                        response: JsonRpcResponse::success(
+                            req.id,
+                            serde_json::json!({ "accepted": true }),
+                        ),
+                        effect: DispatchEffect::SpawnCivilian {
+                            x,
+                            y,
+                            faction,
+                            entity_seq: ctx.tick.wrapping_add(1) ^ 0x00c0_ffee,
+                        },
+                    },
+                    Err(error) => DispatchPlan {
+                        response: JsonRpcResponse::failure(req.id, error),
+                        effect: DispatchEffect::None,
+                    },
+                }
+            }
+        }
+        JsonRpcMethod::SimPlaceVoxel => {
+            if !role_allows_operator(
+                ctx.require_role,
+                req.params.as_ref(),
+                ctx.connection_role.as_deref(),
+            ) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                match parse_place_voxel_params(req.params.as_ref()) {
+                    Ok((x, y, z, material)) => DispatchPlan {
+                        response: JsonRpcResponse::success(
+                            req.id,
+                            serde_json::json!({ "accepted": true }),
+                        ),
+                        effect: DispatchEffect::PlaceVoxel { x, y, z, material },
+                    },
+                    Err(error) => DispatchPlan {
+                        response: JsonRpcResponse::failure(req.id, error),
+                        effect: DispatchEffect::None,
+                    },
+                }
+            }
+        }
         JsonRpcMethod::SimCommand => match parse_sim_command_action(req.params.as_ref()) {
             Some(SimCommandAction::Noop) => DispatchPlan {
                 response: JsonRpcResponse::success(req.id, serde_json::json!({ "accepted": true })),
@@ -784,6 +880,80 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+    }
+}
+
+/// Parse `sim.spawn_civilian` params: `{ "x", "y", "faction" }` (normalized coords).
+pub fn parse_spawn_civilian_params(
+    params: Option<&Value>,
+) -> Result<(f32, f32, u32), JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "Missing params".to_owned(),
+        data: None,
+    })?;
+    let x = p
+        .get("x")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .ok_or(invalid_params("x"))?;
+    let y = p
+        .get("y")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .ok_or(invalid_params("y"))?;
+    let faction = p
+        .get("faction")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32)
+        .unwrap_or(0);
+    Ok((x, y, faction))
+}
+
+/// Parse `sim.place_voxel` params: `{ "x", "y", "z", "material" }`.
+pub fn parse_place_voxel_params(
+    params: Option<&Value>,
+) -> Result<(i64, i64, i64, u16), JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "Missing params".to_owned(),
+        data: None,
+    })?;
+    let x = p
+        .get("x")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("x"))?;
+    let y = p
+        .get("y")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("y"))?;
+    let z = p
+        .get("z")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("z"))?;
+    let material = p
+        .get("material")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u16)
+        .unwrap_or(0);
+    Ok((x, y, z, material))
+}
+
+fn invalid_params(field: &str) -> JsonRpcError {
+    JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: format!("Invalid params: missing or invalid `{field}`"),
+        data: None,
+    }
+}
+
+/// Set `result.entity_id` after `sim.spawn_civilian`.
+pub fn set_spawn_civilian_result(response: &mut JsonRpcResponse, entity_id: u32) {
+    if let Some(result) = response.result.as_mut() {
+        if let Some(obj) = result.as_object_mut() {
+            obj.insert("entity_id".to_owned(), serde_json::json!(entity_id));
+            obj.insert("ok".to_owned(), serde_json::json!(true));
+        }
     }
 }
 
@@ -1144,6 +1314,45 @@ mod tests {
             .is_some_and(|s| !s.civ_pins.is_empty()));
         let json = snapshot_result_json(&fields);
         assert!(json.get("civ_pins").and_then(|v| v.as_array()).is_some());
+    }
+
+    #[test]
+    fn parse_spawn_civilian_params_accepts_normalized_coords() {
+        let params = serde_json::json!({ "x": 0.25, "y": 0.75, "faction": 2 });
+        let (x, y, faction) = parse_spawn_civilian_params(Some(&params)).expect("spawn params");
+        assert!((x - 0.25).abs() < f32::EPSILON);
+        assert!((y - 0.75).abs() < f32::EPSILON);
+        assert_eq!(faction, 2);
+    }
+
+    #[test]
+    fn parse_place_voxel_params_reads_coords() {
+        let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "material": 4 });
+        let (x, y, z, material) = parse_place_voxel_params(Some(&params)).expect("place params");
+        assert_eq!((x, y, z, material), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn dispatch_sim_spawn_civilian_schedules_effect() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":9,"method":"sim.spawn_civilian","params":{"x":0.5,"y":0.5,"faction":0}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 10,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+            },
+        );
+        assert!(matches!(
+            plan.effect,
+            DispatchEffect::SpawnCivilian { faction: 0, .. }
+        ));
     }
 
     #[test]

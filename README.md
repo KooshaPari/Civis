@@ -69,7 +69,7 @@ cargo run -p civ-server   # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 | Kind | Methods / routes |
 |------|------------------|
 | HTTP | `GET /healthz` → `{ "tick": <u64> }` · `GET /replay/export` → `.civreplay` (`application/octet-stream`) · `POST /replay/import` → load `.civreplay` bytes into the bridge |
-| WS JSON-RPC | `health` · `sim.status` · `sim.snapshot` · `sim.command` (`params.action`: `noop` \| `tick`) · `sim.save_replay` · `sim.load_replay` (`params.path`) · `sim.reset` (`params.seed`) · `sim.set_policy` (`params.scarcity_multiplier`, optional `base_consumption_joules`) · `sim.set_speed` (`params.multiplier`: 0 \| 1 \| 2 \| 4 \| 8) · `sim.get_speed` |
+| WS JSON-RPC | `health` · `sim.status` · `sim.snapshot` · `sim.command` (`params.action`: `noop` \| `tick`) · `sim.spawn_civilian` (`x`, `y` normalized 0–1, `faction`) · `sim.place_voxel` (`x`, `y`, `z`, `material`) · `sim.save_replay` · `sim.load_replay` (`params.path`) · `sim.reset` (`params.seed`) · `sim.set_policy` · `sim.set_speed` · `sim.get_speed` |
 
 **`POST /replay/import`** — replace the live bridge simulation from a raw `.civreplay` body (no filesystem path). Request: `Content-Type: application/octet-stream`. Success: `{ "ok": true, "tick": <u64> }`; invalid bytes → `400`. Updates both the in-memory sim and the bridge tick counter (same state as `GET /healthz`).
 

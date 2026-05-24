@@ -54,6 +54,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Godot** P-U1 partial | `main.gd`, `era_timelapse.gd` | Buildings + job-colored civilians; era HUD; authoring on watch attach; see `fr-p-u1-roadmap.md` |
 | **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
+| **Server** authoring RPC | `sim.spawn_civilian`, `sim.place_voxel` | Godot server attach; operator role when `require_role` |
 | **Roadmap** quality ladder | `docs/roadmap/product-quality-ladder.md` | L0–L5 definitions; Manor Lords = L5 on L3–L4 |
 | **Dashboard** theme / perf / stats / agents | `web/dashboard/` (`theme.ts`, `perf_panel.tsx`, `stats_panel.tsx`, `agents_panel.tsx`, `useCivisAttach.ts`) | Persisted `data-theme`; sparkline; **`StatsPanel`** tick + voxel chunk count + FPS; **`AgentsPanel`** seen-agent count + recent ids from `AgentAppearance` frames |
 | **Dashboard** attach / minimap | `attachConfig.ts`, `bottom_bar.tsx`, `side_panel.tsx` | Binary-first WS (`?binary=`); `?attach=watch` SSE; 160×160 terrain minimap with click-to-inspect chunk; `mergeSnapshot` parses nested `economy.institutions` and population/diplomacy pulses |

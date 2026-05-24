@@ -12,7 +12,7 @@ use std::{
     convert::Infallible,
     net::SocketAddr,
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicU16, AtomicU8, Ordering},
         Arc,
     },
     time::Duration,
@@ -33,6 +33,7 @@ use civ_agents::{
     spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Position3d, Velocity,
 };
 use civ_engine::{Citizen, DiplomacyKind, JobType, Simulation};
+use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
@@ -150,6 +151,14 @@ struct TradeRoute {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct TechNode {
+    id: String,
+    kind: String,
+    era_min: u16,
+    unlocked: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct InstitutionRow {
     id: u32,
     kind: String,
@@ -208,6 +217,7 @@ struct ProductionRates {
 struct Snapshot {
     tick: u64,
     tick_dt_ms: u32,
+    current_era: u16,
     population: u64,
     voxel_dirty_count: usize,
     voxel_chunk_count: usize,
@@ -223,6 +233,7 @@ struct Snapshot {
     diplomacy_events: Vec<DiplomacyPulse>,
     birth_events: Vec<PopulationPulse>,
     death_events: Vec<PopulationPulse>,
+    tech_tree: Vec<TechNode>,
     is_day: bool,
     speed: u8,
 }
@@ -251,7 +262,9 @@ struct AppState {
     tx: broadcast::Sender<Snapshot>,
     terrain: Arc<Terrain>,
     terrain_cache: TerrainCache,
+    laws: Arc<LawDb>,
     sim: Arc<Mutex<Simulation>>,
+    target_era: Arc<AtomicU16>,
     speed: Arc<AtomicU8>,
 }
 
@@ -302,6 +315,7 @@ async fn main() {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
     let terrain = Terrain::generate(42);
     let terrain_cache = TerrainCache::from_terrain(&terrain);
+    let laws = Arc::new(default_law_db());
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -320,7 +334,9 @@ async fn main() {
         tx: tx.clone(),
         terrain: Arc::new(terrain),
         terrain_cache,
+        laws,
         sim,
+        target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
     };
 
@@ -373,6 +389,11 @@ async fn simulation_worker(state: AppState) {
             let mut sim = state.sim.lock().await;
             for _ in 0..speed {
                 sim.tick();
+                if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
+                    state
+                        .target_era
+                        .store(((sim.state.tick / 600).min(5)) as u16, Ordering::Relaxed);
+                }
                 let terrain = state.terrain.clone();
                 let mut rng = sim.rng_mut().clone();
                 tick_movement(&mut sim.world, 128, &mut rng, |x, y| {
@@ -380,7 +401,8 @@ async fn simulation_worker(state: AppState) {
                 });
                 *sim.rng_mut() = rng;
             }
-            make_snapshot(&sim, speed)
+            let current_era = state.target_era.load(Ordering::Relaxed);
+            make_snapshot(&sim, speed, &state.laws, current_era)
         };
         *state.latest.write().await = Some(snapshot.clone());
         let _ = state.tx.send(snapshot);
@@ -420,7 +442,7 @@ fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
     }
 }
 
-fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
+fn make_snapshot(sim: &Simulation, speed: u8, laws: &LawDb, current_era: u16) -> Snapshot {
     let events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
@@ -465,10 +487,12 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let climate = sim.climate();
     let is_day = climate.day_phase >= 0.25 && climate.day_phase < 0.75;
     let tick_dt_ms = 100u32 / u32::from(speed.max(1));
+    let tech_tree = tech_tree(laws, current_era);
 
     Snapshot {
         tick: sim.state.tick,
         tick_dt_ms,
+        current_era,
         population: sim.state.population,
         voxel_dirty_count: events.len(),
         voxel_chunk_count: sim.voxel().chunk_count(),
@@ -484,9 +508,67 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
         diplomacy_events,
         birth_events,
         death_events,
+        tech_tree,
         is_day,
         speed,
     }
+}
+
+fn default_law_db() -> LawDb {
+    LawDb::load_ron(
+        r#"(
+            version: 0,
+            laws: [
+                (
+                    id: "mass_conservation",
+                    kind: Conservation,
+                    era_min: 0,
+                    inputs: [],
+                    outputs: [],
+                    losses: [],
+                    dependencies: [],
+                ),
+                (
+                    id: "steel",
+                    kind: Material,
+                    era_min: 4,
+                    inputs: ["iron_ore", "coal"],
+                    outputs: ["steel_ingot"],
+                    losses: ["slag"],
+                    dependencies: ["mass_conservation"],
+                ),
+                (
+                    id: "fusion_power",
+                    kind: FictionalExtension,
+                    era_min: 9,
+                    inputs: ["deuterium"],
+                    outputs: ["energy"],
+                    losses: ["helium_4"],
+                    dependencies: ["mass_conservation"],
+                ),
+            ],
+        )"#,
+    )
+    .expect("sample law db")
+}
+
+fn tech_tree(db: &LawDb, current_era: u16) -> Vec<TechNode> {
+    let mut nodes = db
+        .laws
+        .iter()
+        .map(|law| TechNode {
+            id: law.id.clone(),
+            kind: match law.kind {
+                LawKind::Conservation => "Conservation".to_string(),
+                LawKind::Material => "Material".to_string(),
+                LawKind::FictionalExtension => "FictionalExtension".to_string(),
+            },
+            era_min: law.era_min,
+            unlocked: current_era >= law.era_min,
+        })
+        .collect::<Vec<_>>();
+    nodes.sort_by(|a, b| a.era_min.cmp(&b.era_min).then_with(|| a.id.cmp(&b.id)));
+    nodes
 }
 
 fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
@@ -851,7 +933,9 @@ mod api_tests {
             tx,
             terrain: Arc::new(terrain.clone()),
             terrain_cache: TerrainCache::from_terrain(&terrain),
+            laws: Arc::new(default_law_db()),
             sim,
+            target_era: Arc::new(AtomicU16::new(0)),
             speed: Arc::new(AtomicU8::new(1)),
         }
     }

@@ -31,7 +31,7 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 | **Determinism** | Fixed-point `i64` @ 10^6 scale; `ChaCha8Rng` seeded once per run; `BTreeMap` for ordered iteration |
 | **Tick loop** | Fixed-timestep, 100 ms/tick, sub-16 ms target budget |
 | **Protocol** | WebSocket JSON-RPC + binary frames (multi-client) |
-| **Rendering clients** | Godot (game UX), Bevy (CI/reference), Unreal (visuals), **Web (spectator/ops only)** — see [ADR-009](docs/adr/ADR-009-web-client-strategy.md) |
+| **Rendering clients** | Godot (game UX), Bevy (CI/reference), Unreal (visuals), **Web (L2 sandbox + ops)** — [ADR-009](docs/adr/ADR-009-web-client-strategy.md), [amendment](docs/adr/ADR-009-amendment-web-l2-authoring.md) |
 | **Replay** | Full event log → bit-identical replay (`.civreplay`) |
 
 CivLab is simultaneously a **game** (RTS-style city/nation building), a **research sandbox** (deterministic, scriptable, full event logs), and a **platform** (multiple renderers attach to one simulation).
@@ -55,14 +55,28 @@ See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortres
 
 ## Quick Start
 
-**Prerequisites:** Rust (edition in `Cargo.toml`), [Bun](https://bun.sh) (docs only; no npm/yarn/pnpm), [Task](https://taskfile.dev).
+**Prerequisites:** Rust (edition in `Cargo.toml`), [Bun](https://bun.sh) (docs only; no npm/yarn/pnpm), [Task](https://taskfile.dev), [lefthook](https://github.com/evilmartians/lefthook) (local git hooks).
 
 ```bash
 git clone https://github.com/KooshaPari/Civis.git && cd Civis
+lefthook install
 cargo build --workspace && cargo test --workspace
-task quality
-cargo run -p civ-server   # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
+just civis-3d-verify          # or: lefthook run pre-push (emits manifest + runs gates)
+cargo run -p civ-server       # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 ```
+
+### Local-first CI (avoid billable runners)
+
+Heavy quality runs **on your machine** via lefthook; GitHub Actions only **verifies** the committed attestation in `.ci/quality-manifest.json` (no `cargo` on the runner — same pattern as phenotype-journey `manifest.verified.json`).
+
+| Step | Command |
+|------|---------|
+| Install hooks | `lefthook install` |
+| Run before push | `lefthook run pre-push` → runs fmt/clippy/test/web/dashboard checks, writes `.ci/quality-manifest.json` |
+| Commit manifest | `git add .ci/quality-manifest.json` (staged automatically when hooks pass) |
+| Cloud verify (CI) | `just quality-manifest-verify` or workflow job `quality-manifest` |
+
+Optional full sweep on Actions (manual only): **Actions → Quality → Run workflow** (`workflow_dispatch` → `quality-full`).
 
 **`civ-server` protocol** — HTTP on the bind address; WebSocket JSON-RPC at `/ws`.
 
@@ -137,7 +151,7 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 | Local quality gate | `task quality` |
 | Build docs | `cd docs && bun run docs:build` |
 | Preview docs | `cd docs && bun run docs:dev` |
-| Web spectator (ADR-009) | `cargo run -p civ-server` then `cd web && npm install && npm run dev` → http://127.0.0.1:5173 |
+| Web dashboard (L2 authoring default) | `cargo run -p civ-server` + `cargo run -p civ-watch` (terrain) → `cd web/dashboard && npm run dev` → http://127.0.0.1:5173 — `?spectator=1` for read-only |
 | Web tests | `cd web && npm test` |
 | Screenshot assets | [`docs/guides/screenshot-automation.md`](docs/guides/screenshot-automation.md) |
 

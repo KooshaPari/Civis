@@ -33,6 +33,16 @@ tasks:
       - task: docs:build
       - just ci
 
+  quality:local:
+    desc: "Full local gates + emit .ci/quality-manifest.json (lefthook pre-push)"
+    cmds:
+      - just quality-manifest
+
+  quality:manifest-verify:
+    desc: "Cloud CI check — verify committed quality manifest (no cargo on runner)"
+    cmds:
+      - just quality-manifest-verify
+
   rust:ci:
     desc: "Rust lint, test, audit, unused-deps (Phenotype just ci)"
     cmds:

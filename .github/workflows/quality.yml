@@ -1,90 +1,43 @@
+# Local-first quality: developers run `lefthook run pre-push` (or `just quality-manifest`).
+# This workflow only verifies the committed attestation — no Rust/Node toolchain on the runner.
 name: Quality
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  rust-quality:
+  quality-manifest:
+    name: quality-manifest (cloud verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+  # Optional heavy sweep (manual / release only — not required for PR merge).
+  quality-full:
+    name: quality-full (manual)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@stable
-      - name: Rust fmt
-        run: cargo fmt --check
-      - name: Rust clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-      - name: Rust test
-        run: cargo test --workspace
-      - name: Rust test (civis-godot-rust)
-        working-directory: clients/godot-ref/rust
-        run: cargo test
-      - name: Rust test (civ-infra features)
-        run: cargo test -p civ-infra --all-features
-      - name: Rust test (civ-research firepass)
-        run: cargo test -p civ-research --features firepass-kimi
-      - name: Rust test (civ-bevy-ref)
-        run: cargo test -p civ-bevy-ref
-      - name: Rust test (civ-bevy-ref bevy)
-        run: cargo test -p civ-bevy-ref --features bevy
-      - name: Rust test (civ-watch)
-        run: cargo test -p civ-watch
-
-  web-quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Web test
-        working-directory: web
-        run: npm test
-      - name: Web frame3d package test (if split)
-        if: ${{ hashFiles('web/frame3d/package.json') != '' }}
-        working-directory: web/frame3d
+      - name: Full Rust + web sweep
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-          npm test
-      - name: Web attach package test (if split)
-        if: ${{ hashFiles('web/attach/package.json') != '' }}
-        working-directory: web/attach
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-          npm test
-      - name: Dashboard install (bun)
-        working-directory: web/dashboard
-        run: bun install --frozen-lockfile
-      - name: Dashboard typecheck and build
-        working-directory: web/dashboard
-        run: |
-          bun run typecheck
-          bun run build
-
-  release-benchmarks:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Engine 10k tick budget (release, ignored)
-        run: cargo test -p civ-engine --release ten_thousand_ticks_under_budget -- --ignored
-      - name: WS tick broadcast encode bench (release, ignored)
-        run: cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture
-
-  docs-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Install docs deps
-        run: bun install
-      - name: Build docs
-        run: bun run docs:build
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+          (cd clients/godot-ref/rust && cargo test)
+          (cd web && npm test)
+          (cd web/dashboard && bun install --frozen-lockfile && bun run typecheck && bun run build)

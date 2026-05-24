@@ -73,6 +73,11 @@ namespace DINOForge.Runtime.UI
         private float _lastClickTimeUnscaled = -10f;
         private System.Collections.Generic.List<Button>? _allOptionsButtons;
 
+        // #882: Selectable-donor path — populated by FindSettingsButton when a suitable
+        // MainMenuButton-style Selectable is found but has no UnityEngine.UI.Button sibling.
+        // Consumed by TryInjectMenuButton as a fallback clone source.
+        private Selectable? _pendingSelectableDonor;
+
         // Text re-enforcement: after injection, re-assert "Mods" text every N frames
         // in case UiGrid or any internal update reverts it via a path Harmony doesn't cover.
         private int _textEnforceFrame;
@@ -336,10 +341,29 @@ namespace DINOForge.Runtime.UI
                     // canvas name may vary; we rely on finding the Settings/Options button.
                     DebugLog.Write("NativeMenuInjector", $"[{_sessionId}] Attempt#{attemptId} Canvas '{canvas.name}': searching for buttons...");
 
+                    _pendingSelectableDonor = null; // reset per-canvas before FindSettingsButton populates it
                     Button? settingsButton = FindSettingsButton(canvas);
                     if (settingsButton == null)
                     {
-                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': NO Settings/Options button found");
+                        // #882: Selectable-donor fallback — FindSettingsButton may have set
+                        // _pendingSelectableDonor when it found a MainMenuButton-style Selectable.
+                        if (_pendingSelectableDonor != null)
+                        {
+                            Selectable selectableDonor = _pendingSelectableDonor;
+                            _pendingSelectableDonor = null;
+                            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓ Selectable-donor path: donor='{selectableDonor.name}' type={selectableDonor.GetType().Name} in canvas '{canvas.name}'");
+                            InjectButtonFromSelectable(selectableDonor, attemptId);
+                            if (_injected)
+                            {
+                                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ SELECTABLE-DONOR INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                                TakeAutoCheckpointScreenshot("cp1_mods_injected_selectable", 180);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Canvas '{canvas.name}': NO Settings/Options button found");
+                        }
                         continue;
                     }
 
@@ -453,8 +477,29 @@ namespace DINOForge.Runtime.UI
                     }
                 }
 
-                // #778: Broadened pass — also scan Selectables (catches custom buttons that
+                // #882: Second query — DINO's MainMenuButton inherits Selectable (NOT Button), so
+                // the Button-typed query above returns 0 candidates. Filter Selectables to those
+                // whose runtime type-name contains "Button" (Pattern #99/#171: explicit Ordinal).
+                Selectable[] activeSelectables = canvas.GetComponentsInChildren<Selectable>(includeInactive: false);
+                System.Collections.Generic.List<Selectable> selectableCandidates = new System.Collections.Generic.List<Selectable>();
+                foreach (Selectable s in activeSelectables)
+                {
+                    if (s == null) continue;
+                    if (s is Button) continue; // already counted in allButtons
+                    if (s.GetType().Name.IndexOf("Button", StringComparison.Ordinal) < 0) continue;
+                    string label = ReadGameObjectLabel(s.gameObject);
+                    if (label.Length == 0) continue;
+                    if (label.IndexOf("Options", StringComparison.OrdinalIgnoreCase) >= 0
+                        || label.IndexOf("Settings", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        selectableCandidates.Add(s);
+                    }
+                }
+
+                // #778 / #882: Broadened pass — also scan ALL Selectables (catches custom buttons that
                 // inherit Selectable but not Button) by reading child Text/TMP_Text labels directly.
+                // When a match is found and no Button-typed donor exists yet, store it as
+                // _pendingSelectableDonor for the CloneSelectableAsButton path.
                 if (optionsButtons.Count == 0)
                 {
                     foreach (Selectable s in selectables)
@@ -465,8 +510,12 @@ namespace DINOForge.Runtime.UI
                         if (label.IndexOf("Settings", StringComparison.OrdinalIgnoreCase) >= 0
                             || label.IndexOf("Options", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
-                            LogInfo($"[NativeMenuInjector] [#778]   Selectable-match '{s.gameObject.name}' type={s.GetType().Name} label='{label}' — but not Unity Button; cannot clone via current path");
+                            LogInfo($"[NativeMenuInjector] [#778/#882]   Selectable-match '{s.gameObject.name}' type={s.GetType().Name} label='{label}' — storing as _pendingSelectableDonor for Selectable-clone path");
                             DebugLog.Write("NativeMenuInjector", $"[#778] MATCH (Selectable) canvas='{canvas.name}' go='{s.gameObject.name}' type={s.GetType().FullName} label='{label}'");
+                            // First match wins; don't overwrite a candidate already set by
+                            // the selectableCandidates pass above.
+                            if (_pendingSelectableDonor == null)
+                                _pendingSelectableDonor = s;
                         }
                     }
 
@@ -479,6 +528,9 @@ namespace DINOForge.Runtime.UI
                             || label.IndexOf("Options", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             DebugLog.Write("NativeMenuInjector", $"[#778] MATCH (*Button reflection) canvas='{canvas.name}' go='{c.gameObject.name}' type={c.GetType().FullName} label='{label}'");
+                            // If the component is also a Selectable, it qualifies as donor.
+                            if (_pendingSelectableDonor == null && c is Selectable cs && !(cs is Button))
+                                _pendingSelectableDonor = cs;
                         }
                     }
                 }
@@ -490,6 +542,30 @@ namespace DINOForge.Runtime.UI
                     LogInfo($"[NativeMenuInjector]     Found {optionsButtons.Count} 'Options' button(s); will repurpose for Mods");
                     return optionsButtons[0];
                 }
+
+                // #882: Selectable-fallback — promote first custom-Button-typed Selectable as donor.
+                if (selectableCandidates.Count >= 1)
+                {
+                    Selectable donor = selectableCandidates[0];
+                    LogInfo($"[NativeMenuInjector] Selectable-fallback used: donor='{donor.name}' typeName='{donor.GetType().Name}'");
+                    // Last-ditch: if the donor GameObject also carries a UnityEngine.UI.Button
+                    // sibling component, promote it directly.
+                    Button? donorButton = donor.gameObject.GetComponent<Button>();
+                    if (donorButton != null)
+                    {
+                        LogInfo($"[NativeMenuInjector]     Selectable donor has sibling UnityEngine.UI.Button — using it as clone source");
+                        return donorButton;
+                    }
+                    // #882 extension: store the Selectable donor for the new CloneSelectableAsButton
+                    // path in TryInjectMenuButton. This lets InjectButtonFromSelectable clone the
+                    // GameObject and swap the custom component for a UnityEngine.UI.Button.
+                    LogInfo($"[NativeMenuInjector]     Selectable donor has no UnityEngine.UI.Button sibling — storing as _pendingSelectableDonor for Selectable-clone path");
+                    _pendingSelectableDonor = donor;
+                }
+
+                // #882: Early-exit diagnostic — surfaces *why* we're returning null even when
+                // Selectables exist on the canvas. Pairs with the Selectable-fallback log above.
+                LogInfo($"[NativeMenuInjector.probe] EARLY-EXIT canvas='{canvas.name}' UnityButtons={allButtons.Length} customSelectables={selectableCandidates.Count}");
 
                 // Log all buttons found for diagnostics
                 LogInfo($"[NativeMenuInjector]     No 'Settings' or 'Options' button found in canvas. Dumping all {allButtons.Length} active buttons:");
@@ -560,6 +636,7 @@ namespace DINOForge.Runtime.UI
 
             // Ensure onClick only has OnModsButtonClicked
             modsButton.onClick.RemoveAllListeners();
+            LogInfo($"[NativeMenuInjector.probe] WIRING onClick listener — button name={modsButton.name}, listenerCount-before={modsButton.onClick.GetPersistentEventCount()}");
             modsButton.onClick.AddListener(OnModsButtonClicked);
             LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Wired onClick listener to OnModsButtonClicked");
 
@@ -635,6 +712,115 @@ namespace DINOForge.Runtime.UI
             catch (Exception ex)
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ⚠⚠⚠ InjectButton EXCEPTION: {ex}");
+            }
+        }
+
+        // ------------------------------------------------------------------ //
+        // Selectable-donor injection path (#882)
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Alternative injection entry point used when the canvas has no Unity
+        /// <see cref="Button"/> instances but does have a custom
+        /// <c>MainMenuButton : Selectable</c> donor.
+        ///
+        /// Strategy:
+        ///   1. Clone the donor's GameObject via
+        ///      <see cref="NativeUiHelper.CloneSelectableAsButton"/> (strips the custom
+        ///      component, adds a proper <see cref="Button"/>).
+        ///   2. Build a synthetic <em>settingsButton reference</em> from the donor for
+        ///      layout positioning (it shares the same parent, so
+        ///      <see cref="PositionAndRebuildLayout"/> works unchanged).
+        ///   3. Delegate to the existing <see cref="TryReEnforceExistingInjection"/>,
+        ///      <see cref="EnsureButtonInteractivity"/>,
+        ///      <see cref="ValidateRaycastAndEventSystem"/>,
+        ///      <see cref="RewireModsButtonClick"/>, and
+        ///      <see cref="CommitInjectionAndLog"/> clusters unchanged.
+        /// </summary>
+        private void InjectButtonFromSelectable(Selectable donor, long attemptId)
+        {
+            try
+            {
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButtonFromSelectable: donor='{donor.name}' type={donor.GetType().Name}");
+
+                // 1. Clone the donor's GameObject; get a proper Button back.
+                Button? modsButton = NativeUiHelper.CloneSelectableAsButton(donor, "Mods");
+                if (modsButton == null)
+                {
+                    LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButtonFromSelectable: CloneSelectableAsButton returned null — ABORT");
+                    return;
+                }
+
+                // Register clone name for Harmony text-intercept patch (same as Button path).
+                RepurposedModsButtonGoName = modsButton.gameObject.name;
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButtonFromSelectable: cloned '{modsButton.name}', registered for text intercept");
+
+                // 2. Enforce "Mods" text on all text children (clone inherited donor label).
+                foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+                {
+                    legacyText.text = "Mods";
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set Text '{legacyText.name}' to 'Mods'");
+                }
+                System.Type? tmpType = System.Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+                if (tmpType != null)
+                {
+                    foreach (Component c in modsButton.GetComponentsInChildren(tmpType, true))
+                    {
+                        tmpType.GetProperty("text")?.SetValue(c, "Mods");
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     - Set TMP_Text '{c.name}' to 'Mods'");
+                    }
+                }
+
+                // 3. Position the Mods button AFTER the donor in the parent layout.
+                RectTransform? modsRect = modsButton.GetComponent<RectTransform>();
+                RectTransform? donorRect = donor.GetComponent<RectTransform>();
+                if (modsRect != null && donorRect != null)
+                {
+                    NativeUiHelper.PositionAfterSibling(modsRect, donorRect);
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Positioned AFTER donor (sibling index: {modsButton.transform.GetSiblingIndex()})");
+
+                    // Force layout rebuild.
+                    Transform layoutParent = donorRect.parent;
+                    if (layoutParent != null)
+                    {
+                        var layoutRt = layoutParent.GetComponent<RectTransform>();
+                        if (layoutRt != null)
+                            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRt);
+                        if (layoutParent.parent != null)
+                        {
+                            var gpRt = layoutParent.parent.GetComponent<RectTransform>();
+                            if (gpRt != null)
+                                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(gpRt);
+                        }
+                        UnityEngine.Canvas.ForceUpdateCanvases();
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Layout rebuild forced on '{layoutParent.name}'");
+                    }
+                }
+                else
+                {
+                    LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}   Could not get RectTransform for modsButton or donor — skipping position");
+                }
+
+                // 4. Ensure interactivity and targetGraphic.
+                EnsureButtonInteractivity(modsButton, attemptId);
+
+                // 5. Raycast diagnostics + EventSystem navigation isolation.
+                //    ValidateRaycastAndEventSystem takes a settingsButton reference for navigation
+                //    logging only; pass a fake stub by creating a minimal donor-sibling lookup.
+                //    We use modsButton as the "settingsButton" reference since navigation.mode
+                //    on the donor's Selectable isn't accessible from here and the log is
+                //    diagnostic-only.
+                ValidateRaycastAndEventSystem(modsButton, modsButton, attemptId);
+
+                // 6. Wire onClick.
+                RewireModsButtonClick(modsButton, attemptId);
+
+                // 7. Atomic state commit.
+                CommitInjectionAndLog(modsButton, attemptId);
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ⚠ InjectButtonFromSelectable EXCEPTION: {ex}");
             }
         }
 
@@ -1029,6 +1215,7 @@ namespace DINOForge.Runtime.UI
 
         private void OnModsButtonClicked()
         {
+            LogInfo($"[NativeMenuInjector.probe] OnModsButtonClicked FIRED at {DateTime.UtcNow:HH:mm:ss.fff}");
             LogInfo($"[NativeMenuInjector::{_sessionId}] NativeMenuInjector.OnModsClick fired");
             _buttonClickCount++;
             long clickId = _buttonClickCount;
@@ -1069,6 +1256,7 @@ namespace DINOForge.Runtime.UI
         private void RewireModsButtonClick(Button modsButton, long attemptId)
         {
             modsButton.onClick.RemoveAllListeners();
+            LogInfo($"[NativeMenuInjector.probe] WIRING onClick listener — button name={modsButton.name}, listenerCount-before={modsButton.onClick.GetPersistentEventCount()}");
             modsButton.onClick.AddListener(OnModsButtonClicked);
             LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Click handler replaced with DINOForge toggle only");
         }

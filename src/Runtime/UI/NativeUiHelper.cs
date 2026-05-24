@@ -69,6 +69,66 @@ namespace DINOForge.Runtime.UI
             StripNonUiBehaviours(root);
         }
 
+        /// <summary>
+        /// Clones a <see cref="Selectable"/> donor whose runtime type is NOT
+        /// <see cref="Button"/> (e.g. DINO's <c>MainMenuButton : Selectable</c>).
+        /// Steps:
+        ///   1. Instantiate a copy of the donor's GameObject under the same parent.
+        ///   2. Destroy every non-Unity component (game-specific scripts) PLUS the
+        ///      original custom-selectable component (identified by type equality).
+        ///   3. Add a fresh <see cref="Button"/> component to the clone root.
+        ///   4. Clear persistent onclick events and reset navigation.
+        ///   5. Set the clone's label text via <see cref="SetButtonText"/>.
+        /// Returns the new <see cref="Button"/>, or <c>null</c> if the clone fails.
+        /// </summary>
+        /// <param name="donor">The custom Selectable to clone. Must not be a Button.</param>
+        /// <param name="newText">Label text for the new button.</param>
+        public static Button? CloneSelectableAsButton(Selectable donor, string newText)
+        {
+            if (donor == null) return null;
+            if (donor is Button) return null; // caller should use CloneButton for Button donors
+
+            try
+            {
+                // 1. Clone the donor GameObject, keeping the same parent.
+                GameObject clone = UnityEngine.Object.Instantiate(donor.gameObject, donor.transform.parent);
+                clone.name = "DINOForge_ModsButton";
+
+                // 2a. Strip game-specific MonoBehaviours FIRST so nothing fires during tear-down.
+                StripNonUiBehaviours(clone);
+
+                // 2b. Destroy the custom selectable component(s) on the clone root — we replace
+                //     them with a proper UnityEngine.UI.Button. We must iterate over all
+                //     Selectable-derived components because the type name is game-specific.
+                System.Type donorType = donor.GetType();
+                Selectable[] cloneSelectables = clone.GetComponents<Selectable>();
+                foreach (Selectable s in cloneSelectables)
+                {
+                    if (s != null && s.GetType() == donorType)
+                    {
+                        UnityEngine.Object.Destroy(s);
+                    }
+                }
+
+                // 3. Add a fresh Button component.
+                Button btn = clone.AddComponent<Button>();
+
+                // 4. Clear inherited persistent callbacks + reset navigation.
+                btn.onClick = new Button.ButtonClickedEvent();
+                Navigation nav = btn.navigation;
+                nav.mode = Navigation.Mode.Automatic;
+                btn.navigation = nav;
+
+                // 5. Set label text.
+                SetButtonText(btn, newText);
+
+                return btn;
+            }
+            catch { /* safe-swallow: best-effort Selectable-to-Button clone; caller handles null and logs the failure */
+                return null;
+            }
+        }
+
         private static void StripNonUiBehaviours(GameObject root)
         {
             MonoBehaviour[] behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);

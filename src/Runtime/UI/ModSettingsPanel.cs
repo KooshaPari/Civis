@@ -227,7 +227,7 @@ namespace DINOForge.Runtime.UI
             }
             else if (settingType.IsEnum)
             {
-                string current = entry.BoxedValue.ToString();
+                string current = entry.BoxedValue?.ToString() ?? string.Empty;
                 string[] names = Enum.GetNames(settingType);
                 int currentIndex = Array.IndexOf(names, current);
                 if (currentIndex < 0) currentIndex = 0;
@@ -236,13 +236,15 @@ namespace DINOForge.Runtime.UI
                 if (GUILayout.Button("<", GUILayout.Width(25)))
                 {
                     currentIndex = (currentIndex - 1 + names.Length) % names.Length;
-                    entry.BoxedValue = Enum.Parse(settingType, names[currentIndex]);
+                    Array values = Enum.GetValues(settingType);
+                    entry.BoxedValue = values.GetValue(currentIndex);
                 }
                 GUILayout.Label(current, GUILayout.Width(100));
                 if (GUILayout.Button(">", GUILayout.Width(25)))
                 {
                     currentIndex = (currentIndex + 1) % names.Length;
-                    entry.BoxedValue = Enum.Parse(settingType, names[currentIndex]);
+                    Array values = Enum.GetValues(settingType);
+                    entry.BoxedValue = values.GetValue(currentIndex);
                 }
             }
             else
@@ -253,7 +255,7 @@ namespace DINOForge.Runtime.UI
                 if (newVal != current)
                 {
                     try { entry.BoxedValue = newVal; }
-                    catch { /* ignore type conversion failures */ }
+                    catch { /* safe-swallow: user-edited text may not convert to the config entry type */ }
                 }
             }
 

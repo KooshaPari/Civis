@@ -224,8 +224,9 @@ impl CivisClient {
         let n = positions.len().min(factions.len());
         let spawns: Vec<_> = (0..n)
             .map(|i| {
-                let pos = positions.get(i);
-                ux::spawn_civilian_body(pos.x, pos.y, factions.get(i))
+                let pos = positions.get(i).unwrap_or(Vector2::ZERO);
+                let faction = factions.get(i).unwrap_or(0);
+                ux::spawn_civilian_body(pos.x, pos.y, faction)
             })
             .collect();
         let events = ux::spawn_batch_events(&spawns, start_id.max(0) as u64);

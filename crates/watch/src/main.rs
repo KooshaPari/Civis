@@ -143,10 +143,18 @@ struct TradeRoute {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct InstitutionRow {
+    id: u32,
+    kind: String,
+    balance_joules: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct EconomySnapshot {
     energy_budget: f64,
     faction_treasury: Vec<FactionTreasury>,
     production_rates: ProductionRates,
+    institutions: Vec<InstitutionRow>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -448,6 +456,15 @@ fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
         }
     }
 
+    let institutions = civ_server::jsonrpc::institutions_from_sim(sim)
+        .into_iter()
+        .map(|row| InstitutionRow {
+            id: row.id,
+            kind: row.kind.to_string(),
+            balance_joules: row.balance_joules,
+        })
+        .collect();
+
     EconomySnapshot {
         energy_budget,
         faction_treasury,
@@ -457,6 +474,7 @@ fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
             metal_per_tick,
             energy_per_tick: energy_budget / 1000.0,
         },
+        institutions,
     }
 }
 

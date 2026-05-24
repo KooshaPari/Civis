@@ -21,7 +21,8 @@ jobs:
       - name: Rust test
         run: cargo test --workspace
       - name: Rust test (civis-godot-rust)
-        run: cargo test -p civis-godot-rust
+        working-directory: clients/godot-ref/rust
+        run: cargo test
       - name: Rust test (civ-infra features)
         run: cargo test -p civ-infra --all-features
       - name: Rust test (civ-research firepass)

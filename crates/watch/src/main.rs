@@ -32,7 +32,7 @@ use axum::{
 use civ_agents::{
     spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Position3d, Velocity,
 };
-use civ_engine::{Citizen, JobType, Simulation};
+use civ_engine::{Citizen, DiplomacyKind, JobType, Simulation};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
@@ -44,6 +44,13 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::{info, warn};
 
 use crate::terrain::Terrain;
+
+fn env_u16(name: &str, default: u16) -> u16 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(default)
+}
 
 #[derive(Debug, Clone, Serialize)]
 struct SampleCivilian {
@@ -155,6 +162,31 @@ struct EconomySnapshot {
     faction_treasury: Vec<FactionTreasury>,
     production_rates: ProductionRates,
     institutions: Vec<InstitutionRow>,
+    resources: ResourceSnapshot,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ResourceSnapshot {
+    food: f64,
+    wood: f64,
+    metal: f64,
+    energy: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct PopulationPulse {
+    tick: u64,
+    entity_id: u64,
+    x: f32,
+    y: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct DiplomacyPulse {
+    tick: u64,
+    faction_a: u32,
+    faction_b: u32,
+    kind: DiplomacyKind,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -186,6 +218,11 @@ struct Snapshot {
     roads: Vec<Road>,
     trade_routes: Vec<TradeRoute>,
     economy: EconomySnapshot,
+    births_this_tick: u32,
+    deaths_this_tick: u32,
+    diplomacy_events: Vec<DiplomacyPulse>,
+    birth_events: Vec<PopulationPulse>,
+    death_events: Vec<PopulationPulse>,
     is_day: bool,
     speed: u8,
 }
@@ -291,10 +328,7 @@ async fn main() {
 
     let app = build_app(state);
 
-    let port: u16 = std::env::var("CIV_WATCH_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(9090);
+    let port = env_u16("CIV_WATCH_PORT", 9090);
     let addr: SocketAddr = format!("0.0.0.0:{port}")
         .parse()
         .expect("valid listen address");
@@ -395,6 +429,39 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let roads = roads(&buildings);
     let trade_routes = trade_routes(&factions, sim.state.tick);
     let economy = economy_snapshot(sim, &factions);
+    let birth_events: Vec<PopulationPulse> = sim
+        .last_births()
+        .iter()
+        .cloned()
+        .map(|event| PopulationPulse {
+            tick: event.tick,
+            entity_id: event.entity_id,
+            x: event.x,
+            y: event.y,
+        })
+        .collect::<Vec<PopulationPulse>>();
+    let death_events: Vec<PopulationPulse> = sim
+        .last_deaths()
+        .iter()
+        .cloned()
+        .map(|event| PopulationPulse {
+            tick: event.tick,
+            entity_id: event.entity_id,
+            x: event.x,
+            y: event.y,
+        })
+        .collect::<Vec<PopulationPulse>>();
+    let diplomacy_events: Vec<DiplomacyPulse> = sim
+        .diplomacy_events()
+        .iter()
+        .cloned()
+        .map(|event| DiplomacyPulse {
+            tick: event.tick,
+            faction_a: event.faction_a,
+            faction_b: event.faction_b,
+            kind: event.kind,
+        })
+        .collect();
     let _ = build_voxel_delta_frame(sim.state.tick, events, sim.voxel()).map_err(|err| {
         warn!(?err, "voxel frame build failed for current tick");
     });
@@ -415,6 +482,11 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
         roads,
         trade_routes,
         economy,
+        births_this_tick: birth_events.len() as u32,
+        deaths_this_tick: death_events.len() as u32,
+        diplomacy_events,
+        birth_events,
+        death_events,
         is_day,
         speed,
     }
@@ -422,6 +494,7 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
 
 fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
     let energy_budget = sim.state.energy_budget_joules.to_f64();
+    let resources = &sim.state.resources;
     let faction_treasury = factions
         .iter()
         .map(|faction| {
@@ -475,6 +548,12 @@ fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
             energy_per_tick: energy_budget / 1000.0,
         },
         institutions,
+        resources: ResourceSnapshot {
+            food: resources.food.to_f64(),
+            wood: resources.wood.to_f64(),
+            metal: resources.metal.to_f64(),
+            energy: resources.energy.to_f64(),
+        },
     }
 }
 

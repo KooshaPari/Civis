@@ -3,8 +3,8 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_many, CohortStats, LodTier, Tools,
-    Wardrobe,
+    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
+    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -114,6 +114,29 @@ pub struct Resources {
     pub energy: Fixed, // Joules
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DiplomacyKind {
+    TradeAgreement,
+    Conflict,
+    Peace,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DiplomacyEvent {
+    pub tick: u64,
+    pub faction_a: u32,
+    pub faction_b: u32,
+    pub kind: DiplomacyKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PopulationEvent {
+    pub tick: u64,
+    pub entity_id: u64,
+    pub x: f32,
+    pub y: f32,
+}
+
 /// Production capability
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Production {
@@ -162,6 +185,7 @@ pub struct WorldState {
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
     pub faction_treasury: HashMap<u32, Fixed>,
+    pub resources: Resources,
 }
 
 impl Default for WorldState {
@@ -181,6 +205,7 @@ impl Default for WorldState {
                 (1, Fixed::from_num(8_000)),
                 (2, Fixed::from_num(8_000)),
             ]),
+            resources: Resources::default(),
         }
     }
 }
@@ -200,6 +225,10 @@ pub struct Simulation {
     diffusion_params: DiffusionParams,
     target_era: u16,
     last_cohort_stats: Option<CohortStats>,
+    last_births: Vec<PopulationEvent>,
+    last_deaths: Vec<PopulationEvent>,
+    diplomacy_events: Vec<DiplomacyEvent>,
+    next_civilian_id: u64,
     research_cache: ResearchCache,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
@@ -350,6 +379,10 @@ impl Simulation {
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
             last_cohort_stats: None,
+            last_births: Vec::new(),
+            last_deaths: Vec::new(),
+            diplomacy_events: Vec::new(),
+            next_civilian_id: 1_000_000,
             research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
@@ -393,6 +426,10 @@ impl Simulation {
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
             last_cohort_stats: None,
+            last_births: Vec::new(),
+            last_deaths: Vec::new(),
+            diplomacy_events: Vec::new(),
+            next_civilian_id: 1_000_000,
             research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
@@ -509,6 +546,18 @@ impl Simulation {
         &self.research_cache
     }
 
+    pub fn last_births(&self) -> &[PopulationEvent] {
+        &self.last_births
+    }
+
+    pub fn last_deaths(&self) -> &[PopulationEvent] {
+        &self.last_deaths
+    }
+
+    pub fn diplomacy_events(&self) -> &[DiplomacyEvent] {
+        &self.diplomacy_events
+    }
+
     /// Spawn initial world entities
     fn spawn_initial_entities(world: &mut World) {
         // Create initial citizens
@@ -574,6 +623,8 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.diplomacy_events.clear();
+        self.phase_diplomacy();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
@@ -709,52 +760,93 @@ impl Simulation {
 
     /// Production phase - buildings produce resources
     fn phase_production(&mut self) {
-        let mut production: HashMap<ResourceType, Fixed> = HashMap::new();
-        production.insert(ResourceType::Food, Fixed::ZERO);
-        production.insert(ResourceType::Wood, Fixed::ZERO);
-        production.insert(ResourceType::Metal, Fixed::ZERO);
+        let mut food = Fixed::ZERO;
+        let wood = Fixed::ZERO;
+        let mut metal = Fixed::ZERO;
+        let mut energy = Fixed::ZERO;
 
-        // Collect production from buildings
         for (_, building) in self.world.query::<&Building>().iter() {
             match building.building_type {
                 BuildingType::Farm => {
-                    *production.get_mut(&ResourceType::Food).unwrap() += Fixed::from_num(10);
+                    food += Fixed::from_num(1);
                 }
                 BuildingType::Mine => {
-                    *production.get_mut(&ResourceType::Metal).unwrap() += Fixed::from_num(5);
+                    metal += Fixed::from_num(1);
+                }
+                BuildingType::CityCenter => {
+                    energy += Fixed::from_raw(Fixed::from_num(1).raw / 2);
                 }
                 _ => {}
             }
         }
-
-        // Apply production to state (simplified - would go to resources in full impl)
-        tracing::debug!(
-            "Tick {} production: food={:?}, metal={:?}",
-            self.state.tick,
-            production.get(&ResourceType::Food),
-            production.get(&ResourceType::Metal)
-        );
+        self.state.resources.food += food;
+        self.state.resources.wood += wood;
+        self.state.resources.metal += metal;
+        self.state.resources.energy += energy;
     }
 
     /// Citizen lifecycle phase
     fn phase_citizen_lifecycle(&mut self) {
-        let mut births: u32 = 0;
+        self.last_births.clear();
+        self.last_deaths.clear();
+        let population = count_civilians(&self.world) as f64;
+        let max_pop = self.state.population.max(1) as f64;
+        let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
+        let birth_chance = 0.003 * (1.0 - overcrowding_factor);
+        let birth_window = self.state.tick % 200 == 0;
+        let mut dead = Vec::new();
+        let mut births = Vec::new();
 
-        for (_, citizen) in self.world.query::<&mut Citizen>().iter() {
-            // Age citizens
-            citizen.age += 1;
-
-            // Simple welfare decay/growth based on random
-            let change = Fixed::from_num(self.rng.gen_range(-5..=5)) / Fixed::from_num(100);
-            citizen.welfare = (citizen.welfare + change).clamp(Fixed::ZERO, Fixed::from_num(1));
+        for (entity, (civilian, pos, needs)) in self
+            .world
+            .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
+        {
+            civilian.age = civilian.age.saturating_add(1);
+            if self.state.resources.food.raw > 0 {
+                needs.food = (needs.food + 0.008).min(1.0);
+            } else {
+                needs.food = (needs.food - 0.03).max(0.0);
+            }
+            if needs.food < 0.05 && self.state.resources.food.raw <= 0 {
+                dead.push((entity, civilian.id, pos.coord));
+                continue;
+            }
+            if birth_window
+                && civilian.age > 18
+                && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
+            {
+                let child_id = self.next_civilian_id;
+                self.next_civilian_id += 1;
+                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                births.push((child_id, x, y));
+            }
         }
 
-        // Births based on welfare
-        if self.state.population > 0 && self.rng.gen_bool(0.001) {
-            births = 1;
+        for (child_id, x, y) in births {
+            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
+            self.last_births.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id: child_id,
+                x,
+                y,
+            });
         }
 
-        self.state.population += births as u64;
+        for (entity, entity_id, coord) in dead {
+            let _ = self.world.despawn(entity);
+            self.last_deaths.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id,
+                x: coord.x as f32 / FIXED_SCALE as f32,
+                y: coord.z as f32 / FIXED_SCALE as f32,
+            });
+        }
+
+        let births_count = self.last_births.len() as u64;
+        let deaths_count = self.last_deaths.len() as u64;
+        self.state.population = self.state.population.saturating_add(births_count);
+        self.state.population = self.state.population.saturating_sub(deaths_count);
     }
 
     /// Military phase
@@ -766,6 +858,49 @@ impl Simulation {
                     .min(Fixed::from_num(1));
             }
         }
+    }
+
+    fn phase_diplomacy(&mut self) {
+        if self.state.tick % 500 != 0 {
+            return;
+        }
+        self.diplomacy_events.clear();
+        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        if faction_ids.len() < 2 {
+            return;
+        }
+        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
+        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
+        let kind = if self.rng.gen_bool(0.6) {
+            DiplomacyKind::TradeAgreement
+        } else {
+            DiplomacyKind::Conflict
+        };
+        match kind {
+            DiplomacyKind::TradeAgreement => {
+                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
+                    *v += Fixed::from_num(100);
+                }
+                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
+                    *v += Fixed::from_num(100);
+                }
+            }
+            DiplomacyKind::Conflict => {
+                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
+                    *v -= Fixed::from_num(50);
+                }
+                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
+                    *v -= Fixed::from_num(50);
+                }
+            }
+            DiplomacyKind::Peace => {}
+        }
+        self.diplomacy_events.push(DiplomacyEvent {
+            tick: self.state.tick,
+            faction_a: a,
+            faction_b: b,
+            kind,
+        });
     }
 
     /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
@@ -803,6 +938,10 @@ impl Simulation {
             building_count,
             military_count,
             energy_budget: self.state.energy_budget_joules,
+            resources: self.state.resources.clone(),
+            births_this_tick: self.last_births.len() as u32,
+            deaths_this_tick: self.last_deaths.len() as u32,
+            diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
         }
     }
@@ -848,6 +987,10 @@ pub struct SimulationSnapshot {
     pub building_count: usize,
     pub military_count: usize,
     pub energy_budget: Fixed,
+    pub resources: Resources,
+    pub births_this_tick: u32,
+    pub deaths_this_tick: u32,
+    pub diplomacy_events: Vec<DiplomacyEvent>,
     /// Per-good clearing prices in cents from [`MarketState`].
     pub market_prices: BTreeMap<String, i64>,
 }

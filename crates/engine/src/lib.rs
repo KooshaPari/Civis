@@ -25,8 +25,9 @@ pub mod scenario;
 pub mod spectator;
 
 pub use engine::{
-    Building, BuildingType, Citizen, JobType, MilitaryUnit, Position, Production, ResourceType,
-    Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
+    Building, BuildingType, Citizen, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
+    PopulationEvent, Position, Production, ResourceType, Resources, Simulation, SimulationSnapshot,
+    UnitType, WorldState,
 };
 
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
@@ -227,6 +228,7 @@ mod tests {
             rng_seed: 12345,
             factions: HashMap::new(),
             faction_treasury: HashMap::new(),
+            ..WorldState::default()
         };
         let s2 = WorldState {
             tick: 0,
@@ -235,6 +237,7 @@ mod tests {
             rng_seed: 12345,
             factions: HashMap::new(),
             faction_treasury: HashMap::new(),
+            ..WorldState::default()
         };
 
         let r1 = step(s1, Fixed::from_num(10));

@@ -123,10 +123,10 @@ impl LiveHudSnapshot {
     }
 }
 
-/// Default Civis JSON-RPC WebSocket host (matches `civ-server` `CIVIS_WS_ADDR`).
+/// Default Civis JSON-RPC WebSocket host.
 pub const DEFAULT_WS_HOST: &str = "127.0.0.1";
 
-/// Default Civis JSON-RPC WebSocket port (matches `civ-server` `CIVIS_WS_ADDR`).
+/// Default Civis JSON-RPC WebSocket port.
 pub const DEFAULT_WS_PORT: u16 = 3000;
 
 /// Default Civis JSON-RPC WebSocket path.
@@ -147,10 +147,16 @@ pub fn live_ws_url(host: &str, port: u16, path: &str) -> String {
     format!("ws://{host}:{port}{normalized_path}")
 }
 
-/// Default local attach URL used by `civ-bevy-window` (`127.0.0.1:3000/ws`).
+/// Default local attach URL used by `civ-bevy-window`.
 #[must_use]
 pub fn default_live_ws_url() -> String {
-    live_ws_url(DEFAULT_WS_HOST, DEFAULT_WS_PORT, DEFAULT_WS_PATH)
+    let host = std::env::var("CIV_WS_HOST").unwrap_or_else(|_| DEFAULT_WS_HOST.to_string());
+    let port = std::env::var("CIV_SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(DEFAULT_WS_PORT);
+    let path = std::env::var("CIV_WS_PATH").unwrap_or_else(|_| DEFAULT_WS_PATH.to_string());
+    live_ws_url(&host, port, &path)
 }
 
 /// Parse `CIVIS_WS_BINARY` (`1`, `true`, `yes`, case-insensitive) or fall back to
@@ -185,8 +191,8 @@ pub fn with_tick_format_binary_query(url: &str) -> String {
 /// Resolve the live WebSocket URL from environment variables.
 ///
 /// Precedence:
-/// 1. `CIVIS_WS_URL` — full `ws://…` URL
-/// 2. `CIVIS_WS_ADDR` — `host:port` (same as `civ-server` main), optional `CIVIS_WS_PATH`
+/// 1. `CIV_WS_URL` — full `ws://…` URL
+/// 2. `CIV_SERVER_PORT` plus optional `CIV_WS_HOST` / `CIV_WS_PATH`
 /// 3. [`default_live_ws_url`]
 ///
 /// When [`ws_prefer_binary_from_env`] is true, appends `tick_format=binary`.
@@ -203,37 +209,14 @@ pub fn resolve_live_ws_url() -> String {
 /// Resolve attach URL without the binary broadcast hint query parameter.
 #[must_use]
 pub fn resolve_ws_url_from_env() -> String {
-    if let Ok(full) = std::env::var("CIVIS_WS_URL") {
+    if let Ok(full) = std::env::var("CIV_WS_URL") {
         let trimmed = full.trim();
         if !trimmed.is_empty() {
             return trimmed.to_string();
         }
     }
 
-    if let Ok(addr) = std::env::var("CIVIS_WS_ADDR") {
-        let trimmed = addr.trim();
-        if !trimmed.is_empty() {
-            let path = std::env::var("CIVIS_WS_PATH")
-                .ok()
-                .map(|value| value.trim().to_string())
-                .filter(|value| !value.is_empty())
-                .unwrap_or_else(|| DEFAULT_WS_PATH.to_string());
-            let (host, port) = parse_ws_addr(trimmed);
-            return live_ws_url(host, port, &path);
-        }
-    }
-
     default_live_ws_url()
-}
-
-fn parse_ws_addr(addr: &str) -> (&str, u16) {
-    if let Some((host, port)) = addr.rsplit_once(':') {
-        if !host.is_empty() {
-            let port = port.parse().unwrap_or(DEFAULT_WS_PORT);
-            return (host, port);
-        }
-    }
-    (addr, DEFAULT_WS_PORT)
 }
 
 /// Decode a packed [`ChunkId`] into chunk grid coordinates (live bridge layout).
@@ -635,32 +618,33 @@ mod tests {
 
     #[test]
     fn with_tick_format_binary_query_appends_once() {
+        let base = default_live_ws_url();
         assert_eq!(
-            with_tick_format_binary_query("ws://127.0.0.1:3000/ws"),
-            "ws://127.0.0.1:3000/ws?tick_format=binary"
+            with_tick_format_binary_query(&base),
+            format!("{base}?tick_format=binary")
         );
         assert_eq!(
-            with_tick_format_binary_query("ws://127.0.0.1:3000/ws?role=operator"),
-            "ws://127.0.0.1:3000/ws?role=operator&tick_format=binary"
+            with_tick_format_binary_query(&format!("{base}?role=operator")),
+            format!("{base}?role=operator&tick_format=binary")
         );
         assert_eq!(
-            with_tick_format_binary_query("ws://127.0.0.1:3000/ws?tick_format=binary"),
-            "ws://127.0.0.1:3000/ws?tick_format=binary"
+            with_tick_format_binary_query(&format!("{base}?tick_format=binary")),
+            format!("{base}?tick_format=binary")
         );
     }
 
     #[test]
     fn resolve_ws_url_from_env_parses_addr_and_path() {
         let url = {
-            std::env::set_var("CIVIS_WS_URL", "");
-            std::env::set_var("CIVIS_WS_ADDR", "localhost:8765");
-            std::env::set_var("CIVIS_WS_PATH", "/attach");
+            std::env::set_var("CIV_WS_URL", "");
+            std::env::set_var("CIV_SERVER_PORT", "8765");
+            std::env::set_var("CIV_WS_PATH", "/attach");
             resolve_ws_url_from_env()
         };
-        assert_eq!(url, "ws://localhost:8765/attach");
-        std::env::remove_var("CIVIS_WS_URL");
-        std::env::remove_var("CIVIS_WS_ADDR");
-        std::env::remove_var("CIVIS_WS_PATH");
+        assert_eq!(url, "ws://127.0.0.1:8765/attach");
+        std::env::remove_var("CIV_WS_URL");
+        std::env::remove_var("CIV_SERVER_PORT");
+        std::env::remove_var("CIV_WS_PATH");
     }
 
     #[test]

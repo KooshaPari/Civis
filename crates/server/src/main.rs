@@ -6,10 +6,11 @@ use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
-    let addr: SocketAddr = std::env::var("CIVIS_WS_ADDR")
+    let port = std::env::var("CIV_SERVER_PORT")
         .ok()
         .and_then(|value| value.parse().ok())
-        .unwrap_or_else(|| SocketAddr::from(([127, 0, 0, 1], 3000)));
+        .unwrap_or(3000);
+    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
     let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
         .ok()
         .and_then(|value| value.parse().ok())

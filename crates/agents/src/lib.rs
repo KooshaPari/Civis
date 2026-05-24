@@ -142,6 +142,62 @@ impl CivilianBundle {
     }
 }
 
+/// Spawn a child civilian near a parent position using the supplied RNG.
+#[must_use]
+pub fn child_bundle_from_parent(rng: &mut ChaCha8Rng) -> CivilianBundle {
+    let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+    CivilianBundle {
+        velocity: Velocity {
+            dx: angle.cos(),
+            dy: angle.sin(),
+        },
+        wardrobe: Wardrobe {
+            era: 0,
+            material: MaterialId(0),
+        },
+        tools: Tools {
+            era: 0,
+            material: MaterialId(0),
+        },
+        needs: Needs {
+            food: 0.25,
+            shelter: 0.25,
+            safety: 0.25,
+            belonging: 0.25,
+        },
+        lod: LodTier::Hot,
+    }
+}
+
+/// Spawn a child civilian near the supplied normalized position.
+pub fn spawn_child_near(
+    world: &mut World,
+    id: u64,
+    faction: u32,
+    x: f32,
+    y: f32,
+    rng: &mut ChaCha8Rng,
+) -> hecs::Entity {
+    let nx = (x + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
+    let ny = (y + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
+    spawn_civilian(
+        world,
+        Civilian {
+            id,
+            faction,
+            age: 0,
+        },
+        Position3d {
+            coord: WorldCoord {
+                x: (nx * civ_voxel::FIXED_SCALE as f32) as i64,
+                y: 0,
+                z: (ny * civ_voxel::FIXED_SCALE as f32) as i64,
+            },
+        },
+        child_bundle_from_parent(rng),
+    )
+}
+
 /// Utility-AI action priority derived from unmet needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NeedAction {

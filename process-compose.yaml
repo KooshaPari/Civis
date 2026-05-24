@@ -4,10 +4,10 @@ log_location: .process-compose/process-compose.log
 log_level: info
 
 environment:
-  - RUST_LOG=info
-  - CIV_SERVER_HOST=0.0.0.0
-  - CIV_SERVER_PORT=8080
-  - CIV_METRICS_PORT=9090
+  - RUST_LOG=${RUST_LOG:-info}
+  - CIV_SERVER_HOST=${CIV_SERVER_HOST:-0.0.0.0}
+  - CIV_SERVER_PORT=${CIV_SERVER_PORT:-8080}
+  - CIV_METRICS_PORT=${CIV_METRICS_PORT:-9090}
 
 processes:
   postgres:
@@ -36,7 +36,7 @@ processes:
     readiness_probe:
       exec:
         command: sh
-        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':5432 ' || curl -sf http://127.0.0.1:5432/healthz >/dev/null 2>&1"]
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':5432 ' || curl -sf http://127.0.0.1:${CIV_PG_PORT:-5432}/healthz >/dev/null 2>&1"]
       initial_delay_seconds: 5
       period_seconds: 5
       timeout_seconds: 10
@@ -65,7 +65,7 @@ processes:
     readiness_probe:
       exec:
         command: sh
-        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':6379 ' || curl -sf http://127.0.0.1:6379/healthz >/dev/null 2>&1"]
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':6379 ' || curl -sf http://127.0.0.1:${CIV_DRAGONFLY_PORT:-6379}/healthz >/dev/null 2>&1"]
       initial_delay_seconds: 3
       period_seconds: 5
       timeout_seconds: 10
@@ -91,7 +91,7 @@ processes:
     readiness_probe:
       exec:
         command: sh
-        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':4222 ' || curl -sf http://127.0.0.1:4222/healthz >/dev/null 2>&1"]
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ':4222 ' || curl -sf http://127.0.0.1:${CIV_NATS_PORT:-4222}/healthz >/dev/null 2>&1"]
       initial_delay_seconds: 3
       period_seconds: 5
       timeout_seconds: 10
@@ -104,22 +104,22 @@ processes:
       - |
         mkdir -p .process-compose/data/minio
         if command -v minio >/dev/null 2>&1; then
-          exec minio server .process-compose/data/minio --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+          exec minio server .process-compose/data/minio --address 127.0.0.1:${CIV_MINIO_PORT:-9000} --console-address 127.0.0.1:${CIV_MINIO_CONSOLE_PORT:-9001}
         fi
         if command -v docker >/dev/null 2>&1; then
           exec docker run --rm \
-            -e MINIO_ROOT_USER=civis \
-            -e MINIO_ROOT_PASSWORD=civisroot \
-            -p 9000:9000 \
-            -p 9001:9001 \
+            -e MINIO_ROOT_USER=${CIV_MINIO_ACCESS_KEY} \
+            -e MINIO_ROOT_PASSWORD=${CIV_MINIO_SECRET_KEY} \
+            -p ${CIV_MINIO_PORT:-9000}:${CIV_MINIO_PORT:-9000} \
+            -p ${CIV_MINIO_CONSOLE_PORT:-9001}:${CIV_MINIO_CONSOLE_PORT:-9001} \
             -v "$PWD/.process-compose/data/minio:/data" \
             minio/minio server /data --address 0.0.0.0:9000 --console-address 0.0.0.0:9001
         fi
         echo "minio or docker is required" >&2
         exit 1
     environment:
-      - MINIO_ROOT_USER=civis
-      - MINIO_ROOT_PASSWORD=civisroot
+      - MINIO_ROOT_USER=${CIV_MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${CIV_MINIO_SECRET_KEY}
     availability:
       restart: on_failure
       max_restarts: 5
@@ -127,7 +127,7 @@ processes:
     readiness_probe:
       exec:
         command: sh
-        args: ["-c", "netstat -tulpn 2>/dev/null | grep -Eq ':(9000|9001) ' || curl -sf http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1"]
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -Eq ':(${CIV_MINIO_PORT:-9000}|${CIV_MINIO_CONSOLE_PORT:-9001}) ' || curl -sf http://127.0.0.1:${CIV_MINIO_PORT:-9000}/minio/health/ready >/dev/null 2>&1"]
       initial_delay_seconds: 5
       period_seconds: 5
       timeout_seconds: 10
@@ -144,7 +144,7 @@ processes:
     readiness_probe:
       exec:
         command: sh
-        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q 8080 || curl -s http://localhost:8080/health >/dev/null 2>&1 || true"]
+        args: ["-c", "netstat -tulpn 2>/dev/null | grep -q ${CIV_SERVER_PORT:-8080} || curl -s http://localhost:${CIV_SERVER_PORT:-8080}/health >/dev/null 2>&1 || true"]
       initial_delay_seconds: 3
       period_seconds: 5
       timeout_seconds: 10
@@ -159,7 +159,7 @@ processes:
       - |
         while true; do
           sleep 10
-          curl -s http://localhost:9090/metrics > /tmp/civ-metrics-$(date +%s).txt 2>/dev/null || true
+          curl -s http://localhost:${CIV_METRICS_PORT:-9090}/metrics > /tmp/civ-metrics-$(date +%s).txt 2>/dev/null || true
         done
     depends_on:
       sim-server:

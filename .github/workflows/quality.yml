@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -56,13 +57,14 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm test
-      # web/dashboard has bun.lock locally; CI uses npm — npm ci when package-lock.json is committed, else npm install
+      - name: Dashboard install (bun)
+        working-directory: web/dashboard
+        run: bun install --frozen-lockfile
       - name: Dashboard typecheck and build
         working-directory: web/dashboard
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-          npm run typecheck
-          npx vite build
+          bun run typecheck
+          bun run build
 
   release-benchmarks:
     runs-on: ubuntu-latest

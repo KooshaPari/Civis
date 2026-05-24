@@ -1,0 +1,26 @@
+{
+  "version": "1",
+  "repo": "Civis",
+  "git_sha": "5ec984d24559654973347d88d44935137def3408",
+  "created_at": "2026-05-24T23:43:36Z",
+  "runner": {
+    "rust": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "host": "KOOSHAPARI-DESK"
+  },
+  "gates": {
+    "dashboard_typecheck": {
+      "status": "fail",
+      "detail": "exit 2"
+    },
+    "web_test": {
+      "status": "pass",
+      "detail": ""
+    },
+    "civis_3d_verify": {
+      "status": "fail",
+      "detail": "exit 101"
+    }
+  },
+  "manifest_hash": "4887472f973bf61bbe6c7ec426ae1d34dfc60a49307204fb16bf2527a21527e3"
+}
+

@@ -1,8 +1,9 @@
 # Civis Unreal 5 visual showcase
 
-## Open question
+## EULA decision (resolved 2026-05-23)
 
-Ship under the standard Epic EULA, which carries royalty surface, or constrain this to a shell-only renderer with no game logic in UE5 so the royalty surface stays minimized. That decision should be made before the MVP hardens.
+Ships under the **standard Epic EULA** with full game logic in UE5.
+Royalty surface accepted per owner decision.
 
 ## Run instructions
 

@@ -113,3 +113,27 @@ test("parseDiplomacyEvents reads civ-watch diplomacy_events", () => {
   assert.equal(events.length, 1);
   assert.equal(events[0].kind, "TradeAgreement");
 });
+
+function parseRoadKind(kind) {
+  if (kind === "Trail" || kind === "Dirt" || kind === "Paved" || kind === "Highway") return kind;
+  return "Dirt";
+}
+
+function parseRoads(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => ({
+    from: [Number(row.from?.[0] ?? 0), Number(row.from?.[1] ?? 0)],
+    to: [Number(row.to?.[0] ?? 0), Number(row.to?.[1] ?? 0)],
+    width: Number(row.width ?? 0.02),
+    kind: parseRoadKind(row.kind),
+  }));
+}
+
+test("parseRoads reads civ-watch roads array", () => {
+  const roads = parseRoads([
+    { from: [0.1, 0.2], to: [0.5, 0.6], width: 0.03, kind: "Paved" },
+  ]);
+  assert.equal(roads.length, 1);
+  assert.equal(roads[0].kind, "Paved");
+  assert.equal(roads[0].from[0], 0.1);
+});

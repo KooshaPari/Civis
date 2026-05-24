@@ -1,5 +1,4 @@
 import type {
-  Biome,
   Building,
   CivPin,
   DiplomacyEvent,
@@ -8,8 +7,11 @@ import type {
   Faction,
   InstitutionRow,
   PopulationPulse,
+  Road,
+  RoadKind,
   Snapshot,
   TimeSpeed,
+  TradeRoute,
 } from "../store";
 
 /** Merge `sim.snapshot` JSON (with optional spectator fields) into dashboard `Snapshot`. */
@@ -18,16 +20,20 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
   const civPins = parseCivPins(r.civ_pins);
   const factions = parseFactions(r.factions);
   const buildings = parseBuildings(r.buildings);
+  const roads = parseRoads(r.roads);
+  const trade_routes = parseTradeRoutes(r.trade_routes);
   return {
     tick: Number(r.tick ?? 0),
-    tick_dt_ms: 100,
+    tick_dt_ms: Number(r.tick_dt_ms ?? 100),
     population: Number(r.population ?? 0),
-    voxel_dirty_count: 0,
-    voxel_chunk_count: 0,
+    voxel_dirty_count: Number(r.voxel_dirty_count ?? 0),
+    voxel_chunk_count: Number(r.voxel_chunk_count ?? 0),
     sample_civilians: [],
     civ_pins: civPins,
     factions,
     buildings,
+    roads,
+    trade_routes,
     births_this_tick: Number(r.births_this_tick ?? 0),
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
@@ -189,4 +195,37 @@ function parseBuildingKind(kind: unknown): Building["kind"] {
   if (kind === "Industrial") return "Industrial";
   if (kind === "Civic") return "Civic";
   return "Residential";
+}
+
+function parseRoadKind(kind: unknown): RoadKind {
+  if (kind === "Trail" || kind === "Dirt" || kind === "Paved" || kind === "Highway") return kind;
+  return "Dirt";
+}
+
+function parseRoads(raw: unknown): Road[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    const from = item.from as number[] | undefined;
+    const to = item.to as number[] | undefined;
+    return {
+      from: [Number(from?.[0] ?? 0), Number(from?.[1] ?? 0)] as [number, number],
+      to: [Number(to?.[0] ?? 0), Number(to?.[1] ?? 0)] as [number, number],
+      width: Number(item.width ?? 0.02),
+      kind: parseRoadKind(item.kind),
+    };
+  });
+}
+
+function parseTradeRoutes(raw: unknown): TradeRoute[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      from_faction: Number(item.from_faction ?? 0),
+      to_faction: Number(item.to_faction ?? 0),
+      goods: String(item.goods ?? ""),
+      volume: Number(item.volume ?? 0),
+    };
+  });
 }

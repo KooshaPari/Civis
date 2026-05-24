@@ -48,6 +48,8 @@ type SceneRefs = {
   buildings: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   tradeRoutes: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial>[];
+  effects: THREE.Group | null;
+  transientSprites: THREE.Sprite[];
   activeTerrain: Terrain | null;
   currentTerrainSize: number;
   terrainWorldSize: number;
@@ -57,6 +59,7 @@ type SceneRefs = {
   previousSnapshot: Snapshot | null;
   currentSnapshot: Snapshot | null;
   snapshotReceivedAt: number;
+  spawnBurst?: (x: number, y: number, color: number, label?: string) => void;
 };
 
 export function Scene3d() {
@@ -75,6 +78,8 @@ export function Scene3d() {
     buildings: [],
     roads: [],
     tradeRoutes: [],
+    effects: null,
+    transientSprites: [],
     activeTerrain: null,
     currentTerrainSize: 0,
     terrainWorldSize: 0,
@@ -134,6 +139,9 @@ export function Scene3d() {
     scene.add(roadGroup);
     const tradeRouteGroup = new THREE.Group();
     scene.add(tradeRouteGroup);
+    const effectGroup = new THREE.Group();
+    scene.add(effectGroup);
+    refs.current.effects = effectGroup;
 
     const civilianGroup = new THREE.Group();
     scene.add(civilianGroup);
@@ -268,6 +276,11 @@ export function Scene3d() {
       const snapshot = stateRef.current.snapshot;
       if (!terrain) return;
       const factions = snapshot?.factions ?? [];
+      const conflicted = new Set(
+        snapshot?.diplomacy_events
+          ?.filter((event) => event.kind === "Conflict")
+          .flatMap((event) => [event.faction_a, event.faction_b]) ?? [],
+      );
       while (refs.current.territories.length < factions.length) {
         const mesh = new THREE.Mesh(
           new THREE.CircleGeometry(1, 64),
@@ -301,7 +314,8 @@ export function Scene3d() {
         );
         mesh.scale.setScalar(faction.radius);
         mesh.material.color.setRGB(faction.color[0] / 255, faction.color[1] / 255, faction.color[2] / 255);
-        mesh.material.opacity = 0.12 + index * 0.03;
+        mesh.material.opacity = conflicted.has(faction.id) ? 0.3 : 0.12 + index * 0.03;
+        mesh.material.color.setHex(conflicted.has(faction.id) ? 0xff4d4d : mesh.material.color.getHex());
       });
     };
 
@@ -431,6 +445,18 @@ export function Scene3d() {
       refs.current.targetDayFactor = target;
     };
 
+    refs.current.spawnBurst = (x: number, y: number, color: number, label?: string) => {
+      const terrain = refs.current.activeTerrain;
+      if (!terrain || !refs.current.effects) return;
+      const sprite = createEffectSprite(label ?? "", color);
+      sprite.position.set(x * terrain.size - terrain.size / 2, terrainHeightAt(terrain, x, y) + 1.4, y * terrain.size - terrain.size / 2);
+      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).bornAt = performance.now();
+      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).rise = 0.8;
+      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).fadeAt = performance.now() + 3000;
+      refs.current.effects.add(sprite);
+      refs.current.transientSprites.push(sprite);
+    };
+
     const onPointerDown = async (event: PointerEvent) => {
       const terrain = refs.current.activeTerrain;
       const terrainMesh = refs.current.terrainMesh;
@@ -512,6 +538,7 @@ export function Scene3d() {
         animateDecorations(refs.current, terrain, performance.now());
         updateInterpolatedCivilians(refs.current, terrain, performance.now());
         animateTradeRoutes(refs.current, performance.now());
+        updateEffects(refs.current, terrain, performance.now());
       }
       controls.update();
       renderer.render(scene, camera);
@@ -545,6 +572,7 @@ export function Scene3d() {
       tradeRouteGroup.clear();
       civilianGroup.clear();
       buildingGroup.clear();
+      refs.current.spawnBurst = undefined;
       disposeScene(scene);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
@@ -559,6 +587,21 @@ export function Scene3d() {
       refs.current.previousSnapshot = refs.current.currentSnapshot;
       refs.current.currentSnapshot = state.snapshot;
       refs.current.snapshotReceivedAt = performance.now();
+      const burst = refs.current.spawnBurst;
+      if (burst) {
+        state.snapshot.birth_events.forEach((event) => burst(event.x, event.y, 0x7ed957));
+        state.snapshot.death_events.forEach((event) => burst(event.x, event.y, 0xff6b6b));
+        state.snapshot.diplomacy_events.forEach((event) => {
+          const faction = state.snapshot?.factions.find((item) => item.id === event.faction_a) ?? state.snapshot?.factions[0];
+          if (!faction) return;
+          burst(
+            faction.capital[0],
+            faction.capital[1],
+            event.kind === "Conflict" ? 0xff4d4d : 0xf5d76e,
+            event.kind === "Conflict" ? "Conflict!" : event.kind === "TradeAgreement" ? "Trade Agreement!" : "Peace",
+          );
+        });
+      }
     }
     updateCiviliansFromRefs(refs.current, performance.now());
     updateFactionsFromRefs(refs.current, state.snapshot);
@@ -703,6 +746,55 @@ function animateTradeRoutes(refs: SceneRefs, now: number) {
     if (!line.visible) return;
     (line.material as any).dashOffset = -(time * 0.8 + index * 0.15);
   });
+}
+
+function updateEffects(refs: SceneRefs, terrain: Terrain, now: number) {
+  if (!refs.effects) return;
+  const live: THREE.Sprite[] = [];
+  refs.transientSprites.forEach((sprite) => {
+    const data = sprite.userData as { bornAt: number; fadeAt: number; rise: number };
+    const age = now - data.bornAt;
+    const life = 3000;
+    if (age >= life) {
+      refs.effects?.remove(sprite);
+      sprite.material.dispose();
+      sprite.material.map?.dispose();
+      return;
+    }
+    sprite.position.y += data.rise * 0.01;
+    const remaining = 1 - age / life;
+    (sprite.material as THREE.SpriteMaterial).opacity = remaining;
+    sprite.scale.setScalar(0.8 + remaining * 0.8);
+    live.push(sprite);
+  });
+  refs.transientSprites = live;
+}
+
+function createEffectSprite(label: string, color: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(10, 14, 20, 0.0)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
+    ctx.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+    ctx.font = "bold 28px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+  });
+  return new THREE.Sprite(material);
 }
 
 function interpolateCivPin(refs: SceneRefs, index: number, now: number) {

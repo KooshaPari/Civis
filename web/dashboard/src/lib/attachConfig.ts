@@ -59,7 +59,7 @@ export function resolveBrowserWsUrl(search = ""): string {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
       url = `${proto}//${window.location.host}/ws`;
     } else {
-      url = "ws://127.0.0.1:3000/ws";
+      url = `ws://127.0.0.1:${import.meta.env.VITE_CIV_SERVER_PORT ?? "3000"}/ws`;
     }
   }
   if (resolveWsPreferBinary(search)) {

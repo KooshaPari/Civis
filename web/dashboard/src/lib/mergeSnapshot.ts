@@ -25,6 +25,11 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
     civ_pins: civPins,
     factions,
     buildings,
+    births_this_tick: Number(r.births_this_tick ?? 0),
+    deaths_this_tick: Number(r.deaths_this_tick ?? 0),
+    diplomacy_events: [],
+    birth_events: [],
+    death_events: [],
     is_day: Boolean(r.is_day ?? true),
     economy: parseEconomyForServer(r),
     speed,
@@ -65,7 +70,13 @@ function parseEconomy(raw: unknown): EconomySnapshot {
       metal_per_tick: Number(production.metal_per_tick ?? 0),
       energy_per_tick: Number(production.energy_per_tick ?? 0),
     },
-    institutions: parseInstitutions(r.institutions),
+    institutions: parseInstitutions(r.institutions ?? (r.economy as Record<string, unknown> | undefined)?.institutions),
+    resources: {
+      food: Number((r.resources as Record<string, unknown> | undefined)?.food ?? 0),
+      wood: Number((r.resources as Record<string, unknown> | undefined)?.wood ?? 0),
+      metal: Number((r.resources as Record<string, unknown> | undefined)?.metal ?? 0),
+      energy: Number((r.resources as Record<string, unknown> | undefined)?.energy ?? 0),
+    },
   };
 }
 

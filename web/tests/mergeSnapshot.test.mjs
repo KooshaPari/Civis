@@ -38,3 +38,41 @@ test("parseInstitutions shape for sim.snapshot", () => {
   assert.equal(rows.length, 2);
   assert.equal(rows[0].kind, "market");
 });
+
+/** Institutions may be top-level on sim.snapshot or nested under economy (civ-watch SSE). */
+function parseInstitutions(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => ({
+    id: Number(row.id ?? 0),
+    kind: String(row.kind ?? "unknown"),
+    balance_joules: Number(row.balance_joules ?? 0),
+  }));
+}
+
+function parseEconomyInstitutions(r) {
+  return parseInstitutions(
+    r.institutions ?? r.economy?.institutions,
+  );
+}
+
+test("parseEconomyInstitutions reads nested economy.institutions", () => {
+  const rows = parseEconomyInstitutions({
+    economy: {
+      institutions: [{ id: 2, kind: "treasury", balance_joules: 99 }],
+    },
+  });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].kind, "treasury");
+  assert.equal(rows[0].balance_joules, 99);
+});
+
+test("parseEconomyInstitutions prefers top-level institutions", () => {
+  const rows = parseEconomyInstitutions({
+    institutions: [{ id: 1, kind: "market", balance_joules: 5 }],
+    economy: {
+      institutions: [{ id: 2, kind: "treasury", balance_joules: 99 }],
+    },
+  });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].kind, "market");
+});

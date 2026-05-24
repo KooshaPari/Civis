@@ -45,6 +45,12 @@ export function TopBar() {
           </>
         )}
       </div>
+      <div className="resource-strip" aria-label="Resource levels">
+        <ResourceBar label="Food" value={state.snapshot?.economy.resources.food ?? 0} tone="food" />
+        <ResourceBar label="Wood" value={state.snapshot?.economy.resources.wood ?? 0} tone="wood" />
+        <ResourceBar label="Metal" value={state.snapshot?.economy.resources.metal ?? 0} tone="metal" />
+        <ResourceBar label="Energy" value={state.snapshot?.economy.resources.energy ?? 0} tone="energy" />
+      </div>
       <div className="top-actions">
         <button
           type="button"
@@ -80,6 +86,26 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     <article className="metric-card">
       <span>{label}</span>
       <strong>{value}</strong>
+    </article>
+  );
+}
+
+function ResourceBar({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "food" | "wood" | "metal" | "energy";
+}) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <article className={`resource-bar ${tone}`}>
+      <span>{label}</span>
+      <div className="resource-track">
+        <div className="resource-fill" style={{ width: `${pct}%` }} />
+      </div>
     </article>
   );
 }

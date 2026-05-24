@@ -2,8 +2,10 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const WATCH = process.env.CIVIS_WATCH_HTTP ?? "http://127.0.0.1:9090";
-const SERVER = process.env.CIVIS_SERVER_HTTP ?? "http://127.0.0.1:3000";
+const WATCH_PORT = process.env.CIV_WATCH_PORT ?? "9090";
+const SERVER_PORT = process.env.CIV_SERVER_PORT ?? "3000";
+const WATCH = process.env.VITE_CIVIS_WATCH_HTTP ?? `http://127.0.0.1:${WATCH_PORT}`;
+const SERVER = process.env.VITE_CIVIS_SERVER_HTTP ?? `http://127.0.0.1:${SERVER_PORT}`;
 
 export default defineConfig({
   plugins: [react()],

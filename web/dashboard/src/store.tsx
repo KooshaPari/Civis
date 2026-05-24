@@ -91,6 +91,30 @@ export type EconomySnapshot = {
   faction_treasury: FactionTreasury[];
   production_rates: ProductionRates;
   institutions: InstitutionRow[];
+  resources: ResourceSnapshot;
+};
+
+export type ResourceSnapshot = {
+  food: number;
+  wood: number;
+  metal: number;
+  energy: number;
+};
+
+export type PopulationPulse = {
+  tick: number;
+  entity_id: number;
+  x: number;
+  y: number;
+};
+
+export type DiplomacyKind = "TradeAgreement" | "Conflict" | "Peace";
+
+export type DiplomacyEvent = {
+  tick: number;
+  faction_a: number;
+  faction_b: number;
+  kind: DiplomacyKind;
 };
 
 export type Snapshot = {
@@ -106,6 +130,11 @@ export type Snapshot = {
   roads?: Road[];
   trade_routes?: TradeRoute[];
   economy: EconomySnapshot;
+  births_this_tick: number;
+  deaths_this_tick: number;
+  diplomacy_events: DiplomacyEvent[];
+  birth_events: PopulationPulse[];
+  death_events: PopulationPulse[];
   is_day: boolean;
   speed: TimeSpeed;
 };

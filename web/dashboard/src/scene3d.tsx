@@ -2,7 +2,16 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { postControl } from "./control";
-import { Biome, Building, CivPin, Faction, Snapshot, Terrain, useDashboardStore } from "./store";
+import {
+  Biome,
+  Building,
+  CivPin,
+  Faction,
+  Road,
+  Snapshot,
+  Terrain,
+  useDashboardStore,
+} from "./store";
 
 const BIOME_COLORS: Record<Biome, number> = {
   deepwater: 0x0e2659,
@@ -30,12 +39,19 @@ const TERRAIN_HEIGHT_SCALE = 12;
 type SceneRefs = {
   terrainMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
   waterMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
+  decorationGroup: THREE.Group | null;
+  treeInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
+  rockInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
+  snowPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   territories: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>[];
   buildings: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
+  roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
+  tradeRoutes: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial>[];
   activeTerrain: Terrain | null;
   currentTerrainSize: number;
   terrainWorldSize: number;
+  terrainBaseColors: Float32Array | null;
   targetDayFactor: number;
   dayFactor: number;
   previousSnapshot: Snapshot | null;
@@ -50,12 +66,19 @@ export function Scene3d() {
   const refs = useRef<SceneRefs>({
     terrainMesh: null,
     waterMesh: null,
+    decorationGroup: null,
+    treeInstances: null,
+    rockInstances: null,
+    snowPoints: null,
     civilians: [],
     territories: [],
     buildings: [],
+    roads: [],
+    tradeRoutes: [],
     activeTerrain: null,
     currentTerrainSize: 0,
     terrainWorldSize: 0,
+    terrainBaseColors: null,
     targetDayFactor: 1,
     dayFactor: 1,
     previousSnapshot: null,
@@ -107,6 +130,10 @@ export function Scene3d() {
     scene.add(terrainGroup);
     const territoryGroup = new THREE.Group();
     scene.add(territoryGroup);
+    const roadGroup = new THREE.Group();
+    scene.add(roadGroup);
+    const tradeRouteGroup = new THREE.Group();
+    scene.add(tradeRouteGroup);
 
     const civilianGroup = new THREE.Group();
     scene.add(civilianGroup);
@@ -128,6 +155,29 @@ export function Scene3d() {
         disposeMesh(refs.current.waterMesh);
         refs.current.waterMesh = null;
       }
+      if (refs.current.decorationGroup) {
+        terrainGroup.remove(refs.current.decorationGroup);
+        disposeObject(refs.current.decorationGroup);
+        refs.current.decorationGroup = null;
+        refs.current.treeInstances = null;
+        refs.current.rockInstances = null;
+        refs.current.snowPoints = null;
+      }
+      if (refs.current.treeInstances) {
+        terrainGroup.remove(refs.current.treeInstances);
+        disposeObject(refs.current.treeInstances);
+        refs.current.treeInstances = null;
+      }
+      if (refs.current.rockInstances) {
+        terrainGroup.remove(refs.current.rockInstances);
+        disposeObject(refs.current.rockInstances);
+        refs.current.rockInstances = null;
+      }
+      if (refs.current.snowPoints) {
+        terrainGroup.remove(refs.current.snowPoints);
+        disposeObject(refs.current.snowPoints);
+        refs.current.snowPoints = null;
+      }
 
       const geometry = new THREE.PlaneGeometry(terrain.size, terrain.size, terrain.size - 1, terrain.size - 1);
       geometry.rotateX(-Math.PI / 2);
@@ -144,6 +194,7 @@ export function Scene3d() {
         }
       }
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      refs.current.terrainBaseColors = colors.slice();
       geometry.computeVertexNormals();
 
       const terrainMaterial = new THREE.MeshStandardMaterial({
@@ -171,6 +222,7 @@ export function Scene3d() {
       waterMesh.receiveShadow = true;
       terrainGroup.add(waterMesh);
       refs.current.waterMesh = waterMesh;
+      buildDecorations(terrain, terrainGroup, refs.current);
       controls.target.set(0, terrain.size * 0.12, 0);
       camera.position.set(terrain.size * 0.25, terrain.size * 1.7, terrain.size * 1.6);
       camera.lookAt(controls.target);
@@ -292,6 +344,88 @@ export function Scene3d() {
       });
     };
 
+    const updateRoads = () => {
+      const terrain = refs.current.activeTerrain;
+      const snapshot = stateRef.current.snapshot;
+      if (!terrain) return;
+      const roads = snapshot?.roads ?? [];
+      while (refs.current.roads.length < roads.length) {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshStandardMaterial({ roughness: 0.96, metalness: 0.01 }),
+        );
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        roadGroup.add(mesh);
+        refs.current.roads.push(mesh);
+      }
+      refs.current.roads.forEach((mesh, index) => {
+        const road = roads[index];
+        if (!road) {
+          mesh.visible = false;
+          return;
+        }
+        mesh.visible = true;
+        const segment = roadSegment(terrain, road.from, road.to);
+        const [startX, startZ, endX, endZ, length, angle] = segment;
+        mesh.position.set((startX + endX) * 0.5, roadHeight(terrain, road.from, road.to), (startZ + endZ) * 0.5);
+        mesh.rotation.set(0, angle, 0);
+        mesh.scale.set(length, 0.08, road.width);
+        mesh.material.color.setHex(roadColor(road.kind));
+      });
+    };
+
+    const updateTradeRoutes = () => {
+      const terrain = refs.current.activeTerrain;
+      const snapshot = stateRef.current.snapshot;
+      if (!terrain) return;
+      const routes = snapshot?.trade_routes ?? [];
+      while (refs.current.tradeRoutes.length < routes.length) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0)]);
+        const material = new THREE.LineDashedMaterial({
+          color: 0xffffff,
+          dashSize: 0.45,
+          gapSize: 0.25,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances();
+        tradeRouteGroup.add(line);
+        refs.current.tradeRoutes.push(line);
+      }
+      refs.current.tradeRoutes.forEach((line, index) => {
+        const route = routes[index];
+        if (!route) {
+          line.visible = false;
+          return;
+        }
+        const from = factionById(snapshot?.factions ?? [], route.from_faction);
+        const to = factionById(snapshot?.factions ?? [], route.to_faction);
+        if (!from || !to) {
+          line.visible = false;
+          return;
+        }
+        line.visible = true;
+        const fromX = from.capital[0] * terrain.size - terrain.size / 2;
+        const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
+        const toX = to.capital[0] * terrain.size - terrain.size / 2;
+        const toZ = to.capital[1] * terrain.size - terrain.size / 2;
+        const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+        const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const dz = toZ - fromZ;
+        const length = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        line.position.set((fromX + toX) * 0.5, (fromY + toY) * 0.5, (fromZ + toZ) * 0.5);
+        line.scale.set(length, 1, 1);
+        line.rotation.set(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)), Math.atan2(-dz, dx), 0);
+        line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
+        line.computeLineDistances();
+      });
+    };
+
     const applyDayNight = () => {
       const target = stateRef.current.snapshot?.is_day === false ? 0.3 : 1;
       refs.current.targetDayFactor = target;
@@ -328,34 +462,18 @@ export function Scene3d() {
       const worldZ = cellY * SCALE;
       const worldY = Math.max(0, Math.round(hit.point.y)) * SCALE;
 
-      try {
-        if (current.selectedTool === "SpawnCivilian") {
-          await postControl("/control/spawn_civilian", {
-            x: normX,
-            y: normY,
-            faction: 0,
-          });
-        } else if (current.selectedTool === "DamageBomb") {
-          await postControl("/control/damage", {
-            x: worldX,
-            y: worldY,
-            z: worldZ,
-            radius: current.damageRadius,
-            energy: 100,
-          });
-        } else if (current.selectedTool === "InspectAgent") {
-          dispatch({ type: "set_toast", message: `Terrain cell ${basePayload.x}, ${basePayload.y}` });
-        } else {
-          await postControl("/control/place_voxel", {
-            x: worldX,
-            y: worldY,
-            z: worldZ,
-            material: current.selectedMaterial,
-          });
-        }
-      } catch {
-        dispatch({ type: "set_toast", message: `Failed to ${controlLabel(current.selectedTool)}` });
+      if (current.readOnly || current.selectedTool !== "InspectAgent") {
+        if (current.selectedTool === "Camera") return;
+        dispatch({
+          type: "set_toast",
+          message: `Cell ${basePayload.x}, ${basePayload.y} (read-only spectator)`,
+        });
+        return;
       }
+      dispatch({
+        type: "set_toast",
+        message: `Terrain cell ${basePayload.x}, ${basePayload.y}`,
+      });
     };
 
     const resizeRenderer = () => {
@@ -391,7 +509,9 @@ export function Scene3d() {
         fog.color.copy(bg);
         fog.near = terrain.size * 0.8;
         fog.far = terrain.size * 2.5;
+        animateDecorations(refs.current, terrain, performance.now());
         updateInterpolatedCivilians(refs.current, terrain, performance.now());
+        animateTradeRoutes(refs.current, performance.now());
       }
       controls.update();
       renderer.render(scene, camera);
@@ -406,6 +526,8 @@ export function Scene3d() {
       updateCivilians();
       updateFactions();
       updateBuildings();
+      updateRoads();
+      updateTradeRoutes();
       applyDayNight();
       animate();
     };
@@ -419,6 +541,8 @@ export function Scene3d() {
       controls.dispose();
       terrainGroup.clear();
       territoryGroup.clear();
+      roadGroup.clear();
+      tradeRouteGroup.clear();
       civilianGroup.clear();
       buildingGroup.clear();
       disposeScene(scene);
@@ -439,6 +563,8 @@ export function Scene3d() {
     updateCiviliansFromRefs(refs.current, performance.now());
     updateFactionsFromRefs(refs.current, state.snapshot);
     updateBuildingsFromRefs(refs.current, state.snapshot);
+    updateRoadsFromRefs(refs.current, state.snapshot);
+    updateTradeRoutesFromRefs(refs.current, state.snapshot);
     refs.current.targetDayFactor = state.snapshot?.is_day === false ? 0.3 : 1;
   }, [state.snapshot]);
 
@@ -516,6 +642,69 @@ function updateBuildingsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
   });
 }
 
+function updateRoadsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
+  const terrain = refs.activeTerrain;
+  if (!terrain) return;
+  const roads = snapshot?.roads ?? [];
+  refs.roads.forEach((mesh, index) => {
+    const road = roads[index];
+    if (!road) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = true;
+    const segment = roadSegment(terrain, road.from, road.to);
+    const [startX, startZ, endX, endZ, length, angle] = segment;
+    mesh.position.set((startX + endX) * 0.5, roadHeight(terrain, road.from, road.to), (startZ + endZ) * 0.5);
+    mesh.rotation.set(0, angle, 0);
+    mesh.scale.set(length, 0.08, road.width);
+    mesh.material.color.setHex(roadColor(road.kind));
+  });
+}
+
+function updateTradeRoutesFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
+  const terrain = refs.activeTerrain;
+  if (!terrain) return;
+  const routes = snapshot?.trade_routes ?? [];
+  refs.tradeRoutes.forEach((line, index) => {
+    const route = routes[index];
+    if (!route) {
+      line.visible = false;
+      return;
+    }
+    const from = factionById(snapshot?.factions ?? [], route.from_faction);
+    const to = factionById(snapshot?.factions ?? [], route.to_faction);
+    if (!from || !to) {
+      line.visible = false;
+      return;
+    }
+    line.visible = true;
+    const fromX = from.capital[0] * terrain.size - terrain.size / 2;
+    const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
+    const toX = to.capital[0] * terrain.size - terrain.size / 2;
+    const toZ = to.capital[1] * terrain.size - terrain.size / 2;
+    const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+    const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const dz = toZ - fromZ;
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+    line.position.set((fromX + toX) * 0.5, (fromY + toY) * 0.5, (fromZ + toZ) * 0.5);
+    line.scale.set(length, 1, 1);
+    line.rotation.set(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)), Math.atan2(-dz, dx), 0);
+    line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
+    line.computeLineDistances();
+  });
+}
+
+function animateTradeRoutes(refs: SceneRefs, now: number) {
+  const time = now * 0.001;
+  refs.tradeRoutes.forEach((line, index) => {
+    if (!line.visible) return;
+    (line.material as any).dashOffset = -(time * 0.8 + index * 0.15);
+  });
+}
+
 function interpolateCivPin(refs: SceneRefs, index: number, now: number) {
   const current = refs.currentSnapshot;
   if (!current) return { x: 0, y: 0 };
@@ -532,17 +721,62 @@ function interpolateCivPin(refs: SceneRefs, index: number, now: number) {
 }
 
 async function terrainLoader(): Promise<Terrain> {
-  const response = await fetch("/terrain");
+  const cachedEtag = localStorage.getItem("civis-terrain-etag");
+  const headers: HeadersInit = {};
+  if (cachedEtag) {
+    headers["If-None-Match"] = cachedEtag;
+  }
+  const response = await fetch("/terrain", { headers });
+  if (response.status === 304 && cachedEtag) {
+    const cachedBody = localStorage.getItem("civis-terrain-body");
+    if (cachedBody) {
+      return JSON.parse(cachedBody) as Terrain;
+    }
+  }
   if (!response.ok) {
     throw new Error(`GET /terrain failed with ${response.status}`);
   }
-  return (await response.json()) as Terrain;
+  const etag = response.headers.get("ETag");
+  const body = await response.text();
+  if (etag) {
+    localStorage.setItem("civis-terrain-etag", etag);
+    localStorage.setItem("civis-terrain-body", body);
+  }
+  return JSON.parse(body) as Terrain;
 }
 
 function terrainHeightAt(terrain: Terrain, x: number, y: number) {
   const ix = clampIndex(Math.floor(x), terrain.size);
   const iy = clampIndex(Math.floor(y), terrain.size);
   return terrain.heights[iy * terrain.size + ix] * TERRAIN_HEIGHT_SCALE;
+}
+
+function roadHeight(terrain: Terrain, from: [number, number], to: [number, number]) {
+  return Math.max(terrainHeightAt(terrain, from[0], from[1]), terrainHeightAt(terrain, to[0], to[1])) + 0.06;
+}
+
+function roadSegment(terrain: Terrain, from: [number, number], to: [number, number]) {
+  const startX = from[0] * terrain.size - terrain.size / 2;
+  const startZ = from[1] * terrain.size - terrain.size / 2;
+  const endX = to[0] * terrain.size - terrain.size / 2;
+  const endZ = to[1] * terrain.size - terrain.size / 2;
+  const dx = endX - startX;
+  const dz = endZ - startZ;
+  const length = Math.sqrt(dx * dx + dz * dz) || 1;
+  const angle = Math.atan2(dz, dx);
+  return [startX, startZ, endX, endZ, length, angle] as const;
+}
+
+function roadColor(kind: Road["kind"]) {
+  switch (kind) {
+    case "Trail":
+    case "Dirt":
+      return 0x8b6a42;
+    case "Paved":
+      return 0x8d9299;
+    case "Highway":
+      return 0x45484c;
+  }
 }
 
 function clampIndex(value: number, size: number) {
@@ -598,15 +832,31 @@ function disposeMesh(mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THR
   }
 }
 
+function disposeObject(object: THREE.Object3D) {
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh || child instanceof THREE.InstancedMesh || child instanceof THREE.Points) {
+      child.geometry.dispose();
+      const material = child.material;
+      if (Array.isArray(material)) {
+        material.forEach((m) => m.dispose());
+      } else if (material) {
+        material.dispose();
+      }
+    }
+  });
+}
+
 function disposeScene(scene: THREE.Scene) {
   scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
-    const mesh = object as THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
-    if (mesh.geometry) mesh.geometry.dispose();
-    if (Array.isArray(mesh.material)) {
-      mesh.material.forEach((material) => material.dispose());
-    } else if (mesh.material) {
-      mesh.material.dispose();
+    const anyObject = object as THREE.Object3D & {
+      geometry?: THREE.BufferGeometry;
+      material?: THREE.Material | THREE.Material[];
+    };
+    if (anyObject.geometry) anyObject.geometry.dispose();
+    if (Array.isArray(anyObject.material)) {
+      anyObject.material.forEach((material) => material.dispose());
+    } else if (anyObject.material) {
+      anyObject.material.dispose();
     }
   });
 }
@@ -619,4 +869,212 @@ function updateShadowBounds(light: THREE.DirectionalLight, terrainSize: number) 
   camera.top = extent;
   camera.bottom = -extent;
   camera.updateProjectionMatrix();
+}
+
+function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: SceneRefs) {
+  const rng = createTerrainRng(terrain);
+  const treeCandidates: Array<{ x: number; y: number; height: number }> = [];
+  const rockCandidates: Array<{ x: number; y: number; height: number }> = [];
+  const snowCells: Array<{ x: number; y: number; height: number }> = [];
+
+  for (let y = 0; y < terrain.size; y += 1) {
+    for (let x = 0; x < terrain.size; x += 1) {
+      const idx = y * terrain.size + x;
+      const biome = terrain.biomes[idx];
+      const height = terrain.heights[idx] * TERRAIN_HEIGHT_SCALE;
+      if (biome === "forest") treeCandidates.push({ x, y, height });
+      if (biome === "stone") rockCandidates.push({ x, y, height });
+      if (biome === "snow") snowCells.push({ x, y, height });
+    }
+  }
+
+  const treeCount = Math.min(2000, Math.floor(treeCandidates.length * 0.55));
+  const rockCount = Math.min(500, Math.floor(rockCandidates.length * 0.45));
+  const snowCount = Math.min(200, snowCells.length ? 200 : 0);
+
+  if (treeCount > 0) {
+    const trunkGeo = new THREE.CylinderGeometry(0.08, 0.11, 0.65, 6);
+    const canopyGeo = new THREE.ConeGeometry(0.55, 1.4, 7);
+    const treeGroup = new THREE.Group();
+    const canopyMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x6a4a2f, roughness: 1, metalness: 0 });
+    const trunk = new THREE.InstancedMesh(trunkGeo, trunkMaterial, treeCount);
+    const canopy = new THREE.InstancedMesh(canopyGeo, canopyMaterial, treeCount);
+    trunk.castShadow = true;
+    canopy.castShadow = true;
+    const trunkMatrix = new THREE.Matrix4();
+    const canopyMatrix = new THREE.Matrix4();
+    const color = new THREE.Color();
+    for (let i = 0; i < treeCount; i += 1) {
+      const cell = treeCandidates[Math.floor(rng() * treeCandidates.length)];
+      const scale = 0.8 + rng() * 0.4;
+      const wx = cell.x - terrain.size / 2 + (rng() - 0.5) * 0.35;
+      const wz = cell.y - terrain.size / 2 + (rng() - 0.5) * 0.35;
+      const wy = cell.height + 0.08;
+      trunkMatrix.compose(
+        new THREE.Vector3(wx, wy + 0.3 * scale, wz),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rng() * Math.PI * 2, 0)),
+        new THREE.Vector3(scale * 0.8, scale, scale * 0.8),
+      );
+      canopyMatrix.compose(
+        new THREE.Vector3(wx, wy + 1.1 * scale, wz),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rng() * Math.PI * 2, 0)),
+        new THREE.Vector3(scale, scale, scale),
+      );
+      trunk.setMatrixAt(i, trunkMatrix);
+      const green = 0x2d5a1e + Math.floor(rng() * (0x4a8c32 - 0x2d5a1e));
+      color.setHex(green);
+      canopy.setMatrixAt(i, canopyMatrix);
+      canopy.setColorAt(i, color);
+    }
+    canopy.instanceColor!.needsUpdate = true;
+    trunk.instanceMatrix.needsUpdate = true;
+    canopy.instanceMatrix.needsUpdate = true;
+    treeGroup.add(trunk, canopy);
+    terrainGroup.add(treeGroup);
+    refs.decorationGroup = treeGroup;
+    refs.treeInstances = trunk;
+  }
+
+  if (rockCount > 0) {
+    const rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
+    const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0.02 });
+    const rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockCount);
+    rocks.castShadow = true;
+    const matrix = new THREE.Matrix4();
+    const color = new THREE.Color();
+    for (let i = 0; i < rockCount; i += 1) {
+      const cell = rockCandidates[Math.floor(rng() * rockCandidates.length)];
+      const radius = 0.3 + rng() * 0.5;
+      const wx = cell.x - terrain.size / 2 + (rng() - 0.5) * 0.25;
+      const wz = cell.y - terrain.size / 2 + (rng() - 0.5) * 0.25;
+      const wy = cell.height + radius * 0.5;
+      matrix.compose(
+        new THREE.Vector3(wx, wy, wz),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(rng() * Math.PI, rng() * Math.PI * 2, rng() * Math.PI)),
+        new THREE.Vector3(radius, radius, radius),
+      );
+      rocks.setMatrixAt(i, matrix);
+      const tone = 0x707070 + Math.floor(rng() * (0x909090 - 0x707070));
+      color.setHex(tone);
+      rocks.setColorAt(i, color);
+    }
+    rocks.instanceColor!.needsUpdate = true;
+    rocks.instanceMatrix.needsUpdate = true;
+    terrainGroup.add(rocks);
+    refs.rockInstances = rocks;
+  }
+
+  if (snowCount > 0) {
+    const positions = new Float32Array(snowCount * 3);
+    const speeds = new Float32Array(snowCount);
+    for (let i = 0; i < snowCount; i += 1) {
+      const cell = snowCells[Math.floor(rng() * snowCells.length)];
+      positions[i * 3] = cell.x - terrain.size / 2 + (rng() - 0.5) * 0.6;
+      positions[i * 3 + 1] = cell.height + rng() * terrain.size * 0.35 + 2;
+      positions[i * 3 + 2] = cell.y - terrain.size / 2 + (rng() - 0.5) * 0.6;
+      speeds[i] = 0.35 + rng() * 0.45;
+    }
+    const snowGeo = new THREE.BufferGeometry();
+    snowGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    snowGeo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
+    const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.8 });
+    const snow = new THREE.Points(snowGeo, snowMat);
+    terrainGroup.add(snow);
+    refs.snowPoints = snow;
+  }
+}
+
+function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
+  const time = now * 0.001;
+  if (refs.waterMesh) {
+    refs.waterMesh.material.opacity = 0.5 + 0.1 * (0.5 + 0.5 * Math.sin(time * 0.8));
+  }
+
+  if (refs.snowPoints) {
+    const geometry = refs.snowPoints.geometry;
+    const position = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
+    for (let i = 0; i < position.count; i += 1) {
+      const vy = position.getY(i) - ((speed?.getX(i) ?? 0.4) * 0.02);
+      if (vy < -terrain.size * 0.15) {
+        const x = position.getX(i);
+        const z = position.getZ(i);
+        position.setXYZ(i, x, terrain.size * 0.6 + (i % 7) * 0.2, z);
+      } else {
+        position.setY(i, vy);
+      }
+    }
+    position.needsUpdate = true;
+  }
+
+  const terrainMesh = refs.terrainMesh;
+  const baseColors = refs.terrainBaseColors;
+  if (terrainMesh && baseColors) {
+    const colorAttr = terrainMesh.geometry.getAttribute("color") as THREE.BufferAttribute;
+    const color = new THREE.Color();
+    const positions = terrainMesh.geometry.getAttribute("position") as THREE.BufferAttribute;
+    for (let i = 0; i < colorAttr.count; i += 1) {
+      const biomeInfluence = terrain.biomes[i] === "grass" ? 1 : 0;
+      if (!biomeInfluence) {
+        colorAttr.setXYZ(i, baseColors[i * 3], baseColors[i * 3 + 1], baseColors[i * 3 + 2]);
+        continue;
+      }
+      const x = positions.getX(i);
+      const z = positions.getZ(i);
+      const sway = 0.04 * Math.sin(time * 1.2 + x * 0.25 + z * 0.17);
+      color.setRGB(
+        clamp01(baseColors[i * 3] + sway),
+        clamp01(baseColors[i * 3 + 1] + sway * 1.15),
+        clamp01(baseColors[i * 3 + 2] + sway * 0.6),
+      );
+      colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+    colorAttr.needsUpdate = true;
+  }
+}
+
+function createTerrainRng(terrain: Terrain) {
+  let seed = 2166136261;
+  for (let i = 0; i < terrain.heights.length; i += 1) {
+    seed = fnv1a(seed, Math.floor(terrain.heights[i] * 1000));
+  }
+  for (let i = 0; i < terrain.biomes.length; i += 1) {
+    seed = fnv1a(seed, biomeId(terrain.biomes[i]));
+  }
+  return mulberry32(seed >>> 0);
+}
+
+function fnv1a(seed: number, value: number) {
+  let hash = seed ^ value;
+  hash = Math.imul(hash, 16777619);
+  return hash >>> 0;
+}
+
+function biomeId(biome: Biome) {
+  switch (biome) {
+    case "deepwater":
+      return 1;
+    case "water":
+      return 2;
+    case "sand":
+      return 3;
+    case "grass":
+      return 4;
+    case "forest":
+      return 5;
+    case "stone":
+      return 6;
+    case "snow":
+      return 7;
+  }
+}
+
+function mulberry32(seed: number) {
+  return function rng() {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

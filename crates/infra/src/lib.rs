@@ -25,7 +25,7 @@ pub enum InfraError {
     /// NATS error.
     #[cfg(feature = "nats")]
     #[error("nats error: {0}")]
-    Nats(#[from] async_nats::Error),
+    Nats(String),
     /// S3 error.
     #[cfg(feature = "s3")]
     #[error("s3 error: {0}")]
@@ -43,5 +43,69 @@ pub enum InfraError {
 impl From<redis::RedisError> for InfraError {
     fn from(value: redis::RedisError) -> Self {
         Self::Cache(value.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InfraError;
+
+    #[test]
+    fn missing_config_error_is_actionable() {
+        let err = InfraError::MissingConfig("DATABASE_URL".into());
+        let message = err.to_string();
+        assert!(message.contains("DATABASE_URL"));
+        assert!(message.contains("missing configuration"));
+    }
+
+    #[cfg(feature = "nats")]
+    #[test]
+    fn nats_error_includes_detail() {
+        let err = InfraError::Nats("connection refused".into());
+        let message = err.to_string();
+        assert!(message.contains("nats error"));
+        assert!(message.contains("connection refused"));
+    }
+
+    #[cfg(feature = "s3")]
+    #[test]
+    fn s3_error_includes_detail() {
+        let err = InfraError::S3("bucket missing".into());
+        let message = err.to_string();
+        assert!(message.contains("s3 error"));
+        assert!(message.contains("bucket missing"));
+    }
+
+    #[cfg(feature = "cache")]
+    #[test]
+    fn cache_error_includes_detail() {
+        let err = InfraError::Cache("broken pipe".into());
+        let message = err.to_string();
+        assert!(message.contains("cache error"));
+        assert!(message.contains("broken pipe"));
+    }
+
+    #[cfg(feature = "cache")]
+    #[test]
+    fn redis_error_converts_to_cache_variant() {
+        let redis_err = redis::RedisError::from((redis::ErrorKind::IoError, "broken pipe"));
+        let err: InfraError = redis_err.into();
+        assert!(err.to_string().contains("cache error"));
+    }
+
+    #[cfg(feature = "pg")]
+    #[test]
+    fn postgres_error_includes_detail() {
+        let err = InfraError::Postgres(sqlx::Error::PoolClosed);
+        let message = err.to_string();
+        assert!(message.contains("postgres error"));
+    }
+
+    #[cfg(feature = "pg")]
+    #[test]
+    fn sqlx_error_converts_to_postgres_variant() {
+        let err: InfraError = sqlx::Error::PoolClosed.into();
+        assert!(matches!(err, InfraError::Postgres(_)));
+        assert!(err.to_string().contains("postgres error"));
     }
 }

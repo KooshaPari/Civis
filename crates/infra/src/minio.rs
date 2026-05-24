@@ -1,4 +1,5 @@
 use crate::InfraError;
+use aws_config::BehaviorVersion;
 use aws_sdk_s3::{config::Credentials, primitives::ByteStream, Client};
 
 /// MinIO/S3 client wrapper.
@@ -15,7 +16,7 @@ impl MinioClient {
         secret_key: &str,
     ) -> Result<Self, InfraError> {
         let credentials = Credentials::new(access_key, secret_key, None, None, "minio");
-        let config = aws_config::from_env()
+        let config = aws_config::defaults(BehaviorVersion::latest())
             .endpoint_url(endpoint)
             .credentials_provider(credentials)
             .load()

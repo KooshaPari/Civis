@@ -31,7 +31,7 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 | **Determinism** | Fixed-point `i64` @ 10^6 scale; `ChaCha8Rng` seeded once per run; `BTreeMap` for ordered iteration |
 | **Tick loop** | Fixed-timestep, 100 ms/tick, sub-16 ms target budget |
 | **Protocol** | WebSocket JSON-RPC + binary frames (multi-client) |
-| **Rendering clients** | Bevy (reference), Unreal, Unity, Godot, Web, Research API |
+| **Rendering clients** | Godot (game UX), Bevy (CI/reference), Unreal (visuals), **Web (spectator/ops only)** — see [ADR-009](docs/adr/ADR-009-web-client-strategy.md) |
 | **Replay** | Full event log → bit-identical replay (`.civreplay`) |
 
 CivLab is simultaneously a **game** (RTS-style city/nation building), a **research sandbox** (deterministic, scriptable, full event logs), and a **platform** (multiple renderers attach to one simulation).
@@ -55,32 +55,58 @@ See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortres
 
 ## Quick Start
 
-**Prerequisites:**
-- Rust 2024 edition (`rustup` recent stable; the workspace `Cargo.toml` pins the edition — install a current `rustup` if `cargo build` complains about edition)
-- [Bun](https://bun.sh) for the docs site (`bun --version` ≥ 1.0). **Use Bun only — do not use npm/yarn/pnpm.**
-- [Task](https://taskfile.dev) for the local quality gate
+**Prerequisites:** Rust (edition in `Cargo.toml`), [Bun](https://bun.sh) (docs only; no npm/yarn/pnpm), [Task](https://taskfile.dev).
 
 ```bash
-# Clone
-git clone https://github.com/KooshaPari/Civis.git
-cd Civis
-
-# Build & test simulation core
-cargo build --workspace
-cargo test --workspace
-
-# Local quality gate (clippy, fmt, tests)
+git clone https://github.com/KooshaPari/Civis.git && cd Civis
+cargo build --workspace && cargo test --workspace
 task quality
-
-# Docs site (Bun only)
-cd docs
-bun install
-bun run docs:dev      # local preview
-bun run docs:build    # static build
-bun run docs:index    # regenerate docs/.generated/doc-index.json
+cargo run -p civ-server   # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 ```
 
-> **Note on case:** the canonical repo name is **`Civis`** (capital C). Some legacy docs and scripts reference `civ` or `civis`; treat `Civis` as authoritative.
+**`civ-server` protocol** — HTTP on the bind address; WebSocket JSON-RPC at `/ws`.
+
+| Kind | Methods / routes |
+|------|------------------|
+| HTTP | `GET /healthz` → `{ "tick": <u64> }` · `GET /replay/export` → `.civreplay` (`application/octet-stream`) · `POST /replay/import` → load `.civreplay` bytes into the bridge |
+| WS JSON-RPC | `health` · `sim.status` · `sim.snapshot` · `sim.command` (`params.action`: `noop` \| `tick`) · `sim.save_replay` · `sim.load_replay` (`params.path`) · `sim.reset` (`params.seed`) · `sim.set_policy` (`params.scarcity_multiplier`, optional `base_consumption_joules`) · `sim.set_speed` (`params.multiplier`: 0 \| 1 \| 2 \| 4 \| 8) · `sim.get_speed` |
+
+**`POST /replay/import`** — replace the live bridge simulation from a raw `.civreplay` body (no filesystem path). Request: `Content-Type: application/octet-stream`. Success: `{ "ok": true, "tick": <u64> }`; invalid bytes → `400`. Updates both the in-memory sim and the bridge tick counter (same state as `GET /healthz`).
+
+**`sim.snapshot`** — read-only view of the in-memory simulation. Params: `{}`. When the bridge can read the sim, result includes `tick`, `population`, `building_count`, and `market_prices`; `energy_budget` and `hash_chain_root` (64-char lowercase hex from the replay hash chain) are included when set. Otherwise returns `{ "tick": <u64> }` only.
+
+**`sim.reset`** — replace the bridge simulation with `Simulation::with_seed`. Params: `{ "seed": <u64> }` (required). Result: `{ "seed": <u64>, "tick": 0 }`. Resets the live world and tick counter.
+
+**`sim.set_policy`** — update `Simulation::economy_policy`. Params: `{ "scarcity_multiplier": <f64> }` (required, ≥ 0); optional `{ "base_consumption_joules": <u64> }`. Result: `{ "updated": true, "scarcity_multiplier": <f64>, "base_consumption_joules": <f64> }` (joules reflect the live policy after apply).
+
+**`sim.set_speed`** — store bridge tick speed multiplier. Params: `{ "multiplier": <u32> }` (0, 1, 2, 4, or 8). Result: `{ "accepted": true, "multiplier": <u32> }`.
+
+**`sim.get_speed`** — read stored multiplier. Params: omit or `{}`. Result: `{ "multiplier": <u32> }`.
+
+**Tick broadcast (10 Hz push)** — not JSON-RPC; the bridge pushes three `Frame3d` values each tick (`VoxelDelta`, `BuildingDiff`, `AgentAppearance`). Wire encoding is set by `WsBridgeConfig::tick_broadcast_format` (`TickBroadcastFormat`):
+
+| Mode | WebSocket frames per tick |
+|------|---------------------------|
+| `Text` | 3 JSON text frames |
+| `Binary` | 3 `F3D0` binary frames |
+| `Both` (default) | 3 text frames, then 3 matching binary frames |
+
+Binary layout: `F3D0` magic (4) · kind tag (1: voxel / building / agent) · payload length BE (4) · JSON body (`civ-protocol-3d`). `cargo run -p civ-server` reads `CIVIS_TICK_BROADCAST` (`text` | `binary` | `both`, default `both`). Bevy clients that prefer binary-only tick frames should start the server with `CIVIS_TICK_BROADCAST=binary`. When embedding `run_ws_bridge`, set `tick_broadcast_format` on `WsBridgeConfig` directly.
+
+Examples (send as WebSocket text frames after connecting to `ws://127.0.0.1:3000/ws`):
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"health","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"sim.snapshot","params":{}}
+{"jsonrpc":"2.0","id":3,"method":"sim.reset","params":{"seed":4242}}
+{"jsonrpc":"2.0","id":4,"method":"sim.set_policy","params":{"scarcity_multiplier":0.0}}
+{"jsonrpc":"2.0","id":5,"method":"sim.set_speed","params":{"multiplier":2}}
+{"jsonrpc":"2.0","id":6,"method":"sim.get_speed"}
+```
+
+Docs: `cd docs && bun install && bun run docs:dev` · build: `bun run docs:build` · index: `bun run docs:index`
+
+> **Note on case:** the canonical repo name is **`Civis`** (capital C). Some legacy docs reference `civ` or `civis`; treat `Civis` as authoritative.
 
 ---
 
@@ -105,11 +131,15 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 | Task | Command |
 |---|---|
 | Run all Rust tests | `cargo test --workspace` |
+| FR-CORE-001 tick budget (10k ticks, release) | `cargo test -p civ-engine --release ten_thousand_ticks_under_budget -- --ignored` |
 | Lint (deny warnings) | `cargo clippy --workspace -- -D warnings` |
 | Format check | `cargo fmt --check` |
 | Local quality gate | `task quality` |
 | Build docs | `cd docs && bun run docs:build` |
 | Preview docs | `cd docs && bun run docs:dev` |
+| Web spectator (ADR-009) | `cargo run -p civ-server` then `cd web && npm install && npm run dev` → http://127.0.0.1:5173 |
+| Web tests | `cd web && npm test` |
+| Screenshot assets | [`docs/guides/screenshot-automation.md`](docs/guides/screenshot-automation.md) |
 
 All tests must reference a Functional Requirement (FR) per `FUNCTIONAL_REQUIREMENTS.md`.
 

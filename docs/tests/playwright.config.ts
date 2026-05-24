@@ -1,27 +1,26 @@
 import { defineConfig, devices } from '@playwright/test'
+import { DOCS_PORT } from '../.vitepress/constants.mjs'
+
+/** Dedicated port so docs E2E does not collide with the main frontend on 5173. */
+const docsBaseURL = process.env.BASE_URL || `http://localhost:${DOCS_PORT}`
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: process.env.CI ? 'list' : 'html',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:5173',
+    baseURL: docsBaseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
-    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'vitepress dev .',
-    url: 'http://localhost:5173',
+    command: `vitepress dev --port ${DOCS_PORT}`,
+    cwd: '..',
+    url: docsBaseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 
 /// Marker version of this crate's public schema.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Immutable planet parameters used to derive climate phases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,6 +94,16 @@ pub fn defaults_earthlike() -> (PlanetConfig, MoonConfig) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// FR-CIV-PLANET-000 — exposes a semver-like schema version stub.
+    #[test]
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
+    }
 
     /// FR-CIV-PLANET-001 - day phase wraps deterministically across the day length.
     #[test]

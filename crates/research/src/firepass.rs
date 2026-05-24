@@ -1,3 +1,5 @@
+//! Firepass/Kimi LLM client implementation.
+
 use super::{LlmClient, LlmError, TechCard};
 use serde::Deserialize;
 
@@ -71,15 +73,18 @@ impl LlmClient for FirepassKimiClient {
         prompt: &str,
         snapshot_hash: &[u8],
     ) -> Result<TechCard, LlmError> {
+        let content = format!(
+            "{prompt}\n\nSnapshot hash: {snapshot_hash:?}\nReturn only a JSON tech-card with fields id, era, inputs, energy_cost, byproducts, dependencies."
+        );
         let request = ChatCompletionRequest {
             model: "kimi-k2.6-turbo",
             messages: vec![MessageReq {
                 role: "user",
-                content: &format!(
-                    "{prompt}\n\nSnapshot hash: {snapshot_hash:?}\nReturn only a JSON tech-card with fields id, era, inputs, energy_cost, byproducts, dependencies."
-                ),
+                content: &content,
             }],
-            response_format: ResponseFormat { kind: "json_object" },
+            response_format: ResponseFormat {
+                kind: "json_object",
+            },
         };
 
         let url = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
@@ -109,10 +114,19 @@ impl LlmClient for FirepassKimiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, MutexGuard};
+
+    /// Serializes env-var mutation; parallel tests would race on `KIMI_API_KEY`.
+    fn env_lock() -> MutexGuard<'static, ()> {
+        static LOCK: Mutex<()> = Mutex::new(());
+        LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 
     #[test]
     fn from_env_requires_api_key() {
+        let _guard = env_lock();
         std::env::remove_var("KIMI_API_KEY");
+        std::env::remove_var("FIREPASS_BASE_URL");
         assert!(matches!(
             FirepassKimiClient::from_env(),
             Err(LlmError::NetworkUnavailable)
@@ -121,20 +135,24 @@ mod tests {
 
     #[test]
     fn from_env_uses_default_base_url() {
+        let _guard = env_lock();
         std::env::set_var("KIMI_API_KEY", "test-key");
         std::env::remove_var("FIREPASS_BASE_URL");
         let client = FirepassKimiClient::from_env().expect("client");
         assert_eq!(client.base_url, "https://api.firepass.dev/v1");
         assert_eq!(client.api_key, "test-key");
+        std::env::remove_var("KIMI_API_KEY");
     }
 
     #[test]
-    #[ignore]
     fn from_env_happy_path_with_explicit_base_url() {
+        let _guard = env_lock();
         std::env::set_var("KIMI_API_KEY", "test-key");
         std::env::set_var("FIREPASS_BASE_URL", "https://example.invalid/v1");
         let client = FirepassKimiClient::from_env().expect("client");
         assert_eq!(client.base_url, "https://example.invalid/v1");
         assert_eq!(client.api_key, "test-key");
+        std::env::remove_var("KIMI_API_KEY");
+        std::env::remove_var("FIREPASS_BASE_URL");
     }
 }

@@ -26,7 +26,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Schema version for `civ-diffusion`. Bumped on breaking changes.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Parameters describing one tech-adoption curve. `p` is the innovation
 /// coefficient (the rate at which non-adopters spontaneously try the tech),
@@ -79,10 +79,14 @@ pub fn trajectory(f0: f32, params: DiffusionParams, ticks: usize) -> Vec<f32> {
 mod tests {
     use super::*;
 
-    /// FR-CIV-DIFFUSION-000 — schema version is exposed.
+    /// FR-CIV-DIFFUSION-000 — exposes a semver-like schema version stub.
     #[test]
-    fn schema_version_present() {
-        assert_eq!(SCHEMA_VERSION, 0);
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
     /// FR-CIV-DIFFUSION-001 — adoption matches the Bass closed-form for the

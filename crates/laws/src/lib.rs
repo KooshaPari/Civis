@@ -162,6 +162,12 @@ impl LawDb {
 mod tests {
     use super::*;
 
+    /// FR-CIV-LAWS-000 — crate compiles and exposes a schema version.
+    #[test]
+    fn schema_version_stub() {
+        assert_eq!(SCHEMA_VERSION, 0);
+    }
+
     fn sample_ron() -> &'static str {
         r#"(
             version: 0,

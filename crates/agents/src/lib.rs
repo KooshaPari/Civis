@@ -29,7 +29,7 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 /// Schema version. Bumped on breaking changes.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Civilian identity component.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -94,6 +94,54 @@ pub struct Position3d {
     pub coord: WorldCoord,
 }
 
+/// Per-tick movement direction for a civilian.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Velocity {
+    /// Normalised x direction.
+    pub dx: f32,
+    /// Normalised y direction.
+    pub dy: f32,
+}
+
+/// Spawn-time bundle for velocity, wardrobe, tools, needs, and LOD tier.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CivilianBundle {
+    /// Initial movement direction.
+    pub velocity: Velocity,
+    /// Starting wardrobe.
+    pub wardrobe: Wardrobe,
+    /// Starting tools.
+    pub tools: Tools,
+    /// Starting needs.
+    pub needs: Needs,
+    /// Simulation fidelity tier.
+    pub lod: LodTier,
+}
+
+impl CivilianBundle {
+    /// Era-zero civilian with balanced needs and hot LOD.
+    pub fn newborn_default(velocity: Velocity) -> Self {
+        Self {
+            velocity,
+            wardrobe: Wardrobe {
+                era: 0,
+                material: MaterialId(0),
+            },
+            tools: Tools {
+                era: 0,
+                material: MaterialId(0),
+            },
+            needs: Needs {
+                food: 0.25,
+                shelter: 0.25,
+                safety: 0.25,
+                belonging: 0.25,
+            },
+            lod: LodTier::Hot,
+        }
+    }
+}
+
 /// Utility-AI action priority derived from unmet needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NeedAction {
@@ -140,12 +188,47 @@ pub fn spawn_civilian(
     world: &mut World,
     civilian: Civilian,
     position: Position3d,
-    wardrobe: Wardrobe,
-    tools: Tools,
-    needs: Needs,
-    lod: LodTier,
+    bundle: CivilianBundle,
 ) -> hecs::Entity {
-    world.spawn((civilian, position, wardrobe, tools, needs, lod))
+    let CivilianBundle {
+        velocity,
+        wardrobe,
+        tools,
+        needs,
+        lod,
+    } = bundle;
+    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod))
+}
+
+/// Spawn one civilian at a specific normalized terrain position.
+pub fn spawn_civilian_at(
+    world: &mut World,
+    id: u64,
+    faction: u32,
+    x: f32,
+    y: f32,
+    rng: &mut ChaCha8Rng,
+) -> hecs::Entity {
+    let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+    let velocity = Velocity {
+        dx: angle.cos(),
+        dy: angle.sin(),
+    };
+    let coord = WorldCoord {
+        x: (x.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
+        y: 0,
+        z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
+    };
+    spawn_civilian(
+        world,
+        Civilian {
+            id,
+            faction,
+            age: 18 + (id % 50) as u16,
+        },
+        Position3d { coord },
+        CivilianBundle::newborn_default(velocity),
+    )
 }
 
 /// Spawn a deterministic batch of civilians with sequential IDs.
@@ -184,8 +267,21 @@ pub fn spawn_many(
             1 => LodTier::Warm,
             _ => LodTier::Cold,
         };
+        let angle = (offset as f32) * 0.5;
         entities.push(spawn_civilian(
-            world, civilian, position, wardrobe, tools, needs, lod,
+            world,
+            civilian,
+            position,
+            CivilianBundle {
+                velocity: Velocity {
+                    dx: angle.cos(),
+                    dy: angle.sin(),
+                },
+                wardrobe,
+                tools,
+                needs,
+                lod,
+            },
         ));
     }
     entities
@@ -225,6 +321,58 @@ pub fn should_tick_now(tier: LodTier, current_tick: u64) -> bool {
         LodTier::Hot => true,
         LodTier::Warm => current_tick % 4 == 0,
         LodTier::Cold => current_tick % 16 == 0,
+    }
+}
+
+fn movement_speed_factor(tier: LodTier) -> f32 {
+    match tier {
+        LodTier::Hot => 0.002,
+        LodTier::Warm => 0.0014,
+        LodTier::Cold => 0.0009,
+    }
+}
+
+/// Advance civilian movement one tick.
+pub fn tick_movement<F>(world: &mut World, terrain_size: u32, rng: &mut ChaCha8Rng, is_walkable: F)
+where
+    F: Fn(f32, f32) -> bool,
+{
+    for (_, (pos, vel, _, lod)) in
+        world.query_mut::<(&mut Position3d, &mut Velocity, &Civilian, &LodTier)>()
+    {
+        if !should_tick_now(*lod, terrain_size as u64) {
+            continue;
+        }
+
+        if rng.gen_range(0..50) == 0 {
+            let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+            vel.dx = angle.cos();
+            vel.dy = angle.sin();
+        }
+
+        let (x, y) = (
+            pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32,
+            pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32,
+        );
+        let speed = movement_speed_factor(*lod);
+        let next_x = (x + vel.dx * speed).clamp(0.01, 0.99);
+        let next_y = (y + vel.dy * speed).clamp(0.01, 0.99);
+        let mut final_x = next_x;
+        let mut final_y = next_y;
+
+        if !is_walkable(next_x, next_y) {
+            vel.dx = -vel.dx;
+            vel.dy = -vel.dy;
+            final_x = (x + vel.dx * speed).clamp(0.01, 0.99);
+            final_y = (y + vel.dy * speed).clamp(0.01, 0.99);
+            if !is_walkable(final_x, final_y) {
+                final_x = x;
+                final_y = y;
+            }
+        }
+
+        pos.coord.x = (final_x * civ_voxel::FIXED_SCALE as f32) as i64;
+        pos.coord.z = (final_y * civ_voxel::FIXED_SCALE as f32) as i64;
     }
 }
 
@@ -365,10 +513,41 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// FR-CIV-AGENTS-000 — schema version exposed.
+    /// FR-CIV-AGENTS-000 — exposes a semver-like schema version stub.
     #[test]
-    fn schema_version_present() {
-        assert_eq!(SCHEMA_VERSION, 0);
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
+    }
+
+    /// FR-CIV-AGENTS-001 — wardrobe + tools state ticks deterministically under
+    /// a fixed seed (replay-safe).
+    #[test]
+    fn wardrobe_tools_deterministic() {
+        let params = DiffusionParams::default();
+        let mut wardrobe_a = Wardrobe {
+            era: 1,
+            material: MaterialId(2),
+        };
+        let mut wardrobe_b = wardrobe_a;
+        let mut tools_a = Tools {
+            era: 1,
+            material: MaterialId(3),
+        };
+        let mut tools_b = tools_a;
+        let mut r1 = rng(42);
+        let mut r2 = rng(42);
+        for _ in 0..200 {
+            propagate_wardrobe(&mut wardrobe_a, 5, 0.3, params, &mut r1);
+            propagate_wardrobe(&mut wardrobe_b, 5, 0.3, params, &mut r2);
+            propagate_tools(&mut tools_a, 5, 0.3, params, &mut r1);
+            propagate_tools(&mut tools_b, 5, 0.3, params, &mut r2);
+        }
+        assert_eq!(wardrobe_a, wardrobe_b);
+        assert_eq!(tools_a, tools_b);
     }
 
     /// FR-CIV-AGENTS-001 — propagate_wardrobe is deterministic under a fixed
@@ -419,6 +598,30 @@ mod tests {
             assert!(!propagate_wardrobe(&mut w, 5, 0.99, params, &mut r));
         }
         assert_eq!(w.era, 5);
+    }
+
+    /// FR-CIV-AGENTS-010 — gestalt (Cold) and Hot tiers agree at shared sync ticks.
+    #[test]
+    fn lod_gestalt_no_divergence() {
+        let params = DiffusionParams::default();
+        let mut hot = Wardrobe {
+            era: 1,
+            material: MaterialId(1),
+        };
+        let mut cold = hot;
+        let mut hot_rng = rng(42);
+        let mut cold_rng = rng(42);
+
+        for tick in 0..32 {
+            if should_tick_now(LodTier::Hot, tick) {
+                propagate_wardrobe(&mut hot, 5, 0.3, params, &mut hot_rng);
+            }
+            if should_tick_now(LodTier::Cold, tick) {
+                propagate_wardrobe(&mut cold, 5, 0.3, params, &mut cold_rng);
+            }
+        }
+
+        assert_eq!(hot, cold);
     }
 
     /// FR-CIV-AGENTS-010 — LodTier debug / equality holds across copies.
@@ -473,10 +676,25 @@ mod tests {
             belonging: 0.4,
         };
         let lod = LodTier::Warm;
-        let entity = spawn_civilian(&mut world, civ.clone(), pos, wardrobe, tools, needs, lod);
+        let entity = spawn_civilian(
+            &mut world,
+            civ.clone(),
+            pos,
+            CivilianBundle {
+                velocity: Velocity { dx: 1.0, dy: 0.0 },
+                wardrobe,
+                tools,
+                needs,
+                lod,
+            },
+        );
 
         assert_eq!(&*world.get::<&Civilian>(entity).unwrap(), &civ);
         assert_eq!(&*world.get::<&Position3d>(entity).unwrap(), &pos);
+        assert_eq!(
+            &*world.get::<&Velocity>(entity).unwrap(),
+            &Velocity { dx: 1.0, dy: 0.0 }
+        );
         assert_eq!(&*world.get::<&Wardrobe>(entity).unwrap(), &wardrobe);
         assert_eq!(&*world.get::<&Tools>(entity).unwrap(), &tools);
         assert_eq!(&*world.get::<&Needs>(entity).unwrap(), &needs);
@@ -504,6 +722,139 @@ mod tests {
         assert_eq!(count_civilians(&world), 0);
         spawn_many(&mut world, 3, 1, 2);
         assert_eq!(count_civilians(&world), 3);
+    }
+
+    /// AGENTS-040 — tick_movement updates position.
+    #[test]
+    fn tick_movement_updates_position() {
+        let mut world = World::new();
+        let mut rng = rng(7);
+        let entity = spawn_civilian(
+            &mut world,
+            Civilian {
+                id: 1,
+                faction: 0,
+                age: 20,
+            },
+            Position3d {
+                coord: WorldCoord {
+                    x: 500_000,
+                    y: 0,
+                    z: 500_000,
+                },
+            },
+            CivilianBundle {
+                velocity: Velocity { dx: 1.0, dy: 0.0 },
+                wardrobe: Wardrobe {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                tools: Tools {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                needs: Needs {
+                    food: 0.25,
+                    shelter: 0.25,
+                    safety: 0.25,
+                    belonging: 0.25,
+                },
+                lod: LodTier::Hot,
+            },
+        );
+        let before = *world.get::<&Position3d>(entity).unwrap();
+        tick_movement(&mut world, 128, &mut rng, |_, _| true);
+        let after = *world.get::<&Position3d>(entity).unwrap();
+        assert_ne!(before, after);
+    }
+
+    /// AGENTS-041 — tick_movement respects terrain bounds.
+    #[test]
+    fn tick_movement_respects_bounds() {
+        let mut world = World::new();
+        let mut rng = rng(11);
+        let entity = spawn_civilian(
+            &mut world,
+            Civilian {
+                id: 2,
+                faction: 0,
+                age: 22,
+            },
+            Position3d {
+                coord: WorldCoord {
+                    x: 990_000,
+                    y: 0,
+                    z: 990_000,
+                },
+            },
+            CivilianBundle {
+                velocity: Velocity { dx: 1.0, dy: 1.0 },
+                wardrobe: Wardrobe {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                tools: Tools {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                needs: Needs {
+                    food: 0.25,
+                    shelter: 0.25,
+                    safety: 0.25,
+                    belonging: 0.25,
+                },
+                lod: LodTier::Hot,
+            },
+        );
+        tick_movement(&mut world, 128, &mut rng, |_, _| true);
+        let pos = world.get::<&Position3d>(entity).unwrap();
+        let x = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let y = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        assert!((0.01..=0.99).contains(&x));
+        assert!((0.01..=0.99).contains(&y));
+    }
+
+    /// AGENTS-042 — civilians avoid water.
+    #[test]
+    fn tick_movement_avoids_water() {
+        let mut world = World::new();
+        let mut rng = rng(19);
+        let entity = spawn_civilian(
+            &mut world,
+            Civilian {
+                id: 3,
+                faction: 0,
+                age: 23,
+            },
+            Position3d {
+                coord: WorldCoord {
+                    x: 500_000,
+                    y: 0,
+                    z: 500_000,
+                },
+            },
+            CivilianBundle {
+                velocity: Velocity { dx: 1.0, dy: 0.0 },
+                wardrobe: Wardrobe {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                tools: Tools {
+                    era: 0,
+                    material: MaterialId(0),
+                },
+                needs: Needs {
+                    food: 0.25,
+                    shelter: 0.25,
+                    safety: 0.25,
+                    belonging: 0.25,
+                },
+                lod: LodTier::Hot,
+            },
+        );
+        tick_movement(&mut world, 128, &mut rng, |x, _| x < 0.500_001);
+        let pos = world.get::<&Position3d>(entity).unwrap();
+        assert!(pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32 <= 0.500_001);
     }
 
     /// FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a

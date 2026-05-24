@@ -1,28 +1,105 @@
 import { useEffect, useRef } from "react";
 import { postControl } from "./control";
-import { useDashboardStore } from "./store";
-
-const MATERIALS = [
-  { id: 1, label: "Mud", color: "#7b5c47" },
-  { id: 2, label: "Brick", color: "#b46a44" },
-  { id: 3, label: "Stone", color: "#8a95a6" },
-  { id: 4, label: "Wood", color: "#8b6a45" },
-  { id: 5, label: "Sand", color: "#d7bf79" },
-  { id: 6, label: "Grass", color: "#4ab866" },
-  { id: 7, label: "Arc", color: "#6bbcff" },
-];
-
-const ERAS = ["Mud-brick", "Bronze", "Iron", "Steam", "Modern", "Arcology"];
+import {
+  chunkToMinimapUv,
+  encodeChunkId,
+  findChunkAtGrid,
+  minimapBoundsFromKeys,
+  minimapUvToChunkGrid,
+} from "./lib/minimap";
+import {
+  exportReplayBlob,
+  importReplayBytes,
+  jsonRpcCall,
+  normalizeServerSnapshot,
+} from "./lib/civisServer";
+import { getActiveServerSocket } from "./lib/civisSocket";
+import { mergeServerSnapshot } from "./lib/mergeSnapshot";
+import { useDashboardStore, type TimeSpeed } from "./store";
 
 export function BottomBar() {
   const { state, dispatch } = useDashboardStore();
   const miniMapRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const runControl = async (path: string) => {
+  const runWatchControl = async (path: string, body: object = {}) => {
     try {
-      await postControl(path, {});
+      await postControl(path, body);
     } catch {
-      dispatch({ type: "set_toast", message: `Failed to ${path.replace("/control/", "")}` });
+      dispatch({ type: "set_toast", message: `Failed: ${path}` });
+    }
+  };
+
+  const setServerSpeed = async (multiplier: TimeSpeed) => {
+    const ws = getActiveServerSocket();
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      dispatch({ type: "set_toast", message: "Not connected to civ-server" });
+      return;
+    }
+    try {
+      await jsonRpcCall(ws, "sim.set_speed", { multiplier });
+      dispatch({ type: "set_speed", speed: multiplier });
+      const snap = await jsonRpcCall<unknown>(ws, "sim.snapshot");
+      const metrics = normalizeServerSnapshot(snap);
+      dispatch({ type: "set_server_metrics", metrics });
+      dispatch({
+        type: "set_snapshot",
+        snapshot: mergeServerSnapshot(snap, multiplier),
+      });
+    } catch {
+      dispatch({ type: "set_toast", message: "sim.set_speed failed" });
+    }
+  };
+
+  const runServerTick = async () => {
+    const ws = getActiveServerSocket();
+    if (!ws) return;
+    try {
+      await jsonRpcCall(ws, "sim.command", { action: "tick" });
+      const snap = await jsonRpcCall<unknown>(ws, "sim.snapshot");
+      const metrics = normalizeServerSnapshot(snap);
+      dispatch({ type: "set_server_metrics", metrics });
+      dispatch({
+        type: "set_snapshot",
+        snapshot: mergeServerSnapshot(snap, (metrics.speed_multiplier as TimeSpeed) ?? 1),
+      });
+    } catch {
+      dispatch({ type: "set_toast", message: "sim.command tick failed" });
+    }
+  };
+
+  const downloadReplay = async () => {
+    try {
+      const blob = await exportReplayBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "session.civreplay";
+      a.click();
+      URL.revokeObjectURL(url);
+      dispatch({ type: "set_toast", message: "Replay exported" });
+    } catch {
+      dispatch({ type: "set_toast", message: "Replay export failed" });
+    }
+  };
+
+  const onReplayFile = async (file: File) => {
+    try {
+      const buf = await file.arrayBuffer();
+      const { tick } = await importReplayBytes(buf);
+      dispatch({ type: "set_toast", message: `Replay imported @ tick ${tick}` });
+      const ws = getActiveServerSocket();
+      if (ws?.readyState === WebSocket.OPEN) {
+        const snap = await jsonRpcCall<unknown>(ws, "sim.snapshot");
+        const metrics = normalizeServerSnapshot(snap);
+        dispatch({ type: "set_server_metrics", metrics });
+        dispatch({
+          type: "set_snapshot",
+          snapshot: mergeServerSnapshot(snap, (metrics.speed_multiplier as TimeSpeed) ?? 1),
+        });
+      }
+    } catch {
+      dispatch({ type: "set_toast", message: "Replay import failed" });
     }
   };
 
@@ -45,8 +122,7 @@ export function BottomBar() {
     for (let y = 0; y < terrain.size; y += 1) {
       for (let x = 0; x < terrain.size; x += 1) {
         const idx = y * terrain.size + x;
-        const biome = terrain.biomes[idx];
-        ctx.fillStyle = biomeColor(biome);
+        ctx.fillStyle = biomeColor(terrain.biomes[idx]);
         ctx.fillRect(x * cellW, y * cellH, Math.ceil(cellW), Math.ceil(cellH));
       }
     }
@@ -54,77 +130,114 @@ export function BottomBar() {
     snapshot?.factions.forEach((faction) => {
       ctx.beginPath();
       ctx.fillStyle = `rgba(${faction.color[0]}, ${faction.color[1]}, ${faction.color[2]}, 0.95)`;
-      ctx.arc(faction.capital[0] * width, faction.capital[1] * height, Math.max(2, faction.radius * 0.25), 0, Math.PI * 2);
+      ctx.arc(
+        faction.capital[0] * width,
+        faction.capital[1] * height,
+        Math.max(2, faction.radius * 0.25),
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
     });
-  }, [state.snapshot, state.terrain]);
+
+    const bounds = minimapBoundsFromKeys(state.loadedChunkIds);
+    if (bounds) {
+      for (const chunkId of state.loadedChunkIds) {
+        const [u, v] = chunkToMinimapUv(chunkId, bounds);
+        ctx.fillStyle = "#b8b09e";
+        ctx.fillRect(u * width - 2, v * height - 2, 4, 4);
+      }
+    }
+  }, [state.snapshot, state.terrain, state.loadedChunkIds]);
+
+  const inspectMinimapCell = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!state.terrain) return;
+    const canvas = miniMapRef.current;
+    if (!canvas) return;
+
+    const bounds = minimapBoundsFromKeys(state.loadedChunkIds);
+    if (!bounds) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const u = (event.clientX - rect.left) / rect.width;
+    const v = (event.clientY - rect.top) / rect.height;
+    const [cx, cz] = minimapUvToChunkGrid([u, v], bounds);
+    const chunkId =
+      findChunkAtGrid(state.loadedChunkIds, cx, cz) ?? encodeChunkId(cx, 0, cz);
+    dispatch({ type: "set_inspected_chunk", chunkId });
+  };
+
+  const speedButtons = (
+    <div className="time-row" role="group" aria-label="Simulation speed">
+      {[0, 1, 2, 4, 8].map((speed) => (
+        <button
+          key={speed}
+          type="button"
+          className={`time-button ${state.speed === speed ? "active" : ""}`}
+          title={speed === 0 ? "Pause" : `${speed}x speed`}
+          onClick={() => {
+            const s = speed as TimeSpeed;
+            if (state.attachMode === "server") {
+              void setServerSpeed(s);
+            } else {
+              dispatch({ type: "set_speed", speed: s });
+              void runWatchControl("/control/speed", { speed: s });
+            }
+          }}
+        >
+          {speed === 0 ? "⏸ Pause" : speed === 1 ? "▶ 1×" : `⏩ ${speed}×`}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <footer className="bottom-bar">
-      <div className="tool-row">
-        <ToolButton active={state.selectedTool === "PlaceVoxel"} title="Place Voxel" emoji="🧱" onClick={() => dispatch({ type: "set_tool", tool: "PlaceVoxel" })} />
-        <ToolButton active={state.selectedTool === "SpawnCivilian"} title="Spawn Civilian" emoji="👤" onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })} />
-        <ToolButton active={state.selectedTool === "DamageBomb"} title="Damage" emoji="💥" onClick={() => dispatch({ type: "set_tool", tool: "DamageBomb" })} />
-        <ToolButton active={state.selectedTool === "InspectAgent"} title="Inspect" emoji="🔍" onClick={() => dispatch({ type: "set_tool", tool: "InspectAgent" })} />
-        <ToolButton active={state.selectedTool === "Camera"} title="Camera" emoji="🎥" onClick={() => dispatch({ type: "set_tool", tool: "Camera" })} />
-        <ToolButton title="Save" emoji="💾" onClick={() => void runControl("/control/save")} />
-        <ToolButton title="Load" emoji="📂" onClick={() => void runControl("/control/load")} />
-      </div>
-
-      <div className="time-row">
-        {[0, 1, 2, 4, 8].map((speed) => (
-          <button
-            key={speed}
-            className={`time-button ${state.speed === speed ? "active" : ""}`}
-            title={speed === 0 ? "Pause" : `${speed}x speed`}
-            onClick={() => {
-              const s = speed as 0 | 1 | 2 | 4 | 8;
-              dispatch({ type: "set_speed", speed: s });
-              void postControl("/control/speed", { speed: s }).catch(() =>
-                dispatch({ type: "set_toast", message: "speed update failed" }),
-              );
-            }}
-          >
-            {speed === 0 ? "⏸ Pause" : speed === 1 ? "▶ 1×" : speed === 2 ? "⏩ 2×" : speed === 4 ? "⏩⏩ 4×" : "⏩⏩⏩ 8×"}
-          </button>
-        ))}
-      </div>
-
-      <div className="picker-row">
-        <label>
-          <span>Material</span>
-          <select value={state.selectedMaterial} onChange={(event) => dispatch({ type: "set_material", material: Number(event.target.value) })}>
-            {MATERIALS.map((material) => (
-              <option key={material.id} value={material.id}>
-                {material.id} - {material.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="swatches">
-          {MATERIALS.map((material) => (
-            <button
-              key={material.id}
-              className={`swatch ${state.selectedMaterial === material.id ? "active" : ""}`}
-              title={`Material ${material.id}: ${material.label}`}
-              onClick={() => dispatch({ type: "set_material", material: material.id })}
-            >
-              <span style={{ background: material.color }} />
-              {material.id}
-            </button>
-          ))}
+      <div className="control-group">
+        <span className="control-label">View (read-only)</span>
+        <div className="tool-row">
+          <ToolButton
+            active={state.selectedTool === "InspectAgent"}
+            title="Inspect terrain cell"
+            emoji="🔍"
+            onClick={() => dispatch({ type: "set_tool", tool: "InspectAgent" })}
+          />
+          <ToolButton
+            active={state.selectedTool === "Camera"}
+            title="Orbit camera"
+            emoji="🎥"
+            onClick={() => dispatch({ type: "set_tool", tool: "Camera" })}
+          />
         </div>
+      </div>
 
-        <label>
-          <span>Era</span>
-          <select value={state.selectedEra} onChange={(event) => dispatch({ type: "set_era", era: Number(event.target.value) })}>
-            {ERAS.map((era, index) => (
-              <option key={era} value={index}>
-                {index} - {era}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="control-group">
+        <span className="control-label">
+          Operator {state.attachMode === "server" ? "(JSON-RPC)" : "(civ-watch HTTP)"}
+        </span>
+        {speedButtons}
+        {state.attachMode === "server" ? (
+          <div className="tool-row">
+            <ToolButton title="Advance one tick" emoji="⏭" onClick={() => void runServerTick()} />
+            <ToolButton title="Export .civreplay" emoji="💾" onClick={() => void downloadReplay()} />
+            <ToolButton
+              title="Import .civreplay"
+              emoji="📂"
+              onClick={() => fileInputRef.current?.click()}
+            />
+          </div>
+        ) : null}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".civreplay,application/octet-stream"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void onReplayFile(file);
+            e.target.value = "";
+          }}
+        />
       </div>
 
       <div className="minimap-shell">
@@ -132,7 +245,14 @@ export function BottomBar() {
           <span>Minimap</span>
           <strong>{state.snapshot?.factions.length ?? 0} factions</strong>
         </div>
-        <canvas ref={miniMapRef} width={160} height={160} className="minimap" aria-label="Terrain minimap" />
+        <canvas
+          ref={miniMapRef}
+          width={160}
+          height={160}
+          className="minimap"
+          aria-label="Terrain minimap"
+          onClick={inspectMinimapCell}
+        />
       </div>
     </footer>
   );
@@ -150,7 +270,7 @@ function ToolButton({
   onClick: () => void;
 }) {
   return (
-    <button className={`tool-button ${active ? "active" : ""}`} title={title} onClick={onClick}>
+    <button type="button" className={`tool-button ${active ? "active" : ""}`} title={title} onClick={onClick}>
       <span aria-hidden>{emoji}</span>
       <small>{title}</small>
     </button>

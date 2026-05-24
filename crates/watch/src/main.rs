@@ -19,17 +19,18 @@ use std::{
 };
 
 use axum::{
+    body::{Body, Bytes},
     extract::State,
+    http::{header, HeaderMap, HeaderValue, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
-        Json,
+        IntoResponse, Json, Response,
     },
     routing::{get, post},
     Router,
 };
 use civ_agents::{
-    spawn_civilian as agents_spawn_civilian, Civilian as AgentCivilian, LodTier, Needs, Position3d,
-    Tools, Wardrobe,
+    spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Position3d, Velocity,
 };
 use civ_engine::{Citizen, JobType, Simulation};
 use civ_server::build_voxel_delta_frame;
@@ -117,6 +118,53 @@ struct Building {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct Road {
+    from: [f32; 2],
+    to: [f32; 2],
+    width: f32,
+    kind: RoadKind,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "PascalCase")]
+enum RoadKind {
+    Trail,
+    Dirt,
+    Paved,
+    Highway,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TradeRoute {
+    from_faction: u32,
+    to_faction: u32,
+    goods: String,
+    volume: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EconomySnapshot {
+    energy_budget: f64,
+    faction_treasury: Vec<FactionTreasury>,
+    production_rates: ProductionRates,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FactionTreasury {
+    id: u32,
+    name: String,
+    balance: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProductionRates {
+    food_per_tick: f64,
+    wood_per_tick: f64,
+    metal_per_tick: f64,
+    energy_per_tick: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct Snapshot {
     tick: u64,
     tick_dt_ms: u32,
@@ -127,8 +175,29 @@ struct Snapshot {
     civ_pins: Vec<CivPin>,
     factions: Vec<Faction>,
     buildings: Vec<Building>,
+    roads: Vec<Road>,
+    trade_routes: Vec<TradeRoute>,
+    economy: EconomySnapshot,
     is_day: bool,
     speed: u8,
+}
+
+/// Pre-serialized terrain JSON and a stable ETag for cheap repeat fetches.
+#[derive(Clone)]
+struct TerrainCache {
+    body: Bytes,
+    etag: HeaderValue,
+}
+
+impl TerrainCache {
+    fn from_terrain(terrain: &Terrain) -> Self {
+        let body = Bytes::from(serde_json::to_vec(terrain).expect("terrain serializes"));
+        let etag = format!("\"{:016x}\"", terrain.heights_fingerprint());
+        Self {
+            body,
+            etag: HeaderValue::from_str(&etag).expect("valid etag"),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -136,6 +205,7 @@ struct AppState {
     latest: Arc<RwLock<Option<Snapshot>>>,
     tx: broadcast::Sender<Snapshot>,
     terrain: Arc<Terrain>,
+    terrain_cache: TerrainCache,
     sim: Arc<Mutex<Simulation>>,
     speed: Arc<AtomicU8>,
 }
@@ -185,7 +255,8 @@ async fn main() {
         .init();
 
     let (tx, _) = broadcast::channel::<Snapshot>(64);
-    let terrain = Arc::new(Terrain::generate(42));
+    let terrain = Terrain::generate(42);
+    let terrain_cache = TerrainCache::from_terrain(&terrain);
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -196,31 +267,21 @@ async fn main() {
     {
         let mut s = sim.lock().await;
         seed_voxels(&mut s);
+        seed_civilians(&mut s, &terrain);
     }
 
     let state = AppState {
         latest: Arc::new(RwLock::new(None)),
         tx: tx.clone(),
-        terrain,
+        terrain: Arc::new(terrain),
+        terrain_cache,
         sim,
         speed: Arc::new(AtomicU8::new(1)),
     };
 
     tokio::spawn(simulation_worker(state.clone()));
 
-    let app = Router::new()
-        .route("/events", get(sse_handler))
-        .route("/snapshot", get(snapshot_handler))
-        .route("/terrain", get(terrain_handler))
-        .route("/control/place_voxel", post(place_voxel_handler))
-        .route("/control/spawn_civilian", post(spawn_civilian_handler))
-        .route("/control/damage", post(damage_handler))
-        .route("/control/speed", post(speed_handler))
-        .fallback_service(
-            ServeDir::new("web/dashboard/dist").append_index_html_on_directories(true),
-        )
-        .with_state(state)
-        .layer(CorsLayer::permissive());
+    let app = build_app(state);
 
     let port: u16 = std::env::var("CIV_WATCH_PORT")
         .ok()
@@ -238,6 +299,26 @@ async fn main() {
     axum::serve(listener, app).await.expect("axum server");
 }
 
+fn build_api_router() -> Router<AppState> {
+    Router::new()
+        .route("/events", get(sse_handler))
+        .route("/snapshot", get(snapshot_handler))
+        .route("/terrain", get(terrain_handler))
+        .route("/control/place_voxel", post(place_voxel_handler))
+        .route("/control/spawn_civilian", post(spawn_civilian_handler))
+        .route("/control/damage", post(damage_handler))
+        .route("/control/speed", post(speed_handler))
+}
+
+fn build_app(state: AppState) -> Router {
+    build_api_router()
+        .fallback_service(
+            ServeDir::new("web/dashboard/dist").append_index_html_on_directories(true),
+        )
+        .with_state(state)
+        .layer(CorsLayer::permissive())
+}
+
 async fn simulation_worker(state: AppState) {
     let mut interval = tokio::time::interval(Duration::from_millis(100));
     loop {
@@ -250,6 +331,12 @@ async fn simulation_worker(state: AppState) {
             let mut sim = state.sim.lock().await;
             for _ in 0..speed {
                 sim.tick();
+                let terrain = state.terrain.clone();
+                let mut rng = sim.rng_mut().clone();
+                tick_movement(&mut sim.world, 128, &mut rng, |x, y| {
+                    terrain.is_walkable(x, y)
+                });
+                *sim.rng_mut() = rng;
             }
             make_snapshot(&sim, speed)
         };
@@ -274,12 +361,32 @@ fn seed_voxels(sim: &mut Simulation) {
     }
 }
 
+fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
+    let mut spawned = 0_u64;
+    let mut x = 0.11_f32;
+    let mut y = 0.19_f32;
+    while spawned < 32 {
+        if terrain.is_walkable(x, y) {
+            let id = 10_000 + spawned;
+            let mut rng = sim.rng_mut().clone();
+            let _ = spawn_civilian_at(&mut sim.world, id, (spawned % 4) as u32, x, y, &mut rng);
+            *sim.rng_mut() = rng;
+            spawned += 1;
+        }
+        x = (x + 0.071).fract();
+        y = (y + 0.113).fract();
+    }
+}
+
 fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
     let factions = factions(sim.state.tick);
     let buildings = buildings(&factions, sim.state.tick);
+    let roads = roads(&buildings);
+    let trade_routes = trade_routes(&factions, sim.state.tick);
+    let economy = economy_snapshot(sim, &factions);
     let _ = build_voxel_delta_frame(sim.state.tick, events, sim.voxel()).map_err(|err| {
         warn!(?err, "voxel frame build failed for current tick");
     });
@@ -297,8 +404,59 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
         civ_pins,
         factions,
         buildings,
+        roads,
+        trade_routes,
+        economy,
         is_day,
         speed,
+    }
+}
+
+fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
+    let energy_budget = sim.state.energy_budget_joules.to_f64();
+    let faction_treasury = factions
+        .iter()
+        .map(|faction| {
+            let name = sim
+                .state
+                .factions
+                .get(&faction.id)
+                .cloned()
+                .unwrap_or_else(|| format!("Faction {}", faction.id));
+            let balance = sim
+                .state
+                .faction_treasury
+                .get(&faction.id)
+                .map(|value| value.to_f64())
+                .unwrap_or(0.0);
+            FactionTreasury {
+                id: faction.id,
+                name,
+                balance,
+            }
+        })
+        .collect();
+
+    let mut food_per_tick = 0.0;
+    let wood_per_tick = 0.0;
+    let mut metal_per_tick = 0.0;
+    for (_, building) in sim.world.query::<&civ_engine::Building>().iter() {
+        match building.building_type {
+            civ_engine::BuildingType::Farm => food_per_tick += 10.0,
+            civ_engine::BuildingType::Mine => metal_per_tick += 5.0,
+            _ => {}
+        }
+    }
+
+    EconomySnapshot {
+        energy_budget,
+        faction_treasury,
+        production_rates: ProductionRates {
+            food_per_tick,
+            wood_per_tick,
+            metal_per_tick,
+            energy_per_tick: energy_budget / 1000.0,
+        },
     }
 }
 
@@ -312,35 +470,27 @@ fn sample_civilians(sim: &Simulation) -> Vec<SampleCivilian> {
             health: citizen.health.to_f64(),
             ideology: citizen.ideology.to_f64(),
             welfare: citizen.welfare.to_f64(),
-            job: citizen.job.map(JobLabel::from),
+            job: None,
         })
         .collect()
 }
 
 fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
     sim.world
-        .query::<&Citizen>()
+        .query::<(&AgentCivilian, &Position3d, &Velocity)>()
         .iter()
         .take(256)
         .enumerate()
-        .map(|(idx, (_, citizen))| {
-            let seed = u64::from(idx as u32).wrapping_mul(2_654_435_761) ^ u64::from(citizen.age);
-            let base_x = ((seed & 0xffff) as f32) / 65535.0;
-            let base_y = (((seed >> 16) & 0xffff) as f32) / 65535.0;
-            let angle = ((seed >> 32) as f32 / u32::MAX as f32) * std::f32::consts::TAU;
-            let drift = 0.0015 + ((seed >> 48) as f32 / 65535.0) * 0.0025;
-            let dx = angle.cos() * drift;
-            let dy = angle.sin() * drift;
-            let tick_phase = (sim.state.tick as f32) * 0.1;
-            let x = wrap01(base_x + dx * tick_phase);
-            let y = wrap01(base_y + dy * tick_phase);
+        .map(|(idx, (_, (_citizen, pos, vel)))| {
+            let x = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+            let y = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
             CivPin {
                 idx: idx as u32,
                 x,
                 y,
-                dx,
-                dy,
-                job: citizen.job.map(JobLabel::from),
+                dx: vel.dx,
+                dy: vel.dy,
+                job: None,
             }
         })
         .collect()
@@ -396,6 +546,68 @@ fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
     buildings
 }
 
+fn roads(buildings: &[Building]) -> Vec<Road> {
+    let mut roads = Vec::new();
+    let mut by_faction: std::collections::BTreeMap<u32, Vec<&Building>> =
+        std::collections::BTreeMap::new();
+    for building in buildings {
+        by_faction
+            .entry(building.faction_id)
+            .or_default()
+            .push(building);
+    }
+
+    for faction_buildings in by_faction.values_mut() {
+        faction_buildings.sort_by_key(|building| building.id);
+        for pair in faction_buildings.windows(2) {
+            let from = pair[0];
+            let to = pair[1];
+            let distance = ((to.x - from.x).powi(2) + (to.y - from.y).powi(2)).sqrt();
+            let kind = if distance < 0.03 {
+                RoadKind::Trail
+            } else if distance < 0.06 {
+                RoadKind::Dirt
+            } else if distance < 0.10 {
+                RoadKind::Paved
+            } else {
+                RoadKind::Highway
+            };
+            let width = match kind {
+                RoadKind::Trail => 0.2,
+                RoadKind::Dirt => 0.4,
+                RoadKind::Paved => 0.6,
+                RoadKind::Highway => 1.0,
+            };
+            roads.push(Road {
+                from: [from.x, from.y],
+                to: [to.x, to.y],
+                width,
+                kind,
+            });
+        }
+    }
+
+    roads
+}
+
+fn trade_routes(factions: &[Faction], tick: u64) -> Vec<TradeRoute> {
+    let goods = ["grain", "timber", "ore", "cloth", "salt", "tools"];
+    let mut routes = Vec::new();
+    for (idx, from) in factions.iter().enumerate() {
+        for to in factions.iter().skip(idx + 1) {
+            let goods_idx = ((tick / 180) as usize + idx + to.id as usize) % goods.len();
+            let volume = 8.0 + (((tick / 30) as f32 + from.id as f32 + to.id as f32) % 16.0);
+            routes.push(TradeRoute {
+                from_faction: from.id,
+                to_faction: to.id,
+                goods: goods[goods_idx].to_string(),
+                volume,
+            });
+        }
+    }
+    routes
+}
+
 fn noise_offset(seed: u64, lane: u64) -> f32 {
     let mixed = seed
         .wrapping_mul(0x9E37_79B9_7F4A_7C15)
@@ -412,8 +624,26 @@ async fn snapshot_handler(State(state): State<AppState>) -> Json<Option<Snapshot
     Json(state.latest.read().await.clone())
 }
 
-async fn terrain_handler(State(state): State<AppState>) -> Json<Terrain> {
-    Json((*state.terrain).clone())
+async fn terrain_handler(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let cache = &state.terrain_cache;
+    if headers
+        .get(header::IF_NONE_MATCH)
+        .is_some_and(|value| value == cache.etag)
+    {
+        return (
+            StatusCode::NOT_MODIFIED,
+            [(header::ETAG, cache.etag.clone())],
+        )
+            .into_response();
+    }
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::ETAG, cache.etag.clone())
+        .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+        .body(Body::from(cache.body.clone()))
+        .expect("terrain response")
 }
 
 async fn place_voxel_handler(
@@ -441,36 +671,9 @@ async fn spawn_civilian_handler(
 ) -> Json<ControlOk> {
     let mut sim = state.sim.lock().await;
     let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
-    agents_spawn_civilian(
-        &mut sim.world,
-        AgentCivilian {
-            id,
-            faction: req.faction,
-            age: 18,
-        },
-        Position3d {
-            coord: WorldCoord {
-                x: (req.x * 1_000_000.0) as i64,
-                y: 0,
-                z: (req.y * 1_000_000.0) as i64,
-            },
-        },
-        Wardrobe {
-            era: 0,
-            material: MaterialId(0),
-        },
-        Tools {
-            era: 0,
-            material: MaterialId(0),
-        },
-        Needs {
-            food: 0.25,
-            shelter: 0.25,
-            safety: 0.25,
-            belonging: 0.25,
-        },
-        LodTier::Hot,
-    );
+    let mut rng = sim.rng_mut().clone();
+    let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
+    *sim.rng_mut() = rng;
     Json(ControlOk {
         ok: true,
         message: None,
@@ -534,4 +737,271 @@ async fn sse_handler(
         }
     });
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+#[cfg(test)]
+mod api_tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use tower::ServiceExt;
+
+    fn test_state() -> AppState {
+        let (tx, _) = broadcast::channel::<Snapshot>(64);
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let terrain = Terrain::generate(42);
+        AppState {
+            latest: Arc::new(RwLock::new(None)),
+            tx,
+            terrain: Arc::new(terrain.clone()),
+            terrain_cache: TerrainCache::from_terrain(&terrain),
+            sim,
+            speed: Arc::new(AtomicU8::new(1)),
+        }
+    }
+
+    fn test_app() -> Router {
+        test_app_with_state(test_state())
+    }
+
+    fn test_app_with_state(state: AppState) -> Router {
+        build_api_router()
+            .with_state(state)
+            .layer(CorsLayer::permissive())
+    }
+
+    async fn body_json(response: axum::response::Response) -> serde_json::Value {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body");
+        serde_json::from_slice(&bytes).expect("json body")
+    }
+
+    #[tokio::test]
+    async fn get_terrain_returns_heightmap_json() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/terrain")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(header::ETAG)
+                .expect("etag")
+                .to_str()
+                .unwrap(),
+            format!("\"{:016x}\"", Terrain::generate(42).heights_fingerprint())
+        );
+        let json = body_json(response).await;
+        assert_eq!(json["size"], terrain::SIZE);
+        assert_eq!(
+            json["heights"].as_array().expect("heights array").len(),
+            terrain::SIZE * terrain::SIZE,
+        );
+        assert_eq!(
+            json["biomes"].as_array().expect("biomes array").len(),
+            terrain::SIZE * terrain::SIZE,
+        );
+    }
+
+    #[tokio::test]
+    async fn get_terrain_returns_304_when_etag_matches() {
+        let app = test_app();
+        let first = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/terrain")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let etag = first
+            .headers()
+            .get(header::ETAG)
+            .expect("etag")
+            .to_str()
+            .unwrap()
+            .to_owned();
+
+        let second = app
+            .oneshot(
+                Request::builder()
+                    .uri("/terrain")
+                    .header(header::IF_NONE_MATCH, etag)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.status(), StatusCode::NOT_MODIFIED);
+        assert!(axum::body::to_bytes(second.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_snapshot_returns_null_before_first_tick() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/snapshot")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert!(json.is_null());
+    }
+
+    #[tokio::test]
+    async fn post_control_speed_rejects_invalid_value() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/speed")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"speed":3}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], false);
+    }
+
+    #[tokio::test]
+    async fn post_control_speed_accepts_valid_value() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/speed")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"speed":2}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn post_control_place_voxel_returns_ok() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/place_voxel")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"x":0,"y":0,"z":0,"material":2}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn get_events_streams_snapshot_within_timeout() {
+        use http_body_util::BodyExt;
+
+        let state = test_state();
+        tokio::spawn(simulation_worker(state.clone()));
+        let app = test_app_with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/events")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|ct| ct.starts_with("text/event-stream")));
+
+        let mut body = response.into_body();
+        let mut buf = String::new();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+        while !buf.contains("event: snapshot") {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            let frame = tokio::time::timeout(remaining, body.frame())
+                .await
+                .expect("timed out waiting for SSE snapshot event")
+                .expect("body frame")
+                .expect("frame data");
+            if let Ok(chunk) = frame.into_data() {
+                buf.push_str(&String::from_utf8_lossy(&chunk));
+            }
+        }
+        assert!(buf.contains("\"tick\""));
+    }
+
+    #[tokio::test]
+    async fn post_control_spawn_civilian_returns_ok() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/spawn_civilian")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"x":0.5,"y":0.5,"faction":0}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn post_control_damage_returns_ok() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/damage")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"x":0,"y":0,"z":0,"radius":2,"energy":100}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
 }

@@ -3,9 +3,10 @@
   "private": true,
   "license": "MIT OR Apache-2.0",
   "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "dev": "echo 'web scaffold ready'",
-    "build": "echo 'web build scaffold'",
-    "test": "echo 'web test scaffold'"
+    "test": "node --test tests/*.test.mjs",
+    "dev": "npm run dev --prefix dashboard",
+    "build": "npm run build --prefix dashboard"
   }
 }

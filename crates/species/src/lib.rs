@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 pub use civ_genetics::Dna;
 
 /// Schema version. Bumped on breaking changes.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Visible per-organism morphology. Drives the renderer (skin colour, height,
 /// limb count, etc.). All fields are scalar so the diffusion / wardrobe layer
@@ -97,10 +97,14 @@ pub fn express(dna: &Dna) -> Phenotype {
 mod tests {
     use super::*;
 
-    /// FR-CIV-SPECIES-000 — schema version is exposed.
+    /// FR-CIV-SPECIES-000 — exposes a semver-like schema version stub.
     #[test]
-    fn schema_version_present() {
-        assert_eq!(SCHEMA_VERSION, 0);
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
     /// FR-CIV-SPECIES-001 — identical DNA produces identical phenotype.

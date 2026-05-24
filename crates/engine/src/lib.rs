@@ -12,10 +12,17 @@
 //! - `io` - File I/O utilities
 
 pub mod engine;
+pub mod hash_chain;
+pub mod integrity;
+pub mod invariants;
 pub mod io;
+pub mod lod;
 pub mod metrics;
 pub mod policy;
 pub mod replay;
+pub mod replay_format;
+pub mod scenario;
+pub mod spectator;
 
 pub use engine::{
     Building, BuildingType, Citizen, JobType, MilitaryUnit, Position, Production, ResourceType,
@@ -24,9 +31,27 @@ pub use engine::{
 
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{apply_damage, DamageEvent};
-pub use metrics::{compute, Metrics};
-pub use policy::{effective_consumption, PolicyInput};
+pub use hash_chain::{
+    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+};
+pub use integrity::{check_integrity, IntegrityError};
+pub use invariants::{check_tick_invariants, InvariantError};
+pub use lod::LodTier;
+pub use lod::{
+    aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity,
+    should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
+};
+pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
+pub use replay_format::{
+    decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
+    FORMAT_VERSION, MAGIC,
+};
+pub use scenario::{
+    baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
+};
+pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

@@ -8,9 +8,21 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod jsonrpc;
 pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
 pub mod ws_bridge;
 
+pub use jsonrpc::{
+    dispatch_request, encode_response, error_code, forbidden_operator_role_error,
+    parse_error_response, parse_replay_path, parse_request, parse_reset_seed, parse_role_param,
+    parse_sim_command_action, role_allows_operator_tick, set_sim_command_tick,
+    snapshot_fields_from_sim, DispatchContext, DispatchEffect, DispatchPlan, JsonRpcError,
+    JsonRpcMethod, JsonRpcParseError, JsonRpcRequest, JsonRpcResponse, RequestId, SimCommandAction,
+    SnapshotFields, JSONRPC_VERSION, OPERATOR_ROLE,
+};
 pub use voxel_frame_builder::{build_voxel_delta_frame, VoxelFrameBuilderError};
-pub use ws_bridge::{run_ws_bridge, WsBridgeConfig};
+pub use ws_bridge::{
+    run_ws_bridge, spawn_ws_bridge, spawn_ws_bridge_with_config, TickBroadcastFormat,
+    WsBridgeConfig,
+};

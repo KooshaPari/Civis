@@ -27,7 +27,7 @@ pub enum BuildingProvenance {
 
 /// Marker version of this crate's public schema. Bumped on breaking changes
 /// so replay (`.civreplay`) files can refuse to load mismatched versions.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Stable identifier for a building parcel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -272,10 +272,14 @@ pub fn default_facade_for_era(era: u16) -> FacadeStyle {
 mod tests {
     use super::*;
 
-    /// FR-CIV-BUILD-000 — crate compiles and exposes a schema version.
+    /// FR-CIV-BUILD-000 — exposes a semver-like schema version stub.
     #[test]
-    fn schema_version_present() {
-        assert_eq!(SCHEMA_VERSION, 0);
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
     /// FR-CIV-BUILD-001 — BuildingGraph round-trips through RON.
@@ -487,6 +491,122 @@ mod tests {
         let id = ids[0];
         assert_eq!(graph.facades.get(&id).map(|facade| facade.era), Some(5));
         assert_eq!(graph.facades.get(&id), Some(&default_facade_for_era(5)));
+    }
+
+    /// FR-CIV-BUILD-001 — `BuildingGraph` RON round-trip without loss.
+    #[test]
+    fn graph_ron_roundtrip() {
+        let mut graph = BuildingGraph::new();
+        let id = BuildingId(7);
+        graph.insert_parcel(Parcel {
+            id,
+            kind: ParcelKind::Residential,
+            origin: WorldCoord { x: 4, y: 5, z: 6 },
+            size: [8, 8, 8],
+            era_min: 1,
+        });
+        graph.set_facade(id, default_facade_for_era(1));
+        graph.set_provenance(id, BuildingProvenance::Procedural);
+        assert_eq!(graph, graph.round_trip_ron());
+    }
+
+    /// FR-CIV-BUILD-010 — demand-driven allocation is deterministic under fixed seed.
+    #[test]
+    fn demand_allocation_deterministic() {
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 1.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let origin = WorldCoord { x: 1, y: 2, z: 3 };
+
+        let mut graph_a = BuildingGraph::new();
+        let mut graph_b = BuildingGraph::new();
+        let mut allocator_a = Allocator::new(99);
+        let mut allocator_b = Allocator::new(99);
+
+        let ids_a = allocator_a.allocate(&mut graph_a, &signals, 3, origin, 24);
+        let ids_b = allocator_b.allocate(&mut graph_b, &signals, 3, origin, 24);
+
+        assert_eq!(ids_a, ids_b);
+        assert_eq!(graph_a.parcels, graph_b.parcels);
+    }
+
+    /// FR-CIV-BUILD-020 — freehand-authored parcels share the same graph shape
+    /// as grammar-generated equivalents aside from provenance.
+    #[test]
+    fn freehand_matches_grammar() {
+        let mut grammar_graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(42);
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let ids = allocator.allocate(
+            &mut grammar_graph,
+            &signals,
+            2,
+            WorldCoord { x: 0, y: 0, z: 0 },
+            16,
+        );
+        let parcel = grammar_graph
+            .parcels
+            .iter()
+            .find(|p| p.id == ids[0])
+            .expect("parcel")
+            .clone();
+
+        let mut freehand_graph = BuildingGraph::new();
+        freehand_graph.insert_parcel(parcel.clone());
+        freehand_graph.set_facade(parcel.id, default_facade_for_era(2));
+        freehand_graph.set_provenance(parcel.id, BuildingProvenance::Freehand);
+
+        assert_eq!(freehand_graph.parcels, grammar_graph.parcels);
+        assert_eq!(freehand_graph.facades, grammar_graph.facades);
+        assert_eq!(
+            freehand_graph.provenance.get(&parcel.id),
+            Some(&BuildingProvenance::Freehand)
+        );
+        assert_eq!(
+            grammar_graph.provenance.get(&parcel.id),
+            Some(&BuildingProvenance::Procedural)
+        );
+    }
+
+    /// FR-CIV-BUILD-030 — era transitions across 100 ticks emit both pre- and
+    /// post-boundary facade styles in the histogram.
+    #[test]
+    fn era_grammar_histogram() {
+        let mut graph = BuildingGraph::new();
+        let mut allocator = Allocator::new(7);
+        let signals = DemandSignals {
+            residential: 1.0,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let mut histogram = BTreeMap::new();
+
+        for tick in 0..100 {
+            let era = if tick < 50 { 0 } else { 3 };
+            for id in allocator.allocate(
+                &mut graph,
+                &signals,
+                era,
+                WorldCoord { x: 0, y: 0, z: 0 },
+                8,
+            ) {
+                if let Some(facade) = graph.facades.get(&id) {
+                    *histogram.entry(facade.name.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+
+        assert!(histogram.get("mud-brick").copied().unwrap_or(0) > 0);
+        assert!(histogram.get("brick").copied().unwrap_or(0) > 0);
     }
 
     /// FR-CIV-BUILD-015 — 100 ticks of high signals produce around 100 parcels.

@@ -13,7 +13,7 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// A DNA strand — fixed-length byte vector. Length is class-parameterised at
 /// construction; the type itself is class-agnostic.
@@ -167,15 +167,19 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// FR-CIV-GENETICS-000 — schema version present.
+    /// FR-CIV-GENETICS-000 — exposes a semver-like schema version stub.
     #[test]
-    fn schema_version_present() {
-        assert_eq!(SCHEMA_VERSION, 0);
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
     /// FR-CIV-GENETICS-001 — mutation is deterministic under a fixed seed.
     #[test]
-    fn mutation_is_deterministic() {
+    fn mutation_deterministic() {
         let class = DnaClass::default();
         let mut a = Dna::zero(class.length);
         let mut b = Dna::zero(class.length);
@@ -188,7 +192,7 @@ mod tests {
 
     /// FR-CIV-GENETICS-002 — recombination is deterministic under a fixed seed.
     #[test]
-    fn recombination_is_deterministic() {
+    fn recombination_deterministic() {
         let class = DnaClass::default();
         let parent_a = Dna(vec![1u8; class.length]);
         let parent_b = Dna(vec![2u8; class.length]);
@@ -206,7 +210,7 @@ mod tests {
     /// FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
     /// not below.
     #[test]
-    fn speciation_trigger_respects_threshold() {
+    fn speciation_trigger() {
         let class = DnaClass {
             speciation_threshold: 0.5,
             ..DnaClass::default()

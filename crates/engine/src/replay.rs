@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
 
+use crate::hash_chain::{chain_root_from_ticks, tick_event_bytes, tick_hash, GENESIS, HASH_LEN};
 use crate::io::{read_text, write_text};
 use civ_voxel::MaterialId;
 
@@ -37,6 +38,9 @@ pub struct ReplayLog {
     pub events: Vec<ReplayEvent>,
     pub seed: u64,
     pub schema_version: u32,
+    /// Latest BLAKE3 chain root after the most recent [`Self::record_tick`].
+    #[serde(default)]
+    pub running_hash: Option<[u8; HASH_LEN]>,
 }
 
 impl Default for ReplayLog {
@@ -45,6 +49,7 @@ impl Default for ReplayLog {
             events: Vec::new(),
             seed: 0,
             schema_version: 1,
+            running_hash: None,
         }
     }
 }
@@ -55,6 +60,20 @@ pub enum ReplayError {
     Io(std::io::Error),
     Ron(ron::Error),
     RonSpanned(ron::error::SpannedError),
+    /// `.civreplay` container magic bytes do not match.
+    InvalidMagic,
+    /// Unsupported `.civreplay` container format version.
+    UnsupportedFormatVersion(u32),
+    /// File shorter than header, payload, or footer.
+    Truncated,
+    /// RON payload exceeds `u32::MAX` bytes.
+    PayloadTooLarge,
+    /// Payload is not valid UTF-8.
+    InvalidUtf8(std::str::Utf8Error),
+    /// Footer SHA-256 does not match header + payload.
+    ChecksumMismatch,
+    /// Stored [`ReplayLog::running_hash`] does not match the chain recomputed from tick events.
+    HashChainMismatch,
 }
 
 impl fmt::Display for ReplayError {
@@ -63,6 +82,15 @@ impl fmt::Display for ReplayError {
             Self::Io(err) => write!(f, "{err}"),
             Self::Ron(err) => write!(f, "{err}"),
             Self::RonSpanned(err) => write!(f, "{err}"),
+            Self::InvalidMagic => write!(f, "invalid .civreplay magic"),
+            Self::UnsupportedFormatVersion(v) => {
+                write!(f, "unsupported .civreplay format version {v}")
+            }
+            Self::Truncated => write!(f, "truncated .civreplay file"),
+            Self::PayloadTooLarge => write!(f, ".civreplay RON payload too large"),
+            Self::InvalidUtf8(err) => write!(f, "{err}"),
+            Self::ChecksumMismatch => write!(f, ".civreplay checksum mismatch"),
+            Self::HashChainMismatch => write!(f, "replay hash chain mismatch"),
         }
     }
 }
@@ -87,6 +115,12 @@ impl From<ron::Error> for ReplayError {
     }
 }
 
+impl From<std::str::Utf8Error> for ReplayError {
+    fn from(value: std::str::Utf8Error) -> Self {
+        Self::InvalidUtf8(value)
+    }
+}
+
 impl ReplayLog {
     /// Record a voxel write.
     pub fn record_voxel_write(&mut self, tick: u64, pos: WorldCoord, value: MaterialId) {
@@ -108,9 +142,42 @@ impl ReplayLog {
         });
     }
 
-    /// Record a tick marker.
+    /// Record a tick marker and extend the per-tick hash chain (FR-CORE-005 partial).
     pub fn record_tick(&mut self, tick: u64) {
         self.events.push(ReplayEvent::Tick { tick });
+        let prev = self.running_hash.unwrap_or(GENESIS);
+        self.running_hash = Some(tick_hash(&prev, &tick_event_bytes(tick)));
+    }
+
+    /// Recompute the hash-chain root from [`ReplayEvent::Tick`] markers in event order.
+    #[must_use]
+    pub fn recompute_running_hash(&self) -> Option<[u8; HASH_LEN]> {
+        chain_root_from_ticks(self.events.iter().filter_map(|event| match event {
+            ReplayEvent::Tick { tick } => Some(*tick),
+            _ => None,
+        }))
+    }
+
+    /// Verify that a stored [`Self::running_hash`] matches the chain from tick events.
+    ///
+    /// Logs without a stored root (legacy) skip verification.
+    pub fn verify_hash_chain(&self) -> Result<(), ReplayError> {
+        let Some(stored) = self.running_hash else {
+            return Ok(());
+        };
+        let expected = self
+            .recompute_running_hash()
+            .ok_or(ReplayError::HashChainMismatch)?;
+        if stored != expected {
+            return Err(ReplayError::HashChainMismatch);
+        }
+        Ok(())
+    }
+
+    /// Alias for [`Self::running_hash`] (hash-chain root after the last recorded tick).
+    #[must_use]
+    pub fn hash_chain_root(&self) -> Option<[u8; HASH_LEN]> {
+        self.running_hash
     }
 
     /// Save the replay log as RON.

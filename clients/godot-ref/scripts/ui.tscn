@@ -1,8 +1,39 @@
-[gd_scene load_steps=1 format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/minimap.gd" id="1_minimap"]
 
 [node name="UI" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Minimap" type="Panel" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -136.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 136.0
+mouse_filter = 0
+tooltip_text = "Terrain height fingerprint (128×128). Click to pan orbit target."
+script = ExtResource("1_minimap")
+
+[node name="TextureRect" type="TextureRect" parent="Minimap"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 128.0
+offset_bottom = 128.0
+custom_minimum_size = Vector2(128, 128)
+stretch_mode = 0
+mouse_filter = 2
+
+[node name="Dot" type="ColorRect" parent="Minimap"]
+layout_mode = 0
+offset_right = 4.0
+offset_bottom = 4.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.95)
 
 [node name="BottomBar" type="PanelContainer" parent="."]
 anchor_top = 1.0
@@ -16,30 +47,48 @@ offset_bottom = 0.0
 
 [node name="Place Voxel" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Place Voxel"
+tooltip_text = "Left-click terrain to place a voxel (POST /control/place_voxel)"
 
 [node name="Spawn Civilian" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Spawn Civilian"
+tooltip_text = "Left-click terrain to spawn a civilian (POST /control/spawn_civilian)"
 
 [node name="Damage" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Damage"
+tooltip_text = "Tactical voxel damage (not wired yet)"
 
 [node name="Inspect" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Inspect"
+tooltip_text = "Inspect terrain cell under cursor"
 
 [node name="Camera" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Camera"
+tooltip_text = "Orbit camera with right-drag and scroll zoom"
 
 [node name="Speed" type="OptionButton" parent="BottomBar/HBoxContainer"]
 item_count = 5
 selected = 1
+tooltip_text = "Simulation speed: Pause, 1×, 2×, 4×, or 8× (POST /control/speed)"
 
 [node name="Material" type="SpinBox" parent="BottomBar/HBoxContainer"]
 min_value = 0.0
 max_value = 7.0
 step = 1.0
+tooltip_text = "Voxel material id (0–7) for Place Voxel"
 
 [node name="TickLabel" type="Label" parent="BottomBar/HBoxContainer"]
 text = "Tick: 0"
+tooltip_text = "Live tick from civ-watch GET /snapshot"
 
 [node name="PopulationLabel" type="Label" parent="BottomBar/HBoxContainer"]
 text = "Population: 0"
+tooltip_text = "Population from civ-watch GET /snapshot"
+
+[node name="EraLabel" type="Label" parent="BottomBar/HBoxContainer"]
+text = "Era: 0"
+tooltip_text = "Era index from tick / era length (FR-CIV-UX-001 timelapse)"
+
+[node name="SpawnCountLabel" type="Label" parent="BottomBar/HBoxContainer"]
+visible = false
+text = "Spawns: 0"
+tooltip_text = "Authoring spawn counter (watch attach only)"

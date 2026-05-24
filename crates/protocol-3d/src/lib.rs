@@ -9,9 +9,16 @@
 //!   (procedural vs freehand).
 //! - **Agent appearance** — per-civilian wardrobe / tools state updates.
 //!
-//! This crate currently ships the wire-format types and a versioning gate; the
-//! actual binary serialisation (zstd-compressed frames) and WebSocket attach
-//! happen in `civ-server` once the frame types stabilise.
+//! This crate ships the wire-format types, a versioning gate, and a minimal
+//! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`).
+//! Full zstd-compressed production framing and WebSocket attach land in
+//! `civ-server` once the schema stabilises.
+//!
+//! **Tick batch coalescing:** the server sends three separate `F3D0` frames per
+//! tick (voxel, building, agent) rather than one length-prefixed batch blob.
+//! Clients already decode individual frames; merging them would require a new
+//! magic/batch envelope and break existing decoders for a small WebSocket
+//! framing win (3 headers ≈ 27 bytes vs 1).
 //!
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-PROTO3D-*`.
 
@@ -84,7 +91,7 @@ pub struct BuildingDiffFrame {
 
 /// Agent appearance update — one entry per agent whose visible state changed
 /// this tick (wardrobe, tools, era).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentAppearanceFrame {
     /// Server tick at which the update was produced.
     pub tick: u64,
@@ -93,7 +100,7 @@ pub struct AgentAppearanceFrame {
 }
 
 /// A single per-agent appearance state update.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentAppearanceUpdate {
     /// Opaque ECS entity ID. The server side ensures stable IDs across ticks.
     pub agent_id: u64,
@@ -103,11 +110,18 @@ pub struct AgentAppearanceUpdate {
     pub wardrobe: MaterialId,
     /// Tools material slot.
     pub tools: MaterialId,
+    /// Uniform scale multiplier for the agent marker mesh (`1.0` when omitted).
+    #[serde(default = "default_agent_scale")]
+    pub scale: f32,
+}
+
+fn default_agent_scale() -> f32 {
+    1.0
 }
 
 /// Discriminated union of all 3D-extension protocol frames. The existing Civis
 /// protocol carries this inside its binary-frame envelope.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Frame3d {
     /// Voxel-delta batch for one tick.
     VoxelDelta(VoxelDeltaFrame),
@@ -127,6 +141,92 @@ impl Frame3d {
             Self::AgentAppearance(f) => f.tick,
         }
     }
+}
+
+/// 4-byte magic identifying civ-protocol-3d binary frames (CIV-0200 partial).
+pub const FRAME3D_BINARY_MAGIC: &[u8; 4] = b"F3D0";
+
+/// Header size: magic (4) + kind tag (1) + payload length (4, big-endian).
+const FRAME3D_BINARY_HEADER_LEN: usize = 9;
+
+/// Variant tag carried in the binary header (kind byte).
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Frame3dKind {
+    VoxelDelta = 0,
+    BuildingDiff = 1,
+    AgentAppearance = 2,
+}
+
+impl Frame3dKind {
+    fn from_frame(frame: &Frame3d) -> Self {
+        match frame {
+            Frame3d::VoxelDelta(_) => Self::VoxelDelta,
+            Frame3d::BuildingDiff(_) => Self::BuildingDiff,
+            Frame3d::AgentAppearance(_) => Self::AgentAppearance,
+        }
+    }
+}
+
+/// Errors from binary frame encode/decode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Frame3dBinaryError {
+    /// Magic bytes do not match [`FRAME3D_BINARY_MAGIC`].
+    BadMagic,
+    /// Buffer is shorter than the fixed header.
+    TooShort,
+    /// Declared payload length does not match the buffer.
+    LengthMismatch,
+    /// JSON payload could not be serialized or parsed.
+    InvalidPayload(String),
+}
+
+/// Encode a [`Frame3d`] as `magic || kind || len_be || json`.
+///
+/// JSON carries the full tagged union so clients can reuse existing serde
+/// schemas while the binary envelope satisfies CIV-0200 binary-frame clients.
+pub fn encode_frame3d_binary(frame: &Frame3d) -> Result<Vec<u8>, Frame3dBinaryError> {
+    let json = serde_json::to_vec(frame)
+        .map_err(|err| Frame3dBinaryError::InvalidPayload(err.to_string()))?;
+    encode_frame3d_binary_from_json(frame, &json)
+}
+
+/// Wrap already-serialized JSON bytes in the `F3D0` envelope for `frame`.
+///
+/// Use when the same JSON is sent as a WebSocket text frame and as the binary
+/// payload (avoids a second `serde_json` pass in `Both` tick-broadcast mode).
+pub fn encode_frame3d_binary_from_json(
+    frame: &Frame3d,
+    json: &[u8],
+) -> Result<Vec<u8>, Frame3dBinaryError> {
+    let kind = Frame3dKind::from_frame(frame);
+    let len = u32::try_from(json.len()).map_err(|_| Frame3dBinaryError::LengthMismatch)?;
+
+    let mut out = Vec::with_capacity(FRAME3D_BINARY_HEADER_LEN + json.len());
+    out.extend_from_slice(FRAME3D_BINARY_MAGIC);
+    out.push(kind as u8);
+    out.extend_from_slice(&len.to_be_bytes());
+    out.extend_from_slice(json);
+    Ok(out)
+}
+
+/// Decode a binary blob produced by [`encode_frame3d_binary`].
+pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError> {
+    if bytes.len() < FRAME3D_BINARY_HEADER_LEN {
+        return Err(Frame3dBinaryError::TooShort);
+    }
+    if &bytes[..4] != FRAME3D_BINARY_MAGIC {
+        return Err(Frame3dBinaryError::BadMagic);
+    }
+
+    let len = u32::from_be_bytes([bytes[5], bytes[6], bytes[7], bytes[8]]) as usize;
+    let expected = FRAME3D_BINARY_HEADER_LEN + len;
+    if bytes.len() != expected {
+        return Err(Frame3dBinaryError::LengthMismatch);
+    }
+
+    serde_json::from_slice(&bytes[FRAME3D_BINARY_HEADER_LEN..])
+        .map_err(|err| Frame3dBinaryError::InvalidPayload(err.to_string()))
 }
 
 #[cfg(test)]
@@ -179,5 +279,58 @@ mod tests {
             deltas: Vec::new(),
         });
         assert_eq!(f.tick(), 17);
+    }
+
+    /// FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
+    #[test]
+    fn building_diff_binary_roundtrip() {
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 42,
+            provenance: BuildingProvenance::Procedural,
+        });
+        let bytes = encode_frame3d_binary(&frame).expect("encode");
+        assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));
+        assert_eq!(bytes[4], Frame3dKind::BuildingDiff as u8);
+        let back = decode_frame3d_binary(&bytes).expect("decode");
+        assert_eq!(back, frame);
+    }
+
+    /// FR-CIV-PROTO3D-006 — pre-serialized JSON matches full encode path.
+    #[test]
+    fn binary_from_json_matches_full_encode() {
+        let frame = Frame3d::AgentAppearance(AgentAppearanceFrame {
+            tick: 7,
+            updates: Vec::new(),
+        });
+        let json = serde_json::to_vec(&frame).expect("json");
+        let from_json = encode_frame3d_binary_from_json(&frame, &json).expect("from json");
+        let full = encode_frame3d_binary(&frame).expect("full");
+        assert_eq!(from_json, full);
+    }
+
+    /// FR-CIV-PROTO3D-007 — agent appearance accepts optional scale with default.
+    #[test]
+    fn agent_appearance_update_default_scale() {
+        let json = r#"{"agent_id":3,"era":1,"wardrobe":0,"tools":0}"#;
+        let update: AgentAppearanceUpdate = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(update.scale, 1.0);
+        let with_scale = r#"{"agent_id":3,"era":1,"wardrobe":0,"tools":0,"scale":1.25}"#;
+        let scaled: AgentAppearanceUpdate = serde_json::from_str(with_scale).expect("deserialize");
+        assert!((scaled.scale - 1.25).abs() < f32::EPSILON);
+    }
+
+    /// FR-CIV-PROTO3D-005 — corrupt magic is rejected.
+    #[test]
+    fn decode_rejects_bad_magic() {
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 1,
+            provenance: BuildingProvenance::Freehand,
+        });
+        let mut bytes = encode_frame3d_binary(&frame).expect("encode");
+        bytes[0] = b'X';
+        assert_eq!(
+            decode_frame3d_binary(&bytes),
+            Err(Frame3dBinaryError::BadMagic)
+        );
     }
 }

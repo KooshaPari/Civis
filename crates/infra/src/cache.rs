@@ -23,7 +23,7 @@ impl Cache {
         redis::cmd("SET")
             .arg(key)
             .arg(value)
-            .query_async::<_, ()>(&mut conn)
+            .query_async::<()>(&mut conn)
             .await?;
         Ok(())
     }
@@ -33,7 +33,7 @@ impl Cache {
         let mut conn = self.connection().await?;
         Ok(redis::cmd("GET")
             .arg(key)
-            .query_async::<_, Option<Vec<u8>>>(&mut conn)
+            .query_async::<Option<Vec<u8>>>(&mut conn)
             .await?)
     }
 
@@ -42,7 +42,7 @@ impl Cache {
         let mut conn = self.connection().await?;
         redis::cmd("DEL")
             .arg(key)
-            .query_async::<_, ()>(&mut conn)
+            .query_async::<()>(&mut conn)
             .await?;
         Ok(())
     }

@@ -3,10 +3,12 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_cohort_tools, propagate_cohort_wardrobe, spawn_many, CohortStats,
+    count_civilians, propagate_tools, propagate_wardrobe, spawn_many, CohortStats, LodTier, Tools,
+    Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
+use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
 use civ_tactics::{apply_damage, DamageEvent};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
@@ -15,11 +17,35 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
-use crate::replay::ReplayLog;
+use crate::lod::{should_tick_entity_with_policy, LodPolicy};
+use crate::policy::PolicyInput;
+use crate::policy::DEFAULT_ECONOMY_POLICY;
+use crate::replay::{ReplayError, ReplayLog};
+use crate::replay_format::{load_civreplay, save_civreplay};
+
+/// Ordered phase identifiers executed once per [`Simulation::tick`].
+///
+/// CIV-0001 partial — engine-side deterministic transition. Server command intake
+/// and client broadcast are outside this crate. Keep in sync with the calls in
+/// [`Simulation::tick`].
+#[allow(dead_code)]
+pub(crate) const PHASE_ORDER: &[&str] = &[
+    "production",
+    "citizen_lifecycle",
+    "military",
+    "economy",
+    "tactics",
+    "voxel",
+    "compact",
+    "planet",
+    "buildings",
+    "diffusion",
+];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResearchCache;
@@ -185,6 +211,113 @@ pub struct Simulation {
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
     replay_log: ReplayLog,
+    /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
+    pub economy_policy: PolicyInput,
+    /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
+    pub economy_state: EconomyState,
+    /// Per-good clearing prices (`civ-economy`); advanced in [`phase_economy`].
+    pub market_state: MarketState,
+    /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
+    pub lod_policy: LodPolicy,
+}
+
+fn economy_state_from_world(world: &WorldState) -> EconomyState {
+    let energy_budget_joules = world.energy_budget_joules.raw / crate::SCALE;
+    let mut state = EconomyState::with_energy_budget(energy_budget_joules);
+    state.tick = world.tick;
+    state
+}
+
+fn propagate_cohort_wardrobe_with_lod(
+    world: &mut World,
+    target_era: u16,
+    params: DiffusionParams,
+    rng: &mut SimRng,
+    tick: u64,
+    policy: LodPolicy,
+) -> CohortStats {
+    let total_civilians = count_civilians(world) as u32;
+    let mut currently_at_target = world
+        .query::<&Wardrobe>()
+        .iter()
+        .filter(|(_, wardrobe)| wardrobe.era >= target_era)
+        .count() as u32;
+    let current_fraction = if total_civilians == 0 {
+        0.0
+    } else {
+        currently_at_target as f32 / total_civilians as f32
+    };
+
+    let mut promoted_this_tick = 0_u32;
+    for (_, (wardrobe, lod)) in world.query_mut::<(&mut Wardrobe, &LodTier)>().into_iter() {
+        if !should_tick_entity_with_policy(tick, *lod, policy) {
+            continue;
+        }
+        if wardrobe.era < target_era
+            && propagate_wardrobe(wardrobe, target_era, current_fraction, params, rng)
+        {
+            promoted_this_tick += 1;
+        }
+    }
+
+    currently_at_target = world
+        .query::<&Wardrobe>()
+        .iter()
+        .filter(|(_, wardrobe)| wardrobe.era >= target_era)
+        .count() as u32;
+
+    CohortStats {
+        promoted_this_tick,
+        currently_at_target,
+        total_civilians,
+        current_fraction,
+    }
+}
+
+fn propagate_cohort_tools_with_lod(
+    world: &mut World,
+    target_era: u16,
+    params: DiffusionParams,
+    rng: &mut SimRng,
+    tick: u64,
+    policy: LodPolicy,
+) -> CohortStats {
+    let total_civilians = count_civilians(world) as u32;
+    let mut currently_at_target = world
+        .query::<&Tools>()
+        .iter()
+        .filter(|(_, tools)| tools.era >= target_era)
+        .count() as u32;
+    let current_fraction = if total_civilians == 0 {
+        0.0
+    } else {
+        currently_at_target as f32 / total_civilians as f32
+    };
+
+    let mut promoted_this_tick = 0_u32;
+    for (_, (tools, lod)) in world.query_mut::<(&mut Tools, &LodTier)>().into_iter() {
+        if !should_tick_entity_with_policy(tick, *lod, policy) {
+            continue;
+        }
+        if tools.era < target_era
+            && propagate_tools(tools, target_era, current_fraction, params, rng)
+        {
+            promoted_this_tick += 1;
+        }
+    }
+
+    currently_at_target = world
+        .query::<&Tools>()
+        .iter()
+        .filter(|(_, tools)| tools.era >= target_era)
+        .count() as u32;
+
+    CohortStats {
+        promoted_this_tick,
+        currently_at_target,
+        total_civilians,
+        current_fraction,
+    }
 }
 
 impl Simulation {
@@ -199,9 +332,12 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let state = WorldState::default();
 
         Self {
-            state: WorldState::default(),
+            economy_state: economy_state_from_world(&state),
+            market_state: MarketState::default(),
+            state,
             world,
             rng,
             planet,
@@ -222,6 +358,8 @@ impl Simulation {
                 seed: 42,
                 ..ReplayLog::default()
             },
+            economy_policy: DEFAULT_ECONOMY_POLICY,
+            lod_policy: LodPolicy::default(),
         }
     }
 
@@ -234,12 +372,15 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let state = WorldState {
+            rng_seed: seed,
+            ..Default::default()
+        };
 
         Self {
-            state: WorldState {
-                rng_seed: seed,
-                ..Default::default()
-            },
+            economy_state: economy_state_from_world(&state),
+            market_state: MarketState::default(),
+            state,
             world,
             rng,
             planet,
@@ -260,6 +401,8 @@ impl Simulation {
                 seed,
                 ..ReplayLog::default()
             },
+            economy_policy: DEFAULT_ECONOMY_POLICY,
+            lod_policy: LodPolicy::default(),
         }
     }
 
@@ -418,11 +561,15 @@ impl Simulation {
         &mut self.rng
     }
 
-    /// Advance simulation by one tick
+    /// Advance simulation by one tick.
+    ///
+    /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
+    /// transition only; server command intake and client broadcast live outside this
+    /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     pub fn tick(&mut self) {
         self.state.tick += 1;
 
-        // Run simulation phases
+        // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
         self.phase_citizen_lifecycle();
         self.phase_military();
@@ -434,11 +581,41 @@ impl Simulation {
         self.phase_buildings();
         self.phase_diffusion();
         self.replay_log.record_tick(self.state.tick);
+
+        #[cfg(debug_assertions)]
+        debug_assert!(
+            crate::integrity::check_integrity(self).is_ok(),
+            "simulation integrity violated"
+        );
     }
 
     /// Borrow the replay log.
     pub fn replay_log(&self) -> &ReplayLog {
         &self.replay_log
+    }
+
+    /// Mutable borrow of the replay log (tests and integrity tooling).
+    pub fn replay_log_mut(&mut self) -> &mut ReplayLog {
+        &mut self.replay_log
+    }
+
+    /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
+    pub fn hash_chain_root(&self) -> Option<[u8; crate::hash_chain::HASH_LEN]> {
+        self.replay_log.running_hash
+    }
+
+    /// Save the in-memory replay log to a `.civreplay` file (FR-REPLAY-001).
+    pub fn save_replay(&self, path: impl AsRef<std::path::Path>) -> Result<(), ReplayError> {
+        save_civreplay(path, &self.replay_log)
+    }
+
+    /// Load a `.civreplay` file and replay its events into a new simulation.
+    pub fn load_replay_from_file(path: impl AsRef<std::path::Path>) -> Result<Self, ReplayError> {
+        let log = load_civreplay(path)?;
+        let mut sim = Self::with_seed(log.seed);
+        log.replay(&mut sim)?;
+        sim.replay_log = log;
+        Ok(sim)
     }
 
     /// Planet phase - recompute climate from the current tick.
@@ -504,17 +681,23 @@ impl Simulation {
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.
     fn phase_diffusion(&mut self) {
-        let wardrobe_stats = propagate_cohort_wardrobe(
+        let tick = self.state.tick;
+        let policy = self.lod_policy;
+        let wardrobe_stats = propagate_cohort_wardrobe_with_lod(
             &mut self.world,
             self.target_era,
             self.diffusion_params,
             &mut self.rng,
+            tick,
+            policy,
         );
-        let _tools_stats = propagate_cohort_tools(
+        let _tools_stats = propagate_cohort_tools_with_lod(
             &mut self.world,
             self.target_era,
             self.diffusion_params,
             &mut self.rng,
+            tick,
+            policy,
         );
 
         debug_assert_eq!(
@@ -585,12 +768,26 @@ impl Simulation {
         }
     }
 
-    /// Economy phase - energy consumption
+    /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
+    /// and advance market prices.
+    ///
+    /// Policy consumption (FR-ECON-001):
+    /// `effective_consumption = base_consumption_joules × max(scarcity_multiplier, 0)`
+    ///
+    /// Conservation: budget only decreases; result is clamped to zero (aggregate
+    /// energy cannot go negative).
     fn phase_economy(&mut self) {
-        // Base energy consumption per citizen
-        let consumption = Fixed::from_num(self.state.population) / Fixed::from_num(1000);
-        self.state.energy_budget_joules =
-            (self.state.energy_budget_joules - consumption).max(Fixed::ZERO);
+        self.economy_state.energy_budget_joules =
+            self.state.energy_budget_joules.raw / crate::SCALE;
+
+        let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
+        let budget = self.economy_state.energy_budget_joules;
+        let allocated = CapitalistAllocator.allocate(budget, demand);
+        civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
+        civ_economy::step(&mut self.economy_state);
+
+        self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        self.market_state.step(self.state.tick);
     }
 
     /// Get snapshot of current state
@@ -606,6 +803,7 @@ impl Simulation {
             building_count,
             military_count,
             energy_budget: self.state.energy_budget_joules,
+            market_prices: self.market_state.prices().clone(),
         }
     }
 }
@@ -650,6 +848,8 @@ pub struct SimulationSnapshot {
     pub building_count: usize,
     pub military_count: usize,
     pub energy_budget: Fixed,
+    /// Per-good clearing prices in cents from [`MarketState`].
+    pub market_prices: BTreeMap<String, i64>,
 }
 
 // ============================================================================
@@ -659,8 +859,9 @@ pub struct SimulationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
-    use civ_agents::{count_civilians, Wardrobe};
+    use civ_agents::{count_civilians, LodTier, Wardrobe};
     use civ_planet::{compute_climate, is_daytime, MoonConfig, PlanetConfig};
     use civ_voxel::{MaterialId, WorldCoord};
     use tempfile::NamedTempFile;
@@ -688,6 +889,132 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         assert_eq!(sim.state.tick, 1);
+    }
+
+    /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
+    #[test]
+    fn fr_core_001_single_tick_event_per_tick() {
+        use crate::invariants::check_tick_invariants;
+
+        let mut sim = Simulation::with_seed(1);
+        assert_eq!(count_replay_ticks(&sim), 0);
+
+        sim.tick();
+        assert_eq!(sim.state.tick, 1);
+        assert_eq!(count_replay_ticks(&sim), 1);
+        check_tick_invariants(&sim).expect("one replay tick marker per completed tick");
+
+        for expected in 2..=5 {
+            sim.tick();
+            assert_eq!(sim.state.tick, expected);
+            assert_eq!(count_replay_ticks(&sim), expected as usize);
+        }
+    }
+
+    /// CIV-0001 partial — `PHASE_ORDER` matches the sequence in `Simulation::tick`.
+    #[test]
+    fn phase_order_matches_tick_sequence() {
+        assert_eq!(
+            PHASE_ORDER,
+            &[
+                "production",
+                "citizen_lifecycle",
+                "military",
+                "economy",
+                "tactics",
+                "voxel",
+                "compact",
+                "planet",
+                "buildings",
+                "diffusion",
+            ]
+        );
+    }
+
+    fn count_replay_ticks(sim: &Simulation) -> usize {
+        sim.replay_log()
+            .events
+            .iter()
+            .filter(|event| matches!(event, ReplayEvent::Tick { .. }))
+            .count()
+    }
+
+    /// CIV-0100 stub: joule budget drain matches policy formula and stays non-negative.
+    #[test]
+    fn phase_economy_conserves_non_negative_budget() {
+        use crate::policy::PolicyInput;
+
+        let mut sim = Simulation::with_seed(99);
+        sim.economy_policy = PolicyInput {
+            base_consumption_joules: 1_000.0,
+            scarcity_multiplier: 2.0,
+        };
+        let before = sim.state.energy_budget_joules;
+        sim.tick();
+        let expected = (before - Fixed::from_num(2_000i64)).max(Fixed::ZERO);
+        assert_eq!(sim.state.energy_budget_joules, expected);
+        assert!(sim.state.energy_budget_joules.raw >= Fixed::ZERO.raw);
+    }
+
+    /// `phase_economy` routes demand through [`CapitalistAllocator::allocate`].
+    #[test]
+    fn phase_economy_uses_capitalist_allocator() {
+        use crate::policy::PolicyInput;
+
+        let mut sim = Simulation::with_seed(7);
+        sim.state.energy_budget_joules = Fixed::from_num(50);
+        sim.economy_policy = PolicyInput {
+            base_consumption_joules: 100.0,
+            scarcity_multiplier: 1.0,
+        };
+
+        let demand = crate::policy::effective_consumption(sim.economy_policy) as i64;
+        let expected_allocated = CapitalistAllocator.allocate(50, demand);
+        let before = sim.state.energy_budget_joules;
+
+        sim.tick();
+
+        assert_eq!(expected_allocated, 50);
+        assert_eq!(
+            sim.state.energy_budget_joules,
+            before - Fixed::from_num(expected_allocated)
+        );
+        assert_eq!(sim.economy_state.energy_budget_joules, 0);
+    }
+
+    /// `phase_economy` keeps `economy_state` in sync with the world joule budget.
+    #[test]
+    fn phase_economy_updates_economy_state() {
+        use crate::policy::PolicyInput;
+
+        let mut sim = Simulation::with_seed(99);
+        sim.economy_policy = PolicyInput {
+            base_consumption_joules: 1_000.0,
+            scarcity_multiplier: 1.0,
+        };
+        let before = sim.economy_state.energy_budget_joules;
+        sim.tick();
+        assert_eq!(
+            sim.economy_state.energy_budget_joules,
+            sim.state.energy_budget_joules.raw / crate::SCALE
+        );
+        assert_eq!(sim.economy_state.energy_budget_joules, before - 1_000);
+    }
+
+    /// `phase_economy` advances [`MarketState`] so prices move over time.
+    #[test]
+    fn phase_economy_steps_market_prices() {
+        const N: usize = 2;
+
+        let mut sim = Simulation::with_seed(42);
+        let initial = sim.market_state.prices.clone();
+        for _ in 0..N {
+            sim.tick();
+        }
+        assert_ne!(
+            sim.market_state.prices, initial,
+            "expected at least one market price to change after {N} ticks"
+        );
     }
 
     #[test]
@@ -814,6 +1141,44 @@ mod tests {
             .filter(|(_, wardrobe)| wardrobe.era >= sim.target_era)
             .count();
         assert!(after > before);
+    }
+
+    /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
+    #[test]
+    fn cold_tier_diffusion_only_on_cadence_boundaries() {
+        let mut sim = Simulation::with_seed(55);
+        let policy = LodPolicy::default();
+
+        let cold_entities: Vec<hecs::Entity> = sim
+            .world
+            .query::<(&Wardrobe, &LodTier)>()
+            .iter()
+            .filter_map(|(entity, (_, lod))| (*lod == LodTier::Cold).then_some(entity))
+            .collect();
+        assert!(
+            !cold_entities.is_empty(),
+            "expected spawn_many to produce Cold-tier civilians"
+        );
+
+        for tick in 1..=32 {
+            let before: std::collections::HashMap<hecs::Entity, u16> = cold_entities
+                .iter()
+                .map(|&entity| (entity, *sim.world.get::<&Wardrobe>(entity).unwrap()))
+                .map(|(entity, wardrobe)| (entity, wardrobe.era))
+                .collect();
+
+            sim.tick();
+
+            for &entity in &cold_entities {
+                let after = sim.world.get::<&Wardrobe>(entity).unwrap().era;
+                if before[&entity] != after {
+                    assert!(
+                        should_tick_entity_with_policy(tick, LodTier::Cold, policy),
+                        "Cold-tier wardrobe changed on tick {tick} (off cadence)"
+                    );
+                }
+            }
+        }
     }
 
     /// FR-CIV-ENGINE-INT-013 — replay determinism still holds across 200 ticks
@@ -1050,6 +1415,36 @@ mod tests {
         log.replay(&mut replayed).unwrap();
         assert_eq!(replayed.state.tick, sim.state.tick);
         assert_eq!(replayed.voxel().chunk_count(), sim.voxel().chunk_count());
+    }
+
+    /// CIV-0104 — minimal tick invariants hold after every tick.
+    #[test]
+    fn tick_invariants_hold_across_many_ticks() {
+        use crate::invariants::check_tick_invariants;
+
+        let mut sim = Simulation::with_seed(104);
+        check_tick_invariants(&sim).expect("initial state");
+
+        for _ in 0..200 {
+            sim.tick();
+            check_tick_invariants(&sim).expect("invariants after tick");
+        }
+    }
+
+    /// FR-REPLAY-001 — `.civreplay` save/load restores simulation tick after N ticks.
+    #[test]
+    fn civreplay_save_load_restores_tick_after_ticks() {
+        const N: u64 = 17;
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..N {
+            sim.tick();
+        }
+        let expected_tick = sim.state.tick;
+
+        let file = NamedTempFile::new().unwrap();
+        sim.save_replay(file.path()).unwrap();
+        let loaded = Simulation::load_replay_from_file(file.path()).unwrap();
+        assert_eq!(loaded.state.tick, expected_tick);
     }
 
     /// FR-CIV-ENGINE-REPLAY-005 — identical replay logs converge to identical voxel state.

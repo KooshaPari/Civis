@@ -12,19 +12,72 @@ jobs:
   rust-quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@stable
       - name: Rust fmt
         run: cargo fmt --check
       - name: Rust clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Rust test
-        run: cargo test --all
+        run: cargo test --workspace
+      - name: Rust test (civis-godot-rust)
+        run: cargo test -p civis-godot-rust
+      - name: Rust test (civ-infra features)
+        run: cargo test -p civ-infra --all-features
+      - name: Rust test (civ-research firepass)
+        run: cargo test -p civ-research --features firepass-kimi
+      - name: Rust test (civ-bevy-ref)
+        run: cargo test -p civ-bevy-ref
+      - name: Rust test (civ-bevy-ref bevy)
+        run: cargo test -p civ-bevy-ref --features bevy
+      - name: Rust test (civ-watch)
+        run: cargo test -p civ-watch
+
+  web-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Web test
+        working-directory: web
+        run: npm test
+      - name: Web frame3d package test (if split)
+        if: ${{ hashFiles('web/frame3d/package.json') != '' }}
+        working-directory: web/frame3d
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm test
+      - name: Web attach package test (if split)
+        if: ${{ hashFiles('web/attach/package.json') != '' }}
+        working-directory: web/attach
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm test
+      # web/dashboard has bun.lock locally; CI uses npm — npm ci when package-lock.json is committed, else npm install
+      - name: Dashboard typecheck and build
+        working-directory: web/dashboard
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run typecheck
+          npx vite build
+
+  release-benchmarks:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Engine 10k tick budget (release, ignored)
+        run: cargo test -p civ-engine --release ten_thousand_ticks_under_budget -- --ignored
+      - name: WS tick broadcast encode bench (release, ignored)
+        run: cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture
 
   docs-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest

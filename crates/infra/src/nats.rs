@@ -9,7 +9,9 @@ impl NatsClient {
     /// Connect to NATS.
     pub async fn connect(url: &str) -> Result<Self, InfraError> {
         Ok(Self {
-            client: async_nats::connect(url).await?,
+            client: async_nats::connect(url)
+                .await
+                .map_err(|err| InfraError::Nats(err.to_string()))?,
         })
     }
 
@@ -21,12 +23,16 @@ impl NatsClient {
     ) -> Result<(), InfraError> {
         self.client
             .publish(topic.to_owned(), payload.into())
-            .await?;
+            .await
+            .map_err(|err| InfraError::Nats(err.to_string()))?;
         Ok(())
     }
 
     /// Subscribe to a topic.
     pub async fn subscribe(&self, topic: &str) -> Result<async_nats::Subscriber, InfraError> {
-        Ok(self.client.subscribe(topic.to_owned()).await?)
+        self.client
+            .subscribe(topic.to_owned())
+            .await
+            .map_err(|err| InfraError::Nats(err.to_string()))
     }
 }

@@ -1,5 +1,11 @@
 //! Policy module - consumption calculations based on policy settings
 
+/// Defaults matching `scenarios/baseline.yaml`.
+pub const DEFAULT_ECONOMY_POLICY: PolicyInput = PolicyInput {
+    base_consumption_joules: 5_000_000_000.0,
+    scarcity_multiplier: 1.0,
+};
+
 #[derive(Debug, Clone, Copy)]
 pub struct PolicyInput {
     pub base_consumption_joules: f64,

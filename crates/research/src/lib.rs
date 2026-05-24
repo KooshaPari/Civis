@@ -92,6 +92,96 @@ pub enum RejectReason {
     NoEffects,
 }
 
+/// Per-save progression mode (ADR-006).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ReplayMode {
+    /// Historical tech tree only; replay refuses any `LlmEvent`.
+    Canonical,
+    /// Canonical backbone plus LLM side-tech; replay requires cache hits.
+    Hybrid,
+    /// LLM may propose alt-physics/biology; replay requires cache hits.
+    Free,
+}
+
+/// Hash-keyed LLM output recorded in the event log (ADR-006).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LlmEvent {
+    /// RNG seed supplied to the model call.
+    pub seed: u64,
+    /// Blake3 of prompt template + variables.
+    pub prompt_hash: [u8; 32],
+    /// Provider model identifier.
+    pub model_id: String,
+    /// Provider model version.
+    pub model_version: String,
+    /// Blake3 of the snapshot region the call observed.
+    pub input_snapshot_hash: [u8; 32],
+    /// Blake3 of serialized output.
+    pub output_hash: [u8; 32],
+    /// Validated tech card emitted by the call.
+    pub output: TechCard,
+    /// Simulation tick when the event was recorded.
+    pub tick: u64,
+}
+
+impl LlmEvent {
+    /// Composite cache key: `(prompt_hash, input_snapshot_hash, model_id, model_version)`.
+    #[must_use]
+    pub fn cache_key(&self) -> Vec<u8> {
+        let mut key = Vec::with_capacity(64 + self.model_id.len() + self.model_version.len());
+        key.extend_from_slice(&self.prompt_hash);
+        key.extend_from_slice(&self.input_snapshot_hash);
+        key.extend_from_slice(self.model_id.as_bytes());
+        key.extend_from_slice(self.model_version.as_bytes());
+        key
+    }
+}
+
+/// Why replay refused to advance on an LLM event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReplayRefusal {
+    /// Canonical mode encountered an `LlmEvent` in the log.
+    CanonicalLlmEvent,
+    /// Hybrid/Free replay could not resolve the event from cache.
+    HybridCacheMiss,
+}
+
+/// Outcome of attempting to apply an `LlmEvent` during replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReplayAdvanceOutcome {
+    /// Cache hit (Hybrid/Free) or live run — event may be applied.
+    Advanced,
+    /// Replay must halt until the log/cache is repaired.
+    Refused(ReplayRefusal),
+}
+
+/// Apply replay rules from ADR-006 for a single `LlmEvent`.
+///
+/// During live play (`is_replay == false`) all modes advance. During replay,
+/// Canonical refuses every LLM event; Hybrid/Free require a cache hit.
+#[must_use]
+pub fn replay_advance_llm_event(
+    mode: ReplayMode,
+    cache: &ResearchCache,
+    event: &LlmEvent,
+    is_replay: bool,
+) -> ReplayAdvanceOutcome {
+    if !is_replay {
+        return ReplayAdvanceOutcome::Advanced;
+    }
+
+    match mode {
+        ReplayMode::Canonical => ReplayAdvanceOutcome::Refused(ReplayRefusal::CanonicalLlmEvent),
+        ReplayMode::Hybrid | ReplayMode::Free => {
+            if cache.get(&event.cache_key()).is_some() {
+                ReplayAdvanceOutcome::Advanced
+            } else {
+                ReplayAdvanceOutcome::Refused(ReplayRefusal::HybridCacheMiss)
+            }
+        }
+    }
+}
+
 /// Outcome of a research cycle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResearchOutcome {
@@ -284,6 +374,37 @@ mod tests {
         assert_eq!(SCHEMA_VERSION, 0);
     }
 
+    /// FR-CIV-RESEARCH-001 — LLM cache hit returns byte-identical output.
+    #[tokio::test]
+    async fn llm_cache_hit() {
+        let mut cache = ResearchCache::default();
+        let db = valid_research_db();
+        let key = b"snapshot-hash";
+        let card = TechCard {
+            id: "cached-tech".into(),
+            era: 1,
+            inputs: vec!["ore".into()],
+            energy_cost: 1,
+            byproducts: vec!["slag".into()],
+            dependencies: vec!["mass_conservation".into()],
+        };
+        cache.insert(key, card.clone());
+        let client = StaticClient {
+            card: Ok(TechCard {
+                id: "must-not-be-used".into(),
+                era: 99,
+                inputs: vec!["x".into()],
+                energy_cost: 999,
+                byproducts: vec!["y".into()],
+                dependencies: vec!["mass_conservation".into()],
+            }),
+        };
+
+        let outcome = run_research_cycle(&client, &mut cache, &db, "prompt", key).await;
+        assert_eq!(outcome, ResearchOutcome::CacheHit(card.clone()));
+        assert_eq!(cache.get(key), Some(&card));
+    }
+
     /// FR-CIV-RESEARCH-001 — a well-formed card with valid dependencies is
     /// accepted.
     #[test]
@@ -455,6 +576,56 @@ mod tests {
             ResearchOutcome::ClientError(LlmError::NetworkUnavailable)
         );
         assert!(cache.is_empty());
+    }
+
+    fn sample_llm_event() -> LlmEvent {
+        LlmEvent {
+            seed: 1,
+            prompt_hash: [0xAA; 32],
+            model_id: "kimi-k2.6-turbo".into(),
+            model_version: "2026-05-22".into(),
+            input_snapshot_hash: [0xBB; 32],
+            output_hash: [0xCC; 32],
+            output: TechCard {
+                id: "side_tech".into(),
+                era: 2,
+                inputs: vec!["ore".into()],
+                energy_cost: 5,
+                byproducts: vec!["slag".into()],
+                dependencies: vec!["mass_conservation".into()],
+            },
+            tick: 42,
+        }
+    }
+
+    /// FR-CIV-RESEARCH-002 — Canonical replay refuses first `LlmEvent` (ADR-006).
+    #[test]
+    fn canonical_replay_refuses_llm() {
+        let event = sample_llm_event();
+        let cache = ResearchCache::default();
+
+        let outcome = replay_advance_llm_event(ReplayMode::Canonical, &cache, &event, true);
+
+        assert_eq!(
+            outcome,
+            ReplayAdvanceOutcome::Refused(ReplayRefusal::CanonicalLlmEvent),
+            "canonical replay must halt on any LlmEvent until a deterministic fallback is supplied"
+        );
+    }
+
+    /// FR-CIV-RESEARCH-003 — Hybrid replay on cache miss refuses to advance (ADR-006).
+    #[test]
+    fn hybrid_cache_miss_refuses() {
+        let event = sample_llm_event();
+        let cache = ResearchCache::default();
+
+        let outcome = replay_advance_llm_event(ReplayMode::Hybrid, &cache, &event, true);
+
+        assert_eq!(
+            outcome,
+            ReplayAdvanceOutcome::Refused(ReplayRefusal::HybridCacheMiss),
+            "hybrid replay must not call a live LLM when the hash-keyed cache misses"
+        );
     }
 
     /// FR-CIV-RESEARCH-033 — deterministic dummy client is stable.

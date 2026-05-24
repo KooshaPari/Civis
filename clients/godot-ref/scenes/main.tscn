@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="PackedScene" path="res://scripts/ui.tscn" id="2_ui"]
+[ext_resource type="Script" path="res://scripts/camera.gd" id="2_camera"]
+[ext_resource type="PackedScene" path="res://scripts/ui.tscn" id="3_ui"]
 
 [sub_resource type="Environment" id="1_env"]
 background_mode = 2
@@ -27,6 +28,7 @@ script = ExtResource("1_main")
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 32, 50, 32)
 fov = 55.0
+script = ExtResource("2_camera")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-45, -30, 0)
@@ -43,8 +45,10 @@ transform = Transform3D(48, 0, 0, 0, 1, 0, 0, 0, 48, 32, -1, 32)
 
 [node name="Civilians" type="Node3D" parent="."]
 
+[node name="Buildings" type="Node3D" parent="."]
+
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
 
-[node name="UI" parent="." instance=ExtResource("2_ui")]
+[node name="UI" parent="." instance=ExtResource("3_ui")]

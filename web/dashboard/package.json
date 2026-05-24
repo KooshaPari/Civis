@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+    "dev": "node node_modules/vite/bin/vite.js",
+    "build": "tsc --noEmit && node node_modules/vite/bin/vite.js build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@babylonjs/core": "^8.0.0",
     "@tanstack/react-router": "^1.124.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

@@ -98,6 +98,6 @@ through P-U1 — voxel kernel through WorldBox UX). See that file for the DAG.
 - Build/progression design: `~/.claude/plans/civis-3d-scratch/build.md`
 - Voxel-kernel design: `~/.claude/plans/civis-3d-scratch/phenotype-voxel-design.md`
 - ADR-005 (adaptive voxel), ADR-006 (LLM event sourcing), ADR-007 (three renderers),
-  ADR-008 (algorithmic genetics)
+  ADR-008 (algorithmic genetics), ADR-009 (web spectator-first)
 - Phased plan: `docs/roadmap/plan-3d-phases.md`
 - FR additions: `docs/development-guide/fr-3d-additions.md`

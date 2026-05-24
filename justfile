@@ -29,8 +29,11 @@ audit:
 unused:
     cargo machete
 
-# Full local CI sweep
+# Full local CI sweep (install cargo-deny for audit: cargo install cargo-deny)
 ci: lint test audit unused
+
+# Phenotype-aligned alias: Rust + optional infra note in README
+quality: civis-3d-verify
 
 # Generate docs
 docs:

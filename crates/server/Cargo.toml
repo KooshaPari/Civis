@@ -8,10 +8,13 @@ publish = false
 
 [dependencies]
 civ-engine = { path = "../engine", version = "0.1.0" }
+civ-agents = { path = "../agents" }
+civ-economy = { path = "../economy" }
 civ-voxel = { path = "../voxel" }
 civ-protocol-3d = { path = "../protocol-3d" }
 axum = { version = "0.7", features = ["ws"] }
 futures = "0.3"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net"] }
 tracing = "0.1"
@@ -25,4 +28,12 @@ name = "civ-server"
 path = "src/main.rs"
 
 [dev-dependencies]
+civ-engine = { path = "../engine" }
+futures = "0.3"
 proptest = "1.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tempfile = "3"
+tokio-tungstenite = "0.24"
+http = "1"

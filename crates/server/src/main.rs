@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use civ_engine::Simulation;
-use civ_server::{run_ws_bridge, WsBridgeConfig};
+use civ_server::{run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
 use tokio::sync::Mutex;
 
 #[tokio::main]
@@ -16,7 +16,12 @@ async fn main() {
         .unwrap_or(16);
 
     run_ws_bridge(
-        WsBridgeConfig { addr, max_clients },
+        WsBridgeConfig {
+            addr,
+            max_clients,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::from_env(),
+        },
         Arc::new(Mutex::new(Simulation::default())),
     )
     .await;

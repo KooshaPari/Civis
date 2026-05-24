@@ -80,6 +80,18 @@ pub struct Terrain {
 }
 
 impl Terrain {
+    /// FNV-1a digest of all height samples (bit-exact, replay-safe).
+    pub fn heights_fingerprint(&self) -> u64 {
+        let mut h: u64 = 0xcbf29ce484222325;
+        for height in &self.heights {
+            for byte in height.to_bits().to_le_bytes() {
+                h ^= u64::from(byte);
+                h = h.wrapping_mul(0x100000001b3);
+            }
+        }
+        h
+    }
+
     /// Generate a new heightmap from `seed`. Deterministic.
     pub fn generate(seed: u64) -> Self {
         let mut heights = vec![0.0_f32; SIZE * SIZE];
@@ -110,6 +122,26 @@ impl Terrain {
             heights,
             biomes,
         }
+    }
+
+    /// Convert normalised coordinates into a terrain cell index.
+    pub fn cell_index(&self, x: f32, y: f32) -> Option<usize> {
+        if !(0.0..=1.0).contains(&x) || !(0.0..=1.0).contains(&y) {
+            return None;
+        }
+        let ix = ((x * (self.size as f32 - 1.0)).round() as usize).min(self.size - 1);
+        let iy = ((y * (self.size as f32 - 1.0)).round() as usize).min(self.size - 1);
+        Some(iy * self.size + ix)
+    }
+
+    /// Return the biome at a normalised position.
+    pub fn biome_at(&self, x: f32, y: f32) -> Option<Biome> {
+        self.cell_index(x, y).map(|idx| self.biomes[idx])
+    }
+
+    /// Return whether the position is walkable terrain.
+    pub fn is_walkable(&self, x: f32, y: f32) -> bool {
+        matches!(self.biome_at(x, y), Some(b) if !matches!(b, Biome::DeepWater | Biome::Water))
     }
 }
 
@@ -160,6 +192,13 @@ mod tests {
         let a = Terrain::generate(42);
         let b = Terrain::generate(42);
         assert_eq!(a.heights, b.heights);
+        assert_eq!(a.heights_fingerprint(), b.heights_fingerprint());
+    }
+
+    #[test]
+    fn terrain_hash_at_seed_42_is_stable() {
+        let fingerprint = Terrain::generate(42).heights_fingerprint();
+        assert_eq!(fingerprint, 6_321_126_721_059_547_128);
     }
 
     #[test]

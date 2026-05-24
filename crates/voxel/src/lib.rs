@@ -29,18 +29,26 @@ pub use phenotype_voxel::{
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.
-pub const SCHEMA_VERSION: u32 = 0;
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 #[cfg(test)]
 mod stub_tests {
     use super::*;
 
+    /// FR-CIV-VOXEL-000 — exposes a semver-like schema version stub.
+    #[test]
+    fn schema_version_stub() {
+        assert!(!SCHEMA_VERSION.is_empty());
+        let core = SCHEMA_VERSION.split('-').next().unwrap();
+        let segments: Vec<&str> = core.split('.').collect();
+        assert_eq!(segments.len(), 3);
+        assert!(segments.iter().all(|part| !part.is_empty()));
+    }
+
     /// FR-CIV-VOXEL-000 — crate compiles, kernel re-exports resolve.
     #[test]
     fn kernel_reexports_resolve() {
-        let _: u32 = SCHEMA_VERSION;
         let _: u32 = phenotype_voxel::SCHEMA_VERSION;
-        assert_eq!(SCHEMA_VERSION, 0);
     }
 
     /// FR-CIV-VOXEL-002 (early smoke) — kernel dirty events sort deterministically
@@ -107,6 +115,122 @@ mod stub_tests {
         let mesh = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("mesh");
         assert_eq!(mesh.vertices.len(), 54 * 4);
         assert_eq!(mesh.indices.len(), 54 * 6);
+    }
+
+    /// FR-CIV-VOXEL-001 — adaptive storage: many writes within one 16³ leaf stay
+    /// in a single dense chunk through the Civis re-export.
+    #[test]
+    fn adaptive_storage() {
+        let mut world: VoxelWorld<u8> = VoxelWorld::new(FIXED_SCALE);
+        for z in 0..16 {
+            for y in 0..16 {
+                for x in 0..16 {
+                    world.write(
+                        WorldCoord {
+                            x: i64::from(x) * FIXED_SCALE,
+                            y: i64::from(y) * FIXED_SCALE,
+                            z: i64::from(z) * FIXED_SCALE,
+                        },
+                        1,
+                    );
+                }
+            }
+        }
+        assert_eq!(world.chunk_count(), 1);
+        assert_eq!(world.read(WorldCoord { x: 0, y: 0, z: 0 }), 1);
+        assert_eq!(
+            world.read(WorldCoord {
+                x: 15 * FIXED_SCALE,
+                y: 15 * FIXED_SCALE,
+                z: 15 * FIXED_SCALE,
+            }),
+            1
+        );
+    }
+
+    /// FR-CIV-VOXEL-002 — dirty queue drains in `(chunk_id, write_seq)` order.
+    #[test]
+    fn dirty_queue_deterministic() {
+        let mut world: VoxelWorld<u8> = VoxelWorld::new(FIXED_SCALE);
+        let a0 = WorldCoord { x: 0, y: 0, z: 0 };
+        let b0 = WorldCoord {
+            x: 100 * FIXED_SCALE,
+            y: 0,
+            z: 0,
+        };
+        world.write(a0, 1);
+        world.write(b0, 2);
+        world.write(
+            WorldCoord {
+                x: FIXED_SCALE,
+                y: 0,
+                z: 0,
+            },
+            3,
+        );
+        let dirty = world.drain_dirty();
+        assert_eq!(dirty.len(), 3);
+        for window in dirty.windows(2) {
+            let (left, right) = (&window[0], &window[1]);
+            assert!(
+                left.chunk_id < right.chunk_id
+                    || (left.chunk_id == right.chunk_id && left.write_seq <= right.write_seq)
+            );
+        }
+    }
+
+    /// FR-CIV-VOXEL-003 — public world coordinates are fixed-point integers.
+    #[test]
+    fn fixed_point_api() {
+        let coord = WorldCoord {
+            x: 3 * FIXED_SCALE + 250_000,
+            y: -2 * FIXED_SCALE,
+            z: 0,
+        };
+        let chunk = to_chunk_coord(coord, FIXED_SCALE, 16);
+        assert_eq!(
+            chunk,
+            ChunkCoord {
+                cx: 0,
+                cy: -1,
+                cz: 0
+            }
+        );
+        assert_eq!(FIXED_SCALE, 1_000_000);
+    }
+
+    /// FR-CIV-VOXEL-004 — `VoxelScaleMultiplier` keeps LOD selection scale-invariant.
+    #[test]
+    fn scale_multiplier_lod() {
+        let policy = LodPolicy::default();
+        let lod_a = select_lod(64.0 * 8.0, VoxelScaleMultiplier(8.0), policy);
+        let lod_b = select_lod(64.0 * 16.0, VoxelScaleMultiplier(16.0), policy);
+        assert_eq!(lod_a, lod_b);
+    }
+
+    /// FR-CIV-VOXEL-010 — `Mesher` produces a non-empty watertight-style mesh
+    /// for a fixed test block through the Civis re-export.
+    #[test]
+    fn mesher_watertight() {
+        let chunk_voxels: Vec<MaterialId> = {
+            let mut v = vec![MaterialId(0); 16 * 16 * 16];
+            for ix in 0..3 {
+                for iy in 0..3 {
+                    for iz in 0..3 {
+                        v[ix + iy * 16 + iz * 16 * 16] = MaterialId(1);
+                    }
+                }
+            }
+            v
+        };
+        let view = ChunkView {
+            id: ChunkId(0),
+            voxels: &chunk_voxels,
+        };
+        let mesh = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("mesh");
+        assert_eq!(mesh.vertices.len(), 54 * 4);
+        assert_eq!(mesh.indices.len(), 54 * 6);
+        assert!(mesh.indices.len() % 6 == 0);
     }
 
     /// FR-CIV-VOXEL-005 (early smoke) — VoxelWorld replay is bit-identical when

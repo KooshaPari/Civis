@@ -6,6 +6,7 @@ members = [
   "crates/voxel",
   "crates/build",
   "crates/genetics",
+  "crates/economy",
   "crates/species",
   "crates/agents",
   "crates/diffusion",
@@ -16,6 +17,10 @@ members = [
   "crates/protocol-3d",
   "crates/watch",
   "clients/bevy-ref",
+]
+exclude = [
+  "clients/godot-ref/rust",
+  "clients/unreal-show/Source/Civis/rust-shim",
 ]
 resolver = "2"
 

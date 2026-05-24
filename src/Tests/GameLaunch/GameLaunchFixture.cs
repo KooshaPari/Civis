@@ -12,29 +12,38 @@ using Xunit.Abstractions;
 namespace DINOForge.Tests.GameLaunch;
 
 /// <summary>
-/// xUnit collection fixture: launches the DINO game process, waits for the DINOForge
-/// bridge to become healthy, and tears down the process after all tests in the
-/// <see cref="GameLaunchCollection"/> finish.
+/// xUnit collection fixture: launches the DINO game process (or attaches to an already-running
+/// instance), waits for the DINOForge bridge to become healthy, and tears down the process after
+/// all tests in the <see cref="GameLaunchCollection"/> finish (only when this fixture started it).
 ///
-/// Required environment variables:
-///   DINO_GAME_PATH   — path to Diplomacy is Not an Option.exe, or the Steam install
-///                      directory (e.g. ...\common\Diplomacy is Not an Option); directories
-///                      are resolved to Diplomacy is Not an Option.exe inside automatically
-///   DINO_BRIDGE_PORT — (optional) bridge listen port, defaults to 7474
+/// Environment variables:
+///   DINO_GAME_PATH — (required to launch) path to <c>Diplomacy is Not an Option.exe</c>, or the
+///                    Steam install directory; directories are resolved to the .exe automatically.
+///                    Optional when <c>DINO_GAME_ALREADY_RUNNING=1</c> (attach-only).
+///   DINO_GAME_ALREADY_RUNNING — set to <c>1</c> or <c>true</c> to skip launching the game and
+///                               connect to an existing process with the bridge already up.
+///   DINO_GAME_BOOTSTRAP_TIMEOUT_MS — total milliseconds to poll for bridge readiness (default
+///                                    90000). Headless cold starts often exceed 30s.
+///   DINOFORGE_PIPE_NAME — (optional) named pipe for the in-game bridge (default
+///                         <c>dinoforge-game-bridge</c>).
+///   DINO_BRIDGE_PORT — (optional, informational) legacy CI marker; bridge uses named pipes, not TCP.
 ///
-/// Gracefully skips (not throws) when DINO_GAME_PATH is not set, the path is invalid, or the
-/// game bridge is unavailable after bootstrap.
-/// Tests are tagged [Trait("Category","GameLaunch")] and excluded from ci.yml.
-/// They run via game-launch.yml on a self-hosted runner that has the game installed.
+/// Gracefully skips (not throws) when the game path is invalid, launch fails, or the bridge is
+/// unavailable after bootstrap. Tests use <see cref="SkipIfNotInitialized"/>.
+/// Tagged [Trait("Category","GameLaunch")] and run on self-hosted runners via game-launch.yml.
 /// </summary>
 public sealed class GameLaunchFixture : IAsyncLifetime
 {
     private const string GameExecutableName = "Diplomacy is Not an Option.exe";
+    private const string GameProcessBaseName = "Diplomacy is Not an Option";
 
-    private const int BootstrapTimeoutMs = 30_000;
+    private const int DefaultBootstrapTimeoutMs = 90_000;
     private const int PollIntervalMs = 500;
+    private const int PerAttemptConnectTimeoutMs = 10_000;
+    private const int PerAttemptWorldWaitMs = 15_000;
 
     private Process? _gameProcess;
+    private bool _launchedGame;
 
     /// <summary>
     /// Indicates whether the fixture was initialized successfully.
@@ -62,39 +71,82 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        bool attachOnly = IsTruthyEnv("DINO_GAME_ALREADY_RUNNING");
         string? gamePath = Environment.GetEnvironmentVariable("DINO_GAME_PATH");
+        int bootstrapTimeoutMs = ResolveBootstrapTimeoutMs();
 
-        // Gracefully skip if DINO_GAME_PATH is not set
-        if (string.IsNullOrEmpty(gamePath))
+        if (!attachOnly && string.IsNullOrEmpty(gamePath))
         {
             IsInitialized = false;
             return;
         }
 
-        string? gameExePath = ResolveGameExecutablePath(gamePath);
-        if (gameExePath is null)
+        string? gameExePath = null;
+        string? gameDir = null;
+        if (!string.IsNullOrEmpty(gamePath))
+        {
+            gameExePath = ResolveGameExecutablePath(gamePath);
+            if (gameExePath is null && !attachOnly)
+            {
+                IsInitialized = false;
+                return;
+            }
+
+            if (gameExePath is not null)
+            {
+                gameDir = Path.GetDirectoryName(gameExePath);
+            }
+        }
+
+        if (attachOnly && gameExePath is null && !IsGameProcessRunning())
         {
             IsInitialized = false;
             return;
         }
-
-        _gameProcess = Process.Start(new ProcessStartInfo
+        else
         {
-            FileName = gameExePath,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        }) ?? throw new InvalidOperationException($"Failed to start game at: {gameExePath}");
+            _gameProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = gameExePath!,
+                WorkingDirectory = gameDir ?? Path.GetDirectoryName(gameExePath!) ?? "",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            }) ?? throw new InvalidOperationException($"Failed to start game at: {gameExePath}");
 
-        Client = new GameClient(new GameClientOptions { UseMessageFraming = false });
+            _launchedGame = true;
+        }
 
-        // Poll until the bridge is healthy or timeout
-        using CancellationTokenSource cts = new(BootstrapTimeoutMs);
-        while (!cts.IsCancellationRequested)
+        Client = new GameClient(BuildClientOptions());
+
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(bootstrapTimeoutMs);
+        while (DateTime.UtcNow < deadline)
         {
+            using CancellationTokenSource attemptCts = new(
+                TimeSpan.FromMilliseconds(Math.Min(PerAttemptConnectTimeoutMs, RemainingMs(deadline))));
+
             try
             {
-                await Client.ConnectAsync(cts.Token).ConfigureAwait(true);
-                WaitResult worldResult = await Client.WaitForWorldAsync(BootstrapTimeoutMs, cts.Token).ConfigureAwait(true);
+                if (Client.IsConnected)
+                {
+                    Client.Disconnect();
+                }
+
+                await Client.ConnectAsync(
+                    TimeSpan.FromMilliseconds(PerAttemptConnectTimeoutMs),
+                    attemptCts.Token).ConfigureAwait(true);
+
+                int worldWaitMs = (int)Math.Min(
+                    PerAttemptWorldWaitMs,
+                    RemainingMs(deadline));
+                if (worldWaitMs <= 0)
+                {
+                    break;
+                }
+
+                using CancellationTokenSource worldCts = new(TimeSpan.FromMilliseconds(worldWaitMs));
+                WaitResult worldResult = await Client
+                    .WaitForWorldAsync(worldWaitMs, worldCts.Token)
+                    .ConfigureAwait(true);
                 if (worldResult.Ready)
                 {
                     IsInitialized = true;
@@ -106,11 +158,17 @@ public sealed class GameLaunchFixture : IAsyncLifetime
                 // Bridge not up yet — keep polling
             }
 
+            int delayMs = (int)Math.Min(PollIntervalMs, RemainingMs(deadline));
+            if (delayMs <= 0)
+            {
+                break;
+            }
+
             try
             {
-                await Task.Delay(PollIntervalMs, cts.Token).ConfigureAwait(false);
+                await Task.Delay(delayMs).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch
             {
                 break;
             }
@@ -118,6 +176,55 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 
         IsInitialized = false;
     }
+
+    private static GameClientOptions BuildClientOptions()
+    {
+        string pipeName = Environment.GetEnvironmentVariable("DINOFORGE_PIPE_NAME")
+            ?? "dinoforge-game-bridge";
+
+        return new GameClientOptions
+        {
+            UseMessageFraming = false,
+            PipeName = pipeName,
+            ConnectTimeoutMs = PerAttemptConnectTimeoutMs,
+            SendTimeoutMs = 30_000,
+            ReadTimeoutMs = 60_000,
+        };
+    }
+
+    private static int ResolveBootstrapTimeoutMs()
+    {
+        string? raw = Environment.GetEnvironmentVariable("DINO_GAME_BOOTSTRAP_TIMEOUT_MS");
+        if (int.TryParse(raw, out int ms) && ms > 0)
+        {
+            return ms;
+        }
+
+        return DefaultBootstrapTimeoutMs;
+    }
+
+    private static bool IsTruthyEnv(string name)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return value is "1"
+            || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGameProcessRunning()
+    {
+        try
+        {
+            return Process.GetProcessesByName(GameProcessBaseName).Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static long RemainingMs(DateTime deadline) =>
+        Math.Max(0, (long)(deadline - DateTime.UtcNow).TotalMilliseconds);
 
     /// <summary>
     /// Resolves <paramref name="gamePath"/> to the game executable: accepts either the .exe
@@ -141,9 +248,14 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 
     public Task DisposeAsync()
     {
-        try { _gameProcess?.Kill(entireProcessTree: true); }
-        catch { /* best-effort */ }
+        if (_launchedGame)
+        {
+            try { _gameProcess?.Kill(entireProcessTree: true); }
+            catch { /* best-effort */ }
+        }
+
         _gameProcess?.Dispose();
+        Client?.Dispose();
         return Task.CompletedTask;
     }
 }

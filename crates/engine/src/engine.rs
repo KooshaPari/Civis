@@ -797,9 +797,9 @@ impl Simulation {
         let mut dead = Vec::new();
         let mut births = Vec::new();
 
-        for (entity, (civilian, pos, needs)) in self
-            .world
-            .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
+        for (entity, (civilian, pos, needs)) in
+            self.world
+                .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
             civilian.age = civilian.age.saturating_add(1);
             if self.state.resources.food.raw > 0 {
@@ -811,9 +811,7 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window
-                && civilian.age > 18
-                && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
+            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
             {
                 let child_id = self.next_civilian_id;
                 self.next_civilian_id += 1;

@@ -74,3 +74,14 @@ civis-3d-watch:
 # Install and build the dashboard for the watch harness.
 civis-3d-watch-build:
     cd web/dashboard && bun install && bun run build
+
+# Godot GDExtension crate (excluded from workspace; test in-tree).
+godot-test:
+    cd clients/godot-ref/rust && cargo test
+
+# Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
+infra-up:
+    process-compose up
+
+# Rust gate without cargo-deny (when deny is not installed locally).
+rust-verify: lint test

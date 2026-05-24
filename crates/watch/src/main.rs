@@ -432,7 +432,6 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let birth_events: Vec<PopulationPulse> = sim
         .last_births()
         .iter()
-        .cloned()
         .map(|event| PopulationPulse {
             tick: event.tick,
             entity_id: event.entity_id,
@@ -443,7 +442,6 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let death_events: Vec<PopulationPulse> = sim
         .last_deaths()
         .iter()
-        .cloned()
         .map(|event| PopulationPulse {
             tick: event.tick,
             entity_id: event.entity_id,
@@ -454,7 +452,6 @@ fn make_snapshot(sim: &Simulation, speed: u8) -> Snapshot {
     let diplomacy_events: Vec<DiplomacyPulse> = sim
         .diplomacy_events()
         .iter()
-        .cloned()
         .map(|event| DiplomacyPulse {
             tick: event.tick,
             faction_a: event.faction_a,

@@ -2,9 +2,12 @@ import type {
   Biome,
   Building,
   CivPin,
+  DiplomacyEvent,
+  DiplomacyKind,
   EconomySnapshot,
   Faction,
   InstitutionRow,
+  PopulationPulse,
   Snapshot,
   TimeSpeed,
 } from "../store";
@@ -27,13 +30,44 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
     buildings,
     births_this_tick: Number(r.births_this_tick ?? 0),
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
-    diplomacy_events: [],
-    birth_events: [],
-    death_events: [],
+    diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
+    birth_events: parsePopulationPulses(r.birth_events),
+    death_events: parsePopulationPulses(r.death_events),
     is_day: Boolean(r.is_day ?? true),
     economy: parseEconomyForServer(r),
     speed,
   };
+}
+
+function parsePopulationPulses(raw: unknown): PopulationPulse[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      tick: Number(item.tick ?? 0),
+      entity_id: Number(item.entity_id ?? 0),
+      x: Number(item.x ?? 0),
+      y: Number(item.y ?? 0),
+    };
+  });
+}
+
+function parseDiplomacyKind(kind: unknown): DiplomacyKind {
+  if (kind === "TradeAgreement" || kind === "Conflict" || kind === "Peace") return kind;
+  return "Peace";
+}
+
+function parseDiplomacyEvents(raw: unknown): DiplomacyEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      tick: Number(item.tick ?? 0),
+      faction_a: Number(item.faction_a ?? 0),
+      faction_b: Number(item.faction_b ?? 0),
+      kind: parseDiplomacyKind(item.kind),
+    };
+  });
 }
 
 function parseInstitutions(raw: unknown): InstitutionRow[] {

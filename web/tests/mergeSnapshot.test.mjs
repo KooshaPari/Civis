@@ -76,3 +76,40 @@ test("parseEconomyInstitutions prefers top-level institutions", () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].kind, "market");
 });
+
+function parsePopulationPulses(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => ({
+    tick: Number(row.tick ?? 0),
+    entity_id: Number(row.entity_id ?? 0),
+    x: Number(row.x ?? 0),
+    y: Number(row.y ?? 0),
+  }));
+}
+
+function parseDiplomacyEvents(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => ({
+    tick: Number(row.tick ?? 0),
+    faction_a: Number(row.faction_a ?? 0),
+    faction_b: Number(row.faction_b ?? 0),
+    kind: row.kind === "TradeAgreement" || row.kind === "Conflict" ? row.kind : "Peace",
+  }));
+}
+
+test("parsePopulationPulses reads civ-watch birth_events", () => {
+  const pulses = parsePopulationPulses([
+    { tick: 200, entity_id: 10001, x: 0.42, y: 0.58 },
+  ]);
+  assert.equal(pulses.length, 1);
+  assert.equal(pulses[0].entity_id, 10001);
+  assert.equal(pulses[0].x, 0.42);
+});
+
+test("parseDiplomacyEvents reads civ-watch diplomacy_events", () => {
+  const events = parseDiplomacyEvents([
+    { tick: 500, faction_a: 0, faction_b: 1, kind: "TradeAgreement" },
+  ]);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].kind, "TradeAgreement");
+});

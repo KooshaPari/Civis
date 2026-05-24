@@ -56,7 +56,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
 | **Roadmap** quality ladder | `docs/roadmap/product-quality-ladder.md` | L0–L5 definitions; Manor Lords = L5 on L3–L4 |
 | **Dashboard** theme / perf / stats / agents | `web/dashboard/` (`theme.ts`, `perf_panel.tsx`, `stats_panel.tsx`, `agents_panel.tsx`, `useCivisAttach.ts`) | Persisted `data-theme`; sparkline; **`StatsPanel`** tick + voxel chunk count + FPS; **`AgentsPanel`** seen-agent count + recent ids from `AgentAppearance` frames |
-| **Dashboard** attach / minimap | `attachConfig.ts`, `bottom_bar.tsx`, `side_panel.tsx` | Binary-first WS (`?binary=`); `?attach=watch` SSE; 160×160 terrain minimap (future: shared UV/chunk mapping); inspect stub — minimap click **not** added |
+| **Dashboard** attach / minimap | `attachConfig.ts`, `bottom_bar.tsx`, `side_panel.tsx` | Binary-first WS (`?binary=`); `?attach=watch` SSE; 160×160 terrain minimap with click-to-inspect chunk; `mergeSnapshot` parses nested `economy.institutions` and population/diplomacy pulses |
 
 ## Spec domains vs code (gap summary)
 

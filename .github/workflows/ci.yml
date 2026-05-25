@@ -140,6 +140,9 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     needs: build-and-test
+    # PR quality gate is enforced by SonarCloud GitHub App (KooshaPari_Dino).
+    # CI scanner uses SONAR_TOKEN; fails when token/org does not match sonar-project.properties.
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: read

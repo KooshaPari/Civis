@@ -43,7 +43,9 @@ pre-push:
 
     test-unit:
       priority: 2
-      run: dotnet test src/Tests/DINOForge.Tests.csproj -c Release --no-build --verbosity normal
+      env:
+        CI: "true"
+      run: dotnet test src/Tests/DINOForge.Tests.csproj -c Release /p:GameInstalled=false --verbosity normal
 
     test-integration:
       priority: 3

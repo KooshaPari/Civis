@@ -68,10 +68,13 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
     /// <summary>
     /// NATIVE-004 / SPEC-002 manual AC #7: pause menu contains injected Mods button after gameplay pause.
-    /// Bridge has no simulateKey/ESC endpoint; opens pause via <see cref="GameClient.InvokeMethodAsync"/> discovery.
-    /// Skips when pause menu cannot be opened programmatically (verify manually or MCP <c>pause_menu</c> scenario).
+    /// Unblocked when GameBridge gains simulateKey/ESC or a documented pause-menu handler (see skip reason).
     /// </summary>
-    [SkippableFact]
+    [Fact(Skip =
+        "GameBridgeServer: pressKey is scanScene-only (HandlePressKey), not key simulation; " +
+        "invokeMethod pause-target discovery fails on current game builds. " +
+        "Manual: docs/specs/SPEC-002-native-menu-injector.md AC #7. " +
+        "MCP ESC path: game_navigate_to pause_menu (bare-cua), not GameBridge.")]
     public async Task PauseMenu_HasModsButton_WhenOpened()
     {
         fixture.SkipIfNotInitialized();
@@ -85,8 +88,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         status.WorldReady.Should().BeTrue("ECS world should be ready before opening pause menu");
 
         bool pauseOpened = await TryOpenPauseMenuAsync(fixture.Client);
-        Skip.IfNot(pauseOpened,
-            "Could not open pause menu via bridge invokeMethod (no ESC/simulateKey); run manual AC #7 or MCP pause_menu scenario.");
+        pauseOpened.Should().BeTrue(
+            "pause menu must open via invokeMethod discovery once bridge pause simulation exists");
 
         await Task.Delay(2500);
 

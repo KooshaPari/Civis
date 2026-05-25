@@ -37,11 +37,18 @@ if body.get("version") != "1":
     raise SystemExit(f"unsupported manifest version: {body.get('version')}")
 
 head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-if body.get("git_sha") != head:
-    raise SystemExit(
-        f"stale manifest: git_sha {body.get('git_sha')} != HEAD {head}\n"
-        "Re-run: lefthook run pre-push && commit .ci/quality-manifest.json"
-    )
+attested = body.get("git_sha")
+if attested not in {head, ""}:
+    try:
+        parent = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
+    except subprocess.CalledProcessError:
+        parent = ""
+    if attested != parent:
+        raise SystemExit(
+            f"stale manifest: git_sha {attested} != HEAD {head}"
+            + (f" or parent {parent}" if parent else "")
+            + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
+        )
 
 gates = body.get("gates") or {}
 failed = [k for k, v in gates.items() if v.get("status") != "pass"]

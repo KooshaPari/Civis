@@ -88,7 +88,11 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
 
   const prevBirthKeys = new Set(previous.birth_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`));
   const prevDeathKeys = new Set(previous.death_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`));
-  const prevDamageKeys = new Set(previous.damage_events.map((event) => `${event.x}:${event.y}`));
+  const prevDamageKeys = new Set(
+    previous.damage_events.map(
+      (event) => `${event.x}:${event.y}:${event.unit_a ?? ""}:${event.unit_b ?? ""}`,
+    ),
+  );
   const prevDiplomacyKeys = new Set(previous.diplomacy_events.map((event) => `${event.tick}:${event.faction_a}:${event.faction_b}:${event.kind}`));
   const prevEventKeys = new Set(previous.events.map((event) => `${event.tick}:${event.kind}:${event.message}:${event.faction_id ?? "n"}`));
 
@@ -119,14 +123,18 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
     });
   });
   snapshot.damage_events.forEach((event, index) => {
-    const key = `${event.x}:${event.y}`;
+    const key = `${event.x}:${event.y}:${event.unit_a ?? ""}:${event.unit_b ?? ""}`;
     if (prevDamageKeys.has(key)) return;
+    const units =
+      event.unit_a != null && event.unit_b != null
+        ? ` (units ${event.unit_a} vs ${event.unit_b})`
+        : "";
     add({
       id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}3${index}`),
       tick: snapshot.tick,
-      kind: "disaster",
-      icon: "⚡",
-      message: `Disaster at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
+      kind: "damage",
+      icon: "💥",
+      message: `Combat damage at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}${units}`,
       focus: [event.x, event.y],
     });
   });

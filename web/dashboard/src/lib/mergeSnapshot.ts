@@ -80,6 +80,9 @@ export function mergeServerSnapshot(
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
     damage_events: parseDamageEvents(r.damage_events),
+    damage_events_count: Number(
+      r.damage_events_count ?? (Array.isArray(r.damage_events) ? r.damage_events.length : 0),
+    ),
     disaster_events: parseDisasterEvents(r.disaster_events),
     birth_events: parsePopulationPulses(r.birth_events),
     death_events: parsePopulationPulses(r.death_events),
@@ -154,10 +157,13 @@ function parseDamageEvents(raw: unknown): DamagePulse[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((row) => {
     const item = row as Record<string, unknown>;
-    return {
+    const pulse: DamagePulse = {
       x: Number(item.x ?? 0),
       y: Number(item.y ?? 0),
     };
+    if (item.unit_a != null) pulse.unit_a = Number(item.unit_a);
+    if (item.unit_b != null) pulse.unit_b = Number(item.unit_b);
+    return pulse;
   });
 }
 

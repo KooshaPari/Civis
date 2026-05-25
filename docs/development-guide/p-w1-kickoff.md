@@ -1,7 +1,7 @@
 # P-W1 tactical warfare — kickoff
 
-**Phase:** P-W1 (`crates/tactics`)  
-**Depends on:** P-V1 (voxel), P-A1 (agents)  
+**Phase:** P-W1 (`crates/tactics`)
+**Depends on:** P-V1 (voxel), P-A1 (agents)
 **Branch suggestion:** `feat/p-w1-tactics` off `main` after #296 merges
 
 ## Already wired
@@ -25,9 +25,10 @@
 ## First PR slice (recommended)
 
 1. **Test:** `engine::tick` with queued `DamageEvent` reduces voxel count — **done** (`pending_damage_drains_and_reduces_chunk_count` in `civ-engine`).
-2. **Server:** expose `damage_events` count on `sim.snapshot` (already partial via watch).
-3. **Web:** render damage_events markers on `scene3d.tsx` (red flash at norm coords).
-4. **Docs:** mark FR-CIV-TACTICS-001 integration row `implemented` when test lands.
+2. **Server:** `sim.snapshot` exposes `damage_events`, `damage_events_count`, `voxel_damage_removed_this_tick` — **done** (`feat/p-w1-tactics`).
+3. **Web:** damage bursts + combat notifications — **done** (`scene3d.tsx`, `main.tsx`).
+4. **Watch:** per-unit `unit_a` / `unit_b` on military `DamagePulse` — **done**.
+5. **Next:** hook `evolve_doctrine` to sim tick / faction doctrine slots (FR-CIV-TACTICS-010 integration).
 
 ## Run
 

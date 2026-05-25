@@ -7,6 +7,7 @@ const KIND_CLASS: Record<string, string> = {
   diplomacy: "diplomacy",
   tech: "tech",
   disaster: "disaster",
+  damage: "damage",
   trade: "trade",
 };
 

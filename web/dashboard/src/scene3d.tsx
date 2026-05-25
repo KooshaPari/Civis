@@ -1239,6 +1239,30 @@ export function Scene3d() {
       }
     };
 
+    const onWheel = (event: WheelEvent) => {
+      const terrain = refs.current.activeTerrain;
+      const controls = controlsRef.current;
+      const camera = cameraRef.current;
+      if (!terrain || !controls || !camera) return;
+      event.preventDefault();
+
+      const zoomFactor = Math.exp(event.deltaY * 0.0012);
+      const offset = camera.position.clone().sub(controls.target);
+      offset.multiplyScalar(zoomFactor);
+
+      const minDistance = Math.max(terrain.size * 0.12, controls.minDistance || 0);
+      const maxDistance = Math.max(terrain.size * 8, controls.maxDistance || Infinity);
+      const nextDistance = offset.length();
+      if (nextDistance < minDistance) {
+        offset.setLength(minDistance);
+      } else if (nextDistance > maxDistance) {
+        offset.setLength(maxDistance);
+      }
+
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    };
+
     const resizeRenderer = () => {
       const width = mount.clientWidth;
       const height = mount.clientHeight;
@@ -1249,12 +1273,69 @@ export function Scene3d() {
       labelRenderer.setSize(width, height);
     };
 
+    const updateDisasterRings = (
+      sceneRefs: SceneRefs,
+      terrain: Terrain,
+      now: number,
+    ) => {
+      for (let i = sceneRefs.disasterRings.length - 1; i >= 0; i -= 1) {
+        const ring = sceneRefs.disasterRings[i];
+        const bornAt = Number(ring.userData.bornAt ?? now);
+        const life = Number(ring.userData.life ?? 3000);
+        const age = now - bornAt;
+        const progress = clamp01(age / life);
+        const baseRadius = Number(ring.userData.radius ?? 1);
+        const severity = Number(ring.userData.severity ?? 1);
+        ring.scale.setScalar(baseRadius * (1 + progress * (1.5 + severity * 0.2)));
+        const material = ring.material as THREE.MeshStandardMaterial;
+        material.opacity = (1 - progress) * 0.9;
+        ring.position.y =
+          terrainHeightAt(
+            terrain,
+            (ring.position.x + terrain.size / 2) / terrain.size,
+            (ring.position.z + terrain.size / 2) / terrain.size,
+          ) + 0.22;
+        if (progress >= 1) {
+          sceneRefs.effects?.remove(ring);
+          ring.geometry.dispose();
+          material.dispose();
+          sceneRefs.disasterRings.splice(i, 1);
+        }
+      }
+    };
+
+    const updateHoverTooltip = (
+      tooltipEl: HTMLDivElement,
+      sceneRefs: SceneRefs,
+      target: { kind: "civilian" | "building"; index: number; x: number; y: number } | null,
+      terrain: Terrain,
+    ) => {
+      if (!target) {
+        tooltipEl.style.opacity = "0";
+        tooltipEl.style.transform = "translate(-9999px, -9999px)";
+        return;
+      }
+      const text =
+        target.kind === "civilian"
+          ? `Civilian #${target.index + 1}`
+          : `Building #${target.index + 1}`;
+      tooltipEl.textContent = text;
+      tooltipEl.style.opacity = "1";
+      const offsetX = Math.min(target.x + 16, terrain.size * 4);
+      const offsetY = Math.min(target.y + 16, terrain.size * 4);
+      tooltipEl.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      sceneRefs.snapshotReceivedAt = sceneRefs.snapshotReceivedAt;
+    };
+
     const observer = new ResizeObserver(resizeRenderer);
     observer.observe(mount);
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointermove", onHoverMove);
     renderer.domElement.addEventListener("pointerup", onPointerUp);
     renderer.domElement.addEventListener("pointercancel", onPointerUp);
+    renderer.domElement.addEventListener("dblclick", onDoubleClick);
+    renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKeyDown);
 
     scene.background = new THREE.Color(0x87b7e0);
@@ -1302,6 +1383,12 @@ export function Scene3d() {
         animateTradeRoutes(refs.current, performance.now());
         updateEffects(refs.current, terrain, performance.now());
         updateLabels();
+        updateDisasterRings(refs.current, terrain, performance.now());
+        updateHoverTooltip(tooltip, refs.current, hoverTarget, terrain);
+      }
+      if (refs.current.cameraFocusTarget && refs.current.cameraPositionTarget) {
+        controls.target.lerp(refs.current.cameraFocusTarget, 0.08);
+        camera.position.lerp(refs.current.cameraPositionTarget, 0.08);
       }
       controls.update();
       renderer.render(scene, camera);
@@ -1330,8 +1417,11 @@ export function Scene3d() {
       observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointermove", onHoverMove);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       renderer.domElement.removeEventListener("pointercancel", onPointerUp);
+      renderer.domElement.removeEventListener("dblclick", onDoubleClick);
+      renderer.domElement.removeEventListener("wheel", onWheel);
       clearDragPreview();
       window.removeEventListener("keydown", onKeyDown);
       window.cancelAnimationFrame(raf);
@@ -1349,13 +1439,16 @@ export function Scene3d() {
       refs.current.buildingRings = [];
       refs.current.tradeCargo = [];
       refs.current.tradeRoutes = [];
+      refs.current.disasterRings = [];
       refs.current.buildings = [];
+      refs.current.cameraFocusTarget = null;
+      refs.current.cameraPositionTarget = null;
       refs.current.spawnBurst = undefined;
-      refs.current.spawnDisasterRing = undefined;
       disposeScene(scene);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
       mount.removeChild(labelRenderer.domElement);
+      mount.removeChild(tooltip);
     };
   }, [dispatch]);
 
@@ -1890,6 +1983,75 @@ function updateEffects(refs: SceneRefs, terrain: Terrain, now: number) {
     live.push(sprite);
   });
   refs.transientSprites = live;
+}
+
+function updateDisasterRings(refs: SceneRefs, terrain: Terrain, now: number) {
+  if (!refs.effects) return;
+  const live: THREE.Mesh<THREE.TorusGeometry, THREE.MeshStandardMaterial>[] = [];
+  refs.disasterRings.forEach((ring) => {
+    const data = ring.userData as {
+      bornAt: number;
+      life: number;
+      radius: number;
+      severity: number;
+    };
+    const age = now - data.bornAt;
+    if (age >= data.life) {
+      refs.effects?.remove(ring);
+      ring.geometry.dispose();
+      ring.material.dispose();
+      return;
+    }
+    const t = age / data.life;
+    const scale = data.radius * terrain.size * (1.0 + t * 3.5);
+    ring.scale.setScalar(scale);
+    ring.material.opacity = 0.9 * (1 - t);
+    live.push(ring);
+  });
+  refs.disasterRings = live;
+}
+
+function updateHoverTooltip(
+  tooltip: HTMLDivElement,
+  refs: SceneRefs,
+  hoverTarget:
+    | { kind: "civilian" | "building"; index: number; x: number; y: number }
+    | null,
+  _terrain: Terrain,
+) {
+  if (!hoverTarget || !refs.currentSnapshot) {
+    tooltip.style.opacity = "0";
+    tooltip.style.transform = "translate(-9999px, -9999px)";
+    return;
+  }
+  const snapshot = refs.currentSnapshot;
+  const marginY = 24;
+  let text = "";
+  if (hoverTarget.kind === "civilian") {
+    const civilian = snapshot.civ_pins?.[hoverTarget.index];
+    if (!civilian) return;
+    text = `Civilian age ${snapshot.sample_civilians?.[hoverTarget.index]?.age ?? "?"} job ${civilian.job ?? "unemployed"}`;
+  } else {
+    const building = snapshot.buildings?.[hoverTarget.index];
+    if (!building) return;
+    text = `${building.kind} building, era ${building.era}`;
+  }
+  tooltip.textContent = text;
+  tooltip.style.opacity = "1";
+  tooltip.style.transform = `translate(${hoverTarget.x + 12}px, ${hoverTarget.y - marginY}px)`;
+}
+
+function findAncestorBuilding(
+  object: THREE.Object3D,
+  buildings: THREE.Group[],
+) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    const index = buildings.indexOf(current as THREE.Group);
+    if (index >= 0) return index;
+    current = current.parent;
+  }
+  return -1;
 }
 
 function createEffectSprite(label: string, color: number) {

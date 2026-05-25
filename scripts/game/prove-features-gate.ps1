@@ -71,11 +71,19 @@ function Get-GameInstallRoot {
     if (-not [string]::IsNullOrWhiteSpace($env:DINO_GAME_PATH)) {
         return $env:DINO_GAME_PATH
     }
-    return 'G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option'
+    # Windows dev default only — ubuntu CI has no G: drive; avoid Join-Path on missing drive.
+    if ($IsWindows -or ($env:OS -match 'Windows')) {
+        return 'G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option'
+    }
+    return $null
 }
 
 function Test-GameInstalledForTests {
-    $managedDir = Join-Path (Get-GameInstallRoot) 'Diplomacy is Not an Option_Data\Managed'
+    $root = Get-GameInstallRoot
+    if ([string]::IsNullOrWhiteSpace($root)) {
+        return $false
+    }
+    $managedDir = Join-Path $root 'Diplomacy is Not an Option_Data\Managed'
     return Test-Path -LiteralPath (Join-Path $managedDir 'UnityEngine.dll')
 }
 

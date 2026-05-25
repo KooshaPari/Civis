@@ -54,6 +54,8 @@ jobs:
 
       - name: Build
         run: dotnet build src/DINOForge.CI.NoRuntime.sln --no-restore --configuration Release /p:BuildInParallel=false
+        # DINOForge.Tests.CliTools excluded from CI.NoRuntime.sln: it refs Tools.Cli (win-x64 RID);
+        # Linux Release builds cannot resolve Cli ref metadata (CS0006 Debug/win-x64 vs Release).
 
       # Unit + Integration tests — both projects are in CI.NoRuntime.sln, built above in Release
       - name: Test (Unit)

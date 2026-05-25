@@ -3,15 +3,34 @@ import type { ServerMetrics } from "./lib/civisServer";
 import { pushFrameSample } from "./lib/framePerf";
 import { readStoredTheme, type ThemeMode } from "./lib/theme";
 
-export type ToolKind = "PlaceVoxel" | "SpawnCivilian" | "DamageBomb" | "InspectAgent" | "Camera";
+export type ToolKind =
+  | "PlaceVoxel"
+  | "SpawnCivilian"
+  | "DamageBomb"
+  | "InspectAgent"
+  | "Camera";
 
-export type SpawnKind = "civilian" | "vehicle" | "airport";
+export type SpawnKind = "civilian" | "vehicle" | "airport" | "port";
 export type CameraPreset = "wide" | "close" | "orbit";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
 
-export type JobLabel = "farmer" | "warrior" | "scholar" | "trader" | "priest" | "admin" | "unemployed";
+export type JobLabel =
+  | "farmer"
+  | "warrior"
+  | "scholar"
+  | "trader"
+  | "priest"
+  | "admin"
+  | "unemployed";
 
-export type Biome = "deepwater" | "water" | "sand" | "grass" | "forest" | "stone" | "snow";
+export type Biome =
+  | "deepwater"
+  | "water"
+  | "sand"
+  | "grass"
+  | "forest"
+  | "stone"
+  | "snow";
 
 export type Terrain = {
   size: number;
@@ -53,7 +72,11 @@ export type Faction = {
   radius: number;
 };
 
-export type BuildingKind = "Residential" | "Commercial" | "Industrial" | "Civic";
+export type BuildingKind =
+  | "Residential"
+  | "Commercial"
+  | "Industrial"
+  | "Civic";
 
 export type Building = {
   id: number;
@@ -281,7 +304,12 @@ type Action =
   | { type: "set_snapshot"; snapshot: Snapshot | null }
   | { type: "set_server_metrics"; metrics: ServerMetrics | null }
   | { type: "set_frame3d_tick"; tick: number | null }
-  | { type: "set_chunk_stats"; count: number; recentIds: number[]; loadedIds: number[] }
+  | {
+      type: "set_chunk_stats";
+      count: number;
+      recentIds: number[];
+      loadedIds: number[];
+    }
   | { type: "set_inspected_chunk"; chunkId: number | null }
   | { type: "set_agent_stats"; count: number; recentIds: number[] }
   | { type: "push_frame_sample"; ms: number; source?: FrameSampleSource }
@@ -332,9 +360,7 @@ const initialState: State = {
   economyPanelOpen: true,
   techTreeOpen: false,
   theme: readStoredTheme(
-    typeof window !== "undefined"
-      ? { search: window.location.search }
-      : {},
+    typeof window !== "undefined" ? { search: window.location.search } : {},
   ),
   toast: null,
   lastSaveTick: null,
@@ -435,7 +461,9 @@ function reducer(state: State, action: Action): State {
     case "set_toast":
       return {
         ...state,
-        toast: action.message ? { id: Date.now(), message: action.message } : null,
+        toast: action.message
+          ? { id: Date.now(), message: action.message }
+          : null,
       };
     case "set_last_save_tick":
       return { ...state, lastSaveTick: action.tick };
@@ -455,7 +483,11 @@ const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  return <StoreContext.Provider value={{ state, dispatch }}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider value={{ state, dispatch }}>
+      {children}
+    </StoreContext.Provider>
+  );
 }
 
 export function useDashboardStore() {

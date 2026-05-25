@@ -89,6 +89,26 @@ impl DebugRender {
 /// Alpha for chunk solid fill when wireframe debug mode is active (ghost overlay).
 pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
 
+/// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct WsSpectatorMeta {
+    /// Day/night flag from the simulation climate phase.
+    pub is_day: bool,
+    /// Latest tick when present on the snapshot payload.
+    pub tick: Option<u64>,
+}
+
+/// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    let result = value.get("result")?;
+    let is_day = result.get("is_day")?.as_bool()?;
+    let tick = result.get("tick").and_then(|v| v.as_u64());
+    Some(WsSpectatorMeta { is_day, tick })
+}
+
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket status).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LiveHudSnapshot {
@@ -568,6 +588,20 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("chunk: 42"));
+    }
+
+    #[test]
+    fn parse_jsonrpc_snapshot_meta_reads_is_day_and_tick() {
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4}}"#;
+        let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
+        assert!(!meta.is_day);
+        assert_eq!(meta.tick, Some(12));
+    }
+
+    #[test]
+    fn parse_jsonrpc_snapshot_meta_ignores_tick_broadcast() {
+        let text = r#"{"tick":5,"voxel_delta":[]}"#;
+        assert!(parse_jsonrpc_snapshot_meta(text).is_none());
     }
 
     #[test]

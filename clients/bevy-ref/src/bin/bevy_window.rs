@@ -18,7 +18,8 @@ use civ_bevy_ref::{
     decode_chunk_id, focused_chunk_at_grid, mesh_lod_level, minimap_uv_to_chunk_grid,
     resolve_live_ws_url, should_render_chunk,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, AGENT_MARKER_DEPTH,
+    CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, WsSpectatorMeta,
+    AGENT_MARKER_DEPTH,
     AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::{AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
@@ -118,6 +119,22 @@ struct MinimapUi {
     dots: Entity,
 }
 
+/// L5 presentation: day/night from `sim.snapshot` with smooth lighting ramp.
+#[derive(Resource)]
+struct ScenePresentation {
+    is_day: bool,
+    day_factor: f32,
+}
+
+impl Default for ScenePresentation {
+    fn default() -> Self {
+        Self {
+            is_day: true,
+            day_factor: 1.0,
+        }
+    }
+}
+
 #[derive(Resource, Default)]
 struct MinimapCache {
     chunk_keys: Vec<u64>,
@@ -181,6 +198,7 @@ fn main() {
             WireframePlugin,
         ))
         .insert_resource(LiveScene::default())
+        .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
@@ -193,14 +211,44 @@ fn main() {
                 viewport_chunk_raycast,
                 update_orbit_camera_transform,
                 apply_live_frames,
+                apply_spectator_meta,
                 sync_chunk_debug_render,
                 update_chunk_fade,
                 update_hud,
                 update_minimap,
+                update_presentation_lighting,
             )
                 .chain(),
         )
         .run();
+}
+
+fn apply_spectator_meta(
+    bridge: Res<LiveBridge>,
+    mut presentation: ResMut<ScenePresentation>,
+    mut hud: ResMut<HudState>,
+) {
+    for meta in bridge.client.poll_meta() {
+        presentation.is_day = meta.is_day;
+        if let Some(tick) = meta.tick {
+            hud.snapshot.tick = Some(tick);
+            hud.snapshot.connected = true;
+        }
+    }
+}
+
+/// L5 slice: day/night from `sim.snapshot` (`is_day`) on the default directional light.
+fn update_presentation_lighting(
+    time: Res<Time>,
+    mut presentation: ResMut<ScenePresentation>,
+    mut lights: Query<&mut DirectionalLight>,
+) {
+    let target = if presentation.is_day { 1.0 } else { 0.32 };
+    let step = (time.delta_seconds() * 2.5).clamp(0.0, 1.0);
+    presentation.day_factor += (target - presentation.day_factor) * step;
+    for mut light in &mut lights {
+        light.illuminance = 12_000.0 * presentation.day_factor;
+    }
 }
 
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
@@ -481,6 +529,8 @@ fn update_minimap(
     mut commands: Commands,
     scene: Res<LiveScene>,
     minimap: Res<MinimapUi>,
+    orbit: Res<OrbitCamera>,
+    hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
     children: Query<&Children>,
 ) {
@@ -505,10 +555,17 @@ fn update_minimap(
     };
 
     let plot = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
+    let focused = hud.snapshot.focused_chunk;
     for raw in keys {
         let [u, v] = chunk_to_minimap_uv(ChunkId(raw), bounds);
         let left = MINIMAP_INSET + u * plot;
         let top = MINIMAP_INSET + v * plot;
+        let is_focused = focused.map(|id| id.0 == raw).unwrap_or(false);
+        let dot_color = if is_focused {
+            Color::srgb(0.95, 0.92, 0.45)
+        } else {
+            Color::srgb(0.72, 0.69, 0.62)
+        };
         commands.entity(minimap.dots).with_children(|parent| {
             parent.spawn((
                 NodeBundle {
@@ -520,7 +577,35 @@ fn update_minimap(
                         height: Val::Px(MINIMAP_DOT),
                         ..default()
                     },
-                    background_color: Color::srgb(0.72, 0.69, 0.62).into(),
+                    background_color: dot_color.into(),
+                    ..default()
+                },
+                FocusPolicy::Pass,
+            ));
+        });
+    }
+
+    let cam_cx = (orbit.centre[0] / CHUNK_EDGE as f32).floor() as i32;
+    let cam_cz = (orbit.centre[2] / CHUNK_EDGE as f32).floor() as i32;
+    if let Some(cam_raw) = keys.iter().find(|&&raw| {
+        let (cx, _cy, cz) = decode_chunk_id(ChunkId(raw));
+        cx == cam_cx && cz == cam_cz
+    }) {
+        let [u, v] = chunk_to_minimap_uv(ChunkId(*cam_raw), bounds);
+        let left = MINIMAP_INSET + u * plot - 1.0;
+        let top = MINIMAP_INSET + v * plot - 1.0;
+        commands.entity(minimap.dots).with_children(|parent| {
+            parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(left),
+                        top: Val::Px(top),
+                        width: Val::Px(MINIMAP_DOT + 2.0),
+                        height: Val::Px(MINIMAP_DOT + 2.0),
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.95, 0.95, 0.98).into(),
                     ..default()
                 },
                 FocusPolicy::Pass,

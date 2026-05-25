@@ -5,7 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{BuildingType, Citizen, JobType, Simulation};
+use civ_agents::{Civilian, Position3d, Velocity};
+use civ_voxel::FIXED_SCALE;
+
+use crate::engine::{BuildingType, JobType, Simulation};
 
 /// Normalised map pin for one civilian (0..1 plane coordinates).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -112,31 +115,28 @@ fn wrap01(v: f32) -> f32 {
     v - v.floor()
 }
 
+/// Pins from agent ECS positions (matches civ-watch); includes `spawn_civilian_at` spawns.
 fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
-    sim.world
-        .query::<&Citizen>()
+    let mut pins: Vec<CivPin> = sim
+        .world
+        .query::<(&Civilian, &Position3d, &Velocity)>()
         .iter()
-        .take(256)
-        .enumerate()
-        .map(|(idx, (_, citizen))| {
-            let seed = u64::from(idx as u32).wrapping_mul(2_654_435_761) ^ u64::from(citizen.age);
-            let base_x = ((seed & 0xffff) as f32) / 65535.0;
-            let base_y = (((seed >> 16) & 0xffff) as f32) / 65535.0;
-            let angle = ((seed >> 32) as f32 / u32::MAX as f32) * std::f32::consts::TAU;
-            let drift = 0.0015 + ((seed >> 48) as f32 / 65535.0) * 0.0025;
-            let dx = angle.cos() * drift;
-            let dy = angle.sin() * drift;
-            let tick_phase = (sim.state.tick as f32) * 0.1;
+        .map(|(_, (civilian, pos, vel))| {
+            let x = (pos.coord.x as f32 / FIXED_SCALE as f32).clamp(0.0, 1.0);
+            let y = (pos.coord.z as f32 / FIXED_SCALE as f32).clamp(0.0, 1.0);
             CivPin {
-                idx: idx as u32,
-                x: wrap01(base_x + dx * tick_phase),
-                y: wrap01(base_y + dy * tick_phase),
-                dx,
-                dy,
-                job: citizen.job.map(JobLabel::from),
+                idx: civilian.id as u32,
+                x,
+                y,
+                dx: vel.dx,
+                dy: vel.dy,
+                job: None,
             }
         })
-        .collect()
+        .collect();
+    pins.sort_by_key(|p| p.idx);
+    pins.truncate(256);
+    pins
 }
 
 fn factions_for_tick(tick: u64) -> Vec<Faction> {
@@ -183,16 +183,25 @@ fn buildings_for_factions(factions: &[Faction], tick: u64, sim: &Simulation) -> 
         }
     }
     for (idx, (_, building)) in sim.world.query::<&crate::Building>().iter().enumerate() {
-        if building.building_type == crate::BuildingType::CityCenter {
-            let (x, y) = crate::grid_to_norm(building.position);
-            pins.push(BuildingPin {
+        let (x, y) = crate::grid_to_norm(building.position);
+        match building.building_type {
+            crate::BuildingType::CityCenter => pins.push(BuildingPin {
                 id: 9_000 + idx as u32,
                 x,
                 y,
                 kind: BuildingKind::Civic,
                 era: ((tick / 120) % 6) as u16,
                 faction_id: 0,
-            });
+            }),
+            crate::BuildingType::Market => pins.push(BuildingPin {
+                id: 9_100 + idx as u32,
+                x,
+                y,
+                kind: BuildingKind::Commercial,
+                era: ((tick / 120) % 6) as u16,
+                faction_id: 0,
+            }),
+            _ => {}
         }
     }
     pins
@@ -209,5 +218,21 @@ mod tests {
         assert!(!view.civ_pins.is_empty());
         assert!(!view.factions.is_empty());
         assert!(!view.buildings.is_empty());
+    }
+
+    #[test]
+    fn civ_pins_reflect_spawned_agent_coordinates() {
+        use civ_agents::spawn_civilian_at;
+
+        let mut sim = Simulation::with_seed(9);
+        let mut rng = sim.rng_mut().clone();
+        let _ = spawn_civilian_at(&mut sim.world, 42_001, 1, 0.4, 0.6, &mut rng);
+        *sim.rng_mut() = rng;
+        let pins = civ_pins(&sim);
+        assert!(
+            pins.iter()
+                .any(|p| (p.x - 0.4).abs() < 0.02 && (p.y - 0.6).abs() < 0.02),
+            "expected spawn at norm (0.4, 0.6), got {pins:?}"
+        );
     }
 }

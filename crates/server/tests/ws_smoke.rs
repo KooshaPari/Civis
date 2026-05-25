@@ -1585,6 +1585,60 @@ async fn ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id() {
 }
 
 #[tokio::test]
+async fn ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
+    let addr = spawn_ws_bridge(sim, 4).await;
+    let url = format!("ws://{addr}/ws");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":72,"method":"sim.spawn_civilian","params":{"x":0.42,"y":0.58,"faction":2}}"#
+                .into(),
+        ))
+        .await
+        .expect("send spawn");
+
+    timeout(Duration::from_secs(3), async {
+        let mut snapshot_sent = false;
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(72)) {
+                assert_eq!(value.pointer("/result/ok"), Some(&serde_json::json!(true)));
+                socket
+                    .send(Message::Text(
+                        r#"{"jsonrpc":"2.0","id":73,"method":"sim.snapshot","params":{}}"#.into(),
+                    ))
+                    .await
+                    .expect("snapshot");
+                snapshot_sent = true;
+                continue;
+            }
+            if snapshot_sent && value.get("id") == Some(&serde_json::json!(73)) {
+                let pins = value
+                    .pointer("/result/civ_pins")
+                    .and_then(|v| v.as_array())
+                    .expect("civ_pins");
+                let found = pins.iter().any(|pin| {
+                    let x = pin.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    let y = pin.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    (x - 0.42).abs() < 0.03 && (y - 0.58).abs() < 0.03
+                });
+                assert!(found, "spawn pin missing from snapshot: {pins:?}");
+                return;
+            }
+        }
+        panic!("ws closed before snapshot pin check");
+    })
+    .await
+    .expect("spawn+snapshot pin timeout");
+}
+
+#[tokio::test]
 async fn ws_jsonrpc_sim_damage_accepts_event() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
     let addr = spawn_ws_bridge(sim, 4).await;

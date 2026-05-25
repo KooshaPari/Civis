@@ -29,6 +29,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Civis")
     void SpawnCivilian(float X, float Y, int32 Faction);
 
+    /** POST /control/spawn_entity — civilian, vehicle, or airport (FR-CIV-UX-006). */
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void SpawnEntity(const FString& Kind, float X, float Y, int32 Faction);
+
+    /** POST /control/damage — immediate voxel damage (matches civ-watch + civ-server). */
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void ApplyDamage(int64 X, int64 Y, int64 Z, int32 Radius, int32 Energy);
+
     UPROPERTY(BlueprintAssignable, Category = "Civis")
     FOnSnapshotReceived OnSnapshot;
 

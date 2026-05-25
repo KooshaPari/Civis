@@ -57,6 +57,16 @@ pub fn spawn_airport_at(world: &mut World, x: f32, y: f32) -> Entity {
     },))
 }
 
+/// Spawn a harbor / trade port (`Market`) at normalized coords.
+pub fn spawn_port_at(world: &mut World, x: f32, y: f32) -> Entity {
+    world.spawn((Building {
+        building_type: BuildingType::Market,
+        hp: Fixed::from_num(350),
+        max_hp: Fixed::from_num(350),
+        position: norm_to_grid(x, y),
+    },))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,7 +84,8 @@ mod tests {
         let mut world = World::new();
         let _mil = spawn_military_at(&mut world, 1, 0.2, 0.8, UnitType::Knight);
         let _air = spawn_airport_at(&mut world, 0.7, 0.3);
+        let _port = spawn_port_at(&mut world, 0.3, 0.7);
         assert_eq!(world.query::<&MilitaryUnit>().iter().count(), 1);
-        assert_eq!(world.query::<&Building>().iter().count(), 1);
+        assert_eq!(world.query::<&Building>().iter().count(), 2);
     }
 }

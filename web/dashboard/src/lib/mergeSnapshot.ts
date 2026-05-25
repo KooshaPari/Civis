@@ -49,7 +49,10 @@ function parseTechTree(raw: unknown): TechNode[] {
 }
 
 /** Merge `sim.snapshot` JSON (with optional spectator fields) into dashboard `Snapshot`. */
-export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot {
+export function mergeServerSnapshot(
+  result: unknown,
+  speed: TimeSpeed,
+): Snapshot {
   const r = (result ?? {}) as Record<string, unknown>;
   const civPins = parseCivPins(r.civ_pins);
   const militaryUnits = parseMilitaryPins(r.military_units);
@@ -57,22 +60,22 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
   const buildings = parseBuildings(r.buildings);
   const roads = parseRoads(r.roads);
   const trade_routes = parseTradeRoutes(r.trade_routes);
-    return {
-      tick: Number(r.tick ?? 0),
-      tick_dt_ms: Number(r.tick_dt_ms ?? 100),
-      current_era: Number(r.current_era ?? 0),
-      population: Number(r.population ?? 0),
+  return {
+    tick: Number(r.tick ?? 0),
+    tick_dt_ms: Number(r.tick_dt_ms ?? 100),
+    current_era: Number(r.current_era ?? 0),
+    population: Number(r.population ?? 0),
     voxel_dirty_count: Number(r.voxel_dirty_count ?? 0),
     voxel_chunk_count: Number(r.voxel_chunk_count ?? 0),
     sample_civilians: [],
     civ_pins: civPins,
     military_units: militaryUnits,
     factions,
-      buildings,
-      roads,
-      trade_routes,
-      trade_volume_this_tick: Number(r.trade_volume_this_tick ?? 0),
-      births_this_tick: Number(r.births_this_tick ?? 0),
+    buildings,
+    roads,
+    trade_routes,
+    trade_volume_this_tick: Number(r.trade_volume_this_tick ?? 0),
+    births_this_tick: Number(r.births_this_tick ?? 0),
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
     damage_events: parseDamageEvents(r.damage_events),
@@ -102,7 +105,9 @@ function parseWeather(raw: unknown): WeatherSnapshot {
   const row = (raw ?? {}) as Record<string, unknown>;
   const precip = row.precipitation;
   const precipitation =
-    precip === "rain" || precip === "snow" || precip === "none" ? precip : "none";
+    precip === "rain" || precip === "snow" || precip === "none"
+      ? precip
+      : "none";
   return {
     season: String(row.season ?? "Spring"),
     temperature: Number(row.temperature ?? 15),
@@ -125,7 +130,8 @@ function parsePopulationPulses(raw: unknown): PopulationPulse[] {
 }
 
 function parseDiplomacyKind(kind: unknown): DiplomacyKind {
-  if (kind === "TradeAgreement" || kind === "Conflict" || kind === "Peace") return kind;
+  if (kind === "TradeAgreement" || kind === "Conflict" || kind === "Peace")
+    return kind;
   return "Peace";
 }
 
@@ -188,12 +194,23 @@ function parseEconomy(raw: unknown): EconomySnapshot {
       metal_per_tick: Number(production.metal_per_tick ?? 0),
       energy_per_tick: Number(production.energy_per_tick ?? 0),
     },
-    institutions: parseInstitutions(r.institutions ?? (r.economy as Record<string, unknown> | undefined)?.institutions),
+    institutions: parseInstitutions(
+      r.institutions ??
+        (r.economy as Record<string, unknown> | undefined)?.institutions,
+    ),
     resources: {
-      food: Number((r.resources as Record<string, unknown> | undefined)?.food ?? 0),
-      wood: Number((r.resources as Record<string, unknown> | undefined)?.wood ?? 0),
-      metal: Number((r.resources as Record<string, unknown> | undefined)?.metal ?? 0),
-      energy: Number((r.resources as Record<string, unknown> | undefined)?.energy ?? 0),
+      food: Number(
+        (r.resources as Record<string, unknown> | undefined)?.food ?? 0,
+      ),
+      wood: Number(
+        (r.resources as Record<string, unknown> | undefined)?.wood ?? 0,
+      ),
+      metal: Number(
+        (r.resources as Record<string, unknown> | undefined)?.metal ?? 0,
+      ),
+      energy: Number(
+        (r.resources as Record<string, unknown> | undefined)?.energy ?? 0,
+      ),
     },
   };
 }
@@ -202,7 +219,9 @@ function parseEconomy(raw: unknown): EconomySnapshot {
 function parseEconomyForServer(root: Record<string, unknown>): EconomySnapshot {
   const nested = parseEconomy(root.economy);
   const energy =
-    root.energy_budget != null ? Number(root.energy_budget) : nested.energy_budget;
+    root.energy_budget != null
+      ? Number(root.energy_budget)
+      : nested.energy_budget;
   const institutions =
     parseInstitutions(root.institutions).length > 0
       ? parseInstitutions(root.institutions)
@@ -248,7 +267,11 @@ function parseFactions(raw: unknown): Faction[] {
     const capital = row.capital as number[] | undefined;
     return {
       id: Number(row.id ?? 0),
-      color: [color?.[0] ?? 128, color?.[1] ?? 128, color?.[2] ?? 128] as [number, number, number],
+      color: [color?.[0] ?? 128, color?.[1] ?? 128, color?.[2] ?? 128] as [
+        number,
+        number,
+        number,
+      ],
       capital: [capital?.[0] ?? 0.5, capital?.[1] ?? 0.5] as [number, number],
       radius: Number(row.radius ?? 10),
     };
@@ -293,7 +316,13 @@ function parseBuildingKind(kind: unknown): Building["kind"] {
 }
 
 function parseRoadKind(kind: unknown): RoadKind {
-  if (kind === "Trail" || kind === "Dirt" || kind === "Paved" || kind === "Highway") return kind;
+  if (
+    kind === "Trail" ||
+    kind === "Dirt" ||
+    kind === "Paved" ||
+    kind === "Highway"
+  )
+    return kind;
   return "Dirt";
 }
 
@@ -304,7 +333,10 @@ function parseRoads(raw: unknown): Road[] {
     const from = item.from as number[] | undefined;
     const to = item.to as number[] | undefined;
     return {
-      from: [Number(from?.[0] ?? 0), Number(from?.[1] ?? 0)] as [number, number],
+      from: [Number(from?.[0] ?? 0), Number(from?.[1] ?? 0)] as [
+        number,
+        number,
+      ],
       to: [Number(to?.[0] ?? 0), Number(to?.[1] ?? 0)] as [number, number],
       width: Number(item.width ?? 0.02),
       kind: parseRoadKind(item.kind),

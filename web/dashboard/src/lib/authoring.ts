@@ -47,40 +47,63 @@ async function refreshAfterMutation(
   }
 }
 
+async function spawnAtCell(
+  input: TerrainAuthoringInput,
+  cellX: number,
+  cellY: number,
+): Promise<void> {
+  const normX = cellX / input.terrainSize;
+  const normY = cellY / input.terrainSize;
+  if (input.attachMode === "server") {
+    const ws = getActiveServerSocket();
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected to civ-server");
+    }
+    const method =
+      input.spawnKind === "civilian" ? "sim.spawn_civilian" : "sim.spawn_entity";
+    const params =
+      input.spawnKind === "civilian"
+        ? { x: normX, y: normY, faction: input.faction }
+        : { kind: input.spawnKind, x: normX, y: normY, faction: input.faction };
+    await jsonRpcCall<{ entity_id?: number }>(ws, method, params);
+    return;
+  }
+  await postControl("/control/spawn_entity", {
+    kind: input.spawnKind,
+    x: normX,
+    y: normY,
+    faction: input.faction,
+  });
+}
+
+/** Spawn along a drag path (FR-CIV-UX-004 convoy). */
+export async function executeConvoyAlongPath(
+  input: TerrainAuthoringInput,
+  points: Array<{ cellX: number; cellY: number }>,
+  dispatch: AuthoringDispatch,
+): Promise<string> {
+  if (points.length === 0) {
+    return "No spawn points";
+  }
+  for (const point of points) {
+    await spawnAtCell(input, point.cellX, point.cellY);
+  }
+  await refreshAfterMutation(input.attachMode, input.speed, dispatch);
+  return `Placed convoy of ${points.length} ${input.spawnKind}(s)`;
+}
+
 /** Run spawn / place / damage for the active attach backend (FR-CIV-WEB-008). */
 export async function executeTerrainAuthoring(
   input: TerrainAuthoringInput,
   dispatch: AuthoringDispatch,
 ): Promise<string> {
-  const normX = input.cellX / input.terrainSize;
-  const normY = input.cellY / input.terrainSize;
   const worldX = input.cellX * FIXED_SCALE;
   const worldZ = input.cellY * FIXED_SCALE;
   const worldY = Math.max(0, Math.round(input.heightY)) * FIXED_SCALE;
 
   switch (input.tool) {
     case "SpawnCivilian": {
-      if (input.attachMode === "server") {
-        const ws = getActiveServerSocket();
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          throw new Error("Not connected to civ-server");
-        }
-        const method =
-          input.spawnKind === "civilian" ? "sim.spawn_civilian" : "sim.spawn_entity";
-        const params =
-          input.spawnKind === "civilian"
-            ? { x: normX, y: normY, faction: input.faction }
-            : { kind: input.spawnKind, x: normX, y: normY, faction: input.faction };
-        const result = await jsonRpcCall<{ entity_id?: number }>(ws, method, params);
-        await refreshAfterMutation(input.attachMode, input.speed, dispatch);
-        return `Spawned ${input.spawnKind} #${result.entity_id ?? "?"}`;
-      }
-      await postControl("/control/spawn_entity", {
-        kind: input.spawnKind,
-        x: normX,
-        y: normY,
-        faction: input.faction,
-      });
+      await spawnAtCell(input, input.cellX, input.cellY);
       await refreshAfterMutation(input.attachMode, input.speed, dispatch);
       return `Spawned ${input.spawnKind} at ${input.cellX}, ${input.cellY}`;
     }

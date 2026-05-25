@@ -1,11 +1,18 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { executeTerrainAuthoring } from "./lib/authoring";
+import {
+  CSS2DObject,
+  CSS2DRenderer,
+} from "three/examples/jsm/renderers/CSS2DRenderer.js";
+import {
+  executeConvoyAlongPath,
+  executeTerrainAuthoring,
+} from "./lib/authoring";
+import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
 import { postControl } from "./control";
 import { getActiveServerSocket } from "./lib/civisSocket";
-import { jsonRpcCall } from "./lib/civisServer";
+import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import {
   Biome,
   Building,
@@ -43,11 +50,20 @@ const CIVILIAN_POOL_SIZE = 256;
 const TERRAIN_HEIGHT_SCALE = 12;
 
 type SceneRefs = {
-  terrainMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
+  terrainMesh: THREE.Mesh<
+    THREE.PlaneGeometry,
+    THREE.MeshStandardMaterial
+  > | null;
   waterMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
   decorationGroup: THREE.Group | null;
-  treeInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
-  rockInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
+  treeInstances: THREE.InstancedMesh<
+    THREE.BufferGeometry,
+    THREE.MeshStandardMaterial
+  > | null;
+  rockInstances: THREE.InstancedMesh<
+    THREE.BufferGeometry,
+    THREE.MeshStandardMaterial
+  > | null;
   snowPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   rainPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
@@ -258,7 +274,12 @@ export function Scene3d() {
         refs.current.rainPoints = null;
       }
 
-      const geometry = new THREE.PlaneGeometry(terrain.size, terrain.size, terrain.size - 1, terrain.size - 1);
+      const geometry = new THREE.PlaneGeometry(
+        terrain.size,
+        terrain.size,
+        terrain.size - 1,
+        terrain.size - 1,
+      );
       geometry.rotateX(-Math.PI / 2);
       const positions = geometry.attributes.position as THREE.BufferAttribute;
       const colors = new Float32Array(terrain.size * terrain.size * 3);
@@ -304,7 +325,11 @@ export function Scene3d() {
       buildDecorations(terrain, terrainGroup, refs.current);
       refs.current.terrainFeatureLabels = computeTerrainFeatures(terrain);
       controls.target.set(0, terrain.size * 0.12, 0);
-      camera.position.set(terrain.size * 0.25, terrain.size * 1.7, terrain.size * 1.6);
+      camera.position.set(
+        terrain.size * 0.25,
+        terrain.size * 1.7,
+        terrain.size * 1.6,
+      );
       camera.lookAt(controls.target);
       controls.update();
       updateShadowBounds(sun, terrain.size);
@@ -334,7 +359,11 @@ export function Scene3d() {
           return;
         }
         mesh.visible = true;
-        const sample = interpolateCivPin(refs.current, index, performance.now());
+        const sample = interpolateCivPin(
+          refs.current,
+          index,
+          performance.now(),
+        );
         const wx = sample.x * terrain.size - terrain.size / 2;
         const wz = sample.y * terrain.size - terrain.size / 2;
         const wy = terrainHeightAt(terrain, sample.x, sample.y) + 0.7;
@@ -377,9 +406,19 @@ export function Scene3d() {
         const wy = terrainHeightAt(terrain, unit.x, unit.y) + 0.85;
         mesh.position.set(wx, wy, wz);
         mesh.scale.setScalar(1 + unit.strength * 0.15);
-        mesh.material.color.setHex(factionColor(snapshot?.factions ?? [], unit.faction));
-        mesh.material.emissive.setHex(combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`) ? 0xff2222 : 0x000000);
-        mesh.material.emissiveIntensity = combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`) ? 0.8 : 0;
+        mesh.material.color.setHex(
+          factionColor(snapshot?.factions ?? [], unit.faction),
+        );
+        mesh.material.emissive.setHex(
+          combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`)
+            ? 0xff2222
+            : 0x000000,
+        );
+        mesh.material.emissiveIntensity = combat.has(
+          `${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`,
+        )
+          ? 0.8
+          : 0;
       });
     };
 
@@ -421,13 +460,22 @@ export function Scene3d() {
         mesh.visible = true;
         mesh.position.set(
           faction.capital[0] * terrain.size - terrain.size / 2,
-          terrainHeightAt(terrain, faction.capital[0], faction.capital[1]) + 0.25,
+          terrainHeightAt(terrain, faction.capital[0], faction.capital[1]) +
+            0.25,
           faction.capital[1] * terrain.size - terrain.size / 2,
         );
         mesh.scale.setScalar(faction.radius);
-        mesh.material.color.setRGB(faction.color[0] / 255, faction.color[1] / 255, faction.color[2] / 255);
-        mesh.material.opacity = conflicted.has(faction.id) ? 0.3 : 0.12 + index * 0.03;
-        mesh.material.color.setHex(conflicted.has(faction.id) ? 0xff4d4d : mesh.material.color.getHex());
+        mesh.material.color.setRGB(
+          faction.color[0] / 255,
+          faction.color[1] / 255,
+          faction.color[2] / 255,
+        );
+        mesh.material.opacity = conflicted.has(faction.id)
+          ? 0.3
+          : 0.12 + index * 0.03;
+        mesh.material.color.setHex(
+          conflicted.has(faction.id) ? 0xff4d4d : mesh.material.color.getHex(),
+        );
       });
     };
 
@@ -453,18 +501,22 @@ export function Scene3d() {
           return;
         }
         mesh.visible = true;
-        const faction = factionById(snapshot?.factions ?? [], building.faction_id);
+        const faction = factionById(
+          snapshot?.factions ?? [],
+          building.faction_id,
+        );
         const dims = buildingDimensions(building);
         mesh.scale.set(dims[0], dims[1], dims[2]);
         const wx = building.x * terrain.size - terrain.size / 2;
         const wz = building.y * terrain.size - terrain.size / 2;
-        const wy = terrainHeightAt(terrain, building.x, building.y) + dims[1] * 0.5;
+        const wy =
+          terrainHeightAt(terrain, building.x, building.y) + dims[1] * 0.5;
         mesh.position.set(wx, wy, wz);
         if (faction) {
           mesh.material.color.setRGB(
-            Math.min(1, faction.color[0] / 255 * 0.8 + 0.15),
-            Math.min(1, faction.color[1] / 255 * 0.8 + 0.15),
-            Math.min(1, faction.color[2] / 255 * 0.8 + 0.15),
+            Math.min(1, (faction.color[0] / 255) * 0.8 + 0.15),
+            Math.min(1, (faction.color[1] / 255) * 0.8 + 0.15),
+            Math.min(1, (faction.color[2] / 255) * 0.8 + 0.15),
           );
         }
       });
@@ -494,7 +546,11 @@ export function Scene3d() {
         mesh.visible = true;
         const segment = roadSegment(terrain, road.from, road.to);
         const [startX, startZ, endX, endZ, length, angle] = segment;
-        mesh.position.set((startX + endX) * 0.5, roadHeight(terrain, road.from, road.to), (startZ + endZ) * 0.5);
+        mesh.position.set(
+          (startX + endX) * 0.5,
+          roadHeight(terrain, road.from, road.to),
+          (startZ + endZ) * 0.5,
+        );
         mesh.rotation.set(0, angle, 0);
         mesh.scale.set(length, 0.08, road.width);
         mesh.material.color.setHex(roadColor(road.kind));
@@ -559,8 +615,10 @@ export function Scene3d() {
         const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
         const toX = to.capital[0] * terrain.size - terrain.size / 2;
         const toZ = to.capital[1] * terrain.size - terrain.size / 2;
-        const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
-        const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
+        const fromY =
+          terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+        const toY =
+          terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
         const dx = toX - fromX;
         const dy = toY - fromY;
         const dz = toZ - fromZ;
@@ -575,7 +633,11 @@ export function Scene3d() {
         line.position.copy(midpoint);
         line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
         line.scale.set(radius, length, radius);
-        line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
+        line.material.color.setRGB(
+          from.color[0] / 255,
+          from.color[1] / 255,
+          from.color[2] / 255,
+        );
         const phase = (performance.now() * 0.00025 + index * 0.17) % 1;
         cargo.position.set(
           fromX + dx * phase,
@@ -583,7 +645,11 @@ export function Scene3d() {
           fromZ + dz * phase,
         );
         cargo.scale.setScalar(0.5 + route.volume * 0.02);
-        cargo.material.color.setRGB(to.color[0] / 255, to.color[1] / 255, to.color[2] / 255);
+        cargo.material.color.setRGB(
+          to.color[0] / 255,
+          to.color[1] / 255,
+          to.color[2] / 255,
+        );
       });
     };
 
@@ -624,36 +690,67 @@ export function Scene3d() {
       const features = refs.current.terrainFeatureLabels;
       if (features.mountain) {
         const label = createBillboardLabel("Mountain", [255, 255, 255]);
-        label.position.set(features.mountain[0], features.mountain[1], features.mountain[2]);
+        label.position.set(
+          features.mountain[0],
+          features.mountain[1],
+          features.mountain[2],
+        );
         labelGroup.add(label);
       }
       if (features.lake) {
         const label = createBillboardLabel("Lake", [180, 225, 255]);
-        label.position.set(features.lake[0], features.lake[1], features.lake[2]);
+        label.position.set(
+          features.lake[0],
+          features.lake[1],
+          features.lake[2],
+        );
         labelGroup.add(label);
       }
       if (features.forest) {
         const label = createBillboardLabel("Forest", [185, 255, 185]);
-        label.position.set(features.forest[0], features.forest[1], features.forest[2]);
+        label.position.set(
+          features.forest[0],
+          features.forest[1],
+          features.forest[2],
+        );
         labelGroup.add(label);
       }
     };
 
-    refs.current.spawnBurst = (x: number, y: number, color: number, label?: string) => {
+    refs.current.spawnBurst = (
+      x: number,
+      y: number,
+      color: number,
+      label?: string,
+    ) => {
       const terrain = refs.current.activeTerrain;
       if (!terrain || !refs.current.effects) return;
       const sprite = createEffectSprite(label ?? "", color);
-      sprite.position.set(x * terrain.size - terrain.size / 2, terrainHeightAt(terrain, x, y) + 1.4, y * terrain.size - terrain.size / 2);
-      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).bornAt = performance.now();
-      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).rise = 0.8;
-      (sprite.userData as { bornAt: number; rise: number; fadeAt: number }).fadeAt = performance.now() + 3000;
+      sprite.position.set(
+        x * terrain.size - terrain.size / 2,
+        terrainHeightAt(terrain, x, y) + 1.4,
+        y * terrain.size - terrain.size / 2,
+      );
+      (
+        sprite.userData as { bornAt: number; rise: number; fadeAt: number }
+      ).bornAt = performance.now();
+      (
+        sprite.userData as { bornAt: number; rise: number; fadeAt: number }
+      ).rise = 0.8;
+      (
+        sprite.userData as { bornAt: number; rise: number; fadeAt: number }
+      ).fadeAt = performance.now() + 3000;
       refs.current.effects.add(sprite);
       refs.current.transientSprites.push(sprite);
     };
 
     const SPAWN_DRAG_MIN_CELLS = 4;
-    let spawnDrag: { startX: number; startY: number; heightY: number; pointerId: number } | null =
-      null;
+    let spawnDrag: {
+      startX: number;
+      startY: number;
+      heightY: number;
+      pointerId: number;
+    } | null = null;
     let dragPreviewLine: THREE.Line | null = null;
 
     const pickTerrainCell = (event: PointerEvent) => {
@@ -687,16 +784,28 @@ export function Scene3d() {
       }
     };
 
-    const updateDragPreview = (startX: number, startY: number, endX: number, endY: number) => {
+    const updateDragPreview = (
+      startX: number,
+      startY: number,
+      endX: number,
+      endY: number,
+    ) => {
       const terrain = refs.current.activeTerrain;
       if (!terrain || !refs.current.effects) return;
       const sx = startX - terrain.size / 2;
       const sz = startY - terrain.size / 2;
       const ex = endX - terrain.size / 2;
       const ez = endY - terrain.size / 2;
-      const sy = terrainHeightAt(terrain, startX / terrain.size, startY / terrain.size) + 0.4;
-      const ey = terrainHeightAt(terrain, endX / terrain.size, endY / terrain.size) + 0.4;
-      const points = [new THREE.Vector3(sx, sy, sz), new THREE.Vector3(ex, ey, ez)];
+      const sy =
+        terrainHeightAt(terrain, startX / terrain.size, startY / terrain.size) +
+        0.4;
+      const ey =
+        terrainHeightAt(terrain, endX / terrain.size, endY / terrain.size) +
+        0.4;
+      const points = [
+        new THREE.Vector3(sx, sy, sz),
+        new THREE.Vector3(ex, ey, ez),
+      ];
       if (!dragPreviewLine) {
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const material = new THREE.LineDashedMaterial({
@@ -717,7 +826,12 @@ export function Scene3d() {
       if (!spawnDrag || event.pointerId !== spawnDrag.pointerId) return;
       const pick = pickTerrainCell(event);
       if (!pick) return;
-      updateDragPreview(spawnDrag.startX, spawnDrag.startY, pick.cellX, pick.cellY);
+      updateDragPreview(
+        spawnDrag.startX,
+        spawnDrag.startY,
+        pick.cellX,
+        pick.cellY,
+      );
     };
 
     const onPointerUp = async (event: PointerEvent) => {
@@ -734,33 +848,49 @@ export function Scene3d() {
       }
       const endX = pick?.cellX ?? start.startX;
       const endY = pick?.cellY ?? start.startY;
-      const dist = Math.hypot(endX - start.startX, endY - start.startY);
-      const placeX = dist >= SPAWN_DRAG_MIN_CELLS ? endX : start.startX;
-      const placeY = dist >= SPAWN_DRAG_MIN_CELLS ? endY : start.startY;
+      const terrainSize = pick?.terrainSize ?? current.terrain?.size ?? 128;
       const heightY = pick?.heightY ?? start.heightY;
+      const authoringBase = {
+        attachMode: current.attachMode,
+        speed: current.speed,
+        tool: "SpawnCivilian" as const,
+        cellX: endX,
+        cellY: endY,
+        terrainSize,
+        heightY,
+        material: current.selectedMaterial,
+        faction: current.selectedFaction,
+        damageRadius: current.damageRadius,
+        spawnKind: current.spawnKind,
+      };
+      const dispatchFns = {
+        set_snapshot: (snapshot: unknown) =>
+          dispatch({ type: "set_snapshot", snapshot: snapshot as Snapshot }),
+        set_server_metrics: (
+          metrics: ReturnType<typeof normalizeServerSnapshot>,
+        ) => dispatch({ type: "set_server_metrics", metrics }),
+        set_speed: (speed: TimeSpeed) => dispatch({ type: "set_speed", speed }),
+      };
       try {
-        const message = await executeTerrainAuthoring(
-          {
-            attachMode: current.attachMode,
-            speed: current.speed,
-            tool: "SpawnCivilian",
-            cellX: placeX,
-            cellY: placeY,
-            terrainSize: pick?.terrainSize ?? current.terrain?.size ?? 128,
-            heightY,
-            material: current.selectedMaterial,
-            faction: current.selectedFaction,
-            damageRadius: current.damageRadius,
-            spawnKind: current.spawnKind,
-          },
-          {
-            set_snapshot: (snapshot) =>
-              dispatch({ type: "set_snapshot", snapshot: snapshot as Snapshot }),
-            set_server_metrics: (metrics) =>
-              dispatch({ type: "set_server_metrics", metrics }),
-            set_speed: (speed) => dispatch({ type: "set_speed", speed }),
-          },
-        );
+        const message =
+          spawnKindUsesConvoy(current.spawnKind) &&
+          Math.hypot(endX - start.startX, endY - start.startY) >=
+            SPAWN_DRAG_MIN_CELLS
+            ? await executeConvoyAlongPath(
+                authoringBase,
+                convoyCells(
+                  start.startX,
+                  start.startY,
+                  endX,
+                  endY,
+                  terrainSize,
+                ),
+                dispatchFns,
+              )
+            : await executeTerrainAuthoring(
+                { ...authoringBase, cellX: endX, cellY: endY },
+                dispatchFns,
+              );
         dispatch({ type: "set_toast", message });
       } catch (err) {
         dispatch({
@@ -801,9 +931,17 @@ export function Scene3d() {
         );
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(pointer, camera);
-        const militaryHit = raycaster.intersectObjects(refs.current.military, false)[0];
+        const militaryHit = raycaster.intersectObjects(
+          refs.current.military,
+          false,
+        )[0];
         if (militaryHit) {
-          const index = refs.current.military.indexOf(militaryHit.object as THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>);
+          const index = refs.current.military.indexOf(
+            militaryHit.object as THREE.Mesh<
+              THREE.ConeGeometry,
+              THREE.MeshStandardMaterial
+            >,
+          );
           const unit = stateRef.current.snapshot?.military_units?.[index];
           dispatch({
             type: "set_selected_military",
@@ -829,7 +967,7 @@ export function Scene3d() {
 
       if (
         current.selectedTool === "SpawnCivilian" &&
-        (current.spawnKind === "vehicle" || current.spawnKind === "airport")
+        spawnKindUsesConvoy(current.spawnKind)
       ) {
         spawnDrag = {
           startX: cellX,
@@ -859,7 +997,10 @@ export function Scene3d() {
           },
           {
             set_snapshot: (snapshot) =>
-              dispatch({ type: "set_snapshot", snapshot: snapshot as Snapshot }),
+              dispatch({
+                type: "set_snapshot",
+                snapshot: snapshot as Snapshot,
+              }),
             set_server_metrics: (metrics) =>
               dispatch({ type: "set_server_metrics", metrics }),
             set_speed: (speed) => dispatch({ type: "set_speed", speed }),
@@ -892,9 +1033,14 @@ export function Scene3d() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
-      if (event.target instanceof HTMLElement && /input|textarea|select/i.test(event.target.tagName)) return;
+      if (
+        event.target instanceof HTMLElement &&
+        /input|textarea|select/i.test(event.target.tagName)
+      )
+        return;
       if (event.key >= "1" && event.key <= "5") {
-        const faction = stateRef.current.snapshot?.factions?.[Number(event.key) - 1];
+        const faction =
+          stateRef.current.snapshot?.factions?.[Number(event.key) - 1];
         if (!faction) return;
         dispatch({ type: "set_camera_focus", focus: faction.capital });
         event.preventDefault();
@@ -944,17 +1090,36 @@ export function Scene3d() {
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
       if (terrain) {
-        refs.current.dayFactor += (refs.current.targetDayFactor - refs.current.dayFactor) * 0.04;
+        refs.current.dayFactor +=
+          (refs.current.targetDayFactor - refs.current.dayFactor) * 0.04;
         const d = refs.current.dayFactor;
         hemisphere.intensity = 0.6 * d;
         sun.intensity = 1.2 * d;
-        sun.position.set(terrain.size * 0.7, terrain.size * 1.3, terrain.size * 0.55);
+        sun.position.set(
+          terrain.size * 0.7,
+          terrain.size * 1.3,
+          terrain.size * 0.55,
+        );
         const weather = refs.current.terrainWeather;
-        const bg = new THREE.Color().lerpColors(new THREE.Color(0x0a1530), new THREE.Color(0x87b7e0), d);
+        const bg = new THREE.Color().lerpColors(
+          new THREE.Color(0x0a1530),
+          new THREE.Color(0x87b7e0),
+          d,
+        );
         scene.background = bg;
         fog.color.copy(bg);
-        fog.density = weather?.precipitation === "rain" ? 0.012 : weather?.precipitation === "snow" ? 0.008 : 0.0035;
-        updateWeatherParticles(refs.current, terrain, weather, performance.now());
+        fog.density =
+          weather?.precipitation === "rain"
+            ? 0.012
+            : weather?.precipitation === "snow"
+              ? 0.008
+              : 0.0035;
+        updateWeatherParticles(
+          refs.current,
+          terrain,
+          weather,
+          performance.now(),
+        );
         animateDecorations(refs.current, terrain, performance.now());
         updateInterpolatedCivilians(refs.current, terrain, performance.now());
         animateTradeRoutes(refs.current, performance.now());
@@ -1000,13 +1165,14 @@ export function Scene3d() {
       tradeRouteGroup.clear();
       civilianGroup.clear();
       buildingGroup.clear();
+      refs.current.tradeCargo = [];
+      refs.current.tradeRoutes = [];
       refs.current.spawnBurst = undefined;
       disposeScene(scene);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
       mount.removeChild(labelRenderer.domElement);
     };
-
   }, [dispatch]);
 
   useEffect(() => {
@@ -1018,17 +1184,30 @@ export function Scene3d() {
       refs.current.snapshotReceivedAt = performance.now();
       const burst = refs.current.spawnBurst;
       if (burst) {
-        state.snapshot.birth_events.forEach((event) => burst(event.x, event.y, 0x7ed957));
-        state.snapshot.death_events.forEach((event) => burst(event.x, event.y, 0xff6b6b));
-        state.snapshot.damage_events.forEach((event) => burst(event.x, event.y, 0xff4d4d, "Impact"));
+        state.snapshot.birth_events.forEach((event) =>
+          burst(event.x, event.y, 0x7ed957),
+        );
+        state.snapshot.death_events.forEach((event) =>
+          burst(event.x, event.y, 0xff6b6b),
+        );
+        state.snapshot.damage_events.forEach((event) =>
+          burst(event.x, event.y, 0xff4d4d, "Impact"),
+        );
         state.snapshot.diplomacy_events.forEach((event) => {
-          const faction = state.snapshot?.factions.find((item) => item.id === event.faction_a) ?? state.snapshot?.factions[0];
+          const faction =
+            state.snapshot?.factions.find(
+              (item) => item.id === event.faction_a,
+            ) ?? state.snapshot?.factions[0];
           if (!faction) return;
           burst(
             faction.capital[0],
             faction.capital[1],
             event.kind === "Conflict" ? 0xff4d4d : 0xf5d76e,
-            event.kind === "Conflict" ? "Conflict!" : event.kind === "TradeAgreement" ? "Trade Agreement!" : "Peace",
+            event.kind === "Conflict"
+              ? "Conflict!"
+              : event.kind === "TradeAgreement"
+                ? "Trade Agreement!"
+                : "Peace",
           );
         });
       }
@@ -1040,7 +1219,9 @@ export function Scene3d() {
     updateRoadsFromRefs(refs.current, state.snapshot);
     updateTradeRoutesFromRefs(refs.current, state.snapshot);
     refs.current.targetDayFactor = state.snapshot?.is_day === false ? 0.3 : 1;
-    refs.current.terrainFeatureLabels = terrain ? computeTerrainFeatures(terrain) : refs.current.terrainFeatureLabels;
+    refs.current.terrainFeatureLabels = terrain
+      ? computeTerrainFeatures(terrain)
+      : refs.current.terrainFeatureLabels;
   }, [state.snapshot]);
 
   useEffect(() => {
@@ -1053,12 +1234,22 @@ export function Scene3d() {
     const z = fy * terrain.size - terrain.size / 2;
     const y = terrainHeightAt(terrain, fx, fy);
     controls.target.set(x, y + 1.5, z);
-    camera.position.set(x + terrain.size * 0.22, y + terrain.size * 0.65, z + terrain.size * 0.22);
+    camera.position.set(
+      x + terrain.size * 0.22,
+      y + terrain.size * 0.65,
+      z + terrain.size * 0.22,
+    );
     camera.lookAt(controls.target);
     controls.update();
   }, [state.cameraFocusToken, state.cameraFocus]);
 
-  return <div ref={mountRef} className="scene3d" aria-label="Three.js heightmap scene" />;
+  return (
+    <div
+      ref={mountRef}
+      className="scene3d"
+      aria-label="Three.js heightmap scene"
+    />
+  );
 }
 
 function updateCiviliansFromRefs(refs: SceneRefs, now: number) {
@@ -1081,12 +1272,18 @@ function updateMilitaryFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
       terrainHeightAt(terrain, unit.x, unit.y) + 0.85,
       unit.y * terrain.size - terrain.size / 2,
     );
-    mesh.material.color.setHex(factionColor(snapshot?.factions ?? [], unit.faction));
+    mesh.material.color.setHex(
+      factionColor(snapshot?.factions ?? [], unit.faction),
+    );
     mesh.material.emissiveIntensity = 0;
   });
 }
 
-function updateInterpolatedCivilians(refs: SceneRefs, terrain: Terrain | null, now: number) {
+function updateInterpolatedCivilians(
+  refs: SceneRefs,
+  terrain: Terrain | null,
+  now: number,
+) {
   if (!terrain) return;
   const current = refs.currentSnapshot;
   const previous = refs.previousSnapshot ?? current;
@@ -1129,7 +1326,11 @@ function updateFactionsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
       faction.capital[1] * terrain.size - terrain.size / 2,
     );
     mesh.scale.setScalar(faction.radius);
-    mesh.material.color.setRGB(faction.color[0] / 255, faction.color[1] / 255, faction.color[2] / 255);
+    mesh.material.color.setRGB(
+      faction.color[0] / 255,
+      faction.color[1] / 255,
+      faction.color[2] / 255,
+    );
   });
 }
 
@@ -1166,7 +1367,11 @@ function updateRoadsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
     mesh.visible = true;
     const segment = roadSegment(terrain, road.from, road.to);
     const [startX, startZ, endX, endZ, length, angle] = segment;
-    mesh.position.set((startX + endX) * 0.5, roadHeight(terrain, road.from, road.to), (startZ + endZ) * 0.5);
+    mesh.position.set(
+      (startX + endX) * 0.5,
+      roadHeight(terrain, road.from, road.to),
+      (startZ + endZ) * 0.5,
+    );
     mesh.rotation.set(0, angle, 0);
     mesh.scale.set(length, 0.08, road.width);
     mesh.material.color.setHex(roadColor(road.kind));
@@ -1197,19 +1402,32 @@ function updateTradeRoutesFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
     const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
     const toX = to.capital[0] * terrain.size - terrain.size / 2;
     const toZ = to.capital[1] * terrain.size - terrain.size / 2;
-    const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+    const fromY =
+      terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
     const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
     const dx = toX - fromX;
     const dy = toY - fromY;
     const dz = toZ - fromZ;
     const length = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-    line.position.set((fromX + toX) * 0.5, (fromY + toY) * 0.5, (fromZ + toZ) * 0.5);
+    line.position.set(
+      (fromX + toX) * 0.5,
+      (fromY + toY) * 0.5,
+      (fromZ + toZ) * 0.5,
+    );
     line.quaternion.setFromUnitVectors(
       new THREE.Vector3(0, 1, 0),
       new THREE.Vector3(dx, dy, dz).normalize(),
     );
-    line.scale.set(0.035 + route.volume * 0.003, length, 0.035 + route.volume * 0.003);
-    line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
+    line.scale.set(
+      0.035 + route.volume * 0.003,
+      length,
+      0.035 + route.volume * 0.003,
+    );
+    line.material.color.setRGB(
+      from.color[0] / 255,
+      from.color[1] / 255,
+      from.color[2] / 255,
+    );
   });
 }
 
@@ -1252,7 +1470,8 @@ function clusterBuildings(buildings: Building[], terrain: Terrain) {
       }
     }
     if (group.length < 3) continue;
-    const label = group.length >= 10 ? "City" : group.length >= 5 ? "Town" : "Village";
+    const label =
+      group.length >= 10 ? "City" : group.length >= 5 ? "Town" : "Village";
     const avg = group.reduce(
       (acc, building) => {
         acc.x += building.x;
@@ -1291,7 +1510,12 @@ function computeTerrainFeatures(terrain: Terrain) {
       }
       const key = `${Math.floor(x / 6)}:${Math.floor(y / 6)}`;
       if (biome === "water") {
-        const cell: Cluster = waterClusters.get(key) ?? { cells: 0, x: 0, y: 0, height: -Infinity };
+        const cell: Cluster = waterClusters.get(key) ?? {
+          cells: 0,
+          x: 0,
+          y: 0,
+          height: -Infinity,
+        };
         cell.cells += 1;
         cell.x += x;
         cell.y += y;
@@ -1299,7 +1523,12 @@ function computeTerrainFeatures(terrain: Terrain) {
         waterClusters.set(key, cell);
       }
       if (biome === "forest") {
-        const cell: Cluster = forestClusters.get(key) ?? { cells: 0, x: 0, y: 0, height: -Infinity };
+        const cell: Cluster = forestClusters.get(key) ?? {
+          cells: 0,
+          x: 0,
+          y: 0,
+          height: -Infinity,
+        };
         cell.cells += 1;
         cell.x += x;
         cell.y += y;
@@ -1308,14 +1537,24 @@ function computeTerrainFeatures(terrain: Terrain) {
       }
     }
   }
-  const largest = (clusters: Map<string, { cells: number; x: number; y: number; height: number }>) => {
-    let best: { cells: number; x: number; y: number; height: number } | null = null;
+  const largest = (
+    clusters: Map<
+      string,
+      { cells: number; x: number; y: number; height: number }
+    >,
+  ) => {
+    let best: { cells: number; x: number; y: number; height: number } | null =
+      null;
     for (const cluster of clusters.values()) {
       if (!best || cluster.cells > best.cells) best = cluster;
     }
     if (!best) return null;
     const { x, y, cells, height } = best;
-    return [x / cells - size / 2, height + 1.5, y / cells - size / 2] as [number, number, number];
+    return [x / cells - size / 2, height + 1.5, y / cells - size / 2] as [
+      number,
+      number,
+      number,
+    ];
   };
   return {
     mountain,
@@ -1327,7 +1566,8 @@ function computeTerrainFeatures(terrain: Terrain) {
 function nextSpeed(speed: TimeSpeed, direction: 1 | -1): TimeSpeed {
   const steps: TimeSpeed[] = [0, 1, 2, 4, 8];
   const index = steps.indexOf(speed);
-  const next = steps[Math.min(steps.length - 1, Math.max(0, index + direction))];
+  const next =
+    steps[Math.min(steps.length - 1, Math.max(0, index + direction))];
   return next;
 }
 
@@ -1348,7 +1588,8 @@ function animateTradeRoutes(refs: SceneRefs, now: number) {
     const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
     const toX = to.capital[0] * terrain.size - terrain.size / 2;
     const toZ = to.capital[1] * terrain.size - terrain.size / 2;
-    const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+    const fromY =
+      terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
     const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
     const phase = (time * (0.18 + route.volume * 0.004) + index * 0.23) % 1;
     cargo.position.set(
@@ -1364,7 +1605,11 @@ function updateEffects(refs: SceneRefs, terrain: Terrain, now: number) {
   if (!refs.effects) return;
   const live: THREE.Sprite[] = [];
   refs.transientSprites.forEach((sprite) => {
-    const data = sprite.userData as { bornAt: number; fadeAt: number; rise: number };
+    const data = sprite.userData as {
+      bornAt: number;
+      fadeAt: number;
+      rise: number;
+    };
     const age = now - data.bornAt;
     const life = 3000;
     if (age >= life) {
@@ -1455,11 +1700,24 @@ function terrainHeightAt(terrain: Terrain, x: number, y: number) {
   return terrain.heights[iy * terrain.size + ix] * TERRAIN_HEIGHT_SCALE;
 }
 
-function roadHeight(terrain: Terrain, from: [number, number], to: [number, number]) {
-  return Math.max(terrainHeightAt(terrain, from[0], from[1]), terrainHeightAt(terrain, to[0], to[1])) + 0.06;
+function roadHeight(
+  terrain: Terrain,
+  from: [number, number],
+  to: [number, number],
+) {
+  return (
+    Math.max(
+      terrainHeightAt(terrain, from[0], from[1]),
+      terrainHeightAt(terrain, to[0], to[1]),
+    ) + 0.06
+  );
 }
 
-function roadSegment(terrain: Terrain, from: [number, number], to: [number, number]) {
+function roadSegment(
+  terrain: Terrain,
+  from: [number, number],
+  to: [number, number],
+) {
   const startX = from[0] * terrain.size - terrain.size / 2;
   const startZ = from[1] * terrain.size - terrain.size / 2;
   const endX = to[0] * terrain.size - terrain.size / 2;
@@ -1533,7 +1791,9 @@ function controlLabel(tool: string) {
   }
 }
 
-function disposeMesh(mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>) {
+function disposeMesh(
+  mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>,
+) {
   mesh.geometry.dispose();
   if (Array.isArray(mesh.material)) {
     mesh.material.forEach((material) => material.dispose());
@@ -1544,7 +1804,11 @@ function disposeMesh(mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THR
 
 function disposeObject(object: THREE.Object3D) {
   object.traverse((child) => {
-    if (child instanceof THREE.Mesh || child instanceof THREE.InstancedMesh || child instanceof THREE.Points) {
+    if (
+      child instanceof THREE.Mesh ||
+      child instanceof THREE.InstancedMesh ||
+      child instanceof THREE.Points
+    ) {
       child.geometry.dispose();
       const material = child.material;
       if (Array.isArray(material)) {
@@ -1571,7 +1835,10 @@ function disposeScene(scene: THREE.Scene) {
   });
 }
 
-function updateShadowBounds(light: THREE.DirectionalLight, terrainSize: number) {
+function updateShadowBounds(
+  light: THREE.DirectionalLight,
+  terrainSize: number,
+) {
   const camera = light.shadow.camera as THREE.OrthographicCamera;
   const extent = terrainSize * 0.8;
   camera.left = -extent;
@@ -1581,7 +1848,11 @@ function updateShadowBounds(light: THREE.DirectionalLight, terrainSize: number) 
   camera.updateProjectionMatrix();
 }
 
-function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: SceneRefs) {
+function buildDecorations(
+  terrain: Terrain,
+  terrainGroup: THREE.Group,
+  refs: SceneRefs,
+) {
   const rng = createTerrainRng(terrain);
   const treeCandidates: Array<{ x: number; y: number; height: number }> = [];
   const rockCandidates: Array<{ x: number; y: number; height: number }> = [];
@@ -1604,10 +1875,22 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
     const trunkGeo = new THREE.CylinderGeometry(0.08, 0.11, 0.65, 6);
     const canopyGeo = new THREE.ConeGeometry(0.55, 1.4, 7);
     const treeGroup = new THREE.Group();
-    const canopyMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
-    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x6a4a2f, roughness: 1, metalness: 0 });
+    const canopyMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0,
+    });
+    const trunkMaterial = new THREE.MeshStandardMaterial({
+      color: 0x6a4a2f,
+      roughness: 1,
+      metalness: 0,
+    });
     const trunk = new THREE.InstancedMesh(trunkGeo, trunkMaterial, treeCount);
-    const canopy = new THREE.InstancedMesh(canopyGeo, canopyMaterial, treeCount);
+    const canopy = new THREE.InstancedMesh(
+      canopyGeo,
+      canopyMaterial,
+      treeCount,
+    );
     trunk.castShadow = true;
     canopy.castShadow = true;
     const trunkMatrix = new THREE.Matrix4();
@@ -1621,12 +1904,16 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
       const wy = cell.height + 0.08;
       trunkMatrix.compose(
         new THREE.Vector3(wx, wy + 0.3 * scale, wz),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rng() * Math.PI * 2, 0)),
+        new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(0, rng() * Math.PI * 2, 0),
+        ),
         new THREE.Vector3(scale * 0.8, scale, scale * 0.8),
       );
       canopyMatrix.compose(
         new THREE.Vector3(wx, wy + 1.1 * scale, wz),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rng() * Math.PI * 2, 0)),
+        new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(0, rng() * Math.PI * 2, 0),
+        ),
         new THREE.Vector3(scale, scale, scale),
       );
       trunk.setMatrixAt(i, trunkMatrix);
@@ -1646,7 +1933,11 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
 
   if (rockCount > 0) {
     const rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
-    const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0.02 });
+    const rockMat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0.02,
+    });
     const rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockCount);
     rocks.castShadow = true;
     const matrix = new THREE.Matrix4();
@@ -1659,7 +1950,13 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
       const wy = cell.height + radius * 0.5;
       matrix.compose(
         new THREE.Vector3(wx, wy, wz),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(rng() * Math.PI, rng() * Math.PI * 2, rng() * Math.PI)),
+        new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(
+            rng() * Math.PI,
+            rng() * Math.PI * 2,
+            rng() * Math.PI,
+          ),
+        ),
         new THREE.Vector3(radius, radius, radius),
       );
       rocks.setMatrixAt(i, matrix);
@@ -1672,28 +1969,36 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
     terrainGroup.add(rocks);
     refs.rockInstances = rocks;
   }
-
 }
 
 function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
   const time = now * 0.001;
   if (refs.waterMesh) {
-    refs.waterMesh.material.opacity = 0.5 + 0.1 * (0.5 + 0.5 * Math.sin(time * 0.8));
+    refs.waterMesh.material.opacity =
+      0.5 + 0.1 * (0.5 + 0.5 * Math.sin(time * 0.8));
   }
 
   const terrainMesh = refs.terrainMesh;
   const baseColors = refs.terrainBaseColors;
   if (terrainMesh && baseColors) {
-    const colorAttr = terrainMesh.geometry.getAttribute("color") as THREE.BufferAttribute;
+    const colorAttr = terrainMesh.geometry.getAttribute(
+      "color",
+    ) as THREE.BufferAttribute;
     const season = refs.terrainSeason || "Summer";
     const seasonBlend = terrainSeasonBlend(season);
     const weather = refs.terrainWeather;
-    const positions = terrainMesh.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const positions = terrainMesh.geometry.getAttribute(
+      "position",
+    ) as THREE.BufferAttribute;
     const base = new THREE.Color();
     const tint = new THREE.Color(seasonBlend.tint);
     for (let i = 0; i < colorAttr.count; i += 1) {
       const biome = terrain.biomes[i];
-      base.setRGB(baseColors[i * 3], baseColors[i * 3 + 1], baseColors[i * 3 + 2]);
+      base.setRGB(
+        baseColors[i * 3],
+        baseColors[i * 3 + 1],
+        baseColors[i * 3 + 2],
+      );
       const x = positions.getX(i);
       const z = positions.getZ(i);
       const sway = 0.04 * Math.sin(time * 1.2 + x * 0.25 + z * 0.17);
@@ -1759,14 +2064,23 @@ function createSnowSystem(terrain: Terrain) {
   const speeds = new Float32Array(count);
   for (let i = 0; i < count; i += 1) {
     positions[i * 3] = (Math.random() - 0.5) * terrain.size;
-    positions[i * 3 + 1] = terrain.size * 0.45 + Math.random() * terrain.size * 0.2;
+    positions[i * 3 + 1] =
+      terrain.size * 0.45 + Math.random() * terrain.size * 0.2;
     positions[i * 3 + 2] = (Math.random() - 0.5) * terrain.size;
     speeds[i] = 0.35 + Math.random() * 0.45;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
-  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.8 }));
+  return new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.8,
+    }),
+  );
 }
 
 function createRainSystem(terrain: Terrain) {
@@ -1775,24 +2089,43 @@ function createRainSystem(terrain: Terrain) {
   const speeds = new Float32Array(count);
   for (let i = 0; i < count; i += 1) {
     positions[i * 3] = (Math.random() - 0.5) * terrain.size;
-    positions[i * 3 + 1] = terrain.size * 0.65 + Math.random() * terrain.size * 0.15;
+    positions[i * 3 + 1] =
+      terrain.size * 0.65 + Math.random() * terrain.size * 0.15;
     positions[i * 3 + 2] = (Math.random() - 0.5) * terrain.size;
     speeds[i] = 1.2 + Math.random() * 0.9;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
-  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x66aaff, size: 0.05, transparent: true, opacity: 0.75 }));
+  return new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      color: 0x66aaff,
+      size: 0.05,
+      transparent: true,
+      opacity: 0.75,
+    }),
+  );
 }
 
-function animateSnow(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>, terrain: Terrain) {
+function animateSnow(
+  points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>,
+  terrain: Terrain,
+) {
   const geometry = points.geometry;
   const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-  const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
+  const speed = geometry.getAttribute("speed") as
+    | THREE.BufferAttribute
+    | undefined;
   for (let i = 0; i < position.count; i += 1) {
-    const vy = position.getY(i) - ((speed?.getX(i) ?? 0.4) * 0.02);
+    const vy = position.getY(i) - (speed?.getX(i) ?? 0.4) * 0.02;
     if (vy < -terrain.size * 0.15) {
-      position.setXYZ(i, position.getX(i), terrain.size * 0.6 + (i % 7) * 0.2, position.getZ(i));
+      position.setXYZ(
+        i,
+        position.getX(i),
+        terrain.size * 0.6 + (i % 7) * 0.2,
+        position.getZ(i),
+      );
     } else {
       position.setY(i, vy);
     }
@@ -1800,16 +2133,27 @@ function animateSnow(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMate
   position.needsUpdate = true;
 }
 
-function animateRain(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>, terrain: Terrain, now: number) {
+function animateRain(
+  points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>,
+  terrain: Terrain,
+  now: number,
+) {
   const geometry = points.geometry;
   const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-  const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
+  const speed = geometry.getAttribute("speed") as
+    | THREE.BufferAttribute
+    | undefined;
   const wind = 0.03 * Math.sin(now * 0.0015);
   for (let i = 0; i < position.count; i += 1) {
-    const vy = position.getY(i) - ((speed?.getX(i) ?? 1.0) * 0.09);
+    const vy = position.getY(i) - (speed?.getX(i) ?? 1.0) * 0.09;
     const vx = position.getX(i) + wind;
     if (vy < -terrain.size * 0.1) {
-      position.setXYZ(i, (Math.random() - 0.5) * terrain.size, terrain.size * 0.7 + Math.random() * terrain.size * 0.1, (Math.random() - 0.5) * terrain.size);
+      position.setXYZ(
+        i,
+        (Math.random() - 0.5) * terrain.size,
+        terrain.size * 0.7 + Math.random() * terrain.size * 0.1,
+        (Math.random() - 0.5) * terrain.size,
+      );
     } else {
       position.setXYZ(i, vx, vy, position.getZ(i));
     }

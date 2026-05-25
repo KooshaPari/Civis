@@ -51,7 +51,7 @@ tooltip_text = "Left-click terrain to place a voxel (POST /control/place_voxel)"
 
 [node name="Spawn Civilian" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Spawn"
-tooltip_text = "Click to spawn civilian; drag to place vehicle or airport (FR-CIV-UX-004)"
+tooltip_text = "Click civilian; drag vehicle/airport/port — long drag spawns convoy (FR-CIV-UX-004)"
 
 [node name="SpawnKind" type="OptionButton" parent="BottomBar/HBoxContainer"]
 item_count = 3
@@ -105,3 +105,7 @@ tooltip_text = "FR-CIV-UX-005 wide orbit preset"
 [node name="CameraClose" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Cam Close"
 tooltip_text = "FR-CIV-UX-005 close orbit preset"
+
+[node name="CameraOrbit" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Cam Orbit"
+tooltip_text = "FR-CIV-UX-005 default orbit preset"

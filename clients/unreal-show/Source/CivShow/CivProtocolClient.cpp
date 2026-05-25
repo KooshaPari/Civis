@@ -82,10 +82,23 @@ void UCivProtocolClient::PlaceVoxel(int64 X, int64 Y, int64 Z, int32 Material)
 
 void UCivProtocolClient::SpawnCivilian(float X, float Y, int32 Faction)
 {
+    SpawnEntity(TEXT("civilian"), X, Y, Faction);
+}
+
+void UCivProtocolClient::SpawnEntity(const FString& Kind, float X, float Y, int32 Faction)
+{
     const FString Body = FString::Printf(
-        TEXT("{\"x\":%f,\"y\":%f,\"faction\":%d}"),
-        X, Y, Faction);
-    RequestJson(TEXT("POST"), TEXT("/control/spawn_civilian"), Body, [](const FString&) {});
+        TEXT("{\"kind\":\"%s\",\"x\":%f,\"y\":%f,\"faction\":%d}"),
+        *Kind, X, Y, Faction);
+    RequestJson(TEXT("POST"), TEXT("/control/spawn_entity"), Body, [](const FString&) {});
+}
+
+void UCivProtocolClient::ApplyDamage(int64 X, int64 Y, int64 Z, int32 Radius, int32 Energy)
+{
+    const FString Body = FString::Printf(
+        TEXT("{\"x\":%lld,\"y\":%lld,\"z\":%lld,\"radius\":%d,\"energy\":%d}"),
+        X, Y, Z, Radius, Energy);
+    RequestJson(TEXT("POST"), TEXT("/control/damage"), Body, [](const FString&) {});
 }
 
 bool UCivProtocolClient::RequestJson(const FString& Verb, const FString& Path, const FString& Body, TFunction<void(const FString&)> OnOk)

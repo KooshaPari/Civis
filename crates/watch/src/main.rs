@@ -247,6 +247,7 @@ struct FactionTreasury {
     id: u32,
     name: String,
     balance: f64,
+    trade_balance: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -255,6 +256,12 @@ struct ProductionRates {
     wood_per_tick: f64,
     metal_per_tick: f64,
     energy_per_tick: f64,
+}
+
+#[derive(Debug, Clone, Default)]
+struct TradeTickSummary {
+    balances: std::collections::HashMap<u32, f64>,
+    volume: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -488,7 +495,7 @@ async fn simulation_worker(state: AppState) {
             let mut sim = state.sim.lock().await;
             let mut military = state.military.lock().await;
             let mut damage_events = Vec::new();
-            let mut trade_volume_this_tick = 0.0;
+            let mut trade = TradeTickSummary::default();
             for _ in 0..speed {
                 sim.tick();
                 if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
@@ -507,7 +514,11 @@ async fn simulation_worker(state: AppState) {
                 *sim.rng_mut() = rng;
                 damage_events = tick_military(&mut sim, &terrain, &mut military);
                 let tick = sim.state.tick;
-                trade_volume_this_tick = apply_trade_routes(&mut sim, &factions, tick);
+                let (trade_volume, trade_balances) = apply_trade_routes(&mut sim, &factions, tick);
+                trade.volume += trade_volume;
+                for (faction_id, balance) in trade_balances {
+                    *trade.balances.entry(faction_id).or_insert(0.0) += balance;
+                }
                 for event in &damage_events {
                     sim.push_damage(DamageEvent {
                         center: WorldCoord {
@@ -525,7 +536,7 @@ async fn simulation_worker(state: AppState) {
                 &sim,
                 &military,
                 &damage_events,
-                trade_volume_this_tick,
+                &trade,
                 speed,
                 &state.laws,
                 current_era,
@@ -657,20 +668,21 @@ fn make_snapshot(
     sim: &Simulation,
     military: &[MilitaryPin],
     damage_events: &[DamagePulse],
-    trade_volume_this_tick: f64,
+    trade: &TradeTickSummary,
     speed: u8,
     laws: &LawDb,
     current_era: u16,
 ) -> Snapshot {
     let voxel_events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
-    let civ_pins = civ_pins(sim);
+    let civ_pins = civ_pins_from_spectator(sim);
     let factions = factions(sim.state.tick);
     let mut buildings = buildings(&factions, sim.state.tick);
+    merge_authoring_buildings(&mut buildings, sim);
     let housing_stats = housing_snapshot(sim, &mut buildings);
     let roads = roads(&buildings);
     let trade_routes = trade_routes(&factions, sim.state.tick);
-    let economy = economy_snapshot(sim, &factions);
+    let economy = economy_snapshot(sim, &factions, &trade.balances);
     let birth_events: Vec<PopulationPulse> = sim
         .last_births()
         .iter()
@@ -733,7 +745,7 @@ fn make_snapshot(
         roads,
         trade_routes,
         economy,
-        trade_volume_this_tick,
+        trade_volume_this_tick: trade.volume,
         births_this_tick: birth_events.len() as u32,
         deaths_this_tick: death_events.len() as u32,
         diplomacy_events,
@@ -973,7 +985,11 @@ fn tech_tree(db: &LawDb, current_era: u16) -> Vec<TechNode> {
     nodes
 }
 
-fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
+fn economy_snapshot(
+    sim: &Simulation,
+    factions: &[Faction],
+    trade_balances_this_tick: &std::collections::HashMap<u32, f64>,
+) -> EconomySnapshot {
     let energy_budget = sim.state.energy_budget_joules.to_f64();
     let resources = &sim.state.resources;
     let faction_treasury = factions
@@ -995,6 +1011,7 @@ fn economy_snapshot(sim: &Simulation, factions: &[Faction]) -> EconomySnapshot {
                 id: faction.id,
                 name,
                 balance,
+                trade_balance: *trade_balances_this_tick.get(&faction.id).unwrap_or(&0.0),
             }
         })
         .collect();
@@ -1053,25 +1070,31 @@ fn sample_civilians(sim: &Simulation) -> Vec<SampleCivilian> {
         .collect()
 }
 
-fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
-    sim.world
-        .query::<(&AgentCivilian, &Position3d, &Velocity)>()
+fn civ_pins_from_spectator(sim: &Simulation) -> Vec<CivPin> {
+    sim.spectator_view()
+        .civ_pins
         .iter()
-        .take(256)
-        .enumerate()
-        .map(|(idx, (_, (_citizen, pos, vel)))| {
-            let x = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
-            let y = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
-            CivPin {
-                idx: idx as u32,
-                x,
-                y,
-                dx: vel.dx,
-                dy: vel.dy,
-                job: None,
-            }
+        .map(|p| CivPin {
+            idx: p.idx,
+            x: p.x,
+            y: p.y,
+            dx: p.dx,
+            dy: p.dy,
+            job: p.job.map(job_label_from_engine),
         })
         .collect()
+}
+
+fn job_label_from_engine(label: civ_engine::spectator::JobLabel) -> JobLabel {
+    match label {
+        civ_engine::spectator::JobLabel::Farmer => JobLabel::Farmer,
+        civ_engine::spectator::JobLabel::Warrior => JobLabel::Warrior,
+        civ_engine::spectator::JobLabel::Scholar => JobLabel::Scholar,
+        civ_engine::spectator::JobLabel::Trader => JobLabel::Trader,
+        civ_engine::spectator::JobLabel::Priest => JobLabel::Priest,
+        civ_engine::spectator::JobLabel::Admin => JobLabel::Admin,
+        civ_engine::spectator::JobLabel::Unemployed => JobLabel::Unemployed,
+    }
 }
 
 fn assign_and_drift_housing(sim: &mut Simulation, buildings: &[Building]) {
@@ -1176,6 +1199,35 @@ fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
     buildings
 }
 
+/// Placed airports / ports from ECS authoring (FR-CIV-UX-006).
+fn merge_authoring_buildings(buildings: &mut Vec<Building>, sim: &Simulation) {
+    use civ_engine::{grid_to_norm, BuildingType};
+
+    for (idx, (_, building)) in sim
+        .world
+        .query::<&civ_engine::Building>()
+        .iter()
+        .enumerate()
+    {
+        let (x, y) = grid_to_norm(building.position);
+        let (kind, id_base) = match building.building_type {
+            BuildingType::CityCenter => (BuildingKind::Civic, 9_000_u32),
+            BuildingType::Market => (BuildingKind::Commercial, 9_100_u32),
+            _ => continue,
+        };
+        buildings.push(Building {
+            id: id_base + idx as u32,
+            x,
+            y,
+            kind,
+            era: ((sim.state.tick / 600) % 6) as u8,
+            faction_id: 0,
+            occupants: 0,
+            capacity: 0,
+        });
+    }
+}
+
 fn housing_snapshot(sim: &Simulation, buildings: &mut [Building]) -> HousingStats {
     let needy_count = sim
         .world
@@ -1272,7 +1324,11 @@ fn trade_routes(factions: &[Faction], tick: u64) -> Vec<TradeRoute> {
     routes
 }
 
-fn apply_trade_routes(sim: &mut Simulation, factions: &[Faction], tick: u64) -> f64 {
+fn apply_trade_routes(
+    sim: &mut Simulation,
+    factions: &[Faction],
+    tick: u64,
+) -> (f64, std::collections::HashMap<u32, f64>) {
     let routes = trade_routes(factions, tick);
     let diplomacy = sim
         .diplomacy_events()
@@ -1289,6 +1345,7 @@ fn apply_trade_routes(sim: &mut Simulation, factions: &[Faction], tick: u64) -> 
         .collect::<std::collections::HashMap<_, _>>();
 
     let mut trade_volume_this_tick = 0.0;
+    let mut trade_balances = std::collections::HashMap::new();
     for route in routes {
         let key = (
             route.from_faction.min(route.to_faction),
@@ -1314,16 +1371,18 @@ fn apply_trade_routes(sim: &mut Simulation, factions: &[Faction], tick: u64) -> 
             route.from_faction,
             treasury_delta,
         );
+        *trade_balances.entry(route.from_faction).or_insert(0.0) += treasury_delta;
         adjust_resource(&mut sim.state.resources, resource, quantity);
         adjust_treasury(
             &mut sim.state.faction_treasury,
             route.to_faction,
             -treasury_delta,
         );
+        *trade_balances.entry(route.to_faction).or_insert(0.0) -= treasury_delta;
         trade_volume_this_tick += f64::from(route.volume);
     }
 
-    trade_volume_this_tick
+    (trade_volume_this_tick, trade_balances)
 }
 
 fn route_resource(goods: &str) -> civ_engine::ResourceType {
@@ -1478,21 +1537,15 @@ async fn spawn_entity_handler(
         "airport" => {
             use civ_engine::spawn_airport_at;
             let _ = spawn_airport_at(&mut sim.world, req.x, req.y);
-            let mut military = state.military.lock().await;
-            let id = sim.state.tick.wrapping_add(1) ^ 0x00a1_0001_u64;
-            military.push(MilitaryPin {
-                id,
-                x: req.x.clamp(0.0, 1.0),
-                y: req.y.clamp(0.0, 1.0),
-                unit_type: "Airport".to_string(),
-                faction: req.faction,
-                strength: 1.0,
-            });
+        }
+        "port" => {
+            use civ_engine::spawn_port_at;
+            let _ = spawn_port_at(&mut sim.world, req.x, req.y);
         }
         _ => {
             return Json(ControlOk {
                 ok: false,
-                message: Some("kind must be civilian, vehicle, or airport".to_string()),
+                message: Some("kind must be civilian, vehicle, airport, or port".to_string()),
             });
         }
     }

@@ -56,8 +56,10 @@ pub enum SpawnKind {
     Civilian,
     /// Vehicle placeholder.
     Vehicle,
-    /// Airport / port placeholder.
+    /// Airport hub building.
     Airport,
+    /// Harbor / trade port building.
+    Port,
 }
 
 impl SpawnKind {
@@ -67,6 +69,7 @@ impl SpawnKind {
             Self::Civilian => "civilian",
             Self::Vehicle => "vehicle",
             Self::Airport => "airport",
+            Self::Port => "port",
         }
     }
 
@@ -77,18 +80,58 @@ impl SpawnKind {
 
     /// Whether FR-CIV-UX-004 expects drag-release placement (not click-only).
     pub const fn uses_drag_place(self) -> bool {
-        matches!(self, Self::Vehicle | Self::Airport)
+        matches!(self, Self::Vehicle | Self::Airport | Self::Port)
+    }
+
+    /// Whether a long drag spawns a convoy along the path (FR-CIV-UX-004).
+    pub const fn uses_convoy_drag(self) -> bool {
+        matches!(self, Self::Vehicle | Self::Airport | Self::Port)
     }
 }
 
 /// Minimum normalized drag distance (cells / grid_size) before drag-release placement fires.
 pub const SPAWN_DRAG_MIN_NORM: f32 = 4.0 / 128.0;
 
+/// Spacing between convoy spawns along a drag path (8 cells on a 128 grid).
+pub const CONVOY_SPACING_NORM: f32 = 8.0 / 128.0;
+
+/// Maximum entities placed by one drag gesture.
+pub const CONVOY_MAX_SPAWNS: usize = 32;
+
 /// True when drag from `start` to `end` exceeds the placement threshold.
 pub fn spawn_drag_exceeds_threshold(start: (f32, f32), end: (f32, f32)) -> bool {
     let dx = end.0 - start.0;
     let dy = end.1 - start.1;
     (dx * dx + dy * dy).sqrt() >= SPAWN_DRAG_MIN_NORM
+}
+
+/// Sample normalized positions along a drag segment for convoy placement.
+pub fn convoy_positions(start: (f32, f32), end: (f32, f32)) -> Vec<(f32, f32)> {
+    let dx = end.0 - start.0;
+    let dy = end.1 - start.1;
+    let dist = (dx * dx + dy * dy).sqrt();
+    if dist < SPAWN_DRAG_MIN_NORM {
+        return vec![(
+            end.0.clamp(0.0, 1.0),
+            end.1.clamp(0.0, 1.0),
+        )];
+    }
+    let steps = ((dist / CONVOY_SPACING_NORM).floor() as usize).min(CONVOY_MAX_SPAWNS.saturating_sub(1));
+    if steps == 0 {
+        return vec![(
+            end.0.clamp(0.0, 1.0),
+            end.1.clamp(0.0, 1.0),
+        )];
+    }
+    (0..=steps)
+        .map(|i| {
+            let t = i as f32 / steps as f32;
+            (
+                (start.0 + dx * t).clamp(0.0, 1.0),
+                (start.1 + dy * t).clamp(0.0, 1.0),
+            )
+        })
+        .collect()
 }
 
 /// Valid timelapse speed multipliers (matches civ-watch `/control/speed`).

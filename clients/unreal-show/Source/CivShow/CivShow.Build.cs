@@ -24,6 +24,7 @@ public class CivShow : ModuleRules
         {
             "Slate",
             "SlateCore",
+            "WebSockets",
         });
 
         if (Target.Platform == UnrealTargetPlatform.Win64)

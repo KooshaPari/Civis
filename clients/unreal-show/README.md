@@ -32,13 +32,19 @@ Gameplay authority stays on `civ-server`; this client prioritizes presentation.
 | Snapshot pins | `GET /snapshot` | `sim.snapshot` | Yes (HTTP) |
 | Speed / tick | `POST /control/speed` | `sim.set_speed` | HTTP only |
 | F3D0 voxel stream | — | WS binary | Planned |
-| Spawn / build | `POST /control/*` | `sim.spawn_civilian` / `sim.place_voxel` | HTTP only (WS planned) |
+| Spawn / build | `POST /control/spawn_entity`, `place_voxel`, `damage` | `sim.spawn_entity` / `sim.place_voxel` / `sim.damage` | HTTP (`SpawnEntity`, `ApplyDamage` on `UCivProtocolClient`) |
+
+## Dual attach (implemented)
+
+1. **civ-watch HTTP** — terrain (`GET /terrain`), legacy controls.
+2. **civ-server WS** — `UCivWsClient` JSON-RPC + F3D0 throttle (mirrors Godot `CivisWsClient`).
+3. **`ACivShowGameMode`** — fetches terrain, connects WS, syncs `civ_pins` → `ACivilianActor`.
 
 ## Next integration steps
 
-1. Add optional `CivWsClient` (JSON-RPC) mirroring Godot `civis_ws_client.gd`.
-2. Keep terrain on civ-watch until voxel mesh streams over F3D0.
-3. Share spectator field layout with `crates/engine/src/spectator.rs`.
+1. F3D0 voxel mesh stream (keep heightmap terrain until then).
+2. Materials / Nanite polish (L5 art pass).
+3. Share job colors from snapshot pins when jobs are wired on agents.
 
 ## Layout
 

@@ -1023,6 +1023,8 @@ pub enum SpawnEntityKind {
     Vehicle,
     /// Spawn civic hub building (`CityCenter`).
     Airport,
+    /// Spawn harbor / trade port (`Market`).
+    Port,
 }
 
 impl SpawnEntityKind {
@@ -1032,6 +1034,7 @@ impl SpawnEntityKind {
             Self::Civilian => "civilian",
             Self::Vehicle => "vehicle",
             Self::Airport => "airport",
+            Self::Port => "port",
         }
     }
 }
@@ -1049,10 +1052,11 @@ pub fn parse_spawn_entity_params(
         Some("civilian") => SpawnEntityKind::Civilian,
         Some("vehicle") => SpawnEntityKind::Vehicle,
         Some("airport") => SpawnEntityKind::Airport,
+        Some("port") => SpawnEntityKind::Port,
         _ => {
             return Err(JsonRpcError {
                 code: error_code::INVALID_PARAMS,
-                message: "kind must be civilian, vehicle, or airport".to_owned(),
+                message: "kind must be civilian, vehicle, airport, or port".to_owned(),
                 data: None,
             });
         }

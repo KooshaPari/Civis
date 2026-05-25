@@ -155,7 +155,7 @@ func _bind_ui() -> void:
 	speed.item_selected.connect(_on_speed_selected)
 	var spawn_kind_ui := ui.get_node("BottomBar/HBoxContainer/SpawnKind") as OptionButton
 	spawn_kind_ui.clear()
-	for label in ["civilian", "vehicle", "airport"]:
+	for label in ["civilian", "vehicle", "airport", "port"]:
 		spawn_kind_ui.add_item(label)
 	spawn_kind_ui.select(0)
 	spawn_kind_ui.item_selected.connect(_on_spawn_kind_selected)
@@ -175,6 +175,9 @@ func _bind_ui() -> void:
 	)
 	ui.get_node("BottomBar/HBoxContainer/CameraClose").pressed.connect(
 		func(): cam.apply_preset("close")
+	)
+	ui.get_node("BottomBar/HBoxContainer/CameraOrbit").pressed.connect(
+		func(): cam.apply_preset("orbit")
 	)
 	_apply_speed(current_speed)
 
@@ -209,7 +212,7 @@ func _input(event: InputEvent) -> void:
 		var norm := _ray_hit_norm()
 		if norm.x < 0.0:
 			return
-		if spawn_kind in ["vehicle", "airport"]:
+		if spawn_kind in ["vehicle", "airport", "port"]:
 			_spawn_drag_active = true
 			_spawn_drag_start = norm
 			_ensure_drag_preview()
@@ -225,11 +228,7 @@ func _input(event: InputEvent) -> void:
 			if _spawn_drag_start.x >= 0.0:
 				_spawn_at_norm(_spawn_drag_start.x, _spawn_drag_start.y)
 			return
-		var dist_cells := _spawn_drag_start.distance_to(end) * float(TERRAIN_GRID_SIZE)
-		if dist_cells >= SPAWN_DRAG_MIN_CELLS:
-			_spawn_at_norm(end.x, end.y)
-		elif _spawn_drag_start.x >= 0.0:
-			_spawn_at_norm(_spawn_drag_start.x, _spawn_drag_start.y)
+		_spawn_convoy_along_drag(_spawn_drag_start, end)
 
 func _clicking_minimap() -> bool:
 	var minimap := ui.get_node("Minimap") as Control
@@ -256,6 +255,7 @@ func _spawn_at_norm(norm_x: float, norm_y: float) -> void:
 		_civis_http.post_spawn_entity(spawn_kind, norm_x, norm_y, 0)
 	spawn_count += 1
 	ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
+	_spawn_burst_at_norm(norm_x, norm_y, _spawn_burst_color_for_kind(spawn_kind))
 
 func _ensure_drag_preview() -> void:
 	if _drag_preview != null:
@@ -315,6 +315,7 @@ func _handle_mutation_click() -> void:
 			_ws_client.apply_damage(wx, wy, wz, damage_radius)
 		else:
 			_civis_http.post_damage(wx, wy, wz, damage_radius)
+		SpawnBurst.emit_at(self, pos + Vector3(0, 0.6, 0), Color(1.0, 0.3, 0.3))
 
 func _on_timer_timeout() -> void:
 	_update_snapshot_watch()
@@ -337,9 +338,18 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 	ui.get_node("BottomBar/HBoxContainer/TickLabel").text = "Tick: %s" % tick
 	ui.get_node("BottomBar/HBoxContainer/PopulationLabel").text = "Population: %s" % snapshot.get("population", 0)
 	ui.get_node("BottomBar/HBoxContainer/EraLabel").text = EraTimelapse.era_label(tick)
+	_apply_day_night(bool(snapshot.get("is_day", true)))
 	_sync_civilians(snapshot.get("civ_pins", []))
 	_sync_buildings(snapshot.get("buildings", []))
 	_sync_military(snapshot.get("military_units", []))
+
+
+func _apply_day_night(is_day: bool) -> void:
+	var sun: DirectionalLight3D = $DirectionalLight3D
+	sun.light_energy = 1.15 if is_day else 0.32
+	var env: Environment = $WorldEnvironment.environment
+	if env:
+		env.ambient_light_energy = 0.55 if is_day else 0.18
 
 func _sync_civilians(pins: Array) -> void:
 	var seen := {}
@@ -349,8 +359,10 @@ func _sync_civilians(pins: Array) -> void:
 		var node: MeshInstance3D = civilian_nodes.get(idx)
 		if node == null:
 			node = MeshInstance3D.new()
-			node.mesh = BoxMesh.new()
-			node.scale = Vector3(0.4, 1.4, 0.4)
+			var cap := CapsuleMesh.new()
+			cap.radius = 0.22
+			cap.height = 1.05
+			node.mesh = cap
 			civilians_root.add_child(node)
 			civilian_nodes[idx] = node
 		var job := str(pin.get("job", "unemployed")).to_lower()
@@ -435,3 +447,18 @@ func _on_speed_selected(index: int) -> void:
 
 func _on_material_changed(value: float) -> void:
 	current_material = int(value)
+
+func _spawn_burst_color_for_kind(kind: String) -> Color:
+	match kind:
+		"vehicle":
+			return Color(0.75, 0.75, 0.82)
+		"airport":
+			return Color(0.55, 0.72, 0.95)
+		_:
+			return Color(0.49, 0.85, 0.34)
+
+func _spawn_burst_at_norm(norm_x: float, norm_y: float, color: Color) -> void:
+	var gx := norm_x * float(TERRAIN_GRID_SIZE)
+	var gz := norm_y * float(TERRAIN_GRID_SIZE)
+	var gy := _terrain_height(int(gx), int(gz)) + 1.1
+	SpawnBurst.emit_at(civilians_root, Vector3(gx, gy, gz), color)

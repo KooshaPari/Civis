@@ -2,10 +2,11 @@ use std::{thread, time::Duration};
 
 use civ_protocol_3d::Frame3d;
 
-use crate::{parse_ws_payload, ws_prefer_binary_from_env};
+use crate::{parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsSpectatorMeta};
 use crossbeam_channel::{Receiver, Sender};
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use tokio::runtime::Builder;
+use tokio_tungstenite::tungstenite::Message;
 
 /// Live attach WebSocket client preferences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,7 +26,8 @@ impl Default for WsClientConfig {
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
-    rx: Receiver<Frame3d>,
+    frame_rx: Receiver<Frame3d>,
+    meta_rx: Receiver<WsSpectatorMeta>,
 }
 
 impl WsClient {
@@ -36,30 +38,49 @@ impl WsClient {
 
     /// Spawn with explicit attach preferences (binary-first tick handling).
     pub fn spawn_with_config(url: String, config: WsClientConfig) -> Self {
-        let (tx, rx) = crossbeam_channel::unbounded();
-        thread::spawn(move || run_client(url, config, tx));
-        Self { rx }
+        let (frame_tx, frame_rx) = crossbeam_channel::unbounded();
+        let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx));
+        Self { frame_rx, meta_rx }
     }
 
     /// Drain all currently available frames without blocking the main thread.
     #[must_use]
     pub fn poll(&self) -> Vec<Frame3d> {
         let mut frames = Vec::new();
-        while let Ok(frame) = self.rx.try_recv() {
+        while let Ok(frame) = self.frame_rx.try_recv() {
             frames.push(frame);
         }
         frames
     }
+
+    /// Drain `sim.snapshot` JSON-RPC metadata (day/night, tick).
+    #[must_use]
+    pub fn poll_meta(&self) -> Vec<WsSpectatorMeta> {
+        let mut metas = Vec::new();
+        while let Ok(meta) = self.meta_rx.try_recv() {
+            metas.push(meta);
+        }
+        metas
+    }
 }
 
-fn run_client(url: String, config: WsClientConfig, tx: Sender<Frame3d>) {
+const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
+const SNAPSHOT_POLL_SECS: u64 = 2;
+
+fn run_client(
+    url: String,
+    config: WsClientConfig,
+    frame_tx: Sender<Frame3d>,
+    meta_tx: Sender<WsSpectatorMeta>,
+) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("tokio runtime");
     runtime.block_on(async move {
         loop {
-            if let Err(err) = connect_and_stream(&url, config, &tx).await {
+            if let Err(err) = connect_and_stream(&url, config, &frame_tx, &meta_tx).await {
                 eprintln!("bevy ws client disconnected: {err}");
                 thread::sleep(Duration::from_secs(1));
             }
@@ -67,32 +88,71 @@ fn run_client(url: String, config: WsClientConfig, tx: Sender<Frame3d>) {
     });
 }
 
+async fn request_snapshot(
+    write: &mut futures_util::stream::SplitSink<
+        tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+        Message,
+    >,
+) -> Result<(), String> {
+    write
+        .send(Message::Text(SNAPSHOT_RPC.into()))
+        .await
+        .map_err(|err| err.to_string())
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
-    tx: &Sender<Frame3d>,
+    frame_tx: &Sender<Frame3d>,
+    meta_tx: &Sender<WsSpectatorMeta>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
         .map_err(|err| err.to_string())?;
-    let (_, mut read) = ws.split();
+    let (mut write, mut read) = ws.split();
 
-    while let Some(msg) = read.next().await {
-        let msg = msg.map_err(|err| err.to_string())?;
-        let frame = match &msg {
-            tokio_tungstenite::tungstenite::Message::Text(text) if config.prefer_binary => {
-                continue;
+    request_snapshot(&mut write).await?;
+
+    let mut poll = tokio::time::interval(Duration::from_secs(SNAPSHOT_POLL_SECS));
+    poll.tick().await;
+
+    loop {
+        tokio::select! {
+            _ = poll.tick() => {
+                request_snapshot(&mut write).await?;
             }
-            tokio_tungstenite::tungstenite::Message::Text(text) => {
-                parse_ws_payload(text.as_bytes())?
+            msg = read.next() => {
+                let Some(msg) = msg else {
+                    return Err("websocket closed".into());
+                };
+                let msg = msg.map_err(|err| err.to_string())?;
+                match msg {
+                    Message::Text(text) => {
+                        if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
+                            if meta_tx.send(meta).is_err() {
+                                return Err("bevy meta receiver dropped".into());
+                            }
+                            continue;
+                        }
+                        if config.prefer_binary {
+                            continue;
+                        }
+                        let frame = parse_ws_payload(text.as_bytes())?;
+                        if frame_tx.send(frame).is_err() {
+                            return Err("bevy frame receiver dropped".into());
+                        }
+                    }
+                    Message::Binary(bytes) => {
+                        let frame = parse_ws_payload(&bytes)?;
+                        if frame_tx.send(frame).is_err() {
+                            return Err("bevy frame receiver dropped".into());
+                        }
+                    }
+                    _ => {}
+                }
             }
-            tokio_tungstenite::tungstenite::Message::Binary(bytes) => parse_ws_payload(bytes)?,
-            _ => continue,
-        };
-        if tx.send(frame).is_err() {
-            return Err("bevy receiver dropped".into());
         }
     }
-
-    Err("websocket closed".into())
 }

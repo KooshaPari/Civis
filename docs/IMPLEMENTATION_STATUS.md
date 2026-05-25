@@ -39,7 +39,8 @@
 | Fixed metrics | `engine/src/metrics.rs` | `compute_fixed` + unit test parity vs float `compute` |
 | JSON-RPC (CIV-0200) | `server/src/jsonrpc.rs`, `ws_bridge.rs` | `health`, `sim.status`, `sim.snapshot`, `sim.command`, speed/replay/policy/reset; optional operator role gate + unit tests |
 | HTTP replay I/O | `ws_bridge.rs` | `GET /replay/export` → `.civreplay` bytes; `POST /replay/import` loads octet-stream into bridge (`{ "ok": true, "tick": … }`) |
-| Server integration | `server/tests/ws_smoke.rs` | 23 tokio tests: healthz, WS RPC, replay I/O, role gate, post-tick frames |
+| Spectator pins | `engine/src/spectator.rs` | `civ_pins` from agent `Position3d` (spawn coords on `sim.snapshot`) |
+| Server integration | `server/tests/ws_smoke.rs` | 28+ tokio tests: healthz, WS RPC, spawn pin snapshot, replay I/O, role gate |
 
 ## GFX / UI (reference clients)
 
@@ -48,10 +49,11 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Client | Location | Landed |
 |--------|----------|--------|
 | **Bevy** orbit / fade / LOD / agents | `clients/bevy-ref/` (`bevy_window.rs`, `lib.rs`) | `OrbitCamera` drag/scroll/`R`/`WASD`; chunk fade-in; `mesh_lod_level` → `CubicMesher`; `agent_color_from_id` + optional `#id` labels + payload scale; `LiveHudSnapshot` overlay |
-| **Bevy** minimap / binary WS | `bevy-ref/ws_client.rs`, `bevy_window.rs`, `lib.rs` | `parse_ws_payload` F3D0-first; 160×160 chunk-dot minimap via `chunk_to_minimap_uv` (top-left UV, chunk-centre dots); click **not** added — see minimap conventions |
+| **Bevy** minimap / binary WS | `bevy-ref/ws_client.rs`, `bevy_window.rs`, `lib.rs` | F3D0-first ticks; `sim.snapshot` JSON-RPC poll for `is_day`; minimap click-to-focus; day/night lighting |
 | **Godot** camera / terrain / UI | `clients/godot-ref/scripts/` | Orbit `Camera3D` (`camera.gd`); 128×128 minimap grid + click-to-focus (`minimap.gd`); `terrain_height_exaggeration`; `biome_color` / `height_color`; control `tooltip_text` hints |
 | **Godot** civ-server attach | `clients/godot-ref/scripts/civis_ws_client.gd`, `main.gd` | Default `attach_mode=server`: WS JSON-RPC + F3D0-throttled `sim.snapshot`; terrain via civ-watch HTTP; `spectator_mode` default |
-| **Godot** P-U1 partial | `main.gd`, `era_timelapse.gd` | Buildings + job-colored civilians; era HUD; authoring on watch attach; see `fr-p-u1-roadmap.md` |
+| **Godot** P-U1 | `main.gd`, `era_timelapse.gd`, `camera.gd` | Buildings + military pins; era HUD; server attach + L2 authoring; camera presets wide/close/orbit |
+| **Unreal** HTTP + WS | `CivProtocolClient.cpp`, `CivWsClient.cpp`, `CivShowGameMode` | HTTP terrain/controls; WS JSON-RPC + `civ_pins` civilian sync |
 | **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
 | **Web** FR-CIV-WEB-008 | `web/dashboard/src/lib/authoring.ts`, `bottom_bar.tsx` | L2 authoring default on; `?spectator=1` for read-only |
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
@@ -81,8 +83,8 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 - **`cargo test -p civ-economy`** — allocator, ledger, market
 - **`cargo test -p civ-research`** — ADR-006 validator/cache
 - **`cargo test -p civ-protocol-3d`** — `F3D0` roundtrip
-- **`cargo test -p civ-server`** — jsonrpc + ws_bridge + ws_smoke (23)
-- **`cargo test -p civ-watch`** — 14 tests: `/terrain` (ETag/304), `/snapshot`, `/events` (SSE), `/control/speed`, `place_voxel`, `spawn_civilian`, `damage`
+- **`cargo test -p civ-server`** — jsonrpc + ws_bridge + ws_smoke (28+)
+- **`cargo test -p civ-watch`** — 16 tests: `/terrain`, `/snapshot`, `/events`, `/control/spawn_entity`, `damage`, save/load
 - **`cargo test -p civ-bevy-ref`** / **`civis-godot-rust`** — reference client surface (GFX / UI)
 - **`cargo test -p civ-infra`** (+ `--features pg`; integration `#[ignore]` without Docker Postgres)
 - **CI / docs / web** — `fr-coverage.yml`; `docs:check`; `web/dashboard` npm test (GFX / UI)

@@ -13,17 +13,14 @@
 | — | Buildings + job-colored pins in 3D | `main.gd` `_sync_buildings`, `_sync_civilians` |
 | — | Era label in HUD | `era_timelapse.gd`, `EraLabel` |
 
-## Next (P-U1 backlog)
+## Post P-U1 slice (landed)
 
-| FR ID (proposed) | Requirement | Blocker |
-|------------------|-------------|---------|
-| FR-CIV-UX-002 | `sim.spawn_civilian` on **civ-server** JSON-RPC | **implemented** — `sim.spawn_civilian`; Godot `CivisWsClient` |
-| FR-CIV-UX-003 | `sim.place_voxel` on server | **implemented** |
-| FR-CIV-UX-004 | Drag-place vehicles / airports / ports | **implemented** — drag-release on web + Godot; `sim.spawn_entity` / watch HTTP |
-| FR-CIV-UX-005 | Era timelapse **camera** presets | **implemented** — `camera.gd` + web dashboard wide/close/orbit |
-| FR-CIV-UX-006 | Spawn palette (civilian / vehicle / airport) | **implemented** — `sim.spawn_entity`, watch `/control/spawn_entity` |
-| FR-CIV-UX-006 | Spawn palette UI | **implemented** — `sim.spawn_entity` (vehicle/airport) + web palette on civ-server attach |
-| — | `sim.damage` on server | **implemented** — web + Godot server attach |
+| Item | Evidence |
+|------|----------|
+| Unreal WS | `CivWsClient.cpp`, `CivShowGameMode` dual HTTP+WS attach + `ApplyDayNight` |
+| Bevy minimap | `bevy_window.rs` click-to-focus; `ws_client` `sim.snapshot` meta → `is_day` lighting |
+| Agents ↔ spectator | `spectator.rs` `civ_pins` from `Position3d`; `ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot` |
+| L5 (scoped) | `fr-l5-visual-pass.md`; Godot capsules + `SpawnBurst`; Bevy/Unreal/Godot day-night |
 
 ## Authoring today
 

@@ -14,11 +14,11 @@
 
 | In scope | Out of scope |
 |----------|----------------|
-| Connect to `civ-server` WS (`/ws`) or `civ-watch` HTTP/SSE | Full WorldBox spawn palette (FR-CIV-UX-004+) |
+| Connect to `civ-server` WS (`/ws`) or `civ-watch` HTTP/SSE | Full WorldBox GOAP / build-graph editor |
 | Display `sim.snapshot` metrics | Feature parity with Godot desktop P-U1 |
 | Import/export `.civreplay` via HTTP or RPC | Full PBR / Manor Lords visual bar |
 | 3D terrain/agents/buildings from snapshot or `F3D0` | Second gameplay ruleset reimplemented in TS |
-| **L2 authoring** (default on): `sim.spawn_civilian`, `sim.place_voxel`; watch `/control/*` | Bevy WASM game client |
+| **L2 authoring** (default on): `sim.spawn_entity`, `sim.place_voxel`, `sim.damage`; watch `/control/*` | Bevy WASM game client |
 
 ---
 
@@ -44,7 +44,7 @@
 | `?spectator=1` | Spectator only (legacy ADR-009 default) |
 | `?authoring=0` | Explicitly disable mutations |
 
-Server: `sim.spawn_civilian`, `sim.place_voxel`. Watch: `POST /control/*`. Damage: watch only.
+Server: `sim.spawn_civilian` | `sim.spawn_entity`, `sim.place_voxel`, `sim.damage` (immediate). Watch: `POST /control/spawn_entity`, `place_voxel`, `damage`.
 
 ---
 
@@ -53,7 +53,7 @@ Server: `sim.spawn_civilian`, `sim.place_voxel`. Watch: `POST /control/*`. Damag
 - HTML5 Godot export (see ADR-009 § Alternatives)
 - Bevy WASM game client
 - PlayCanvas/Babylon as authoritative gameplay layer
-- Replacing Godot for vehicles / airports / era camera presets
+- Replacing Godot for full P-U1 timelapse UX and Manor Lords visual bar
 
 ---
 

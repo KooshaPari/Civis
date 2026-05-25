@@ -20,7 +20,9 @@ export function EconomyPanel() {
     const currentPopulation = snapshot?.population ?? 0;
     const previousPopulation = previous?.population ?? currentPopulation;
     const populationDelta = currentPopulation - previousPopulation;
-    const populationGrowthRate = previous ? populationDelta / Math.max(previous.population, 1) : 0;
+    const populationGrowthRate = previous
+      ? populationDelta / Math.max(previous.population, 1)
+      : 0;
 
     const treasuryRows =
       economy?.faction_treasury.map((row) => ({
@@ -37,8 +39,12 @@ export function EconomyPanel() {
           { key: "energy", label: "Energy", value: production.energy_per_tick },
         ]
       : [];
-    const maxProduction = Math.max(1, ...productionBars.map((row) => Math.abs(row.value)));
-    const startingEnergyBudget = initialEnergyBudgetRef.current ?? economy?.energy_budget ?? 0;
+    const maxProduction = Math.max(
+      1,
+      ...productionBars.map((row) => Math.abs(row.value)),
+    );
+    const startingEnergyBudget =
+      initialEnergyBudgetRef.current ?? economy?.energy_budget ?? 0;
 
     return {
       energyBudget: economy?.energy_budget ?? 0,
@@ -61,7 +67,9 @@ export function EconomyPanel() {
     historyRef.current = {
       tick: snapshot.tick,
       population: snapshot.population,
-      treasury: new Map(economy.faction_treasury.map((row) => [row.id, row.balance])),
+      treasury: new Map(
+        economy.faction_treasury.map((row) => [row.id, row.balance]),
+      ),
       energyBudget: economy.energy_budget,
     };
   }, [snapshot, economy]);
@@ -70,17 +78,25 @@ export function EconomyPanel() {
   const energyFill = economy
     ? Math.max(
         0,
-        Math.min(100, (energyRemaining / Math.max(derived.startingEnergyBudget, 1)) * 100),
+        Math.min(
+          100,
+          (energyRemaining / Math.max(derived.startingEnergyBudget, 1)) * 100,
+        ),
       )
     : 0;
 
   return (
-    <aside className={`economy-panel ${state.economyPanelOpen ? "open" : "closed"}`}>
+    <aside
+      className={`economy-panel ${state.economyPanelOpen ? "open" : "closed"}`}
+    >
       <button
         type="button"
         className="panel-toggle"
         onClick={() =>
-          dispatch({ type: "set_economy_panel_open", open: !state.economyPanelOpen })
+          dispatch({
+            type: "set_economy_panel_open",
+            open: !state.economyPanelOpen,
+          })
         }
       >
         {state.economyPanelOpen ? "Hide" : "Show"}
@@ -89,14 +105,18 @@ export function EconomyPanel() {
         <>
           <h2>Economy</h2>
           <p className="inspector-hint">
-            Energy, treasury, and production are tracked from the current sim snapshot.
+            Energy, treasury, and production are tracked from the current sim
+            snapshot.
           </p>
 
           <section className="inspector-section economy-section">
             <h3>Energy budget</h3>
             <div className="economy-budget">
               <div className="economy-budget-track" aria-hidden="true">
-                <div className="economy-budget-fill" style={{ width: `${energyFill}%` }} />
+                <div
+                  className="economy-budget-fill"
+                  style={{ width: `${energyFill}%` }}
+                />
               </div>
               <div className="economy-budget-meta">
                 <span>Remaining</span>
@@ -123,7 +143,9 @@ export function EconomyPanel() {
                 ))}
               </div>
             ) : (
-              <p className="economy-empty">No institution ledger on snapshot yet</p>
+              <p className="economy-empty">
+                No institution ledger on snapshot yet
+              </p>
             )}
           </section>
 
@@ -135,13 +157,24 @@ export function EconomyPanel() {
                   <span>ID</span>
                   <span>Name</span>
                   <span>Balance</span>
+                  <span>Trade balance</span>
                 </div>
                 {derived.treasuryRows.map((row) => (
                   <div key={row.id} className="economy-table-row">
                     <span>#{row.id}</span>
                     <span>{row.name}</span>
-                    <span className={row.delta >= 0 ? "trend-up" : "trend-down"}>
+                    <span
+                      className={row.delta >= 0 ? "trend-up" : "trend-down"}
+                    >
                       {row.delta >= 0 ? "▲" : "▼"} {formatNumber(row.balance)}
+                    </span>
+                    <span
+                      className={
+                        row.trade_balance >= 0 ? "trend-up" : "trend-down"
+                      }
+                    >
+                      {row.trade_balance >= 0 ? "▲" : "▼"}{" "}
+                      {formatNumber(row.trade_balance)}
                     </span>
                   </div>
                 ))}
@@ -153,16 +186,27 @@ export function EconomyPanel() {
 
           <section className="inspector-section economy-section">
             <h3>Production rates</h3>
-            <div className="economy-bars" role="list" aria-label="Production rates">
+            <div
+              className="economy-bars"
+              role="list"
+              aria-label="Production rates"
+            >
               {derived.productionBars.length > 0 ? (
                 derived.productionBars.map((bar) => (
-                  <div key={bar.key} className="economy-bar-row" role="listitem">
+                  <div
+                    key={bar.key}
+                    className="economy-bar-row"
+                    role="listitem"
+                  >
                     <div className="economy-bar-head">
                       <span>{bar.label}</span>
                       <strong>{bar.value.toFixed(1)}/tick</strong>
                     </div>
                     <div className="economy-bar-track">
-                      <div className="economy-bar-fill" style={{ width: bar.width }} />
+                      <div
+                        className="economy-bar-fill"
+                        style={{ width: bar.width }}
+                      />
                     </div>
                   </div>
                 ))
@@ -186,5 +230,7 @@ export function EconomyPanel() {
 }
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(
+    value,
+  );
 }

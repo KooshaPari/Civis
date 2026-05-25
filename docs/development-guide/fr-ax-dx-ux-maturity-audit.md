@@ -11,10 +11,12 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | Surface | Maturity | Blocker to “done” |
 |---------|----------|-------------------|
-| **AX (agents)** | Partial–Good | `AGENTS.md` + `agent-smoke.ps1` + attach matrix in place; Unreal still not in `civis-3d-verify` / lefthook |
-| **DX (developers)** | Good | `just civis-3d-verify`, `jsonrpc-surface.md`, `client-attach-matrix.md`; workspace gate flaky on Windows file locks + `civ-bevy-ref` bin |
-| **UX (players / L2)** | Partial | Godot P-U1 best; web L2 good; F3D0 live on Bevy only; Unreal minimap out of scope |
-| **Modding** | Partial (v1 manifest) | `civ-mod-host` + `mods/` + scenario `mods: []`; WASM / `.civmod` / phase hooks still spec-only |
+| **AX (agents)** | Good | `AGENTS.md` + `agent-smoke.ps1` + attach matrix; optional `-FullUnreal` off default verify |
+| **DX (developers)** | Good | `just civis-3d-verify` (catalog + scenario checks), `jsonrpc-surface.md`, `client-attach-matrix.md` |
+| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial** — Bevy full mesh; Godot/Unreal **VoxelDelta markers** only |
+| **Modding** | Partial (v1 manifest) | v1 done; v2 registry / WASM / phase hooks only if product needs full mod mesh |
+
+**Gates (2026-05-25):** `ws_smoke` 32 tests · `just civis-3d-verify` pass (incl. `check-jsonrpc-catalog.ps1`, `civis-3d-scenario-check`).
 
 **Recommended finish order:** P0 agent contracts → P1 protocol/attach parity → P2 modding MVP hooks → P3 L5 polish.
 
@@ -39,7 +41,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |----|-----|----------|------------------|
 | DX-01 | **Modding API** v1 manifest only | `crates/mod-host`, `mods/`, `fr-modding-roadmap.md`; no WASM | v2: registry + policy stub; CI drift check on manifest schema |
 | DX-02 | **Scenario YAML** partial | `scenarios/baseline.yaml` has `mods: []`; `Scenario::validate` | Document all keys; fail `civis-3d-verify` on invalid YAML |
-| DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`docs/api/jsonrpc-surface.md`](../api/jsonrpc-surface.md) — 14 methods, `ws_smoke` links | Optional CI check against `JsonRpcMethod` enum |
+| DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`jsonrpc-surface.md`](../api/jsonrpc-surface.md) + [`scripts/check-jsonrpc-catalog.ps1`](../../scripts/check-jsonrpc-catalog.ps1) in `civis-3d-verify` | Keep doc table in sync when adding `JsonRpcMethod` variants |
 | DX-04 | ~~Client attach matrix~~ **Done** | [`docs/guides/client-attach-matrix.md`](../guides/client-attach-matrix.md) | Update when new client or default URL changes |
 | DX-05 | **Godot GDExtension** path vs scripts-only | `civis-godot-rust` + `scripts/` | README “authoring path” for server vs watch |
 | DX-06 | **Research crate** ADR-006 stubs only | `crates/research` | Mark “not on critical path” or wire validator into scenario load |
@@ -52,8 +54,8 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | ID | Gap | Evidence | Finish criterion |
 |----|-----|----------|------------------|
 | UX-01 | **`job` on `civ_pins`** wired from `Citizen` on agent entities | `spectator.rs` reads `Citizen.job`; `attach_citizen_to_agents` | **Mature** — `civ-engine` `civ_pins_include_job_when_citizen_component_present` |
-| UX-02 | **Cross-client spawn palette** parity | `client-attach-matrix.md` spawn table; Unreal HTTP+WS | WS test per kind (extend `ws_smoke`) |
-| UX-03 | **F3D0 voxel stream** not in Unreal/Godot live path | Planned in README | Bevy binary-first done; extend one client |
+| UX-02 | ~~Cross-client spawn palette~~ **Partial–Good** | [`client-attach-matrix.md`](../guides/client-attach-matrix.md) — all five `kind`s on WS; `ws_smoke` covers civilian + vehicle | Optional `ws_smoke` per `port` / `hangar` |
+| UX-03 | **F3D0 voxel stream** partial on Godot/Unreal | Bevy: binary `Frame3d` mesh; Godot/Unreal: **VoxelDelta chunk markers** + snapshot throttle | Full voxel mesh on second client only if product needs parity with Bevy |
 | UX-04 | **Minimap conventions** — Bevy/Godot/web; Unreal none | `minimap-conventions.md`, `client-attach-matrix.md` UX-04 | **Documented** — Unreal out of scope until implemented |
 | UX-05 | **spectator_mode default** differs (Godot true, web false) | Confusing for demos | Document in attach matrix; align defaults or query params |
 | UX-06 | **Manor Lords L5** incremental only | `fr-l5-visual-pass.md` IN PROGRESS | Close scoped slices; defer art to Quixel |
@@ -129,9 +131,8 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |---|------|---------------------|
 | 1 | Wire `job` on `CivPin` | [x] Done |
 | 2 | F3D0 throttle doc for Godot | [x] Done — `fr-godot-attach.md` § F3D0; attach matrix notes throttle vs Bevy mesh path |
-| 3 | Unreal build + Play checklist | [~] Partial — `build.ps1` on VS 2026 + UE 5.7; default smoke = preflight; full UBT via `-FullUnreal` |
-
-**Remaining:** UX-03 F3D0 **voxel mesh** on Godot/Unreal live path; extend `ws_smoke` per spawn `kind`.
+| 3 | Unreal build + Play checklist | [x] Done — `build.ps1` on VS 2026 + UE 5.7; default smoke = preflight; full UBT via `-FullUnreal` |
+| 4 | Godot/Unreal F3D0 markers | [x] Done — `VoxelDelta` overlays documented; not full Bevy mesh |
 
 ### Sprint D — Modding MVP (1 week)
 
@@ -181,12 +182,12 @@ VS 2022 without `VC\Tools\MSVC` remains insufficient until the C++ workload is i
 
 | Gate | Result |
 |------|--------|
-| `.\scripts\agent-smoke.ps1` | **PASS** — civ-server + civ-watch; default Unreal offline preflight (`verify-unreal-ready`) |
-| `.\scripts\agent-smoke.ps1 -FullUnreal` | **PASS** when UE 5.7 + VS 2026 present — full `build.ps1` (not `-SkipUe`) |
-| `just civis-3d-verify` | Stop running `civ-watch` if `civ-watch.exe` file-lock fails |
-| `civ-bevy-ref` autobins | **Fixed** — `autobins = false` (no spurious `terrain` bin) |
+| `.\scripts\agent-smoke.ps1` | **PASS** — civ-server 32/32 `ws_smoke`, civ-watch, Unreal preflight |
+| `.\scripts\agent-smoke.ps1 -FullUnreal` | **PASS** when UE 5.7 + VS 2026 present — full `build.ps1` |
+| `just civis-3d-verify` | **PASS** — workspace build/test/clippy/fmt + `check-jsonrpc-catalog.ps1` + `civis-3d-scenario-check` |
+| `just civis-3d-catalog-check` | **PASS** — 14 methods: `jsonrpc.rs` ↔ `jsonrpc-surface.md` |
+| `just civis-3d-scenario-check` | **PASS** — 7 `scenario::*` tests |
 
-### Open P0 (agent / verify)
+### Open P0
 
-1. **AX-03** — **Partial:** optional `unreal_*` quality gates + `-FullUnreal`; not in default lefthook/`civis-3d-verify`.
-2. **Live F3D0** — Godot/Unreal voxel stream still snapshot-only (documented).
+1. **Modding v2** — registry, WASM, `.civmod`, policy phase hooks — only if the product needs a full mod mesh beyond v1 manifest + `civ-mod-host` stubs.

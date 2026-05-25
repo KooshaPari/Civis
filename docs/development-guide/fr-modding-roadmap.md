@@ -1,6 +1,6 @@
 # FR-CIV-MOD — Modding roadmap (CIV-0700)
 
-**Spec:** [`CIV-0700-modding-api-spec.md`](../specs/CIV-0700-modding-api-spec.md)  
+**Spec:** [`CIV-0700-modding-api-spec.md`](../specs/CIV-0700-modding-api-spec.md)
 **Maturity audit:** [`fr-ax-dx-ux-maturity-audit.md`](./fr-ax-dx-ux-maturity-audit.md) § P3
 
 ## v1 — Manifest only (Sprint D, current)
@@ -9,9 +9,9 @@
 |------|--------|----------|
 | Manifest JSON Schema | Done | `mods/manifest.schema.json` |
 | Example PolicyMod manifest | Done | `mods/example-policy/manifest.toml` |
-| `civ-mod-host` crate | Stub | `crates/mod-host` — load + validate manifest, no-op `tick` |
-| Scenario `mods: []` | Placeholder | `crates/engine/src/scenario.rs` — list of mod directory paths |
-| Engine hook | Placeholder | `Simulation::register_mod_stubs`, `mod_host.tick()` each sim tick |
+| `civ-mod-host` crate | Stub | `crates/mod-host` — load + validate manifest |
+| Scenario `mods: []` | Done | `scenarios/baseline.yaml` lists `mods/example-policy` when path validates |
+| Engine hook | Stub | `register_mod_stubs`; policy phase at `phase_economy` via `ModHost::tick` |
 
 **What works today**
 
@@ -23,13 +23,25 @@
 
 - WASM load, sandbox, `world_read` / `action_emit` (§5–8).
 - `.civmod` bundles, `civlab-sdk`, mod signing (§11–14).
-- Policy phase injection, lifecycle events `mod.loaded.v1` (traceability FR-MOD-004).
+- Lifecycle events `mod.loaded.v1` (traceability FR-MOD-004).
 
-## v2 — Host registry + policy stub (planned)
+## v2 — Host registry + policy stub — Done (stub)
 
-1. `ModRegistry` in `civ-mod-host` with capability sets from manifest permissions.
-2. Engine Phase 3a callsite (no WASM): log-only policy hook.
-3. `mod.loaded.v1` / `mod.error.v1` on replay bus (see EVENT_TAXONOMY).
+| Item | Status | Location |
+|------|--------|----------|
+| `ModRegistry` | Done (stub) | `crates/mod-host` — `on_policy_phase` filters policy + `write_policy` |
+| Engine Phase 3a callsite | Done (stub) | `Simulation::phase_economy` — `tracing::debug!` per log line |
+| `mod.loaded.v1` / `mod.error.v1` | Planned | replay bus (EVENT_TAXONOMY) |
+
+**What works today (v2)**
+
+- Log lines `mod:{id}:policy_phase:tick=N` for eligible policy mods each economy phase.
+- `ModHost::tick(sim_tick)` delegates to registry (no WASM).
+
+**What does not work yet (v2+)**
+
+- Capability enforcement beyond manifest flags; actual policy writes.
+- `mod.loaded.v1` / `mod.error.v1` on replay bus.
 
 ## v3 — WASM sandbox (planned)
 

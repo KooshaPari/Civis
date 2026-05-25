@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/camera.gd" id="2_camera"]
 [ext_resource type="PackedScene" path="res://scripts/ui.tscn" id="3_ui"]
+[ext_resource type="Script" path="res://scripts/f3d0_voxel_overlay.gd" id="4_voxel_overlay"]
 
 [sub_resource type="Environment" id="1_env"]
 background_mode = 2
@@ -48,6 +49,9 @@ transform = Transform3D(48, 0, 0, 0, 1, 0, 0, 0, 48, 32, -1, 32)
 [node name="Buildings" type="Node3D" parent="."]
 
 [node name="Military" type="Node3D" parent="."]
+
+[node name="VoxelOverlays" type="Node3D" parent="."]
+script = ExtResource("4_voxel_overlay")
 
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.1

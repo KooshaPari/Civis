@@ -7,6 +7,29 @@ this is the UX iteration surface for the WorldBox-style spawn editor.
 
 **Default attach:** `attach_mode = server` — WebSocket JSON-RPC to `civ-server` for live ticks and `sim.snapshot`; terrain still from `civ-watch` HTTP.
 
+## Authoring paths
+
+Two layers: **GDScript** (attach, UI, presentation) and **GDExtension** (HTTP terrain mesh + WS frame helpers). Both are required for the default server attach demo.
+
+| Path | Location | Responsibility |
+|------|----------|----------------|
+| **Scripts-only** | `scripts/civis_ws_client.gd`, `main.gd`, `camera.gd`, … | WS JSON-RPC to civ-server (`health`, `sim.snapshot`, `sim.spawn_civilian`, `sim.place_voxel`); F3D0/text tick → throttled snapshot; `spectator_mode`; capsule civilians, job colors, `SpawnBurst`, foot Y via `_world_y_at_norm` |
+| **GDExtension (Rust)** | `rust/src/lib.rs`, `rust/src/ws_frame.rs` | **`CivisClient`** — sync HTTP to civ-watch (`fetch_terrain`, biome/height vertex colors); **`CivisWsFrame`** — decode binary WS payloads (`F3D0` magic, JSON-RPC envelopes, legacy text `Frame3d`) for `civis_ws_client.gd` |
+
+**Rebuild Rust DLL after protocol or terrain API changes:**
+
+```powershell
+cd clients/godot-ref/rust
+cargo build
+# release: cargo build --release
+```
+
+Godot loads `res://rust/target/debug/civis_godot_rust.dll` (see `civis.gdextension`). Or from repo root: `just civis-3d-godot`.
+
+**Watch-only dev (no extension rebuild for WS):** set `attach_mode = watch` — terrain and controls use HTTP from GDScript + `CivisClient`; no civ-server WS.
+
+Spec: [`docs/development-guide/fr-godot-attach.md`](../../docs/development-guide/fr-godot-attach.md), [`docs/guides/client-attach-matrix.md`](../../docs/guides/client-attach-matrix.md).
+
 ## Run
 
 1. Install Godot 4.3+

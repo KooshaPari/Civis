@@ -55,7 +55,8 @@ These do **not** need the Editor or UBT:
 
 4. **Exit codes:** `0` = UBT succeeded; `2` = UE still missing; `1` = compile error (fix C++/Build.cs).
 
-5. Run the **Play in Editor** checklist below (requires `civ-server` + `civ-watch`).
+5. Run automated PIE prep: `.\scripts\pie-validation.ps1` (backends + WS/terrain smoke + checklist below).
+6. Run the **Play in Editor** checklist below (requires `civ-server` + `civ-watch`).
 
 ---
 
@@ -75,7 +76,9 @@ Prerequisites: `cargo run -p civ-server` and `cargo run -p civ-watch` in separat
 
 **Quick smoke:** with both backends running, PIE should show heightmap terrain within ~1 s and at least one civilian pin after a spawn RPC from another client or `ws_smoke`.
 
-**Not in this checklist:** F3D0 voxel mesh stream (throttled snapshot refresh only), minimap (out of scope — see attach matrix UX-04).
+**F3D0:** `VoxelDelta` frames show coarse chunk box markers (same idea as Godot `F3d0VoxelOverlay`). Full 16³ mesh remains Bevy-only.
+
+**Out of scope:** minimap (attach matrix UX-04).
 
 ---
 

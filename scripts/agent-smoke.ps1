@@ -34,7 +34,8 @@ function Test-UnrealUbtAvailable {
 
 Push-Location $RepoRoot
 try {
-    Write-Host '==> civ-server WS smoke (health, snapshot, spawn pin)' -ForegroundColor Cyan
+    # ws_smoke includes civ_pins[].job asserts (UX-01) in ws_jsonrpc_sim_snapshot_returns_snapshot_fields
+    Write-Host '==> civ-server WS smoke (health, snapshot, civ_pins job, spawn palette)' -ForegroundColor Cyan
     & cargo test -p civ-server --quiet --test ws_smoke
     if ($LASTEXITCODE -ne 0) { exit 1 }
 

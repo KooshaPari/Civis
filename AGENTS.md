@@ -13,6 +13,7 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
 | Godot GDExtension | `just godot-test` |
 | Unreal CivShow | `.\clients\unreal-show\scripts\build.ps1` (needs UE 5.7 + MSVC) |
+| Unreal PIE prep | `.\scripts\pie-validation.ps1` (starts backends, WS/terrain smoke, prints PIE checklist) |
 
 ## Attach matrix (do not guess URLs)
 
@@ -32,6 +33,7 @@ Default stack:
 | Godot attach | `docs/development-guide/fr-godot-attach.md` |
 | L5 visual pass | `docs/development-guide/fr-l5-visual-pass.md` |
 | Modding (spec only) | `docs/specs/CIV-0700-modding-api-spec.md` |
+| Scenario YAML | `docs/guides/scenario-yaml.md` |
 | Agent smoke | `docs/guides/agent-smoke.md` |
 | Web FR matrix (closed) | `docs/traceability/fr-web-matrix.md` |
 

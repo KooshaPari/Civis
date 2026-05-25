@@ -4,14 +4,28 @@ Single reference for how each client talks to **civ-server** (WS JSON-RPC + opti
 
 | Client | Primary attach | Default URL | Terrain | Snapshot / pins | Spawn / place | F3D0 voxels | Spectator default |
 |--------|----------------|-------------|---------|-----------------|---------------|-------------|-------------------|
-| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | Throttled snapshot only | `spectator_mode=true` |
+| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **VoxelDelta** chunk overlays + snapshot throttle | `spectator_mode=true` |
 | **Godot** watch mode | `attach_mode=watch` | HTTP `http://127.0.0.1:9090` | Same | SSE / poll via watch | `POST /control/*` when not spectator | — | — |
 | **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | `spectator_mode=false` |
 | **Bevy window** | civ-server WS | `ws://127.0.0.1:3000/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) |
-| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` (F3D0 → throttled snapshot only) | WS `sim.spawn_*` + HTTP `POST /control/*` | Throttled snapshot refresh only | Editor PIE |
+| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **VoxelDelta** chunk markers (`OnF3d0FrameReceived`) | Editor PIE |
 | **civ-server tests** | In-process | `127.0.0.1:3000` | — | JSON-RPC | Full RPC surface | Replay tests | — |
 
-### UX-02 — Spawn palette (`kind` → transport)
+### UX-05 — `spectator_mode` defaults
+
+ADR-009: web is **L2 authoring by default**; Godot is **spectator by default** (WorldBox-style observer until Inspector toggle). Use explicit overrides for demos so both clients match intent.
+
+| Client | Default | How to override | When authoring enabled | Hidden / disabled tools |
+|--------|---------|-----------------|------------------------|-------------------------|
+| **Godot** | `spectator_mode=true` on `Main` | Inspector → `spectator_mode=false` | Place Voxel, Spawn palette, Damage | `MUTATION_TOOLS` in `main.gd` |
+| **Web dashboard** | Authoring on (`readOnly=false`) | `?spectator=1` or `?authoring=0` | Spawn, place voxel, speed (L2) | `resolveAuthoringEnabled()` in `attachConfig.ts` |
+| **Bevy window** | N/A (agent/CI tooling) | — | WS spawn RPCs in standalone | — |
+| **Unreal CivShow** | PIE / editor session | HTTP `POST /control/*` + WS in game mode | Same spawn palette as Godot when not gated in C++ | Project-specific |
+| **civ-watch built UI** | Served at `:9090` | Same query params as web when embedded | `POST /control/*` | — |
+
+**Demo tip:** Godot F5 is read-only until you flip `spectator_mode`. Web at `http://127.0.0.1:5173` is authoring unless you add `?spectator=1`.
+
+## UX-02 — Spawn palette (`kind` → transport)
 
 Wire labels match [`jsonrpc-surface.md`](../api/jsonrpc-surface.md): `civilian` uses `sim.spawn_civilian`; all other kinds use `sim.spawn_entity` with `{ "kind", "x", "y", "faction"? }`.
 
@@ -57,7 +71,7 @@ cargo run -p civ-watch
 ## Parity gaps (see maturity audit)
 
 - `civ_pins.job` may be `null` until spawn sets `Citizen.job` (Unreal `CivisJobColors` ready when wired).
-- F3D0 **voxel mesh** stream: Bevy renders `Frame3d`; Godot/Unreal throttle `sim.snapshot` only (see [`fr-godot-attach.md`](../development-guide/fr-godot-attach.md)).
+- F3D0 **full mesh**: Bevy renders `Frame3d` voxels; Godot shows chunk **markers** on `VoxelDelta`; Unreal throttles snapshot only.
 
 ## Related docs
 

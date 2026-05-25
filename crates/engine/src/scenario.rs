@@ -201,7 +201,7 @@ mod tests {
         assert_eq!(scenario.population, 1_000_000);
         assert_eq!(scenario.base_consumption_joules, 5_000_000_000);
         assert!((scenario.scarcity_multiplier - 1.0).abs() < f64::EPSILON);
-        assert!(scenario.mods.is_empty());
+        assert_eq!(scenario.mods, vec!["mods/example-policy"]);
     }
 
     #[test]
@@ -232,6 +232,8 @@ mods:
         let mut sim = scenario.into_simulation(42);
         assert_eq!(sim.state.tick, 0);
         assert_eq!(sim.state.population, 1_000_000);
+        assert_eq!(sim.mod_host().mods().len(), 1);
+        assert_eq!(sim.mod_host().mods()[0].manifest.meta.id, "example-policy");
 
         for _ in 0..10 {
             sim.tick();

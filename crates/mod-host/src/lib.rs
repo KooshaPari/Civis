@@ -1,8 +1,8 @@
-//! civ-mod-host — manifest-only mod host stub (CIV-0700 Sprint D).
+//! civ-mod-host — manifest-only mod host stub (CIV-0700 Sprint D / v2).
 //!
 //! Loads and validates `manifest.toml` (or `mod.toml`) from a mod directory.
-//! WASM sandboxing, capability enforcement, and phase hooks are future work;
-//! [`ModHost::tick`] is intentionally a no-op.
+//! WASM sandboxing and capability enforcement are future work; v2 adds a
+//! [`ModRegistry`] with a log-only policy-phase stub invoked from [`ModHost::tick`].
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -160,10 +160,49 @@ pub struct LoadedMod {
     pub manifest: ModManifest,
 }
 
-/// In-process mod host (manifest-only MVP).
+/// Registry of loaded mod manifests (v2 stub — no WASM guests).
+#[derive(Debug, Clone, Default)]
+pub struct ModRegistry {
+    mods: Vec<LoadedMod>,
+}
+
+impl ModRegistry {
+    /// Empty registry.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Loaded mods in registration order.
+    #[must_use]
+    pub fn mods(&self) -> &[LoadedMod] {
+        &self.mods
+    }
+
+    /// Register a loaded mod entry.
+    pub fn register(&mut self, entry: LoadedMod) {
+        self.mods.push(entry);
+    }
+
+    /// Policy-phase stub (Phase 3a): one log line per policy mod with `write_policy`.
+    ///
+    /// Format: `mod:{id}:policy_phase:tick={tick}` (WASM callbacks not invoked yet).
+    #[must_use]
+    pub fn on_policy_phase(&self, tick: u64) -> Vec<String> {
+        self.mods
+            .iter()
+            .filter(|m| {
+                m.manifest.meta.mod_type == ModType::Policy && m.manifest.permissions.write_policy
+            })
+            .map(|m| format!("mod:{}:policy_phase:tick={tick}", m.manifest.meta.id))
+            .collect()
+    }
+}
+
+/// In-process mod host (manifest-only MVP + v2 policy stub).
 #[derive(Debug, Clone, Default)]
 pub struct ModHost {
-    mods: Vec<LoadedMod>,
+    registry: ModRegistry,
 }
 
 impl ModHost {
@@ -173,10 +212,16 @@ impl ModHost {
         Self::default()
     }
 
+    /// Manifest registry backing this host.
+    #[must_use]
+    pub fn registry(&self) -> &ModRegistry {
+        &self.registry
+    }
+
     /// Mods currently registered.
     #[must_use]
     pub fn mods(&self) -> &[LoadedMod] {
-        &self.mods
+        self.registry.mods()
     }
 
     /// Load `manifest.toml` from `mod_dir` and register it.
@@ -184,16 +229,17 @@ impl ModHost {
         let mod_dir = mod_dir.as_ref();
         let manifest_path = mod_dir.join("manifest.toml");
         let manifest = load_manifest(&manifest_path)?;
-        self.mods.push(LoadedMod {
+        self.registry.register(LoadedMod {
             root: mod_dir.to_path_buf(),
             manifest,
         });
         Ok(())
     }
 
-    /// Per-tick hook — no-op until WASM/policy phases are wired (CIV-0700).
-    pub fn tick(&self) {
-        let _ = &self.mods;
+    /// Per-tick hook — runs the policy-phase stub (no WASM yet).
+    #[must_use]
+    pub fn tick(&self, sim_tick: u64) -> Vec<String> {
+        self.registry.on_policy_phase(sim_tick)
     }
 }
 
@@ -297,13 +343,51 @@ mod tests {
     }
 
     #[test]
-    fn mod_host_tick_is_no_op() {
+    fn mod_registry_policy_phase_emits_log_lines() {
         let mut host = ModHost::new();
         host.load_manifest_dir(example_policy_mod_dir())
             .expect("load example mod");
-        assert_eq!(host.mods().len(), 1);
-        host.tick();
-        host.tick();
+
+        let lines = host.registry().on_policy_phase(42);
+        assert_eq!(lines, vec!["mod:example-policy:policy_phase:tick=42"]);
+
+        let via_tick = host.tick(99);
+        assert_eq!(via_tick, vec!["mod:example-policy:policy_phase:tick=99"]);
+    }
+
+    #[test]
+    fn policy_phase_skips_mods_without_write_policy() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("manifest.toml");
+        std::fs::write(
+            &path,
+            r#"
+[mod]
+id = "read-only-policy"
+name = "x"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = false
+"#,
+        )
+        .expect("write");
+
+        let manifest = load_manifest(&path).expect("manifest");
+        let mut registry = ModRegistry::new();
+        registry.register(LoadedMod {
+            root: dir.path().to_path_buf(),
+            manifest,
+        });
+
+        assert!(registry.on_policy_phase(1).is_empty());
     }
 
     #[test]

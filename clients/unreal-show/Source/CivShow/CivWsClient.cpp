@@ -196,30 +196,62 @@ void UCivWsClient::HandleMessage(const FString& Text)
     if (Root->HasField(TEXT("VoxelDelta")) || Root->HasField(TEXT("BuildingDiff"))
         || Root->HasField(TEXT("AgentAppearance")))
     {
-        const double Now = FPlatformTime::Seconds();
-        if (Now - LastSnapshotRequestSeconds >= SnapshotThrottleSec)
-        {
-            LastSnapshotRequestSeconds = Now;
-            RequestSnapshot();
-        }
+        FString Serialized;
+        const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+        FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
+        OnF3d0FrameReceived.Broadcast(TEXT("legacy"), Serialized);
+        MaybeRequestSnapshotThrottled();
+    }
+}
+
+FString UCivWsClient::FrameKindFromByte(const uint8 KindByte)
+{
+    switch (KindByte)
+    {
+    case 0:
+        return TEXT("VoxelDelta");
+    case 1:
+        return TEXT("BuildingDiff");
+    case 2:
+        return TEXT("AgentAppearance");
+    default:
+        return TEXT("Unknown");
+    }
+}
+
+void UCivWsClient::MaybeRequestSnapshotThrottled()
+{
+    const double Now = FPlatformTime::Seconds();
+    if (Now - LastSnapshotRequestSeconds >= SnapshotThrottleSec)
+    {
+        LastSnapshotRequestSeconds = Now;
+        RequestSnapshot();
     }
 }
 
 void UCivWsClient::HandleBinary(const TArray<uint8>& Data)
 {
-    if (Data.Num() >= 4)
+    static constexpr int32 HeaderLen = 9;
+    if (Data.Num() < HeaderLen)
     {
-        const FString Magic = FString(ANSI_TO_TCHAR(reinterpret_cast<const char*>(Data.GetData())), 4);
-        if (Magic == TEXT("F3D0"))
-        {
-            const double Now = FPlatformTime::Seconds();
-            if (Now - LastSnapshotRequestSeconds >= SnapshotThrottleSec)
-            {
-                LastSnapshotRequestSeconds = Now;
-                RequestSnapshot();
-            }
-        }
+        return;
     }
+    if (FMemory::Memcmp(Data.GetData(), "F3D0", 4) != 0)
+    {
+        return;
+    }
+
+    const uint8 KindByte = Data[4];
+    const uint32 JsonLen = (static_cast<uint32>(Data[5]) << 24) | (static_cast<uint32>(Data[6]) << 16)
+        | (static_cast<uint32>(Data[7]) << 8) | static_cast<uint32>(Data[8]);
+    if (Data.Num() != HeaderLen + static_cast<int32>(JsonLen))
+    {
+        return;
+    }
+
+    const FString FrameJson = FString(UTF8_TO_TCHAR(reinterpret_cast<const char*>(Data.GetData() + HeaderLen)), JsonLen);
+    OnF3d0FrameReceived.Broadcast(FrameKindFromByte(KindByte), FrameJson);
+    MaybeRequestSnapshotThrottled();
 }
 
 void UCivWsClient::ScheduleReconnect()

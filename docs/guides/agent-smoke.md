@@ -24,7 +24,9 @@ Default (no switches): Rust smokes + `verify-unreal-ready.ps1` offline preflight
 
 | Check | Proves |
 |-------|--------|
-| `cargo test -p civ-server --test ws_smoke` | JSON-RPC health, snapshot shape, spawn → `civ_pins` |
+| `cargo test -p civ-server --test ws_smoke` | JSON-RPC health, snapshot shape, spawn → `civ_pins`, **`civ_pins[].job`** (UX-01) |
+
+**Note:** Agent smoke does **not** need a separate job test binary. The full `ws_smoke` integration suite already asserts job labels on startup snapshots in `ws_jsonrpc_sim_snapshot_returns_snapshot_fields` (non-null `job`, at least one `"farmer"` pin). Spawn-after-RPC coverage is in `ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot`. No extra flags on `agent-smoke.ps1` are required for job wire shape.
 | `cargo test -p civ-watch` | HTTP terrain/snapshot/control contracts |
 | `verify-unreal-ready.ps1` (default) | Target.cs, rust `.lib`, UE path scaffolding |
 | `build.ps1` (`-FullUnreal`) | Full rust-shim + CivShowEditor UBT when engine installed |

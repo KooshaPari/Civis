@@ -11,7 +11,10 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
-use civ_tactics::{apply_damage, evolve_doctrine, DamageEvent, Doctrine, DoctrineLibrary};
+use civ_tactics::{
+    apply_damage, evolve_doctrine, tick_war_bridge, DamageEvent, Doctrine, DoctrineLibrary,
+    MilitaryUnitSample, WarBridgeConfig,
+};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::{Entity, World};
 use rand::Rng;
@@ -286,7 +289,7 @@ pub struct Simulation {
     pub market_state: MarketState,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
-    /// Manifest-only mod host (CIV-0700 Sprint D); WASM not loaded yet.
+    /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
     mod_host: ModHost,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
@@ -699,14 +702,24 @@ impl Simulation {
             let _ = world.spawn((farm,));
         }
 
-        // Create initial military
-        for i in 0..10 {
+        // Create initial military (player + AI for war-bridge smoke)
+        for i in 0..5 {
             let soldier = MilitaryUnit {
                 unit_type: UnitType::Soldier,
                 strength: Fixed::from_num(10),
                 morale: Fixed::from_num(1),
                 position: Position { x: i, y: 0 },
-                faction_id: 0, // Player faction
+                faction_id: 0,
+            };
+            let _ = world.spawn((soldier,));
+        }
+        for i in 0..5 {
+            let soldier = MilitaryUnit {
+                unit_type: UnitType::Archer,
+                strength: Fixed::from_num(8),
+                morale: Fixed::from_num(1),
+                position: Position { x: i + 6, y: 2 },
+                faction_id: 1,
             };
             let _ = world.spawn((soldier,));
         }
@@ -738,7 +751,6 @@ impl Simulation {
         self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
-        self.mod_host.tick();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -971,7 +983,7 @@ impl Simulation {
         self.state.population = self.state.population.saturating_sub(deaths_count);
     }
 
-    /// Military phase
+    /// Military phase — morale recovery and Phase-4 war → tactics bridge.
     fn phase_military(&mut self) {
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
             // Morale recovery
@@ -980,6 +992,24 @@ impl Simulation {
                     .min(Fixed::from_num(1));
             }
         }
+
+        let units: Vec<MilitaryUnitSample> = self
+            .world
+            .query::<&MilitaryUnit>()
+            .iter()
+            .map(|(_, unit)| MilitaryUnitSample {
+                faction_id: unit.faction_id,
+                grid_x: unit.position.x,
+                grid_y: unit.position.y,
+            })
+            .collect();
+        let bridge_events = tick_war_bridge(
+            self.state.tick,
+            &WarBridgeConfig::default(),
+            &units,
+            &self.voxel,
+        );
+        self.pending_damage.extend(bridge_events);
     }
 
     fn phase_diplomacy(&mut self) {
@@ -1034,6 +1064,10 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
+        for line in self.mod_host.tick(self.state.tick) {
+            tracing::debug!(mod_log = %line, "mod policy phase");
+        }
+
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
 

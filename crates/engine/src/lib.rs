@@ -35,9 +35,13 @@ pub use spawn::{
     spawn_port_at, unit_type_label,
 };
 
-pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModType};
+pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModRegistry, ModType};
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
-pub use civ_tactics::{apply_damage, evolve_doctrine, DamageEvent, Doctrine, DoctrineLibrary};
+pub use civ_tactics::{
+    apply_damage, evolve_doctrine, formation_offsets, grid_to_world_coord, line_of_sight,
+    tick_war_bridge, DamageEvent, Doctrine, DoctrineLibrary, FormationKind, MilitaryUnitSample,
+    WarBridgeConfig,
+};
 pub use hash_chain::{
     chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
 };

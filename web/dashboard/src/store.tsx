@@ -119,6 +119,23 @@ export type GameEvent = {
   faction_id: number | null;
 };
 
+export type NotificationTone =
+  | "birth"
+  | "death"
+  | "diplomacy"
+  | "tech"
+  | "disaster"
+  | "trade";
+
+export type NotificationItem = {
+  id: number;
+  tick: number;
+  kind: NotificationTone;
+  icon: string;
+  message: string;
+  focus: [number, number] | null;
+};
+
 export type TechNode = {
   id: string;
   kind: string;
@@ -182,6 +199,15 @@ export type DamagePulse = {
   y: number;
 };
 
+export type DisasterEvent = {
+  tick: number;
+  kind: string;
+  x: number;
+  y: number;
+  radius: number;
+  severity: number;
+};
+
 export type WeatherSnapshot = {
   season: string;
   temperature: number;
@@ -210,6 +236,7 @@ export type Snapshot = {
   deaths_this_tick: number;
   diplomacy_events: DiplomacyEvent[];
   damage_events: DamagePulse[];
+  disaster_events: DisasterEvent[];
   birth_events: PopulationPulse[];
   death_events: PopulationPulse[];
   tech_tree: TechNode[];
@@ -284,6 +311,8 @@ type State = {
   techTreeOpen: boolean;
   theme: ThemeMode;
   toast: Toast | null;
+  notifications: NotificationItem[];
+  soundEnabled: boolean;
   lastSaveTick: number | null;
 };
 
@@ -323,6 +352,10 @@ type Action =
   | { type: "set_economy_panel_open"; open: boolean }
   | { type: "set_tech_tree_open"; open: boolean }
   | { type: "set_toast"; message: string | null }
+  | { type: "push_notification"; notification: NotificationItem }
+  | { type: "dismiss_notification"; id: number }
+  | { type: "clear_notifications" }
+  | { type: "set_sound_enabled"; enabled: boolean }
   | { type: "set_last_save_tick"; tick: number | null }
   | { type: "clear_toast" };
 
@@ -363,6 +396,8 @@ const initialState: State = {
     typeof window !== "undefined" ? { search: window.location.search } : {},
   ),
   toast: null,
+  notifications: [],
+  soundEnabled: true,
   lastSaveTick: null,
 };
 
@@ -465,6 +500,23 @@ function reducer(state: State, action: Action): State {
           ? { id: Date.now(), message: action.message }
           : null,
       };
+    case "push_notification":
+      return {
+        ...state,
+        notifications: [action.notification, ...state.notifications]
+          .slice(0, 5),
+      };
+    case "dismiss_notification":
+      return {
+        ...state,
+        notifications: state.notifications.filter(
+          (notification) => notification.id !== action.id,
+        ),
+      };
+    case "clear_notifications":
+      return { ...state, notifications: [] };
+    case "set_sound_enabled":
+      return { ...state, soundEnabled: action.enabled };
     case "set_last_save_tick":
       return { ...state, lastSaveTick: action.tick };
     case "clear_toast":

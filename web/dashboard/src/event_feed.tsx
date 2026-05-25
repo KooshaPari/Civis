@@ -10,6 +10,7 @@ const EVENT_ICONS: Record<string, string> = {
   tech: "🔬",
   building: "🏗️",
   peace: "🤝",
+  disaster: "⚡",
 };
 
 export function EventFeed() {

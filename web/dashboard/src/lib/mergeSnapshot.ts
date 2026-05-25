@@ -6,6 +6,7 @@ import type {
   DiplomacyKind,
   DamagePulse,
   EconomySnapshot,
+  DisasterEvent,
   Faction,
   InstitutionRow,
   PopulationPulse,
@@ -79,6 +80,7 @@ export function mergeServerSnapshot(
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
     damage_events: parseDamageEvents(r.damage_events),
+    disaster_events: parseDisasterEvents(r.disaster_events),
     birth_events: parsePopulationPulses(r.birth_events),
     death_events: parsePopulationPulses(r.death_events),
     tech_tree: parseTechTree(r.tech_tree),
@@ -155,6 +157,21 @@ function parseDamageEvents(raw: unknown): DamagePulse[] {
     return {
       x: Number(item.x ?? 0),
       y: Number(item.y ?? 0),
+    };
+  });
+}
+
+function parseDisasterEvents(raw: unknown): DisasterEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      tick: Number(item.tick ?? 0),
+      kind: String(item.kind ?? ""),
+      x: Number(item.x ?? 0),
+      y: Number(item.y ?? 0),
+      radius: Number(item.radius ?? 0),
+      severity: Number(item.severity ?? 0),
     };
   });
 }

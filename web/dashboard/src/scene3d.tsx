@@ -18,6 +18,7 @@ import {
   Biome,
   Building,
   CivPin,
+  DisasterEvent,
   Faction,
   MilitaryPin,
   Road,
@@ -76,6 +77,7 @@ type SceneRefs = {
   roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   tradeRoutes: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>[];
   tradeCargo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>[];
+  disasterRings: THREE.Mesh<THREE.TorusGeometry, THREE.MeshStandardMaterial>[];
   effects: THREE.Group | null;
   transientSprites: THREE.Sprite[];
   activeTerrain: Terrain | null;
@@ -94,7 +96,10 @@ type SceneRefs = {
   previousSnapshot: Snapshot | null;
   currentSnapshot: Snapshot | null;
   snapshotReceivedAt: number;
+  cameraFocusTarget: THREE.Vector3 | null;
+  cameraPositionTarget: THREE.Vector3 | null;
   spawnBurst?: (x: number, y: number, color: number, label?: string) => void;
+  spawnDisasterRing?: (event: DisasterEvent) => void;
 };
 
 export function Scene3d() {
@@ -120,6 +125,7 @@ export function Scene3d() {
     roads: [],
     tradeRoutes: [],
     tradeCargo: [],
+    disasterRings: [],
     effects: null,
     transientSprites: [],
     activeTerrain: null,
@@ -134,6 +140,8 @@ export function Scene3d() {
     previousSnapshot: null,
     currentSnapshot: null,
     snapshotReceivedAt: performance.now(),
+    cameraFocusTarget: null,
+    cameraPositionTarget: null,
   });
 
   useEffect(() => {
@@ -180,6 +188,7 @@ export function Scene3d() {
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     const labelRenderer = new CSS2DRenderer();
+    const tooltip = document.createElement("div");
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -189,6 +198,14 @@ export function Scene3d() {
     labelRenderer.setSize(mount.clientWidth, mount.clientHeight);
     labelRenderer.domElement.className = "scene-label-layer";
     mount.appendChild(labelRenderer.domElement);
+    tooltip.className = "scene-tooltip";
+    tooltip.style.position = "absolute";
+    tooltip.style.top = "0";
+    tooltip.style.left = "0";
+    tooltip.style.transform = "translate(-9999px, -9999px)";
+    tooltip.style.pointerEvents = "none";
+    tooltip.style.opacity = "0";
+    mount.appendChild(tooltip);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     cameraRef.current = camera;
@@ -232,6 +249,9 @@ export function Scene3d() {
     scene.add(buildingGroup);
     const labelGroup = new THREE.Group();
     scene.add(labelGroup);
+    const hoverRaycaster = new THREE.Raycaster();
+    const hoverPointer = new THREE.Vector2();
+    let hoverTarget: { kind: "civilian" | "building"; index: number; x: number; y: number } | null = null;
 
     const civilianGeometry = createCivilianGeometry();
     const civilianMaterial = new THREE.MeshStandardMaterial({
@@ -824,6 +844,42 @@ export function Scene3d() {
       refs.current.transientSprites.push(sprite);
     };
 
+    const spawnDisasterRing = (event: DisasterEvent) => {
+      const terrain = refs.current.activeTerrain;
+      if (!terrain || !refs.current.effects) return;
+      const ringGeometry = new THREE.TorusGeometry(1, 0.07, 12, 36);
+      const ringMaterial = new THREE.MeshStandardMaterial({
+        color:
+          event.kind === "Earthquake"
+            ? 0x8b5a2b
+            : event.kind === "Flood"
+              ? 0x4aa3ff
+              : event.kind === "Wildfire"
+                ? 0xff4d4d
+                : 0x6abf69,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+        emissive: new THREE.Color(0x000000),
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.position.set(
+        event.x * terrain.size - terrain.size / 2,
+        terrainHeightAt(terrain, event.x, event.y) + 0.22,
+        event.y * terrain.size - terrain.size / 2,
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.userData = {
+        bornAt: performance.now(),
+        life: 3000,
+        radius: event.radius,
+        severity: event.severity,
+      };
+      refs.current.effects.add(ring);
+      refs.current.disasterRings.push(ring);
+    };
+    refs.current.spawnDisasterRing = spawnDisasterRing;
+
     const SPAWN_DRAG_MIN_CELLS = 4;
     let spawnDrag: {
       startX: number;
@@ -912,6 +968,47 @@ export function Scene3d() {
         pick.cellX,
         pick.cellY,
       );
+    };
+
+    const onHoverMove = (event: PointerEvent) => {
+      if (spawnDrag) return;
+      const terrain = refs.current.activeTerrain;
+      if (!terrain) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      hoverPointer.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+      );
+      hoverRaycaster.setFromCamera(hoverPointer, camera);
+      const civilianHit = hoverRaycaster.intersectObjects(refs.current.civilians, false)[0];
+      if (civilianHit) {
+        const index = refs.current.civilians.indexOf(
+          civilianHit.object as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
+        );
+        hoverTarget = { kind: "civilian", index, x: event.clientX, y: event.clientY };
+        return;
+      }
+      const buildingHit = hoverRaycaster.intersectObjects(refs.current.buildings, false)[0];
+      if (buildingHit) {
+        const index = refs.current.buildings.indexOf(
+          buildingHit.object as THREE.Group,
+        );
+        hoverTarget = { kind: "building", index, x: event.clientX, y: event.clientY };
+        return;
+      }
+      hoverTarget = null;
+    };
+
+    const onDoubleClick = (event: MouseEvent) => {
+      const pick = pickTerrainCell(event as unknown as PointerEvent);
+      if (!pick) return;
+      dispatch({
+        type: "set_camera_focus",
+        focus: [
+          pick.cellX / pick.terrainSize,
+          pick.cellY / pick.terrainSize,
+        ],
+      });
     };
 
     const onPointerUp = async (event: PointerEvent) => {
@@ -1254,6 +1351,7 @@ export function Scene3d() {
       refs.current.tradeRoutes = [];
       refs.current.buildings = [];
       refs.current.spawnBurst = undefined;
+      refs.current.spawnDisasterRing = undefined;
       disposeScene(scene);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
@@ -1279,6 +1377,10 @@ export function Scene3d() {
         state.snapshot.damage_events.forEach((event) =>
           burst(event.x, event.y, 0xff4d4d, "Impact"),
         );
+        const disasterRing = refs.current.spawnDisasterRing;
+        if (disasterRing) {
+          state.snapshot.disaster_events.forEach((event) => disasterRing(event));
+        }
         state.snapshot.diplomacy_events.forEach((event) => {
           const faction =
             state.snapshot?.factions.find(

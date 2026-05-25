@@ -1,5 +1,6 @@
 import { flipTheme, themeToggleLabel } from "./lib/theme";
 import { useDashboardStore } from "./store";
+import { playClick, primeAudio } from "./lib/sounds";
 
 export function TopBar() {
   const { state, dispatch } = useDashboardStore();
@@ -95,6 +96,20 @@ export function TopBar() {
           onClick={() => dispatch({ type: "set_tech_tree_open", open: true })}
         >
           🔬 Tech Tree
+        </button>
+        <button
+          type="button"
+          className="panel-toggle sound-toggle"
+          title={state.soundEnabled ? "Mute sounds" : "Enable sounds"}
+          aria-label={state.soundEnabled ? "Mute sounds" : "Enable sounds"}
+          aria-pressed={!state.soundEnabled}
+          onClick={() => {
+            void primeAudio();
+            playClick();
+            dispatch({ type: "set_sound_enabled", enabled: !state.soundEnabled });
+          }}
+        >
+          {state.soundEnabled ? "🔊 Sound" : "🔇 Muted"}
         </button>
         <span className={`connection-pill ${state.connection}`}>Connection: {connectionLabel}</span>
         <a className="status-page-link" href="./status.html" title="WebSocket attach diagnostics">

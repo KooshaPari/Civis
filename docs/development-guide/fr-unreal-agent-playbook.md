@@ -1,7 +1,7 @@
 # FR-CIV-UE-AGENT — Unreal showcase: agent playbook
 
-**Client:** `clients/unreal-show`  
-**Engine:** UE **5.7** on this machine (`C:\Program Files\Epic Games\UE_5.7`); `CivShow.uproject` `EngineAssociation` updated to `5.7`. `build.ps1` also accepts 5.4/5.6 if installed.  
+**Client:** `clients/unreal-show`
+**Engine:** UE **5.7** on this machine (`C:\Program Files\Epic Games\UE_5.7`); `CivShow.uproject` `EngineAssociation` updated to `5.7`. `build.ps1` also accepts 5.4/5.6 if installed.
 **Role:** L5 visual showcase only — sim authority stays on `civ-server` / `civ-watch`
 
 ---
@@ -24,6 +24,17 @@ These do **not** need the Editor or UBT:
 **Avoid** until UE is on disk: generating `.sln`, cooking content, Quixel import, Play-In-Editor.
 
 ---
+
+## What agents can vs cannot do
+
+| Can | Cannot (needs you) |
+|-----|---------------------|
+| Run `setup.exe modify --quiet` for MSVC workload | Click through **UAC** / first-time Epic login on your behalf |
+| Open VS Installer + docs in browser (`open-vs-installer.ps1`) | Complete a **GUI installer** already open (singleton lock) |
+| `winget install` Build Tools (may prompt admin) | Accept Epic/Unreal EULAs in a modal |
+| Build rust-shim, edit all C++ before UBT | Fully unattended VS modify if another installer instance is running |
+
+**This machine (2026-05-25):** UE **5.7** at `C:\Program Files\Epic Games\UE_5.7`. VS **Community 2022** has **no** `VC\Tools\MSVC` yet. VS **Preview** has only **banned** 14.42/14.43 toolchains — UBT rejects them. Fix: add **Desktop development with C++** + **MSVC v14.44-17.14** to **Community** (not Preview).
 
 ## When download finishes (automated path)
 

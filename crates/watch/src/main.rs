@@ -944,11 +944,7 @@ fn game_events(
         .collect()
 }
 
-fn disaster_events(
-    tick: u64,
-    factions: &[Faction],
-    buildings: &[Building],
-) -> Vec<DisasterEvent> {
+fn disaster_events(tick: u64, factions: &[Faction], buildings: &[Building]) -> Vec<DisasterEvent> {
     if tick == 0 || tick % 1000 != 0 {
         return Vec::new();
     }
@@ -984,7 +980,10 @@ fn disaster_events(
         }];
     }
     if roll < 0.75 {
-        let center = factions.first().map(|faction| faction.capital).unwrap_or([0.5, 0.5]);
+        let center = factions
+            .first()
+            .map(|faction| faction.capital)
+            .unwrap_or([0.5, 0.5]);
         return vec![DisasterEvent {
             tick,
             kind: "Flood".to_string(),

@@ -67,6 +67,16 @@ pub fn spawn_port_at(world: &mut World, x: f32, y: f32) -> Entity {
     },))
 }
 
+/// Spawn a hangar / barracks (`Barracks`) at normalized coords.
+pub fn spawn_hangar_at(world: &mut World, x: f32, y: f32) -> Entity {
+    world.spawn((Building {
+        building_type: BuildingType::Barracks,
+        hp: Fixed::from_num(400),
+        max_hp: Fixed::from_num(400),
+        position: norm_to_grid(x, y),
+    },))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,7 +95,8 @@ mod tests {
         let _mil = spawn_military_at(&mut world, 1, 0.2, 0.8, UnitType::Knight);
         let _air = spawn_airport_at(&mut world, 0.7, 0.3);
         let _port = spawn_port_at(&mut world, 0.3, 0.7);
+        let _hangar = spawn_hangar_at(&mut world, 0.5, 0.5);
         assert_eq!(world.query::<&MilitaryUnit>().iter().count(), 1);
-        assert_eq!(world.query::<&Building>().iter().count(), 2);
+        assert_eq!(world.query::<&Building>().iter().count(), 3);
     }
 }

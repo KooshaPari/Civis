@@ -10,7 +10,7 @@ export type ToolKind =
   | "InspectAgent"
   | "Camera";
 
-export type SpawnKind = "civilian" | "vehicle" | "airport" | "port";
+export type SpawnKind = "civilian" | "vehicle" | "airport" | "port" | "hangar";
 export type CameraPreset = "wide" | "close" | "orbit";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
 

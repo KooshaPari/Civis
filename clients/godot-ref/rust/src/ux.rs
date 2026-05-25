@@ -60,6 +60,8 @@ pub enum SpawnKind {
     Airport,
     /// Harbor / trade port building.
     Port,
+    /// Hangar / barracks building.
+    Hangar,
 }
 
 impl SpawnKind {
@@ -70,6 +72,7 @@ impl SpawnKind {
             Self::Vehicle => "vehicle",
             Self::Airport => "airport",
             Self::Port => "port",
+            Self::Hangar => "hangar",
         }
     }
 
@@ -80,12 +83,18 @@ impl SpawnKind {
 
     /// Whether FR-CIV-UX-004 expects drag-release placement (not click-only).
     pub const fn uses_drag_place(self) -> bool {
-        matches!(self, Self::Vehicle | Self::Airport | Self::Port)
+        matches!(
+            self,
+            Self::Vehicle | Self::Airport | Self::Port | Self::Hangar
+        )
     }
 
     /// Whether a long drag spawns a convoy along the path (FR-CIV-UX-004).
     pub const fn uses_convoy_drag(self) -> bool {
-        matches!(self, Self::Vehicle | Self::Airport | Self::Port)
+        matches!(
+            self,
+            Self::Vehicle | Self::Airport | Self::Port | Self::Hangar
+        )
     }
 }
 

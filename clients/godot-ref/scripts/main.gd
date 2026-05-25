@@ -164,7 +164,7 @@ func _bind_ui() -> void:
 	speed.item_selected.connect(_on_speed_selected)
 	var spawn_kind_ui := ui.get_node("BottomBar/HBoxContainer/SpawnKind") as OptionButton
 	spawn_kind_ui.clear()
-	for label in ["civilian", "vehicle", "airport", "port"]:
+	for label in ["civilian", "vehicle", "airport", "port", "hangar"]:
 		spawn_kind_ui.add_item(label)
 	spawn_kind_ui.select(0)
 	spawn_kind_ui.item_selected.connect(_on_spawn_kind_selected)
@@ -221,7 +221,7 @@ func _input(event: InputEvent) -> void:
 		var norm := _ray_hit_norm()
 		if norm.x < 0.0:
 			return
-		if spawn_kind in ["vehicle", "airport", "port"]:
+		if spawn_kind in ["vehicle", "airport", "port", "hangar"]:
 			_spawn_drag_active = true
 			_spawn_drag_start = norm
 			_ensure_drag_preview()
@@ -469,7 +469,7 @@ func _on_tool_pressed(tool: String) -> void:
 	current_tool = tool
 
 func _on_spawn_kind_selected(index: int) -> void:
-	spawn_kind = ["civilian", "vehicle", "airport", "port"][index]
+	spawn_kind = ["civilian", "vehicle", "airport", "port", "hangar"][index]
 
 func _on_speed_selected(index: int) -> void:
 	var speeds := [0, 1, 2, 4, 8]
@@ -487,6 +487,8 @@ func _spawn_burst_color_for_kind(kind: String) -> Color:
 			return Color(0.55, 0.72, 0.95)
 		"port":
 			return Color(0.45, 0.82, 0.72)
+		"hangar":
+			return Color(0.72, 0.58, 0.48)
 		_:
 			return Color(0.49, 0.85, 0.34)
 

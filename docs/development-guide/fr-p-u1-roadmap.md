@@ -12,8 +12,8 @@
 | FR-CIV-GODOT-ATTACH-000..004 | civ-server WS + civ-watch terrain | `civis_ws_client.gd`, `main.gd` |
 | — | Buildings + job-colored pins in 3D | `main.gd` `_sync_buildings`, `_sync_civilians` |
 | — | Era label in HUD | `era_timelapse.gd`, `EraLabel` |
-| FR-CIV-UX-004 | Drag-place + convoy along path (vehicle/airport/port) | `ux::convoy_positions`, `main.gd`, `scene3d.tsx`, `spawnConvoy.ts` |
-| FR-CIV-UX-006 | Spawn palette: civilian, vehicle, airport, port | `spawn.rs`, `jsonrpc.rs`, `watch` `/control/spawn_entity`, Godot + web bottom bar |
+| FR-CIV-UX-004 | Drag-place + convoy along path (vehicle/airport/port/hangar) | `ux::convoy_positions`, `main.gd`, `scene3d.tsx`, `spawnConvoy.ts` |
+| FR-CIV-UX-006 | Spawn palette: civilian, vehicle, airport, port, hangar | `spawn.rs`, `jsonrpc.rs`, `watch` `/control/spawn_entity`, Godot + web bottom bar |
 
 ## Post P-U1 slice (landed)
 

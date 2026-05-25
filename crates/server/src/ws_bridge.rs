@@ -476,7 +476,9 @@ async fn apply_dispatch_effect(
             entity_seq,
         } => {
             use crate::jsonrpc::SpawnEntityKind;
-            use civ_engine::{spawn_airport_at, spawn_military_at, spawn_port_at, UnitType};
+            use civ_engine::{
+                spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at, UnitType,
+            };
 
             let mut sim = state.sim.lock().await;
             let entity = match kind {
@@ -498,6 +500,7 @@ async fn apply_dispatch_effect(
                 }
                 SpawnEntityKind::Airport => spawn_airport_at(&mut sim.world, x, y),
                 SpawnEntityKind::Port => spawn_port_at(&mut sim.world, x, y),
+                SpawnEntityKind::Hangar => spawn_hangar_at(&mut sim.world, x, y),
             };
             set_spawn_civilian_result(response, entity.id());
         }

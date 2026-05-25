@@ -1199,7 +1199,7 @@ fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
     buildings
 }
 
-/// Placed airports / ports from ECS authoring (FR-CIV-UX-006).
+/// Placed airports / ports / hangars from ECS authoring (FR-CIV-UX-006).
 fn merge_authoring_buildings(buildings: &mut Vec<Building>, sim: &Simulation) {
     use civ_engine::{grid_to_norm, BuildingType};
 
@@ -1213,6 +1213,7 @@ fn merge_authoring_buildings(buildings: &mut Vec<Building>, sim: &Simulation) {
         let (kind, id_base) = match building.building_type {
             BuildingType::CityCenter => (BuildingKind::Civic, 9_000_u32),
             BuildingType::Market => (BuildingKind::Commercial, 9_100_u32),
+            BuildingType::Barracks => (BuildingKind::Industrial, 9_200_u32),
             _ => continue,
         };
         buildings.push(Building {
@@ -1542,10 +1543,16 @@ async fn spawn_entity_handler(
             use civ_engine::spawn_port_at;
             let _ = spawn_port_at(&mut sim.world, req.x, req.y);
         }
+        "hangar" => {
+            use civ_engine::spawn_hangar_at;
+            let _ = spawn_hangar_at(&mut sim.world, req.x, req.y);
+        }
         _ => {
             return Json(ControlOk {
                 ok: false,
-                message: Some("kind must be civilian, vehicle, airport, or port".to_string()),
+                message: Some(
+                    "kind must be civilian, vehicle, airport, port, or hangar".to_string(),
+                ),
             });
         }
     }
@@ -2037,6 +2044,27 @@ mod api_tests {
                     .uri("/control/spawn_civilian")
                     .header("content-type", "application/json")
                     .body(Body::from(r#"{"x":0.5,"y":0.5,"faction":0}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn post_control_spawn_entity_hangar_returns_ok() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/spawn_entity")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"kind":"hangar","x":0.55,"y":0.45,"faction":0}"#,
+                    ))
                     .unwrap(),
             )
             .await

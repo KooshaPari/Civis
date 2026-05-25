@@ -51,7 +51,7 @@ tooltip_text = "Left-click terrain to place a voxel (POST /control/place_voxel)"
 
 [node name="Spawn Civilian" type="Button" parent="BottomBar/HBoxContainer"]
 text = "Spawn"
-tooltip_text = "Click civilian; drag vehicle/airport/port — long drag spawns convoy (FR-CIV-UX-004)"
+tooltip_text = "Click civilian; drag vehicle/airport/port/hangar — long drag spawns convoy (FR-CIV-UX-004)"
 
 [node name="SpawnKind" type="OptionButton" parent="BottomBar/HBoxContainer"]
 item_count = 3

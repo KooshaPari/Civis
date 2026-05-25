@@ -10,7 +10,12 @@ const DRAG_MIN_CELLS = 4;
 
 /** Kinds that support drag-release and convoy sampling. */
 export function spawnKindUsesConvoy(kind: SpawnKind): boolean {
-  return kind === "vehicle" || kind === "airport" || kind === "port";
+  return (
+    kind === "vehicle" ||
+    kind === "airport" ||
+    kind === "port" ||
+    kind === "hangar"
+  );
 }
 
 /** Terrain cells to spawn along a drag segment (inclusive endpoints). */

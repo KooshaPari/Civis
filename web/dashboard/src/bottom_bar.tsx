@@ -404,7 +404,12 @@ export function BottomBar() {
                 onChange={(e) =>
                   dispatch({
                     type: "set_spawn_kind",
-                    kind: e.target.value as "civilian" | "vehicle" | "airport" | "port",
+                    kind: e.target.value as
+                      | "civilian"
+                      | "vehicle"
+                      | "airport"
+                      | "port"
+                      | "hangar",
                   })
                 }
               >
@@ -412,6 +417,7 @@ export function BottomBar() {
                 <option value="vehicle">Vehicle (drag on terrain)</option>
                 <option value="airport">Airport (drag / convoy)</option>
                 <option value="port">Port (drag / convoy)</option>
+                <option value="hangar">Hangar (drag / convoy)</option>
               </select>
             </label>
           </div>

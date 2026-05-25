@@ -1025,6 +1025,8 @@ pub enum SpawnEntityKind {
     Airport,
     /// Spawn harbor / trade port (`Market`).
     Port,
+    /// Spawn hangar / barracks (`Barracks`).
+    Hangar,
 }
 
 impl SpawnEntityKind {
@@ -1035,6 +1037,7 @@ impl SpawnEntityKind {
             Self::Vehicle => "vehicle",
             Self::Airport => "airport",
             Self::Port => "port",
+            Self::Hangar => "hangar",
         }
     }
 }
@@ -1053,10 +1056,11 @@ pub fn parse_spawn_entity_params(
         Some("vehicle") => SpawnEntityKind::Vehicle,
         Some("airport") => SpawnEntityKind::Airport,
         Some("port") => SpawnEntityKind::Port,
+        Some("hangar") => SpawnEntityKind::Hangar,
         _ => {
             return Err(JsonRpcError {
                 code: error_code::INVALID_PARAMS,
-                message: "kind must be civilian, vehicle, airport, or port".to_owned(),
+                message: "kind must be civilian, vehicle, airport, port, or hangar".to_owned(),
                 data: None,
             });
         }
@@ -1589,6 +1593,10 @@ mod tests {
         assert!((x - 0.1).abs() < f32::EPSILON);
         assert!((y - 0.9).abs() < f32::EPSILON);
         assert_eq!(faction, 1);
+
+        let hangar = serde_json::json!({ "kind": "hangar", "x": 0.5, "y": 0.5 });
+        let (kind, ..) = parse_spawn_entity_params(Some(&hangar)).expect("hangar");
+        assert_eq!(kind, SpawnEntityKind::Hangar);
     }
 
     #[test]

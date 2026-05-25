@@ -57,7 +57,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
 | **Web** FR-CIV-WEB-008 | `web/dashboard/src/lib/authoring.ts`, `bottom_bar.tsx` | L2 authoring default on; `?spectator=1` for read-only |
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
-| **Server** authoring RPC | `sim.spawn_civilian`, `sim.spawn_entity`, `sim.place_voxel` | Vehicle → `Knight` military pin; airport → `CityCenter` building; `military_units` on `sim.snapshot` |
+| **Server** authoring RPC | `sim.spawn_civilian`, `sim.spawn_entity`, `sim.place_voxel` | Vehicle → `Knight`; airport → `CityCenter`; port → `Market`; hangar → `Barracks`; `military_units` on `sim.snapshot` |
 | **Roadmap** quality ladder | `docs/roadmap/product-quality-ladder.md` | L0–L5 definitions; Manor Lords = L5 on L3–L4 |
 | **Dashboard** theme / perf / stats / agents | `web/dashboard/` (`theme.ts`, `perf_panel.tsx`, `stats_panel.tsx`, `agents_panel.tsx`, `useCivisAttach.ts`) | Persisted `data-theme`; sparkline; **`StatsPanel`** tick + voxel chunk count + FPS; **`AgentsPanel`** seen-agent count + recent ids from `AgentAppearance` frames |
 | **Dashboard** attach / minimap | `attachConfig.ts`, `bottom_bar.tsx`, `side_panel.tsx` | Binary-first WS (`?binary=`); `?attach=watch` SSE; 160×160 terrain minimap with click-to-inspect chunk; `mergeSnapshot` parses nested `economy.institutions` and population/diplomacy pulses |

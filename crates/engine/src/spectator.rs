@@ -201,6 +201,14 @@ fn buildings_for_factions(factions: &[Faction], tick: u64, sim: &Simulation) -> 
                 era: ((tick / 120) % 6) as u16,
                 faction_id: 0,
             }),
+            crate::BuildingType::Barracks => pins.push(BuildingPin {
+                id: 9_200 + idx as u32,
+                x,
+                y,
+                kind: BuildingKind::Industrial,
+                era: ((tick / 120) % 6) as u16,
+                faction_id: 0,
+            }),
             _ => {}
         }
     }

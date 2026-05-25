@@ -31,7 +31,8 @@ pub use engine::{
     UnitType, WorldState,
 };
 pub use spawn::{
-    grid_to_norm, norm_to_grid, spawn_airport_at, spawn_military_at, spawn_port_at, unit_type_label,
+    grid_to_norm, norm_to_grid, spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at,
+    unit_type_label,
 };
 
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};

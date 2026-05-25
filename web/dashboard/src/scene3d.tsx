@@ -47,7 +47,8 @@ const JOB_COLORS: Record<NonNullable<CivPin["job"]>, number> = {
 };
 
 const CIVILIAN_POOL_SIZE = 256;
-const TERRAIN_HEIGHT_SCALE = 12;
+const TERRAIN_HEIGHT_SCALE = 22;
+const TERRAIN_WATER_LEVEL = TERRAIN_HEIGHT_SCALE * 0.38;
 
 type SceneRefs = {
   terrainMesh: THREE.Mesh<
@@ -283,23 +284,65 @@ export function Scene3d() {
       geometry.rotateX(-Math.PI / 2);
       const positions = geometry.attributes.position as THREE.BufferAttribute;
       const colors = new Float32Array(terrain.size * terrain.size * 3);
+      const heightMap = new Float32Array(terrain.size * terrain.size);
 
       for (let y = 0; y < terrain.size; y += 1) {
         for (let x = 0; x < terrain.size; x += 1) {
           const idx = y * terrain.size + x;
           const height = terrain.heights[idx] * TERRAIN_HEIGHT_SCALE;
+          heightMap[idx] = height;
           positions.setY(idx, height);
+        }
+      }
+      for (let y = 0; y < terrain.size; y += 1) {
+        for (let x = 0; x < terrain.size; x += 1) {
+          const idx = y * terrain.size + x;
+          const center = heightMap[idx];
+          const left = heightMap[y * terrain.size + clampIndex(x - 1, terrain.size)];
+          const right = heightMap[y * terrain.size + clampIndex(x + 1, terrain.size)];
+          const up = heightMap[clampIndex(y - 1, terrain.size) * terrain.size + x];
+          const down = heightMap[clampIndex(y + 1, terrain.size) * terrain.size + x];
+
+          const neighborAverage =
+            (left + right + up + down) * 0.25;
+          const aoFactor = clamp01(
+            ((neighborAverage - center) / Math.max(1, TERRAIN_HEIGHT_SCALE)) * 2.2,
+          );
+          const darkening = 1.0 - aoFactor * 0.3;
           const color = new THREE.Color(BIOME_COLORS[terrain.biomes[idx]]);
+          color.multiplyScalar(darkening);
           color.toArray(colors, idx * 3);
         }
       }
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       refs.current.terrainBaseColors = colors.slice();
       geometry.computeVertexNormals();
+      const normalAttr = geometry.getAttribute("normal") as THREE.BufferAttribute;
+      for (let i = 0; i < normalAttr.count; i += 1) {
+        const nx = normalAttr.getX(i);
+        const ny = normalAttr.getY(i);
+        const nz = normalAttr.getZ(i);
+        const exaggeratedX = nx * 1.55;
+        const exaggeratedY = ny * 0.9;
+        const exaggeratedZ = nz * 1.55;
+        const length =
+          Math.sqrt(
+            exaggeratedX * exaggeratedX +
+              exaggeratedY * exaggeratedY +
+              exaggeratedZ * exaggeratedZ,
+          ) || 1;
+        normalAttr.setXYZ(
+          i,
+          exaggeratedX / length,
+          exaggeratedY / length,
+          exaggeratedZ / length,
+        );
+      }
+      normalAttr.needsUpdate = true;
 
       const terrainMaterial = new THREE.MeshStandardMaterial({
         vertexColors: true,
-        flatShading: true,
+        flatShading: false,
         roughness: 1,
         metalness: 0.02,
       });
@@ -318,7 +361,7 @@ export function Scene3d() {
         roughness: 0.5,
       });
       const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
-      waterMesh.position.y = 0;
+      waterMesh.position.y = TERRAIN_WATER_LEVEL;
       waterMesh.receiveShadow = true;
       terrainGroup.add(waterMesh);
       refs.current.waterMesh = waterMesh;

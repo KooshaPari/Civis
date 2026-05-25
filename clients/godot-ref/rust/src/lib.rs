@@ -414,9 +414,10 @@ mod ux_tests {
         assert!(SpawnKind::Vehicle.is_wired());
         assert!(SpawnKind::Airport.is_wired());
         assert!(SpawnKind::Port.is_wired());
+        assert!(SpawnKind::Hangar.is_wired());
     }
 
-    /// FR-CIV-UX-004 — vehicle/airport/port use drag + convoy placement.
+    /// FR-CIV-UX-004 — vehicle/airport/port/hangar use drag + convoy placement.
     #[test]
     fn spawn_drag_threshold_matches_palette() {
         use super::ux::{convoy_positions, spawn_drag_exceeds_threshold, SPAWN_DRAG_MIN_NORM};
@@ -425,6 +426,7 @@ mod ux_tests {
         assert!(SpawnKind::Vehicle.uses_drag_place());
         assert!(SpawnKind::Port.uses_drag_place());
         assert!(SpawnKind::Port.uses_convoy_drag());
+        assert!(SpawnKind::Hangar.uses_drag_place());
         assert!(!spawn_drag_exceeds_threshold((0.1, 0.1), (0.11, 0.1)));
         assert!(spawn_drag_exceeds_threshold(
             (0.1, 0.1),

@@ -78,10 +78,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload report on failure
         if: failure()
-        uses: actions/upload-artifact@573e96872e1e9bf7d7d6db67e6efe79c0c3eac65 # v4.0.4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: pattern-${{ matrix.pattern.number }}-report
           path: pattern-${{ matrix.pattern.number }}-report.json
@@ -104,10 +104,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 
@@ -123,10 +123,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 
@@ -142,10 +142,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 
@@ -161,10 +161,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 
@@ -180,10 +180,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@a1cd7d75d18221425915e628d674c94e6975657c # v4.1.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9aeb9bc5e3ef4b25c73cc3b91a4f6b81 # v5.0.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
 

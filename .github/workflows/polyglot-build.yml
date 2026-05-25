@@ -384,7 +384,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@6bd8b7f7d58d76bb371f91465f0c7d208eccb313 # v4.0.0
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
           dotnet-version: '11.0.100-preview.2'
           include-prerelease: true

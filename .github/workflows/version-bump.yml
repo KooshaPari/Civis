@@ -25,7 +25,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@6bd8b7f7d58d76bb371f91465f0c7d208eccb313 # v4.0.0
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
           global-json-file: global.json
 

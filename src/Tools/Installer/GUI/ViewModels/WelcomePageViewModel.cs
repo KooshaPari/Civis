@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using DINOForge.Installer.Services;
+using DINOForge.Tools.Installer;
 using System;
 using System.Threading.Tasks;
 

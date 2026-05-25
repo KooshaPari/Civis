@@ -169,9 +169,19 @@ public sealed class GameClient : IGameClient, IDisposable
 
             try
             {
-                await _pipe.ConnectAsync(linkedCts.Token).ConfigureAwait(false);
+                // NamedPipeClientStream.ConnectAsync can ignore cancellation for missing pipes on Windows;
+                // race connect against an independent delay (do not link timeout token into ConnectAsync).
+                Task connectTask = _pipe.ConnectAsync(ct);
+                Task finished = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
+                if (finished != connectTask)
+                {
+                    CleanupPipe();
+                    throw new TimeoutException($"Connection timeout after {timeout.TotalSeconds}s");
+                }
+
+                await connectTask.ConfigureAwait(false);
             }
-            catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested || ct.IsCancellationRequested)
             {
                 throw new TimeoutException($"Connection timeout after {timeout.TotalSeconds}s", ex);
             }

@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using DINOForge.SDK.Assets;
-using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
 using FluentAssertions;
 using Xunit;
 
@@ -122,14 +121,14 @@ namespace DINOForge.Tests
         [Fact]
         public void Constructor_NullGameDir_Throws()
         {
-            Action act = () => new RuntimeAssetService(null!);
+            Action act = () => new AssetService(null!);
             act.Should().Throw<ArgumentNullException>().WithParameterName("gameDir");
         }
 
         [Fact]
         public void Constructor_NonExistentDir_DoesNotThrow()
         {
-            using var service = new RuntimeAssetService("/nonexistent/game/dir");
+            using var service = new AssetService("/nonexistent/game/dir");
             // Should not throw; directory existence is checked lazily
         }
 
@@ -138,7 +137,7 @@ namespace DINOForge.Tests
         [Fact]
         public void ListBundles_NonExistentDir_ReturnsEmpty()
         {
-            using var service = new RuntimeAssetService("/nonexistent/game/dir");
+            using var service = new AssetService("/nonexistent/game/dir");
             IReadOnlyList<BundleInfo> bundles = service.ListBundles();
             bundles.Should().BeEmpty();
         }
@@ -148,7 +147,7 @@ namespace DINOForge.Tests
         [Fact]
         public void ValidateModBundle_NonExistentFile_ReturnsErrors()
         {
-            using var service = new RuntimeAssetService("/nonexistent/game/dir");
+            using var service = new AssetService("/nonexistent/game/dir");
             AssetValidationResult result = service.ValidateModBundle("/nonexistent/mod.bundle");
 
             result.IsValid.Should().BeFalse();
@@ -160,7 +159,7 @@ namespace DINOForge.Tests
         [Fact]
         public void ExtractAsset_NonExistentBundle_ReturnsNull()
         {
-            using var service = new RuntimeAssetService("/nonexistent/game/dir");
+            using var service = new AssetService("/nonexistent/game/dir");
             byte[]? data = service.ExtractAsset("/nonexistent/bundle.bundle", "SomeAsset");
             data.Should().BeNull();
         }
@@ -170,7 +169,7 @@ namespace DINOForge.Tests
         [Fact]
         public void ReadCatalog_NonExistentDir_ReturnsEmpty()
         {
-            using var service = new RuntimeAssetService("/nonexistent/game/dir");
+            using var service = new AssetService("/nonexistent/game/dir");
             IReadOnlyDictionary<string, string> catalog = service.ReadCatalog();
             catalog.Should().BeEmpty();
         }
@@ -211,7 +210,7 @@ namespace DINOForge.Tests
         [Fact]
         public void Dispose_CanBeCalledMultipleTimes()
         {
-            var service = new RuntimeAssetService("/nonexistent/game/dir");
+            var service = new AssetService("/nonexistent/game/dir");
             service.Dispose();
             // Second dispose should not throw
             Action act = () => service.Dispose();

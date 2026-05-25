@@ -10,7 +10,6 @@ using DINOForge.SDK;
 using DINOForge.SDK.Assets;
 using DINOForge.SDK.Dependencies;
 using DINOForge.SDK.NativeInterop;
-using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
 using FluentAssertions;
 using Xunit;
 
@@ -418,7 +417,7 @@ exit /b {exitCode}
         public void AssetService_Constructor_RequiresGameDir()
         {
             // Act & Assert
-            Action act = () => new RuntimeAssetService(null!);
+            Action act = () => new AssetService(null!);
             act.Should().Throw<ArgumentNullException>();
         }
 
@@ -426,7 +425,7 @@ exit /b {exitCode}
         public void AssetService_ListBundles_WithNonexistentDirectory_ReturnsEmpty()
         {
             // Arrange
-            var service = new RuntimeAssetService("C:/nonexistent/game/directory");
+            var service = new AssetService("C:/nonexistent/game/directory");
 
             // Act
             var bundles = service.ListBundles();

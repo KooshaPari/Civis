@@ -6,7 +6,6 @@ using System.Linq;
 using DINOForge.SDK;
 using DINOForge.SDK.Assets;
 using DINOForge.SDK.Dependencies;
-using RuntimeAssetService = DINOForge.Runtime.Assets.AssetService;
 using FluentAssertions;
 using Xunit;
 
@@ -83,14 +82,14 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_NullDir_Throws()
         {
-            var action = () => new RuntimeAssetService(null!);
+            var action = () => new AssetService(null!);
             action.Should().Throw<ArgumentNullException>();
         }
 
         [Fact]
         public void AssetService_ValidDir_Succeeds()
         {
-            var svc = new RuntimeAssetService(@"C:\Game");
+            var svc = new AssetService(@"C:\Game");
             svc.Should().NotBeNull();
             svc.Dispose();
         }
@@ -98,7 +97,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ListBundles_Nonexistent_Empty()
         {
-            var svc = new RuntimeAssetService(@"C:\Nonexistent");
+            var svc = new AssetService(@"C:\Nonexistent");
             var bundles = svc.ListBundles();
             bundles.Should().BeEmpty();
             svc.Dispose();
@@ -107,7 +106,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ListAssets_NullPath_Throws()
         {
-            var svc = new RuntimeAssetService(@"C:\Game");
+            var svc = new AssetService(@"C:\Game");
             var action = () => svc.ListAssets(null!);
             // File.Exists(null) returns false, throws FileNotFoundException
             action.Should().Throw<FileNotFoundException>();
@@ -117,7 +116,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ListAssets_NonexistentFile_Throws()
         {
-            var svc = new RuntimeAssetService(@"C:\Game");
+            var svc = new AssetService(@"C:\Game");
             var action = () => svc.ListAssets(@"C:\nonexistent.bundle");
             action.Should().Throw<FileNotFoundException>();
             svc.Dispose();
@@ -126,7 +125,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ValidateModBundle_NullPath_ReturnsFailure()
         {
-            var svc = new RuntimeAssetService(@"C:\Game");
+            var svc = new AssetService(@"C:\Game");
             // ValidateModBundle doesn't throw for null; File.Exists(null) returns false
             var result = svc.ValidateModBundle(null!);
             result.IsValid.Should().BeFalse();
@@ -136,7 +135,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ValidateModBundle_NonexistentFile_Invalid()
         {
-            var svc = new RuntimeAssetService(@"C:\Game");
+            var svc = new AssetService(@"C:\Game");
             var result = svc.ValidateModBundle(@"C:\nonexistent.bundle");
             result.IsValid.Should().BeFalse();
             result.Errors.Should().Contain(e => e.Contains("not found"));
@@ -146,7 +145,7 @@ namespace DINOForge.Tests
         [Fact]
         public void AssetService_ReadCatalog_Nonexistent_Empty()
         {
-            var svc = new RuntimeAssetService(@"C:\Nonexistent");
+            var svc = new AssetService(@"C:\Nonexistent");
             var catalog = svc.ReadCatalog();
             catalog.Should().BeEmpty();
             svc.Dispose();

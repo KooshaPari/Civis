@@ -1617,7 +1617,7 @@ packs/three parts extra
         lockEntries["packs/valid-parts"].Should().Be("abc123");
     }
 
-    // NOTE: AssetService tests removed - AssetService moved to DINOForge.Runtime.Assets
+    // NOTE: AssetService tests live in AssetServiceTests.cs (DINOForge.SDK.Assets.AssetService)
     // AssetService requires AssetsTools.NET native interop and is marked [ExcludeFromCodeCoverage]
     // Integration tests for asset operations belong in DINOForge.Tests.Integration
 

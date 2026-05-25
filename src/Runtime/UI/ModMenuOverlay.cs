@@ -443,6 +443,12 @@ namespace DINOForge.Runtime.UI
         /// <summary>Pack-specific error messages.</summary>
         public IReadOnlyList<string> Errors { get; }
 
+        /// <summary>Content type counts (e.g. factions:1, units:3).</summary>
+        public IReadOnlyDictionary<string, int> ContentSummary { get; }
+
+        /// <summary>Auto-detected content-type overlaps with other packs.</summary>
+        public IReadOnlyList<string> DetectedConflicts { get; }
+
         /// <summary>
         /// Creates a new pack display info instance.
         /// </summary>
@@ -457,7 +463,9 @@ namespace DINOForge.Runtime.UI
             bool isEnabled,
             IReadOnlyList<string> dependencies,
             IReadOnlyList<string> conflicts,
-            IReadOnlyList<string>? errors = null)
+            IReadOnlyList<string>? errors = null,
+            IReadOnlyDictionary<string, int>? contentSummary = null,
+            IReadOnlyList<string>? detectedConflicts = null)
         {
             Id = id;
             Name = name;
@@ -470,10 +478,12 @@ namespace DINOForge.Runtime.UI
             Dependencies = dependencies;
             Conflicts = conflicts;
             Errors = errors ?? new List<string>().AsReadOnly();
+            ContentSummary = contentSummary ?? (IReadOnlyDictionary<string, int>)new Dictionary<string, int>(StringComparer.Ordinal);
+            DetectedConflicts = detectedConflicts ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
         }
 
         /// <summary>Returns a copy with the enabled state changed.</summary>
         public PackDisplayInfo WithEnabled(bool enabled)
-            => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled, Dependencies, Conflicts, Errors);
+            => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled, Dependencies, Conflicts, Errors, ContentSummary, DetectedConflicts);
     }
 }

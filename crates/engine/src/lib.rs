@@ -26,21 +26,22 @@ pub mod spawn;
 pub mod spectator;
 
 pub use engine::{
-    Building, BuildingType, Citizen, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
-    PopulationEvent, Position, Production, ResourceType, Resources, Simulation, SimulationSnapshot,
-    UnitType, WorldState,
+    Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType,
+    MilitaryUnit, PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
+    SimulationSnapshot, UnitType, WorldState,
 };
 pub use spawn::{
-    grid_to_norm, norm_to_grid, spawn_airport_at, spawn_hangar_at, spawn_military_at,
-    spawn_port_at, unit_type_label,
+    grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
+    spawn_military_at, spawn_port_at, unit_type_label,
 };
 
 pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModRegistry, ModType};
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{
     apply_damage, evolve_doctrine, formation_offsets, grid_to_world_coord, line_of_sight,
-    tick_war_bridge, DamageEvent, Doctrine, DoctrineLibrary, FormationKind, MilitaryUnitSample,
-    WarBridgeConfig,
+    score_doctrine_fitness, tick_war_bridge, CombatEngagement, DamageEvent, Doctrine,
+    DoctrineLibrary, FactionEngagementStats, FormationKind, MilitaryUnitSample,
+    NoopOperationalLayer, OperationalLayer, WarBridgeConfig,
 };
 pub use hash_chain::{
     chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,

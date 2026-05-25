@@ -12,8 +12,9 @@ use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketSta
 use civ_mod_host::ModHost;
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
 use civ_tactics::{
-    apply_damage, evolve_doctrine, tick_war_bridge, DamageEvent, Doctrine, DoctrineLibrary,
-    MilitaryUnitSample, WarBridgeConfig,
+    apply_damage, evolve_doctrine, score_doctrine_fitness, tick_war_bridge, CombatEngagement,
+    DamageEvent, Doctrine, DoctrineLibrary, FactionEngagementStats, MilitaryUnitSample,
+    NoopOperationalLayer, OperationalLayer, WarBridgeConfig,
 };
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::{Entity, World};
@@ -66,6 +67,21 @@ pub type SimRng = ChaCha8Rng;
 pub struct Position {
     pub x: i32,
     pub y: i32,
+}
+
+/// Tactical damage pulse for spectator clients (normalized map coords + optional unit ids).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CombatDamagePulse {
+    /// Normalized map X.
+    pub x: f32,
+    /// Normalized map Y.
+    pub y: f32,
+    /// Attacking unit pin id when damage came from military contact.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_a: Option<u64>,
+    /// Defending unit pin id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_b: Option<u64>,
 }
 
 /// Citizen entity component
@@ -278,8 +294,11 @@ pub struct Simulation {
     /// at the start of every [`Simulation::tick`].
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
-    /// Normalized map centers for damage applied during the most recent tactics phase.
-    last_tick_damage_centers: Vec<(f32, f32)>,
+    /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
+    last_tick_combat_pulses: Vec<CombatDamagePulse>,
+    /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
+    last_tick_engagements: Vec<CombatEngagement>,
+    operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
@@ -454,7 +473,9 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
-            last_tick_damage_centers: Vec::new(),
+            last_tick_combat_pulses: Vec::new(),
+            last_tick_engagements: Vec::new(),
+            operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
                 ..ReplayLog::default()
@@ -505,7 +526,9 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
-            last_tick_damage_centers: Vec::new(),
+            last_tick_combat_pulses: Vec::new(),
+            last_tick_engagements: Vec::new(),
+            operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
                 ..ReplayLog::default()
@@ -616,8 +639,16 @@ impl Simulation {
     }
 
     /// Normalized (0..1) map centers for damage events applied on the last tick.
-    pub fn last_tick_damage_centers(&self) -> &[(f32, f32)] {
-        &self.last_tick_damage_centers
+    pub fn last_tick_combat_pulses(&self) -> &[CombatDamagePulse] {
+        &self.last_tick_combat_pulses
+    }
+
+    /// Normalized damage centers (legacy helper over [`Self::last_tick_combat_pulses`]).
+    pub fn last_tick_damage_centers(&self) -> Vec<(f32, f32)> {
+        self.last_tick_combat_pulses
+            .iter()
+            .map(|pulse| (pulse.x, pulse.y))
+            .collect()
     }
 
     /// Borrow the 3D voxel substrate. Read-only.
@@ -737,6 +768,8 @@ impl Simulation {
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     pub fn tick(&mut self) {
         self.state.tick += 1;
+        self.last_tick_combat_pulses.clear();
+        self.last_tick_engagements.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -796,24 +829,66 @@ impl Simulation {
 
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
+        self.last_tick_voxel_damage_count = 0;
+        let scale = FIXED_SCALE as f32;
+        for event in self.pending_damage.drain(..) {
+            let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
+            let y = (event.center.z as f32 / scale).clamp(0.0, 1.0);
+            let has_pulse = self.last_tick_combat_pulses.iter().any(|pulse| {
+                (pulse.x - x).abs() < f32::EPSILON && (pulse.y - y).abs() < f32::EPSILON
+            });
+            if !has_pulse {
+                self.last_tick_combat_pulses.push(CombatDamagePulse {
+                    x,
+                    y,
+                    unit_a: None,
+                    unit_b: None,
+                });
+            }
+            self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
+        }
+
         const DOCTRINE_EVOLVE_MODULO: u64 = 64;
         if self.state.tick % DOCTRINE_EVOLVE_MODULO == 0 {
+            let mut faction_stats =
+                vec![FactionEngagementStats::default(); self.faction_doctrines.len()];
+            for engagement in &self.last_tick_engagements {
+                let shooter = engagement.shooter_faction as usize;
+                let target = engagement.target_faction as usize;
+                if shooter < faction_stats.len() {
+                    faction_stats[shooter].engagements_as_shooter = faction_stats[shooter]
+                        .engagements_as_shooter
+                        .saturating_add(1);
+                }
+                if target < faction_stats.len() {
+                    faction_stats[target].engagements_as_target = faction_stats[target]
+                        .engagements_as_target
+                        .saturating_add(1);
+                }
+            }
+            if self.last_tick_voxel_damage_count > 0 && !self.last_tick_engagements.is_empty() {
+                let per_shooter = (self.last_tick_voxel_damage_count as u32)
+                    .saturating_div(self.last_tick_engagements.len() as u32)
+                    .max(1);
+                for engagement in &self.last_tick_engagements {
+                    let shooter = engagement.shooter_faction as usize;
+                    if shooter < faction_stats.len() {
+                        faction_stats[shooter].voxels_removed = faction_stats[shooter]
+                            .voxels_removed
+                            .saturating_add(per_shooter);
+                    }
+                }
+            }
             for (faction, library) in self.faction_doctrines.iter_mut().enumerate() {
+                let stats = faction_stats.get(faction).copied().unwrap_or_default();
+                for doctrine in &mut library.current {
+                    doctrine.score = score_doctrine_fitness(doctrine, &stats);
+                }
                 let mut rng = ChaCha8Rng::seed_from_u64(
                     self.state.rng_seed ^ self.state.tick ^ u64::from(faction as u32),
                 );
                 evolve_doctrine(library, &mut rng, 0.2);
             }
-        }
-
-        self.last_tick_voxel_damage_count = 0;
-        self.last_tick_damage_centers.clear();
-        let scale = civ_voxel::FIXED_SCALE as f32;
-        for event in self.pending_damage.drain(..) {
-            let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
-            let y = (event.center.z as f32 / scale).clamp(0.0, 1.0);
-            self.last_tick_damage_centers.push((x, y));
-            self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
         }
     }
 
@@ -985,31 +1060,59 @@ impl Simulation {
 
     /// Military phase — morale recovery and Phase-4 war → tactics bridge.
     fn phase_military(&mut self) {
+        use crate::spawn::military_pin_id;
+
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
-            // Morale recovery
             if unit.morale < Fixed::from_num(1) {
                 unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
                     .min(Fixed::from_num(1));
             }
         }
 
-        let units: Vec<MilitaryUnitSample> = self
+        let rows: Vec<(Entity, MilitaryUnitSample)> = self
             .world
             .query::<&MilitaryUnit>()
             .iter()
-            .map(|(_, unit)| MilitaryUnitSample {
-                faction_id: unit.faction_id,
-                grid_x: unit.position.x,
-                grid_y: unit.position.y,
+            .enumerate()
+            .map(|(idx, (entity, unit))| {
+                (
+                    entity,
+                    MilitaryUnitSample {
+                        unit_id: military_pin_id(entity, idx),
+                        faction_id: unit.faction_id,
+                        grid_x: unit.position.x,
+                        grid_y: unit.position.y,
+                    },
+                )
             })
             .collect();
-        let bridge_events = tick_war_bridge(
-            self.state.tick,
-            &WarBridgeConfig::default(),
-            &units,
-            &self.voxel,
-        );
-        self.pending_damage.extend(bridge_events);
+        let samples: Vec<MilitaryUnitSample> = rows.iter().map(|(_, s)| *s).collect();
+        let config = WarBridgeConfig::default();
+        let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
+        self.operational
+            .on_combat_engagements(self.state.tick, &engagements);
+        self.last_tick_engagements = engagements.clone();
+
+        let strength_loss = Fixed::from_num(config.strength_damage_fixed);
+        let scale = FIXED_SCALE as f32;
+        for engagement in &engagements {
+            let Some((target_entity, _)) = rows.get(engagement.target_index) else {
+                continue;
+            };
+            for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
+                if entity == *target_entity {
+                    unit.strength = (unit.strength - strength_loss).max(Fixed::from_num(0));
+                    break;
+                }
+            }
+            self.last_tick_combat_pulses.push(CombatDamagePulse {
+                x: (engagement.damage.center.x as f32 / scale).clamp(0.0, 1.0),
+                y: (engagement.damage.center.z as f32 / scale).clamp(0.0, 1.0),
+                unit_a: Some(engagement.shooter_id),
+                unit_b: Some(engagement.target_id),
+            });
+            self.pending_damage.push(engagement.damage);
+        }
     }
 
     fn phase_diplomacy(&mut self) {

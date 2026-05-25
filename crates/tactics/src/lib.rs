@@ -8,14 +8,18 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod doctrine_fitness;
 mod formation;
 mod los;
+mod operational;
 mod war_bridge;
 
+pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
 pub use formation::{formation_offsets, FormationKind};
 pub use los::line_of_sight;
+pub use operational::{NoopOperationalLayer, OperationalLayer};
 pub use war_bridge::{
-    grid_to_world_coord, tick_war_bridge, MilitaryUnitSample, WarBridgeConfig,
+    grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridgeConfig,
 };
 
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
@@ -289,17 +293,19 @@ mod tests {
         assert_eq!(wedge[0], (0, 0));
     }
 
-    /// FR-CIV-TACTICS-022 — war bridge queues damage when factions engage with LOS.
+    /// FR-CIV-TACTICS-022/024 — war bridge returns per-soldier engagements on cadence.
     #[test]
     fn war_bridge_queues_damage_on_cadence_with_los() {
         let world = VoxelWorld::new(1);
         let units = [
             MilitaryUnitSample {
+                unit_id: 10,
                 faction_id: 0,
                 grid_x: 0,
                 grid_y: 0,
             },
             MilitaryUnitSample {
+                unit_id: 20,
                 faction_id: 1,
                 grid_x: 4,
                 grid_y: 0,
@@ -310,15 +316,33 @@ mod tests {
             ..WarBridgeConfig::default()
         };
         assert!(tick_war_bridge(3, &config, &units, &world).is_empty());
-        let events = tick_war_bridge(4, &config, &units, &world);
-        assert_eq!(
-            events.len(),
-            2,
-            "each faction should damage the opposing unit when in range with LOS"
-        );
-        assert!(events
+        let engagements = tick_war_bridge(4, &config, &units, &world);
+        assert_eq!(engagements.len(), 2);
+        assert!(engagements
             .iter()
-            .all(|e| e.radius_voxels == config.damage_radius_voxels));
+            .all(|e| e.damage.radius_voxels == config.damage_radius_voxels));
+        assert!(engagements
+            .iter()
+            .any(|e| e.shooter_id == 10 && e.target_id == 20));
+    }
+
+    /// FR-CIV-TACTICS-023 — doctrine fitness increases with engagement pressure.
+    #[test]
+    fn doctrine_fitness_rewards_engagement_stats() {
+        let doctrine = Doctrine {
+            id: 1,
+            unit_composition: vec![4, 4, 4],
+            score: 0.0,
+        };
+        let quiet = FactionEngagementStats::default();
+        let active = FactionEngagementStats {
+            engagements_as_shooter: 2,
+            engagements_as_target: 0,
+            voxels_removed: 8,
+        };
+        assert!(
+            score_doctrine_fitness(&doctrine, &active) > score_doctrine_fitness(&doctrine, &quiet)
+        );
     }
 
     /// FR-CIV-TACTICS-011 — evolve_doctrine selects fitter doctrines.

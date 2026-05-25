@@ -14,10 +14,11 @@
     <!-- Copy SDK and its dependencies alongside Runtime DLL for deployment (game install only) -->
     <CopyLocalLockFileAssemblies Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">true</CopyLocalLockFileAssemblies>
 
-    <!-- Deploy ONLY netstandard2.0 build to BepInEx plugins (BepInEx-loadable); keep net8.0 in bin/ for test consumption -->
-    <OutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">$(BepInExDir)\plugins</OutputPath>
-    <AppendTargetFrameworkToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">false</AppendRuntimeIdentifierToOutputPath>
+    <!--
+      [Pattern #530] Do NOT redirect OutputPath — that empties bin/Release/netstandard2.0/ and breaks
+      the standard verification check (Get-FileHash bin/... vs BepInEx/...).
+      Instead, the DeployDll target below explicitly copies from the standard output path to BepInEx.
+    -->
 
     <!-- Suppress version conflict warning for System.IO.Compression — game provides 4.2.0.0 at runtime, netstandard2.0 ref resolves to 4.1.3.0, both are compatible -->
     <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
@@ -222,6 +223,17 @@
     <Compile Remove="Bridge\WaveInjector.cs" />
     <Compile Remove="Bridge\VFXPoolManager.cs" />
     <Compile Remove="Bridge\LODManager.cs" />
+    <!-- CI allowlist: drop all Bridge sources then re-include pure-C# helpers only -->
+    <Compile Remove="Bridge\**\*.cs" />
+    <Compile Include="Bridge\VanillaArchetypeMapper.cs" />
+    <Compile Include="Bridge\UnitSpawnRequest.cs" />
+    <Compile Include="Bridge\PackStatMappings.cs" />
+    <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
+    <Compile Include="Bridge\SessionHmac.cs" />
+    <Compile Remove="VFX\**" />
+    <Compile Remove="Assets\**" />
+    <Compile Remove="UI\Adapters\**" />
+    <Compile Remove="RustAssetPipelineInterop.cs" />
     <!-- Exclude Aviation namespace from CI builds (no Unity.Entities available without game install).
          Aviation is fully implemented (AerialUnitComponent, AerialMovementSystem, AerialSpawnSystem,
          AerialTargetingSystem, AerialBuildingMapper, AerialUnitMapper, AntiAirComponent, AviationPlugin)
@@ -237,6 +249,30 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <!--
+    [Pattern #530 / #885] Explicit DLL deploy target.
+    Copies DINOForge.Runtime.dll from the standard netstandard2.0 bin output
+    (bin/Release/netstandard2.0/) to BepInEx/plugins/ so that:
+      (a) bin/Release/netstandard2.0/DINOForge.Runtime.dll always exists for verification
+      (b) BepInEx/plugins/DINOForge.Runtime.dll is an exact copy of the built artifact
+    This replaces the earlier OutputPath-redirect approach which emptied bin/ and broke:
+      $bHash = (Get-FileHash 'bin\Release\netstandard2.0\DINOForge.Runtime.dll').Hash
+      Write-Host "Match: $($dHash -eq $bHash)"
+  -->
+  <Target Name="DeployDll" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true"
+          Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    <Message Text="[DeployDll] Deployed $(AssemblyName).dll to $(BepInExDir)\plugins" Importance="high" />
+  </Target>
 
   <!--
     Deploy Kenney CC0 UI sprites to BepInEx/plugins/dinoforge-ui-assets/ alongside the DLL.

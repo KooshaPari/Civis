@@ -176,6 +176,12 @@ All commands talk to the running process-compose instance via `--port 18080`. Th
 
 **Prefer native services over Docker** for development and tooling. Run Postgres, Redis, Caddy, Prometheus, etc. as **native processes** (e.g. via `make install-native` and process-compose). Use Docker only when native install is not feasible (e.g. CI, production image) or explicitly required. Do not recommend Docker-first for local dev when native orchestration is available.
 
+### Infra services
+
+- The local infra stack is defined in `process-compose.yaml`.
+- Use the native `postgres`, `dragonfly`/`redis-server`, `nats-server`, and `minio` processes first; Docker fallbacks exist only when a native binary is unavailable.
+- Keep infra changes aligned with the same native-services-over-Docker rule used for the app services above.
+
 **Strictly prefer local, OSS, and free.** Do **not** recommend paid online services (SaaS, cloud APIs, paid tiers) when local or free alternatives exist. Prefer: self-hosted, open-source, free-tier, or local tooling. If a feature requires external services, prefer OSS/self-hosted or free options first; document paid options only as fallback and label them clearly. No "use service X (paid)" as the default recommendation.
 
 ---

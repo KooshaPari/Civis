@@ -1,20 +1,11 @@
 name: cargo-deny
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
   push:
-    branches:
-      - main
-    paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-  schedule:
-    - cron: '0 9 * * 1'
-
+    branches: [main]
 jobs:
   cargo-deny:
     runs-on: ubuntu-latest

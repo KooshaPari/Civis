@@ -1,5 +1,9 @@
 name: Doc Links
-on: [push, pull_request]
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: read
 
@@ -7,5 +11,5 @@ jobs:
   links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: echo "Doc link check (phenotype-tooling integration)"

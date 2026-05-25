@@ -1,22 +1,29 @@
-use civ_engine::{step, WorldState, metrics, Fixed};
+use std::{net::SocketAddr, sync::Arc};
 
-fn main() {
-    let state = WorldState::default();
-    
-    // Direct Fixed calculation instead of going through policy module
-    let base = Fixed::from_num(5_000_000_000i64); // 5e9 joules
-    let consumption = base; // No scarcity multiplier for now
+use civ_engine::Simulation;
+use civ_server::{run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
+use tokio::sync::Mutex;
 
-    let next = step(state, consumption);
-    let m = metrics::compute(next.energy_budget_joules.to_f64(), consumption.to_f64());
+#[tokio::main]
+async fn main() {
+    let port = std::env::var("CIV_SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(3000);
+    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
+    let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(16);
 
-    println!(
-        "tick={} energy={} waste={} surplus={} tyranny={} legitimacy={}",
-        next.tick,
-        next.energy_budget_joules.to_f64(),
-        m.waste_joules,
-        m.surplus_joules,
-        m.tyranny_index,
-        m.legitimacy_index
-    );
+    run_ws_bridge(
+        WsBridgeConfig {
+            addr,
+            max_clients,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::from_env(),
+        },
+        Arc::new(Mutex::new(Simulation::default())),
+    )
+    .await;
 }

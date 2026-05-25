@@ -27,7 +27,39 @@ tasks:
       - bun install
 
   quality:
-    desc: "Run quality checks (lint + docs build)"
+    desc: "Run quality checks (JS lint + docs + Rust just ci)"
     cmds:
       - task: lint
       - task: docs:build
+      - just ci
+
+  quality:local:
+    desc: "Full local gates + emit .ci/quality-manifest.json (lefthook pre-push)"
+    cmds:
+      - just quality-manifest
+
+  quality:manifest-verify:
+    desc: "Cloud CI check — verify committed quality manifest (no cargo on runner)"
+    cmds:
+      - just quality-manifest-verify
+
+  rust:ci:
+    desc: "Rust lint, test, audit, unused-deps (Phenotype just ci)"
+    cmds:
+      - just ci
+
+  civis-3d-verify:
+    desc: "3D extension gate (build, test, clippy, fmt)"
+    cmds:
+      - just civis-3d-verify
+
+  infra:up:
+    desc: "Start native infra (postgres, dragonfly, nats, minio) via process-compose"
+    cmds:
+      - process-compose up
+
+  dev:watch:
+    desc: "civ-watch + dashboard (Rust HTTP :9090; no full process-compose required)"
+    cmds:
+      - just civis-3d-watch-build
+      - just civis-3d-watch

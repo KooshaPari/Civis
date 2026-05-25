@@ -1,34 +1,43 @@
+# Local-first quality: developers run `lefthook run pre-push` (or `just quality-manifest`).
+# This workflow only verifies the committed attestation — no Rust/Node toolchain on the runner.
 name: Quality
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  rust-quality:
+  quality-manifest:
+    name: quality-manifest (cloud verify)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Rust fmt
-        run: cargo fmt --check
-      - name: Rust clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-      - name: Rust test
-        run: cargo test --all
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
 
-  docs-build:
+  # Optional heavy sweep (manual / release only — not required for PR merge).
+  quality-full:
+    name: quality-full (manual)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
-      - name: Install docs deps
-        run: bun install
-      - name: Build docs
-        run: bun run docs:build
+          node-version: 20
+      - name: Full Rust + web sweep
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+          (cd clients/godot-ref/rust && cargo test)
+          (cd web && npm test)
+          (cd web/dashboard && bun install --frozen-lockfile && bun run typecheck && bun run build)

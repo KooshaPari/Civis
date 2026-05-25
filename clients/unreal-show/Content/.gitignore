@@ -1,0 +1,3 @@
+# Quixel / Fab imports (local only; keep .gitkeep folders tracked)
+Megascans/
+**/Megascans/**

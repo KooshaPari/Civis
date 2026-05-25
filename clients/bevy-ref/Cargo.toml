@@ -1,0 +1,59 @@
+[package]
+name = "civ-bevy-ref"
+description = "Civis Bevy reference 3D client: CI + determinism + agent-driven daily-driver renderer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "civ-bevy-ref"
+path = "src/main.rs"
+
+[dependencies]
+civ-voxel = { path = "../../crates/voxel" }
+crossbeam-channel = "0.5"
+
+# Bevy is an optional dep behind the `bevy` feature so the default workspace
+# build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
+bevy = { version = "0.14", optional = true, default-features = false, features = [
+    "bevy_asset",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_winit",
+    "default_font",
+    "x11",
+    "wayland",
+] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optional = true }
+tokio-tungstenite = { version = "0.24", optional = true, default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
+futures-util = { version = "0.3", optional = true }
+serde_json = { version = "1", optional = true }
+civ-protocol-3d = { path = "../../crates/protocol-3d", optional = true }
+
+[dev-dependencies]
+civ-protocol-3d = { path = "../../crates/protocol-3d" }
+serde_json = "1"
+
+[features]
+default = []
+bevy = [
+    "dep:bevy",
+    "dep:tokio",
+    "dep:tokio-tungstenite",
+    "dep:futures-util",
+    "dep:serde_json",
+    "dep:civ-protocol-3d",
+]
+
+[[bin]]
+name = "civ-bevy-window"
+path = "src/bin/bevy_window.rs"
+required-features = ["bevy"]

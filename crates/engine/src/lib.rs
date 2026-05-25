@@ -1,5 +1,5 @@
 //! CivLab Deterministic Simulation Engine
-//! 
+//!
 //! Uses fixed-point arithmetic for deterministic simulation results.
 //! Uses i64 with scaling for deterministic calculations.
 //!
@@ -12,18 +12,52 @@
 //! - `io` - File I/O utilities
 
 pub mod engine;
-pub mod policy;
-pub mod metrics;
+pub mod hash_chain;
+pub mod integrity;
+pub mod invariants;
 pub mod io;
+pub mod lod;
+pub mod metrics;
+pub mod policy;
+pub mod replay;
+pub mod replay_format;
+pub mod scenario;
+pub mod spawn;
+pub mod spectator;
 
 pub use engine::{
-    Simulation, SimulationSnapshot, WorldState,
-    Position, Citizen, JobType, Building, BuildingType,
-    Resources, Production, ResourceType, MilitaryUnit, UnitType,
+    Building, BuildingType, Citizen, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
+    PopulationEvent, Position, Production, ResourceType, Resources, Simulation, SimulationSnapshot,
+    UnitType, WorldState,
+};
+pub use spawn::{
+    grid_to_norm, norm_to_grid, spawn_airport_at, spawn_hangar_at, spawn_military_at,
+    spawn_port_at, unit_type_label,
 };
 
-pub use policy::{effective_consumption, PolicyInput};
-pub use metrics::{compute, Metrics};
+pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
+pub use civ_tactics::{apply_damage, DamageEvent};
+pub use hash_chain::{
+    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+};
+pub use integrity::{check_integrity, IntegrityError};
+pub use invariants::{check_tick_invariants, InvariantError};
+pub use lod::LodTier;
+pub use lod::{
+    aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity,
+    should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
+};
+pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
+pub use replay::{ReplayError, ReplayEvent, ReplayLog};
+pub use replay_format::{
+    decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
+    FORMAT_VERSION, MAGIC,
+};
+pub use scenario::{
+    baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
+};
+pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -42,44 +76,54 @@ pub const SCALE: i64 = 1_000_000; // 10^6 (easier to work with)
 impl Fixed {
     pub const ZERO: Fixed = Fixed { raw: 0 };
     pub const ONE: Fixed = Fixed { raw: SCALE };
-    
+
     pub fn from_num<T: TryInto<i128>>(n: T) -> Self {
         let scaled = n.try_into().unwrap_or(0) * SCALE as i128;
         Fixed { raw: scaled as i64 }
     }
-    
+
     pub fn from_raw(raw: i64) -> Self {
         Fixed { raw }
     }
-    
+
     pub fn to_f64(self) -> f64 {
         self.raw as f64 / SCALE as f64
     }
-    
+
     pub fn saturating_add(self, other: Fixed) -> Fixed {
-        Fixed { raw: self.raw.saturating_add(other.raw) }
+        Fixed {
+            raw: self.raw.saturating_add(other.raw),
+        }
     }
-    
+
     pub fn saturating_sub(self, other: Fixed) -> Fixed {
-        Fixed { raw: self.raw.saturating_sub(other.raw) }
+        Fixed {
+            raw: self.raw.saturating_sub(other.raw),
+        }
     }
-    
+
     pub fn clamp(self, min: Fixed, max: Fixed) -> Fixed {
-        Fixed { raw: self.raw.clamp(min.raw, max.raw) }
+        Fixed {
+            raw: self.raw.clamp(min.raw, max.raw),
+        }
     }
 }
 
 impl std::ops::Add for Fixed {
     type Output = Fixed;
     fn add(self, other: Fixed) -> Fixed {
-        Fixed { raw: self.raw + other.raw }
+        Fixed {
+            raw: self.raw + other.raw,
+        }
     }
 }
 
 impl std::ops::Sub for Fixed {
     type Output = Fixed;
     fn sub(self, other: Fixed) -> Fixed {
-        Fixed { raw: self.raw - other.raw }
+        Fixed {
+            raw: self.raw - other.raw,
+        }
     }
 }
 
@@ -114,14 +158,18 @@ impl std::ops::SubAssign for Fixed {
 
 impl serde::Serialize for Fixed {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: serde::Serializer {
+    where
+        S: serde::Serializer,
+    {
         serializer.serialize_f64(self.to_f64())
     }
 }
 
 impl<'de> serde::Deserialize<'de> for Fixed {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: serde::Deserializer<'de> {
+    where
+        D: serde::Deserializer<'de>,
+    {
         let f = f64::deserialize(deserializer)?;
         Ok(Fixed::from_num((f * SCALE as f64) as i64))
     }
@@ -138,7 +186,9 @@ pub fn create_rng(seed: u64) -> SimRng {
 /// Advance simulation by one tick (simple API)
 pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     state.tick += 1;
-    let result = state.energy_budget_joules.saturating_sub(consumption_joules);
+    let result = state
+        .energy_budget_joules
+        .saturating_sub(consumption_joules);
     state.energy_budget_joules = if result.raw < 0 { Fixed::ZERO } else { result };
     state
 }
@@ -166,34 +216,38 @@ mod tests {
 
     #[test]
     fn step_energy_floor_at_zero() {
-        let mut s = WorldState::default();
-        s.energy_budget_joules = Fixed::from_num(50);
+        let s = WorldState {
+            energy_budget_joules: Fixed::from_num(50),
+            ..WorldState::default()
+        };
         let n = step(s, Fixed::from_num(100));
         assert_eq!(n.energy_budget_joules, Fixed::ZERO);
     }
 
     #[test]
     fn determinism_same_seed_same_output() {
-        let s1 = WorldState { 
-            tick: 0, 
-            population: 100, 
-            energy_budget_joules: Fixed::from_num(1000), 
+        let s1 = WorldState {
+            tick: 0,
+            population: 100,
+            energy_budget_joules: Fixed::from_num(1000),
             rng_seed: 12345,
             factions: HashMap::new(),
             faction_treasury: HashMap::new(),
+            ..WorldState::default()
         };
-        let s2 = WorldState { 
-            tick: 0, 
-            population: 100, 
-            energy_budget_joules: Fixed::from_num(1000), 
+        let s2 = WorldState {
+            tick: 0,
+            population: 100,
+            energy_budget_joules: Fixed::from_num(1000),
             rng_seed: 12345,
             factions: HashMap::new(),
             faction_treasury: HashMap::new(),
+            ..WorldState::default()
         };
-        
+
         let r1 = step(s1, Fixed::from_num(10));
         let r2 = step(s2, Fixed::from_num(10));
-        
+
         assert_eq!(r1.tick, r2.tick);
         assert_eq!(r1.energy_budget_joules, r2.energy_budget_joules);
     }

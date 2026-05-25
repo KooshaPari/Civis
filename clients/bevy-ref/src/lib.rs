@@ -1,0 +1,984 @@
+//! civ-bevy-ref library surface.
+//!
+//! Splits cleanly into two parts:
+//!
+//! - **Always compiled** — pure converters and helpers that turn the
+//!   engine-neutral [`civ_voxel::MeshBuffer`] into engine-native vertex
+//!   arrays. Currently this just re-exposes the kernel `MeshBuffer` and adds
+//!   small utility shapes.
+//! - **`bevy` feature** — the Bevy renderer (`pub mod bevy_render`). Pulls
+//!   Bevy 0.14 behind an optional feature set. Off by default so the workspace
+//!   build stays fast for CI / agent-driven smoke runs.
+
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+pub use civ_voxel::{
+    ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
+};
+
+/// Default orbit azimuth in radians (45° — camera south-east of centre).
+pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
+
+/// Default orbit elevation in radians (~35° — slightly above the horizon).
+pub const DEFAULT_CAMERA_ELEVATION_RAD: f32 = 0.615_479_7;
+
+/// Default scene centre for a single 16³ chunk centred on the origin grid cell.
+pub const DEFAULT_CAMERA_CENTRE: [f32; 3] = [8.0, 8.0, 8.0];
+
+/// Default camera stand-off distance in world units (≈ three chunk edges).
+pub const DEFAULT_CAMERA_DISTANCE: f32 = 48.0;
+
+/// Engine-neutral camera placement helper. The actual renderer uses this to
+/// position a chase / orbit camera around a voxel scene.
+///
+/// Orbit controls are not wired yet; drag-to-orbit will reuse these constants.
+/// Until then, [`CameraTarget::orbit_position`] frames the first chunk at the origin.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CameraTarget {
+    /// Centre of the scene in world units.
+    pub centre: [f32; 3],
+    /// Distance from the centre to place the camera.
+    pub distance: f32,
+    /// Horizontal orbit angle in radians (0 = +Z, increasing toward +X).
+    pub azimuth_rad: f32,
+    /// Vertical orbit angle in radians (0 = horizon, π/2 = straight down).
+    pub elevation_rad: f32,
+}
+
+impl Default for CameraTarget {
+    fn default() -> Self {
+        Self {
+            centre: DEFAULT_CAMERA_CENTRE,
+            distance: DEFAULT_CAMERA_DISTANCE,
+            azimuth_rad: DEFAULT_CAMERA_AZIMUTH_RAD,
+            elevation_rad: DEFAULT_CAMERA_ELEVATION_RAD,
+        }
+    }
+}
+
+impl CameraTarget {
+    /// Eye position for an orbit camera looking at [`Self::centre`].
+    #[must_use]
+    pub fn orbit_position(&self) -> [f32; 3] {
+        let horiz = self.distance * self.elevation_rad.cos();
+        [
+            self.centre[0] + horiz * self.azimuth_rad.sin(),
+            self.centre[1] + self.distance * self.elevation_rad.sin(),
+            self.centre[2] + horiz * self.azimuth_rad.cos(),
+        ]
+    }
+}
+
+/// Debug rendering toggles for the Bevy reference window (`civ-bevy-window`).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct DebugRender {
+    /// When true, chunk meshes render with wireframe overlay (Bevy `Wireframe` on native).
+    pub wireframe: bool,
+}
+
+impl DebugRender {
+    /// Flip [`Self::wireframe`] and return the new value.
+    pub fn toggle_wireframe(&mut self) -> bool {
+        self.wireframe = !self.wireframe;
+        self.wireframe
+    }
+}
+
+/// Alpha for chunk solid fill when wireframe debug mode is active (ghost overlay).
+pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
+
+/// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct WsSpectatorMeta {
+    /// Day/night flag from the simulation climate phase.
+    pub is_day: bool,
+    /// Latest tick when present on the snapshot payload.
+    pub tick: Option<u64>,
+}
+
+/// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    let result = value.get("result")?;
+    let is_day = result.get("is_day")?.as_bool()?;
+    let tick = result.get("tick").and_then(|v| v.as_u64());
+    Some(WsSpectatorMeta { is_day, tick })
+}
+
+/// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket status).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct LiveHudSnapshot {
+    /// Whether the WebSocket client is connected and receiving frames.
+    pub connected: bool,
+    /// Latest simulation tick from the server, if any frame has arrived yet.
+    pub tick: Option<u64>,
+    /// Smoothed frames-per-second estimate from the renderer loop.
+    pub fps: f32,
+    /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
+    pub focused_chunk: Option<ChunkId>,
+}
+
+impl LiveHudSnapshot {
+    /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
+    #[must_use]
+    pub fn format_overlay(&self) -> String {
+        let status = if self.connected {
+            "connected"
+        } else {
+            "disconnected"
+        };
+        let tick = self
+            .tick
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "—".to_string());
+        let mut line = format!("FPS: {:.0} | tick: {tick} | {status}", self.fps);
+        if let Some(chunk) = self.focused_chunk {
+            line.push_str(&format!(" | chunk: {}", chunk.0));
+        }
+        line
+    }
+}
+
+/// Default Civis JSON-RPC WebSocket host.
+pub const DEFAULT_WS_HOST: &str = "127.0.0.1";
+
+/// Default Civis JSON-RPC WebSocket port.
+pub const DEFAULT_WS_PORT: u16 = 3000;
+
+/// Default Civis JSON-RPC WebSocket path.
+pub const DEFAULT_WS_PATH: &str = "/ws";
+
+/// When true, the live attach client skips redundant JSON text tick frames and
+/// requests binary-only broadcast when the server honors `tick_format=binary`.
+pub const DEFAULT_WS_PREFER_BINARY: bool = true;
+
+/// Build a WebSocket URL for the Civis 3D live attach path (`ws://host:port/path`).
+#[must_use]
+pub fn live_ws_url(host: &str, port: u16, path: &str) -> String {
+    let normalized_path = if path.starts_with('/') {
+        path.to_string()
+    } else {
+        format!("/{path}")
+    };
+    format!("ws://{host}:{port}{normalized_path}")
+}
+
+/// Default local attach URL used by `civ-bevy-window`.
+#[must_use]
+pub fn default_live_ws_url() -> String {
+    let host = std::env::var("CIV_WS_HOST").unwrap_or_else(|_| DEFAULT_WS_HOST.to_string());
+    let port = std::env::var("CIV_SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(DEFAULT_WS_PORT);
+    let path = std::env::var("CIV_WS_PATH").unwrap_or_else(|_| DEFAULT_WS_PATH.to_string());
+    live_ws_url(&host, port, &path)
+}
+
+/// Parse `CIVIS_WS_BINARY` (`1`, `true`, `yes`, case-insensitive) or fall back to
+/// [`DEFAULT_WS_PREFER_BINARY`].
+#[must_use]
+pub fn ws_prefer_binary_from_env() -> bool {
+    std::env::var("CIVIS_WS_BINARY")
+        .map(|value| parse_ws_binary_env_flag(&value))
+        .unwrap_or(DEFAULT_WS_PREFER_BINARY)
+}
+
+/// Returns true for common truthy env strings used by `CIVIS_WS_BINARY`.
+#[must_use]
+pub fn parse_ws_binary_env_flag(value: &str) -> bool {
+    matches!(
+        value.trim(),
+        "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON"
+    )
+}
+
+/// Append `tick_format=binary` when absent so `civ-server` may switch to
+/// [`TickBroadcastFormat::Binary`] for this connection.
+#[must_use]
+pub fn with_tick_format_binary_query(url: &str) -> String {
+    if url.contains("tick_format=") {
+        return url.to_string();
+    }
+    let separator = if url.contains('?') { '&' } else { '?' };
+    format!("{url}{separator}tick_format=binary")
+}
+
+/// Resolve the live WebSocket URL from environment variables.
+///
+/// Precedence:
+/// 1. `CIV_WS_URL` — full `ws://…` URL
+/// 2. `CIV_SERVER_PORT` plus optional `CIV_WS_HOST` / `CIV_WS_PATH`
+/// 3. [`default_live_ws_url`]
+///
+/// When [`ws_prefer_binary_from_env`] is true, appends `tick_format=binary`.
+#[must_use]
+pub fn resolve_live_ws_url() -> String {
+    let base = resolve_ws_url_from_env();
+    if ws_prefer_binary_from_env() {
+        with_tick_format_binary_query(&base)
+    } else {
+        base
+    }
+}
+
+/// Resolve attach URL without the binary broadcast hint query parameter.
+#[must_use]
+pub fn resolve_ws_url_from_env() -> String {
+    if let Ok(full) = std::env::var("CIV_WS_URL") {
+        let trimmed = full.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+
+    default_live_ws_url()
+}
+
+/// Decode a packed [`ChunkId`] into chunk grid coordinates (live bridge layout).
+#[must_use]
+pub fn decode_chunk_id(id: ChunkId) -> (i32, i32, i32) {
+    let raw = id.0;
+    let mut cx = ((raw >> 40) & 0x00ff_ffff) as i32;
+    let mut cy = ((raw >> 16) & 0x00ff_ffff) as i32;
+    let mut cz = (raw & 0x0000_ffff) as i32;
+    if cx & 0x0080_0000 != 0 {
+        cx |= !0x00ff_ffff;
+    }
+    if cy & 0x0080_0000 != 0 {
+        cy |= !0x00ff_ffff;
+    }
+    if cz & 0x0000_8000 != 0 {
+        cz |= !0x0000_ffff;
+    }
+    (cx, cy, cz)
+}
+
+/// Pack chunk grid coordinates into a [`ChunkId`] (inverse of [`decode_chunk_id`]).
+#[must_use]
+pub fn encode_chunk_id(cx: i32, cy: i32, cz: i32) -> ChunkId {
+    let cx_u = cx as u32 as u64;
+    let cy_u = cy as u32 as u64;
+    let cz_u = cz as u32 as u64;
+    ChunkId((cx_u << 40) | (cy_u << 16) | (cz_u & 0xFFFF))
+}
+
+/// Map a world-space position to the containing chunk grid cell.
+#[must_use]
+pub fn chunk_id_at_world_pos(pos: [f32; 3], chunk_edge: f32) -> ChunkId {
+    let cx = (pos[0] / chunk_edge).floor() as i32;
+    let cy = (pos[1] / chunk_edge).floor() as i32;
+    let cz = (pos[2] / chunk_edge).floor() as i32;
+    encode_chunk_id(cx, cy, cz)
+}
+
+/// Stub raycast: intersect a ray with a horizontal plane and return the chunk at the hit.
+#[must_use]
+pub fn chunk_raycast_stub(
+    ray_origin: [f32; 3],
+    ray_dir: [f32; 3],
+    plane_y: f32,
+    chunk_edge: f32,
+) -> Option<ChunkId> {
+    if ray_dir[1].abs() < f32::EPSILON {
+        return None;
+    }
+    let t = (plane_y - ray_origin[1]) / ray_dir[1];
+    if t <= 0.0 {
+        return None;
+    }
+    let hit = [
+        ray_origin[0] + ray_dir[0] * t,
+        plane_y,
+        ray_origin[2] + ray_dir[2] * t,
+    ];
+    Some(chunk_id_at_world_pos(hit, chunk_edge))
+}
+
+/// Resolve a focused chunk for minimap XZ grid selection against loaded chunk ids.
+#[must_use]
+pub fn focused_chunk_at_grid(cx: i32, cz: i32, preferred_cy: i32, loaded: &[u64]) -> ChunkId {
+    let preferred = encode_chunk_id(cx, preferred_cy, cz);
+    if loaded.contains(&preferred.0) {
+        return preferred;
+    }
+    for &raw in loaded {
+        let id = ChunkId(raw);
+        let (x, _, z) = decode_chunk_id(id);
+        if x == cx && z == cz {
+            return id;
+        }
+    }
+    preferred
+}
+
+/// Voxel chunk edge length in world units (16³ leaf chunks).
+pub const VOXEL_CHUNK_EDGE: f32 = 16.0;
+
+/// World-space centre of a chunk grid cell (for distance culling).
+#[must_use]
+pub fn chunk_world_centre(chunk_id: ChunkId, chunk_edge: f32) -> [f32; 3] {
+    let (x, y, z) = decode_chunk_id(chunk_id);
+    [
+        (x as f32 + 0.5) * chunk_edge,
+        (y as f32 + 0.5) * chunk_edge,
+        (z as f32 + 0.5) * chunk_edge,
+    ]
+}
+
+/// Euclidean distance from the camera to a chunk's world-space centre.
+#[must_use]
+pub fn chunk_distance_from_camera(chunk_id: ChunkId, camera_pos: [f32; 3], chunk_edge: f32) -> f32 {
+    let centre = chunk_world_centre(chunk_id, chunk_edge);
+    let dx = centre[0] - camera_pos[0];
+    let dy = centre[1] - camera_pos[1];
+    let dz = centre[2] - camera_pos[2];
+    (dx * dx + dy * dy + dz * dz).sqrt()
+}
+
+/// Sphere-distance cull stub: render when chunk centre is within `max_dist`.
+#[must_use]
+pub fn should_render_chunk(chunk_id: ChunkId, camera_pos: [f32; 3], max_dist: f32) -> bool {
+    chunk_distance_from_camera(chunk_id, camera_pos, VOXEL_CHUNK_EDGE) <= max_dist
+}
+
+/// Duration of the chunk spawn fade-in in seconds.
+pub const CHUNK_FADE_DURATION_SECS: f32 = 0.3;
+
+/// Linear fade alpha for a chunk spawn animation (`0.0` → `1.0` over
+/// [`CHUNK_FADE_DURATION_SECS`]).
+#[must_use]
+pub fn chunk_fade_alpha(elapsed_secs: f32) -> f32 {
+    if elapsed_secs <= 0.0 {
+        0.0
+    } else if elapsed_secs >= CHUNK_FADE_DURATION_SECS {
+        1.0
+    } else {
+        elapsed_secs / CHUNK_FADE_DURATION_SECS
+    }
+}
+
+/// Returns true once the chunk fade-in has reached full opacity.
+#[must_use]
+pub fn chunk_fade_complete(elapsed_secs: f32) -> bool {
+    elapsed_secs >= CHUNK_FADE_DURATION_SECS
+}
+
+/// Apply a fade alpha to an opaque sRGB triple (preserves RGB, sets alpha).
+#[must_use]
+pub fn chunk_fade_color(rgb: [f32; 3], alpha: f32) -> [f32; 4] {
+    [rgb[0], rgb[1], rgb[2], alpha.clamp(0.0, 1.0)]
+}
+
+/// Default agent marker width in world units (before optional payload scale).
+pub const AGENT_MARKER_WIDTH: f32 = 0.8;
+
+/// Default agent marker height in world units (before optional payload scale).
+pub const AGENT_MARKER_HEIGHT: f32 = 1.6;
+
+/// Default agent marker depth in world units (before optional payload scale).
+pub const AGENT_MARKER_DEPTH: f32 = 0.8;
+
+/// Deterministic sRGB triple in `[0, 1]` for an opaque agent id (hash → hue).
+#[must_use]
+pub fn agent_color_from_id(agent_id: u64) -> [f32; 3] {
+    let hash = splitmix64(agent_id);
+    let hue = (hash as f32 / u64::MAX as f32).fract();
+    hsv_to_rgb(hue, 0.62, 0.88)
+}
+
+/// Short label for an agent marker (`name` when provided, otherwise `#<id>`).
+#[must_use]
+pub fn agent_label_stub(agent_id: u64, name: Option<&str>) -> String {
+    if let Some(label) = name.map(str::trim).filter(|value| !value.is_empty()) {
+        return label.to_string();
+    }
+    format!("#{agent_id}")
+}
+
+/// Uniform scale multiplier from a payload field (`1.0` when absent or invalid).
+#[must_use]
+pub fn agent_scale_multiplier(scale: f32) -> f32 {
+    if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    }
+}
+
+fn splitmix64(mut value: u64) -> u64 {
+    value = value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = value;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
+    let h = h.fract().max(0.0);
+    let i = (h * 6.0).floor() as i32;
+    let f = h * 6.0 - i as f32;
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - f * s);
+    let t = v * (1.0 - (1.0 - f) * s);
+    match i % 6 {
+        0 => [v, t, p],
+        1 => [q, v, p],
+        2 => [p, v, t],
+        3 => [p, q, v],
+        4 => [t, p, v],
+        _ => [v, p, q],
+    }
+}
+
+/// Inclusive chunk-grid bounds for the XZ plane: `(min_x, min_z, max_x, max_z)`.
+pub type MinimapBounds = (i32, i32, i32, i32);
+
+/// Map a loaded chunk into normalised minimap UV coordinates within `bounds`.
+///
+/// Returns `[u, v]` in `0.0..=1.0` at the centre of the chunk cell. `(0, 0)` is
+/// the top-left of the bounds rectangle; `(1, 1)` is the bottom-right.
+#[must_use]
+pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2] {
+    let (cx, _cy, cz) = decode_chunk_id(chunk_id);
+    let (min_x, min_z, max_x, max_z) = bounds;
+    let span_x = (max_x - min_x + 1).max(1) as f32;
+    let span_z = (max_z - min_z + 1).max(1) as f32;
+    [
+        (cx - min_x) as f32 / span_x + 0.5 / span_x,
+        (cz - min_z) as f32 / span_z + 0.5 / span_z,
+    ]
+}
+
+/// Inverse of [`chunk_to_minimap_uv`]: map normalised minimap UV back to chunk grid XZ.
+///
+/// UV `(0, 0)` is the top-left of `bounds`; `(1, 1)` is the bottom-right. Values are
+/// clamped to the inclusive chunk grid range.
+#[must_use]
+pub fn minimap_uv_to_chunk_grid(uv: [f32; 2], bounds: MinimapBounds) -> (i32, i32) {
+    let (min_x, min_z, max_x, max_z) = bounds;
+    let span_x = (max_x - min_x + 1).max(1) as f32;
+    let span_z = (max_z - min_z + 1).max(1) as f32;
+    let cx = (uv[0] * span_x + min_x as f32).floor() as i32;
+    let cz = (uv[1] * span_z + min_z as f32).floor() as i32;
+    (cx.clamp(min_x, max_x), cz.clamp(min_z, max_z))
+}
+
+/// Target [`day_factor`](presentation_day_factor_target) when `sim.snapshot` reports night.
+pub const PRESENTATION_NIGHT_DAY_FACTOR: f32 = 0.32;
+
+/// Day sky / clear colour (sRGB, matches web `0x87b7e0`).
+pub const PRESENTATION_DAY_CLEAR_RGB: [f32; 3] = [0.529, 0.718, 0.878];
+
+/// Night sky / clear colour (sRGB, matches web `0x0a1530`).
+pub const PRESENTATION_NIGHT_CLEAR_RGB: [f32; 3] = [0.039, 0.082, 0.188];
+
+/// Day ambient fill brightness (warm).
+pub const PRESENTATION_DAY_AMBIENT_BRIGHTNESS: f32 = 0.45;
+
+/// Night ambient fill brightness (dim cool).
+pub const PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS: f32 = 0.14;
+
+/// Day ambient colour (warm sRGB).
+pub const PRESENTATION_DAY_AMBIENT_RGB: [f32; 3] = [0.96, 0.93, 0.86];
+
+/// Night ambient colour (cool sRGB).
+pub const PRESENTATION_NIGHT_AMBIENT_RGB: [f32; 3] = [0.55, 0.68, 0.92];
+
+/// Target presentation blend for directional light, ambient, and clear colour.
+#[must_use]
+pub fn presentation_day_factor_target(is_day: bool) -> f32 {
+    if is_day {
+        1.0
+    } else {
+        PRESENTATION_NIGHT_DAY_FACTOR
+    }
+}
+
+/// Linear interpolation between two sRGB triples (`t` in `0.0..=1.0`).
+#[must_use]
+pub fn lerp_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+    let t = t.clamp(0.0, 1.0);
+    [
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t,
+        a[2] + (b[2] - a[2]) * t,
+    ]
+}
+
+/// Clear / sky colour for a smoothed [`day_factor`](presentation_day_factor_target).
+#[must_use]
+pub fn presentation_clear_color_rgb(day_factor: f32) -> [f32; 3] {
+    lerp_rgb(
+        PRESENTATION_NIGHT_CLEAR_RGB,
+        PRESENTATION_DAY_CLEAR_RGB,
+        day_factor,
+    )
+}
+
+/// Ambient fill brightness for a smoothed `day_factor`.
+#[must_use]
+pub fn presentation_ambient_brightness(day_factor: f32) -> f32 {
+    PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS
+        + (PRESENTATION_DAY_AMBIENT_BRIGHTNESS - PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS) * day_factor
+}
+
+/// Ambient fill colour for a smoothed `day_factor`.
+#[must_use]
+pub fn presentation_ambient_color_rgb(day_factor: f32) -> [f32; 3] {
+    lerp_rgb(
+        PRESENTATION_NIGHT_AMBIENT_RGB,
+        PRESENTATION_DAY_AMBIENT_RGB,
+        day_factor,
+    )
+}
+
+/// Stub LOD selector: 0 = full detail, higher = coarser (max 3).
+#[must_use]
+pub fn mesh_lod_level(distance: f32) -> u8 {
+    if distance < 32.0 {
+        0
+    } else if distance < 64.0 {
+        1
+    } else if distance < 128.0 {
+        2
+    } else {
+        3
+    }
+}
+
+/// Parse a JSON text WebSocket payload into a [`civ_protocol_3d::Frame3d`].
+///
+/// Mirrors the `ws_client` receive path; kept here so CI can test protocol
+/// parsing without a GPU or live server.
+#[cfg(any(test, feature = "bevy"))]
+pub fn parse_frame3d_json(text: &str) -> Result<civ_protocol_3d::Frame3d, String> {
+    serde_json::from_str(text).map_err(|err| err.to_string())
+}
+
+/// Parse an F3D0 binary WebSocket payload into a [`civ_protocol_3d::Frame3d`].
+///
+/// Wraps [`civ_protocol_3d::decode_frame3d_binary`] for the live attach path and
+/// CI smoke tests without a GPU or live server.
+#[cfg(any(test, feature = "bevy"))]
+pub fn parse_frame3d_binary(bytes: &[u8]) -> Result<civ_protocol_3d::Frame3d, String> {
+    civ_protocol_3d::decode_frame3d_binary(bytes).map_err(|err| format!("{err:?}"))
+}
+
+/// Returns true when `bytes` begins with the F3D0 binary frame magic.
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn is_frame3d_binary(bytes: &[u8]) -> bool {
+    bytes.len() >= civ_protocol_3d::FRAME3D_BINARY_MAGIC.len()
+        && bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC)
+}
+
+/// Decode a WebSocket payload the same way as [`ws_client`]: F3D0 binary first,
+/// then UTF-8 JSON text fallback.
+#[cfg(any(test, feature = "bevy"))]
+pub fn parse_ws_payload(payload: &[u8]) -> Result<civ_protocol_3d::Frame3d, String> {
+    if is_frame3d_binary(payload) {
+        return parse_frame3d_binary(payload);
+    }
+    let text = std::str::from_utf8(payload).map_err(|err| err.to_string())?;
+    parse_frame3d_json(text)
+}
+
+#[cfg(feature = "bevy")]
+pub mod bevy_render;
+
+#[cfg(feature = "bevy")]
+/// Live Bevy/WebSocket attach path for the 3D reference client.
+pub mod ws_client;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Always-on smoke: the public surface compiles + default camera target is
+    /// sensible.
+    #[test]
+    fn default_camera_target_is_sensible() {
+        let t = CameraTarget::default();
+        assert!(t.distance > 0.0);
+        assert_eq!(t.centre, DEFAULT_CAMERA_CENTRE);
+        let [x, y, z] = t.orbit_position();
+        assert!(y > t.centre[1], "camera should sit above scene centre");
+        assert!((x - t.centre[0]).hypot(z - t.centre[2]) > 1.0);
+    }
+
+    #[test]
+    fn debug_render_wireframe_toggle_flips_state() {
+        let mut debug = DebugRender::default();
+        assert!(!debug.wireframe);
+        assert!(debug.toggle_wireframe());
+        assert!(debug.wireframe);
+        assert!(!debug.toggle_wireframe());
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_connection_and_tick() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(42),
+            fps: 59.7,
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("60"));
+        assert!(line.contains("42"));
+        assert!(line.contains("connected"));
+    }
+
+    #[test]
+    fn live_hud_overlay_shows_disconnected_without_tick() {
+        let line = LiveHudSnapshot {
+            connected: false,
+            tick: None,
+            fps: 0.0,
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("disconnected"));
+        assert!(line.contains('—'));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_focused_chunk_id() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            focused_chunk: Some(ChunkId(42)),
+        }
+        .format_overlay();
+        assert!(line.contains("chunk: 42"));
+    }
+
+    #[test]
+    fn parse_jsonrpc_snapshot_meta_reads_is_day_and_tick() {
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4}}"#;
+        let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
+        assert!(!meta.is_day);
+        assert_eq!(meta.tick, Some(12));
+    }
+
+    #[test]
+    fn parse_jsonrpc_snapshot_meta_ignores_tick_broadcast() {
+        let text = r#"{"tick":5,"voxel_delta":[]}"#;
+        assert!(parse_jsonrpc_snapshot_meta(text).is_none());
+    }
+
+    #[test]
+    fn encode_chunk_id_roundtrips_decode() {
+        let id = encode_chunk_id(5, 7, 9);
+        assert_eq!(decode_chunk_id(id), (5, 7, 9));
+    }
+
+    #[test]
+    fn chunk_raycast_stub_hits_horizontal_plane() {
+        let origin = [8.0, 16.0, 8.0];
+        let dir = [0.0, -1.0, 0.0];
+        let chunk = chunk_raycast_stub(origin, dir, 8.0, VOXEL_CHUNK_EDGE).expect("hit");
+        assert_eq!(decode_chunk_id(chunk), (0, 0, 0));
+    }
+
+    #[test]
+    fn focused_chunk_at_grid_prefers_loaded_y_slice() {
+        let raw = encode_chunk_id(2, 3, 4).0;
+        let alt = encode_chunk_id(2, 9, 4).0;
+        let picked = focused_chunk_at_grid(2, 4, 3, &[alt, raw]);
+        assert_eq!(picked, ChunkId(raw));
+    }
+
+    /// MeshBuffer re-export is callable.
+    #[test]
+    fn mesh_buffer_default_is_empty() {
+        let m = MeshBuffer::default();
+        assert!(m.vertices.is_empty());
+        assert!(m.indices.is_empty());
+    }
+
+    #[test]
+    fn default_live_ws_url_matches_builder() {
+        assert_eq!(
+            default_live_ws_url(),
+            live_ws_url(DEFAULT_WS_HOST, DEFAULT_WS_PORT, DEFAULT_WS_PATH)
+        );
+    }
+
+    #[test]
+    fn parse_ws_binary_env_flag_accepts_common_truthy_values() {
+        assert!(parse_ws_binary_env_flag("1"));
+        assert!(parse_ws_binary_env_flag(" true "));
+        assert!(!parse_ws_binary_env_flag("0"));
+        assert!(!parse_ws_binary_env_flag("false"));
+    }
+
+    #[test]
+    fn with_tick_format_binary_query_appends_once() {
+        let base = default_live_ws_url();
+        assert_eq!(
+            with_tick_format_binary_query(&base),
+            format!("{base}?tick_format=binary")
+        );
+        assert_eq!(
+            with_tick_format_binary_query(&format!("{base}?role=operator")),
+            format!("{base}?role=operator&tick_format=binary")
+        );
+        assert_eq!(
+            with_tick_format_binary_query(&format!("{base}?tick_format=binary")),
+            format!("{base}?tick_format=binary")
+        );
+    }
+
+    #[test]
+    fn resolve_ws_url_from_env_parses_addr_and_path() {
+        let url = {
+            std::env::set_var("CIV_WS_URL", "");
+            std::env::set_var("CIV_SERVER_PORT", "8765");
+            std::env::set_var("CIV_WS_PATH", "/attach");
+            resolve_ws_url_from_env()
+        };
+        assert_eq!(url, "ws://127.0.0.1:8765/attach");
+        std::env::remove_var("CIV_WS_URL");
+        std::env::remove_var("CIV_SERVER_PORT");
+        std::env::remove_var("CIV_WS_PATH");
+    }
+
+    #[test]
+    fn decode_chunk_id_unpacks_grid_coords() {
+        let raw = (5_i64 << 40) | (7_i64 << 16) | 9_i64;
+        assert_eq!(decode_chunk_id(ChunkId(raw as u64)), (5, 7, 9));
+    }
+
+    #[test]
+    fn should_render_chunk_uses_sphere_distance() {
+        let cam = DEFAULT_CAMERA_CENTRE;
+        assert!(should_render_chunk(
+            ChunkId(0),
+            cam,
+            DEFAULT_CAMERA_DISTANCE
+        ));
+        let far = ChunkId((5_i64 << 40) as u64);
+        assert!(!should_render_chunk(far, cam, 32.0));
+    }
+
+    #[test]
+    fn chunk_fade_alpha_ramps_linearly() {
+        assert_eq!(chunk_fade_alpha(0.0), 0.0);
+        assert!((chunk_fade_alpha(0.15) - 0.5).abs() < f32::EPSILON);
+        assert_eq!(chunk_fade_alpha(CHUNK_FADE_DURATION_SECS), 1.0);
+        assert_eq!(chunk_fade_alpha(CHUNK_FADE_DURATION_SECS + 1.0), 1.0);
+    }
+
+    #[test]
+    fn chunk_fade_complete_after_duration() {
+        assert!(!chunk_fade_complete(0.0));
+        assert!(!chunk_fade_complete(0.29));
+        assert!(chunk_fade_complete(CHUNK_FADE_DURATION_SECS));
+    }
+
+    #[test]
+    fn chunk_fade_color_preserves_rgb() {
+        let rgba = chunk_fade_color([0.72, 0.69, 0.62], 0.4);
+        assert_eq!(rgba[0], 0.72);
+        assert_eq!(rgba[1], 0.69);
+        assert_eq!(rgba[2], 0.62);
+        assert_eq!(rgba[3], 0.4);
+    }
+
+    #[test]
+    fn agent_color_from_id_is_in_unit_cube_and_distinct() {
+        let a = agent_color_from_id(1);
+        let b = agent_color_from_id(2);
+        for channel in a {
+            assert!((0.0..=1.0).contains(&channel));
+        }
+        assert_ne!(a, b);
+        assert_eq!(agent_color_from_id(1), agent_color_from_id(1));
+    }
+
+    #[test]
+    fn agent_label_stub_prefers_name() {
+        assert_eq!(agent_label_stub(7, Some(" Ada ")), "Ada");
+        assert_eq!(agent_label_stub(7, None), "#7");
+        assert_eq!(agent_label_stub(7, Some("   ")), "#7");
+    }
+
+    #[test]
+    fn agent_scale_multiplier_filters_invalid_values() {
+        assert_eq!(agent_scale_multiplier(1.0), 1.0);
+        assert_eq!(agent_scale_multiplier(1.5), 1.5);
+        assert_eq!(agent_scale_multiplier(0.0), 1.0);
+        assert_eq!(agent_scale_multiplier(f32::NAN), 1.0);
+    }
+
+    #[test]
+    fn chunk_to_minimap_uv_maps_chunk_centre_in_bounds() {
+        let bounds = (0, 0, 3, 3);
+        let origin = chunk_to_minimap_uv(ChunkId(0), bounds);
+        assert!((origin[0] - 0.125).abs() < f32::EPSILON);
+        assert!((origin[1] - 0.125).abs() < f32::EPSILON);
+
+        let raw = (3_i64 << 40) | (9_i64 << 16) | 3_i64;
+        let corner = chunk_to_minimap_uv(ChunkId(raw as u64), bounds);
+        assert!((corner[0] - 0.875).abs() < f32::EPSILON);
+        assert!((corner[1] - 0.875).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn chunk_to_minimap_uv_centres_single_chunk_bounds() {
+        let raw = (2_i64 << 40) | (4_i64 << 16) | 6_i64;
+        let chunk = ChunkId(raw as u64);
+        let bounds = (2, 6, 2, 6);
+        let uv = chunk_to_minimap_uv(chunk, bounds);
+        assert!((uv[0] - 0.5).abs() < f32::EPSILON);
+        assert!((uv[1] - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn minimap_uv_to_chunk_grid_inverts_chunk_to_minimap_uv() {
+        let bounds = (0, 0, 3, 3);
+        let origin = ChunkId(0);
+        let uv = chunk_to_minimap_uv(origin, bounds);
+        assert_eq!(minimap_uv_to_chunk_grid(uv, bounds), (0, 0));
+
+        let raw = (3_i64 << 40) | (9_i64 << 16) | 3_i64;
+        let corner = ChunkId(raw as u64);
+        let uv = chunk_to_minimap_uv(corner, bounds);
+        assert_eq!(minimap_uv_to_chunk_grid(uv, bounds), (3, 3));
+    }
+
+    #[test]
+    fn minimap_uv_to_chunk_grid_clamps_to_bounds() {
+        let bounds = (1, 2, 4, 5);
+        assert_eq!(minimap_uv_to_chunk_grid([0.0, 0.0], bounds), (1, 2));
+        assert_eq!(minimap_uv_to_chunk_grid([1.0, 1.0], bounds), (4, 5));
+    }
+
+    #[test]
+    fn mesh_lod_level_increases_with_distance() {
+        assert_eq!(mesh_lod_level(0.0), 0);
+        assert_eq!(mesh_lod_level(48.0), 1);
+        assert_eq!(mesh_lod_level(200.0), 3);
+    }
+
+    #[test]
+    fn presentation_day_factor_target_matches_web_night_blend() {
+        assert_eq!(presentation_day_factor_target(true), 1.0);
+        assert!((presentation_day_factor_target(false) - 0.3).abs() < 0.05);
+    }
+
+    #[test]
+    fn presentation_clear_color_lerps_day_and_night() {
+        let night = presentation_clear_color_rgb(0.0);
+        assert_eq!(night, PRESENTATION_NIGHT_CLEAR_RGB);
+        let day = presentation_clear_color_rgb(1.0);
+        assert_eq!(day, PRESENTATION_DAY_CLEAR_RGB);
+        let mid = presentation_clear_color_rgb(0.5);
+        assert!(mid[2] > night[2] && mid[2] < day[2]);
+    }
+
+    #[test]
+    fn presentation_ambient_warm_day_and_cool_night() {
+        let day = presentation_ambient_color_rgb(1.0);
+        let night = presentation_ambient_color_rgb(0.0);
+        assert!(day[0] > night[0], "day ambient should be warmer (more red)");
+        assert!(
+            night[2] > day[2],
+            "night ambient should be cooler (more blue)"
+        );
+        assert!(presentation_ambient_brightness(1.0) > presentation_ambient_brightness(0.0));
+    }
+
+    #[test]
+    fn mesh_lod_level_boundary_thresholds() {
+        assert_eq!(mesh_lod_level(31.9), 0);
+        assert_eq!(mesh_lod_level(32.0), 1);
+        assert_eq!(mesh_lod_level(63.9), 1);
+        assert_eq!(mesh_lod_level(64.0), 2);
+        assert_eq!(mesh_lod_level(127.9), 2);
+        assert_eq!(mesh_lod_level(128.0), 3);
+    }
+
+    #[test]
+    fn chunk_distance_from_camera_at_same_point_is_zero() {
+        let cam = DEFAULT_CAMERA_CENTRE;
+        let dist = chunk_distance_from_camera(ChunkId(0), cam, VOXEL_CHUNK_EDGE);
+        assert!(dist.abs() < f32::EPSILON);
+    }
+
+    /// FR-CIV-BEVY-002 — JSON `Frame3d` payloads parse without a live socket.
+    #[test]
+    fn parse_frame3d_json_accepts_building_diff() {
+        use civ_protocol_3d::{BuildingDiffFrame, BuildingProvenance, Frame3d};
+
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 9,
+            provenance: BuildingProvenance::Procedural,
+        });
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let parsed = parse_frame3d_json(&json).expect("parse");
+        assert_eq!(parsed.tick(), 9);
+    }
+
+    #[test]
+    fn is_frame3d_binary_detects_magic() {
+        use civ_protocol_3d::FRAME3D_BINARY_MAGIC;
+
+        assert!(is_frame3d_binary(FRAME3D_BINARY_MAGIC));
+        assert!(!is_frame3d_binary(b"{\"VoxelDelta\""));
+    }
+
+    #[test]
+    fn parse_ws_payload_accepts_binary_and_text() {
+        use civ_protocol_3d::{
+            encode_frame3d_binary, BuildingDiffFrame, BuildingProvenance, Frame3d,
+        };
+
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 3,
+            provenance: BuildingProvenance::Procedural,
+        });
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let bytes = encode_frame3d_binary(&frame).expect("encode");
+
+        assert_eq!(parse_ws_payload(json.as_bytes()).expect("text"), frame);
+        assert_eq!(parse_ws_payload(&bytes).expect("binary"), frame);
+    }
+
+    #[test]
+    fn parse_ws_payload_prefers_binary_when_magic_present() {
+        use civ_protocol_3d::{
+            encode_frame3d_binary, BuildingDiffFrame, BuildingProvenance, Frame3d,
+        };
+
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 11,
+            provenance: BuildingProvenance::Procedural,
+        });
+        let bytes = encode_frame3d_binary(&frame).expect("encode");
+        assert_eq!(parse_ws_payload(&bytes).expect("binary-first"), frame);
+    }
+
+    /// FR-CIV-BEVY-003 — F3D0 binary `Frame3d` payloads round-trip without a live socket.
+    #[test]
+    fn parse_frame3d_binary_roundtrips_building_diff() {
+        use civ_protocol_3d::{
+            encode_frame3d_binary, BuildingDiffFrame, BuildingProvenance, Frame3d,
+        };
+
+        let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
+            tick: 9,
+            provenance: BuildingProvenance::Procedural,
+        });
+        let bytes = encode_frame3d_binary(&frame).expect("encode");
+        let parsed = parse_frame3d_binary(&bytes).expect("parse");
+        assert_eq!(parsed, frame);
+    }
+}

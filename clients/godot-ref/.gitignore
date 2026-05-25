@@ -1,0 +1,4 @@
+rust/target/
+.godot/
+*.tmp
+*.import

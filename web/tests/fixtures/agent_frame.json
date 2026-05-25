@@ -1,0 +1,9 @@
+{
+  "AgentAppearance": {
+    "tick": 42,
+    "updates": [
+      { "agent_id": 1, "era": 0, "wardrobe": 0, "tools": 0 },
+      { "agent_id": 2, "era": 1, "wardrobe": 1, "tools": 0, "scale": 1.25 }
+    ]
+  }
+}

@@ -1,26 +1,45 @@
 # CIV Engineering Plan: Phases 0-6 with DAG Dependencies
 
-**Project:** CivLab (Headless Rust Civilization Simulator + RTS)
-**Architecture:** Modular workspace with 8 crates (engine, economy, spatial, climate, actors, policy, geo, social, metrics, server)
+**Project:** Civis (headless Rust civilization simulator + 3D substrate)
+**Workspace:** 17 members in root `Cargo.toml` — 16 under `crates/` plus `clients/bevy-ref` (no `crates/climate`, `crates/actors`, `crates/social`, `crates/metrics`, `crates/policy`, `crates/geo`, `crates/spatial`)
 **Methodology:** Test-first (TDD), spec-driven, determinism-first, L3 copilot agent workers
-**Timeline:** 6 phases, ~2-4 weeks per phase, parallel execution via git worktrees
+**Status key:** ✅ landed · 🔶 partial/stub · ❌ not started (per plan)
+**Authoritative map:** `docs/IMPLEMENTATION_STATUS.md` · verify crates: `cargo metadata --no-deps --format-version 1`
+
+---
+
+## Current vs planned (workspace)
+
+| Area | Planned (legacy PLAN / specs) | Actual (`Cargo.toml` + tree) | Status |
+|------|-----------------------------|------------------------------|--------|
+| Workspace size | ~8 domain crates | 17 members (`Cargo.toml`): 16× `crates/*` + `clients/bevy-ref` | ✅ layout |
+| Core tick / RNG | `crates/engine` + FR-CIV-0001 tests | `civ-engine`: `Simulation::tick()`, `ChaCha8Rng`, inline `#[cfg(test)]` in `engine.rs` / `lib.rs` | ✅ |
+| Replay / determinism | `tests/fr_determinism_replay.rs` | `ReplayLog`, `.civreplay` (`replay.rs`, `replay_format.rs`); determinism tests in `engine.rs` | 🔶 |
+| Climate | `crates/climate` | `civ-planet` orbital climate; **no** `crates/climate` (CIV-0102 CO₂ model) | 🔶 |
+| Economy | `crates/economy` market + joule | `civ-economy` **partial** (`EconomyState`, `drain_energy_budget`, `step`, `MarketState::step`); engine `phase_economy` syncs budget + market | 🔶 |
+| Actors / social | `crates/actors`, `crates/social` | `civ-agents` + citizen ECS in `civ-engine`; **no** `actors`/`social` crates | 🔶 |
+| Policy / diplomacy | `crates/policy` | `civ-laws` RON stubs; diplomacy not split out | ❌ |
+| Metrics / research export | `crates/metrics` | `civ-engine` metrics + `civ-research` stubs; no `metrics` crate | 🔶 |
+| Server / protocol | WebSocket + JSON tick stream | `civ-server` JSON-RPC + `ws_bridge`; `civ-protocol-3d`; `server/tests/ws_smoke.rs` | 🔶 |
+| Phase 0 (foundation) | M0 complete | Engine tests green; replay beyond original FR harness | 🔶 |
+| Phase 1 (economy) | M1 market + joule | Ledger + market stepped in engine; full CIV-0100 institution layer not implemented | 🔶 |
 
 ---
 
 ## Phase Diagram & Critical Path
 
 ```
-Phase 0: Foundation (Core Tick Loop)
-  └─> Phase 1: Economy Layer
-        ├─> Phase 2: Actor + Social
-        │     └─> Phase 4: War + Diplomacy
-        └─> Phase 3: Client Protocol  (parallel)
-              ├─> Phase 4: War + Diplomacy
-              └─> Phase 5: Research API  (after Phase 4)
-                    └─> Phase 6: Polish + Hardening
+Phase 0: Foundation (Core Tick Loop)                    [🔶 partial]
+  └─> Phase 1: Economy Layer                          [🔶 partial]
+        ├─> Phase 2: Actor + Social                   [❌ planned crates missing]
+        │     └─> Phase 4: War + Diplomacy            [❌]
+        └─> Phase 3: Client Protocol  (parallel)      [🔶 JSON-RPC / WS smoke]
+              ├─> Phase 4: War + Diplomacy            [❌]
+              └─> Phase 5: Research API               [🔶 scenario + replay landed in engine]
+                    └─> Phase 6: Polish + Hardening   [❌]
 ```
 
-**Critical Path:** Phase 0 → 1 → 2 → 4 → 5 → 6
+**Critical Path:** Phase 0 → 1 → 2 → 4 → 5 → 6 (unchanged intent)
 **Parallel Tracks:** Phase 3 can run alongside Phases 1-2
 **Blocker Dependencies:** See "Depends On" column in each phase table below.
 
@@ -29,8 +48,9 @@ Phase 0: Foundation (Core Tick Loop)
 ## Phase 0: Foundation — Core Tick Loop & Determinism Tests
 
 **Goal:** Deterministic simulation core passing all foundational tests (M0)
-**Duration:** 3-5 days
-**Success Metric:** `cargo test --package civ-engine` runs 100%, all determinism replay tests pass
+**Duration:** 3-5 days (original estimate; core landed, replay harness differs from plan)
+**Status:** 🔶 Partial — tick loop, seeded RNG, and replay log exist; separate `crates/engine/tests/fr_*` harness not used
+**Success Metric:** `cargo test -p civ-engine` passes (determinism + replay tests in `crates/engine/src/engine.rs`, `replay_format.rs`, `lib.rs`)
 
 ### Phase 0 Worktree Setup
 
@@ -39,25 +59,39 @@ git worktree add ../civ-wt-phase0-foundation main
 cd ../civ-wt-phase0-foundation
 ```
 
+### Phase 0 — actual code map
+
+| Concern | Planned path | Actual path |
+|---------|--------------|-------------|
+| Tick loop | `crates/engine/src/simulation.rs` | `crates/engine/src/engine.rs` — `Simulation::tick()` |
+| Determinism tests | `crates/engine/tests/fr_*.rs` | `crates/engine/tests/determinism_proptest.rs` + inline `#[cfg(test)]` in `engine.rs`, `lib.rs`, `replay_format.rs` |
+| Replay | `record_state` / `verify_replay` | `crates/engine/src/replay.rs`, `replay_format.rs` — `ReplayLog`, `.civreplay` save/load |
+| RNG | `Simulation::rng_seed()` contract tests | `SimRng = ChaCha8Rng` in `engine.rs` / `lib.rs` |
+| Invariants | — (not in original P0 table) | `crates/engine/src/invariants.rs` — tick/replay alignment, energy ≥ 0 |
+| Scenario loader | Phase 5 | **Landed early:** `crates/engine/src/scenario.rs`, `scenarios/baseline.yaml` |
+
+Legacy `fr_*.rs` harness files are not used; extend `determinism_proptest.rs` or module tests instead of adding `fr_core_tick_loop.rs` unless deliberately splitting layout.
+
 ### Phase 0 Tasks
 
-| Task ID | Description | Depends On | Owner | L3 Copilot Dispatch | Acceptance Criteria |
-|---------|-------------|-----------|-------|-------------------|---------------------|
-| P0.1 | Core tick loop struct `Simulation::tick(&mut self)` | — | copilot-L3-0a | `copilot -p "Implement FR-CIV-0001-TICK: Core simulation tick loop. Write failing test in crates/engine/tests/fr_core_tick_loop.rs. Test must verify tick increments turn counter and returns Ok(SimulationResult). Do not implement yet. Commit: 'test(engine): FR-CIV-0001-TICK failing test'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Test file exists and test fails (code not yet written) |
-| P0.2 | Implement core tick loop logic | P0.1 | copilot-L3-0b | `copilot -p "Implement FR-CIV-0001-TICK: Core tick loop. Write implementation in crates/engine/src/simulation.rs::Simulation::tick(). Must pass all tests in crates/engine/tests/fr_core_tick_loop.rs. Run: cargo test --package civ-engine. Must pass: cargo clippy -- -D warnings. Commit: 'feat(engine): FR-CIV-0001-TICK core tick loop'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | `cargo test --package civ-engine` passes, clippy clean |
-| P0.3 | Determinism replay harness | P0.2 | copilot-L3-0c | `copilot -p "Implement FR-CIV-0001-REPLAY: Determinism replay test harness. Write failing test in crates/engine/tests/fr_determinism_replay.rs. Test must record a sequence of 100 ticks, then replay with same seed and verify tick-by-tick state equality. Do not implement. Commit: 'test(engine): FR-CIV-0001-REPLAY failing test'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Test file exists, test fails |
-| P0.4 | Implement determinism replay | P0.3 | copilot-L3-0d | `copilot -p "Implement FR-CIV-0001-REPLAY: Determinism replay. Add Simulation::record_state() and Simulation::verify_replay() methods in crates/engine/src/simulation.rs. Must pass all tests in crates/engine/tests/fr_determinism_replay.rs. Run: cargo test --package civ-engine -- --test-threads=1. Commit: 'feat(engine): FR-CIV-0001-REPLAY determinism replay'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | All tests pass, single-threaded determinism verified |
-| P0.5 | RNG seeding contract | P0.4 | copilot-L3-0e | `copilot -p "Implement FR-CIV-0001-RNG: RNG seeding contract. Write failing test in crates/engine/tests/fr_rng_seeding.rs. Test must verify all RNG calls are seeded from Simulation::rng_seed(). Do not implement. Commit: 'test(engine): FR-CIV-0001-RNG failing test'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Test file exists, test fails |
-| P0.6 | RNG seeding implementation | P0.5 | copilot-L3-0f | `copilot -p "Implement FR-CIV-0001-RNG: Add Simulation::seed field and rand::ChaCha8Rng seeded from it. All randomness must use this seeded RNG. Update all crates to accept seeded RNG from engine. Run: cargo test --package civ-engine. Commit: 'feat(engine): FR-CIV-0001-RNG seeded RNG'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | All tests pass, no unseeded RNG calls |
+| Task ID | Description | Depends On | Status | Acceptance criteria (actual) |
+|---------|-------------|------------|--------|------------------------------|
+| P0.1 | Core tick loop `Simulation::tick(&mut self)` | — | ✅ | `cargo test -p civ-engine` — tick advances `state.tick` |
+| P0.2 | Tick phases (voxel, planet, economy sync, replay record) | P0.1 | ✅ | `determinism_holds_with_all_phases_enabled`, `tick_invariants_hold_across_many_ticks` |
+| P0.3 | Determinism replay harness | P0.2 | 🔶 | Tests use `ReplayLog` / voxel replay, not standalone `fr_determinism_replay.rs` |
+| P0.4 | Replay implementation | P0.3 | 🔶 | `replay_reproduces_final_voxel_chunk_count_and_tick`, `civreplay_save_load_restores_tick_after_ticks` |
+| P0.5 | RNG seeding contract | P0.4 | ✅ | `test_determinism`, `determinism_same_seed_same_output` in `lib.rs` |
+| P0.6 | Seeded RNG across dependent crates | P0.5 | 🔶 | Engine + `civ-agents` use `ChaCha8Rng`; audit remaining crates as they grow |
 
 ---
 
 ## Phase 1: Economy Layer — Market + Joule Allocators
 
-**Goal:** Full economy system passing all FR-CIV-ECON tests (M1)
-**Duration:** 5-7 days
-**Depends On:** Phase 0 (core tick loop must work)
-**Success Metric:** All `FR-CIV-ECON-*` tests in `crates/economy/tests/` pass with 100% coverage
+**Goal:** Full economy system per CIV-0100 / CIV-0107 (M1) — ledger, markets, allocation
+**Duration:** 5-7 days (not started beyond stub)
+**Depends On:** Phase 0 core tick loop (🔶 sufficient to proceed)
+**Status:** 🔶 Partial — ledger drain/step + deterministic `MarketState::step` wired in `phase_economy`; full allocation / institution layer not started
+**Success Metric:** `cargo test -p civ-economy` covers market + joule + proptest invariants; `phase_economy` delegates to `civ_economy::step` with real state mutation ✅
 
 ### Phase 1 Worktree Setup
 
@@ -66,16 +100,27 @@ git worktree add ../civ-wt-phase1-economy main
 cd ../civ-wt-phase1-economy
 ```
 
+### Phase 1 — actual code map
+
+| Concern | Planned path | Actual path |
+|---------|--------------|-------------|
+| Economy crate | `crates/economy` with `market.rs`, `joule.rs` | `lib.rs` + `market.rs` — `EconomyState`, `drain_energy_budget`, `step`, `MarketState::step` |
+| Economy tests | `crates/economy/tests/fr_econ_*.rs` | `#[cfg(test)]` in `lib.rs` + `market.rs` (ledger + market + proptest) |
+| Engine integration | `economy::tick()` from `Simulation::tick` | `engine.rs::phase_economy` — syncs `WorldState::energy_budget_joules` ↔ `EconomyState`, policy drain via `effective_consumption` |
+| Spec reference | FR-CIV-ECON-* | `docs/specs/CIV-0100-economy-v1.md` |
+
+No `crates/climate` or separate `crates/metrics` — climate inputs come from `civ-planet` inside engine phases.
+
 ### Phase 1 Tasks
 
-| Task ID | Description | Depends On | Owner | L3 Copilot Dispatch | Acceptance Criteria |
-|---------|-------------|-----------|-------|-------------------|---------------------|
-| P1.1 | Market struct and price tracking | P0.6 | copilot-L3-1a | `copilot -p "Implement FR-CIV-ECON-001-MARKET: Market struct for price tracking. Write failing test in crates/economy/tests/fr_econ_market.rs. Test must define Market { prices: HashMap<GoodID, Price>, ... } and verify price updates. Commit: 'test(economy): FR-CIV-ECON-001 failing test'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Test file exists, test fails |
-| P1.2 | Market implementation | P1.1 | copilot-L3-1b | `copilot -p "Implement FR-CIV-ECON-001-MARKET: Market price tracking in crates/economy/src/market.rs. Implement Market struct with price_update(), get_price(), clear_stale_prices(). Must pass all tests. Commit: 'feat(economy): FR-CIV-ECON-001 market'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | All tests pass |
-| P1.3 | Joule allocator harness | P1.2 | copilot-L3-1c | `copilot -p "Implement FR-CIV-ECON-002-JOULE: Joule allocator harness. Write failing test in crates/economy/tests/fr_econ_joule.rs. Test must verify Joule allocation across actors sums to available energy. Commit: 'test(economy): FR-CIV-ECON-002 failing test'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Test file exists, test fails |
-| P1.4 | Joule allocator implementation | P1.3 | copilot-L3-1d | `copilot -p "Implement FR-CIV-ECON-002-JOULE: Joule allocator in crates/economy/src/joule.rs. Implement JouleAllocator struct with allocate(available_energy, actors) -> Vec<Joules>. Energy conservation invariant: sum <= available. Commit: 'feat(economy): FR-CIV-ECON-002 joule'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | All tests pass, energy invariant holds |
-| P1.5 | Property-based tests for economy | P1.4 | copilot-L3-1e | `copilot -p "Implement FR-CIV-ECON-PROP: Property-based tests for economy. Write proptest tests in crates/economy/tests/fr_econ_properties.rs. Test invariants: (1) Joule allocation never exceeds budget (2) Market prices stay bounded (3) No negative balances. Use proptest::proptest! macro. Commit: 'test(economy): FR-CIV-ECON-PROP property tests'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Property tests pass, coverage > 90% |
-| P1.6 | Economy module integration | P1.5 | copilot-L3-1f | `copilot -p "Integrate economy into engine. Add economy module to crates/engine/src/lib.rs. Call economy::tick() from Simulation::tick(). Write integration test in crates/engine/tests/fr_engine_economy.rs. Commit: 'feat(engine): integrate economy layer'" --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ &` | Integration test passes, no clippy warnings |
+| Task ID | Description | Depends On | Status | Acceptance criteria (target) |
+|---------|-------------|------------|--------|------------------------------|
+| P1.1 | Market struct and price tracking | P0.6 | ✅ | `MarketState` in `market.rs`; unit tests for per-tick price updates |
+| P1.2 | Market implementation | P1.1 | ✅ | `cargo test -p civ-economy` — deterministic price update invariants + edge cases |
+| P1.3 | Joule allocator harness | P1.2 | 🔶 | `drain_energy_budget` + `step` exist; full `JouleAllocator` / actor splits ❌ |
+| P1.4 | Joule allocator implementation | P1.3 | ❌ | Conservation: allocated joules ≤ budget |
+| P1.5 | Property-based economy tests | P1.4 | ✅ | `proptest` in `market.rs` (determinism + positive prices) |
+| P1.6 | Engine integration | P1.5 | ✅ | `phase_economy_*` tests — budget sync, `civ_economy::step`, `MarketState::step` |
 
 ---
 
@@ -257,7 +302,7 @@ git log --oneline  # verify commits
 cargo test --all   # final verification
 
 # Back on main
-cd /Users/kooshapari/temp-PRODVERCEL/485/kush/civ
+cd C:/Users/koosh/Dev/Civis
 git merge ../civ-wt-phase{N}-{name}
 git worktree remove ../civ-wt-phase{N}-{name}
 task quality     # final gate before next phase

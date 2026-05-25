@@ -1,5 +1,9 @@
 /target
+/.process-compose/
 /node_modules
+/docs/playwright-report/
+/web/dashboard/node_modules/
+/web/dashboard/dist/
 /.task
 .DS_Store
 .env
@@ -36,3 +40,4 @@ worktrees/
 worktrees/
 vendor/phenodocs/node_modules/
 .vitepress/cache/
+target-ci/

@@ -1,0 +1,21 @@
+{
+  "VoxelDelta": {
+    "tick": 17,
+    "deltas": [
+      {
+        "event": {
+          "chunk_id": 7,
+          "write_seq": 3
+        },
+        "voxels": []
+      },
+      {
+        "event": {
+          "chunk_id": 42,
+          "write_seq": 1
+        },
+        "voxels": []
+      }
+    ]
+  }
+}

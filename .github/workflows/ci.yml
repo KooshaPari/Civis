@@ -6,7 +6,8 @@ on:
   pull_request:
     branches: [main]
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
@@ -75,6 +76,7 @@ jobs:
       - name: Test (Python MCP Server)
         run: |
           cd src/Tools/DinoforgeMcp
+          python -m pip install --upgrade "pip==25.0.1"
           pip install -e ".[dev]" -q
           pytest tests/ -v --tb=short --junit-xml=python-test-results.xml
 

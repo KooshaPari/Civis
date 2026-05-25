@@ -13,6 +13,7 @@ namespace DINOForge.Analyzers
     {
         public const string DiagnosticId = "DF0094";
         private const string Category = "Design";
+        private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
 
         private static readonly LocalizableString Title =
             (LocalizableString)"Unbounded version constraint";
@@ -117,11 +118,11 @@ namespace DINOForge.Analyzers
 
             // Pattern 1: ">=X.Y.Z" with no upper bound (no space after version)
             // Match ">=0.1.0" but not ">=0.1.0 <1.0.0"
-            if (Regex.IsMatch(trimmed, @"^\s*>=\d+\.\d+(\.\d+)?\s*$"))
+            if (Regex.IsMatch(trimmed, @"^\s*>=\d+\.\d+(\.\d+)?\s*$", RegexOptions.None, RegexMatchTimeout))
                 return true;
 
             // Pattern 2: ">X.Y.Z" with no upper bound (strict lower, no upper)
-            if (Regex.IsMatch(trimmed, @"^\s*>\d+\.\d+(\.\d+)?\s*$"))
+            if (Regex.IsMatch(trimmed, @"^\s*>\d+\.\d+(\.\d+)?\s*$", RegexOptions.None, RegexMatchTimeout))
                 return true;
 
             // Pattern 3: Wildcard "*" (accepts any version)

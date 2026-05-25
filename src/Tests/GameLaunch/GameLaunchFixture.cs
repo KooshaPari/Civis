@@ -85,7 +85,7 @@ public sealed class GameLaunchFixture : IAsyncLifetime
         string? gameDir = null;
         if (!string.IsNullOrEmpty(gamePath))
         {
-            gameExePath = ResolveGameExecutablePath(gamePath);
+            gameExePath = GameLaunchPaths.ResolveGameExecutablePath(gamePath);
             if (gameExePath is null && !attachOnly)
             {
                 IsInitialized = false;
@@ -98,17 +98,26 @@ public sealed class GameLaunchFixture : IAsyncLifetime
             }
         }
 
-        if (attachOnly && gameExePath is null && !IsGameProcessRunning())
+        if (attachOnly)
         {
-            IsInitialized = false;
-            return;
+            if (!IsGameProcessRunning())
+            {
+                IsInitialized = false;
+                return;
+            }
         }
         else
         {
+            if (gameExePath is null)
+            {
+                IsInitialized = false;
+                return;
+            }
+
             _gameProcess = Process.Start(new ProcessStartInfo
             {
-                FileName = gameExePath!,
-                WorkingDirectory = gameDir ?? Path.GetDirectoryName(gameExePath!) ?? "",
+                FileName = gameExePath,
+                WorkingDirectory = gameDir ?? Path.GetDirectoryName(gameExePath) ?? "",
                 UseShellExecute = false,
                 CreateNoWindow = true,
             }) ?? throw new InvalidOperationException($"Failed to start game at: {gameExePath}");
@@ -225,26 +234,6 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 
     private static long RemainingMs(DateTime deadline) =>
         Math.Max(0, (long)(deadline - DateTime.UtcNow).TotalMilliseconds);
-
-    /// <summary>
-    /// Resolves <paramref name="gamePath"/> to the game executable: accepts either the .exe
-    /// file or the Steam install directory containing <see cref="GameExecutableName"/>.
-    /// </summary>
-    private static string? ResolveGameExecutablePath(string gamePath)
-    {
-        if (File.Exists(gamePath))
-        {
-            return gamePath;
-        }
-
-        if (Directory.Exists(gamePath))
-        {
-            string exeInDir = Path.Combine(gamePath, GameExecutableName);
-            return File.Exists(exeInDir) ? exeInDir : null;
-        }
-
-        return null;
-    }
 
     public Task DisposeAsync()
     {

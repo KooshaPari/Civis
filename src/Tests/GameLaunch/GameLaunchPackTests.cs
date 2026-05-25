@@ -1,7 +1,10 @@
 #nullable enable
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.SDK;
+using DINOForge.SDK.Registry;
 using FluentAssertions;
 using Xunit;
 
@@ -45,13 +48,35 @@ public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        CatalogSnapshot catalog = await fixture.Client!.GetCatalogAsync();
+        const string packId = WarfareStarwarsPackUnits.PackId;
 
-        catalog.Units.Should().NotBeEmpty("loaded packs should have registered units");
+        GameStatus status = await fixture.Client!.StatusAsync();
+        status.LoadedPacks.Should().Contain(packId,
+            "warfare-starwars must be active after bootstrap before counting registry units");
 
-        int totalUnits = catalog.Units.Sum(u => u.EntityCount);
-        totalUnits.Should().Be(28,
-            "warfare-starwars defines 14 Republic units + 14 CIS units");
+        // getCatalog returns ECS archetypes (EntityCount = live entities per archetype).
+        // Summing EntityCount across the full world catalog is not a pack unit count (often 200+).
+        CatalogSnapshot catalog = await fixture.Client.GetCatalogAsync();
+        catalog.Units.Should().NotBeEmpty("ECS catalog should list unit archetypes after bootstrap");
+
+        // Registry count: ContentLoader registers pack YAML into RegistryManager by SourcePackId.
+        var registries = new RegistryManager();
+        var loader = new ContentLoader(registries);
+        loader.LoadPack(WarfareStarwarsPackPaths.ResolvePackRoot());
+        loader.LastLoadErrorCount.Should().Be(0,
+            "warfare-starwars pack YAML should load without errors: {0}",
+            string.Join("; ", loader.LastLoadErrors));
+
+        int packUnitCount = registries.Units.All.Values.Count(entry =>
+            string.Equals(entry.SourcePackId, packId, StringComparison.OrdinalIgnoreCase));
+        packUnitCount.Should().Be(WarfareStarwarsPackUnits.All.Length,
+            "warfare-starwars defines 14 Republic units + 14 CIS units in the unit registry");
+
+        foreach (string unitId in WarfareStarwarsPackUnits.All)
+        {
+            registries.Units.Contains(unitId).Should().BeTrue(
+                "each warfare-starwars unit id should be registered: {0}", unitId);
+        }
     }
 
     [SkippableFact]

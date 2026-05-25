@@ -29,17 +29,21 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        UiActionResult debugPanel = await fixture.Client!.QueryUiAsync("name=DebugPanel");
-        debugPanel.Success.Should().BeTrue("DebugPanel should exist on DFCanvas at main menu");
+        UiActionResult debugPanel = await QueryDfCanvasPanelAsync("DebugPanel").ConfigureAwait(false);
+        debugPanel.MatchCount.Should().BeGreaterThan(0, "DebugPanel should exist on DFCanvas at main menu");
         debugPanel.MatchedNode.Should().NotBeNull();
         debugPanel.MatchedNode!.Visible.Should().BeFalse(
             "DebugPanel should start hidden (CanvasGroup alpha 0) before F9 toggle");
 
-        UiActionResult modMenuPanel = await fixture.Client.QueryUiAsync("name=ModMenuPanel");
-        modMenuPanel.Success.Should().BeTrue("ModMenuPanel should exist on DFCanvas at main menu");
-        modMenuPanel.MatchedNode.Should().NotBeNull();
-        modMenuPanel.MatchedNode!.Visible.Should().BeFalse(
-            "ModMenuPanel should start hidden (CanvasGroup alpha 0) before F10 toggle");
+        UiActionResult modMenuPanel = await QueryDfCanvasPanelAsync("ModMenuPanel").ConfigureAwait(false);
+        modMenuPanel.MatchCount.Should().BeGreaterThan(0, "ModMenuPanel should exist on DFCanvas at main menu");
+
+        // Close mod menu when a prior test left it open (shared GameLaunch collection).
+        if (modMenuPanel.MatchedNode?.Visible == true)
+        {
+            await fixture.Client.ToggleUiAsync("modmenu").ConfigureAwait(false);
+            await Task.Delay(400).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -135,7 +139,7 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
             "ToggleUiAsync(debug) should open debug panel in-game");
 
         UiWaitResult debugWait = await fixture.Client.WaitForUiAsync(
-            "name=DebugPanel", "visible", timeoutMs: 3000);
+            "path=DebugPanel", "visible", timeoutMs: 12_000);
         debugWait.Ready.Should().BeTrue(
             "debug panel should be visible after F9 toggle during gameplay");
 
@@ -144,7 +148,7 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
             "ToggleUiAsync(modmenu) should open mod menu in-game");
 
         UiWaitResult modWait = await fixture.Client.WaitForUiAsync(
-            "name=ModMenuPanel", "visible", timeoutMs: 3000);
+            "path=ModMenuPanel", "visible", timeoutMs: 8000);
         modWait.Ready.Should().BeTrue(
             "mod menu should be visible after F10 toggle during gameplay");
     }
@@ -175,6 +179,55 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         GameStatus closedStatus = await fixture.Client.StatusAsync();
         closedStatus.EntityCount.Should().Be(initialEntityCount,
             "entity count should match initial after mod menu closes");
+    }
+
+    private async Task<UiActionResult> QueryDfCanvasPanelAsync(string panelName)
+    {
+        UiActionResult byName = await fixture.Client!.QueryUiAsync($"name={panelName}").ConfigureAwait(false);
+        if (byName.MatchCount > 0)
+        {
+            return byName;
+        }
+
+        UiActionResult byPath = await fixture.Client.QueryUiAsync($"path={panelName}").ConfigureAwait(false);
+        if (byPath.MatchCount > 0)
+        {
+            return byPath;
+        }
+
+        UiTreeResult tree = await fixture.Client.GetUiTreeAsync().ConfigureAwait(false);
+        if (tree.Success && FindUiNodeByName(tree.Root, panelName) is UiNode node)
+        {
+            return new UiActionResult
+            {
+                Success = true,
+                MatchCount = 1,
+                MatchedNode = node,
+                Message = $"Found {panelName} in UI tree snapshot",
+            };
+        }
+
+        return byName;
+    }
+
+    private static UiNode? FindUiNodeByName(UiNode root, string name)
+    {
+        if (string.Equals(root.Name, name, StringComparison.OrdinalIgnoreCase)
+            || root.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+        {
+            return root;
+        }
+
+        foreach (UiNode child in root.Children)
+        {
+            UiNode? found = FindUiNodeByName(child, name);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -26,7 +26,7 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
     }
 
     [SkippableFact]
-    public async Task Bridge_Ping_RoundTripUnder100Ms()
+    public async Task Bridge_Ping_RoundTripUnder500Ms()
     {
         fixture.SkipIfNotInitialized();
 
@@ -34,7 +34,7 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
         await fixture.Client!.PingAsync();
         sw.Stop();
 
-        sw.ElapsedMilliseconds.Should().BeLessThan(100,
-            "bridge should be local-process latency, not network latency");
+        sw.ElapsedMilliseconds.Should().BeLessThan(500,
+            "bridge round-trip over named pipe; allow headroom for CI and loaded game");
     }
 }

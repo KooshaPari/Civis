@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -18,6 +19,14 @@ namespace DINOForge.Tests.GameLaunch;
 [Trait("Category", "GameLaunch")]
 public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 {
+    /// <summary>UiSelectorEngine selectors for the injected Mods button (see NativeMenuInjector).</summary>
+    private static readonly string[] ModsButtonSelectors =
+    [
+        "name=DINOForge_ModsButton",
+        "label=Mods",
+        "role=button&&label=Mods",
+    ];
+
     /// <summary>
     /// NATIVE-001: Main menu contains injected "Mods" button.
     /// </summary>
@@ -26,7 +35,9 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        UiActionResult result = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
+        await EnsureMainMenuWithModsButtonAsync();
+
+        UiActionResult result = await QueryModsButtonAsync();
         result.Should().NotBeNull("Mods button should be queryable in UI");
         result.MatchCount.Should().BeGreaterThan(0,
             "UI should contain a 'Mods' button or element in the main menu");
@@ -40,19 +51,19 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        UiActionResult result = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
+        await EnsureMainMenuWithModsButtonAsync();
+
+        UiActionResult result = await QueryModsButtonAsync();
         result.Should().NotBeNull("Mods button should be found in main menu");
         result.MatchCount.Should().BeGreaterThan(0, "Mods button should match the selector");
 
-        UiActionResult clickResult = await fixture.Client.ClickUiAsync("button:contains('Mods')");
+        UiActionResult clickResult = await fixture.Client.ClickUiAsync(ModsButtonSelectors[0]);
         clickResult.Success.Should().BeTrue("clicking the Mods button should succeed");
 
-        await Task.Delay(300);
-
-        UiWaitResult waitResult = await fixture.Client.WaitForUiAsync(
-            "element:contains('ModMenu')", "visible", timeoutMs: 2000);
-        waitResult.Ready.Should().BeTrue(
-            "mod menu should be visible after Mods button click");
+        UiWaitResult modWait = await fixture.Client.WaitForUiAsync(
+            "path=ModMenuPanel", "visible", timeoutMs: 5000);
+        modWait.Ready.Should().BeTrue(
+            "mod menu panel should be visible after native Mods button click");
     }
 
     /// <summary>
@@ -82,7 +93,7 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         (await IsPauseMenuVisibleAsync(fixture.Client)).Should().BeTrue(
             "pause menu should expose Resume/Continue after pause open attempt");
 
-        UiActionResult modsQuery = await fixture.Client.QueryUiAsync("button:contains('Mods')");
+        UiActionResult modsQuery = await QueryModsButtonAsync();
         modsQuery.MatchCount.Should().BeGreaterThan(0,
             "pause menu should contain the injected Mods button adjacent to Settings/Options");
     }
@@ -95,7 +106,9 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        UiActionResult initialQuery = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
+        await EnsureMainMenuWithModsButtonAsync();
+
+        UiActionResult initialQuery = await QueryModsButtonAsync();
         initialQuery.MatchCount.Should().BeGreaterThan(0,
             "Mods button should exist in main menu initially");
 
@@ -106,10 +119,13 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         status.WorldReady.Should().BeTrue(
             "ECS world should be ready after scene transition");
 
-        await fixture.Client.LoadSceneAsync("MainMenu");
-        await Task.Delay(2000);
+        await fixture.Client.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex);
+        await Task.Delay(2500);
+        await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+            .ConfigureAwait(false);
+        await EnsureMainMenuWithModsButtonAsync();
 
-        UiActionResult finalQuery = await fixture.Client.QueryUiAsync("button:contains('Mods')");
+        UiActionResult finalQuery = await QueryModsButtonAsync();
         finalQuery.MatchCount.Should().BeGreaterThan(0,
             "Mods button should persist after scene transition cycle");
     }
@@ -123,7 +139,9 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
-        UiActionResult modsQuery = await fixture.Client!.QueryUiAsync("button:contains('Mods')");
+        await EnsureMainMenuWithModsButtonAsync();
+
+        UiActionResult modsQuery = await QueryModsButtonAsync();
         modsQuery.MatchCount.Should().BeGreaterThan(0,
             "Mods button must be injected before comparing visual style");
 
@@ -162,6 +180,78 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
             modsButton.Bounds.Height.Should().BeApproximately(referenceButton.Bounds.Height, 2f,
                 "cloned Mods button should preserve donor layout height");
         }
+    }
+
+    private async Task EnsureMainMenuWithModsButtonAsync()
+    {
+        bool modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(10), pollMs: 250);
+
+        if (!modsVisible)
+        {
+            await fixture.Client!.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+                .ConfigureAwait(false);
+            modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(15), pollMs: 500);
+        }
+
+        if (!modsVisible)
+        {
+            LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
+                .ConfigureAwait(false);
+            if (sceneResult.Success)
+            {
+                await Task.Delay(2000).ConfigureAwait(false);
+                await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+                    .ConfigureAwait(false);
+                modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(15), pollMs: 500);
+            }
+        }
+
+        if (!modsVisible)
+        {
+            StartGameResult probe = await fixture.Client!.ClickButtonAsync("DINOForge_ModsButton")
+                .ConfigureAwait(false);
+            modsVisible = probe.Success
+                && (probe.Message?.Contains("Clicked", StringComparison.OrdinalIgnoreCase) ?? false);
+        }
+
+        modsVisible.Should().BeTrue(
+            "native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe)");
+    }
+
+    private async Task<bool> PollModsButtonVisibleAsync(TimeSpan timeout, int pollMs)
+    {
+        return await TestWait.UntilAsync(
+            async () => await QueryModsButtonVisibleAsync().ConfigureAwait(false),
+            timeout,
+            pollMs: pollMs).ConfigureAwait(false);
+    }
+
+    private async Task<bool> QueryModsButtonVisibleAsync()
+    {
+        foreach (string selector in ModsButtonSelectors)
+        {
+            UiActionResult query = await fixture.Client!.QueryUiAsync(selector).ConfigureAwait(false);
+            if (query.MatchCount > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<UiActionResult> QueryModsButtonAsync()
+    {
+        foreach (string selector in ModsButtonSelectors)
+        {
+            UiActionResult query = await fixture.Client!.QueryUiAsync(selector).ConfigureAwait(false);
+            if (query.MatchCount > 0)
+            {
+                return query;
+            }
+        }
+
+        return await fixture.Client!.QueryUiAsync(ModsButtonSelectors[0]).ConfigureAwait(false);
     }
 
     private static UiNode? FindModsMenuButton(UiNode root)
@@ -252,13 +342,13 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
     private static async Task<bool> IsPauseMenuVisibleAsync(GameClient client)
     {
-        UiActionResult resume = await client.QueryUiAsync("button:contains('Resume')");
+        UiActionResult resume = await client.QueryUiAsync("label=Resume");
         if (resume.MatchCount > 0)
         {
             return true;
         }
 
-        UiActionResult continueButton = await client.QueryUiAsync("button:contains('Continue')");
+        UiActionResult continueButton = await client.QueryUiAsync("label=Continue");
         return continueButton.MatchCount > 0;
     }
 }

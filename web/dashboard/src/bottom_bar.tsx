@@ -49,8 +49,10 @@ export function BottomBar() {
       if (!response.ok || !data.ok) {
         throw new Error(data.message ?? `save failed ${response.status}`);
       }
-      dispatch({ type: "set_last_save_tick", tick: Number(data.tick ?? 0) });
-      dispatch({ type: "set_toast", message: `Saved ${filename} @ tick ${Number(data.tick ?? 0)}` });
+      const tick = Number(data.tick ?? 0);
+      autosaveBucketRef.current = Math.floor(tick / 1000);
+      dispatch({ type: "set_last_save_tick", tick });
+      dispatch({ type: "set_toast", message: `Saved ${filename} @ tick ${tick}` });
     } catch (err) {
       dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Save failed" });
     }
@@ -91,8 +93,10 @@ export function BottomBar() {
       if (!response.ok || !data.ok) {
         throw new Error(data.message ?? `load failed ${response.status}`);
       }
-      dispatch({ type: "set_last_save_tick", tick: Number(data.tick ?? 0) });
-      dispatch({ type: "set_toast", message: `Loaded ${name} @ tick ${Number(data.tick ?? 0)}` });
+      const tick = Number(data.tick ?? 0);
+      autosaveBucketRef.current = Math.floor(tick / 1000);
+      dispatch({ type: "set_last_save_tick", tick });
+      dispatch({ type: "set_toast", message: `Loaded ${name} @ tick ${tick}` });
       setLoadOpen(false);
       setLoadEntries([]);
       const snap = await fetch("/snapshot").then((r) => r.json());
@@ -289,6 +293,28 @@ export function BottomBar() {
             onClick={() => dispatch({ type: "set_tool", tool: "Camera" })}
           />
         </div>
+        {state.selectedTool === "Camera" ? (
+          <div className="tool-row" role="group" aria-label="Camera presets">
+            <ToolButton
+              active={state.cameraPreset === "wide"}
+              title="Wide overview (FR-CIV-UX-005)"
+              emoji="🌄"
+              onClick={() => dispatch({ type: "set_camera_preset", preset: "wide" })}
+            />
+            <ToolButton
+              active={state.cameraPreset === "close"}
+              title="Close orbit"
+              emoji="🔎"
+              onClick={() => dispatch({ type: "set_camera_preset", preset: "close" })}
+            />
+            <ToolButton
+              active={state.cameraPreset === "orbit"}
+              title="Default orbit"
+              emoji="🛰"
+              onClick={() => dispatch({ type: "set_camera_preset", preset: "orbit" })}
+            />
+          </div>
+        ) : null}
       </div>
 
       {!state.readOnly ? (
@@ -365,12 +391,8 @@ export function BottomBar() {
                 }
               >
                 <option value="civilian">Civilian</option>
-                <option value="vehicle" disabled={state.attachMode !== "server"}>
-                  Vehicle{state.attachMode !== "server" ? " (server only)" : ""}
-                </option>
-                <option value="airport" disabled={state.attachMode !== "server"}>
-                  Airport{state.attachMode !== "server" ? " (server only)" : ""}
-                </option>
+                <option value="vehicle">Vehicle</option>
+                <option value="airport">Airport</option>
               </select>
             </label>
           </div>

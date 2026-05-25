@@ -42,6 +42,12 @@ func request_snapshot() -> void:
 func spawn_civilian(x: float, y: float, faction: int = 0) -> void:
 	_call_rpc("sim.spawn_civilian", {"x": x, "y": y, "faction": faction})
 
+func spawn_entity(kind: String, x: float, y: float, faction: int = 0) -> void:
+	if kind == "civilian":
+		spawn_civilian(x, y, faction)
+	else:
+		_call_rpc("sim.spawn_entity", {"kind": kind, "x": x, "y": y, "faction": faction})
+
 func place_voxel(x: int, y: int, z: int, material: int) -> void:
 	_call_rpc("sim.place_voxel", {"x": x, "y": y, "z": z, "material": material})
 
@@ -130,7 +136,7 @@ func _handle_rpc_response(msg: Dictionary) -> void:
 	var result = msg.get("result")
 	if method == "sim.snapshot" and typeof(result) == TYPE_DICTIONARY:
 		snapshot_received.emit(_normalize_snapshot(result))
-	elif method in ["sim.spawn_civilian", "sim.place_voxel", "sim.damage"]:
+	elif method in ["sim.spawn_civilian", "sim.spawn_entity", "sim.place_voxel", "sim.damage"]:
 		request_snapshot()
 	elif method == "health":
 		pass

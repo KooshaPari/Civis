@@ -6,6 +6,7 @@ import { readStoredTheme, type ThemeMode } from "./lib/theme";
 export type ToolKind = "PlaceVoxel" | "SpawnCivilian" | "DamageBomb" | "InspectAgent" | "Camera";
 
 export type SpawnKind = "civilian" | "vehicle" | "airport";
+export type CameraPreset = "wide" | "close" | "orbit";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
 
 export type JobLabel = "farmer" | "warrior" | "scholar" | "trader" | "priest" | "admin" | "unemployed";
@@ -76,6 +77,13 @@ export type TradeRoute = {
   to_faction: number;
   goods: string;
   volume: number;
+};
+
+export type GameEvent = {
+  tick: number;
+  kind: string;
+  message: string;
+  faction_id: number | null;
 };
 
 export type TechNode = {
@@ -162,6 +170,7 @@ export type Snapshot = {
   birth_events: PopulationPulse[];
   death_events: PopulationPulse[];
   tech_tree: TechNode[];
+  events: GameEvent[];
   is_day: boolean;
   speed: TimeSpeed;
 };
@@ -182,6 +191,12 @@ type Toast = {
   message: string;
 };
 
+export type SaveEntry = {
+  name: string;
+  size_bytes: number;
+  modified: number | null;
+};
+
 export type { ThemeMode } from "./lib/theme";
 
 export type AttachMode = "watch" | "server";
@@ -199,6 +214,9 @@ type State = {
   damageRadius: number;
   selectedFaction: number;
   spawnKind: SpawnKind;
+  /** Bumped when the user picks a camera preset (FR-CIV-UX-005). */
+  cameraPresetToken: number;
+  cameraPreset: CameraPreset | null;
   selectedCivilian: CivilianFields | null;
   selectedMilitary: MilitaryPin | null;
   connection: "live" | "reconnecting" | "disconnected";
@@ -215,10 +233,12 @@ type State = {
   frameSampleSource: FrameSampleSource;
   terrain: Terrain | null;
   inspectorOpen: boolean;
+  activeSideTab: "inspector" | "events";
   economyPanelOpen: boolean;
   techTreeOpen: boolean;
   theme: ThemeMode;
   toast: Toast | null;
+  lastSaveTick: number | null;
 };
 
 type Action =
@@ -230,6 +250,7 @@ type Action =
   | { type: "set_damage_radius"; radius: number }
   | { type: "set_selected_faction"; faction: number }
   | { type: "set_spawn_kind"; kind: SpawnKind }
+  | { type: "set_camera_preset"; preset: CameraPreset }
   | { type: "set_selected_civilian"; civilian: CivilianFields | null }
   | { type: "set_selected_military"; military: MilitaryPin | null }
   | { type: "set_connection"; connection: State["connection"] }
@@ -246,9 +267,11 @@ type Action =
   | { type: "set_read_only"; readOnly: boolean }
   | { type: "set_terrain"; terrain: Terrain | null }
   | { type: "set_inspector_open"; open: boolean }
+  | { type: "set_active_side_tab"; tab: State["activeSideTab"] }
   | { type: "set_economy_panel_open"; open: boolean }
   | { type: "set_tech_tree_open"; open: boolean }
   | { type: "set_toast"; message: string | null }
+  | { type: "set_last_save_tick"; tick: number | null }
   | { type: "clear_toast" };
 
 const initialState: State = {
@@ -261,6 +284,8 @@ const initialState: State = {
   damageRadius: 8,
   selectedFaction: 0,
   spawnKind: "civilian",
+  cameraPresetToken: 0,
+  cameraPreset: null,
   selectedCivilian: null,
   selectedMilitary: null,
   connection: "disconnected",
@@ -277,6 +302,7 @@ const initialState: State = {
   frameSampleSource: "idle",
   terrain: null,
   inspectorOpen: true,
+  activeSideTab: "inspector",
   economyPanelOpen: true,
   techTreeOpen: false,
   theme: readStoredTheme(
@@ -285,6 +311,7 @@ const initialState: State = {
       : {},
   ),
   toast: null,
+  lastSaveTick: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -305,6 +332,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, selectedFaction: action.faction };
     case "set_spawn_kind":
       return { ...state, spawnKind: action.kind };
+    case "set_camera_preset":
+      return {
+        ...state,
+        cameraPreset: action.preset,
+        cameraPresetToken: state.cameraPresetToken + 1,
+      };
     case "set_selected_civilian":
       return { ...state, selectedCivilian: action.civilian };
     case "set_selected_military":
@@ -361,6 +394,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, terrain: action.terrain };
     case "set_inspector_open":
       return { ...state, inspectorOpen: action.open };
+    case "set_active_side_tab":
+      return { ...state, activeSideTab: action.tab, inspectorOpen: true };
     case "set_economy_panel_open":
       return { ...state, economyPanelOpen: action.open };
     case "set_tech_tree_open":
@@ -370,6 +405,8 @@ function reducer(state: State, action: Action): State {
         ...state,
         toast: action.message ? { id: Date.now(), message: action.message } : null,
       };
+    case "set_last_save_tick":
+      return { ...state, lastSaveTick: action.tick };
     case "clear_toast":
       return { ...state, toast: null };
     default:

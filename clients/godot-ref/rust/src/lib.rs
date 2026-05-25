@@ -215,12 +215,27 @@ impl CivisClient {
 
     #[func]
     fn post_spawn_civilian(&self, x: f32, y: f32, faction: i32) {
+        self.post_spawn_entity(GString::from("civilian"), x, y, faction);
+    }
+
+    /// `POST /control/spawn_entity` — civilian, vehicle, or airport (FR-CIV-UX-006).
+    #[func]
+    fn post_spawn_entity(&self, kind: GString, x: f32, y: f32, faction: i32) {
         if validate_base_url(&self.base_url.to_string()).is_err() {
             return;
         }
-        let url = api_url(&self.base_url.to_string(), "control/spawn_civilian");
-        let body = ux::spawn_civilian_body(x, y, faction);
-        let _entity = ux::entity_create_from_spawn(&body, body.faction as u64);
+        let url = api_url(&self.base_url.to_string(), "control/spawn_entity");
+        let kind = kind.to_string();
+        let body = serde_json::json!({
+            "kind": kind,
+            "x": x,
+            "y": y,
+            "faction": faction,
+        });
+        if kind == "civilian" {
+            let spawn_body = ux::spawn_civilian_body(x, y, faction);
+            let _ = ux::entity_create_from_spawn(&spawn_body, spawn_body.faction as u64);
+        }
         let _ = runtime().block_on(async { self.client.post(url).json(&body).send().await });
     }
 
@@ -372,8 +387,8 @@ mod tests {
 #[cfg(test)]
 mod ux_tests {
     use super::ux::{
-        spawn_batch_events, spawn_civilian_body, validate_timelapse_speed, TimelapseView,
-        TIMELAPSE_SPEEDS,
+        spawn_batch_events, spawn_civilian_body, validate_timelapse_speed, SpawnKind,
+        TimelapseView, TIMELAPSE_SPEEDS,
     };
 
     /// FR-CIV-UX-000 — N UI spawns emit N entity-create events.
@@ -390,6 +405,14 @@ mod ux_tests {
             assert_eq!(event.entity_id, 1_000 + i as u64);
             assert_eq!(event.faction, i as u32);
         }
+    }
+
+    /// FR-CIV-UX-006 — spawn palette kinds are wired on server / watch.
+    #[test]
+    fn spawn_kind_palette_is_wired() {
+        assert!(SpawnKind::Civilian.is_wired());
+        assert!(SpawnKind::Vehicle.is_wired());
+        assert!(SpawnKind::Airport.is_wired());
     }
 
     /// FR-CIV-UX-001 — timelapse rates reach the same tick/era as real-time playback.

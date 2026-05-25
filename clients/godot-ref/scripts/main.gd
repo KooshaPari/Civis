@@ -189,15 +189,12 @@ func _handle_click() -> void:
 		else:
 			_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
 	elif current_tool == "Spawn Civilian":
-		if spawn_kind != "civilian":
-			push_warning("Spawn kind %s not wired (FR-CIV-UX-006)" % spawn_kind)
-			return
 		var norm_x := pos.x / float(TERRAIN_GRID_SIZE)
 		var norm_y := pos.z / float(TERRAIN_GRID_SIZE)
 		if attach_mode == "server":
-			_ws_client.spawn_civilian(norm_x, norm_y, 0)
+			_ws_client.spawn_entity(spawn_kind, norm_x, norm_y, 0)
 		else:
-			_civis_http.post_spawn_civilian(norm_x, norm_y, 0)
+			_civis_http.post_spawn_entity(spawn_kind, norm_x, norm_y, 0)
 		spawn_count += 1
 		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
 	elif current_tool == "Damage":

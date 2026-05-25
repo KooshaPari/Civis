@@ -66,6 +66,8 @@ type SceneRefs = {
 
 export function Scene3d() {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const { state, dispatch } = useDashboardStore();
   const stateRef = useRef(state);
   const refs = useRef<SceneRefs>({
@@ -99,6 +101,32 @@ export function Scene3d() {
   }, [state]);
 
   useEffect(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const terrain = refs.current.activeTerrain;
+    const preset = state.cameraPreset;
+    if (!camera || !controls || !terrain || !preset) return;
+    const size = terrain.size;
+    const targetY = size * 0.12;
+    controls.target.set(0, targetY, 0);
+    switch (preset) {
+      case "wide":
+        camera.position.set(size * 0.5, size * 2.2, size * 1.6);
+        break;
+      case "close":
+        camera.position.set(size * 0.15, size * 0.55, size * 0.4);
+        break;
+      case "orbit":
+        camera.position.set(size * 0.25, size * 1.7, size * 1.6);
+        break;
+      default:
+        break;
+    }
+    camera.lookAt(controls.target);
+    controls.update();
+  }, [state.cameraPresetToken, state.cameraPreset]);
+
+  useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
 
@@ -115,6 +143,8 @@ export function Scene3d() {
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
+    cameraRef.current = camera;
+    controlsRef.current = controls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.maxPolarAngle = Math.PI / 2 - 0.05;

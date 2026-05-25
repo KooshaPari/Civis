@@ -70,9 +70,9 @@ impl SpawnKind {
         }
     }
 
-    /// Whether server JSON-RPC spawn is implemented for this kind.
+    /// Whether server JSON-RPC / civ-watch spawn is implemented for this kind.
     pub const fn is_wired(self) -> bool {
-        matches!(self, Self::Civilian)
+        true
     }
 }
 

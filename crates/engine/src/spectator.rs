@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Building, BuildingType, Citizen, JobType, Simulation};
+use crate::engine::{BuildingType, Citizen, JobType, Simulation};
 
 /// Normalised map pin for one civilian (0..1 plane coordinates).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -182,7 +182,19 @@ fn buildings_for_factions(factions: &[Faction], tick: u64, sim: &Simulation) -> 
             });
         }
     }
-    let _ = sim.world.query::<&Building>().iter().count();
+    for (idx, (_, building)) in sim.world.query::<&crate::Building>().iter().enumerate() {
+        if building.building_type == crate::BuildingType::CityCenter {
+            let (x, y) = crate::grid_to_norm(building.position);
+            pins.push(BuildingPin {
+                id: 9_000 + idx as u32,
+                x,
+                y,
+                kind: BuildingKind::Civic,
+                era: ((tick / 120) % 6) as u16,
+                faction_id: 0,
+            });
+        }
+    }
     pins
 }
 

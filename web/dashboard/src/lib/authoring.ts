@@ -75,16 +75,14 @@ export async function executeTerrainAuthoring(
         await refreshAfterMutation(input.attachMode, input.speed, dispatch);
         return `Spawned ${input.spawnKind} #${result.entity_id ?? "?"}`;
       }
-      if (input.spawnKind !== "civilian") {
-        throw new Error(`Spawn kind "${input.spawnKind}" is server-only (use ?attach=server)`);
-      }
-      await postControl("/control/spawn_civilian", {
+      await postControl("/control/spawn_entity", {
+        kind: input.spawnKind,
         x: normX,
         y: normY,
         faction: input.faction,
       });
       await refreshAfterMutation(input.attachMode, input.speed, dispatch);
-      return `Spawned civilian at ${input.cellX}, ${input.cellY}`;
+      return `Spawned ${input.spawnKind} at ${input.cellX}, ${input.cellY}`;
     }
     case "PlaceVoxel": {
       if (input.attachMode === "server") {
@@ -128,7 +126,7 @@ export async function executeTerrainAuthoring(
         await postControl("/control/damage", body);
       }
       await refreshAfterMutation(input.attachMode, input.speed, dispatch);
-      return `Damage queued at ${input.cellX}, ${input.cellY}`;
+      return `Damage applied at ${input.cellX}, ${input.cellY}`;
     }
     default:
       return `Cell ${input.cellX}, ${input.cellY}`;

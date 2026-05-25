@@ -55,6 +55,9 @@ export function TopBar() {
         <ResourceBar label="Energy" value={state.snapshot?.economy.resources.energy ?? 0} tone="energy" />
       </div>
       <div className="top-actions">
+        <span className="connection-pill">
+          {state.lastSaveTick != null ? `💾 Last save: tick ${state.lastSaveTick}` : "💾 Last save: none"}
+        </span>
         <button
           type="button"
           className="dark-light"

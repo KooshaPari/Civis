@@ -11,12 +11,14 @@
 mod doctrine_fitness;
 mod formation;
 mod los;
+mod movement;
 mod operational;
 mod war_bridge;
 
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
 pub use formation::{formation_offsets, FormationKind};
 pub use los::line_of_sight;
+pub use movement::{tick_operational_movement, GridMove, OperationalMovementConfig};
 pub use operational::{NoopOperationalLayer, OperationalLayer};
 pub use war_bridge::{
     grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridgeConfig,
@@ -324,6 +326,32 @@ mod tests {
         assert!(engagements
             .iter()
             .any(|e| e.shooter_id == 10 && e.target_id == 20));
+    }
+
+    /// FR-CIV-TACTICS-031 — operational movement steps toward nearest enemy.
+    #[test]
+    fn operational_movement_steps_toward_enemy() {
+        let units = [
+            MilitaryUnitSample {
+                unit_id: 1,
+                faction_id: 0,
+                grid_x: 0,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                unit_id: 2,
+                faction_id: 1,
+                grid_x: 4,
+                grid_y: 0,
+            },
+        ];
+        let config = OperationalMovementConfig { cadence_ticks: 8 };
+        assert!(tick_operational_movement(7, &config, &units).is_empty());
+        let moves = tick_operational_movement(8, &config, &units);
+        assert!(!moves.is_empty());
+        assert!(moves
+            .iter()
+            .any(|mv| mv.unit_index == 0 && mv.new_grid_x == 1));
     }
 
     /// FR-CIV-TACTICS-023 — doctrine fitness increases with engagement pressure.

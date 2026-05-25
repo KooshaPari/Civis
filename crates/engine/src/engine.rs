@@ -12,9 +12,10 @@ use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketSta
 use civ_mod_host::ModHost;
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
 use civ_tactics::{
-    apply_damage, evolve_doctrine, score_doctrine_fitness, tick_war_bridge, CombatEngagement,
-    DamageEvent, Doctrine, DoctrineLibrary, FactionEngagementStats, MilitaryUnitSample,
-    NoopOperationalLayer, OperationalLayer, WarBridgeConfig,
+    apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
+    tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
+    FactionEngagementStats, GridMove, MilitaryUnitSample, NoopOperationalLayer, OperationalLayer,
+    OperationalMovementConfig, WarBridgeConfig,
 };
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::{Entity, World};
@@ -211,7 +212,11 @@ pub enum ResourceType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MilitaryUnit {
     pub unit_type: UnitType,
+    /// Legacy wire field; kept in sync with [`Self::hp`].
     pub strength: Fixed,
+    /// Per-soldier hit points (FR-CIV-TACTICS-032).
+    pub hp: Fixed,
+    pub max_hp: Fixed,
     pub morale: Fixed,
     pub position: Position,
     pub faction_id: u32,
@@ -619,6 +624,11 @@ impl Simulation {
         let _ = apply_damage(&mut self.voxel, event);
     }
 
+    pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
+        self.state.tick = tick;
+        self.pending_damage.push(*event);
+    }
+
     pub(crate) fn apply_replay_research(
         &mut self,
         tick: u64,
@@ -735,9 +745,12 @@ impl Simulation {
 
         // Create initial military (player + AI for war-bridge smoke)
         for i in 0..5 {
+            let hp = Fixed::from_num(10);
             let soldier = MilitaryUnit {
                 unit_type: UnitType::Soldier,
-                strength: Fixed::from_num(10),
+                strength: hp,
+                hp,
+                max_hp: hp,
                 morale: Fixed::from_num(1),
                 position: Position { x: i, y: 0 },
                 faction_id: 0,
@@ -745,9 +758,12 @@ impl Simulation {
             let _ = world.spawn((soldier,));
         }
         for i in 0..5 {
+            let hp = Fixed::from_num(8);
             let soldier = MilitaryUnit {
                 unit_type: UnitType::Archer,
-                strength: Fixed::from_num(8),
+                strength: hp,
+                hp,
+                max_hp: hp,
                 morale: Fixed::from_num(1),
                 position: Position { x: i + 6, y: 2 },
                 faction_id: 1,
@@ -1069,40 +1085,65 @@ impl Simulation {
             }
         }
 
-        let rows: Vec<(Entity, MilitaryUnitSample)> = self
+        let mut entities: Vec<Entity> = Vec::new();
+        let mut samples: Vec<MilitaryUnitSample> = self
             .world
             .query::<&MilitaryUnit>()
             .iter()
             .enumerate()
             .map(|(idx, (entity, unit))| {
-                (
-                    entity,
-                    MilitaryUnitSample {
-                        unit_id: military_pin_id(entity, idx),
-                        faction_id: unit.faction_id,
-                        grid_x: unit.position.x,
-                        grid_y: unit.position.y,
-                    },
-                )
+                entities.push(entity);
+                MilitaryUnitSample {
+                    unit_id: military_pin_id(entity, idx),
+                    faction_id: unit.faction_id,
+                    grid_x: unit.position.x,
+                    grid_y: unit.position.y,
+                }
             })
             .collect();
-        let samples: Vec<MilitaryUnitSample> = rows.iter().map(|(_, s)| *s).collect();
+
+        for grid_move in tick_operational_movement(
+            self.state.tick,
+            &OperationalMovementConfig::default(),
+            &samples,
+        ) {
+            if let Some(sample) = samples.get_mut(grid_move.unit_index) {
+                sample.grid_x = grid_move.new_grid_x;
+                sample.grid_y = grid_move.new_grid_y;
+            }
+            if let Some(target_entity) = entities.get(grid_move.unit_index).copied() {
+                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
+                    if entity == target_entity {
+                        unit.position.x = grid_move.new_grid_x;
+                        unit.position.y = grid_move.new_grid_y;
+                        break;
+                    }
+                }
+            }
+        }
+
         let config = WarBridgeConfig::default();
         let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
         self.operational
             .on_combat_engagements(self.state.tick, &engagements);
         self.last_tick_engagements = engagements.clone();
 
-        let strength_loss = Fixed::from_num(config.strength_damage_fixed);
+        let hp_loss = Fixed::from_num(config.strength_damage_fixed);
         let scale = FIXED_SCALE as f32;
         for engagement in &engagements {
-            let Some((target_entity, _)) = rows.get(engagement.target_index) else {
-                continue;
-            };
-            for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
-                if entity == *target_entity {
-                    unit.strength = (unit.strength - strength_loss).max(Fixed::from_num(0));
-                    break;
+            self.replay_log.record_combat(
+                self.state.tick,
+                engagement.shooter_id,
+                engagement.target_id,
+                engagement.damage,
+            );
+            if let Some(target_entity) = entities.get(engagement.target_index) {
+                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
+                    if entity == *target_entity {
+                        unit.hp = (unit.hp - hp_loss).max(Fixed::from_num(0));
+                        unit.strength = unit.hp;
+                        break;
+                    }
                 }
             }
             self.last_tick_combat_pulses.push(CombatDamagePulse {
@@ -1112,6 +1153,17 @@ impl Simulation {
                 unit_b: Some(engagement.target_id),
             });
             self.pending_damage.push(engagement.damage);
+        }
+
+        let dead: Vec<Entity> = self
+            .world
+            .query::<&MilitaryUnit>()
+            .iter()
+            .filter(|(_, unit)| unit.hp <= Fixed::from_num(0))
+            .map(|(entity, _)| entity)
+            .collect();
+        for entity in dead {
+            let _ = self.world.despawn(entity);
         }
     }
 
@@ -1797,6 +1849,25 @@ mod tests {
             sim.replay_log().events.last(),
             Some(ReplayEvent::Tick { tick: 1 })
         ));
+    }
+
+    /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
+    #[test]
+    fn war_bridge_records_combat_replay_events() {
+        let mut sim = Simulation::with_seed(1);
+        for _ in 0..32 {
+            sim.tick();
+        }
+        assert!(sim.replay_log().events.iter().any(|event| {
+            matches!(
+                event,
+                ReplayEvent::Combat {
+                    shooter_id,
+                    target_id,
+                    ..
+                } if *shooter_id != 0 && *target_id != 0
+            )
+        }));
     }
 
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.

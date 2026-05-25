@@ -502,7 +502,7 @@ pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSn
                 y,
                 unit_type: unit_type_label(unit.unit_type).to_string(),
                 faction: unit.faction_id,
-                strength: unit.strength.to_f64() as f32,
+                strength: unit.hp.to_f64() as f32,
             }
         })
         .collect()

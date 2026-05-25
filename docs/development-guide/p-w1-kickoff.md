@@ -9,7 +9,7 @@
 | Link | Location |
 |------|----------|
 | Voxel damage | `civ_tactics::apply_damage` used in `crates/engine/src/engine.rs` tick + `apply_damage_now` |
-| Replay | `DamageEvent` in `crates/engine/src/replay.rs` |
+| Replay | `DamageEvent` + `ReplayEvent::Combat` in `crates/engine/src/replay.rs` |
 | Authoring | `sim.damage` (server), `POST /control/damage` (watch), web/Godot damage tool |
 | Doctrine GA | `evolve_doctrine` + tests `FR-CIV-TACTICS-010/011` |
 
@@ -18,26 +18,34 @@
 | FR ID | Status | Next step |
 |-------|--------|-----------|
 | FR-CIV-TACTICS-000 | implemented | — |
-| FR-CIV-TACTICS-001 | implemented | Per-soldier damage events (not only sphere carve) |
+| FR-CIV-TACTICS-001 | implemented | Voxel sphere damage + per-soldier pins |
 | FR-CIV-TACTICS-010 | implemented | — |
 | FR-CIV-TACTICS-020 | implemented | `line_of_sight` (voxel LOS) |
 | FR-CIV-TACTICS-021 | implemented | `formation_offsets` (line / wedge / square) |
 | FR-CIV-TACTICS-022 | implemented | `tick_war_bridge` in `phase_military` |
+| FR-CIV-TACTICS-023 | implemented | `score_doctrine_fitness` before GA evolve |
+| FR-CIV-TACTICS-024 | implemented | `CombatEngagement` + `unit_a`/`unit_b` on snapshot |
+| FR-CIV-TACTICS-025 | implemented | `ReplayEvent::Combat` in replay log |
+| FR-CIV-TACTICS-030 | implemented | `OperationalLayer` hook |
+| FR-CIV-TACTICS-031 | implemented | `tick_operational_movement` toward enemies |
+| FR-CIV-TACTICS-032 | implemented | `MilitaryUnit::hp` / `max_hp` on ECS |
 
 ## First PR slice (recommended)
 
-1. **Test:** `engine::tick` with queued `DamageEvent` reduces voxel count — **done** (`pending_damage_drains_and_reduces_chunk_count` in `civ-engine`).
-2. **Server:** `sim.snapshot` exposes `damage_events`, `damage_events_count`, `voxel_damage_removed_this_tick` — **done** (`feat/p-w1-tactics`).
-3. **Web:** damage bursts + combat notifications — **done** (`scene3d.tsx`, `main.tsx`).
-4. **Watch:** per-unit `unit_a` / `unit_b` on military `DamagePulse` — **done**.
-5. **Doctrine GA:** `evolve_doctrine` every 64 ticks per faction in `phase_tactics` — **done**.
-6. **Done:** FR-CIV-TACTICS-020/021/022 (LOS, formations, war bridge).
-7. **Next:** Per-soldier combat events, operational layer hooks, richer doctrine fitness.
+1. **Test:** `engine::tick` with queued `DamageEvent` reduces voxel count — **done**.
+2. **Server:** `sim.snapshot` damage fields — **done**.
+3. **Web / Watch:** combat UX — **done**.
+4. **Doctrine GA** — **done**.
+5. **LOS / formations / war bridge** — **done**.
+6. **Per-soldier combat + doctrine fitness + operational hook** — **done** (#300).
+7. **Movement + HP + replay combat** — **done** (item 8).
+8. **Next:** Deeper operational AI (pathfinding), replay round-trip combat assertions, WASM mod hooks.
 
 ## Run
 
 ```bash
 cargo test -p civ-tactics
 cargo test -p civ-engine pending_damage
+cargo test -p civ-engine war_bridge_records
 just civis-3d-verify
 ```

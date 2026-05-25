@@ -50,11 +50,18 @@ public class GameClientFramingTests
         options.UseMessageFraming.Should().BeFalse();
     }
 
-    [Fact(Skip = "#397 — closure-gate hang (iter-92/93), skip until testhost stabilizes")]
+    [Fact]
     public async Task ConnectAsync_WithoutTimeout_UsesOptionsDefault()
     {
-        // Arrange
-        var options = new GameClientOptions { ConnectTimeoutMs = 3000 };
+        // Arrange — unique pipe name so we never connect to a live dinoforge-game-bridge
+        // (handshake + bounded retries can hang 20+ min if the default pipe exists).
+        var options = new GameClientOptions
+        {
+            PipeName = "dinoforge-framing-timeout-" + Guid.NewGuid().ToString("N"),
+            ConnectTimeoutMs = 3000,
+            PerformConnectHandshake = false,
+            RetryCount = 0,
+        };
         var client = new GameClient(options);
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
@@ -69,11 +76,17 @@ public class GameClientFramingTests
         client.Dispose();
     }
 
-    [Fact(Skip = "#543 — flaky with wave-2 bounded-retry timeouts (iter-143), can take 20+ min when pipe connect succeeds then handshake retries; skip until pipe-name isolation lands")]
+    [Fact]
     public async Task ConnectAsync_WithCustomTimeout_UsesProvidedValue()
     {
-        // Arrange
-        var options = new GameClientOptions { ConnectTimeoutMs = 10000 };
+        // Arrange — unique pipe name; custom connectTimeout must win over options default.
+        var options = new GameClientOptions
+        {
+            PipeName = "dinoforge-framing-custom-timeout-" + Guid.NewGuid().ToString("N"),
+            ConnectTimeoutMs = 10000,
+            PerformConnectHandshake = false,
+            RetryCount = 0,
+        };
         var client = new GameClient(options);
         var customTimeout = TimeSpan.FromMilliseconds(1000);
         var sw = System.Diagnostics.Stopwatch.StartNew();

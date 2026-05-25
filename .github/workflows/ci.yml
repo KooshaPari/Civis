@@ -35,8 +35,9 @@ jobs:
       - name: Restore dependencies
         run: |
           dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
-          dotnet restore src/Tests/DINOForge.Tests.csproj /p:RestoreLockedMode=true
-          dotnet restore src/Tests/Integration/DINOForge.Tests.Integration.csproj /p:RestoreLockedMode=true
+          # Tests pull Runtime (not in NoRuntime.sln); lock files drift — restore unlocked
+          dotnet restore src/Tests/DINOForge.Tests.csproj
+          dotnet restore src/Tests/Integration/DINOForge.Tests.Integration.csproj
         env:
           CI: 'true'
 

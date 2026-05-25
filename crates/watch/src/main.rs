@@ -11,6 +11,7 @@ mod terrain;
 use std::{
     convert::Infallible,
     net::SocketAddr,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU16, AtomicU8, Ordering},
         Arc,
@@ -167,6 +168,14 @@ struct TradeRoute {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct GameEvent {
+    tick: u64,
+    kind: String,
+    message: String,
+    faction_id: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct TechNode {
     id: String,
     kind: String,
@@ -252,6 +261,7 @@ struct Snapshot {
     birth_events: Vec<PopulationPulse>,
     death_events: Vec<PopulationPulse>,
     tech_tree: Vec<TechNode>,
+    events: Vec<GameEvent>,
     is_day: bool,
     speed: u8,
 }
@@ -285,6 +295,7 @@ struct AppState {
     military: Arc<Mutex<Vec<MilitaryPin>>>,
     target_era: Arc<AtomicU16>,
     speed: Arc<AtomicU8>,
+    saves_dir: Arc<PathBuf>,
 }
 
 #[derive(Debug, Serialize)]
@@ -309,6 +320,14 @@ struct SpawnCivilianReq {
 }
 
 #[derive(Debug, Deserialize)]
+struct SpawnEntityReq {
+    kind: String,
+    x: f32,
+    y: f32,
+    faction: u32,
+}
+
+#[derive(Debug, Deserialize)]
 struct DamageReq {
     x: i64,
     y: i64,
@@ -320,6 +339,31 @@ struct DamageReq {
 #[derive(Debug, Deserialize)]
 struct SpeedReq {
     speed: u8,
+}
+
+#[derive(Debug, Deserialize)]
+struct SaveReq {
+    filename: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SaveResponse {
+    ok: bool,
+    path: String,
+    tick: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct LoadResponse {
+    ok: bool,
+    tick: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct SaveListEntry {
+    name: String,
+    size_bytes: u64,
+    modified: Option<u64>,
 }
 
 #[tokio::main]
@@ -335,6 +379,8 @@ async fn main() {
     let terrain = Terrain::generate(42);
     let terrain_cache = TerrainCache::from_terrain(&terrain);
     let laws = Arc::new(default_law_db());
+    let saves_dir = Arc::new(PathBuf::from("saves"));
+    std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -364,6 +410,7 @@ async fn main() {
         military,
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
+        saves_dir,
     };
 
     tokio::spawn(simulation_worker(state.clone()));
@@ -390,8 +437,12 @@ fn build_api_router() -> Router<AppState> {
         .route("/terrain", get(terrain_handler))
         .route("/control/place_voxel", post(place_voxel_handler))
         .route("/control/spawn_civilian", post(spawn_civilian_handler))
+        .route("/control/spawn_entity", post(spawn_entity_handler))
         .route("/control/damage", post(damage_handler))
         .route("/control/speed", post(speed_handler))
+        .route("/control/save", post(save_handler))
+        .route("/control/load", post(load_handler))
+        .route("/control/saves", get(list_saves_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -581,7 +632,7 @@ fn make_snapshot(
     laws: &LawDb,
     current_era: u16,
 ) -> Snapshot {
-    let events = sim.last_tick_voxel_events();
+    let voxel_events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
     let factions = factions(sim.state.tick);
@@ -619,13 +670,21 @@ fn make_snapshot(
             kind: event.kind,
         })
         .collect();
-    let _ = build_voxel_delta_frame(sim.state.tick, events, sim.voxel()).map_err(|err| {
+    let tech_nodes = tech_tree(laws, current_era);
+    let events = game_events(
+        sim,
+        &birth_events,
+        &death_events,
+        &diplomacy_events,
+        &buildings,
+        &tech_nodes,
+    );
+    let _ = build_voxel_delta_frame(sim.state.tick, voxel_events, sim.voxel()).map_err(|err| {
         warn!(?err, "voxel frame build failed for current tick");
     });
     let climate = sim.climate();
     let is_day = climate.day_phase >= 0.25 && climate.day_phase < 0.75;
     let tick_dt_ms = 100u32 / u32::from(speed.max(1));
-    let tech_tree = tech_tree(laws, current_era);
 
     Snapshot {
         tick: sim.state.tick,
@@ -648,10 +707,128 @@ fn make_snapshot(
         damage_events: damage_events.to_vec(),
         birth_events,
         death_events,
-        tech_tree,
+        tech_tree: tech_nodes,
+        events,
         is_day,
         speed,
     }
+}
+
+fn game_events(
+    sim: &Simulation,
+    births_this_tick: &[PopulationPulse],
+    deaths_this_tick: &[PopulationPulse],
+    diplomacy_events: &[DiplomacyPulse],
+    buildings: &[Building],
+    tech_tree: &[TechNode],
+) -> Vec<GameEvent> {
+    let mut events = Vec::new();
+    let tick = sim.state.tick;
+
+    for birth in births_this_tick {
+        let faction_id = faction_for_point(birth.x, birth.y);
+        events.push(GameEvent {
+            tick: birth.tick,
+            kind: "birth".to_string(),
+            message: match faction_id {
+                Some(id) => format!("A new citizen was born in Faction {id}"),
+                None => "A new citizen was born".to_string(),
+            },
+            faction_id,
+        });
+    }
+
+    for _death in deaths_this_tick {
+        events.push(GameEvent {
+            tick,
+            kind: "death".to_string(),
+            message: "A citizen died".to_string(),
+            faction_id: None,
+        });
+    }
+
+    for diplomacy in diplomacy_events {
+        let kind = match diplomacy.kind {
+            DiplomacyKind::TradeAgreement => "trade",
+            DiplomacyKind::Conflict => "conflict",
+            DiplomacyKind::Peace => "peace",
+        };
+        let message = match diplomacy.kind {
+            DiplomacyKind::TradeAgreement => format!(
+                "Trade Agreement between Faction {} and Faction {}",
+                diplomacy.faction_a, diplomacy.faction_b
+            ),
+            DiplomacyKind::Conflict => format!(
+                "Conflict between Faction {} and Faction {}",
+                diplomacy.faction_a, diplomacy.faction_b
+            ),
+            DiplomacyKind::Peace => format!(
+                "Peace declared between Faction {} and Faction {}",
+                diplomacy.faction_a, diplomacy.faction_b
+            ),
+        };
+        events.push(GameEvent {
+            tick: diplomacy.tick,
+            kind: kind.to_string(),
+            message,
+            faction_id: Some(diplomacy.faction_a),
+        });
+    }
+
+    for node in tech_tree
+        .iter()
+        .filter(|node| node.unlocked && node.era_min == (sim.state.tick / 600) as u16)
+    {
+        events.push(GameEvent {
+            tick,
+            kind: "tech".to_string(),
+            message: format!(
+                "Era {} reached: {} technology unlocked",
+                node.era_min, node.id
+            ),
+            faction_id: None,
+        });
+    }
+
+    for building in buildings {
+        if matches!(building.kind, BuildingKind::Residential) {
+            events.push(GameEvent {
+                tick,
+                kind: "building".to_string(),
+                message: format!(
+                    "New Residential building in Faction {}",
+                    building.faction_id
+                ),
+                faction_id: Some(building.faction_id),
+            });
+        }
+    }
+
+    events.sort_by(|a, b| {
+        a.tick
+            .cmp(&b.tick)
+            .then_with(|| a.kind.cmp(&b.kind))
+            .then_with(|| a.message.cmp(&b.message))
+    });
+    events
+        .into_iter()
+        .rev()
+        .take(20)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect()
+}
+
+fn faction_for_point(x: f32, y: f32) -> Option<u32> {
+    factions(0)
+        .into_iter()
+        .min_by(|a, b| {
+            let da = (x - a.capital[0]).powi(2) + (y - a.capital[1]).powi(2);
+            let db = (x - b.capital[0]).powi(2) + (y - b.capital[1]).powi(2);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|faction| faction.id)
 }
 
 fn default_law_db() -> LawDb {
@@ -996,12 +1173,65 @@ async fn spawn_civilian_handler(
     })
 }
 
+async fn spawn_entity_handler(
+    State(state): State<AppState>,
+    Json(req): Json<SpawnEntityReq>,
+) -> Json<ControlOk> {
+    let mut sim = state.sim.lock().await;
+    match req.kind.as_str() {
+        "civilian" => {
+            let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
+            let mut rng = sim.rng_mut().clone();
+            let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
+            *sim.rng_mut() = rng;
+        }
+        "vehicle" => {
+            use civ_engine::{spawn_military_at, UnitType};
+            let _ = spawn_military_at(&mut sim.world, req.faction, req.x, req.y, UnitType::Knight);
+            let mut military = state.military.lock().await;
+            let id = sim.state.tick.wrapping_add(1) ^ 0xdeadbee_u64;
+            military.push(MilitaryPin {
+                id,
+                x: req.x.clamp(0.0, 1.0),
+                y: req.y.clamp(0.0, 1.0),
+                unit_type: "Vehicle".to_string(),
+                faction: req.faction,
+                strength: 1.0,
+            });
+        }
+        "airport" => {
+            use civ_engine::spawn_airport_at;
+            let _ = spawn_airport_at(&mut sim.world, req.x, req.y);
+            let mut military = state.military.lock().await;
+            let id = sim.state.tick.wrapping_add(1) ^ 0x00a1_0001_u64;
+            military.push(MilitaryPin {
+                id,
+                x: req.x.clamp(0.0, 1.0),
+                y: req.y.clamp(0.0, 1.0),
+                unit_type: "Airport".to_string(),
+                faction: req.faction,
+                strength: 1.0,
+            });
+        }
+        _ => {
+            return Json(ControlOk {
+                ok: false,
+                message: Some("kind must be civilian, vehicle, or airport".to_string()),
+            });
+        }
+    }
+    Json(ControlOk {
+        ok: true,
+        message: None,
+    })
+}
+
 async fn damage_handler(
     State(state): State<AppState>,
     Json(req): Json<DamageReq>,
 ) -> Json<ControlOk> {
     let mut sim = state.sim.lock().await;
-    sim.push_damage(DamageEvent {
+    let event = DamageEvent {
         center: WorldCoord {
             x: req.x,
             y: req.y,
@@ -1009,7 +1239,8 @@ async fn damage_handler(
         },
         radius_voxels: req.radius,
         energy: req.energy,
-    });
+    };
+    sim.push_damage(event);
     Json(ControlOk {
         ok: true,
         message: None,
@@ -1031,6 +1262,124 @@ async fn speed_handler(
         ok: true,
         message: None,
     })
+}
+
+fn sanitize_save_filename(filename: &str) -> Result<String, String> {
+    let trimmed = filename.trim();
+    if trimmed.is_empty() {
+        return Err("filename cannot be empty".into());
+    }
+    if trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains("..") {
+        return Err("filename must be a simple name".into());
+    }
+    Ok(trimmed.trim_end_matches(".civreplay").to_string())
+}
+
+fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
+    let name = sanitize_save_filename(filename)?;
+    Ok(dir.join(format!("{name}.civreplay")))
+}
+
+async fn save_handler(
+    State(state): State<AppState>,
+    Json(req): Json<SaveReq>,
+) -> Result<Json<SaveResponse>, (StatusCode, Json<ControlOk>)> {
+    let path = save_path(&state.saves_dir, &req.filename).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    let sim = state.sim.lock().await;
+    sim.save_replay(&path).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+    let tick = sim.state.tick;
+    Ok(Json(SaveResponse {
+        ok: true,
+        path: path.display().to_string(),
+        tick,
+    }))
+}
+
+async fn load_handler(
+    State(state): State<AppState>,
+    Json(req): Json<SaveReq>,
+) -> Result<Json<LoadResponse>, (StatusCode, Json<ControlOk>)> {
+    let path = save_path(&state.saves_dir, &req.filename).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    let mut sim = state.sim.lock().await;
+    let loaded = Simulation::load_replay_from_file(&path).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+    *sim = loaded;
+    let tick = sim.state.tick;
+    Ok(Json(LoadResponse { ok: true, tick }))
+}
+
+async fn list_saves_handler(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
+    let mut entries = Vec::new();
+    let dir = state.saves_dir.as_ref();
+    let read_dir = std::fs::read_dir(dir).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("civreplay") {
+            continue;
+        }
+        let meta = match entry.metadata() {
+            Ok(meta) => meta,
+            Err(_) => continue,
+        };
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs());
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+        entries.push(SaveListEntry {
+            name,
+            size_bytes: meta.len(),
+            modified,
+        });
+    }
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(Json(entries))
 }
 
 async fn sse_handler(
@@ -1062,12 +1411,19 @@ mod api_tests {
         body::Body,
         http::{Request, StatusCode},
     };
+    use std::time::{SystemTime, UNIX_EPOCH};
     use tower::ServiceExt;
 
     fn test_state() -> AppState {
         let (tx, _) = broadcast::channel::<Snapshot>(64);
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let terrain = Terrain::generate(42);
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let saves_dir = std::env::temp_dir().join(format!("civis-watch-test-{nanos}"));
+        std::fs::create_dir_all(&saves_dir).expect("saves dir");
         AppState {
             latest: Arc::new(RwLock::new(None)),
             tx,
@@ -1078,6 +1434,7 @@ mod api_tests {
             military: Arc::new(Mutex::new(Vec::new())),
             target_era: Arc::new(AtomicU16::new(0)),
             speed: Arc::new(AtomicU8::new(1)),
+            saves_dir: Arc::new(saves_dir),
         }
     }
 
@@ -1242,6 +1599,61 @@ mod api_tests {
         assert_eq!(response.status(), StatusCode::OK);
         let json = body_json(response).await;
         assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn post_control_save_and_load_round_trip() {
+        let app = test_app();
+        let save_name = "unit-test-save";
+
+        let save_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/save")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(r#"{{"filename":"{save_name}"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(save_response.status(), StatusCode::OK);
+        let save_json = body_json(save_response).await;
+        assert_eq!(save_json["ok"], true);
+
+        let list_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/control/saves")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(list_response.status(), StatusCode::OK);
+        let list_json = body_json(list_response).await;
+        assert!(list_json
+            .as_array()
+            .expect("save list array")
+            .iter()
+            .any(|entry| entry["name"] == save_name));
+
+        let load_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/load")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(r#"{{"filename":"{save_name}"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(load_response.status(), StatusCode::OK);
+        let load_json = body_json(load_response).await;
+        assert_eq!(load_json["ok"], true);
     }
 
     #[tokio::test]

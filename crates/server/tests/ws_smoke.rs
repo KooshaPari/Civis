@@ -1545,6 +1545,46 @@ async fn ws_jsonrpc_sim_spawn_civilian_returns_entity_id() {
 }
 
 #[tokio::test]
+async fn ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
+    let addr = spawn_ws_bridge(sim, 4).await;
+    let url = format!("ws://{addr}/ws");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":71,"method":"sim.spawn_entity","params":{"kind":"vehicle","x":0.3,"y":0.7,"faction":0}}"#
+                .into(),
+        ))
+        .await
+        .expect("send sim.spawn_entity");
+
+    timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(71)) {
+                assert_eq!(value.pointer("/result/ok"), Some(&serde_json::json!(true)));
+                assert!(
+                    value
+                        .pointer("/result/entity_id")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0)
+                        > 0
+                );
+                return;
+            }
+        }
+        panic!("ws closed before spawn_entity response");
+    })
+    .await
+    .expect("spawn_entity timeout");
+}
+
+#[tokio::test]
 async fn ws_jsonrpc_sim_damage_accepts_event() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
     let addr = spawn_ws_bridge(sim, 4).await;
@@ -1568,6 +1608,10 @@ async fn ws_jsonrpc_sim_damage_accepts_event() {
             let value: serde_json::Value = serde_json::from_str(&text).expect("json");
             if value.get("id") == Some(&serde_json::json!(8)) {
                 assert_eq!(value.pointer("/result/ok"), Some(&serde_json::json!(true)));
+                assert_eq!(
+                    value.pointer("/result/queued"),
+                    Some(&serde_json::json!(true))
+                );
                 return;
             }
         }

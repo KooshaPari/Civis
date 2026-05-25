@@ -379,11 +379,17 @@ pub struct SnapshotFields {
 /// Military pin row for `sim.snapshot` (matches civ-watch wire shape).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MilitaryPinSnapshot {
+    /// Stable pin id for clients.
     pub id: u64,
+    /// Normalized map X.
     pub x: f32,
+    /// Normalized map Y.
     pub y: f32,
+    /// Wire label (`Vehicle` maps from `Knight`).
     pub unit_type: String,
+    /// Owning faction id.
     pub faction: u32,
+    /// Unit strength (float for JSON clients).
     pub strength: f32,
 }
 
@@ -456,7 +462,7 @@ pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSn
         .map(|(idx, (entity, unit))| {
             let (x, y) = grid_to_norm(unit.position);
             MilitaryPinSnapshot {
-                id: entity.to_bits().get() as u64 ^ u64::from(idx as u32),
+                id: entity.to_bits().get() ^ u64::from(idx as u32),
                 x,
                 y,
                 unit_type: unit_type_label(unit.unit_type).to_string(),
@@ -576,9 +582,13 @@ pub enum DispatchEffect {
     },
     /// Spawn civilian, vehicle, or airport (`sim.spawn_entity`, FR-CIV-UX-006).
     SpawnEntity {
+        /// Palette kind from request params.
         kind: SpawnEntityKind,
+        /// Normalized map X.
         x: f32,
+        /// Normalized map Y.
         y: f32,
+        /// Owning faction id.
         faction: u32,
         /// Entity id seed for civilians only.
         entity_seq: u64,
@@ -1007,12 +1017,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
 /// Palette entity for `sim.spawn_entity` (FR-CIV-UX-006).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpawnEntityKind {
+    /// Spawn via `civ-agents` civilian helper.
     Civilian,
+    /// Spawn military unit (`Knight` → wire label `Vehicle`).
     Vehicle,
+    /// Spawn civic hub building (`CityCenter`).
     Airport,
 }
 
 impl SpawnEntityKind {
+    /// JSON `kind` string echoed in RPC results.
     pub fn wire_label(self) -> &'static str {
         match self {
             Self::Civilian => "civilian",
@@ -1602,13 +1616,7 @@ mod tests {
     #[test]
     fn snapshot_fields_include_military_pins_when_present() {
         let mut sim = civ_engine::Simulation::with_seed(3);
-        civ_engine::spawn_military_at(
-            &mut sim.world,
-            1,
-            0.25,
-            0.75,
-            civ_engine::UnitType::Knight,
-        );
+        civ_engine::spawn_military_at(&mut sim.world, 1, 0.25, 0.75, civ_engine::UnitType::Knight);
         let fields = snapshot_fields_from_sim(&sim, 1);
         assert!(
             fields
@@ -1618,7 +1626,10 @@ mod tests {
             "expected spawned Knight pin as Vehicle"
         );
         let json = snapshot_result_json(&fields);
-        assert!(json.get("military_units").and_then(|v| v.as_array()).is_some());
+        assert!(json
+            .get("military_units")
+            .and_then(|v| v.as_array())
+            .is_some());
     }
 
     #[test]

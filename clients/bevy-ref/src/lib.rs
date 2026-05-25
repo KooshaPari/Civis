@@ -889,7 +889,10 @@ mod tests {
         let day = presentation_ambient_color_rgb(1.0);
         let night = presentation_ambient_color_rgb(0.0);
         assert!(day[0] > night[0], "day ambient should be warmer (more red)");
-        assert!(night[2] > day[2], "night ambient should be cooler (more blue)");
+        assert!(
+            night[2] > day[2],
+            "night ambient should be cooler (more blue)"
+        );
         assert!(presentation_ambient_brightness(1.0) > presentation_ambient_brightness(0.0));
     }
 

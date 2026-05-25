@@ -119,9 +119,8 @@ impl Terrain {
                 let dy = fy - 0.5;
                 let r = (dx * dx + dy * dy).sqrt() * 2.0;
                 let island = (1.0 - r.powf(1.55)).clamp(0.0, 1.0);
-                let ridge = ((1.0 - (dx.abs() * 1.7).min(1.0))
-                    * (1.0 - (dy.abs() * 1.7).min(1.0)))
-                .clamp(0.0, 1.0);
+                let ridge = ((1.0 - (dx.abs() * 1.7).min(1.0)) * (1.0 - (dy.abs() * 1.7).min(1.0)))
+                    .clamp(0.0, 1.0);
                 h = h * 0.48 + island * 0.34 + ridge * 0.18;
                 heights[y * SIZE + x] = h.clamp(0.0, 1.0);
             }

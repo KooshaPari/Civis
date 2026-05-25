@@ -14,6 +14,18 @@ public class TestWaitCollection;
 [Trait("Category", "Support")]
 public class TestWaitTests
 {
+    /// <summary>Advances virtual time for deadline checks without relying on wall-clock Task.Delay under load.</summary>
+    private sealed class SteppingTimeProvider : TimeProvider
+    {
+        private DateTimeOffset _now;
+
+        public SteppingTimeProvider(DateTimeOffset start) => _now = start;
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void Advance(TimeSpan step) => _now = _now.Add(step);
+    }
+
     [Fact]
     public async Task UntilAsync_PredicateTrueImmediately_ReturnsTrue()
     {
@@ -44,24 +56,31 @@ public class TestWaitTests
             "must spin until at least the timeout window before returning false");
     }
 
-    [Fact(Skip = "Iter-118: Timing-sensitive test — 1528ms vs expected <1000ms")]
+    [Fact]
     public async Task UntilAsync_PredicateBecomesTrue_ReturnsTrueWithinTimeout()
     {
-        var startedAt = DateTime.UtcNow;
-        var becomesTrueAt = startedAt.AddMilliseconds(150);
+        var clock = new SteppingTimeProvider(DateTimeOffset.UtcNow);
+        var becomesTrueAt = clock.GetUtcNow().AddMilliseconds(150);
+        var pollCount = 0;
 
-        var sw = Stopwatch.StartNew();
+        bool Probe()
+        {
+            pollCount++;
+            clock.Advance(TimeSpan.FromMilliseconds(50));
+            return clock.GetUtcNow() >= becomesTrueAt;
+        }
+
         var result = await TestWait.UntilAsync(
-            () => DateTime.UtcNow >= becomesTrueAt,
+            Probe,
             TimeSpan.FromSeconds(2),
-            pollMs: 25);
-        sw.Stop();
+            pollMs: 25,
+            timeProvider: clock);
 
         result.Should().BeTrue();
-        sw.ElapsedMilliseconds.Should().BeGreaterOrEqualTo(125,
-            "should have polled until the trigger time");
-        sw.ElapsedMilliseconds.Should().BeLessThan(1000,
-            "should NOT wait the full timeout when predicate flips");
+        pollCount.Should().BeGreaterOrEqualTo(3,
+            "should have polled until the virtual trigger time");
+        pollCount.Should().BeLessThan(50,
+            "should NOT spin until full virtual timeout when predicate flips");
     }
 
     [Fact]

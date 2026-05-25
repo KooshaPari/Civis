@@ -18,12 +18,14 @@ public static class TestWait
         Func<bool> predicate,
         TimeSpan timeout,
         int pollMs = 50,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        TimeProvider? timeProvider = null)
     {
         if (predicate is null) throw new ArgumentNullException(nameof(predicate));
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        timeProvider ??= TimeProvider.System;
+        var deadline = timeProvider.GetUtcNow().UtcDateTime.Add(timeout);
         ct.ThrowIfCancellationRequested();
-        while (sw.Elapsed < timeout)
+        while (timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             if (predicate()) return true;
             ct.ThrowIfCancellationRequested();
@@ -40,12 +42,14 @@ public static class TestWait
         Func<Task<bool>> predicate,
         TimeSpan timeout,
         int pollMs = 50,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        TimeProvider? timeProvider = null)
     {
         if (predicate is null) throw new ArgumentNullException(nameof(predicate));
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        timeProvider ??= TimeProvider.System;
+        var deadline = timeProvider.GetUtcNow().UtcDateTime.Add(timeout);
         ct.ThrowIfCancellationRequested();
-        while (sw.Elapsed < timeout)
+        while (timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             if (await predicate().ConfigureAwait(false)) return true;
             ct.ThrowIfCancellationRequested();

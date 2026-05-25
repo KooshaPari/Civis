@@ -1545,6 +1545,7 @@ function updateBuildingsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
       return;
     }
     mesh.visible = true;
+    mesh.userData.building = building;
     const dims = buildingDimensions(building);
     mesh.scale.set(dims[0], dims[1], dims[2]);
     const wx = building.x * terrain.size - terrain.size / 2;

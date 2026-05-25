@@ -2099,6 +2099,7 @@ dependencies = [
  "civ-tactics",
  "civ-voxel",
  "futures",
+ "hecs",
  "http-body-util",
  "serde",
  "serde_json",

@@ -189,7 +189,7 @@ export type Snapshot = {
   tech_tree: TechNode[];
   events: GameEvent[];
   is_day: boolean;
-  weather: WeatherSnapshot;
+  weather?: WeatherSnapshot;
   speed: TimeSpeed;
 };
 

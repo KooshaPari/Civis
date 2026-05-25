@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using DINOForge.Bridge.Client;
 using ModelContextProtocol.Server;
-using BareCua;
+using DINOForge.Tools.McpServer.Cua;
 
 namespace DINOForge.Tools.McpServer.Tools;
 
@@ -72,7 +72,9 @@ public sealed class GameInputTool
         try
         {
             // Pattern #116 fix (#800): await instead of .Result to avoid sync-over-async deadlock risk.
-            if (await TryBareCuaPressKey(keyName).ConfigureAwait(false))
+            if (await CuaNativeSession.TryPressKeyAsync(
+                    CuaNativeClientOptions.Bare, CuaNativePaths.TryFindBare(), keyName, CancellationToken.None)
+                .ConfigureAwait(false))
             {
                 return GameClientHelper.ToJson(new
                 {
@@ -114,50 +116,6 @@ public sealed class GameInputTool
         {
             return GameClientHelper.ToJson(new { success = false, error = $"Key input error: {ex.Message}" });
         }
-    }
-
-    /// <summary>
-    /// Attempts to press a key using bare-cua-native.exe (optional).
-    /// Returns true on success, false if bare-cua is not available.
-    /// </summary>
-    private static async Task<bool> TryBareCuaPressKey(string keyName)
-    {
-        try
-        {
-            string? nativePath = FindBareCuaNative();
-            if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
-                return false;
-
-            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", CancellationToken.None).ConfigureAwait(false);
-            try
-            {
-                await computer.PressKeyAsync(keyName).ConfigureAwait(false);
-                return true;
-            }
-            finally
-            {
-                await computer.DisposeAsync().ConfigureAwait(false);
-            }
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Finds bare-cua-native.exe by checking environment variable and hardcoded path.
-    /// </summary>
-    private static string? FindBareCuaNative()
-    {
-        string[] candidatePaths =
-        [
-            Environment.GetEnvironmentVariable("BARE_CUA_NATIVE") ?? string.Empty,
-            Path.Combine(AppContext.BaseDirectory, "bare-cua-native.exe"),
-            "C:\\Users\\koosh\\bare-cua\\target\\release\\bare-cua-native.exe"
-        ];
-
-        return candidatePaths.FirstOrDefault(p => !string.IsNullOrEmpty(p) && File.Exists(p));
     }
 
     private static string SendMouseClick(int? x, int? y, string? button)

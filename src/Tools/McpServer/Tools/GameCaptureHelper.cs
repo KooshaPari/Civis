@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using ScreenCapture.NET;
 using ScreenRecorderLib;
-using DINOForge.Tools.McpServer.PlayCua;
+using DINOForge.Tools.McpServer.Cua;
 
 namespace DINOForge.Tools.McpServer.Tools;
 
@@ -39,11 +39,15 @@ internal static class GameCaptureHelper
     internal static async Task<string?> CaptureAsync(string outputPath, CancellationToken ct = default)
     {
         // Primary: playcua-native (GPU-accelerated, optional fast native capture)
-        if (await TryNativeCuaScreenshotAsync(FindPlayCuaNative, ct, outputPath).ConfigureAwait(false))
+        if (await CuaNativeSession.TryScreenshotAsync(
+                CuaNativeClientOptions.Play, CuaNativePaths.TryFindPlay(), GameWindowTitle, outputPath, ct)
+            .ConfigureAwait(false))
             return outputPath;
 
         // Secondary: bare-cua-native (optional, fast native capture)
-        if (await TryNativeCuaScreenshotAsync(FindBareCuaNative, ct, outputPath).ConfigureAwait(false))
+        if (await CuaNativeSession.TryScreenshotAsync(
+                CuaNativeClientOptions.Bare, CuaNativePaths.TryFindBare(), GameWindowTitle, outputPath, ct)
+            .ConfigureAwait(false))
             return outputPath;
 
         // Tertiary: Unity ScreenCapture.CaptureScreenshot() via file-signal
@@ -64,80 +68,6 @@ internal static class GameCaptureHelper
             return outputPath;
 
         return null;
-    }
-
-    /// <summary>
-    /// Shared native CUA screenshot path (playcua-native or bare-cua-native).
-    /// </summary>
-    private static async Task<bool> TryNativeCuaScreenshotAsync(
-        Func<string?> findNative,
-        CancellationToken ct,
-        string outputPath)
-    {
-        try
-        {
-            string? nativePath = findNative();
-            if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
-                return false;
-
-            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
-            try
-            {
-                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
-                if (pngBytes.Length == 0)
-                    return false;
-
-                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
-            }
-            finally
-            {
-                await computer.DisposeAsync().ConfigureAwait(false);
-            }
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Finds playcua-native.exe by checking (in order):
-    /// 1. PLAYCUA_NATIVE_EXE environment variable (CI builds)
-    /// 2. BARE_CUA_NATIVE environment variable (legacy fallback)
-    /// 3. Same directory as this DLL (bin/)
-    /// 4. Hardcoded dev path C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe
-    /// </summary>
-    private static string? FindPlayCuaNative()
-    {
-        string[] candidatePaths =
-        [
-            Environment.GetEnvironmentVariable("PLAYCUA_NATIVE_EXE") ?? string.Empty,
-            Environment.GetEnvironmentVariable("BARE_CUA_NATIVE") ?? string.Empty,
-            Path.Combine(AppContext.BaseDirectory, "playcua-native.exe"),
-            Path.Combine(AppContext.BaseDirectory, "bare-cua-native.exe"),
-            "C:\\Users\\koosh\\bare-cua\\target\\release\\bare-cua-native.exe"
-        ];
-
-        return candidatePaths.FirstOrDefault(p => !string.IsNullOrEmpty(p) && File.Exists(p));
-    }
-
-    /// <summary>
-    /// Finds bare-cua-native.exe by checking:
-    /// 1. BARE_CUA_NATIVE environment variable
-    /// 2. Same directory as this DLL
-    /// 3. Hardcoded path C:\Users\koosh\bare-cua\target\release\bare-cua-native.exe
-    /// </summary>
-    private static string? FindBareCuaNative()
-    {
-        string[] candidatePaths =
-        [
-            Environment.GetEnvironmentVariable("BARE_CUA_NATIVE") ?? string.Empty,
-            Path.Combine(AppContext.BaseDirectory, "bare-cua-native.exe"),
-            "C:\\Users\\koosh\\bare-cua\\target\\release\\bare-cua-native.exe"
-        ];
-
-        return candidatePaths.FirstOrDefault(p => !string.IsNullOrEmpty(p) && File.Exists(p));
     }
 
     /// <summary>

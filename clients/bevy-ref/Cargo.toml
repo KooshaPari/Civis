@@ -28,6 +28,7 @@ bevy = { version = "0.14", optional = true, default-features = false, features =
     "bevy_core_pipeline",
     "bevy_pbr",
     "bevy_render",
+    "bevy_state",
     "bevy_sprite",
     "bevy_text",
     "bevy_ui",

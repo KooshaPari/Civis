@@ -6,6 +6,8 @@ extends Node3D
 ## `server` = civ-server WebSocket + civ-watch terrain. `watch` = civ-watch HTTP only.
 @export_enum("server", "watch") var attach_mode := "server"
 
+## civ-server WebSocket URL. Resolved at startup from CIV_SERVER_WS env var if set,
+## otherwise falls back to this Inspector value (default port 3000).
 @export var civ_server_ws := "ws://127.0.0.1:3000/ws?tick_format=binary"
 @export var civ_watch_http := "http://127.0.0.1:9090"
 
@@ -80,6 +82,16 @@ func _ready() -> void:
 	_ws_client.snapshot_received.connect(_on_ws_snapshot)
 	_ws_client.connection_changed.connect(_on_ws_connection)
 	_ws_client.f3d0_frame_received.connect(_on_f3d0_frame)
+
+	# Allow env var override so local dev on a non-default port doesn't require
+	# editing the scene file.  CIV_SERVER_WS takes precedence over the Inspector
+	# export; CIV_WATCH_HTTP similarly overrides the watch endpoint.
+	var env_ws: String = OS.get_environment("CIV_SERVER_WS")
+	if not env_ws.is_empty():
+		civ_server_ws = env_ws
+	var env_http: String = OS.get_environment("CIV_WATCH_HTTP")
+	if not env_http.is_empty():
+		civ_watch_http = env_http
 
 	_civis_http.connect(civ_watch_http)
 	_load_terrain()

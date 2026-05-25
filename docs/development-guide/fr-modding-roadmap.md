@@ -9,7 +9,8 @@
 |------|--------|----------|
 | Manifest JSON Schema | Done | `mods/manifest.schema.json` |
 | Example PolicyMod manifest | Done | `mods/example-policy/manifest.toml` |
-| `civ-mod-host` crate | Stub | `crates/mod-host` — load + validate manifest |
+| `civ-mod-host` crate | **Partial (v3)** | `crates/mod-host` — manifest, `.civmod` ZIP, `wasmtime` policy tick |
+| `civlab-sdk` guest | **Partial** | `crates/civlab-sdk` — `civlab_policy_tick` export |
 | Scenario `mods: []` | Done | `scenarios/baseline.yaml` lists `mods/example-policy` when path validates |
 | Engine hook | Stub | `register_mod_stubs`; policy phase at `phase_economy` via `ModHost::tick` |
 
@@ -21,9 +22,9 @@
 
 **What does not work yet**
 
-- WASM load, sandbox, `world_read` / `action_emit` (§5–8).
-- `.civmod` bundles, `civlab-sdk`, mod signing (§11–14).
-- Lifecycle events `mod.loaded.v1` (traceability FR-MOD-004).
+- Full capability API: `world_read` / `action_emit` (§5–8).
+- Economic WASM phase hooks; mod signing (§14).
+- Replay bus JSON `mod.loaded.v1` (engine has `ReplayEvent::ModLoaded` only).
 
 ## v2 — Host registry + policy stub — Done (stub)
 
@@ -43,11 +44,16 @@
 - Capability enforcement beyond manifest flags; actual policy writes.
 - `mod.loaded.v1` / `mod.error.v1` on replay bus.
 
-## v3 — WASM sandbox (planned)
+## v3 — WASM sandbox (**partial**, 2026-05-25)
 
-1. `wasmtime` guest load after manifest validation.
-2. Determinism scan (§3.4).
-3. Example PolicyMod compiled against `civlab-sdk` in CI.
+| Item | Status | Location |
+|------|--------|----------|
+| `wasmtime` policy tick | Done | `crates/mod-host/src/wasm_guest.rs` |
+| `.civmod` ZIP load | Done | `ModHost::load_civmod_archive` |
+| `civlab-sdk` | Done | `crates/civlab-sdk` |
+| Example WASM build | Script | `scripts/build-example-policy-wasm.ps1` |
+| Determinism scan | Planned | §3.4 |
+| CI packaged `.civmod` | Planned | `scripts/package-example-mod.ps1` (optional) |
 
 ## v4 — Save/load + distribution (planned)
 

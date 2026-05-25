@@ -48,7 +48,7 @@ Default stack:
 
 ## Do not (agents)
 
-- Do not implement WASM guests, `.civmod` packs, or policy/economic phase hooks from CIV-0700 yet (`civ-mod-host` v1 is manifest-only).
+- Do not implement full CIV-0700 (capability enforcement, mod signing, in-game mod browser, determinism scan) — `civ-mod-host` v3 **partial**: manifest + `.civmod` ZIP + `wasmtime` policy tick + `ReplayEvent::ModLoaded`; no economic WASM hooks yet.
 - Do not assume Quixel/Megascans assets are in git (`Content/Megascans/` is local-only).
 - Do not edit non-primary worktrees unless the user asked.
 - Do not skip `agent-smoke` or `civis-3d-verify` when changing JSON-RPC or snapshot shapes.
@@ -61,8 +61,10 @@ Default stack:
 
 ## Maturity status (2026-05-25)
 
-**Mature:** determinism/replay, `civ-server` WS tests, `civ-watch`, web L2 authoring (`FR-CIV-WEB-000..008`), Godot server attach, Bevy lib tests.
+**Mature:** determinism/replay, `civ-server` WS tests (incl. spawn palette), `civ-watch`, web L2 authoring, Godot/Bevy/Unreal server attach, JSON-RPC catalog + `just civis-3d-verify`.
 
-**Immature (finish in order):** modding CIV-0700, `job` on `civ_pins`, F3D0 on Godot/Unreal live path, JSON-RPC catalog doc.
+**Partial:** modding v3 (WASM policy tick, `.civmod`, `civlab-sdk`); F3D0 — Bevy full mesh, Godot/Unreal **VoxelDelta markers**; Unreal minimap UMG (256² capture).
 
-See audit for sprint backlog: P0 agent contracts → P1 protocol → P2 UX parity → P3 modding MVP.
+**Deferred (product):** Quixel L5 art, mod signing, in-game mod browser, full `mod.loaded.v1` replay-bus JSON.
+
+See `docs/development-guide/fr-ax-dx-ux-maturity-audit.md`.

@@ -1,8 +1,11 @@
 #include "CivShowGameMode.h"
 
+#include "CivMinimapCapture.h"
+#include "CivMinimapWidget.h"
 #include "CivProtocolClient.h"
 #include "CivWsClient.h"
 #include "CivilianActor.h"
+#include "Blueprint/UserWidget.h"
 #include "Dom/JsonObject.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Engine/DirectionalLight.h"
@@ -43,6 +46,38 @@ void ACivShowGameMode::BeginPlay()
     WsClient->OnSnapshotReceived.AddDynamic(this, &ACivShowGameMode::OnWsSnapshot);
     WsClient->OnF3d0FrameReceived.AddDynamic(this, &ACivShowGameMode::OnF3d0Frame);
     WsClient->ConnectServer(ServerWsUrl);
+
+    SpawnMinimapHud();
+}
+
+void ACivShowGameMode::SpawnMinimapHud()
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    MinimapCapture = GetWorld()->SpawnActor<ACivMinimapCapture>(
+        ACivMinimapCapture::StaticClass(),
+        FVector::ZeroVector,
+        FRotator::ZeroRotator);
+    if (!MinimapCapture)
+    {
+        return;
+    }
+
+    if (APlayerController* Pc = GetWorld()->GetFirstPlayerController())
+    {
+        MinimapWidget = CreateWidget<UCivMinimapWidget>(Pc, UCivMinimapWidget::StaticClass());
+        if (MinimapWidget)
+        {
+            MinimapWidget->AddToViewport(1);
+            if (MinimapCapture->MinimapTexture)
+            {
+                MinimapWidget->SetMinimapTexture(MinimapCapture->MinimapTexture);
+            }
+        }
+    }
 }
 
 void ACivShowGameMode::Tick(float DeltaSeconds)

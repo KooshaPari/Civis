@@ -5,7 +5,9 @@
 #include "CivShowGameMode.generated.h"
 
 class ACivilianActor;
+class ACivMinimapCapture;
 class AVoxelTerrain;
+class UCivMinimapWidget;
 class UCivProtocolClient;
 class UCivWsClient;
 
@@ -63,6 +65,14 @@ private:
 
     UPROPERTY()
     TMap<uint64, AActor*> ChunkOverlayActors;
+
+    UPROPERTY()
+    ACivMinimapCapture* MinimapCapture = nullptr;
+
+    UPROPERTY()
+    UCivMinimapWidget* MinimapWidget = nullptr;
+
+    void SpawnMinimapHud();
 
     static constexpr int32 MaxChunkOverlays = 64;
     static constexpr float ChunkEdge = 16.0f;

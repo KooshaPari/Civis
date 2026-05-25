@@ -39,9 +39,10 @@ pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModRegistry, ModType
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{
     apply_damage, evolve_doctrine, formation_offsets, grid_to_world_coord, line_of_sight,
-    score_doctrine_fitness, tick_war_bridge, CombatEngagement, DamageEvent, Doctrine,
-    DoctrineLibrary, FactionEngagementStats, FormationKind, MilitaryUnitSample,
-    NoopOperationalLayer, OperationalLayer, WarBridgeConfig,
+    score_doctrine_fitness, tick_operational_movement, tick_war_bridge, CombatEngagement,
+    DamageEvent, Doctrine, DoctrineLibrary, FactionEngagementStats, FormationKind, GridMove,
+    MilitaryUnitSample, NoopOperationalLayer, OperationalLayer, OperationalMovementConfig,
+    WarBridgeConfig,
 };
 pub use hash_chain::{
     chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,

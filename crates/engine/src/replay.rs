@@ -22,6 +22,13 @@ pub enum ReplayEvent {
     },
     /// A queued damage event.
     Damage { tick: u64, event: DamageEvent },
+    /// Per-soldier combat (war bridge) with attacker/defender pin ids (FR-CIV-TACTICS-025).
+    Combat {
+        tick: u64,
+        shooter_id: u64,
+        target_id: u64,
+        event: DamageEvent,
+    },
     /// Outcome of a research decision.
     ResearchOutcome {
         tick: u64,
@@ -133,6 +140,22 @@ impl ReplayLog {
         self.events.push(ReplayEvent::Damage { tick, event });
     }
 
+    /// Record a per-soldier combat engagement.
+    pub fn record_combat(
+        &mut self,
+        tick: u64,
+        shooter_id: u64,
+        target_id: u64,
+        event: DamageEvent,
+    ) {
+        self.events.push(ReplayEvent::Combat {
+            tick,
+            shooter_id,
+            target_id,
+            event,
+        });
+    }
+
     /// Record a research outcome.
     pub fn record_research(&mut self, tick: u64, snapshot_hash: Vec<u8>, accepted: bool) {
         self.events.push(ReplayEvent::ResearchOutcome {
@@ -203,6 +226,14 @@ impl ReplayLog {
                 }
                 ReplayEvent::Damage { tick, event } => {
                     into.apply_replay_damage(*tick, event);
+                }
+                ReplayEvent::Combat {
+                    tick,
+                    shooter_id: _,
+                    target_id: _,
+                    event,
+                } => {
+                    into.apply_replay_combat(*tick, event);
                 }
                 ReplayEvent::ResearchOutcome {
                     tick,

@@ -107,6 +107,12 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-020 | Voxel line-of-sight is deterministic. | `crates/tactics/los.rs` | `line_of_sight_blocks_solid_voxels` | implemented |
 | FR-CIV-TACTICS-021 | Formation offsets are stable per kind/slot count. | `crates/tactics/formation.rs` | `formation_offsets_line_and_wedge` | implemented |
 | FR-CIV-TACTICS-022 | War bridge queues voxel damage on cadence with LOS. | `crates/tactics/war_bridge.rs`, `engine.rs` | `war_bridge_queues_damage_on_cadence_with_los` | implemented |
+| FR-CIV-TACTICS-023 | Doctrine fitness scores faction engagement stats. | `crates/tactics/doctrine_fitness.rs` | `doctrine_fitness_rewards_engagement_stats` | implemented |
+| FR-CIV-TACTICS-024 | Per-soldier combat engagements on snapshot. | `crates/tactics/war_bridge.rs`, `engine.rs`, `server/jsonrpc` | `war_bridge_records_combat_replay_events` | implemented |
+| FR-CIV-TACTICS-025 | Combat engagements recorded in replay log. | `crates/engine/src/replay.rs` | `war_bridge_records_combat_replay_events` | implemented |
+| FR-CIV-TACTICS-030 | Operational layer hook for engagements. | `crates/tactics/operational.rs` | (compile + `NoopOperationalLayer` in engine) | implemented |
+| FR-CIV-TACTICS-031 | Operational movement toward nearest enemy. | `crates/tactics/movement.rs` | `operational_movement_steps_toward_enemy` | implemented |
+| FR-CIV-TACTICS-032 | Per-soldier HP on military ECS component. | `engine.rs`, `spawn.rs` | `war_bridge_records_combat_replay_events` | implemented |
 
 ---
 

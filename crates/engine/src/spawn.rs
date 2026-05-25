@@ -43,9 +43,12 @@ pub fn spawn_military_at(
     y: f32,
     unit_type: UnitType,
 ) -> Entity {
+    let hp = Fixed::from_num(10);
     world.spawn((MilitaryUnit {
         unit_type,
-        strength: Fixed::from_num(10),
+        strength: hp,
+        hp,
+        max_hp: hp,
         morale: Fixed::from_num(1),
         position: norm_to_grid(x, y),
         faction_id: faction,

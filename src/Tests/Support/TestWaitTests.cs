@@ -7,6 +7,10 @@ using Xunit;
 
 namespace DINOForge.Tests.Support;
 
+[CollectionDefinition("TestWait", DisableParallelization = true)]
+public class TestWaitCollection;
+
+[Collection("TestWait")]
 [Trait("Category", "Support")]
 public class TestWaitTests
 {
@@ -90,11 +94,11 @@ public class TestWaitTests
     public async Task UntilAsync_CancellationRequested_Throws()
     {
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(50));
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100));
 
         Func<Task> act = () => TestWait.UntilAsync(
             () => false,
-            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(2),
             pollMs: 25,
             ct: cts.Token);
 

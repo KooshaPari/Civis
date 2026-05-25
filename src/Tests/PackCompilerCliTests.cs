@@ -27,6 +27,12 @@ namespace DINOForge.Tests
     [Trait("Journey", "Journey-Debug")]
     public class PackCompilerCliTests : IDisposable
     {
+        private static readonly Lazy<string> PackCompilerProjectPath = new(() =>
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Tools", "PackCompiler", "DINOForge.Tools.PackCompiler.csproj")));
+
+        private static readonly object BuildGate = new();
+        private static bool _packCompilerBuilt;
+
         private readonly string _tempRoot;
         private readonly PackLoader _loader;
 
@@ -36,6 +42,28 @@ namespace DINOForge.Tests
             Directory.CreateDirectory(_tempRoot);
 
             _loader = new PackLoader();
+            EnsurePackCompilerBuilt();
+        }
+
+        private static void EnsurePackCompilerBuilt()
+        {
+            lock (BuildGate)
+            {
+                if (_packCompilerBuilt) return;
+                var build = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"build \"{PackCompilerProjectPath.Value}\" -c Release --verbosity quiet",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                build!.WaitForExit();
+                if (build.ExitCode != 0)
+                    throw new InvalidOperationException("Failed to build PackCompiler for CLI tests");
+                _packCompilerBuilt = true;
+            }
         }
 
         public void Dispose()
@@ -85,13 +113,12 @@ namespace DINOForge.Tests
 
         private (int ExitCode, string StdOut, string StdErr) RunPackCompiler(params string[] args)
         {
-            string projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Tools", "PackCompiler", "DINOForge.Tools.PackCompiler.csproj"));
             string joinedArgs = string.Join(" ", args.Select(arg => $"\"{arg}\""));
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project \"{projectPath}\" -- {joinedArgs}",
+                Arguments = $"run --project \"{PackCompilerProjectPath.Value}\" -c Release --no-build -- {joinedArgs}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

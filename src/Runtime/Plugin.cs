@@ -42,6 +42,10 @@ namespace DINOForge.Runtime
         private static ManualLogSource Log = null!;
         private Harmony? _harmony;
 
+        internal static ConfigEntry<bool>? _showOverlayOnStart;
+        internal static ConfigEntry<bool>? _enableHotReload;
+        internal static ConfigEntry<int>? _hmrDebounceMs;
+
         // Static constructor fires BEFORE Awake — probe entry point
         static Plugin()
         {
@@ -115,6 +119,22 @@ namespace DINOForge.Runtime
             ConfigEntry<string> dumpOutputPath = Config.Bind("Debug", "DumpOutputPath",
                 Path.Combine(Paths.BepInExRootPath, "dinoforge_dumps"),
                 "Directory to write entity/component dump files");
+
+            // DINOForge platform settings (exposed in BepInEx ConfigurationManager)
+            ConfigEntry<bool> showOverlayOnStart = Config.Bind("General", "ShowDebugOverlayOnStart", false,
+                "Show F9 debug overlay automatically when the game starts");
+            ConfigEntry<bool> enableHotReload = Config.Bind("General", "EnableHotReload", true,
+                "Watch pack files for changes and reload automatically (15s debounce)");
+            ConfigEntry<int> hmrDebounceMs = Config.Bind("General", "HotReloadDebounceMs", 15000,
+                new ConfigDescription("Milliseconds to wait after a file change before triggering reload",
+                    new AcceptableValueRange<int>(500, 60000)));
+            ConfigEntry<string> logLevel = Config.Bind("General", "LogLevel", "Info",
+                new ConfigDescription("Logging verbosity for DINOForge runtime",
+                    new AcceptableValueList<string>("Debug", "Info", "Warning", "Error")));
+
+            _showOverlayOnStart = showOverlayOnStart;
+            _enableHotReload = enableHotReload;
+            _hmrDebounceMs = hmrDebounceMs;
 
             // Detect game and log version compatibility info
             try
@@ -386,7 +406,12 @@ namespace DINOForge.Runtime
                 string currentName = UnityEngine.EventSystems.EventSystem.current != null
                     ? UnityEngine.EventSystems.EventSystem.current.gameObject.name
                     : "NULL";
-                DebugLog.Write("Plugin", $"[EventSystem] reconcile: preferred={preferred.gameObject.name}, current={currentName}, total={existing.Length}, enabled={activeCount}, systems=[{string.Join(", ", names)}]");
+                string key = $"{preferred.gameObject.name}|{currentName}|{existing.Length}|{activeCount}";
+                if (key != _lastEventSystemReconcileKey)
+                {
+                    _lastEventSystemReconcileKey = key;
+                    DebugLog.Write("Plugin", $"[EventSystem] reconcile: preferred={preferred.gameObject.name}, current={currentName}, total={existing.Length}, enabled={activeCount}, systems=[{string.Join(", ", names)}]");
+                }
             }
             catch (Exception ex)
             {
@@ -613,6 +638,7 @@ namespace DINOForge.Runtime
         }
 
         private static int _playerLoopEventSystemTick;
+        private static string? _lastEventSystemReconcileKey;
 
         private static void DINOForgePlayerLoopUpdate()
         {
@@ -940,7 +966,16 @@ namespace DINOForge.Runtime
                     try
                     {
                         DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleDebug();
+                        if (_uguiReady && _dfCanvas != null)
+                        {
+                            _dfCanvas.ToggleDebug();
+                            // ForceRefresh after toggle so the panel always shows current data
+                            // (Update() never fires in DINO — periodic refresh is dead code).
+                            if (_dfCanvas.DebugPanel != null && _dfCanvas.DebugPanel.IsVisible)
+                            {
+                                _dfCanvas.DebugPanel.ForceRefresh();
+                            }
+                        }
                         else _debugOverlay?.Toggle();
                     }
                     catch (Exception ex)
@@ -1063,7 +1098,14 @@ namespace DINOForge.Runtime
                 // ── Step 4: Start HMR (Hot Module Reload) signal watcher ─────────────
                 // Watches for DINOForge_HotReload signal file in BepInEx root
                 // When detected, triggers soft UI + pack reload without full game restart
-                StartHmrWatcher();
+                if (Plugin._enableHotReload?.Value != false)
+                {
+                    StartHmrWatcher();
+                }
+                else
+                {
+                    _log.LogInfo("[RuntimeDriver] HMR disabled via config (General.EnableHotReload=false).");
+                }
 
                 // ── Step 5: Start background polling (ECS world, catalog rebuild, heartbeats) ──
                 // MonoBehaviour.Update() NEVER fires in DINO — background thread polling is required.
@@ -1078,6 +1120,7 @@ namespace DINOForge.Runtime
             // Pack loading is YAML parsing — it does NOT require an ECS World.
             // OnWorldReadyCoroutine only fires when gameplay starts (ECS world created).
             // At main menu there is no ECS world, so packs would never load without this path.
+            DebugLog.Write("Plugin", $"[RuntimeDriver] Step 7 ENTERING MainMenu-mode PackLoad — _modPlatform={((_modPlatform != null) ? "present" : "NULL")}");
             RunPhaseWithAbortGuard("MainMenu-mode PackLoad", () =>
             {
                 if (_modPlatform != null)
@@ -1100,6 +1143,12 @@ namespace DINOForge.Runtime
                     _log.LogWarning("[RuntimeDriver] MainMenu-mode pack-load skipped — _modPlatform is null.");
                 }
             });
+
+            if (Plugin._showOverlayOnStart?.Value == true && _dfCanvas != null)
+            {
+                _dfCanvas.ToggleDebug();
+                _log.LogInfo("[RuntimeDriver] F9 overlay shown on start (General.ShowDebugOverlayOnStart=true).");
+            }
 
             _log.LogInfo("[RuntimeDriver] Waiting for ECS World (Update polling)...");
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
@@ -1342,6 +1391,14 @@ namespace DINOForge.Runtime
                     $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                 _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('deferred reload') — dfCanvas={_dfCanvas != null}, modPlatform={_modPlatform != null}");
                 PushLoadedPacksToUgui("deferred reload");
+
+                // Update header status line and show toast so the user knows reload completed.
+                string statusMsg = loadResult.IsSuccess
+                    ? $"Reloaded — {loadResult.LoadedPacks.Count} pack(s) loaded"
+                    : $"Reload failed — {loadResult.Errors.Count} error(s)";
+                _dfCanvas?.ModMenuPanel?.SetStatus(statusMsg, loadResult.Errors.Count);
+                ToastType toastType = loadResult.IsSuccess ? ToastType.Info : ToastType.Warning;
+                _dfCanvas?.ShowToast(statusMsg, toastType);
             }
 
             yield return null;
@@ -1402,6 +1459,17 @@ namespace DINOForge.Runtime
                 }
 
                 _dfCanvas.ModMenuPanel.SetPacks(packInfos);
+
+                ContentLoadResult? lastResult = _modPlatform.GetLastLoadResult();
+                if (lastResult != null)
+                {
+                    int errorCount = lastResult.Errors.Count;
+                    string statusMsg = lastResult.IsSuccess
+                        ? $"{lastResult.LoadedPacks.Count} packs loaded"
+                        : $"{lastResult.LoadedPacks.Count} loaded, {errorCount} error(s)";
+                    _dfCanvas.ModMenuPanel.SetStatus(statusMsg, errorCount);
+                }
+
                 _log?.LogInfo($"[RuntimeDriver] UGUI mod menu refreshed after {reason}.");
             }
             catch (Exception ex)
@@ -1445,54 +1513,26 @@ namespace DINOForge.Runtime
                         {
                             try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
 
-                            // Direct invocation from background thread — works in Mono 2021.3
-                            // Same pattern as F9/F10 key polling (no Update() required)
-                            _log?.LogInfo("[RuntimeDriver] HMR: Signal detected, reloading packs...");
+                            _log?.LogInfo("[RuntimeDriver] HMR: Signal detected, enqueueing reload...");
 
-                            try
-                            {
-                                // #874: unify with PackFileWatcher pipeline — both routes must apply stat-modifier reapply.
-                                // Route A (legacy): KeyInputSystem.OnPackReloadRequested → LoadPacks() only.
-                                // Route B (canonical): ModPlatform.TriggerHotReload() → HotReloadBridge.TriggerReload()
-                                //   which fires StatModifierSystem.Reapply() + OnRuntimeUpdated event.
-                                // Prefer Route B; fall back to Route A when bridge is null (e.g., before init).
-                                bool unified = false;
-                                try
-                                {
-                                    unified = _modPlatform?.TriggerHotReload() ?? false;
-                                }
-                                catch (System.Exception ex)
-                                {
-                                    _log?.LogWarning($"[RuntimeDriver] HMR: TriggerHotReload failed, falling back: {ex}");
-                                }
-
-                                if (!unified)
-                                {
-                                    // Fallback: legacy KeyInputSystem callback path (LoadPacks only, no Reapply).
-                                    Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
-                                }
-                            }
-                            catch (System.Exception ex)
-                            {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload invocation failed: {ex}");
-                            }
-
-                            // Re-initialize UGUI if it exists
+                            // #891: unified reload path — enqueue via RequestPackReload so
+                            // ProcessPackReloadCoroutine handles LoadPacks + UGUI refresh +
+                            // SetStatus + ShowToast consistently (same path as F10 "Reload Packs" button).
                             try
                             {
                                 RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
                                 if (driver != null)
                                 {
-                                    // Reset UGUI state flags so on-next-Update it rebuilds
-                                    driver._uguiReady = false;
-                                    driver._uguiChecked = false;
-                                    driver._dfCanvas = null;
-                                    _log?.LogInfo("[RuntimeDriver] HMR: UGUI state reset for rebuild.");
+                                    driver.RequestPackReload("HMR signal");
+                                }
+                                else
+                                {
+                                    Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
                                 }
                             }
                             catch (System.Exception ex)
                             {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: UGUI reset failed: {ex}");
+                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload enqueue failed: {ex}");
                             }
 
                             _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");

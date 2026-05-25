@@ -40,8 +40,12 @@ namespace DINOForge.Runtime.Bridge
         // (IsHungAppWindow=True). Use these constants as the timeout argument.
         // threshold-ok: bounded main-thread wait for ECS handlers
         private const int MainThreadWaitTimeoutMs = 5000;
+        // threshold-ok: mid-tier bound for input-injection handlers that scan scene objects
+        private const int MainThreadInputWaitTimeoutMs = 8000;
         // threshold-ok: longer bound for heavier reflection-driven UI handlers
         private const int MainThreadHeavyWaitTimeoutMs = 10000;
+        // threshold-ok: poll interval for shutdown signal check; short enough to react quickly, long enough not to spin
+        private const int ShutdownPollIntervalMs = 200;
 
         /// <summary>
         /// Resets the current thread abort state on legacy Unity/Mono runtimes.
@@ -796,7 +800,7 @@ namespace DINOForge.Runtime.Bridge
             var result = MainThreadDispatcher.RunOnMainThread(() => UiTreeSnapshotBuilder.Capture(selector));
             // sync-over-async-unavoidable: ECS-bound, main-thread-required. MainThreadDispatcher.RunOnMainThread
             // returns a Task that completes on main thread; RPC handler must wait synchronously to return response.
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             UiTreeResult treeResult;
             if (!completed)
             {
@@ -837,7 +841,7 @@ namespace DINOForge.Runtime.Bridge
             string selector = parameters?.Value<string>("selector") ?? string.Empty;
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Query(selector));
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             UiActionResult queryResult;
             if (!completed)
             {
@@ -863,7 +867,7 @@ namespace DINOForge.Runtime.Bridge
             string selector = parameters?.Value<string>("selector") ?? string.Empty;
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Click(selector));
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             UiActionResult clickResult;
             if (!completed)
             {
@@ -896,7 +900,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 var evalTask = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.EvaluateState(selector, state));
                 // sync-over-async-unavoidable: ECS-bound, main-thread-required
-                bool completed = evalTask.Wait(5000);
+                bool completed = evalTask.Wait(MainThreadWaitTimeoutMs);
                 if (!completed)
                 {
                     var timeoutResult = new UiWaitResult
@@ -939,7 +943,7 @@ namespace DINOForge.Runtime.Bridge
 
             var result = MainThreadDispatcher.RunOnMainThread(() => UiSelectorEngine.Expect(selector, condition));
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             UiExpectationResult expectResult;
             if (!completed)
             {
@@ -1177,7 +1181,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = task.Wait(5000);
+            bool completed = task.Wait(MainThreadWaitTimeoutMs);
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             ResourceSnapshot snapshot = completed ? task.Result : new ResourceSnapshot();
 
@@ -1222,7 +1226,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool timedOut = !loadResult.Wait(5000);
+            bool timedOut = !loadResult.Wait(MainThreadWaitTimeoutMs);
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             bool success = !timedOut && loadResult.Result.success;
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
@@ -1413,8 +1417,8 @@ namespace DINOForge.Runtime.Bridge
                     return JToken.FromObject(readyResult);
                 }
 
-                // sync-over-async-unavoidable: ManualResetEventSlim signal wait with 200ms bounded timeout (not a Task)
-                if (_shutdownEvent.Wait(200))  // Signaled = shutdown
+                // sync-over-async-unavoidable: ManualResetEventSlim signal wait with ShutdownPollIntervalMs bounded timeout (not a Task)
+                if (_shutdownEvent.Wait(ShutdownPollIntervalMs))  // Signaled = shutdown
                     break;
             }
 
@@ -1753,7 +1757,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -1826,7 +1830,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -1886,7 +1890,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(8000);
+            bool completed = result.Wait(MainThreadInputWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -1943,7 +1947,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -2013,7 +2017,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -2106,7 +2110,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -2188,7 +2192,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(5000);
+            bool completed = result.Wait(MainThreadWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { error = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
@@ -2440,7 +2444,7 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(10000);
+            bool completed = result.Wait(MainThreadHeavyWaitTimeoutMs);
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);

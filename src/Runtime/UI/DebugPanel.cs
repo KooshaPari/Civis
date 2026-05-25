@@ -20,6 +20,7 @@ namespace DINOForge.Runtime.UI
 
         // ── State ─────────────────────────────────────────────────────────────────
         private ModPlatform? _modPlatform;
+        private bool _bridgeStatusCache;
 
         private CanvasGroup? _canvasGroup;
         private RectTransform? _panelRt;
@@ -74,11 +75,18 @@ namespace DINOForge.Runtime.UI
         {
             _modPlatform = modPlatform;
             Debug.Log($"[DebugPanel] SetModPlatform called: {(modPlatform != null ? "set to ModPlatform instance" : "set to NULL")}");
-            // Refresh immediately so changes appear if the panel is already visible
-            if (IsVisible)
-            {
-                RefreshContent();
-            }
+            // Refresh regardless of visibility so that the next Show() has fresh data.
+            RefreshContent();
+        }
+
+        /// <summary>
+        /// Forces an immediate content refresh and updates the bridge status snapshot.
+        /// Call from RuntimeDriver after F9 is pressed so the panel shows up-to-date data.
+        /// </summary>
+        public void ForceRefresh()
+        {
+            _bridgeStatusCache = Plugin.SharedBridgeServer?.IsServerThreadAlive ?? false;
+            RefreshContent();
         }
 
         /// <summary>Shows the panel immediately (no animation).</summary>
@@ -100,8 +108,9 @@ namespace DINOForge.Runtime.UI
                 _panelRt.gameObject.SetActive(true);
             }
 
-            // Immediately refresh content so panel displays on first open
-            RefreshContent();
+            // Immediately refresh content so panel displays on first open.
+            // ForceRefresh() also captures a fresh bridge-status snapshot.
+            ForceRefresh();
 
             // Force all content children visible
             if (_contentRoot != null)
@@ -120,13 +129,23 @@ namespace DINOForge.Runtime.UI
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_panelRt);
             }
 
+            if (_autoRefreshCoroutine != null) StopCoroutine(_autoRefreshCoroutine);
+            _autoRefreshCoroutine = StartCoroutine(AutoRefreshLoop());
+
             Debug.Log($"[DebugPanel] Show() called. ModPlatform={(_modPlatform != null ? "set" : "NULL")}. Content refreshed.");
         }
+
+        private Coroutine? _autoRefreshCoroutine;
 
         /// <summary>Hides the panel immediately (no animation).</summary>
         public void Hide()
         {
             _targetVisible = false;
+            if (_autoRefreshCoroutine != null)
+            {
+                StopCoroutine(_autoRefreshCoroutine);
+                _autoRefreshCoroutine = null;
+            }
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 0f;
@@ -135,6 +154,18 @@ namespace DINOForge.Runtime.UI
             }
 
             Debug.Log("[DebugPanel] Hide() called.");
+        }
+
+        private IEnumerator AutoRefreshLoop()
+        {
+            while (_targetVisible)
+            {
+                yield return new WaitForSecondsRealtime(RefreshInterval);
+                if (_targetVisible && _contentRoot != null)
+                {
+                    RefreshContent();
+                }
+            }
         }
 
         /// <summary>Whether the panel is currently visible.</summary>
@@ -396,6 +427,17 @@ namespace DINOForge.Runtime.UI
 
         private void BuildPlatformContent(Transform parent)
         {
+            AddInfoRow(parent, "Version", PluginInfo.VERSION, UiBuilder.Accent);
+
+            float fps = 1f / Mathf.Max(Time.unscaledDeltaTime, 0.001f);
+            long gcBytes = GC.GetTotalMemory(false);
+            string gcMb = (gcBytes / (1024.0 * 1024.0)).ToString("F1");
+            AddInfoRow(parent, "FPS", $"{fps:F0}", fps > 30f ? UiBuilder.Success : UiBuilder.Warning);
+            AddInfoRow(parent, "GC Heap", $"{gcMb} MB", UiBuilder.TextSecondary);
+
+            AddInfoRow(parent, "Bridge", _bridgeStatusCache ? "connected" : "not connected",
+                _bridgeStatusCache ? UiBuilder.Success : UiBuilder.TextSecondary);
+
             if (_modPlatform != null)
             {
                 AddInfoRow(parent, "Initialized", _modPlatform.IsInitialized ? "true" : "false",
@@ -404,6 +446,29 @@ namespace DINOForge.Runtime.UI
                     _modPlatform.IsWorldReady ? UiBuilder.Success : UiBuilder.Warning);
                 AddInfoRow(parent, "Packs Dir", TruncatePath(_modPlatform.PacksDirectory, 30),
                     UiBuilder.TextSecondary);
+
+                // Loaded packs — count + names
+                System.Collections.Generic.IReadOnlyList<string>? packIds =
+                    _modPlatform.GetLoadedPackIds();
+                int packCount = packIds?.Count ?? 0;
+                AddInfoRow(parent, "Loaded Packs", packCount.ToString(),
+                    packCount > 0 ? UiBuilder.Success : UiBuilder.TextSecondary);
+
+                if (packIds != null)
+                {
+                    int showMax = Math.Min(packIds.Count, 10);
+                    for (int i = 0; i < showMax; i++)
+                    {
+                        UiBuilder.MakeText(parent, $"Pack_{i}", $"  • {packIds[i]}",
+                            10, UiBuilder.TextPrimary);
+                    }
+
+                    if (packIds.Count > 10)
+                    {
+                        UiBuilder.MakeText(parent, "PacksMore",
+                            $"  ... and {packIds.Count - 10} more", 10, UiBuilder.TextSecondary);
+                    }
+                }
 
                 int errCount = GetErrorCount();
                 if (errCount > 0)
@@ -484,9 +549,44 @@ namespace DINOForge.Runtime.UI
 
         private void BuildArchetypesContent(Transform parent)
         {
-            // Brief placeholder — full archetype introspection is expensive
-            UiBuilder.MakeText(parent, "ArchetypesNote",
-                "  (Open F8 dump for full archetype data)", 10, UiBuilder.TextSecondary);
+            try
+            {
+                if (Unity.Entities.World.All.Count == 0)
+                {
+                    UiBuilder.MakeText(parent, "NoArchetypes", "  No ECS worlds (main menu)", 10, UiBuilder.TextSecondary);
+                    return;
+                }
+
+                int shown = 0;
+                foreach (Unity.Entities.World world in Unity.Entities.World.All)
+                {
+                    if (!world.IsCreated) continue;
+                    using (var query = world.EntityManager.CreateEntityQuery(
+                        new Unity.Entities.EntityQueryDesc
+                        {
+                            All = System.Array.Empty<Unity.Entities.ComponentType>(),
+                            Options = Unity.Entities.EntityQueryOptions.IncludePrefab
+                        }))
+                    {
+                        int totalEntities = query.CalculateEntityCount();
+                        UiBuilder.MakeText(parent, $"Arch_{world.Name}",
+                            $"  {world.Name}: {totalEntities} entities", 10, UiBuilder.TextPrimary);
+                    }
+
+                    shown++;
+                    if (shown >= 6) break;
+                }
+
+                if (shown == 0)
+                {
+                    UiBuilder.MakeText(parent, "NoArchetypes", "  No active worlds found", 10, UiBuilder.TextSecondary);
+                }
+            }
+            catch (Exception ex)
+            {
+                UiBuilder.MakeText(parent, "ArchetypeErr",
+                    $"  Error: {ex.GetType().Name}", 10, UiBuilder.Error);
+            }
         }
 
         private void BuildErrorsContent(Transform parent)

@@ -8,8 +8,9 @@
     <BuildInParallel>false</BuildInParallel>
 
     <!-- Detect if the DINO game is installed by checking for UnityEngine.dll -->
-    <GameInstalled Condition="Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
-    <GameInstalled Condition="!Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' == 'true'">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and !Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
     <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
     <!-- Copy SDK and its dependencies alongside Runtime DLL for deployment (game install only) -->
     <CopyLocalLockFileAssemblies Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">true</CopyLocalLockFileAssemblies>
@@ -177,68 +178,19 @@
   </ItemGroup>
 
   <!--
-    When game is not installed (CI / SDK-only builds), exclude all source files
-    that use Unity ECS, BepInEx, or game-specific namespaces. Only pure-C# bridge
-    utilities (VanillaArchetypeMapper, UnitSpawnRequest, OverrideApplicator) compile.
+    When game is not installed (CI / SDK-only builds), compile only pure-C# helpers.
+    Unity ECS, BepInEx, and game-specific sources are excluded via allowlist.
   -->
   <ItemGroup Condition="'$(GameInstalled)' == 'false'">
-    <Compile Remove="Plugin.cs" />
-    <Compile Remove="DebugOverlay.cs" />
-    <Compile Remove="DumpSystem.cs" />
-    <Compile Remove="EntityDumper.cs" />
-    <Compile Remove="SystemEnumerator.cs" />
-    <Compile Remove="ModPlatform.cs" />
-    <Compile Remove="Bridge\OverrideApplicator.cs" />
-    <Compile Remove="Bridge\AssetSwapSystem.cs" />
-    <Compile Remove="Bridge\ComponentMap.cs" />
-    <Compile Remove="Bridge\ComponentMapping.cs" />
-    <Compile Remove="Bridge\EntityQueries.cs" />
-    <Compile Remove="Bridge\GameBridgeServer.cs" />
-    <Compile Remove="Bridge\PackUnitSpawner.cs" />
-    <Compile Remove="Bridge\ResourceReader.cs" />
-    <Compile Remove="Bridge\StatModifierSystem.cs" />
-    <Compile Remove="Bridge\VanillaCatalog.cs" />
-    <Compile Remove="Bridge\MainThreadDispatcher.cs" />
-    <Compile Remove="Bridge\PackStatInjector.cs" />
-    <Compile Remove="HotReload\HotReloadBridge.cs" />
-    <Compile Remove="UI\ModMenuOverlay.cs" />
-    <Compile Remove="UI\ModSettingsPanel.cs" />
-    <Compile Remove="UI\NativeMenuInjector.cs" />
-    <Compile Remove="UI\NativeUiHelper.cs" />
-    <Compile Remove="UI\UiGridHarmonyPatch.cs" />
-    <Compile Remove="UI\UiSelectorEngine.cs" />
-    <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
-    <Compile Remove="UI\DinoForgeStyle.cs" />
-    <Compile Remove="UI\HudIndicator.cs" />
-    <Compile Remove="UI\HudStrip.cs" />
-    <Compile Remove="UI\ModMenuPanel.cs" />
-    <Compile Remove="UI\UiBuilder.cs" />
-    <Compile Remove="UI\UiDiagnostics.cs" />
-    <!-- UiActionTrace: pure .NET (no Unity deps) — keep compiled in CI for test coverage -->
-    <Compile Remove="UI\DebugPanel.cs" />
-    <Compile Remove="UI\DFCanvas.cs" />
-    <Compile Remove="UI\Assets\UiAssets.cs" />
-    <Compile Remove="UI\ModMenuOverlayProxy.cs" />
-    <Compile Remove="Bridge\FactionSystem.cs" />
-    <Compile Remove="Bridge\WaveInjector.cs" />
-    <Compile Remove="Bridge\VFXPoolManager.cs" />
-    <Compile Remove="Bridge\LODManager.cs" />
-    <!-- CI allowlist: drop all Bridge sources then re-include pure-C# helpers only -->
-    <Compile Remove="Bridge\**\*.cs" />
+    <Compile Remove="**\*.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="PluginInfo.cs" />
     <Compile Include="Bridge\VanillaArchetypeMapper.cs" />
     <Compile Include="Bridge\UnitSpawnRequest.cs" />
     <Compile Include="Bridge\PackStatMappings.cs" />
     <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
     <Compile Include="Bridge\SessionHmac.cs" />
-    <Compile Remove="VFX\**" />
-    <Compile Remove="Assets\**" />
-    <Compile Remove="UI\Adapters\**" />
-    <Compile Remove="RustAssetPipelineInterop.cs" />
-    <!-- Exclude Aviation namespace from CI builds (no Unity.Entities available without game install).
-         Aviation is fully implemented (AerialUnitComponent, AerialMovementSystem, AerialSpawnSystem,
-         AerialTargetingSystem, AerialBuildingMapper, AerialUnitMapper, AntiAirComponent, AviationPlugin)
-         and compiles correctly when GameInstalled=true. -->
-    <Compile Remove="Aviation\**" />
+    <Compile Include="UI\UiActionTrace.cs" />
   </ItemGroup>
 
   <!-- SDK and Bridge Protocol project references - always use ProjectReference for proper build ordering -->

@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "3347e729a491e7dc54490b868e7506b48c3cd656",
-  "created_at": "2026-05-25T12:03:00Z",
+  "git_sha": "dbf57c982c7db620644b8121a31ea72027a88162",
+  "created_at": "2026-05-25T12:10:00Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.95.0"
@@ -10,7 +10,7 @@
   "gates": {
     "civis_3d_verify": {
       "status": "pass",
-      "detail": "local godot+ws_smoke"
+      "detail": "local cargo test tactics+engine"
     },
     "web_test": {
       "status": "pass",
@@ -22,8 +22,8 @@
     },
     "godot_test": {
       "status": "pass",
-      "detail": "13 tests"
+      "detail": "9 tactics tests"
     }
   },
-  "manifest_hash": "63c5ef53bf99b60db3465bff739ae24bc5a48248a2b4da0553020987c93869c2"
+  "manifest_hash": "d6d460381a0eec791ed5368db46287e6d28dedc348e09eb90dd63b8122b6c4e0"
 }

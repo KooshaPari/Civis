@@ -305,10 +305,17 @@ mod tests {
                 grid_y: 0,
             },
         ];
-        let config = WarBridgeConfig::default();
-        assert!(tick_war_bridge(31, &config, &units, &world).is_empty());
-        let events = tick_war_bridge(32, &config, &units, &world);
-        assert_eq!(events.len(), 2);
+        let config = WarBridgeConfig {
+            cadence_ticks: 4,
+            ..WarBridgeConfig::default()
+        };
+        assert!(tick_war_bridge(3, &config, &units, &world).is_empty());
+        let events = tick_war_bridge(4, &config, &units, &world);
+        assert_eq!(
+            events.len(),
+            2,
+            "each faction should damage the opposing unit when in range with LOS"
+        );
         assert!(events
             .iter()
             .all(|e| e.radius_voxels == config.damage_radius_voxels));

@@ -29,7 +29,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | AX-01 | ~~Civis AGENTS.md~~ **Done** | Root `AGENTS.md` (verify table, attach matrix, FR index, do-not) | Keep in sync when RPC/snapshot shapes change |
 | AX-02 | ~~Traceability matrix stale~~ **Done** | `TRACEABILITY_MATRIX.md` → `fr-3d-matrix.md` / `fr-web-matrix.md` | Regenerate CIV-01xx rows only when strategic crates land |
 | AX-03 | **Unreal build** optional tier | `scripts/quality/README.md`; `unreal_*` gates in emit when UE+UBT; `agent-smoke -FullUnreal` | **Partial** — full UBT not in default smoke/lefthook; set `CIVIS_QUALITY_UNREAL=1` to attest |
-| AX-04 | ~~No agent attach smoke~~ **Done** | `scripts/agent-smoke.ps1` + `docs/guides/agent-smoke.md` | Extend smoke to assert `civ_pins[].job` when spawn sets job |
+| AX-04 | ~~Agent attach smoke~~ **Done** | `agent-smoke.ps1`; `ws_smoke` asserts `civ_pins[].job` | Extend when new snapshot fields land |
 | AX-05 | ~~fr-web-spectator open~~ **Done** | `fr-web-matrix.md`; `fr-web-spectator.md` IMPLEMENTED | Reopen only if FR-CIV-WEB acceptance criteria change |
 | AX-06 | ~~MSVC gate undocumented~~ **Done** | `AGENTS.md` § Toolchain; playbook + offline scripts | Add MSVC row to product-quality manifest when UE build is mandatory |
 
@@ -39,13 +39,13 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | ID | Gap | Evidence | Finish criterion |
 |----|-----|----------|------------------|
-| DX-01 | **Modding API** v1 manifest only | `crates/mod-host`, `mods/`, `fr-modding-roadmap.md`; no WASM | v2: registry + policy stub; CI drift check on manifest schema |
-| DX-02 | **Scenario YAML** partial | `scenarios/baseline.yaml` has `mods: []`; `Scenario::validate` | Document all keys; fail `civis-3d-verify` on invalid YAML |
+| DX-01 | **Modding API** v1 + v2 stub | `ModRegistry`, policy phase logs; no WASM | v3 WASM / `.civmod` per `fr-modding-roadmap.md` |
+| DX-02 | ~~Scenario YAML~~ **Done** | [`scenario-yaml.md`](../guides/scenario-yaml.md); `civis-3d-scenario-check` in verify | Keep keys in sync with `scenario.rs` |
 | DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`jsonrpc-surface.md`](../api/jsonrpc-surface.md) + [`scripts/check-jsonrpc-catalog.ps1`](../../scripts/check-jsonrpc-catalog.ps1) in `civis-3d-verify` | Keep doc table in sync when adding `JsonRpcMethod` variants |
 | DX-04 | ~~Client attach matrix~~ **Done** | [`docs/guides/client-attach-matrix.md`](../guides/client-attach-matrix.md) | Update when new client or default URL changes |
-| DX-05 | **Godot GDExtension** path vs scripts-only | `civis-godot-rust` + `scripts/` | README “authoring path” for server vs watch |
-| DX-06 | **Research crate** ADR-006 stubs only | `crates/research` | Mark “not on critical path” or wire validator into scenario load |
-| DX-07 | **Many domain crates** schema stubs only | genetics, laws, species, diffusion `*_stub` tests | Either implement one vertical slice or mark `deferred` in matrix |
+| DX-05 | ~~Godot GDExtension~~ **Done** | `clients/godot-ref/README.md` § Authoring paths | Rebuild `rust/` DLL after `CivisWsFrame` changes |
+| DX-06 | ~~Research crate~~ **Deferred** | [`deferred-crates.md`](../guides/deferred-crates.md) | Wire when research FRs land |
+| DX-07 | ~~Domain stubs~~ **Deferred** | [`deferred-crates.md`](../guides/deferred-crates.md) | One vertical slice when product prioritizes |
 
 ---
 

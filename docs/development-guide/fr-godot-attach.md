@@ -1,6 +1,6 @@
 # FR-CIV-GODOT-ATTACH — Godot client backends
 
-**ADR:** [ADR-007](../adr/ADR-007-three-renderers.md), [ADR-009](../adr/ADR-009-web-client-strategy.md)  
+**ADR:** [ADR-007](../adr/ADR-007-three-renderers.md), [ADR-009](../adr/ADR-009-web-client-strategy.md)
 **Implementation:** `clients/godot-ref/scripts/`
 
 | FR ID | Requirement | Acceptance |
@@ -44,6 +44,6 @@ Godot does **not** render voxels from F3D0 today; it uses F3D0 (and legacy text 
 | After spawn/place RPC | Immediate `request_snapshot()` | N/A (Bevy uses poll + F3D0) | Immediate `RequestSnapshot()` on RPC ack |
 | Text tick fallback | `VoxelDelta` / `BuildingDiff` / `AgentAppearance` also throttles snapshot | Skipped when `prefer_binary` | Same fields in `HandleMessage` |
 
-Implementation: `clients/godot-ref/scripts/civis_ws_client.gd` (`_handle_packet`, `_maybe_refresh_snapshot`). Bevy decode tests: `clients/bevy-ref/src/lib.rs` (`parse_f3d0_frame`, `ws_prefer_binary`). Cross-client minimap UV rules (orthogonal): [`minimap-conventions.md`](../guides/minimap-conventions.md).
+Implementation: `clients/godot-ref/scripts/civis_ws_client.gd` (`_handle_packet`, `_maybe_refresh_snapshot`). Rust helper: `clients/godot-ref/rust/src/ws_frame.rs` (`CivisWsFrame.decode_ws_packet` for F3D0 / JSON-RPC / text `Frame3d`). Bevy decode tests: `clients/bevy-ref/src/lib.rs` (`parse_f3d0_frame`, `ws_prefer_binary`). Cross-client minimap UV rules (orthogonal): [`minimap-conventions.md`](../guides/minimap-conventions.md).
 
 **Agent note:** Do not lower throttle below 250 ms on Godot without measuring WS RPC load; match Unreal’s 0.25 s constant when changing either client.

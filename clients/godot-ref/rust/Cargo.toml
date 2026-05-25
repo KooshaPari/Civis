@@ -9,7 +9,8 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = "0.3"
+civ-protocol-3d = { path = "../../../crates/protocol-3d" }
+godot = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }

@@ -35,6 +35,7 @@ pub use spawn::{
     spawn_port_at, unit_type_label,
 };
 
+pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModType};
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{apply_damage, evolve_doctrine, DamageEvent, Doctrine, DoctrineLibrary};
 pub use hash_chain::{
@@ -57,7 +58,6 @@ pub use replay_format::{
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
 };
-pub use civ_mod_host::{load_manifest, ModHost, ModManifest, ModType};
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 
 use rand::SeedableRng;

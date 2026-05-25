@@ -26,11 +26,29 @@ $RustShimDir = Join-Path $ProjectRoot 'Source\Civis\rust-shim'
 $LibDir = Join-Path $ProjectRoot 'Source\Civis\lib'
 $LibName = 'civis_unreal_ffi.lib'
 $PreferredUeVersions = @('5.7', '5.4', '5.6', '5.5')
+# Prefer VS 2026 (18) then 2022 for MSVC; UE 5.7 UBT scans all installs.
+$PreferredVsRoots = @(
+    'C:\Program Files\Microsoft Visual Studio\18\Community',
+    'C:\Program Files\Microsoft Visual Studio\2022\Community'
+)
 $EditorTarget = 'CivShowEditor'
 $Platform = 'Win64'
 
 function Write-Step([string] $Message) {
     Write-Host "==> $Message" -ForegroundColor Cyan
+}
+
+function Get-VsInstallWithMsvc {
+    foreach ($root in $PreferredVsRoots) {
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        $msvcRoot = Join-Path $root 'VC\Tools\MSVC'
+        if (-not (Test-Path -LiteralPath $msvcRoot)) { continue }
+        $versions = @(Get-ChildItem -LiteralPath $msvcRoot -Directory | Sort-Object Name -Descending)
+        if ($versions.Length -gt 0) {
+            return @{ VsRoot = $root; MsvcVersion = $versions[0].Name }
+        }
+    }
+    return $null
 }
 
 function Get-UeRootAndVersion {
@@ -169,6 +187,15 @@ Rust shim was built successfully; only the UE compile step was skipped.
 
 $ueRoot = $ue.Root
 Write-Host "Using UE_$($ue.Version): $ueRoot" -ForegroundColor Green
+
+$vs = Get-VsInstallWithMsvc
+if ($vs) {
+    Write-Host "MSVC: VS at $($vs.VsRoot) toolset $($vs.MsvcVersion)" -ForegroundColor Green
+}
+else {
+    Write-Host 'Warning: no VC/Tools/MSVC under VS 18 or 2022 Community; UBT will likely fail.' -ForegroundColor Yellow
+    Write-Host '  In VS Installer: Workloads -> Desktop development with C++' -ForegroundColor Yellow
+}
 
 $ubt = Get-UnrealBuildTool -UeRoot $ueRoot
 if (-not $ubt) {

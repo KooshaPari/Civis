@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use civ_agents::{Civilian, Position3d, Velocity};
 use civ_voxel::FIXED_SCALE;
 
-use crate::engine::{BuildingType, JobType, Simulation};
+use crate::engine::{BuildingType, Citizen, JobType, Simulation};
 
 /// Normalised map pin for one civilian (0..1 plane coordinates).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -121,16 +121,22 @@ fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
         .world
         .query::<(&Civilian, &Position3d, &Velocity)>()
         .iter()
-        .map(|(_, (civilian, pos, vel))| {
+        .map(|(entity, (civilian, pos, vel))| {
             let x = (pos.coord.x as f32 / FIXED_SCALE as f32).clamp(0.0, 1.0);
             let y = (pos.coord.z as f32 / FIXED_SCALE as f32).clamp(0.0, 1.0);
+            let job = sim
+                .world
+                .get::<&Citizen>(entity)
+                .ok()
+                .and_then(|citizen| citizen.job)
+                .map(JobLabel::from);
             CivPin {
                 idx: civilian.id as u32,
                 x,
                 y,
                 dx: vel.dx,
                 dy: vel.dy,
-                job: None,
+                job,
             }
         })
         .collect();
@@ -229,14 +235,37 @@ mod tests {
     }
 
     #[test]
+    fn civ_pins_include_job_when_citizen_component_present() {
+        let sim = Simulation::with_seed(1);
+        let view = sim.spectator_view();
+        assert!(
+            view.civ_pins.iter().any(|p| p.job.is_some()),
+            "expected pins with job from Citizen on agent entities, got {:?}",
+            view.civ_pins
+        );
+        assert!(
+            view.civ_pins
+                .iter()
+                .any(|p| p.idx == 10_003 && p.job == Some(JobLabel::Farmer)),
+            "civilian id 10003 maps to Farmer via job_type_for_civilian_id"
+        );
+    }
+
+    #[test]
     fn civ_pins_reflect_spawned_agent_coordinates() {
         use civ_agents::spawn_civilian_at;
 
         let mut sim = Simulation::with_seed(9);
         let mut rng = sim.rng_mut().clone();
-        let _ = spawn_civilian_at(&mut sim.world, 42_001, 1, 0.4, 0.6, &mut rng);
+        let _ = spawn_civilian_at(&mut sim.world, 42_007, 1, 0.4, 0.6, &mut rng);
         *sim.rng_mut() = rng;
+        crate::engine::attach_citizen_to_agents(&mut sim.world);
         let pins = civ_pins(&sim);
+        assert_eq!(
+            pins.iter().find(|p| p.idx == 42_007).and_then(|p| p.job),
+            Some(JobLabel::Farmer),
+            "42_007 % 7 == 0 → Farmer"
+        );
         assert!(
             pins.iter()
                 .any(|p| (p.x - 0.4).abs() < 0.02 && (p.y - 0.6).abs() < 0.02),

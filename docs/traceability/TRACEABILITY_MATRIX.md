@@ -1,17 +1,23 @@
 # Traceability Matrix
 
-**Status:** Living document — updated as FRs are assigned, implemented, and tested.
+**Status:** Living document — strategic simulation FRs only (CIV-01xx line).
 **Format:** FR ID | Requirement Summary (SHALL) | Spec Doc | Crate / Source Path | Test Name Pattern | Status
 
 Status values: `planned` | `in_progress` | `implemented`
 
-> **Workspace note (2026-05-23):** The **Crate / Source Path** column below describes the
-> *target* layout from CIV-01xx strategic specs. The repo workspace is the 3D extension
+> **Do not add 3D or web rows here.** Use the dedicated matrices below; this file stays
+> the home for `FR-CORE-*`, `FR-ECON-*`, and other CIV-01xx strategic IDs.
+>
+> | Extension | Authoritative matrix | FR source doc |
+> |-----------|---------------------|---------------|
+> | **3D workspace** (`civ-voxel`, `civ-server`, Godot, …) | [`docs/traceability/fr-3d-matrix.md`](fr-3d-matrix.md) | [`docs/development-guide/fr-3d-additions.md`](../development-guide/fr-3d-additions.md) |
+> | **Web spectator / L2 dashboard** | [`docs/traceability/fr-web-matrix.md`](fr-web-matrix.md) | [`docs/development-guide/fr-web-spectator.md`](../development-guide/fr-web-spectator.md) |
+>
+> **Workspace note (2026-05-25):** The **Crate / Source Path** column below describes the
+> *target* layout from CIV-01xx strategic specs. The active repo is the 3D extension
 > (`civ-engine`, `civ-voxel`, `civ-planet`, …). See
 > [`docs/IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) for the live crate list and
-> gap summary. For FR-CIV-VOXEL/BUILD/AGENTS IDs, see
-> `docs/development-guide/fr-3d-additions.md` and
-> [`docs/traceability/fr-3d-matrix.md`](fr-3d-matrix.md).
+> gap summary before marking any row `implemented`.
 
 **Governance traceability pillars:** `CIV-CORE-1` (simulation core),
 `CIV-POLICY-1` (policy / quality gates), `CIV-METRICS-1` (metrics export),
@@ -275,4 +281,4 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 
 ---
 
-*Last updated: 2026-05-23. Maintainer: add new FRs as specs are finalized; update Status as tests are written and pass CI. Cross-check workspace members in root `Cargo.toml` and `docs/IMPLEMENTATION_STATUS.md` before marking `implemented`.*
+*Last updated: 2026-05-25. Maintainer: add new strategic FRs here only; put 3D IDs in [`fr-3d-matrix.md`](fr-3d-matrix.md) and web IDs in [`fr-web-matrix.md`](fr-web-matrix.md). Cross-check `Cargo.toml` and [`docs/IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) before marking `implemented`.*

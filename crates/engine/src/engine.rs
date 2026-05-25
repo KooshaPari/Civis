@@ -11,7 +11,7 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
-use civ_tactics::{apply_damage, DamageEvent};
+use civ_tactics::{apply_damage, evolve_doctrine, DamageEvent, Doctrine, DoctrineLibrary};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::{Entity, World};
 use rand::Rng;
@@ -288,6 +288,29 @@ pub struct Simulation {
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 Sprint D); WASM not loaded yet.
     mod_host: ModHost,
+    /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
+    faction_doctrines: Vec<DoctrineLibrary>,
+}
+
+/// Default doctrine population for three factions (deterministic seed layout).
+fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
+    (0..3)
+        .map(|faction| DoctrineLibrary {
+            generation: 0,
+            current: vec![
+                Doctrine {
+                    id: faction as u64 * 10 + 1,
+                    unit_composition: vec![10, 5, 2],
+                    score: 0.5,
+                },
+                Doctrine {
+                    id: faction as u64 * 10 + 2,
+                    unit_composition: vec![8, 8, 4],
+                    score: 0.8,
+                },
+            ],
+        })
+        .collect()
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
@@ -436,6 +459,7 @@ impl Simulation {
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
+            faction_doctrines: default_faction_doctrines(),
         }
     }
 
@@ -486,6 +510,7 @@ impl Simulation {
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
+            faction_doctrines: default_faction_doctrines(),
         }
     }
 
@@ -512,6 +537,12 @@ impl Simulation {
     #[must_use]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
+    }
+
+    /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
+    #[must_use]
+    pub fn faction_doctrines(&self) -> &[DoctrineLibrary] {
+        &self.faction_doctrines
     }
 
     /// Borrow the immutable planet config.
@@ -751,8 +782,18 @@ impl Simulation {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
     }
 
-    /// Tactics phase - apply queued damage events to the voxel world.
+    /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
+        const DOCTRINE_EVOLVE_MODULO: u64 = 64;
+        if self.state.tick % DOCTRINE_EVOLVE_MODULO == 0 {
+            for (faction, library) in self.faction_doctrines.iter_mut().enumerate() {
+                let mut rng = ChaCha8Rng::seed_from_u64(
+                    self.state.rng_seed ^ self.state.tick ^ u64::from(faction as u32),
+                );
+                evolve_doctrine(library, &mut rng, 0.2);
+            }
+        }
+
         self.last_tick_voxel_damage_count = 0;
         self.last_tick_damage_centers.clear();
         let scale = civ_voxel::FIXED_SCALE as f32;
@@ -1279,6 +1320,22 @@ mod tests {
         sim.tick();
         let expected = compute_climate(sim.state.tick, &planet, &moon);
         assert_eq!(sim.climate(), &expected);
+    }
+
+    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
+    #[test]
+    fn phase_tactics_evolve_doctrine_on_cadence() {
+        let mut sim = Simulation::with_seed(42);
+        let gen0 = sim.faction_doctrines()[0].generation;
+        for _ in 0..63 {
+            sim.tick();
+        }
+        assert_eq!(sim.faction_doctrines()[0].generation, gen0);
+        sim.tick();
+        assert!(
+            sim.faction_doctrines()[0].generation > gen0,
+            "expected doctrine generation to advance at tick 64"
+        );
     }
 
     /// FR-CIV-ENGINE-INT-002 — queued damage drains and voxel chunk count

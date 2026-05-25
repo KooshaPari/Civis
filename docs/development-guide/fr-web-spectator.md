@@ -1,6 +1,6 @@
 # FR-CIV-WEB — Browser Spectator & Operations Client
 
-**Status:** IN PROGRESS (ADR-009 + L2 authoring amendment; FR-CIV-WEB-000..008)
+**Status:** IMPLEMENTED (ADR-009 + L2 authoring; FR-CIV-WEB-000..008 closed 2026-05-25)
 **ADR:** [ADR-009-web-client-strategy](../adr/ADR-009-web-client-strategy.md)
 **Owner path:** `web/dashboard/`
 
@@ -59,5 +59,6 @@ Server: `sim.spawn_civilian` | `sim.spawn_entity`, `sim.place_voxel`, `sim.damag
 
 ## Traceability
 
-Add rows to `docs/traceability/fr-3d-matrix.md` or a dedicated `fr-web-matrix.md` when
-implementing. Status `planned` until each acceptance test exists.
+Closed matrix with test pointers: [`docs/traceability/fr-web-matrix.md`](../traceability/fr-web-matrix.md).
+
+Verify: `cd web && npm test` (93 tests) and `cd web && npm run build`.

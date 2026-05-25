@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run full local quality gates and write `.ci/quality-manifest.json` for cloud CI verification.
+# Optional Unreal tier: unreal_preflight, unreal_build (see scripts/quality/README.md).
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -20,7 +21,13 @@ record() {
   local status="$2"
   local detail="${3:-}"
   RESULTS+=("${name}|${status}|${detail}")
-  [[ "${status}" == "pass" ]] || FAIL=1
+  if [[ "${status}" == "pass" ]]; then
+    return 0
+  fi
+  if [[ "${status}" == "skip" && "${name}" == unreal_* ]]; then
+    return 0
+  fi
+  FAIL=1
 }
 
 run_gate() {
@@ -47,6 +54,34 @@ else
 fi
 run_gate web_test bash -lc 'cd web && npm test' || true
 run_gate dashboard_typecheck bash -lc 'cd web/dashboard && bun install --frozen-lockfile && bun run typecheck' || true
+
+# Optional Unreal tier (skip when no UE; never fails machines without UE)
+optional_unreal_gate() {
+  if [[ "${CIVIS_QUALITY_UNREAL:-}" != "1" ]]; then
+    if command -v pwsh >/dev/null 2>&1; then
+      pwsh -NoProfile -File "${ROOT}/clients/unreal-show/scripts/detect-ue.ps1" >/dev/null 2>&1 || return 0
+    else
+      return 0
+    fi
+  fi
+  local verify="${ROOT}/clients/unreal-show/scripts/verify-unreal-ready.ps1"
+  local build="${ROOT}/clients/unreal-show/scripts/build.ps1"
+  if [[ -f "${verify}" ]]; then
+    if command -v pwsh >/dev/null 2>&1; then
+      run_gate unreal_preflight pwsh -NoProfile -File "${verify}" || true
+    else
+      run_gate unreal_preflight powershell -NoProfile -File "${verify}" || true
+    fi
+  fi
+  if command -v pwsh >/dev/null 2>&1 && pwsh -NoProfile -File "${ROOT}/clients/unreal-show/scripts/detect-ue.ps1" >/dev/null 2>&1; then
+    if [[ -f "${build}" ]]; then
+      run_gate unreal_build pwsh -NoProfile -File "${build}" || true
+    fi
+  else
+    record unreal_build skip "no UE_ROOT/UBT"
+  fi
+}
+optional_unreal_gate || true
 
 export MANIFEST_PATH="${MANIFEST}"
 export QUALITY_GATE_RESULTS="$(printf '%s\n' "${RESULTS[@]}")"

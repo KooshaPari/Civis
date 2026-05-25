@@ -37,6 +37,15 @@ Invoke-Gate "dashboard_typecheck" {
     Pop-Location
 }
 
+$repoRoot = (git rev-parse --show-toplevel).Trim()
+$optionalUnreal = & (Join-Path $PSScriptRoot 'Invoke-OptionalUnrealGates.ps1') -RepoRoot $repoRoot
+foreach ($entry in $optionalUnreal.GetEnumerator()) {
+    $results[$entry.Key] = $entry.Value
+    if ($entry.Value.status -eq 'fail') { $Failed = $true }
+    $label = $entry.Value.status
+    Write-Host "  $label $($entry.Key)"
+}
+
 $gatesJson = @{}
 foreach ($entry in $results.GetEnumerator()) {
     $gatesJson[$entry.Key] = $entry.Value

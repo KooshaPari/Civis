@@ -19,7 +19,7 @@
 |-------|--------|-----------|
 | FR-CIV-TACTICS-000 | implemented | — |
 | FR-CIV-TACTICS-001 | implemented | Per-soldier damage events (not only sphere carve) |
-| FR-CIV-TACTICS-010 | implemented | Hook GA to sim tick / faction doctrine slots |
+| FR-CIV-TACTICS-010 | implemented | — |
 | FR-CIV-TACTICS-002+ | planned | Line-of-sight, unit formations, Phase 4 war bridge |
 
 ## First PR slice (recommended)
@@ -28,7 +28,8 @@
 2. **Server:** `sim.snapshot` exposes `damage_events`, `damage_events_count`, `voxel_damage_removed_this_tick` — **done** (`feat/p-w1-tactics`).
 3. **Web:** damage bursts + combat notifications — **done** (`scene3d.tsx`, `main.tsx`).
 4. **Watch:** per-unit `unit_a` / `unit_b` on military `DamagePulse` — **done**.
-5. **Next:** hook `evolve_doctrine` to sim tick / faction doctrine slots (FR-CIV-TACTICS-010 integration).
+5. **Doctrine GA:** `evolve_doctrine` every 64 ticks per faction in `phase_tactics` — **done**.
+6. **Next:** FR-CIV-TACTICS-002+ (LOS, formations, war bridge).
 
 ## Run
 

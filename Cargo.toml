@@ -15,6 +15,7 @@ members = [
   "crates/tactics",
   "crates/planet",
   "crates/protocol-3d",
+  "crates/mod-host",
   "crates/watch",
   "clients/bevy-ref",
 ]

@@ -30,3 +30,20 @@ cargo run -p civ-watch     # :9090 terrain (required for heightmap)
 | `civ_server_ws` | `ws://127.0.0.1:3000/ws?tick_format=binary` | JSON-RPC + F3D0 |
 | `civ_watch_http` | `http://127.0.0.1:9090` | Terrain + watch-mode controls |
 | `spectator_mode` | `true` | Hide Place/Spawn/Damage |
+
+## F3D0 tick throttle (server attach)
+
+Godot does **not** render voxels from F3D0 today; it uses F3D0 (and legacy text tick shapes) only to **rate-limit** `sim.snapshot` refreshes for pins, buildings, and `is_day`. Voxel presentation stays on civ-watch terrain HTTP until a live F3D0 mesh path lands (Bevy-first).
+
+| Convention | Godot | Bevy (`bevy-ref`) | Unreal (`CivWsClient`) |
+|------------|-------|-------------------|------------------------|
+| WS URL | `?tick_format=binary` | Same | Same (`CivShowGameMode`) |
+| Binary magic | `F3D0` (4-byte ASCII) | `F3D0` via `parse_ws_payload` | `F3D0` in `HandleBinary` |
+| On F3D0 / tick | `_maybe_refresh_snapshot()` | Decode `Frame3d` for voxels **and** poll snapshot meta | `RequestSnapshot()` throttle only |
+| Snapshot throttle | `snapshot_throttle_ms` = **250** | Side-channel `sim.snapshot` every **2 s** (`SNAPSHOT_POLL_SECS`) for `is_day` / tick | `SnapshotThrottleSec` = **0.25** |
+| After spawn/place RPC | Immediate `request_snapshot()` | N/A (Bevy uses poll + F3D0) | Immediate `RequestSnapshot()` on RPC ack |
+| Text tick fallback | `VoxelDelta` / `BuildingDiff` / `AgentAppearance` also throttles snapshot | Skipped when `prefer_binary` | Same fields in `HandleMessage` |
+
+Implementation: `clients/godot-ref/scripts/civis_ws_client.gd` (`_handle_packet`, `_maybe_refresh_snapshot`). Bevy decode tests: `clients/bevy-ref/src/lib.rs` (`parse_f3d0_frame`, `ws_prefer_binary`). Cross-client minimap UV rules (orthogonal): [`minimap-conventions.md`](../guides/minimap-conventions.md).
+
+**Agent note:** Do not lower throttle below 250 ms on Godot without measuring WS RPC load; match Unreal’s 0.25 s constant when changing either client.

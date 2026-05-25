@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Cloud CI: verify committed local quality attestation (no cargo/rust on the runner).
+#
+# Gate tiers (see scripts/quality/README.md):
+#   Core (required): civis_3d_verify, web_test, dashboard_typecheck, rust_*, godot_test
+#   Optional (Unreal): unreal_preflight, unreal_build — status "skip" is valid; omit if no UE
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -50,8 +54,17 @@ if attested not in {head, ""}:
             + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
         )
 
+OPTIONAL_GATE_PREFIXES = ("unreal_",)
+
+def gate_ok(key: str, status: str) -> bool:
+    if status == "pass":
+        return True
+    if status == "skip" and key.startswith(OPTIONAL_GATE_PREFIXES):
+        return True
+    return False
+
 gates = body.get("gates") or {}
-failed = [k for k, v in gates.items() if v.get("status") != "pass"]
+failed = [k for k, v in gates.items() if not gate_ok(k, v.get("status", ""))]
 if failed:
     raise SystemExit(f"manifest records failed gates: {', '.join(failed)}")
 
@@ -70,5 +83,11 @@ stored = body.get("manifest_hash", "")
 if stored != expected:
     raise SystemExit("manifest_hash mismatch (manifest may be hand-edited)")
 
-print(f"quality-manifest: OK ({len(gates)} gates, sha={head[:12]})")
+optional = [k for k in gates if k.startswith(OPTIONAL_GATE_PREFIXES)]
+core_n = len(gates) - len(optional)
+msg = f"quality-manifest: OK ({core_n} core"
+if optional:
+    msg += f", {len(optional)} optional Unreal"
+msg += f" gates, sha={head[:12]})"
+print(msg)
 PY

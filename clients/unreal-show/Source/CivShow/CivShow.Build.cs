@@ -29,9 +29,9 @@ public class CivShow : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            string ModuleDir = ModuleDirectory;
-            string LibDir = Path.GetFullPath(Path.Combine(ModuleDir, "..", "..", "Civis", "lib"));
-            string IncludeDir = Path.GetFullPath(Path.Combine(ModuleDir, "..", "..", "Civis", "include"));
+            string CivisDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "Civis"));
+            string LibDir = Path.Combine(CivisDir, "lib");
+            string IncludeDir = Path.Combine(CivisDir, "include");
 
             PublicIncludePaths.Add(IncludeDir);
             PublicAdditionalLibraries.Add(Path.Combine(LibDir, "civis_unreal_ffi.lib"));

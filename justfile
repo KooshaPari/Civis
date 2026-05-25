@@ -65,6 +65,10 @@ civis-3d-bevy-smoke:
 civis-3d-bevy-window:
     cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
 
+# Run the standalone Bevy client with in-process simulation.
+civis-3d-standalone:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-standalone
+
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:

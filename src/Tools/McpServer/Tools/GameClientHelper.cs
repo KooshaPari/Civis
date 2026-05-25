@@ -56,4 +56,29 @@ internal static class GameClientHelper
     internal static string NotConnectedMessage =>
         "Game is not running or the DINOForge bridge is unreachable. " +
         "Use 'game_launch' to start the game, or ensure the DINOForge Runtime plugin is loaded.";
+
+    /// <summary>
+    /// Ensures bridge connectivity, invokes <paramref name="invoke"/>, and serializes the result.
+    /// </summary>
+    internal static async Task<string> InvokeBridgeAsync<T>(
+        GameClient client,
+        CancellationToken ct,
+        object notConnectedPayload,
+        Func<GameClient, CancellationToken, Task<T>> invoke,
+        Func<T, object> mapSuccess,
+        Func<GameClientException, object>? mapError = null)
+    {
+        if (!await EnsureConnectedAsync(client, ct).ConfigureAwait(false))
+            return ToJson(notConnectedPayload);
+
+        try
+        {
+            T result = await invoke(client, ct).ConfigureAwait(false);
+            return ToJson(mapSuccess(result));
+        }
+        catch (GameClientException ex)
+        {
+            return ToJson(mapError?.Invoke(ex) ?? new { error = ex.Message });
+        }
+    }
 }

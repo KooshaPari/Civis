@@ -20,20 +20,17 @@ public sealed class GameGetComponentMapTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON with component mapping entries.</returns>
     [McpServerTool(Name = "game_get-component-map"), Description("Get SDK-to-ECS component type mappings. Optionally filter by SDK path.")]
-    public static async Task<string> GetComponentMapAsync(
+    public static Task<string> GetComponentMapAsync(
         GameClient client,
         [Description("Optional SDK path filter; omit to return all mappings")] string? sdkPath = null,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            ComponentMapResult result = await client.GetComponentMapAsync(sdkPath, ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.GetComponentMapAsync(sdkPath, token),
+            result => new
             {
                 mappings = result.Mappings.Select(m => new
                 {
@@ -44,10 +41,5 @@ public sealed class GameGetComponentMapTool
                     description = m.Description
                 })
             });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { error = ex.Message });
-        }
     }
 }

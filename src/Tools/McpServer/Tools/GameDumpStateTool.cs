@@ -20,30 +20,22 @@ public sealed class GameDumpStateTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON with catalog snapshot organized by category.</returns>
     [McpServerTool(Name = "game_dump-state"), Description("Dump ECS game state. Optionally filter by category: unit, building, projectile, or all.")]
-    public static async Task<string> DumpStateAsync(
+    public static Task<string> DumpStateAsync(
         GameClient client,
         [Description("Category to dump: 'unit', 'building', 'projectile', or 'all' (default)")] string? category = null,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            CatalogSnapshot result = await client.DumpStateAsync(category, ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.DumpStateAsync(category, token),
+            result => new
             {
                 units = result.Units.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
                 buildings = result.Buildings.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
                 projectiles = result.Projectiles.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category }),
                 other = result.Other.Select(e => new { e.InferredId, e.ComponentCount, e.EntityCount, e.Category })
             });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { error = ex.Message });
-        }
     }
 }

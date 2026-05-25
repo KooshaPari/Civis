@@ -19,19 +19,16 @@ public sealed class GameGetResourcesTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON with all resource stockpile values.</returns>
     [McpServerTool(Name = "game_get-resources"), Description("Get all current in-game resource stockpile values (food, wood, stone, iron, money, souls, bones, spirit).")]
-    public static async Task<string> GetResourcesAsync(
+    public static Task<string> GetResourcesAsync(
         GameClient client,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            ResourceSnapshot result = await client.GetResourcesAsync(ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.GetResourcesAsync(token),
+            result => new
             {
                 food = result.Food,
                 wood = result.Wood,
@@ -42,10 +39,5 @@ public sealed class GameGetResourcesTool
                 bones = result.Bones,
                 spirit = result.Spirit
             });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { error = ex.Message });
-        }
     }
 }

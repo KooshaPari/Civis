@@ -20,29 +20,22 @@ public sealed class GameReloadPacksTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON with loaded packs and any errors.</returns>
     [McpServerTool(Name = "game_reload-packs"), Description("Reload content packs from disk. Returns loaded pack IDs and any errors.")]
-    public static async Task<string> ReloadPacksAsync(
+    public static Task<string> ReloadPacksAsync(
         GameClient client,
         [Description("Optional packs directory path override")] string? path = null,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { success = false, error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            ReloadResult result = await client.ReloadPacksAsync(path, ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { success = false, error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.ReloadPacksAsync(path, token),
+            result => new
             {
                 success = result.Success,
                 loadedPacks = result.LoadedPacks,
                 errors = result.Errors
-            });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { success = false, error = ex.Message });
-        }
+            },
+            ex => new { success = false, error = ex.Message });
     }
 }

@@ -30,7 +30,8 @@ jobs:
       - name: Install Python deps for proof gate
         working-directory: src/Tools/DinoforgeMcp
         run: |
-          pip install pyyaml jsonschema cryptography
+          python -m pip install --upgrade "pip==25.0.1"
+          pip install -e ".[dev]" -q
 
       - name: Locate latest bundle
         id: bundle
@@ -53,6 +54,10 @@ jobs:
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "path=$latest" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Refresh bundle receipt timestamps (CI freshness)
+        if: steps.bundle.outputs.found == 'true'
+        run: python scripts/ci/refresh_proof_bundle_timestamps.py "${{ steps.bundle.outputs.path }}"
 
       - name: Strict policy.py evaluator (fails closed on violation)
         id: strict_gate

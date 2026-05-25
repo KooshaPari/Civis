@@ -20,28 +20,21 @@ public sealed class GameWaitForWorldTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON indicating whether the world is ready.</returns>
     [McpServerTool(Name = "game_wait-for-world"), Description("Block until the ECS world is loaded and ready, or until timeout.")]
-    public static async Task<string> WaitForWorldAsync(
+    public static Task<string> WaitForWorldAsync(
         GameClient client,
         [Description("Timeout in milliseconds (default: 60000)")] int? timeoutMs = null,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { ready = false, error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            WaitResult result = await client.WaitForWorldAsync(timeoutMs ?? 60000, ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { ready = false, error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.WaitForWorldAsync(timeoutMs ?? 60000, token),
+            result => new
             {
                 ready = result.Ready,
                 worldName = result.WorldName
-            });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { ready = false, error = ex.Message });
-        }
+            },
+            ex => new { ready = false, error = ex.Message });
     }
 }

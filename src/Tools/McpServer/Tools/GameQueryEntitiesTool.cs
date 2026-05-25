@@ -21,21 +21,18 @@ public sealed class GameQueryEntitiesTool
     /// <param name="ct">Cancellation token.</param>
     /// <returns>JSON with entity count and details.</returns>
     [McpServerTool(Name = "game_query-entities"), Description("Query entities in the ECS world by component type and/or category.")]
-    public static async Task<string> QueryEntitiesAsync(
+    public static Task<string> QueryEntitiesAsync(
         GameClient client,
         [Description("ECS component type name to filter by (e.g. 'Components.Health')")] string? componentType = null,
         [Description("Category filter: unit, building, projectile, or other")] string? category = null,
         CancellationToken ct = default)
     {
-        if (!await GameClientHelper.EnsureConnectedAsync(client, ct).ConfigureAwait(false))
-        {
-            return GameClientHelper.ToJson(new { count = 0, error = GameClientHelper.NotConnectedMessage });
-        }
-
-        try
-        {
-            QueryResult result = await client.QueryEntitiesAsync(componentType, category, ct).ConfigureAwait(false);
-            return GameClientHelper.ToJson(new
+        return GameClientHelper.InvokeBridgeAsync(
+            client,
+            ct,
+            new { count = 0, error = GameClientHelper.NotConnectedMessage },
+            (c, token) => c.QueryEntitiesAsync(componentType, category, token),
+            result => new
             {
                 count = result.Count,
                 entities = result.Entities.Select(e => new
@@ -43,11 +40,7 @@ public sealed class GameQueryEntitiesTool
                     index = e.Index,
                     components = e.Components
                 })
-            });
-        }
-        catch (GameClientException ex)
-        {
-            return GameClientHelper.ToJson(new { count = 0, error = ex.Message });
-        }
+            },
+            ex => new { count = 0, error = ex.Message });
     }
 }

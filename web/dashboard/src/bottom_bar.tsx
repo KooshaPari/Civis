@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { postControl } from "./control";
 import {
   chunkToMinimapUv,
@@ -15,18 +15,90 @@ import {
 } from "./lib/civisServer";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { mergeServerSnapshot } from "./lib/mergeSnapshot";
-import { useDashboardStore, type TimeSpeed } from "./store";
+import { useDashboardStore, type SaveEntry, type TimeSpeed } from "./store";
 
 export function BottomBar() {
   const { state, dispatch } = useDashboardStore();
   const miniMapRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const autosaveBucketRef = useRef(-1);
+  const [saveName, setSaveName] = useState("");
+  const [loadEntries, setLoadEntries] = useState<SaveEntry[]>([]);
+  const [loadOpen, setLoadOpen] = useState(false);
 
   const runWatchControl = async (path: string, body: object = {}) => {
     try {
       await postControl(path, body);
     } catch {
       dispatch({ type: "set_toast", message: `Failed: ${path}` });
+    }
+  };
+
+  const saveGame = async (filename: string) => {
+    if (state.attachMode !== "watch") {
+      dispatch({ type: "set_toast", message: "Save/load is available in civ-watch mode" });
+      return;
+    }
+    try {
+      const response = await fetch("/control/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+      const data = (await response.json()) as { ok?: boolean; tick?: number; message?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? `save failed ${response.status}`);
+      }
+      dispatch({ type: "set_last_save_tick", tick: Number(data.tick ?? 0) });
+      dispatch({ type: "set_toast", message: `Saved ${filename} @ tick ${Number(data.tick ?? 0)}` });
+    } catch (err) {
+      dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Save failed" });
+    }
+  };
+
+  const promptSave = () => {
+    const tick = state.snapshot?.tick ?? state.serverMetrics?.tick ?? 0;
+    const name = window.prompt("Save name:", saveName || `autosave-${tick}`);
+    if (!name) return;
+    setSaveName(name);
+    void saveGame(name);
+  };
+
+  const openLoadDialog = async () => {
+    if (state.attachMode !== "watch") {
+      dispatch({ type: "set_toast", message: "Save/load is available in civ-watch mode" });
+      return;
+    }
+    try {
+      const response = await fetch("/control/saves");
+      const entries = (await response.json()) as SaveEntry[];
+      if (!response.ok) throw new Error(`load list failed ${response.status}`);
+      setLoadEntries(entries);
+      setLoadOpen(true);
+    } catch (err) {
+      dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Load failed" });
+    }
+  };
+
+  const loadGame = async (name: string) => {
+    try {
+      const response = await fetch("/control/load", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: name }),
+      });
+      const data = (await response.json()) as { ok?: boolean; tick?: number; message?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? `load failed ${response.status}`);
+      }
+      dispatch({ type: "set_last_save_tick", tick: Number(data.tick ?? 0) });
+      dispatch({ type: "set_toast", message: `Loaded ${name} @ tick ${Number(data.tick ?? 0)}` });
+      setLoadOpen(false);
+      setLoadEntries([]);
+      const snap = await fetch("/snapshot").then((r) => r.json());
+      dispatch({ type: "set_snapshot", snapshot: snap });
+    } catch (err) {
+      dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Load failed" });
     }
   };
 
@@ -149,6 +221,14 @@ export function BottomBar() {
       }
     }
   }, [state.snapshot, state.terrain, state.loadedChunkIds]);
+
+  useEffect(() => {
+    const tick = state.snapshot?.tick ?? 0;
+    const bucket = Math.floor(tick / 1000);
+    if (state.attachMode !== "watch" || bucket <= 0 || bucket <= autosaveBucketRef.current) return;
+    autosaveBucketRef.current = bucket;
+    void saveGame("autosave");
+  }, [state.attachMode, state.snapshot?.tick]);
 
   const inspectMinimapCell = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!state.terrain) return;
@@ -285,11 +365,11 @@ export function BottomBar() {
                 }
               >
                 <option value="civilian">Civilian</option>
-                <option value="vehicle" disabled>
-                  Vehicle (stub)
+                <option value="vehicle" disabled={state.attachMode !== "server"}>
+                  Vehicle{state.attachMode !== "server" ? " (server only)" : ""}
                 </option>
-                <option value="airport" disabled>
-                  Airport (stub)
+                <option value="airport" disabled={state.attachMode !== "server"}>
+                  Airport{state.attachMode !== "server" ? " (server only)" : ""}
                 </option>
               </select>
             </label>
@@ -312,7 +392,12 @@ export function BottomBar() {
               onClick={() => fileInputRef.current?.click()}
             />
           </div>
-        ) : null}
+        ) : (
+          <div className="tool-row">
+            <ToolButton title="Save game" emoji="💾" onClick={promptSave} />
+            <ToolButton title="Load game" emoji="📂" onClick={() => void openLoadDialog()} />
+          </div>
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -325,6 +410,33 @@ export function BottomBar() {
           }}
         />
       </div>
+
+      {loadOpen ? (
+        <div className="modal-backdrop" onClick={() => setLoadOpen(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <strong>Load save</strong>
+              <button type="button" onClick={() => setLoadOpen(false)}>
+                Close
+              </button>
+            </div>
+            <div className="modal-body">
+              {loadEntries.length === 0 ? (
+                <p>No saves found.</p>
+              ) : (
+                <div className="load-list">
+                  {loadEntries.map((entry) => (
+                    <button key={entry.name} type="button" className="load-item" onClick={() => void loadGame(entry.name)}>
+                      <span>{entry.name}</span>
+                      <small>{Math.round(entry.size_bytes / 1024)} KB</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="minimap-shell">
         <div className="minimap-head">

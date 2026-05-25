@@ -52,6 +52,8 @@ pub enum JsonRpcMethod {
     SimGetSpeed,
     /// Spawn one civilian at normalized map coords (`sim.spawn_civilian`, FR-CIV-UX-002).
     SimSpawnCivilian,
+    /// Spawn civilian, vehicle, or airport (`sim.spawn_entity`, FR-CIV-UX-006).
+    SimSpawnEntity,
     /// Write one voxel (`sim.place_voxel`, FR-CIV-UX-003).
     SimPlaceVoxel,
     /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
@@ -73,6 +75,7 @@ impl JsonRpcMethod {
             Self::SimSetSpeed => "sim.set_speed",
             Self::SimGetSpeed => "sim.get_speed",
             Self::SimSpawnCivilian => "sim.spawn_civilian",
+            Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
             Self::SimDamage => "sim.damage",
         }
@@ -92,6 +95,7 @@ impl JsonRpcMethod {
             "sim.set_speed" => Some(Self::SimSetSpeed),
             "sim.get_speed" => Some(Self::SimGetSpeed),
             "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
+            "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
             "sim.damage" => Some(Self::SimDamage),
             _ => None,
@@ -368,6 +372,19 @@ pub struct SnapshotFields {
     pub spectator: Option<civ_engine::SpectatorView>,
     /// Institution balances (`civ-economy` stub ledger).
     pub institutions: Vec<InstitutionSnapshot>,
+    /// Military unit pins for spectator renderers (from ECS `MilitaryUnit`).
+    pub military_units: Vec<MilitaryPinSnapshot>,
+}
+
+/// Military pin row for `sim.snapshot` (matches civ-watch wire shape).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MilitaryPinSnapshot {
+    pub id: u64,
+    pub x: f32,
+    pub y: f32,
+    pub unit_type: String,
+    pub faction: u32,
+    pub strength: f32,
 }
 
 /// Build the JSON-RPC result object for `sim.snapshot`.
@@ -420,7 +437,34 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.institutions).unwrap_or(Value::Null),
         );
     }
+    if !fields.military_units.is_empty() {
+        obj.insert(
+            "military_units".to_owned(),
+            serde_json::to_value(&fields.military_units).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
+}
+
+/// Map ECS military units to spectator pins.
+pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSnapshot> {
+    use civ_engine::{grid_to_norm, unit_type_label, MilitaryUnit};
+    sim.world
+        .query::<&MilitaryUnit>()
+        .iter()
+        .enumerate()
+        .map(|(idx, (entity, unit))| {
+            let (x, y) = grid_to_norm(unit.position);
+            MilitaryPinSnapshot {
+                id: entity.to_bits().get() as u64 ^ u64::from(idx as u32),
+                x,
+                y,
+                unit_type: unit_type_label(unit.unit_type).to_string(),
+                faction: unit.faction_id,
+                strength: unit.strength.to_f64() as f32,
+            }
+        })
+        .collect()
 }
 
 /// Map live simulation institution ledger to wire rows.
@@ -463,6 +507,7 @@ pub fn snapshot_fields_from_sim(
         speed_multiplier,
         spectator: Some(sim.spectator_view()),
         institutions: institutions_from_sim(sim),
+        military_units: military_pins_from_sim(sim),
     }
 }
 
@@ -527,6 +572,15 @@ pub enum DispatchEffect {
         /// Faction id.
         faction: u32,
         /// Entity id seed (bridge tick xor constant).
+        entity_seq: u64,
+    },
+    /// Spawn civilian, vehicle, or airport (`sim.spawn_entity`, FR-CIV-UX-006).
+    SpawnEntity {
+        kind: SpawnEntityKind,
+        x: f32,
+        y: f32,
+        faction: u32,
+        /// Entity id seed for civilians only.
         entity_seq: u64,
     },
     /// Write one voxel (`sim.place_voxel`).
@@ -826,6 +880,38 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
+        JsonRpcMethod::SimSpawnEntity => {
+            if !role_allows_operator(
+                ctx.require_role,
+                req.params.as_ref(),
+                ctx.connection_role.as_deref(),
+            ) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                match parse_spawn_entity_params(req.params.as_ref()) {
+                    Ok((kind, x, y, faction)) => DispatchPlan {
+                        response: JsonRpcResponse::success(
+                            req.id,
+                            serde_json::json!({ "accepted": true, "kind": kind.wire_label() }),
+                        ),
+                        effect: DispatchEffect::SpawnEntity {
+                            kind,
+                            x,
+                            y,
+                            faction,
+                            entity_seq: ctx.tick.wrapping_add(1) ^ 0x00c0_ffee,
+                        },
+                    },
+                    Err(error) => DispatchPlan {
+                        response: JsonRpcResponse::failure(req.id, error),
+                        effect: DispatchEffect::None,
+                    },
+                }
+            }
+        }
         JsonRpcMethod::SimPlaceVoxel => {
             if !role_allows_operator(
                 ctx.require_role,
@@ -916,6 +1002,49 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             },
         },
     }
+}
+
+/// Palette entity for `sim.spawn_entity` (FR-CIV-UX-006).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpawnEntityKind {
+    Civilian,
+    Vehicle,
+    Airport,
+}
+
+impl SpawnEntityKind {
+    pub fn wire_label(self) -> &'static str {
+        match self {
+            Self::Civilian => "civilian",
+            Self::Vehicle => "vehicle",
+            Self::Airport => "airport",
+        }
+    }
+}
+
+/// Parse `sim.spawn_entity` params: `{ "kind", "x", "y", "faction"? }`.
+pub fn parse_spawn_entity_params(
+    params: Option<&Value>,
+) -> Result<(SpawnEntityKind, f32, f32, u32), JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "Missing params".to_owned(),
+        data: None,
+    })?;
+    let kind = match p.get("kind").and_then(|v| v.as_str()) {
+        Some("civilian") => SpawnEntityKind::Civilian,
+        Some("vehicle") => SpawnEntityKind::Vehicle,
+        Some("airport") => SpawnEntityKind::Airport,
+        _ => {
+            return Err(JsonRpcError {
+                code: error_code::INVALID_PARAMS,
+                message: "kind must be civilian, vehicle, or airport".to_owned(),
+                data: None,
+            });
+        }
+    };
+    let (x, y, faction) = parse_spawn_civilian_params(Some(p))?;
+    Ok((kind, x, y, faction))
 }
 
 /// Parse `sim.spawn_civilian` params: `{ "x", "y", "faction" }` (normalized coords).
@@ -1435,6 +1564,64 @@ mod tests {
     }
 
     #[test]
+    fn parse_spawn_entity_params_accepts_palette_kinds() {
+        let params = serde_json::json!({ "kind": "vehicle", "x": 0.1, "y": 0.9, "faction": 1 });
+        let (kind, x, y, faction) = parse_spawn_entity_params(Some(&params)).expect("spawn entity");
+        assert_eq!(kind, SpawnEntityKind::Vehicle);
+        assert!((x - 0.1).abs() < f32::EPSILON);
+        assert!((y - 0.9).abs() < f32::EPSILON);
+        assert_eq!(faction, 1);
+    }
+
+    #[test]
+    fn dispatch_sim_spawn_entity_schedules_vehicle() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":10,"method":"sim.spawn_entity","params":{"kind":"vehicle","x":0.4,"y":0.6,"faction":2}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 4,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+            },
+        );
+        assert!(matches!(
+            plan.effect,
+            DispatchEffect::SpawnEntity {
+                kind: SpawnEntityKind::Vehicle,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn snapshot_fields_include_military_pins_when_present() {
+        let mut sim = civ_engine::Simulation::with_seed(3);
+        civ_engine::spawn_military_at(
+            &mut sim.world,
+            1,
+            0.25,
+            0.75,
+            civ_engine::UnitType::Knight,
+        );
+        let fields = snapshot_fields_from_sim(&sim, 1);
+        assert!(
+            fields
+                .military_units
+                .iter()
+                .any(|unit| unit.unit_type == "Vehicle"),
+            "expected spawned Knight pin as Vehicle"
+        );
+        let json = snapshot_result_json(&fields);
+        assert!(json.get("military_units").and_then(|v| v.as_array()).is_some());
+    }
+
+    #[test]
     fn dispatch_sim_spawn_civilian_schedules_effect() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":9,"method":"sim.spawn_civilian","params":{"x":0.5,"y":0.5,"faction":0}}"#,
@@ -1500,6 +1687,7 @@ mod tests {
                     speed_multiplier: 1,
                     spectator: None,
                     institutions: vec![],
+                    military_units: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1544,6 +1732,7 @@ mod tests {
                     speed_multiplier: 1,
                     spectator: None,
                     institutions: vec![],
+                    military_units: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1593,6 +1782,7 @@ mod tests {
                     speed_multiplier: 1,
                     spectator: None,
                     institutions: vec![],
+                    military_units: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,

@@ -60,21 +60,23 @@ export async function executeTerrainAuthoring(
 
   switch (input.tool) {
     case "SpawnCivilian": {
-      if (input.spawnKind !== "civilian") {
-        throw new Error(`Spawn kind "${input.spawnKind}" is not wired yet (FR-CIV-UX-006)`);
-      }
       if (input.attachMode === "server") {
         const ws = getActiveServerSocket();
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           throw new Error("Not connected to civ-server");
         }
-        const result = await jsonRpcCall<{ entity_id?: number }>(ws, "sim.spawn_civilian", {
-          x: normX,
-          y: normY,
-          faction: input.faction,
-        });
+        const method =
+          input.spawnKind === "civilian" ? "sim.spawn_civilian" : "sim.spawn_entity";
+        const params =
+          input.spawnKind === "civilian"
+            ? { x: normX, y: normY, faction: input.faction }
+            : { kind: input.spawnKind, x: normX, y: normY, faction: input.faction };
+        const result = await jsonRpcCall<{ entity_id?: number }>(ws, method, params);
         await refreshAfterMutation(input.attachMode, input.speed, dispatch);
-        return `Spawned civilian #${result.entity_id ?? "?"}`;
+        return `Spawned ${input.spawnKind} #${result.entity_id ?? "?"}`;
+      }
+      if (input.spawnKind !== "civilian") {
+        throw new Error(`Spawn kind "${input.spawnKind}" is server-only (use ?attach=server)`);
       }
       await postControl("/control/spawn_civilian", {
         x: normX,

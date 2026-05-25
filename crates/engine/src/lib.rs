@@ -22,6 +22,7 @@ pub mod policy;
 pub mod replay;
 pub mod replay_format;
 pub mod scenario;
+pub mod spawn;
 pub mod spectator;
 
 pub use engine::{
@@ -29,6 +30,7 @@ pub use engine::{
     PopulationEvent, Position, Production, ResourceType, Resources, Simulation, SimulationSnapshot,
     UnitType, WorldState,
 };
+pub use spawn::{grid_to_norm, norm_to_grid, spawn_airport_at, spawn_military_at, unit_type_label};
 
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{apply_damage, DamageEvent};

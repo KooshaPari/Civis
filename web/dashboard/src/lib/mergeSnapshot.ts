@@ -12,10 +12,26 @@ import type {
   Road,
   RoadKind,
   Snapshot,
+  GameEvent,
   TechNode,
   TimeSpeed,
   TradeRoute,
 } from "../store";
+
+function parseGameEvents(raw: unknown): GameEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    const faction = item.faction_id;
+    return {
+      tick: Number(item.tick ?? 0),
+      kind: String(item.kind ?? ""),
+      message: String(item.message ?? ""),
+      faction_id:
+        faction === null || faction === undefined ? null : Number(faction),
+    };
+  });
+}
 
 function parseTechTree(raw: unknown): TechNode[] {
   if (!Array.isArray(raw)) return [];
@@ -60,6 +76,7 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
     birth_events: parsePopulationPulses(r.birth_events),
     death_events: parsePopulationPulses(r.death_events),
     tech_tree: parseTechTree(r.tech_tree),
+    events: parseGameEvents(r.events),
     is_day: Boolean(r.is_day ?? true),
     economy: parseEconomyForServer(r),
     speed,

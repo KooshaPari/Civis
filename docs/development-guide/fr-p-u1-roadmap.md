@@ -19,9 +19,9 @@
 |------------------|-------------|---------|
 | FR-CIV-UX-002 | `sim.spawn_civilian` on **civ-server** JSON-RPC | **implemented** — `sim.spawn_civilian`; Godot `CivisWsClient` |
 | FR-CIV-UX-003 | `sim.place_voxel` on server | **implemented** |
-| FR-CIV-UX-004 | Drag-place vehicles / airports / ports | **stub** — palette entries; not wired |
+| FR-CIV-UX-004 | Drag-place vehicles / airports / ports | **partial** — click-place via `sim.spawn_entity`; drag TBD |
 | FR-CIV-UX-005 | Era timelapse **camera** presets | **partial** — `camera.gd` wide/close; web TBD |
-| FR-CIV-UX-006 | Spawn palette UI | **partial** — civilian wired; vehicle/airport disabled |
+| FR-CIV-UX-006 | Spawn palette UI | **implemented** — `sim.spawn_entity` (vehicle/airport) + web palette on civ-server attach |
 | — | `sim.damage` on server | **implemented** — web + Godot server attach |
 
 ## Authoring today

@@ -468,6 +468,38 @@ async fn apply_dispatch_effect(
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
+        DispatchEffect::SpawnEntity {
+            kind,
+            x,
+            y,
+            faction,
+            entity_seq,
+        } => {
+            use crate::jsonrpc::SpawnEntityKind;
+            use civ_engine::{spawn_airport_at, spawn_military_at, UnitType};
+
+            let mut sim = state.sim.lock().await;
+            let entity = match kind {
+                SpawnEntityKind::Civilian => {
+                    let mut rng = sim.rng_mut().clone();
+                    let entity = civ_agents::spawn_civilian_at(
+                        &mut sim.world,
+                        entity_seq,
+                        faction,
+                        x,
+                        y,
+                        &mut rng,
+                    );
+                    *sim.rng_mut() = rng;
+                    entity
+                }
+                SpawnEntityKind::Vehicle => {
+                    spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
+                }
+                SpawnEntityKind::Airport => spawn_airport_at(&mut sim.world, x, y),
+            };
+            set_spawn_civilian_result(response, entity.id());
+        }
         DispatchEffect::PlaceVoxel { x, y, z, material } => {
             let mut sim = state.sim.lock().await;
             sim.voxel_mut().write(

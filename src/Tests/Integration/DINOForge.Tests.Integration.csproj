@@ -35,6 +35,11 @@
     <Compile Remove="UIWireupIntegrationTests.cs" />
   </ItemGroup>
 
+  <!-- DINOBox pool scripts are Windows/PowerShell-only; skip on Linux CI -->
+  <ItemGroup Condition="'$(CI)' == 'true'">
+    <Compile Remove="Tests\SandboxIsolationTests.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Remove="Tests\PingTests.cs" />
     <Compile Remove="Tests\CatalogTests.cs" />

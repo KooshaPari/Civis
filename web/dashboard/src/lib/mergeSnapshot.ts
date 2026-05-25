@@ -13,9 +13,11 @@ import type {
   RoadKind,
   Snapshot,
   GameEvent,
+  HousingStats,
   TechNode,
   TimeSpeed,
   TradeRoute,
+  WeatherSnapshot,
 } from "../store";
 
 function parseGameEvents(raw: unknown): GameEvent[] {
@@ -78,8 +80,33 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
     tech_tree: parseTechTree(r.tech_tree),
     events: parseGameEvents(r.events),
     is_day: Boolean(r.is_day ?? true),
+    housing_stats: parseHousingStats(r.housing_stats),
+    weather: parseWeather(r.weather),
     economy: parseEconomyForServer(r),
     speed,
+  };
+}
+
+function parseHousingStats(raw: unknown): HousingStats {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  return {
+    total_capacity: Number(row.total_capacity ?? 0),
+    occupied: Number(row.occupied ?? 0),
+    homeless: Number(row.homeless ?? 0),
+    vacancy_rate: Number(row.vacancy_rate ?? 0),
+  };
+}
+
+function parseWeather(raw: unknown): WeatherSnapshot {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const precip = row.precipitation;
+  const precipitation =
+    precip === "rain" || precip === "snow" || precip === "none" ? precip : "none";
+  return {
+    season: String(row.season ?? "Spring"),
+    temperature: Number(row.temperature ?? 15),
+    wind_speed: Number(row.wind_speed ?? 0),
+    precipitation,
   };
 }
 
@@ -237,6 +264,8 @@ function parseBuildings(raw: unknown): Building[] {
       kind: parseBuildingKind(row.kind),
       era: Number(row.era ?? 0),
       faction_id: Number(row.faction_id ?? 0),
+      occupants: Number(row.occupants ?? 0),
+      capacity: Number(row.capacity ?? 0),
     };
   });
 }

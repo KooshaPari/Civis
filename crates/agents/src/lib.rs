@@ -74,6 +74,13 @@ pub struct Needs {
     pub belonging: f32,
 }
 
+/// Home assignment for a civilian.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HomeAssignment {
+    /// Stable building ID for the assigned home.
+    pub building_id: u64,
+}
+
 /// Simulation fidelity tier. Far-from-camera civilians collapse to lower tiers
 /// to bound the per-tick cost.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -254,6 +261,31 @@ pub fn spawn_civilian(
         lod,
     } = bundle;
     world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod))
+}
+
+/// Return a normalized direction from a civilian toward a home coordinate.
+#[must_use]
+pub fn drift_toward_home(
+    civilian_pos: &Position3d,
+    home_pos: &Position3d,
+    current_velocity: Velocity,
+    shelter_need: f32,
+) -> Velocity {
+    if shelter_need <= 0.5 {
+        return current_velocity;
+    }
+
+    let dx = home_pos.coord.x as f32 - civilian_pos.coord.x as f32;
+    let dz = home_pos.coord.z as f32 - civilian_pos.coord.z as f32;
+    let len = (dx * dx + dz * dz).sqrt();
+    if len <= f32::EPSILON {
+        return current_velocity;
+    }
+
+    Velocity {
+        dx: dx / len,
+        dy: dz / len,
+    }
 }
 
 /// Spawn one civilian at a specific normalized terrain position.

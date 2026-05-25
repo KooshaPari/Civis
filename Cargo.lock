@@ -2093,6 +2093,7 @@ dependencies = [
  "civ-agents",
  "civ-engine",
  "civ-laws",
+ "civ-planet",
  "civ-protocol-3d",
  "civ-server",
  "civ-tactics",

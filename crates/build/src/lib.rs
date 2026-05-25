@@ -204,6 +204,27 @@ impl BuildingGraph {
             .filter(move |parcel| parcel.era_min <= era)
     }
 
+    /// Returns the total housing capacity across all residential parcels.
+    #[must_use]
+    pub fn total_capacity(&self) -> u32 {
+        self.parcels
+            .iter()
+            .map(|parcel| match parcel.kind {
+                ParcelKind::Residential => 4,
+                ParcelKind::Commercial | ParcelKind::Industrial | ParcelKind::Civic => 0,
+            })
+            .sum()
+    }
+
+    /// Returns the occupied housing slots proxy from residential parcels.
+    #[must_use]
+    pub fn occupied(&self) -> u32 {
+        self.parcels
+            .iter()
+            .filter(|parcel| matches!(parcel.kind, ParcelKind::Residential))
+            .count() as u32
+    }
+
     #[cfg(test)]
     /// Serializes and deserializes the graph through RON for round-trip tests.
     fn round_trip_ron(&self) -> Self {

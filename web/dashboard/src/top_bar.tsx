@@ -11,6 +11,7 @@ export function TopBar() {
   const metrics = state.serverMetrics;
   const tick = state.snapshot?.tick ?? metrics?.tick ?? 0;
   const modeLabel = state.attachMode === "server" ? "civ-server" : "civ-watch";
+  const weatherLabel = formatWeather(state.snapshot?.weather);
 
   return (
     <header className="top-bar">
@@ -22,12 +23,17 @@ export function TopBar() {
         <p className="brand-sub">
           Attach: <strong>{modeLabel}</strong>
           {state.frame3dTick != null ? ` · F3D0 tick ${state.frame3dTick}` : null}
+          {weatherLabel ? ` · ${weatherLabel}` : null}
         </p>
       </div>
       <div className="top-metrics">
         <Metric label="Tick" value={tick} />
         <Metric label="Population" value={state.snapshot?.population ?? metrics?.population ?? 0} />
         <Metric label="⚔️ Soldiers" value={state.snapshot?.military_units?.length ?? 0} />
+        <Metric
+          label="🏠 Housing"
+          value={`${state.snapshot?.housing_stats.occupied ?? 0}/${state.snapshot?.housing_stats.total_capacity ?? 0} (${Math.round((1 - (state.snapshot?.housing_stats.vacancy_rate ?? 0)) * 100)}%)`}
+        />
         {state.attachMode === "server" ? (
           <>
             <Metric label="Buildings" value={metrics?.building_count ?? 0} />
@@ -53,6 +59,11 @@ export function TopBar() {
         <ResourceBar label="Wood" value={state.snapshot?.economy.resources.wood ?? 0} tone="wood" />
         <ResourceBar label="Metal" value={state.snapshot?.economy.resources.metal ?? 0} tone="metal" />
         <ResourceBar label="Energy" value={state.snapshot?.economy.resources.energy ?? 0} tone="energy" />
+        <ResourceBar
+          label="Housing vacancy"
+          value={(state.snapshot?.housing_stats.vacancy_rate ?? 0) * 100}
+          tone="energy"
+        />
       </div>
       <div className="top-actions">
         <span className="connection-pill">
@@ -92,6 +103,17 @@ export function TopBar() {
       </div>
     </header>
   );
+}
+
+function formatWeather(weather?: { season: string; temperature: number; precipitation: string } | null) {
+  if (!weather) return "";
+  const icon = weather.precipitation === "rain" ? "🌧️" : weather.precipitation === "snow" ? "❄️" : "☀️";
+  const precipitation = weather.precipitation === "none" ? "" : ` ${capitalize(weather.precipitation)}`;
+  return `${icon} ${weather.season} ${Math.round(weather.temperature)}°C${precipitation}`;
+}
+
+function capitalize(value: string) {
+  return value.length ? value[0].toUpperCase() + value.slice(1) : value;
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {

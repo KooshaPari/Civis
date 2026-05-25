@@ -31,7 +31,8 @@ use axum::{
     Router,
 };
 use civ_agents::{
-    spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Position3d, Velocity,
+    drift_toward_home, spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Needs,
+    Position3d, Velocity,
 };
 use civ_engine::{Citizen, DiplomacyKind, JobType, Simulation};
 use civ_laws::{LawDb, LawKind};
@@ -140,6 +141,16 @@ struct Building {
     kind: BuildingKind,
     era: u8,
     faction_id: u32,
+    occupants: u32,
+    capacity: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct HousingStats {
+    total_capacity: u32,
+    occupied: u32,
+    homeless: u32,
+    vacancy_rate: f32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -200,6 +211,14 @@ struct EconomySnapshot {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct WeatherSnapshot {
+    season: String,
+    temperature: f32,
+    wind_speed: f32,
+    precipitation: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct ResourceSnapshot {
     food: f64,
     wood: f64,
@@ -250,6 +269,7 @@ struct Snapshot {
     civ_pins: Vec<CivPin>,
     factions: Vec<Faction>,
     buildings: Vec<Building>,
+    housing_stats: HousingStats,
     roads: Vec<Road>,
     trade_routes: Vec<TradeRoute>,
     economy: EconomySnapshot,
@@ -263,6 +283,7 @@ struct Snapshot {
     tech_tree: Vec<TechNode>,
     events: Vec<GameEvent>,
     is_day: bool,
+    weather: WeatherSnapshot,
     speed: u8,
 }
 
@@ -474,6 +495,9 @@ async fn simulation_worker(state: AppState) {
                         .store(((sim.state.tick / 600).min(5)) as u16, Ordering::Relaxed);
                 }
                 let terrain = state.terrain.clone();
+                let factions = factions(sim.state.tick);
+                let buildings = buildings(&factions, sim.state.tick);
+                assign_and_drift_housing(&mut sim, &buildings);
                 let mut rng = sim.rng_mut().clone();
                 tick_movement(&mut sim.world, 128, &mut rng, |x, y| {
                     terrain.is_walkable(x, y)
@@ -636,7 +660,8 @@ fn make_snapshot(
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
     let factions = factions(sim.state.tick);
-    let buildings = buildings(&factions, sim.state.tick);
+    let mut buildings = buildings(&factions, sim.state.tick);
+    let housing_stats = housing_snapshot(sim, &mut buildings);
     let roads = roads(&buildings);
     let trade_routes = trade_routes(&factions, sim.state.tick);
     let economy = economy_snapshot(sim, &factions);
@@ -684,6 +709,7 @@ fn make_snapshot(
     });
     let climate = sim.climate();
     let is_day = climate.day_phase >= 0.25 && climate.day_phase < 0.75;
+    let weather = weather_snapshot(sim.state.tick, climate.year_phase);
     let tick_dt_ms = 100u32 / u32::from(speed.max(1));
 
     Snapshot {
@@ -697,6 +723,7 @@ fn make_snapshot(
         civ_pins,
         factions,
         buildings,
+        housing_stats,
         roads,
         trade_routes,
         economy,
@@ -710,7 +737,58 @@ fn make_snapshot(
         tech_tree: tech_nodes,
         events,
         is_day,
+        weather,
         speed,
+    }
+}
+
+fn weather_snapshot(tick: u64, year_phase: f32) -> WeatherSnapshot {
+    let season = season_from_year_phase(year_phase);
+    let temperature = temperature_from_year_phase(year_phase);
+    let precipitation = precipitation_from_weather(&season, temperature);
+    let wind_speed = 2.5
+        + (year_phase * std::f32::consts::TAU).sin().abs() * 2.0
+        + (tick as f32 * 0.000_01).sin().abs() * 0.5
+        + season_wind_bias(&season);
+
+    WeatherSnapshot {
+        season,
+        temperature,
+        wind_speed,
+        precipitation,
+    }
+}
+
+fn season_from_year_phase(year_phase: f32) -> String {
+    match year_phase {
+        phase if phase < 0.25 => "Spring".to_string(),
+        phase if phase < 0.5 => "Summer".to_string(),
+        phase if phase < 0.75 => "Autumn".to_string(),
+        _ => "Winter".to_string(),
+    }
+}
+
+fn temperature_from_year_phase(year_phase: f32) -> f32 {
+    11.0 + (std::f32::consts::TAU * (year_phase - 0.25)).sin() * 17.0
+}
+
+fn precipitation_from_weather(season: &str, temperature: f32) -> String {
+    match season {
+        "Winter" if temperature <= 0.0 => "snow".to_string(),
+        "Winter" => "none".to_string(),
+        "Spring" | "Autumn" if temperature < 12.0 => "rain".to_string(),
+        "Summer" if temperature < 14.0 => "rain".to_string(),
+        _ => "none".to_string(),
+    }
+}
+
+fn season_wind_bias(season: &str) -> f32 {
+    match season {
+        "Spring" => 1.0,
+        "Summer" => 0.4,
+        "Autumn" => 1.2,
+        "Winter" => 1.6,
+        _ => 0.0,
     }
 }
 
@@ -989,6 +1067,53 @@ fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
         .collect()
 }
 
+fn assign_and_drift_housing(sim: &mut Simulation, buildings: &[Building]) {
+    let world = &mut sim.world;
+    let homes: Vec<_> = buildings
+        .iter()
+        .filter(|building| {
+            matches!(building.kind, BuildingKind::Residential) && building.capacity > 0
+        })
+        .collect();
+    let mut occupancy: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+    let mut home_lookup = std::collections::BTreeMap::new();
+    for building in &homes {
+        home_lookup.insert(building.id, (building.x, building.y));
+    }
+
+    for (_, (_civilian, pos, vel, needs)) in
+        world.query_mut::<(&AgentCivilian, &Position3d, &mut Velocity, &Needs)>()
+    {
+        if needs.shelter <= 0.5 {
+            continue;
+        }
+        let mut selected = None;
+        for building in homes.iter() {
+            let used = occupancy.get(&building.id).copied().unwrap_or(0);
+            if used < building.capacity {
+                selected = Some(*building);
+                break;
+            }
+        }
+        if let Some(home) = selected {
+            occupancy
+                .entry(home.id)
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
+            let home_pos = Position3d {
+                coord: WorldCoord {
+                    x: (home.x * civ_voxel::FIXED_SCALE as f32) as i64,
+                    y: 0,
+                    z: (home.y * civ_voxel::FIXED_SCALE as f32) as i64,
+                },
+            };
+            let drifted = drift_toward_home(pos, &home_pos, *vel, needs.shelter);
+            vel.dx = drifted.dx;
+            vel.dy = drifted.dy;
+        }
+    }
+}
+
 fn factions(tick: u64) -> Vec<Faction> {
     let territory_radius_t = 18.0 + (tick as f32 * 0.018);
     let capitals = [
@@ -1033,10 +1158,49 @@ fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
                 kind: kinds[(idx as usize) % kinds.len()].clone(),
                 era: ((tick / 600) % 6) as u8,
                 faction_id: faction.id,
+                occupants: 0,
+                capacity: match kinds[(idx as usize) % kinds.len()] {
+                    BuildingKind::Residential => 4,
+                    _ => 0,
+                },
             });
         }
     }
     buildings
+}
+
+fn housing_snapshot(sim: &Simulation, buildings: &mut [Building]) -> HousingStats {
+    let needy_count = sim
+        .world
+        .query::<(&AgentCivilian, &Needs)>()
+        .iter()
+        .filter(|(_, (_, needs))| needs.shelter > 0.5)
+        .count() as u32;
+    let total_capacity = buildings.iter().map(|building| building.capacity).sum();
+    let occupied = needy_count.min(total_capacity);
+    let homeless = needy_count.saturating_sub(total_capacity);
+    let mut remaining = occupied;
+    for building in buildings.iter_mut() {
+        if building.capacity == 0 {
+            building.occupants = 0;
+            continue;
+        }
+        let assigned = remaining.min(building.capacity);
+        building.occupants = assigned;
+        remaining = remaining.saturating_sub(assigned);
+    }
+    let vacancy_rate = if total_capacity == 0 {
+        0.0
+    } else {
+        (total_capacity.saturating_sub(occupied)) as f32 / total_capacity as f32
+    };
+
+    HousingStats {
+        total_capacity,
+        occupied,
+        homeless,
+        vacancy_rate,
+    }
 }
 
 fn roads(buildings: &[Building]) -> Vec<Road> {

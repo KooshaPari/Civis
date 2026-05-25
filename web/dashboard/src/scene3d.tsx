@@ -44,6 +44,7 @@ type SceneRefs = {
   treeInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
   rockInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
   snowPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
+  rainPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   military: THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>[];
   territories: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>[];
@@ -56,6 +57,8 @@ type SceneRefs = {
   currentTerrainSize: number;
   terrainWorldSize: number;
   terrainBaseColors: Float32Array | null;
+  terrainSeason: string;
+  terrainWeather: Snapshot["weather"] | null;
   targetDayFactor: number;
   dayFactor: number;
   previousSnapshot: Snapshot | null;
@@ -77,6 +80,7 @@ export function Scene3d() {
     treeInstances: null,
     rockInstances: null,
     snowPoints: null,
+    rainPoints: null,
     civilians: [],
     military: [],
     territories: [],
@@ -89,6 +93,8 @@ export function Scene3d() {
     currentTerrainSize: 0,
     terrainWorldSize: 0,
     terrainBaseColors: null,
+    terrainSeason: "",
+    terrainWeather: null,
     targetDayFactor: 1,
     dayFactor: 1,
     previousSnapshot: null,
@@ -205,6 +211,7 @@ export function Scene3d() {
         refs.current.treeInstances = null;
         refs.current.rockInstances = null;
         refs.current.snowPoints = null;
+        refs.current.rainPoints = null;
       }
       if (refs.current.treeInstances) {
         terrainGroup.remove(refs.current.treeInstances);
@@ -220,6 +227,11 @@ export function Scene3d() {
         terrainGroup.remove(refs.current.snowPoints);
         disposeObject(refs.current.snowPoints);
         refs.current.snowPoints = null;
+      }
+      if (refs.current.rainPoints) {
+        terrainGroup.remove(refs.current.rainPoints);
+        disposeObject(refs.current.rainPoints);
+        refs.current.rainPoints = null;
       }
 
       const geometry = new THREE.PlaneGeometry(terrain.size, terrain.size, terrain.size - 1, terrain.size - 1);
@@ -515,7 +527,9 @@ export function Scene3d() {
       });
     };
 
-    const applyDayNight = () => {
+    const applyWeather = () => {
+      refs.current.terrainWeather = stateRef.current.snapshot?.weather ?? null;
+      refs.current.terrainSeason = refs.current.terrainWeather?.season ?? "";
       const target = stateRef.current.snapshot?.is_day === false ? 0.3 : 1;
       refs.current.targetDayFactor = target;
     };
@@ -638,7 +652,7 @@ export function Scene3d() {
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
 
     scene.background = new THREE.Color(0x87b7e0);
-    const fog = new THREE.Fog(0x87b7e0, 0, 1);
+    const fog = new THREE.FogExp2(0x87b7e0, 0.0035);
     scene.fog = fog;
 
     let raf = 0;
@@ -652,11 +666,12 @@ export function Scene3d() {
         hemisphere.intensity = 0.6 * d;
         sun.intensity = 1.2 * d;
         sun.position.set(terrain.size * 0.7, terrain.size * 1.3, terrain.size * 0.55);
+        const weather = refs.current.terrainWeather;
         const bg = new THREE.Color().lerpColors(new THREE.Color(0x0a1530), new THREE.Color(0x87b7e0), d);
         scene.background = bg;
         fog.color.copy(bg);
-        fog.near = terrain.size * 0.8;
-        fog.far = terrain.size * 2.5;
+        fog.density = weather?.precipitation === "rain" ? 0.012 : weather?.precipitation === "snow" ? 0.008 : 0.0035;
+        updateWeatherParticles(refs.current, terrain, weather, performance.now());
         animateDecorations(refs.current, terrain, performance.now());
         updateInterpolatedCivilians(refs.current, terrain, performance.now());
         animateTradeRoutes(refs.current, performance.now());
@@ -678,7 +693,7 @@ export function Scene3d() {
       updateBuildings();
       updateRoads();
       updateTradeRoutes();
-      applyDayNight();
+      applyWeather();
       animate();
     };
 
@@ -1134,8 +1149,6 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
 
   const treeCount = Math.min(2000, Math.floor(treeCandidates.length * 0.55));
   const rockCount = Math.min(500, Math.floor(rockCandidates.length * 0.45));
-  const snowCount = Math.min(200, snowCells.length ? 200 : 0);
-
   if (treeCount > 0) {
     const trunkGeo = new THREE.CylinderGeometry(0.08, 0.11, 0.65, 6);
     const canopyGeo = new THREE.ConeGeometry(0.55, 1.4, 7);
@@ -1209,24 +1222,6 @@ function buildDecorations(terrain: Terrain, terrainGroup: THREE.Group, refs: Sce
     refs.rockInstances = rocks;
   }
 
-  if (snowCount > 0) {
-    const positions = new Float32Array(snowCount * 3);
-    const speeds = new Float32Array(snowCount);
-    for (let i = 0; i < snowCount; i += 1) {
-      const cell = snowCells[Math.floor(rng() * snowCells.length)];
-      positions[i * 3] = cell.x - terrain.size / 2 + (rng() - 0.5) * 0.6;
-      positions[i * 3 + 1] = cell.height + rng() * terrain.size * 0.35 + 2;
-      positions[i * 3 + 2] = cell.y - terrain.size / 2 + (rng() - 0.5) * 0.6;
-      speeds[i] = 0.35 + rng() * 0.45;
-    }
-    const snowGeo = new THREE.BufferGeometry();
-    snowGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    snowGeo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
-    const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.8 });
-    const snow = new THREE.Points(snowGeo, snowMat);
-    terrainGroup.add(snow);
-    refs.snowPoints = snow;
-  }
 }
 
 function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
@@ -1235,46 +1230,154 @@ function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
     refs.waterMesh.material.opacity = 0.5 + 0.1 * (0.5 + 0.5 * Math.sin(time * 0.8));
   }
 
-  if (refs.snowPoints) {
-    const geometry = refs.snowPoints.geometry;
-    const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-    const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
-    for (let i = 0; i < position.count; i += 1) {
-      const vy = position.getY(i) - ((speed?.getX(i) ?? 0.4) * 0.02);
-      if (vy < -terrain.size * 0.15) {
-        const x = position.getX(i);
-        const z = position.getZ(i);
-        position.setXYZ(i, x, terrain.size * 0.6 + (i % 7) * 0.2, z);
-      } else {
-        position.setY(i, vy);
-      }
-    }
-    position.needsUpdate = true;
-  }
-
   const terrainMesh = refs.terrainMesh;
   const baseColors = refs.terrainBaseColors;
   if (terrainMesh && baseColors) {
     const colorAttr = terrainMesh.geometry.getAttribute("color") as THREE.BufferAttribute;
-    const color = new THREE.Color();
+    const season = refs.terrainSeason || "Summer";
+    const seasonBlend = terrainSeasonBlend(season);
+    const weather = refs.terrainWeather;
     const positions = terrainMesh.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const base = new THREE.Color();
+    const tint = new THREE.Color(seasonBlend.tint);
     for (let i = 0; i < colorAttr.count; i += 1) {
-      const biomeInfluence = terrain.biomes[i] === "grass" ? 1 : 0;
-      if (!biomeInfluence) {
-        colorAttr.setXYZ(i, baseColors[i * 3], baseColors[i * 3 + 1], baseColors[i * 3 + 2]);
-        continue;
-      }
+      const biome = terrain.biomes[i];
+      base.setRGB(baseColors[i * 3], baseColors[i * 3 + 1], baseColors[i * 3 + 2]);
       const x = positions.getX(i);
       const z = positions.getZ(i);
       const sway = 0.04 * Math.sin(time * 1.2 + x * 0.25 + z * 0.17);
-      color.setRGB(
-        clamp01(baseColors[i * 3] + sway),
-        clamp01(baseColors[i * 3 + 1] + sway * 1.15),
-        clamp01(baseColors[i * 3 + 2] + sway * 0.6),
-      );
-      colorAttr.setXYZ(i, color.r, color.g, color.b);
+      if (biome === "grass" || biome === "forest") {
+        const seasonal = base.clone().lerp(tint, seasonBlend.amount);
+        if (weather?.precipitation === "snow") {
+          seasonal.lerp(new THREE.Color(0xf2f6fb), 0.32);
+        }
+        seasonal.offsetHSL(0, 0, sway * 0.12);
+        colorAttr.setXYZ(i, seasonal.r, seasonal.g, seasonal.b);
+      } else {
+        colorAttr.setXYZ(
+          i,
+          clamp01(base.r + sway * 0.05),
+          clamp01(base.g + sway * 0.05),
+          clamp01(base.b + sway * 0.05),
+        );
+      }
     }
     colorAttr.needsUpdate = true;
+  }
+}
+
+function updateWeatherParticles(
+  refs: SceneRefs,
+  terrain: Terrain,
+  weather: Snapshot["weather"] | null,
+  now: number,
+) {
+  if (weather?.precipitation === "snow") {
+    if (!refs.snowPoints) {
+      refs.snowPoints = createSnowSystem(terrain);
+      refs.decorationGroup?.add(refs.snowPoints);
+    }
+    if (refs.rainPoints) {
+      refs.rainPoints.visible = false;
+    }
+    refs.snowPoints.visible = true;
+    animateSnow(refs.snowPoints, terrain);
+    return;
+  }
+
+  if (weather?.precipitation === "rain") {
+    if (!refs.rainPoints) {
+      refs.rainPoints = createRainSystem(terrain);
+      refs.decorationGroup?.add(refs.rainPoints);
+    }
+    if (refs.snowPoints) {
+      refs.snowPoints.visible = false;
+    }
+    refs.rainPoints.visible = true;
+    animateRain(refs.rainPoints, terrain, now);
+    return;
+  }
+
+  if (refs.snowPoints) refs.snowPoints.visible = false;
+  if (refs.rainPoints) refs.rainPoints.visible = false;
+}
+
+function createSnowSystem(terrain: Terrain) {
+  const count = Math.min(260, terrain.size * 2);
+  const positions = new Float32Array(count * 3);
+  const speeds = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) {
+    positions[i * 3] = (Math.random() - 0.5) * terrain.size;
+    positions[i * 3 + 1] = terrain.size * 0.45 + Math.random() * terrain.size * 0.2;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * terrain.size;
+    speeds[i] = 0.35 + Math.random() * 0.45;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.8 }));
+}
+
+function createRainSystem(terrain: Terrain) {
+  const count = Math.min(500, terrain.size * 4);
+  const positions = new Float32Array(count * 3);
+  const speeds = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) {
+    positions[i * 3] = (Math.random() - 0.5) * terrain.size;
+    positions[i * 3 + 1] = terrain.size * 0.65 + Math.random() * terrain.size * 0.15;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * terrain.size;
+    speeds[i] = 1.2 + Math.random() * 0.9;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute("speed", new THREE.BufferAttribute(speeds, 1));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x66aaff, size: 0.05, transparent: true, opacity: 0.75 }));
+}
+
+function animateSnow(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>, terrain: Terrain) {
+  const geometry = points.geometry;
+  const position = geometry.getAttribute("position") as THREE.BufferAttribute;
+  const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
+  for (let i = 0; i < position.count; i += 1) {
+    const vy = position.getY(i) - ((speed?.getX(i) ?? 0.4) * 0.02);
+    if (vy < -terrain.size * 0.15) {
+      position.setXYZ(i, position.getX(i), terrain.size * 0.6 + (i % 7) * 0.2, position.getZ(i));
+    } else {
+      position.setY(i, vy);
+    }
+  }
+  position.needsUpdate = true;
+}
+
+function animateRain(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>, terrain: Terrain, now: number) {
+  const geometry = points.geometry;
+  const position = geometry.getAttribute("position") as THREE.BufferAttribute;
+  const speed = geometry.getAttribute("speed") as THREE.BufferAttribute | undefined;
+  const wind = 0.03 * Math.sin(now * 0.0015);
+  for (let i = 0; i < position.count; i += 1) {
+    const vy = position.getY(i) - ((speed?.getX(i) ?? 1.0) * 0.09);
+    const vx = position.getX(i) + wind;
+    if (vy < -terrain.size * 0.1) {
+      position.setXYZ(i, (Math.random() - 0.5) * terrain.size, terrain.size * 0.7 + Math.random() * terrain.size * 0.1, (Math.random() - 0.5) * terrain.size);
+    } else {
+      position.setXYZ(i, vx, vy, position.getZ(i));
+    }
+  }
+  position.needsUpdate = true;
+}
+
+function terrainSeasonBlend(season: string) {
+  switch (season) {
+    case "Spring":
+      return { tint: 0x7dbf63, amount: 0.15 };
+    case "Summer":
+      return { tint: 0xc9b45b, amount: 0.12 };
+    case "Autumn":
+      return { tint: 0xb77036, amount: 0.34 };
+    case "Winter":
+      return { tint: 0xf2f6fb, amount: 0.42 };
+    default:
+      return { tint: 0x7dbf63, amount: 0.1 };
   }
 }
 

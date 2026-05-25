@@ -61,6 +61,15 @@ export type Building = {
   kind: BuildingKind;
   era: number;
   faction_id: number;
+  occupants: number;
+  capacity: number;
+};
+
+export type HousingStats = {
+  total_capacity: number;
+  occupied: number;
+  homeless: number;
+  vacancy_rate: number;
 };
 
 export type RoadKind = "Trail" | "Dirt" | "Paved" | "Highway";
@@ -148,6 +157,13 @@ export type DamagePulse = {
   y: number;
 };
 
+export type WeatherSnapshot = {
+  season: string;
+  temperature: number;
+  wind_speed: number;
+  precipitation: "none" | "rain" | "snow";
+};
+
 export type Snapshot = {
   tick: number;
   tick_dt_ms: number;
@@ -160,6 +176,7 @@ export type Snapshot = {
   military_units: MilitaryPin[];
   factions: Faction[];
   buildings: Building[];
+  housing_stats: HousingStats;
   roads?: Road[];
   trade_routes?: TradeRoute[];
   economy: EconomySnapshot;
@@ -172,6 +189,7 @@ export type Snapshot = {
   tech_tree: TechNode[];
   events: GameEvent[];
   is_day: boolean;
+  weather: WeatherSnapshot;
   speed: TimeSpeed;
 };
 

@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+autobins = false
 
 [lib]
 path = "src/lib.rs"
@@ -14,8 +15,11 @@ name = "civ-bevy-ref"
 path = "src/main.rs"
 
 [dependencies]
+civ-agents = { path = "../../crates/agents" }
+civ-engine = { path = "../../crates/engine" }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
+serde = { version = "1", features = ["derive"] }
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
@@ -56,4 +60,9 @@ bevy = [
 [[bin]]
 name = "civ-bevy-window"
 path = "src/bin/bevy_window.rs"
+required-features = ["bevy"]
+
+[[bin]]
+name = "civ-standalone"
+path = "src/bin/standalone.rs"
 required-features = ["bevy"]

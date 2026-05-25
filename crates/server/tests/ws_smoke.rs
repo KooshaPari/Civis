@@ -408,6 +408,29 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         snap.market_prices.get("energy").copied(),
         "expected energy price in market_prices"
     );
+
+    let civ_pins = response
+        .pointer("/result/civ_pins")
+        .and_then(|v| v.as_array())
+        .expect("civ_pins array in snapshot");
+    assert!(
+        !civ_pins.is_empty(),
+        "expected civ_pins when startup civilians exist"
+    );
+    assert!(
+        civ_pins.iter().any(|pin| {
+            pin.get("job")
+                .map(|j| !j.is_null())
+                .unwrap_or(false)
+        }),
+        "expected at least one civ_pin with non-null job (UX-01 Citizen wire), got {civ_pins:?}"
+    );
+    assert!(
+        civ_pins.iter().any(|pin| {
+            pin.get("job").and_then(|j| j.as_str()) == Some("farmer")
+        }),
+        "expected lowercase job label in civ_pins, got {civ_pins:?}"
+    );
 }
 
 /// Three parallel clients each receive an `F3D0` binary tick broadcast within 3s

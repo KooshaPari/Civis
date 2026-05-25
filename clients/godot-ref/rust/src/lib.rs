@@ -154,9 +154,9 @@ impl CivisClient {
     }
 
     #[func]
-    fn latest_snapshot(&self) -> Dictionary {
+    fn latest_snapshot(&self) -> VarDictionary {
         if validate_base_url(&self.base_url.to_string()).is_err() {
-            return Dictionary::new();
+            return VarDictionary::new();
         }
         let url = api_url(&self.base_url.to_string(), "snapshot");
         let snapshot = runtime().block_on(async {
@@ -169,20 +169,20 @@ impl CivisClient {
                 Err(_) => None,
             }
         });
-        let mut dict = Dictionary::new();
+        let mut dict = VarDictionary::new();
         if let Some(snapshot) = snapshot {
-            dict.set("tick", snapshot.tick);
+            dict.set("tick", snapshot.tick as i64);
             dict.set("population", snapshot.population as i64);
             dict.set("voxel_dirty_count", snapshot.voxel_dirty_count as i64);
-            let mut civ_pins = Array::new();
+            let mut civ_pins: VarArray = VarArray::new();
             for pin in snapshot.civ_pins {
-                let mut pin_dict = Dictionary::new();
+                let mut pin_dict = VarDictionary::new();
                 pin_dict.set("idx", pin.idx as i64);
                 pin_dict.set("x", pin.x);
                 pin_dict.set("y", pin.y);
                 civ_pins.push(&pin_dict);
             }
-            dict.set("civ_pins", civ_pins);
+            dict.set("civ_pins", &civ_pins);
         }
         dict
     }
@@ -321,12 +321,8 @@ impl INode for CivisClient {
 
 struct CivisRustExtension;
 
-#[gdextension]
+#[gdextension(entry_symbol = civis_rust_init)]
 unsafe impl ExtensionLibrary for CivisRustExtension {}
-
-pub fn civis_rust_init(level: InitLevel) {
-    let _ = level;
-}
 
 #[cfg(test)]
 mod tests {

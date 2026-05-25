@@ -2,6 +2,7 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
+use civ_mod_host::ModHost;
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
     Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
@@ -10,9 +11,9 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
-use civ_tactics::{apply_damage, DamageEvent};
+use civ_tactics::{apply_damage, evolve_doctrine, DamageEvent, Doctrine, DoctrineLibrary};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
-use hecs::World;
+use hecs::{Entity, World};
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -83,6 +84,41 @@ pub enum JobType {
     Priest,
     Admin,
     Unemployed,
+}
+
+/// Deterministic job assignment for agent civilians (stable across seeds).
+pub fn job_type_for_civilian_id(id: u64) -> JobType {
+    match id % 7 {
+        0 => JobType::Farmer,
+        1 => JobType::Warrior,
+        2 => JobType::Scholar,
+        3 => JobType::Trader,
+        4 => JobType::Priest,
+        5 => JobType::Admin,
+        _ => JobType::Unemployed,
+    }
+}
+
+/// Attach [`Citizen`] (with job) to agent entities that only have [`AgentCivilian`].
+pub fn attach_citizen_to_agents(world: &mut World) {
+    let agents: Vec<(Entity, AgentCivilian)> = world
+        .query::<&AgentCivilian>()
+        .iter()
+        .map(|(entity, civilian)| (entity, civilian.clone()))
+        .collect();
+    for (entity, civilian) in agents {
+        if world.get::<&Citizen>(entity).is_ok() {
+            continue;
+        }
+        let citizen = Citizen {
+            age: civilian.age as u32,
+            health: Fixed::from_num(1),
+            ideology: Fixed::ZERO,
+            welfare: Fixed::from_num(7) / Fixed::from_num(10),
+            job: Some(job_type_for_civilian_id(civilian.id)),
+        };
+        let _ = world.insert(entity, (citizen,));
+    }
 }
 
 /// Building entity component
@@ -239,6 +275,8 @@ pub struct Simulation {
     /// at the start of every [`Simulation::tick`].
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
+    /// Normalized map centers for damage applied during the most recent tactics phase.
+    last_tick_damage_centers: Vec<(f32, f32)>,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
@@ -248,6 +286,31 @@ pub struct Simulation {
     pub market_state: MarketState,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
+    /// Manifest-only mod host (CIV-0700 Sprint D); WASM not loaded yet.
+    mod_host: ModHost,
+    /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
+    faction_doctrines: Vec<DoctrineLibrary>,
+}
+
+/// Default doctrine population for three factions (deterministic seed layout).
+fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
+    (0..3)
+        .map(|faction| DoctrineLibrary {
+            generation: 0,
+            current: vec![
+                Doctrine {
+                    id: faction as u64 * 10 + 1,
+                    unit_composition: vec![10, 5, 2],
+                    score: 0.5,
+                },
+                Doctrine {
+                    id: faction as u64 * 10 + 2,
+                    unit_composition: vec![8, 8, 4],
+                    score: 0.8,
+                },
+            ],
+        })
+        .collect()
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
@@ -358,6 +421,7 @@ impl Simulation {
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
         spawn_many(&mut world, 32, 10_000, 0);
+        attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
@@ -387,12 +451,15 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
+            last_tick_damage_centers: Vec::new(),
             replay_log: ReplayLog {
                 seed: 42,
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
+            mod_host: ModHost::new(),
+            faction_doctrines: default_faction_doctrines(),
         }
     }
 
@@ -402,6 +469,7 @@ impl Simulation {
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
         spawn_many(&mut world, 32, 10_000, 0);
+        attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
@@ -434,13 +502,47 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
+            last_tick_damage_centers: Vec::new(),
             replay_log: ReplayLog {
                 seed,
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
+            mod_host: ModHost::new(),
+            faction_doctrines: default_faction_doctrines(),
         }
+    }
+
+    /// Load mod manifests from scenario `mods` paths (repo-relative).
+    ///
+    /// Paths are resolved from the repo root (`crates/engine/../../`). Failures are
+    /// logged and skipped so headless runs stay up during mod development.
+    pub fn register_mod_stubs(&mut self, mod_paths: &[String]) {
+        self.mod_host = ModHost::new();
+        if mod_paths.is_empty() {
+            return;
+        }
+
+        let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        for rel in mod_paths {
+            let dir = repo_root.join(rel);
+            if let Err(err) = self.mod_host.load_manifest_dir(&dir) {
+                tracing::warn!(mod = %rel, error = %err, "mod manifest load skipped");
+            }
+        }
+    }
+
+    /// Borrow the mod host (manifest registry).
+    #[must_use]
+    pub fn mod_host(&self) -> &ModHost {
+        &self.mod_host
+    }
+
+    /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
+    #[must_use]
+    pub fn faction_doctrines(&self) -> &[DoctrineLibrary] {
+        &self.faction_doctrines
     }
 
     /// Borrow the immutable planet config.
@@ -508,6 +610,11 @@ impl Simulation {
     /// Number of voxels removed during the most recent tactics phase.
     pub fn last_tick_voxel_damage_count(&self) -> usize {
         self.last_tick_voxel_damage_count
+    }
+
+    /// Normalized (0..1) map centers for damage events applied on the last tick.
+    pub fn last_tick_damage_centers(&self) -> &[(f32, f32)] {
+        &self.last_tick_damage_centers
     }
 
     /// Borrow the 3D voxel substrate. Read-only.
@@ -631,6 +738,7 @@ impl Simulation {
         self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
+        self.mod_host.tick();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -674,10 +782,25 @@ impl Simulation {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
     }
 
-    /// Tactics phase - apply queued damage events to the voxel world.
+    /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
+        const DOCTRINE_EVOLVE_MODULO: u64 = 64;
+        if self.state.tick % DOCTRINE_EVOLVE_MODULO == 0 {
+            for (faction, library) in self.faction_doctrines.iter_mut().enumerate() {
+                let mut rng = ChaCha8Rng::seed_from_u64(
+                    self.state.rng_seed ^ self.state.tick ^ u64::from(faction as u32),
+                );
+                evolve_doctrine(library, &mut rng, 0.2);
+            }
+        }
+
         self.last_tick_voxel_damage_count = 0;
+        self.last_tick_damage_centers.clear();
+        let scale = civ_voxel::FIXED_SCALE as f32;
         for event in self.pending_damage.drain(..) {
+            let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
+            let y = (event.center.z as f32 / scale).clamp(0.0, 1.0);
+            self.last_tick_damage_centers.push((x, y));
             self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
         }
     }
@@ -787,6 +910,7 @@ impl Simulation {
 
     /// Citizen lifecycle phase
     fn phase_citizen_lifecycle(&mut self) {
+        attach_citizen_to_agents(&mut self.world);
         self.last_births.clear();
         self.last_deaths.clear();
         let population = count_civilians(&self.world) as f64;
@@ -1196,6 +1320,22 @@ mod tests {
         sim.tick();
         let expected = compute_climate(sim.state.tick, &planet, &moon);
         assert_eq!(sim.climate(), &expected);
+    }
+
+    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
+    #[test]
+    fn phase_tactics_evolve_doctrine_on_cadence() {
+        let mut sim = Simulation::with_seed(42);
+        let gen0 = sim.faction_doctrines()[0].generation;
+        for _ in 0..63 {
+            sim.tick();
+        }
+        assert_eq!(sim.faction_doctrines()[0].generation, gen0);
+        sim.tick();
+        assert!(
+            sim.faction_doctrines()[0].generation > gen0,
+            "expected doctrine generation to advance at tick 64"
+        );
     }
 
     /// FR-CIV-ENGINE-INT-002 — queued damage drains and voxel chunk count

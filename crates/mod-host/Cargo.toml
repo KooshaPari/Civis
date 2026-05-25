@@ -1,0 +1,15 @@
+[package]
+name = "civ-mod-host"
+description = "CivLab mod manifest loader and tick hook host (CIV-0700 MVP stub)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1"
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"

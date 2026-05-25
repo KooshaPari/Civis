@@ -1,6 +1,6 @@
 [configuration]
 entry_symbol = "civis_rust_init"
-compatibility_minimum = "4.3"
+compatibility_minimum = "4.6"
 
 [libraries]
 windows.debug.x86_64 = "res://rust/target/debug/civis_godot_rust.dll"

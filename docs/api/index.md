@@ -12,7 +12,7 @@ agents do not treat future WebSocket/JSON-RPC specs as implemented code.
 | --- | --- | --- |
 | Rust engine crate | Implemented | `crates/engine/src/lib.rs` |
 | Rust CLI/server binary | Implemented as a smoke executable | `crates/server/src/main.rs` |
-| WebSocket JSON-RPC protocol | Planned | `docs/specs/CIV-0200-client-protocol.md` |
+| WebSocket JSON-RPC protocol | Implemented (`civ-server`) | [`jsonrpc-surface.md`](jsonrpc-surface.md) · `docs/specs/CIV-0200-client-protocol.md` |
 | Metrics export endpoint | Planned | `docs/traceability/EVENT_TAXONOMY.md` |
 
 ## Engine Crate

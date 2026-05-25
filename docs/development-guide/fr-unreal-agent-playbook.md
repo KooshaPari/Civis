@@ -55,7 +55,27 @@ These do **not** need the Editor or UBT:
 
 4. **Exit codes:** `0` = UBT succeeded; `2` = UE still missing; `1` = compile error (fix C++/Build.cs).
 
-5. Open `CivShow.uproject` → set **Game Mode** to `ACivShowGameMode` if not default → Play with `civ-server` + `civ-watch` running.
+5. Run the **Play in Editor** checklist below (requires `civ-server` + `civ-watch`).
+
+---
+
+## Play in Editor (after `build.ps1` exit `0`)
+
+Prerequisites: `cargo run -p civ-server` and `cargo run -p civ-watch` in separate terminals (same ports as [`client-attach-matrix.md`](../guides/client-attach-matrix.md)).
+
+| Step | Action | Pass criterion |
+|------|--------|----------------|
+| 1 | Double-click or UE Editor → **Open** `clients/unreal-show/CivShow.uproject` | Project loads without compile errors (first open may compile shaders) |
+| 2 | **Edit → Project Settings → Maps & Modes** — default **Game Mode** = `CivShowGameMode` (or set on World Settings) | `ACivShowGameMode` drives attach on Play |
+| 3 | Press **Play (PIE)** | No crash; terrain mesh appears from civ-watch HTTP |
+| 4 | Confirm **WS attach** — Output Log or debugger: `UCivWsClient` connected to `ws://127.0.0.1:3000/ws?tick_format=binary` | `sim.snapshot` responses arrive; civilians sync from `civ_pins` |
+| 5 | **Pins** — spawn on server (`cargo test -p civ-server --test ws_smoke ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot` or Godot/web spawn) | Cylinder civilians appear/update at normalized positions |
+| 6 | **Day/night** — toggle sim day phase (server tick / policy) or wait for `is_day` flip | Directional light + ambient follow `ApplyDayNight` (`is_day` from snapshot JSON) |
+| 7 | **Job colors** — spawn civilians with `Citizen.job` set (when engine exposes job on pins) | Mesh tint uses `CivisJobColors.h` mapping; today `civ_pins.job` may be `null` — verify tint path does not crash |
+
+**Quick smoke:** with both backends running, PIE should show heightmap terrain within ~1 s and at least one civilian pin after a spawn RPC from another client or `ws_smoke`.
+
+**Not in this checklist:** F3D0 voxel mesh stream (throttled snapshot refresh only), minimap (out of scope — see attach matrix UX-04).
 
 ---
 
@@ -122,8 +142,7 @@ Keep **no large binaries in git**; document paths in README only.
 ## Agent checklist after UE install
 
 - [ ] `build.ps1` exit `0`
-- [ ] Play: terrain from civ-watch, civilians from WS `civ_pins`
-- [ ] Day/night: `ApplyDayNight` reacts to `is_day`
+- [ ] **Play in Editor** checklist (terrain HTTP, WS `civ_pins`, `is_day`, job tint path)
 - [ ] Optional: one Quixel ground material on `AVoxelTerrain`
 - [ ] Optional: Niagara burst on `SpawnEntity` HTTP/WS ack
 

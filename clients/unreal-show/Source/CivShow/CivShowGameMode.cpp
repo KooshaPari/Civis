@@ -4,6 +4,7 @@
 #include "CivWsClient.h"
 #include "CivilianActor.h"
 #include "Dom/JsonObject.h"
+#include "Components/DirectionalLightComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"

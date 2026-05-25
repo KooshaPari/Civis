@@ -125,6 +125,7 @@ export type NotificationTone =
   | "diplomacy"
   | "tech"
   | "disaster"
+  | "damage"
   | "trade";
 
 export type NotificationItem = {
@@ -197,6 +198,8 @@ export type DiplomacyEvent = {
 export type DamagePulse = {
   x: number;
   y: number;
+  unit_a?: number;
+  unit_b?: number;
 };
 
 export type DisasterEvent = {
@@ -236,6 +239,7 @@ export type Snapshot = {
   deaths_this_tick: number;
   diplomacy_events: DiplomacyEvent[];
   damage_events: DamagePulse[];
+  damage_events_count?: number;
   disaster_events: DisasterEvent[];
   birth_events: PopulationPulse[];
   death_events: PopulationPulse[];

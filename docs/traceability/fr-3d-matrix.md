@@ -102,7 +102,8 @@ Status values: `planned` | `in_progress` | `implemented`
 |---|---|---|---|---|
 | FR-CIV-TACTICS-000 | Stub. | `crates/tactics/` | `tactics::schema_version_stub` | implemented |
 | FR-CIV-TACTICS-001 | Voxel-destructible damage application is deterministic. | `crates/tactics/`, `engine.rs` | `apply_damage_is_deterministic`, `pending_damage_drains` | implemented |
-| FR-CIV-TACTICS-010 | Doctrine GA converges reproducibly under fixed seed. | `crates/tactics/` | `tactics::doctrine_ga_converges` | implemented |
+| FR-CIV-TACTICS-001-int | Damage pulses on watch/server snapshot + web impact markers. | `watch`, `server/jsonrpc`, `web/dashboard` | `snapshot_fields_from_sim_includes_damage_after_tick` | implemented |
+| FR-CIV-TACTICS-010 | Doctrine GA converges reproducibly under fixed seed. | `crates/tactics/`, `engine.rs` | `tactics::doctrine_ga_converges`, `phase_tactics_evolve_doctrine_on_cadence` | implemented |
 
 ---
 

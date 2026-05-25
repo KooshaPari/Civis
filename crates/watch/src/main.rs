@@ -114,6 +114,11 @@ struct MilitaryPin {
 struct DamagePulse {
     x: f32,
     y: f32,
+    /// Engaging unit pin id when damage came from military contact.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    unit_a: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    unit_b: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -296,6 +301,7 @@ struct Snapshot {
     diplomacy_events: Vec<DiplomacyPulse>,
     military_units: Vec<MilitaryPin>,
     damage_events: Vec<DamagePulse>,
+    damage_events_count: u32,
     disaster_events: Vec<DisasterEvent>,
     birth_events: Vec<PopulationPulse>,
     death_events: Vec<PopulationPulse>,
@@ -666,6 +672,8 @@ fn tick_military(
                 damage_events.push(DamagePulse {
                     x: (units[i].x + units[j].x) * 0.5,
                     y: (units[i].y + units[j].y) * 0.5,
+                    unit_a: Some(units[i].id),
+                    unit_b: Some(units[j].id),
                 });
                 units[i].strength = (units[i].strength - 0.05).max(0.0);
                 units[j].strength = (units[j].strength - 0.05).max(0.0);
@@ -764,6 +772,7 @@ fn make_snapshot(
         diplomacy_events,
         military_units: military.to_vec(),
         damage_events: damage_events.to_vec(),
+        damage_events_count: damage_events.len() as u32,
         disaster_events,
         birth_events,
         death_events,

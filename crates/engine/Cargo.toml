@@ -43,6 +43,9 @@ civ-tactics = { path = "../tactics" }
 # Economy layer (CIV-0100); engine syncs joule budget each tick.
 civ-economy = { path = "../economy" }
 
+# Mod manifest host stub (CIV-0700 Sprint D).
+civ-mod-host = { path = "../mod-host" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.4"

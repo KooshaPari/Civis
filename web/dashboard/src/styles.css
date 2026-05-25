@@ -299,6 +299,7 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 .notification-card.diplomacy { border-left: 4px solid #f5d76e; }
 .notification-card.tech { border-left: 4px solid #58a6ff; }
 .notification-card.disaster { border-left: 4px solid #ff9f43; }
+.notification-card.damage { border-left: 4px solid #ff4d4d; }
 .notification-card.trade { border-left: 4px solid #ffd166; }
 .notification-card:hover { transform: translateX(-2px); }
 .notification-icon { font-size: 1.15rem; line-height: 1; }

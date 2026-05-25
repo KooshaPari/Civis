@@ -58,7 +58,7 @@ void UCivProtocolClient::PollSnapshot()
 
     bSnapshotTickerActive = true;
     LastSnapshotPollSeconds = 0.0;
-    SnapshotTickerHandle = FTicker::GetCoreTicker().AddTicker(
+    SnapshotTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UCivProtocolClient::TickSnapshotPoll), 0.1f);
 }
 

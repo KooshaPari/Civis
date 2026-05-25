@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Http.h"
-#include "Misc/Ticker.h"
+#include "Containers/Ticker.h"
 #include "UObject/Object.h"
 #include "CivProtocolClient.generated.h"
 
@@ -50,7 +50,7 @@ private:
     bool RequestJson(const FString& Verb, const FString& Path, const FString& Body, TFunction<void(const FString&)> OnOk);
     bool TickSnapshotPoll(float DeltaTime);
     FString BaseUrl = TEXT("http://127.0.0.1:9090");
-    FDelegateHandle SnapshotTickerHandle;
+    FTSTicker::FDelegateHandle SnapshotTickerHandle;
     double LastSnapshotPollSeconds = 0.0;
     bool bSnapshotTickerActive = false;
 };

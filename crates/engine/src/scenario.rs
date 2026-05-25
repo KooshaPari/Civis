@@ -27,6 +27,10 @@ pub struct Scenario {
     pub population: u64,
     pub base_consumption_joules: u64,
     pub scarcity_multiplier: f64,
+    /// Mod directory paths (repo-relative from `crates/engine`), e.g. `mods/example-policy`.
+    /// MVP: manifests are loaded; WASM guests are not executed yet (CIV-0700).
+    #[serde(default)]
+    pub mods: Vec<String>,
 }
 
 /// Errors while loading or validating a scenario file.
@@ -114,6 +118,7 @@ impl Scenario {
         let mut sim = Simulation::with_seed(rng_seed);
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
+        sim.register_mod_stubs(&self.mods);
         sim
     }
 
@@ -196,6 +201,25 @@ mod tests {
         assert_eq!(scenario.population, 1_000_000);
         assert_eq!(scenario.base_consumption_joules, 5_000_000_000);
         assert!((scenario.scarcity_multiplier - 1.0).abs() < f64::EPSILON);
+        assert!(scenario.mods.is_empty());
+    }
+
+    #[test]
+    fn scenario_mods_loads_example_policy() {
+        let yaml = r#"
+version: 1
+name: mod-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+mods:
+  - mods/example-policy
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with mods");
+        let sim = scenario.into_simulation(99);
+        assert_eq!(sim.mod_host().mods().len(), 1);
+        assert_eq!(sim.mod_host().mods()[0].manifest.meta.id, "example-policy");
     }
 
     #[test]
@@ -228,6 +252,7 @@ mod tests {
             population: 1,
             base_consumption_joules: 1_000,
             scarcity_multiplier: 0.0,
+            mods: vec![],
         };
 
         let mut zero_scarcity = base.clone();

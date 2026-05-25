@@ -47,6 +47,7 @@ export type MilitaryPin = {
 
 export type Faction = {
   id: number;
+  name?: string;
   color: [number, number, number];
   capital: [number, number];
   radius: number;
@@ -106,6 +107,7 @@ export type FactionTreasury = {
   id: number;
   name: string;
   balance: number;
+  trade_balance: number;
 };
 
 export type ProductionRates = {
@@ -180,6 +182,7 @@ export type Snapshot = {
   roads?: Road[];
   trade_routes?: TradeRoute[];
   economy: EconomySnapshot;
+  trade_volume_this_tick: number;
   births_this_tick: number;
   deaths_this_tick: number;
   diplomacy_events: DiplomacyEvent[];
@@ -235,6 +238,8 @@ type State = {
   /** Bumped when the user picks a camera preset (FR-CIV-UX-005). */
   cameraPresetToken: number;
   cameraPreset: CameraPreset | null;
+  cameraFocusToken: number;
+  cameraFocus: [number, number] | null;
   selectedCivilian: CivilianFields | null;
   selectedMilitary: MilitaryPin | null;
   connection: "live" | "reconnecting" | "disconnected";
@@ -269,6 +274,7 @@ type Action =
   | { type: "set_selected_faction"; faction: number }
   | { type: "set_spawn_kind"; kind: SpawnKind }
   | { type: "set_camera_preset"; preset: CameraPreset }
+  | { type: "set_camera_focus"; focus: [number, number] | null }
   | { type: "set_selected_civilian"; civilian: CivilianFields | null }
   | { type: "set_selected_military"; military: MilitaryPin | null }
   | { type: "set_connection"; connection: State["connection"] }
@@ -304,6 +310,8 @@ const initialState: State = {
   spawnKind: "civilian",
   cameraPresetToken: 0,
   cameraPreset: null,
+  cameraFocusToken: 0,
+  cameraFocus: null,
   selectedCivilian: null,
   selectedMilitary: null,
   connection: "disconnected",
@@ -355,6 +363,12 @@ function reducer(state: State, action: Action): State {
         ...state,
         cameraPreset: action.preset,
         cameraPresetToken: state.cameraPresetToken + 1,
+      };
+    case "set_camera_focus":
+      return {
+        ...state,
+        cameraFocus: action.focus,
+        cameraFocusToken: state.cameraFocusToken + 1,
       };
     case "set_selected_civilian":
       return { ...state, selectedCivilian: action.civilian };

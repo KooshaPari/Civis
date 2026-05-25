@@ -74,6 +74,21 @@ impl SpawnKind {
     pub const fn is_wired(self) -> bool {
         true
     }
+
+    /// Whether FR-CIV-UX-004 expects drag-release placement (not click-only).
+    pub const fn uses_drag_place(self) -> bool {
+        matches!(self, Self::Vehicle | Self::Airport)
+    }
+}
+
+/// Minimum normalized drag distance (cells / grid_size) before drag-release placement fires.
+pub const SPAWN_DRAG_MIN_NORM: f32 = 4.0 / 128.0;
+
+/// True when drag from `start` to `end` exceeds the placement threshold.
+pub fn spawn_drag_exceeds_threshold(start: (f32, f32), end: (f32, f32)) -> bool {
+    let dx = end.0 - start.0;
+    let dy = end.1 - start.1;
+    (dx * dx + dy * dy).sqrt() >= SPAWN_DRAG_MIN_NORM
 }
 
 /// Valid timelapse speed multipliers (matches civ-watch `/control/speed`).

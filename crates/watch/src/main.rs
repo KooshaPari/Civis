@@ -273,6 +273,7 @@ struct Snapshot {
     roads: Vec<Road>,
     trade_routes: Vec<TradeRoute>,
     economy: EconomySnapshot,
+    trade_volume_this_tick: f64,
     births_this_tick: u32,
     deaths_this_tick: u32,
     diplomacy_events: Vec<DiplomacyPulse>,
@@ -487,6 +488,7 @@ async fn simulation_worker(state: AppState) {
             let mut sim = state.sim.lock().await;
             let mut military = state.military.lock().await;
             let mut damage_events = Vec::new();
+            let mut trade_volume_this_tick = 0.0;
             for _ in 0..speed {
                 sim.tick();
                 if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
@@ -504,6 +506,8 @@ async fn simulation_worker(state: AppState) {
                 });
                 *sim.rng_mut() = rng;
                 damage_events = tick_military(&mut sim, &terrain, &mut military);
+                let tick = sim.state.tick;
+                trade_volume_this_tick = apply_trade_routes(&mut sim, &factions, tick);
                 for event in &damage_events {
                     sim.push_damage(DamageEvent {
                         center: WorldCoord {
@@ -521,6 +525,7 @@ async fn simulation_worker(state: AppState) {
                 &sim,
                 &military,
                 &damage_events,
+                trade_volume_this_tick,
                 speed,
                 &state.laws,
                 current_era,
@@ -652,6 +657,7 @@ fn make_snapshot(
     sim: &Simulation,
     military: &[MilitaryPin],
     damage_events: &[DamagePulse],
+    trade_volume_this_tick: f64,
     speed: u8,
     laws: &LawDb,
     current_era: u16,
@@ -727,6 +733,7 @@ fn make_snapshot(
         roads,
         trade_routes,
         economy,
+        trade_volume_this_tick,
         births_this_tick: birth_events.len() as u32,
         deaths_this_tick: death_events.len() as u32,
         diplomacy_events,
@@ -1263,6 +1270,111 @@ fn trade_routes(factions: &[Faction], tick: u64) -> Vec<TradeRoute> {
         }
     }
     routes
+}
+
+fn apply_trade_routes(sim: &mut Simulation, factions: &[Faction], tick: u64) -> f64 {
+    let routes = trade_routes(factions, tick);
+    let diplomacy = sim
+        .diplomacy_events()
+        .iter()
+        .map(|event| {
+            (
+                (
+                    event.faction_a.min(event.faction_b),
+                    event.faction_a.max(event.faction_b),
+                ),
+                event.kind,
+            )
+        })
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let mut trade_volume_this_tick = 0.0;
+    for route in routes {
+        let key = (
+            route.from_faction.min(route.to_faction),
+            route.from_faction.max(route.to_faction),
+        );
+        let Some(kind) = diplomacy.get(&key).copied() else {
+            continue;
+        };
+        if !matches!(kind, DiplomacyKind::Peace | DiplomacyKind::TradeAgreement) {
+            continue;
+        }
+
+        let resource = route_resource(&route.goods);
+        let supply = resource_amount(&sim.state.resources, resource);
+        let demand = resource_demand(&sim.state.resources, resource);
+        let trade_price = 1.0 + (demand - supply) * 0.1;
+        let quantity = f64::from(route.volume) * 0.5;
+        let treasury_delta = f64::from(route.volume) * trade_price;
+
+        adjust_resource(&mut sim.state.resources, resource, -quantity);
+        adjust_treasury(
+            &mut sim.state.faction_treasury,
+            route.from_faction,
+            treasury_delta,
+        );
+        adjust_resource(&mut sim.state.resources, resource, quantity);
+        adjust_treasury(
+            &mut sim.state.faction_treasury,
+            route.to_faction,
+            -treasury_delta,
+        );
+        trade_volume_this_tick += f64::from(route.volume);
+    }
+
+    trade_volume_this_tick
+}
+
+fn route_resource(goods: &str) -> civ_engine::ResourceType {
+    match goods {
+        "grain" => civ_engine::ResourceType::Food,
+        "timber" => civ_engine::ResourceType::Wood,
+        "ore" | "tools" => civ_engine::ResourceType::Metal,
+        "cloth" | "salt" => civ_engine::ResourceType::Energy,
+        _ => civ_engine::ResourceType::Food,
+    }
+}
+
+fn resource_amount(resources: &civ_engine::Resources, resource: civ_engine::ResourceType) -> f64 {
+    match resource {
+        civ_engine::ResourceType::Food => resources.food.to_f64(),
+        civ_engine::ResourceType::Wood => resources.wood.to_f64(),
+        civ_engine::ResourceType::Metal => resources.metal.to_f64(),
+        civ_engine::ResourceType::Energy => resources.energy.to_f64(),
+    }
+}
+
+fn resource_demand(resources: &civ_engine::Resources, resource: civ_engine::ResourceType) -> f64 {
+    (1000.0 - resource_amount(resources, resource)).max(0.0)
+}
+
+fn fixed_from_f64(value: f64) -> civ_engine::Fixed {
+    civ_engine::Fixed::from_raw((value * civ_engine::SCALE as f64).round() as i64)
+}
+
+fn adjust_resource(
+    resources: &mut civ_engine::Resources,
+    resource: civ_engine::ResourceType,
+    delta: f64,
+) {
+    let delta = fixed_from_f64(delta);
+    match resource {
+        civ_engine::ResourceType::Food => resources.food += delta,
+        civ_engine::ResourceType::Wood => resources.wood += delta,
+        civ_engine::ResourceType::Metal => resources.metal += delta,
+        civ_engine::ResourceType::Energy => resources.energy += delta,
+    }
+}
+
+fn adjust_treasury(
+    treasury: &mut std::collections::HashMap<u32, civ_engine::Fixed>,
+    faction_id: u32,
+    delta: f64,
+) {
+    if let Some(balance) = treasury.get_mut(&faction_id) {
+        *balance += fixed_from_f64(delta);
+    }
 }
 
 fn noise_offset(seed: u64, lane: u64) -> f32 {
@@ -1872,6 +1984,27 @@ mod api_tests {
                     .uri("/control/spawn_civilian")
                     .header("content-type", "application/json")
                     .body(Body::from(r#"{"x":0.5,"y":0.5,"faction":0}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn post_control_spawn_entity_vehicle_returns_ok() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/spawn_entity")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"kind":"vehicle","x":0.4,"y":0.6,"faction":1}"#,
+                    ))
                     .unwrap(),
             )
             .await

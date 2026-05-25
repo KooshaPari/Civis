@@ -155,6 +155,9 @@ func _normalize_snapshot(result: Dictionary) -> Dictionary:
 	var buildings = result.get("buildings", [])
 	if typeof(buildings) == TYPE_ARRAY:
 		out["buildings"] = buildings
+	var military = result.get("military_units", [])
+	if typeof(military) == TYPE_ARRAY:
+		out["military_units"] = military
 	if result.has("is_day"):
 		out["is_day"] = result.get("is_day")
 	return out

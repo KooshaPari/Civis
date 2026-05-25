@@ -1,7 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { executeTerrainAuthoring } from "./lib/authoring";
+import { postControl } from "./control";
+import { getActiveServerSocket } from "./lib/civisSocket";
+import { jsonRpcCall } from "./lib/civisServer";
 import {
   Biome,
   Building,
@@ -11,6 +15,7 @@ import {
   Road,
   Snapshot,
   Terrain,
+  TimeSpeed,
   useDashboardStore,
 } from "./store";
 
@@ -50,7 +55,8 @@ type SceneRefs = {
   territories: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>[];
   buildings: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
-  tradeRoutes: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial>[];
+  tradeRoutes: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>[];
+  tradeCargo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>[];
   effects: THREE.Group | null;
   transientSprites: THREE.Sprite[];
   activeTerrain: Terrain | null;
@@ -59,6 +65,11 @@ type SceneRefs = {
   terrainBaseColors: Float32Array | null;
   terrainSeason: string;
   terrainWeather: Snapshot["weather"] | null;
+  terrainFeatureLabels: {
+    mountain: [number, number, number] | null;
+    lake: [number, number, number] | null;
+    forest: [number, number, number] | null;
+  };
   targetDayFactor: number;
   dayFactor: number;
   previousSnapshot: Snapshot | null;
@@ -72,6 +83,7 @@ export function Scene3d() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const { state, dispatch } = useDashboardStore();
+  const speedRef = useRef<TimeSpeed>(state.speed);
   const stateRef = useRef(state);
   const refs = useRef<SceneRefs>({
     terrainMesh: null,
@@ -87,6 +99,7 @@ export function Scene3d() {
     buildings: [],
     roads: [],
     tradeRoutes: [],
+    tradeCargo: [],
     effects: null,
     transientSprites: [],
     activeTerrain: null,
@@ -95,6 +108,7 @@ export function Scene3d() {
     terrainBaseColors: null,
     terrainSeason: "",
     terrainWeather: null,
+    terrainFeatureLabels: { mountain: null, lake: null, forest: null },
     targetDayFactor: 1,
     dayFactor: 1,
     previousSnapshot: null,
@@ -105,6 +119,10 @@ export function Scene3d() {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    speedRef.current = state.speed;
+  }, [state.speed]);
 
   useEffect(() => {
     const camera = cameraRef.current;
@@ -141,12 +159,16 @@ export function Scene3d() {
 
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const labelRenderer = new CSS2DRenderer();
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight, false);
     mount.appendChild(renderer.domElement);
+    labelRenderer.setSize(mount.clientWidth, mount.clientHeight);
+    labelRenderer.domElement.className = "scene-label-layer";
+    mount.appendChild(labelRenderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     cameraRef.current = camera;
@@ -188,6 +210,8 @@ export function Scene3d() {
     scene.add(militaryGroup);
     const buildingGroup = new THREE.Group();
     scene.add(buildingGroup);
+    const labelGroup = new THREE.Group();
+    scene.add(labelGroup);
 
     const applyTerrain = (terrain: Terrain) => {
       refs.current.activeTerrain = terrain;
@@ -278,6 +302,7 @@ export function Scene3d() {
       terrainGroup.add(waterMesh);
       refs.current.waterMesh = waterMesh;
       buildDecorations(terrain, terrainGroup, refs.current);
+      refs.current.terrainFeatureLabels = computeTerrainFeatures(terrain);
       controls.target.set(0, terrain.size * 0.12, 0);
       camera.position.set(terrain.size * 0.25, terrain.size * 1.7, terrain.size * 1.6);
       camera.lookAt(controls.target);
@@ -482,33 +507,54 @@ export function Scene3d() {
       if (!terrain) return;
       const routes = snapshot?.trade_routes ?? [];
       while (refs.current.tradeRoutes.length < routes.length) {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0)]);
-        const material = new THREE.LineDashedMaterial({
-          color: 0xffffff,
-          dashSize: 0.45,
-          gapSize: 0.25,
-          transparent: true,
-          opacity: 0.85,
-        });
-        const line = new THREE.Line(geometry, material);
-        line.computeLineDistances();
-        tradeRouteGroup.add(line);
-        refs.current.tradeRoutes.push(line);
+        const routeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5, 0.5, 1, 8, 1, true),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.75,
+            roughness: 0.9,
+            metalness: 0.05,
+            side: THREE.DoubleSide,
+          }),
+        );
+        routeMesh.castShadow = false;
+        routeMesh.receiveShadow = false;
+        tradeRouteGroup.add(routeMesh);
+        refs.current.tradeRoutes.push(routeMesh);
+      }
+      while (refs.current.tradeCargo.length < routes.length) {
+        const cargo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.18, 10, 10),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0x111111,
+            roughness: 0.5,
+            metalness: 0.1,
+          }),
+        );
+        cargo.castShadow = true;
+        cargo.receiveShadow = false;
+        tradeRouteGroup.add(cargo);
+        refs.current.tradeCargo.push(cargo);
       }
       refs.current.tradeRoutes.forEach((line, index) => {
         const route = routes[index];
         if (!route) {
           line.visible = false;
+          refs.current.tradeCargo[index].visible = false;
           return;
         }
         const from = factionById(snapshot?.factions ?? [], route.from_faction);
         const to = factionById(snapshot?.factions ?? [], route.to_faction);
         if (!from || !to) {
           line.visible = false;
+          refs.current.tradeCargo[index].visible = false;
           return;
         }
         line.visible = true;
+        const cargo = refs.current.tradeCargo[index];
+        cargo.visible = true;
         const fromX = from.capital[0] * terrain.size - terrain.size / 2;
         const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
         const toX = to.capital[0] * terrain.size - terrain.size / 2;
@@ -519,11 +565,25 @@ export function Scene3d() {
         const dy = toY - fromY;
         const dz = toZ - fromZ;
         const length = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-        line.position.set((fromX + toX) * 0.5, (fromY + toY) * 0.5, (fromZ + toZ) * 0.5);
-        line.scale.set(length, 1, 1);
-        line.rotation.set(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)), Math.atan2(-dz, dx), 0);
+        const dir = new THREE.Vector3(dx, dy, dz).normalize();
+        const midpoint = new THREE.Vector3(
+          (fromX + toX) * 0.5,
+          (fromY + toY) * 0.5,
+          (fromZ + toZ) * 0.5,
+        );
+        const radius = 0.035 + route.volume * 0.003;
+        line.position.copy(midpoint);
+        line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        line.scale.set(radius, length, radius);
         line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
-        line.computeLineDistances();
+        const phase = (performance.now() * 0.00025 + index * 0.17) % 1;
+        cargo.position.set(
+          fromX + dx * phase,
+          fromY + dy * phase,
+          fromZ + dz * phase,
+        );
+        cargo.scale.setScalar(0.5 + route.volume * 0.02);
+        cargo.material.color.setRGB(to.color[0] / 255, to.color[1] / 255, to.color[2] / 255);
       });
     };
 
@@ -532,6 +592,51 @@ export function Scene3d() {
       refs.current.terrainSeason = refs.current.terrainWeather?.season ?? "";
       const target = stateRef.current.snapshot?.is_day === false ? 0.3 : 1;
       refs.current.targetDayFactor = target;
+    };
+
+    const updateLabels = () => {
+      const terrain = refs.current.activeTerrain;
+      const snapshot = stateRef.current.snapshot;
+      if (!terrain) return;
+      const factions = snapshot?.factions ?? [];
+      const buildings = snapshot?.buildings ?? [];
+      labelGroup.clear();
+
+      factions.slice(0, 5).forEach((faction, index) => {
+        const label = createBillboardLabel(
+          `${index + 1}. ${factionLabel(faction)}\nPop ${snapshot?.population ?? 0}`,
+          faction.color,
+        );
+        label.position.set(
+          faction.capital[0] * terrain.size - terrain.size / 2,
+          terrainHeightAt(terrain, faction.capital[0], faction.capital[1]) + 8,
+          faction.capital[1] * terrain.size - terrain.size / 2,
+        );
+        labelGroup.add(label);
+      });
+
+      clusterBuildings(buildings, terrain).forEach((cluster) => {
+        const label = createBillboardLabel(cluster.label, [240, 244, 255]);
+        label.position.set(cluster.x, cluster.y, cluster.z);
+        labelGroup.add(label);
+      });
+
+      const features = refs.current.terrainFeatureLabels;
+      if (features.mountain) {
+        const label = createBillboardLabel("Mountain", [255, 255, 255]);
+        label.position.set(features.mountain[0], features.mountain[1], features.mountain[2]);
+        labelGroup.add(label);
+      }
+      if (features.lake) {
+        const label = createBillboardLabel("Lake", [180, 225, 255]);
+        label.position.set(features.lake[0], features.lake[1], features.lake[2]);
+        labelGroup.add(label);
+      }
+      if (features.forest) {
+        const label = createBillboardLabel("Forest", [185, 255, 185]);
+        label.position.set(features.forest[0], features.forest[1], features.forest[2]);
+        labelGroup.add(label);
+      }
     };
 
     refs.current.spawnBurst = (x: number, y: number, color: number, label?: string) => {
@@ -546,10 +651,15 @@ export function Scene3d() {
       refs.current.transientSprites.push(sprite);
     };
 
-    const onPointerDown = async (event: PointerEvent) => {
+    const SPAWN_DRAG_MIN_CELLS = 4;
+    let spawnDrag: { startX: number; startY: number; heightY: number; pointerId: number } | null =
+      null;
+    let dragPreviewLine: THREE.Line | null = null;
+
+    const pickTerrainCell = (event: PointerEvent) => {
       const terrain = refs.current.activeTerrain;
       const terrainMesh = refs.current.terrainMesh;
-      if (!terrain || !terrainMesh) return;
+      if (!terrain || !terrainMesh) return null;
       const rect = renderer.domElement.getBoundingClientRect();
       const pointer = new THREE.Vector2(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -558,11 +668,115 @@ export function Scene3d() {
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObject(terrainMesh, false)[0];
-      if (!hit) return;
-
+      if (!hit) return null;
       const local = terrainMesh.worldToLocal(hit.point.clone());
-      const cellX = clampIndex(Math.floor(local.x + terrain.size / 2), terrain.size);
-      const cellY = clampIndex(Math.floor(local.z + terrain.size / 2), terrain.size);
+      return {
+        cellX: clampIndex(Math.floor(local.x + terrain.size / 2), terrain.size),
+        cellY: clampIndex(Math.floor(local.z + terrain.size / 2), terrain.size),
+        heightY: hit.point.y,
+        terrainSize: terrain.size,
+      };
+    };
+
+    const clearDragPreview = () => {
+      if (dragPreviewLine) {
+        refs.current.effects?.remove(dragPreviewLine);
+        dragPreviewLine.geometry.dispose();
+        (dragPreviewLine.material as THREE.Material).dispose();
+        dragPreviewLine = null;
+      }
+    };
+
+    const updateDragPreview = (startX: number, startY: number, endX: number, endY: number) => {
+      const terrain = refs.current.activeTerrain;
+      if (!terrain || !refs.current.effects) return;
+      const sx = startX - terrain.size / 2;
+      const sz = startY - terrain.size / 2;
+      const ex = endX - terrain.size / 2;
+      const ez = endY - terrain.size / 2;
+      const sy = terrainHeightAt(terrain, startX / terrain.size, startY / terrain.size) + 0.4;
+      const ey = terrainHeightAt(terrain, endX / terrain.size, endY / terrain.size) + 0.4;
+      const points = [new THREE.Vector3(sx, sy, sz), new THREE.Vector3(ex, ey, ez)];
+      if (!dragPreviewLine) {
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineDashedMaterial({
+          color: 0xf0c040,
+          dashSize: 0.6,
+          gapSize: 0.35,
+        });
+        dragPreviewLine = new THREE.Line(geometry, material);
+        dragPreviewLine.computeLineDistances();
+        refs.current.effects.add(dragPreviewLine);
+      } else {
+        dragPreviewLine.geometry.setFromPoints(points);
+        dragPreviewLine.computeLineDistances();
+      }
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!spawnDrag || event.pointerId !== spawnDrag.pointerId) return;
+      const pick = pickTerrainCell(event);
+      if (!pick) return;
+      updateDragPreview(spawnDrag.startX, spawnDrag.startY, pick.cellX, pick.cellY);
+    };
+
+    const onPointerUp = async (event: PointerEvent) => {
+      if (!spawnDrag || event.pointerId !== spawnDrag.pointerId) return;
+      const current = stateRef.current;
+      const pick = pickTerrainCell(event);
+      clearDragPreview();
+      const start = spawnDrag;
+      spawnDrag = null;
+      try {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      } catch {
+        /* pointer may already be released */
+      }
+      const endX = pick?.cellX ?? start.startX;
+      const endY = pick?.cellY ?? start.startY;
+      const dist = Math.hypot(endX - start.startX, endY - start.startY);
+      const placeX = dist >= SPAWN_DRAG_MIN_CELLS ? endX : start.startX;
+      const placeY = dist >= SPAWN_DRAG_MIN_CELLS ? endY : start.startY;
+      const heightY = pick?.heightY ?? start.heightY;
+      try {
+        const message = await executeTerrainAuthoring(
+          {
+            attachMode: current.attachMode,
+            speed: current.speed,
+            tool: "SpawnCivilian",
+            cellX: placeX,
+            cellY: placeY,
+            terrainSize: pick?.terrainSize ?? current.terrain?.size ?? 128,
+            heightY,
+            material: current.selectedMaterial,
+            faction: current.selectedFaction,
+            damageRadius: current.damageRadius,
+            spawnKind: current.spawnKind,
+          },
+          {
+            set_snapshot: (snapshot) =>
+              dispatch({ type: "set_snapshot", snapshot: snapshot as Snapshot }),
+            set_server_metrics: (metrics) =>
+              dispatch({ type: "set_server_metrics", metrics }),
+            set_speed: (speed) => dispatch({ type: "set_speed", speed }),
+          },
+        );
+        dispatch({ type: "set_toast", message });
+      } catch (err) {
+        dispatch({
+          type: "set_toast",
+          message: err instanceof Error ? err.message : "Spawn failed",
+        });
+      }
+    };
+
+    const onPointerDown = async (event: PointerEvent) => {
+      const terrain = refs.current.activeTerrain;
+      const terrainMesh = refs.current.terrainMesh;
+      if (!terrain || !terrainMesh) return;
+      const pick = pickTerrainCell(event);
+      if (!pick) return;
+      const { cellX, cellY, heightY } = pick;
       const current = stateRef.current;
       const basePayload = { x: cellX, y: cellY };
 
@@ -575,11 +789,18 @@ export function Scene3d() {
       const normY = cellY / terrain.size;
       const worldX = cellX * SCALE;
       const worldZ = cellY * SCALE;
-      const worldY = Math.max(0, Math.round(hit.point.y)) * SCALE;
+      const worldY = Math.max(0, Math.round(heightY)) * SCALE;
 
       if (current.selectedTool === "Camera") return;
 
       if (current.selectedTool === "InspectAgent") {
+        const rect = renderer.domElement.getBoundingClientRect();
+        const pointer = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(pointer, camera);
         const militaryHit = raycaster.intersectObjects(refs.current.military, false)[0];
         if (militaryHit) {
           const index = refs.current.military.indexOf(militaryHit.object as THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>);
@@ -606,6 +827,21 @@ export function Scene3d() {
         return;
       }
 
+      if (
+        current.selectedTool === "SpawnCivilian" &&
+        (current.spawnKind === "vehicle" || current.spawnKind === "airport")
+      ) {
+        spawnDrag = {
+          startX: cellX,
+          startY: cellY,
+          heightY,
+          pointerId: event.pointerId,
+        };
+        renderer.domElement.setPointerCapture(event.pointerId);
+        updateDragPreview(cellX, cellY, cellX, cellY);
+        return;
+      }
+
       try {
         const message = await executeTerrainAuthoring(
           {
@@ -615,7 +851,7 @@ export function Scene3d() {
             cellX: basePayload.x,
             cellY: basePayload.y,
             terrainSize: terrain.size,
-            heightY: hit.point.y,
+            heightY,
             material: current.selectedMaterial,
             faction: current.selectedFaction,
             damageRadius: current.damageRadius,
@@ -638,6 +874,48 @@ export function Scene3d() {
       }
     };
 
+    const setSpeed = async (speed: TimeSpeed) => {
+      if (stateRef.current.attachMode === "server") {
+        const ws = getActiveServerSocket();
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        try {
+          await jsonRpcCall(ws, "sim.set_speed", { multiplier: speed });
+          dispatch({ type: "set_speed", speed });
+        } catch {
+          dispatch({ type: "set_toast", message: "sim.set_speed failed" });
+        }
+        return;
+      }
+      dispatch({ type: "set_speed", speed });
+      void postControl("/control/speed", { speed });
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) return;
+      if (event.target instanceof HTMLElement && /input|textarea|select/i.test(event.target.tagName)) return;
+      if (event.key >= "1" && event.key <= "5") {
+        const faction = stateRef.current.snapshot?.factions?.[Number(event.key) - 1];
+        if (!faction) return;
+        dispatch({ type: "set_camera_focus", focus: faction.capital });
+        event.preventDefault();
+        return;
+      }
+      if (event.key === " ") {
+        event.preventDefault();
+        void setSpeed(speedRef.current === 0 ? 1 : 0);
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        void setSpeed(nextSpeed(speedRef.current, 1));
+        return;
+      }
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        void setSpeed(nextSpeed(speedRef.current, -1));
+      }
+    };
+
     const resizeRenderer = () => {
       const width = mount.clientWidth;
       const height = mount.clientHeight;
@@ -645,11 +923,16 @@ export function Scene3d() {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+      labelRenderer.setSize(width, height);
     };
 
     const observer = new ResizeObserver(resizeRenderer);
     observer.observe(mount);
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerup", onPointerUp);
+    renderer.domElement.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
 
     scene.background = new THREE.Color(0x87b7e0);
     const fog = new THREE.FogExp2(0x87b7e0, 0.0035);
@@ -676,9 +959,11 @@ export function Scene3d() {
         updateInterpolatedCivilians(refs.current, terrain, performance.now());
         animateTradeRoutes(refs.current, performance.now());
         updateEffects(refs.current, terrain, performance.now());
+        updateLabels();
       }
       controls.update();
       renderer.render(scene, camera);
+      labelRenderer.render(scene, camera);
     };
 
     const initialize = async () => {
@@ -702,6 +987,11 @@ export function Scene3d() {
     return () => {
       observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointercancel", onPointerUp);
+      clearDragPreview();
+      window.removeEventListener("keydown", onKeyDown);
       window.cancelAnimationFrame(raf);
       controls.dispose();
       terrainGroup.clear();
@@ -714,6 +1004,7 @@ export function Scene3d() {
       disposeScene(scene);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
+      mount.removeChild(labelRenderer.domElement);
     };
 
   }, [dispatch]);
@@ -749,7 +1040,23 @@ export function Scene3d() {
     updateRoadsFromRefs(refs.current, state.snapshot);
     updateTradeRoutesFromRefs(refs.current, state.snapshot);
     refs.current.targetDayFactor = state.snapshot?.is_day === false ? 0.3 : 1;
+    refs.current.terrainFeatureLabels = terrain ? computeTerrainFeatures(terrain) : refs.current.terrainFeatureLabels;
   }, [state.snapshot]);
+
+  useEffect(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const terrain = refs.current.activeTerrain;
+    if (!camera || !controls || !terrain || !state.cameraFocus) return;
+    const [fx, fy] = state.cameraFocus;
+    const x = fx * terrain.size - terrain.size / 2;
+    const z = fy * terrain.size - terrain.size / 2;
+    const y = terrainHeightAt(terrain, fx, fy);
+    controls.target.set(x, y + 1.5, z);
+    camera.position.set(x + terrain.size * 0.22, y + terrain.size * 0.65, z + terrain.size * 0.22);
+    camera.lookAt(controls.target);
+    controls.update();
+  }, [state.cameraFocusToken, state.cameraFocus]);
 
   return <div ref={mountRef} className="scene3d" aria-label="Three.js heightmap scene" />;
 }
@@ -874,15 +1181,18 @@ function updateTradeRoutesFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
     const route = routes[index];
     if (!route) {
       line.visible = false;
+      if (refs.tradeCargo[index]) refs.tradeCargo[index].visible = false;
       return;
     }
     const from = factionById(snapshot?.factions ?? [], route.from_faction);
     const to = factionById(snapshot?.factions ?? [], route.to_faction);
     if (!from || !to) {
       line.visible = false;
+      if (refs.tradeCargo[index]) refs.tradeCargo[index].visible = false;
       return;
     }
     line.visible = true;
+    if (refs.tradeCargo[index]) refs.tradeCargo[index].visible = true;
     const fromX = from.capital[0] * terrain.size - terrain.size / 2;
     const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
     const toX = to.capital[0] * terrain.size - terrain.size / 2;
@@ -894,18 +1204,159 @@ function updateTradeRoutesFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
     const dz = toZ - fromZ;
     const length = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
     line.position.set((fromX + toX) * 0.5, (fromY + toY) * 0.5, (fromZ + toZ) * 0.5);
-    line.scale.set(length, 1, 1);
-    line.rotation.set(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)), Math.atan2(-dz, dx), 0);
+    line.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(dx, dy, dz).normalize(),
+    );
+    line.scale.set(0.035 + route.volume * 0.003, length, 0.035 + route.volume * 0.003);
     line.material.color.setRGB(from.color[0] / 255, from.color[1] / 255, from.color[2] / 255);
-    line.computeLineDistances();
   });
+}
+
+function createBillboardLabel(text: string, rgb: [number, number, number]) {
+  const el = document.createElement("div");
+  el.className = "scene-label";
+  el.textContent = text;
+  el.style.borderColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.42)`;
+  el.style.color = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  const obj = new CSS2DObject(el);
+  obj.center.set(0.5, 1);
+  return obj;
+}
+
+function factionName(id: number) {
+  return `Faction ${id + 1}`;
+}
+
+function factionLabel(faction: Faction) {
+  return faction.name ?? factionName(faction.id);
+}
+
+function clusterBuildings(buildings: Building[], terrain: Terrain) {
+  const clusters: { x: number; y: number; z: number; label: string }[] = [];
+  const used = new Set<number>();
+  const radius = 0.05;
+  for (let i = 0; i < buildings.length; i += 1) {
+    if (used.has(i)) continue;
+    const seed = buildings[i];
+    const group = [seed];
+    used.add(i);
+    for (let j = i + 1; j < buildings.length; j += 1) {
+      if (used.has(j)) continue;
+      const candidate = buildings[j];
+      const dx = candidate.x - seed.x;
+      const dy = candidate.y - seed.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        group.push(candidate);
+        used.add(j);
+      }
+    }
+    if (group.length < 3) continue;
+    const label = group.length >= 10 ? "City" : group.length >= 5 ? "Town" : "Village";
+    const avg = group.reduce(
+      (acc, building) => {
+        acc.x += building.x;
+        acc.y += building.y;
+        acc.z += terrainHeightAt(terrain, building.x, building.y);
+        return acc;
+      },
+      { x: 0, y: 0, z: 0 },
+    );
+    const inv = 1 / group.length;
+    clusters.push({
+      x: avg.x * inv * terrain.size - terrain.size / 2,
+      y: avg.z * inv + 2,
+      z: avg.y * inv * terrain.size - terrain.size / 2,
+      label,
+    });
+  }
+  return clusters;
+}
+
+function computeTerrainFeatures(terrain: Terrain) {
+  let highestSnow = -Infinity;
+  let mountain: [number, number, number] | null = null;
+  type Cluster = { cells: number; x: number; y: number; height: number };
+  const waterClusters: Map<string, Cluster> = new Map();
+  const forestClusters: Map<string, Cluster> = new Map();
+  const size = terrain.size;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const idx = y * size + x;
+      const biome = terrain.biomes[idx];
+      const height = terrain.heights[idx] * TERRAIN_HEIGHT_SCALE;
+      if (biome === "snow" && height > highestSnow) {
+        highestSnow = height;
+        mountain = [x - size / 2, height + 1.5, y - size / 2];
+      }
+      const key = `${Math.floor(x / 6)}:${Math.floor(y / 6)}`;
+      if (biome === "water") {
+        const cell: Cluster = waterClusters.get(key) ?? { cells: 0, x: 0, y: 0, height: -Infinity };
+        cell.cells += 1;
+        cell.x += x;
+        cell.y += y;
+        cell.height = Math.max(cell.height, height);
+        waterClusters.set(key, cell);
+      }
+      if (biome === "forest") {
+        const cell: Cluster = forestClusters.get(key) ?? { cells: 0, x: 0, y: 0, height: -Infinity };
+        cell.cells += 1;
+        cell.x += x;
+        cell.y += y;
+        cell.height = Math.max(cell.height, height);
+        forestClusters.set(key, cell);
+      }
+    }
+  }
+  const largest = (clusters: Map<string, { cells: number; x: number; y: number; height: number }>) => {
+    let best: { cells: number; x: number; y: number; height: number } | null = null;
+    for (const cluster of clusters.values()) {
+      if (!best || cluster.cells > best.cells) best = cluster;
+    }
+    if (!best) return null;
+    const { x, y, cells, height } = best;
+    return [x / cells - size / 2, height + 1.5, y / cells - size / 2] as [number, number, number];
+  };
+  return {
+    mountain,
+    lake: largest(waterClusters),
+    forest: largest(forestClusters),
+  };
+}
+
+function nextSpeed(speed: TimeSpeed, direction: 1 | -1): TimeSpeed {
+  const steps: TimeSpeed[] = [0, 1, 2, 4, 8];
+  const index = steps.indexOf(speed);
+  const next = steps[Math.min(steps.length - 1, Math.max(0, index + direction))];
+  return next;
 }
 
 function animateTradeRoutes(refs: SceneRefs, now: number) {
   const time = now * 0.001;
+  const terrain = refs.activeTerrain;
+  const snapshot = refs.currentSnapshot;
+  if (!terrain || !snapshot) return;
   refs.tradeRoutes.forEach((line, index) => {
     if (!line.visible) return;
-    (line.material as any).dashOffset = -(time * 0.8 + index * 0.15);
+    const route = snapshot.trade_routes?.[index];
+    const cargo = refs.tradeCargo[index];
+    if (!route || !cargo || !cargo.visible) return;
+    const from = factionById(snapshot.factions ?? [], route.from_faction);
+    const to = factionById(snapshot.factions ?? [], route.to_faction);
+    if (!from || !to) return;
+    const fromX = from.capital[0] * terrain.size - terrain.size / 2;
+    const fromZ = from.capital[1] * terrain.size - terrain.size / 2;
+    const toX = to.capital[0] * terrain.size - terrain.size / 2;
+    const toZ = to.capital[1] * terrain.size - terrain.size / 2;
+    const fromY = terrainHeightAt(terrain, from.capital[0], from.capital[1]) + 0.65;
+    const toY = terrainHeightAt(terrain, to.capital[0], to.capital[1]) + 0.65;
+    const phase = (time * (0.18 + route.volume * 0.004) + index * 0.23) % 1;
+    cargo.position.set(
+      THREE.MathUtils.lerp(fromX, toX, phase),
+      THREE.MathUtils.lerp(fromY, toY, phase),
+      THREE.MathUtils.lerp(fromZ, toZ, phase),
+    );
+    cargo.scale.setScalar(0.45 + route.volume * 0.02);
   });
 }
 
@@ -1072,7 +1523,7 @@ function buildingDimensions(building: Building): [number, number, number] {
 function controlLabel(tool: string) {
   switch (tool) {
     case "SpawnCivilian":
-      return "spawn civilian";
+      return "spawn (drag vehicle/airport)";
     case "DamageBomb":
       return "damage";
     case "InspectAgent":

@@ -214,7 +214,20 @@ export function BottomBar() {
         Math.PI * 2,
       );
       ctx.fill();
+      ctx.font = "10px Segoe UI, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.lineWidth = 3;
+      const labelX = faction.capital[0] * width + 6;
+      const labelY = faction.capital[1] * height - 8;
+      const name = faction.name ?? `Faction ${faction.id + 1}`;
+      ctx.strokeText(name, labelX, labelY);
+      ctx.fillText(name, labelX, labelY);
     });
+
+    drawCameraFrustum(ctx, width, height, state.cameraFocus);
 
     const bounds = minimapBoundsFromKeys(state.loadedChunkIds);
     if (bounds) {
@@ -224,7 +237,7 @@ export function BottomBar() {
         ctx.fillRect(u * width - 2, v * height - 2, 4, 4);
       }
     }
-  }, [state.snapshot, state.terrain, state.loadedChunkIds]);
+  }, [state.snapshot, state.terrain, state.loadedChunkIds, state.cameraFocus]);
 
   useEffect(() => {
     const tick = state.snapshot?.tick ?? 0;
@@ -249,6 +262,11 @@ export function BottomBar() {
     const chunkId =
       findChunkAtGrid(state.loadedChunkIds, cx, cz) ?? encodeChunkId(cx, 0, cz);
     dispatch({ type: "set_inspected_chunk", chunkId });
+    const size = state.terrain.size;
+    dispatch({
+      type: "set_camera_focus",
+      focus: [Math.max(0, Math.min(size - 1, u * size)), Math.max(0, Math.min(size - 1, v * size))],
+    });
   };
 
   const speedButtons = (
@@ -331,7 +349,7 @@ export function BottomBar() {
             />
             <ToolButton
               active={state.selectedTool === "SpawnCivilian"}
-              title="Spawn civilian (normalized coords)"
+              title="Spawn: click civilian, drag-release vehicle/airport"
               emoji="🧍"
               onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })}
             />
@@ -391,8 +409,8 @@ export function BottomBar() {
                 }
               >
                 <option value="civilian">Civilian</option>
-                <option value="vehicle">Vehicle</option>
-                <option value="airport">Airport</option>
+                <option value="vehicle">Vehicle (drag on terrain)</option>
+                <option value="airport">Airport (drag on terrain)</option>
               </select>
             </label>
           </div>
@@ -516,4 +534,35 @@ function biomeColor(biome: string) {
     default:
       return "#334155";
   }
+}
+
+function drawCameraFrustum(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  cameraFocus: [number, number] | null,
+) {
+  const cx = (cameraFocus?.[0] ?? 0.5) * width;
+  const cy = (cameraFocus?.[1] ?? 0.5) * height;
+  const topW = width * 0.18;
+  const bottomW = width * 0.42;
+  const topH = height * 0.14;
+  const bottomH = height * 0.28;
+  const leftTop = cx - topW / 2;
+  const rightTop = cx + topW / 2;
+  const leftBottom = cx - bottomW / 2;
+  const rightBottom = cx + bottomW / 2;
+  const topY = cy - topH;
+  const bottomY = cy + bottomH;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(leftTop, topY);
+  ctx.lineTo(rightTop, topY);
+  ctx.lineTo(rightBottom, bottomY);
+  ctx.lineTo(leftBottom, bottomY);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
 }

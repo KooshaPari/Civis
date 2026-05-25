@@ -57,21 +57,22 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
   const buildings = parseBuildings(r.buildings);
   const roads = parseRoads(r.roads);
   const trade_routes = parseTradeRoutes(r.trade_routes);
-  return {
-    tick: Number(r.tick ?? 0),
-    tick_dt_ms: Number(r.tick_dt_ms ?? 100),
-    current_era: Number(r.current_era ?? 0),
-    population: Number(r.population ?? 0),
+    return {
+      tick: Number(r.tick ?? 0),
+      tick_dt_ms: Number(r.tick_dt_ms ?? 100),
+      current_era: Number(r.current_era ?? 0),
+      population: Number(r.population ?? 0),
     voxel_dirty_count: Number(r.voxel_dirty_count ?? 0),
     voxel_chunk_count: Number(r.voxel_chunk_count ?? 0),
     sample_civilians: [],
     civ_pins: civPins,
     military_units: militaryUnits,
     factions,
-    buildings,
-    roads,
-    trade_routes,
-    births_this_tick: Number(r.births_this_tick ?? 0),
+      buildings,
+      roads,
+      trade_routes,
+      trade_volume_this_tick: Number(r.trade_volume_this_tick ?? 0),
+      births_this_tick: Number(r.births_this_tick ?? 0),
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
     damage_events: parseDamageEvents(r.damage_events),
@@ -173,6 +174,7 @@ function parseEconomy(raw: unknown): EconomySnapshot {
           id: Number(item.id ?? 0),
           name: String(item.name ?? "Faction"),
           balance: Number(item.balance ?? 0),
+          trade_balance: Number(item.trade_balance ?? 0),
         };
       })
     : [];

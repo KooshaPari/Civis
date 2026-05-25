@@ -15,8 +15,8 @@ extends Node3D
 const TERRAIN_GRID_SIZE := 128
 const WORLD_SCALE := 1_000_000
 const MUTATION_TOOLS := ["Place Voxel", "Spawn Civilian", "Damage"]
+const SPAWN_DRAG_MIN_CELLS := 4.0
 
-@export_enum("civilian", "vehicle", "airport") var spawn_kind := "civilian"
 @export_range(1, 32, 1) var damage_radius := 8
 
 const JOB_COLORS := {
@@ -36,21 +36,34 @@ const BUILDING_COLORS := {
 	"Civic": Color(0.85, 0.78, 0.45),
 }
 
+const MILITARY_COLORS := {
+	"Soldier": Color(0.9, 0.35, 0.35),
+	"Archer": Color(0.45, 0.75, 0.95),
+	"Vehicle": Color(0.75, 0.75, 0.8),
+	"Scout": Color(0.95, 0.85, 0.4),
+}
+
 var _civis_http: CivisClient
 @onready var terrain_mesh: MeshInstance3D = $Terrain/TerrainMesh
 @onready var civilians_root: Node3D = $Civilians
 @onready var buildings_root: Node3D = $Buildings
+@onready var military_root: Node3D = $Military
 @onready var ui = $UI
 
 var current_tool := "Inspect"
 var current_material := 0
 var current_speed := 1
+var spawn_kind := "civilian"
 var terrain_heights: PackedFloat32Array = PackedFloat32Array()
 var terrain_biomes: PackedByteArray = PackedByteArray()
 var civilian_nodes: Dictionary = {}
 var building_nodes: Dictionary = {}
+var military_nodes: Dictionary = {}
 var spawn_count := 0
 var _ws_client: CivisWsClient
+var _spawn_drag_active := false
+var _spawn_drag_start := Vector2(-1.0, -1.0)
+var _drag_preview: MeshInstance3D
 
 func _ready() -> void:
 	_civis_http = CivisClient.new()
@@ -140,12 +153,19 @@ func _bind_ui() -> void:
 		speed.add_item(label)
 	speed.select(1)
 	speed.item_selected.connect(_on_speed_selected)
+	var spawn_kind_ui := ui.get_node("BottomBar/HBoxContainer/SpawnKind") as OptionButton
+	spawn_kind_ui.clear()
+	for label in ["civilian", "vehicle", "airport"]:
+		spawn_kind_ui.add_item(label)
+	spawn_kind_ui.select(0)
+	spawn_kind_ui.item_selected.connect(_on_spawn_kind_selected)
 	var attach_label := "civ-server WS" if attach_mode == "server" else "civ-watch HTTP"
 	var mode_label := "Spectator" if spectator_mode else "Authoring"
 	var hint := "%s — %s. Terrain from civ-watch." % [mode_label, attach_label]
 	ui.get_node("BottomBar").tooltip_text = hint
 	if spectator_mode:
 		ui.get_node("BottomBar/HBoxContainer/Material").visible = false
+		ui.get_node("BottomBar/HBoxContainer/SpawnKind").visible = false
 	else:
 		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").visible = true
 	ui.get_node("BottomBar/HBoxContainer/Material").value_changed.connect(_on_material_changed)
@@ -167,14 +187,113 @@ func _apply_speed(speed: int) -> void:
 func _process(_delta: float) -> void:
 	if spectator_mode:
 		return
+	if _spawn_drag_active:
+		_update_drag_preview()
+		return
+	if current_tool == "Spawn Civilian":
+		return
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not _clicking_minimap():
-		_handle_click()
+		_handle_mutation_click()
+
+func _input(event: InputEvent) -> void:
+	if spectator_mode:
+		return
+	if not event is InputEventMouseButton:
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index != MOUSE_BUTTON_LEFT or _clicking_minimap():
+		return
+	if current_tool != "Spawn Civilian":
+		return
+	if mb.pressed:
+		var norm := _ray_hit_norm()
+		if norm.x < 0.0:
+			return
+		if spawn_kind in ["vehicle", "airport"]:
+			_spawn_drag_active = true
+			_spawn_drag_start = norm
+			_ensure_drag_preview()
+		else:
+			_spawn_at_norm(norm.x, norm.y)
+	else:
+		if not _spawn_drag_active:
+			return
+		_spawn_drag_active = false
+		var end := _ray_hit_norm()
+		_clear_drag_preview()
+		if end.x < 0.0:
+			if _spawn_drag_start.x >= 0.0:
+				_spawn_at_norm(_spawn_drag_start.x, _spawn_drag_start.y)
+			return
+		var dist_cells := _spawn_drag_start.distance_to(end) * float(TERRAIN_GRID_SIZE)
+		if dist_cells >= SPAWN_DRAG_MIN_CELLS:
+			_spawn_at_norm(end.x, end.y)
+		elif _spawn_drag_start.x >= 0.0:
+			_spawn_at_norm(_spawn_drag_start.x, _spawn_drag_start.y)
 
 func _clicking_minimap() -> bool:
 	var minimap := ui.get_node("Minimap") as Control
 	return minimap.get_rect().has_point(minimap.get_local_mouse_position())
 
-func _handle_click() -> void:
+func _ray_hit_norm() -> Vector2:
+	var cam: Camera3D = $Camera3D
+	var from := cam.project_ray_origin(get_viewport().get_mouse_position())
+	var to := from + cam.project_ray_normal(get_viewport().get_mouse_position()) * 1000.0
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return Vector2(-1.0, -1.0)
+	var pos: Vector3 = hit.position
+	return Vector2(
+		clampf(pos.x / float(TERRAIN_GRID_SIZE), 0.0, 1.0),
+		clampf(pos.z / float(TERRAIN_GRID_SIZE), 0.0, 1.0),
+	)
+
+func _spawn_at_norm(norm_x: float, norm_y: float) -> void:
+	if attach_mode == "server":
+		_ws_client.spawn_entity(spawn_kind, norm_x, norm_y, 0)
+	else:
+		_civis_http.post_spawn_entity(spawn_kind, norm_x, norm_y, 0)
+	spawn_count += 1
+	ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
+
+func _ensure_drag_preview() -> void:
+	if _drag_preview != null:
+		return
+	_drag_preview = MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.35
+	mesh.bottom_radius = 0.5
+	mesh.height = 0.2
+	_drag_preview.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.9, 0.85, 0.35, 0.55)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_drag_preview.material_override = mat
+	military_root.add_child(_drag_preview)
+
+func _update_drag_preview() -> void:
+	if _drag_preview == null or _spawn_drag_start.x < 0.0:
+		return
+	var end := _ray_hit_norm()
+	if end.x < 0.0:
+		_drag_preview.visible = false
+		return
+	_drag_preview.visible = true
+	var sx := _spawn_drag_start.x * float(TERRAIN_GRID_SIZE)
+	var sz := _spawn_drag_start.y * float(TERRAIN_GRID_SIZE)
+	var ex := end.x * float(TERRAIN_GRID_SIZE)
+	var ez := end.y * float(TERRAIN_GRID_SIZE)
+	_drag_preview.position = Vector3(ex, 1.2, ez)
+	var dir := Vector3(ex - sx, 0.0, ez - sz)
+	if dir.length_squared() > 0.01:
+		_drag_preview.look_at(_drag_preview.position + dir.normalized(), Vector3.UP)
+
+func _clear_drag_preview() -> void:
+	if _drag_preview != null:
+		_drag_preview.visible = false
+
+func _handle_mutation_click() -> void:
 	var cam: Camera3D = $Camera3D
 	var from := cam.project_ray_origin(get_viewport().get_mouse_position())
 	var to := from + cam.project_ray_normal(get_viewport().get_mouse_position()) * 1000.0
@@ -188,15 +307,6 @@ func _handle_click() -> void:
 			_ws_client.place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
 		else:
 			_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
-	elif current_tool == "Spawn Civilian":
-		var norm_x := pos.x / float(TERRAIN_GRID_SIZE)
-		var norm_y := pos.z / float(TERRAIN_GRID_SIZE)
-		if attach_mode == "server":
-			_ws_client.spawn_entity(spawn_kind, norm_x, norm_y, 0)
-		else:
-			_civis_http.post_spawn_entity(spawn_kind, norm_x, norm_y, 0)
-		spawn_count += 1
-		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
 	elif current_tool == "Damage":
 		var wx := int(pos.x) * WORLD_SCALE
 		var wy := int(maxf(0.0, pos.y)) * WORLD_SCALE
@@ -229,6 +339,7 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 	ui.get_node("BottomBar/HBoxContainer/EraLabel").text = EraTimelapse.era_label(tick)
 	_sync_civilians(snapshot.get("civ_pins", []))
 	_sync_buildings(snapshot.get("buildings", []))
+	_sync_military(snapshot.get("military_units", []))
 
 func _sync_civilians(pins: Array) -> void:
 	var seen := {}
@@ -282,8 +393,40 @@ func _sync_buildings(pins: Array) -> void:
 			building_nodes[id].queue_free()
 			building_nodes.erase(id)
 
+func _sync_military(units: Array) -> void:
+	var seen := {}
+	for unit in units:
+		var id := int(unit.get("id", 0))
+		seen[id] = true
+		var node: MeshInstance3D = military_nodes.get(id)
+		if node == null:
+			node = MeshInstance3D.new()
+			var cone := CylinderMesh.new()
+			cone.top_radius = 0.05
+			cone.bottom_radius = 0.35
+			cone.height = 1.2
+			node.mesh = cone
+			military_root.add_child(node)
+			military_nodes[id] = node
+		var unit_type := str(unit.get("unit_type", "Soldier"))
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = MILITARY_COLORS.get(unit_type, MILITARY_COLORS["Soldier"])
+		node.material_override = mat
+		node.position = Vector3(
+			float(unit.get("x", 0.0)) * float(TERRAIN_GRID_SIZE),
+			0.8,
+			float(unit.get("y", 0.0)) * float(TERRAIN_GRID_SIZE),
+		)
+	for id in military_nodes.keys():
+		if not seen.has(id):
+			military_nodes[id].queue_free()
+			military_nodes.erase(id)
+
 func _on_tool_pressed(tool: String) -> void:
 	current_tool = tool
+
+func _on_spawn_kind_selected(index: int) -> void:
+	spawn_kind = ["civilian", "vehicle", "airport"][index]
 
 func _on_speed_selected(index: int) -> void:
 	var speeds := [0, 1, 2, 4, 8]

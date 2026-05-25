@@ -415,6 +415,20 @@ mod ux_tests {
         assert!(SpawnKind::Airport.is_wired());
     }
 
+    /// FR-CIV-UX-004 — vehicle/airport use drag placement threshold.
+    #[test]
+    fn spawn_drag_threshold_matches_palette() {
+        use super::ux::{spawn_drag_exceeds_threshold, SPAWN_DRAG_MIN_NORM};
+
+        assert!(!SpawnKind::Civilian.uses_drag_place());
+        assert!(SpawnKind::Vehicle.uses_drag_place());
+        assert!(!spawn_drag_exceeds_threshold((0.1, 0.1), (0.11, 0.1)));
+        assert!(spawn_drag_exceeds_threshold(
+            (0.1, 0.1),
+            (0.1 + SPAWN_DRAG_MIN_NORM * 2.0, 0.1),
+        ));
+    }
+
     /// FR-CIV-UX-001 — timelapse rates reach the same tick/era as real-time playback.
     #[test]
     fn timelapse_no_divergence() {

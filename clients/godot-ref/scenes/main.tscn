@@ -47,6 +47,8 @@ transform = Transform3D(48, 0, 0, 0, 1, 0, 0, 0, 48, 32, -1, 32)
 
 [node name="Buildings" type="Node3D" parent="."]
 
+[node name="Military" type="Node3D" parent="."]
+
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true

@@ -675,7 +675,7 @@ fn make_snapshot(
 ) -> Snapshot {
     let voxel_events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
-    let civ_pins = civ_pins_from_spectator(sim);
+    let civ_pins = civ_pins(sim);
     let factions = factions(sim.state.tick);
     let mut buildings = buildings(&factions, sim.state.tick);
     merge_authoring_buildings(&mut buildings, sim);
@@ -1070,31 +1070,27 @@ fn sample_civilians(sim: &Simulation) -> Vec<SampleCivilian> {
         .collect()
 }
 
-fn civ_pins_from_spectator(sim: &Simulation) -> Vec<CivPin> {
-    sim.spectator_view()
-        .civ_pins
+fn civ_pins(sim: &Simulation) -> Vec<CivPin> {
+    let mut pins = Vec::new();
+    for (idx, (_, (_civilian, pos, vel))) in sim
+        .world
+        .query::<(&AgentCivilian, &Position3d, &Velocity)>()
         .iter()
-        .map(|p| CivPin {
-            idx: p.idx,
-            x: p.x,
-            y: p.y,
-            dx: p.dx,
-            dy: p.dy,
-            job: p.job.map(job_label_from_engine),
-        })
-        .collect()
-}
-
-fn job_label_from_engine(label: civ_engine::spectator::JobLabel) -> JobLabel {
-    match label {
-        civ_engine::spectator::JobLabel::Farmer => JobLabel::Farmer,
-        civ_engine::spectator::JobLabel::Warrior => JobLabel::Warrior,
-        civ_engine::spectator::JobLabel::Scholar => JobLabel::Scholar,
-        civ_engine::spectator::JobLabel::Trader => JobLabel::Trader,
-        civ_engine::spectator::JobLabel::Priest => JobLabel::Priest,
-        civ_engine::spectator::JobLabel::Admin => JobLabel::Admin,
-        civ_engine::spectator::JobLabel::Unemployed => JobLabel::Unemployed,
+        .enumerate()
+    {
+        let x = normalize_world_coord(pos.coord.x);
+        let y = normalize_world_coord(pos.coord.z);
+        pins.push(CivPin {
+            idx: idx as u32,
+            x,
+            y,
+            dx: vel.dx,
+            dy: vel.dy,
+            job: None,
+        });
     }
+    pins.sort_by_key(|pin| pin.idx);
+    pins
 }
 
 fn assign_and_drift_housing(sim: &mut Simulation, buildings: &[Building]) {
@@ -1145,7 +1141,7 @@ fn assign_and_drift_housing(sim: &mut Simulation, buildings: &[Building]) {
 }
 
 fn factions(tick: u64) -> Vec<Faction> {
-    let territory_radius_t = 18.0 + (tick as f32 * 0.018);
+    let base_radius = 0.05 + (tick as f32 * 0.000_02).min(0.12);
     let capitals = [
         (0.22, 0.24, [214, 174, 110]),
         (0.76, 0.27, [112, 176, 122]),
@@ -1160,9 +1156,13 @@ fn factions(tick: u64) -> Vec<Faction> {
             id: idx as u32,
             color: *color,
             capital: [*x, *y],
-            radius: territory_radius_t + idx as f32 * 2.75,
+            radius: (base_radius + idx as f32 * 0.018).min(0.3),
         })
         .collect()
+}
+
+fn normalize_world_coord(coord: i64) -> f32 {
+    (coord as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0)
 }
 
 fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {

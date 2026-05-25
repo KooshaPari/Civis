@@ -43,7 +43,7 @@ Hover controls for tooltips. Left-click runs the active tool on terrain.
 | Control | Action |
 |---------|--------|
 | **Place Voxel** | Select tool, pick material id (0–7), left-click terrain → `POST /control/place_voxel` |
-| **Spawn** | Palette (civilian / vehicle / airport). Civilian: click. Vehicle & airport: drag-release (FR-CIV-UX-004). Server: `sim.spawn_entity`; watch: `POST /control/spawn_entity` |
+| **Spawn** | Palette (civilian / vehicle / airport / port). Civilian: click. Vehicle, airport, port: drag-release; long drag spawns convoy along path (FR-CIV-UX-004). Server: `sim.spawn_entity`; watch: `POST /control/spawn_entity` |
 | **Damage** | Tactical damage tool (placeholder) |
 | **Inspect** | Inspect terrain cell under cursor |
 | **Camera** | Camera/orbit mode (right-drag + scroll; see camera table above) |

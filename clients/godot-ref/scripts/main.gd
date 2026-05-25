@@ -13,6 +13,10 @@ extends Node3D
 @export var spectator_mode := true
 
 const TERRAIN_GRID_SIZE := 128
+const CIVILIAN_FOOT_OFFSET := 0.55
+const BUILDING_FOOT_OFFSET := 1.0
+const MILITARY_FOOT_OFFSET := 0.6
+const SPAWN_BURST_FOOT_OFFSET := 1.1
 const WORLD_SCALE := 1_000_000
 const MUTATION_TOOLS := ["Place Voxel", "Spawn Civilian", "Damage"]
 const SPAWN_DRAG_MIN_CELLS := 4.0
@@ -128,6 +132,11 @@ func _terrain_height(x: int, z: int) -> float:
 	if idx < 0 or idx >= terrain_heights.size():
 		return 0.0
 	return terrain_heights[idx] * terrain_height_exaggeration
+
+func _world_y_at_norm(norm_x: float, norm_y: float, foot_offset: float) -> float:
+	var gx := clampi(int(norm_x * float(TERRAIN_GRID_SIZE)), 0, TERRAIN_GRID_SIZE - 1)
+	var gz := clampi(int(norm_y * float(TERRAIN_GRID_SIZE)), 0, TERRAIN_GRID_SIZE - 1)
+	return _terrain_height(gx, gz) + foot_offset
 
 func _terrain_color(x: int, z: int) -> Color:
 	var idx := z * TERRAIN_GRID_SIZE + x
@@ -247,6 +256,22 @@ func _ray_hit_norm() -> Vector2:
 		clampf(pos.x / float(TERRAIN_GRID_SIZE), 0.0, 1.0),
 		clampf(pos.z / float(TERRAIN_GRID_SIZE), 0.0, 1.0),
 	)
+
+func _spawn_convoy_along_drag(start: Vector2, end: Vector2) -> void:
+	var dist_cells := start.distance_to(end) * float(TERRAIN_GRID_SIZE)
+	if dist_cells < SPAWN_DRAG_MIN_CELLS:
+		if end.x >= 0.0:
+			_spawn_at_norm(end.x, end.y)
+		return
+	var steps := mini(int(dist_cells / 8.0), 31)
+	if steps <= 0:
+		_spawn_at_norm(end.x, end.y)
+		return
+	for i in range(steps + 1):
+		var t := float(i) / float(steps)
+		var nx := lerpf(start.x, end.x, t)
+		var ny := lerpf(start.y, end.y, t)
+		_spawn_at_norm(nx, ny)
 
 func _spawn_at_norm(norm_x: float, norm_y: float) -> void:
 	if attach_mode == "server":
@@ -369,10 +394,12 @@ func _sync_civilians(pins: Array) -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = JOB_COLORS.get(job, JOB_COLORS["unemployed"])
 		node.material_override = mat
+		var norm_x := float(pin.get("x", 0.0))
+		var norm_y := float(pin.get("y", 0.0))
 		node.position = Vector3(
-			float(pin.get("x", 0.0)) * float(TERRAIN_GRID_SIZE),
-			1.0,
-			float(pin.get("y", 0.0)) * float(TERRAIN_GRID_SIZE),
+			norm_x * float(TERRAIN_GRID_SIZE),
+			_world_y_at_norm(norm_x, norm_y, CIVILIAN_FOOT_OFFSET),
+			norm_y * float(TERRAIN_GRID_SIZE),
 		)
 	for idx in civilian_nodes.keys():
 		if not seen.has(idx):
@@ -395,10 +422,12 @@ func _sync_buildings(pins: Array) -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = BUILDING_COLORS.get(kind, BUILDING_COLORS["Residential"])
 		node.material_override = mat
+		var norm_x := float(pin.get("x", 0.0))
+		var norm_y := float(pin.get("y", 0.0))
 		node.position = Vector3(
-			float(pin.get("x", 0.0)) * float(TERRAIN_GRID_SIZE),
-			1.5,
-			float(pin.get("y", 0.0)) * float(TERRAIN_GRID_SIZE),
+			norm_x * float(TERRAIN_GRID_SIZE),
+			_world_y_at_norm(norm_x, norm_y, BUILDING_FOOT_OFFSET),
+			norm_y * float(TERRAIN_GRID_SIZE),
 		)
 	for id in building_nodes.keys():
 		if not seen.has(id):
@@ -424,10 +453,12 @@ func _sync_military(units: Array) -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = MILITARY_COLORS.get(unit_type, MILITARY_COLORS["Soldier"])
 		node.material_override = mat
+		var norm_x := float(unit.get("x", 0.0))
+		var norm_y := float(unit.get("y", 0.0))
 		node.position = Vector3(
-			float(unit.get("x", 0.0)) * float(TERRAIN_GRID_SIZE),
-			0.8,
-			float(unit.get("y", 0.0)) * float(TERRAIN_GRID_SIZE),
+			norm_x * float(TERRAIN_GRID_SIZE),
+			_world_y_at_norm(norm_x, norm_y, MILITARY_FOOT_OFFSET),
+			norm_y * float(TERRAIN_GRID_SIZE),
 		)
 	for id in military_nodes.keys():
 		if not seen.has(id):
@@ -438,7 +469,7 @@ func _on_tool_pressed(tool: String) -> void:
 	current_tool = tool
 
 func _on_spawn_kind_selected(index: int) -> void:
-	spawn_kind = ["civilian", "vehicle", "airport"][index]
+	spawn_kind = ["civilian", "vehicle", "airport", "port"][index]
 
 func _on_speed_selected(index: int) -> void:
 	var speeds := [0, 1, 2, 4, 8]
@@ -454,11 +485,13 @@ func _spawn_burst_color_for_kind(kind: String) -> Color:
 			return Color(0.75, 0.75, 0.82)
 		"airport":
 			return Color(0.55, 0.72, 0.95)
+		"port":
+			return Color(0.45, 0.82, 0.72)
 		_:
 			return Color(0.49, 0.85, 0.34)
 
 func _spawn_burst_at_norm(norm_x: float, norm_y: float, color: Color) -> void:
 	var gx := norm_x * float(TERRAIN_GRID_SIZE)
 	var gz := norm_y * float(TERRAIN_GRID_SIZE)
-	var gy := _terrain_height(int(gx), int(gz)) + 1.1
+	var gy := _world_y_at_norm(norm_x, norm_y, SPAWN_BURST_FOOT_OFFSET)
 	SpawnBurst.emit_at(civilians_root, Vector3(gx, gy, gz), color)

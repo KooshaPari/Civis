@@ -1,8 +1,13 @@
-use std::{thread, time::Duration};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use civ_protocol_3d::Frame3d;
 
-use crate::{parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsSpectatorMeta};
+use crate::{
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsSpectatorMeta,
+};
 use crossbeam_channel::{Receiver, Sender};
 use futures_util::{SinkExt, StreamExt};
 use tokio::runtime::Builder;
@@ -115,44 +120,40 @@ async fn connect_and_stream(
 
     request_snapshot(&mut write).await?;
 
-    let mut poll = tokio::time::interval(Duration::from_secs(SNAPSHOT_POLL_SECS));
-    poll.tick().await;
+    let mut last_snapshot = Instant::now();
 
-    loop {
-        tokio::select! {
-            _ = poll.tick() => {
-                request_snapshot(&mut write).await?;
-            }
-            msg = read.next() => {
-                let Some(msg) = msg else {
-                    return Err("websocket closed".into());
-                };
-                let msg = msg.map_err(|err| err.to_string())?;
-                match msg {
-                    Message::Text(text) => {
-                        if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
-                            if meta_tx.send(meta).is_err() {
-                                return Err("bevy meta receiver dropped".into());
-                            }
-                            continue;
-                        }
-                        if config.prefer_binary {
-                            continue;
-                        }
-                        let frame = parse_ws_payload(text.as_bytes())?;
-                        if frame_tx.send(frame).is_err() {
-                            return Err("bevy frame receiver dropped".into());
-                        }
+    while let Some(msg) = read.next().await {
+        if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
+            request_snapshot(&mut write).await?;
+            last_snapshot = Instant::now();
+        }
+
+        let msg = msg.map_err(|err| err.to_string())?;
+        match msg {
+            Message::Text(text) => {
+                if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
+                    if meta_tx.send(meta).is_err() {
+                        return Err("bevy meta receiver dropped".into());
                     }
-                    Message::Binary(bytes) => {
-                        let frame = parse_ws_payload(&bytes)?;
-                        if frame_tx.send(frame).is_err() {
-                            return Err("bevy frame receiver dropped".into());
-                        }
-                    }
-                    _ => {}
+                    continue;
+                }
+                if config.prefer_binary {
+                    continue;
+                }
+                let frame = parse_ws_payload(text.as_bytes())?;
+                if frame_tx.send(frame).is_err() {
+                    return Err("bevy frame receiver dropped".into());
                 }
             }
+            Message::Binary(bytes) => {
+                let frame = parse_ws_payload(&bytes)?;
+                if frame_tx.send(frame).is_err() {
+                    return Err("bevy frame receiver dropped".into());
+                }
+            }
+            _ => {}
         }
     }
+
+    Err("websocket closed".into())
 }

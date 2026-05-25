@@ -16,7 +16,8 @@ use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
 
 use crate::{
-    chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, CameraTarget, MeshBuffer,
+    chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
+    presentation_ambient_color_rgb, presentation_clear_color_rgb, CameraTarget, MeshBuffer,
     DEBUG_WIREFRAME_OVERLAY_ALPHA,
 };
 
@@ -98,6 +99,19 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     let camera = CameraTarget::default();
     let eye = camera.orbit_position();
     let centre = Vec3::from_array(camera.centre);
+
+    let day_factor = 1.0_f32;
+    let clear_rgb = presentation_clear_color_rgb(day_factor);
+    let ambient_rgb = presentation_ambient_color_rgb(day_factor);
+    commands.insert_resource(ClearColor(Color::srgb(
+        clear_rgb[0],
+        clear_rgb[1],
+        clear_rgb[2],
+    )));
+    commands.insert_resource(AmbientLight {
+        color: Color::srgb(ambient_rgb[0], ambient_rgb[1], ambient_rgb[2]),
+        brightness: presentation_ambient_brightness(day_factor),
+    });
 
     // Sun light — offset from the camera azimuth so voxels pick up depth.
     commands.spawn((

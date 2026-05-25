@@ -16,10 +16,11 @@ use civ_bevy_ref::{
     },
     chunk_distance_from_camera, chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
     decode_chunk_id, focused_chunk_at_grid, mesh_lod_level, minimap_uv_to_chunk_grid,
-    resolve_live_ws_url, should_render_chunk,
+    presentation_ambient_brightness, presentation_ambient_color_rgb,
+    presentation_clear_color_rgb, presentation_day_factor_target, resolve_live_ws_url,
+    should_render_chunk,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, WsSpectatorMeta,
-    AGENT_MARKER_DEPTH,
+    CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, AGENT_MARKER_DEPTH,
     AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::{AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
@@ -237,18 +238,29 @@ fn apply_spectator_meta(
     }
 }
 
-/// L5 slice: day/night from `sim.snapshot` (`is_day`) on the default directional light.
+/// L5 slice: day/night from `sim.snapshot` (`is_day`) on sun, ambient fill, and sky clear colour.
 fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
     mut lights: Query<&mut DirectionalLight>,
+    mut ambient: ResMut<AmbientLight>,
+    mut clear: ResMut<ClearColor>,
 ) {
-    let target = if presentation.is_day { 1.0 } else { 0.32 };
+    let target = presentation_day_factor_target(presentation.is_day);
     let step = (time.delta_seconds() * 2.5).clamp(0.0, 1.0);
     presentation.day_factor += (target - presentation.day_factor) * step;
+
+    let day_factor = presentation.day_factor;
     for mut light in &mut lights {
-        light.illuminance = 12_000.0 * presentation.day_factor;
+        light.illuminance = 12_000.0 * day_factor;
     }
+
+    let ambient_rgb = presentation_ambient_color_rgb(day_factor);
+    ambient.color = Color::srgb(ambient_rgb[0], ambient_rgb[1], ambient_rgb[2]);
+    ambient.brightness = presentation_ambient_brightness(day_factor);
+
+    let clear_rgb = presentation_clear_color_rgb(day_factor);
+    clear.0 = Color::srgb(clear_rgb[0], clear_rgb[1], clear_rgb[2]);
 }
 
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
@@ -556,7 +568,7 @@ fn update_minimap(
 
     let plot = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
     let focused = hud.snapshot.focused_chunk;
-    for raw in keys {
+    for &raw in &keys {
         let [u, v] = chunk_to_minimap_uv(ChunkId(raw), bounds);
         let left = MINIMAP_INSET + u * plot;
         let top = MINIMAP_INSET + v * plot;

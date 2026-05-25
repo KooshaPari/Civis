@@ -52,7 +52,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Bevy** minimap / binary WS | `bevy-ref/ws_client.rs`, `bevy_window.rs`, `lib.rs` | F3D0-first ticks; `sim.snapshot` JSON-RPC poll for `is_day`; minimap click-to-focus; day/night lighting |
 | **Godot** camera / terrain / UI | `clients/godot-ref/scripts/` | Orbit `Camera3D` (`camera.gd`); 128×128 minimap grid + click-to-focus (`minimap.gd`); `terrain_height_exaggeration`; `biome_color` / `height_color`; control `tooltip_text` hints |
 | **Godot** civ-server attach | `clients/godot-ref/scripts/civis_ws_client.gd`, `main.gd` | Default `attach_mode=server`: WS JSON-RPC + F3D0-throttled `sim.snapshot`; terrain via civ-watch HTTP; `spectator_mode` default |
-| **Godot** P-U1 | `main.gd`, `era_timelapse.gd`, `camera.gd` | Buildings + military pins; era HUD; server attach + L2 authoring; camera presets wide/close/orbit |
+| **Godot** P-U1 | `main.gd`, `spawn_burst.gd`, `camera.gd` | Capsule civilians; spawn/damage burst; buildings + military; server attach + L2 authoring; camera presets |
 | **Unreal** HTTP + WS | `CivProtocolClient.cpp`, `CivWsClient.cpp`, `CivShowGameMode` | HTTP terrain/controls; WS JSON-RPC + `civ_pins` civilian sync |
 | **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
 | **Web** FR-CIV-WEB-008 | `web/dashboard/src/lib/authoring.ts`, `bottom_bar.tsx` | L2 authoring default on; `?spectator=1` for read-only |

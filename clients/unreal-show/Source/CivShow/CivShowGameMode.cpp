@@ -77,7 +77,30 @@ void ACivShowGameMode::OnTerrainFetched()
 
 void ACivShowGameMode::OnWsSnapshot(const FString& SnapshotJson)
 {
+    TSharedPtr<FJsonObject> Root;
+    const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SnapshotJson);
+    if (FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid())
+    {
+        bool bIsDay = true;
+        if (Root->TryGetBoolField(TEXT("is_day"), bIsDay))
+        {
+            ApplyDayNight(bIsDay);
+        }
+    }
     SyncCiviliansFromSnapshot(SnapshotJson);
+}
+
+void ACivShowGameMode::ApplyDayNight(bool bIsDay)
+{
+    const float Intensity = bIsDay ? 3.0f : 0.85f;
+    for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
+    {
+        if (UDirectionalLightComponent* Light = It->GetComponent())
+        {
+            Light->SetIntensity(Intensity);
+            break;
+        }
+    }
 }
 
 void ACivShowGameMode::SyncCiviliansFromSnapshot(const FString& SnapshotJson)

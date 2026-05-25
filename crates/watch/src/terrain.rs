@@ -11,7 +11,7 @@
 use serde::Serialize;
 
 /// Side length of the generated terrain grid.
-pub const SIZE: usize = 128;
+pub const SIZE: usize = 256;
 
 /// One terrain biome. Maps to a colour in the web dashboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -95,10 +95,16 @@ impl Terrain {
     /// Generate a new heightmap from `seed`. Deterministic.
     pub fn generate(seed: u64) -> Self {
         let mut heights = vec![0.0_f32; SIZE * SIZE];
-        // Multi-octave value noise: 4 octaves of doubling frequency / halving
-        // amplitude. Continent shape biased toward the centre so coastlines
-        // land inside the grid.
-        let octaves: [(f32, f32); 4] = [(2.0, 0.55), (4.0, 0.30), (8.0, 0.15), (16.0, 0.075)];
+        // Multi-octave value noise with more shape at mid frequencies so the
+        // coastlines read as one island instead of a blurry height field.
+        let octaves: [(f32, f32); 6] = [
+            (1.5, 0.45),
+            (3.0, 0.25),
+            (6.0, 0.14),
+            (12.0, 0.08),
+            (24.0, 0.05),
+            (48.0, 0.025),
+        ];
         for y in 0..SIZE {
             for x in 0..SIZE {
                 let fx = x as f32 / SIZE as f32;
@@ -107,12 +113,16 @@ impl Terrain {
                 for (freq, amp) in octaves {
                     h += value_noise(fx * freq, fy * freq, seed) * amp;
                 }
-                // Radial falloff so the world has natural coastlines.
+                // Radial falloff so the world has natural coastlines and a
+                // broad island silhouette.
                 let dx = fx - 0.5;
                 let dy = fy - 0.5;
-                let r = (dx * dx + dy * dy).sqrt() * 2.0; // 0 at centre, ~1.41 at corner
-                let coastal = (1.0 - r).clamp(0.0, 1.0);
-                h = h * 0.6 + coastal * 0.5;
+                let r = (dx * dx + dy * dy).sqrt() * 2.0;
+                let island = (1.0 - r.powf(1.55)).clamp(0.0, 1.0);
+                let ridge = ((1.0 - (dx.abs() * 1.7).min(1.0))
+                    * (1.0 - (dy.abs() * 1.7).min(1.0)))
+                .clamp(0.0, 1.0);
+                h = h * 0.48 + island * 0.34 + ridge * 0.18;
                 heights[y * SIZE + x] = h.clamp(0.0, 1.0);
             }
         }
@@ -198,7 +208,7 @@ mod tests {
     #[test]
     fn terrain_hash_at_seed_42_is_stable() {
         let fingerprint = Terrain::generate(42).heights_fingerprint();
-        assert_eq!(fingerprint, 6_321_126_721_059_547_128);
+        assert_eq!(fingerprint, 14_290_216_453_490_432_101);
     }
 
     #[test]
@@ -218,8 +228,8 @@ mod tests {
 
     #[test]
     fn all_biomes_can_be_hit() {
-        // The default radial falloff + 4 octaves should produce every biome
-        // somewhere in a 128x128 grid.
+        // The default falloff + octaves should produce most biomes somewhere
+        // in a 256x256 grid.
         let t = Terrain::generate(7);
         let mut seen = [false; 7];
         for b in &t.biomes {
@@ -235,6 +245,6 @@ mod tests {
         }
         // Snow is rare; assert at least 5/7 biomes are present.
         let count = seen.iter().filter(|&&b| b).count();
-        assert!(count >= 5, "only {count} biomes seen across 128x128 grid");
+        assert!(count >= 5, "only {count} biomes seen across 256x256 grid");
     }
 }

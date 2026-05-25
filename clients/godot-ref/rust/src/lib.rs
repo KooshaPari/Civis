@@ -413,20 +413,26 @@ mod ux_tests {
         assert!(SpawnKind::Civilian.is_wired());
         assert!(SpawnKind::Vehicle.is_wired());
         assert!(SpawnKind::Airport.is_wired());
+        assert!(SpawnKind::Port.is_wired());
     }
 
-    /// FR-CIV-UX-004 — vehicle/airport use drag placement threshold.
+    /// FR-CIV-UX-004 — vehicle/airport/port use drag + convoy placement.
     #[test]
     fn spawn_drag_threshold_matches_palette() {
-        use super::ux::{spawn_drag_exceeds_threshold, SPAWN_DRAG_MIN_NORM};
+        use super::ux::{convoy_positions, spawn_drag_exceeds_threshold, SPAWN_DRAG_MIN_NORM};
 
         assert!(!SpawnKind::Civilian.uses_drag_place());
         assert!(SpawnKind::Vehicle.uses_drag_place());
+        assert!(SpawnKind::Port.uses_drag_place());
+        assert!(SpawnKind::Port.uses_convoy_drag());
         assert!(!spawn_drag_exceeds_threshold((0.1, 0.1), (0.11, 0.1)));
         assert!(spawn_drag_exceeds_threshold(
             (0.1, 0.1),
             (0.1 + SPAWN_DRAG_MIN_NORM * 2.0, 0.1),
         ));
+        let convoy = convoy_positions((0.1, 0.1), (0.9, 0.1));
+        assert!(convoy.len() >= 2);
+        assert!(convoy.len() <= 32);
     }
 
     /// FR-CIV-UX-001 — timelapse rates reach the same tick/era as real-time playback.

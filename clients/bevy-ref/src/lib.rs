@@ -468,6 +468,75 @@ pub fn minimap_uv_to_chunk_grid(uv: [f32; 2], bounds: MinimapBounds) -> (i32, i3
     (cx.clamp(min_x, max_x), cz.clamp(min_z, max_z))
 }
 
+/// Target [`day_factor`](presentation_day_factor_target) when `sim.snapshot` reports night.
+pub const PRESENTATION_NIGHT_DAY_FACTOR: f32 = 0.32;
+
+/// Day sky / clear colour (sRGB, matches web `0x87b7e0`).
+pub const PRESENTATION_DAY_CLEAR_RGB: [f32; 3] = [0.529, 0.718, 0.878];
+
+/// Night sky / clear colour (sRGB, matches web `0x0a1530`).
+pub const PRESENTATION_NIGHT_CLEAR_RGB: [f32; 3] = [0.039, 0.082, 0.188];
+
+/// Day ambient fill brightness (warm).
+pub const PRESENTATION_DAY_AMBIENT_BRIGHTNESS: f32 = 0.45;
+
+/// Night ambient fill brightness (dim cool).
+pub const PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS: f32 = 0.14;
+
+/// Day ambient colour (warm sRGB).
+pub const PRESENTATION_DAY_AMBIENT_RGB: [f32; 3] = [0.96, 0.93, 0.86];
+
+/// Night ambient colour (cool sRGB).
+pub const PRESENTATION_NIGHT_AMBIENT_RGB: [f32; 3] = [0.55, 0.68, 0.92];
+
+/// Target presentation blend for directional light, ambient, and clear colour.
+#[must_use]
+pub fn presentation_day_factor_target(is_day: bool) -> f32 {
+    if is_day {
+        1.0
+    } else {
+        PRESENTATION_NIGHT_DAY_FACTOR
+    }
+}
+
+/// Linear interpolation between two sRGB triples (`t` in `0.0..=1.0`).
+#[must_use]
+pub fn lerp_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+    let t = t.clamp(0.0, 1.0);
+    [
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t,
+        a[2] + (b[2] - a[2]) * t,
+    ]
+}
+
+/// Clear / sky colour for a smoothed [`day_factor`](presentation_day_factor_target).
+#[must_use]
+pub fn presentation_clear_color_rgb(day_factor: f32) -> [f32; 3] {
+    lerp_rgb(
+        PRESENTATION_NIGHT_CLEAR_RGB,
+        PRESENTATION_DAY_CLEAR_RGB,
+        day_factor,
+    )
+}
+
+/// Ambient fill brightness for a smoothed `day_factor`.
+#[must_use]
+pub fn presentation_ambient_brightness(day_factor: f32) -> f32 {
+    PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS
+        + (PRESENTATION_DAY_AMBIENT_BRIGHTNESS - PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS) * day_factor
+}
+
+/// Ambient fill colour for a smoothed `day_factor`.
+#[must_use]
+pub fn presentation_ambient_color_rgb(day_factor: f32) -> [f32; 3] {
+    lerp_rgb(
+        PRESENTATION_NIGHT_AMBIENT_RGB,
+        PRESENTATION_DAY_AMBIENT_RGB,
+        day_factor,
+    )
+}
+
 /// Stub LOD selector: 0 = full detail, higher = coarser (max 3).
 #[must_use]
 pub fn mesh_lod_level(distance: f32) -> u8 {
@@ -797,6 +866,31 @@ mod tests {
         assert_eq!(mesh_lod_level(0.0), 0);
         assert_eq!(mesh_lod_level(48.0), 1);
         assert_eq!(mesh_lod_level(200.0), 3);
+    }
+
+    #[test]
+    fn presentation_day_factor_target_matches_web_night_blend() {
+        assert_eq!(presentation_day_factor_target(true), 1.0);
+        assert!((presentation_day_factor_target(false) - 0.3).abs() < 0.05);
+    }
+
+    #[test]
+    fn presentation_clear_color_lerps_day_and_night() {
+        let night = presentation_clear_color_rgb(0.0);
+        assert_eq!(night, PRESENTATION_NIGHT_CLEAR_RGB);
+        let day = presentation_clear_color_rgb(1.0);
+        assert_eq!(day, PRESENTATION_DAY_CLEAR_RGB);
+        let mid = presentation_clear_color_rgb(0.5);
+        assert!(mid[2] > night[2] && mid[2] < day[2]);
+    }
+
+    #[test]
+    fn presentation_ambient_warm_day_and_cool_night() {
+        let day = presentation_ambient_color_rgb(1.0);
+        let night = presentation_ambient_color_rgb(0.0);
+        assert!(day[0] > night[0], "day ambient should be warmer (more red)");
+        assert!(night[2] > day[2], "night ambient should be cooler (more blue)");
+        assert!(presentation_ambient_brightness(1.0) > presentation_ambient_brightness(0.0));
     }
 
     #[test]

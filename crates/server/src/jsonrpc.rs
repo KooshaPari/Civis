@@ -374,6 +374,21 @@ pub struct SnapshotFields {
     pub institutions: Vec<InstitutionSnapshot>,
     /// Military unit pins for spectator renderers (from ECS `MilitaryUnit`).
     pub military_units: Vec<MilitaryPinSnapshot>,
+    /// Damage events applied on the last tick (normalized centers).
+    pub damage_events: Vec<DamagePulseSnapshot>,
+    /// Count of damage events on the last tick.
+    pub damage_events_count: u32,
+    /// Voxels removed by tactical damage on the last tick.
+    pub voxel_damage_removed_this_tick: u32,
+}
+
+/// Tactical damage pulse for `sim.snapshot` (normalized map coords).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DamagePulseSnapshot {
+    /// Normalized map X.
+    pub x: f32,
+    /// Normalized map Y.
+    pub y: f32,
 }
 
 /// Military pin row for `sim.snapshot` (matches civ-watch wire shape).
@@ -449,6 +464,20 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.military_units).unwrap_or(Value::Null),
         );
     }
+    obj.insert(
+        "damage_events_count".to_owned(),
+        serde_json::json!(fields.damage_events_count),
+    );
+    obj.insert(
+        "voxel_damage_removed_this_tick".to_owned(),
+        serde_json::json!(fields.voxel_damage_removed_this_tick),
+    );
+    if !fields.damage_events.is_empty() {
+        obj.insert(
+            "damage_events".to_owned(),
+            serde_json::to_value(&fields.damage_events).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
 }
 
@@ -514,6 +543,13 @@ pub fn snapshot_fields_from_sim(
         spectator: Some(sim.spectator_view()),
         institutions: institutions_from_sim(sim),
         military_units: military_pins_from_sim(sim),
+        damage_events: sim
+            .last_tick_damage_centers()
+            .iter()
+            .map(|(x, y)| DamagePulseSnapshot { x: *x, y: *y })
+            .collect(),
+        damage_events_count: sim.last_tick_damage_centers().len() as u32,
+        voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
     }
 }
 
@@ -1541,6 +1577,49 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_fields_from_sim_includes_damage_after_tick() {
+        use civ_engine::DamageEvent;
+        use civ_voxel::{MaterialId, WorldCoord};
+
+        let mut sim = civ_engine::Simulation::with_seed(9);
+
+        // Pre-fill solid voxels at and around the damage center so that
+        // `apply_damage` has material to remove (an empty world returns 0).
+        let cx = civ_voxel::FIXED_SCALE / 2;
+        let cy = 0i64;
+        let cz = civ_voxel::FIXED_SCALE / 4;
+        for dx in -1i64..=1 {
+            for dy in -1i64..=1 {
+                for dz in -1i64..=1 {
+                    sim.push_voxel_write(
+                        WorldCoord {
+                            x: cx + dx,
+                            y: cy + dy,
+                            z: cz + dz,
+                        },
+                        MaterialId(1),
+                    );
+                }
+            }
+        }
+
+        sim.push_damage(DamageEvent {
+            center: WorldCoord {
+                x: cx,
+                y: cy,
+                z: cz,
+            },
+            radius_voxels: 1,
+            energy: 4,
+        });
+        sim.tick();
+        let fields = snapshot_fields_from_sim(&sim, 1);
+        assert_eq!(fields.damage_events_count, 1);
+        assert_eq!(fields.damage_events.len(), 1);
+        assert!(fields.voxel_damage_removed_this_tick > 0);
+    }
+
+    #[test]
     fn parse_spawn_civilian_params_accepts_normalized_coords() {
         let params = serde_json::json!({ "x": 0.25, "y": 0.75, "faction": 2 });
         let (x, y, faction) = parse_spawn_civilian_params(Some(&params)).expect("spawn params");
@@ -1711,6 +1790,9 @@ mod tests {
                     spectator: None,
                     institutions: vec![],
                     military_units: vec![],
+                    damage_events: vec![],
+                    damage_events_count: 0,
+                    voxel_damage_removed_this_tick: 0,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1732,6 +1814,8 @@ mod tests {
                 "hash_chain_root":
                     "a3f7c2b1e9d045f8a3f7c2b1e9d045f8a3f7c2b1e9d045f8a3f7c2b1e9d045f8",
                 "speed_multiplier": 1,
+                "damage_events_count": 0,
+                "voxel_damage_removed_this_tick": 0,
             }))
         );
     }
@@ -1756,6 +1840,9 @@ mod tests {
                     spectator: None,
                     institutions: vec![],
                     military_units: vec![],
+                    damage_events: vec![],
+                    damage_events_count: 0,
+                    voxel_damage_removed_this_tick: 0,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1773,6 +1860,8 @@ mod tests {
                     "food": 1_000,
                 },
                 "speed_multiplier": 1,
+                "damage_events_count": 0,
+                "voxel_damage_removed_this_tick": 0,
             }))
         );
         assert!(plan
@@ -1806,6 +1895,9 @@ mod tests {
                     spectator: None,
                     institutions: vec![],
                     military_units: vec![],
+                    damage_events: vec![],
+                    damage_events_count: 0,
+                    voxel_damage_removed_this_tick: 0,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1823,6 +1915,8 @@ mod tests {
                     "energy": 1_000,
                 },
                 "speed_multiplier": 1,
+                "damage_events_count": 0,
+                "voxel_damage_removed_this_tick": 0,
             }))
         );
     }

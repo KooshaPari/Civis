@@ -15,7 +15,17 @@ else
 fi
 
 echo "[security-guard] Running ggshield secret scan"
-"${GGSHIELD[@]}" secret scan pre-commit
+# ggshield exits 3 when unauthenticated (no GITGUARDIAN_API_KEY / no local token).
+# Treat that as a skip so local dev commits are not blocked when the key is absent.
+if ! "${GGSHIELD[@]}" secret scan pre-commit; then
+  exit_code=$?
+  if [ "$exit_code" -eq 3 ]; then
+    echo "[security-guard] ggshield not authenticated (exit 3) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2
+  else
+    echo "[security-guard] ggshield secret scan failed with exit code $exit_code" >&2
+    exit "$exit_code"
+  fi
+fi
 
 if command -v codespell >/dev/null 2>&1; then
   changed_files=$(git diff --cached --name-only --diff-filter=ACM || true)

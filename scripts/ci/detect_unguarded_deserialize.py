@@ -68,6 +68,8 @@ import argparse
 import json
 import re
 import sys
+
+from regex_timeout import compile as _re_compile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -112,13 +114,13 @@ def _capture_generic(text: str, start: int) -> tuple[str, int] | None:
 # ``JsonSerializer.DeserializeAsync<T>(...)``. We anchor on the ``<`` after
 # the method name and let _capture_generic walk the brackets. Module-level
 # regex finds the candidate, the helper extracts T precisely.
-STJ_DESERIALIZE_RE = re.compile(
+STJ_DESERIALIZE_RE = _re_compile(
     r"\bJsonSerializer\s*\.\s*"
     r"(?:Deserialize|DeserializeAsync)\s*<"
 )
 
 # Newtonsoft: ``JsonConvert.DeserializeObject<T>(...)``.
-NEWTONSOFT_DESERIALIZE_RE = re.compile(
+NEWTONSOFT_DESERIALIZE_RE = _re_compile(
     r"\bJsonConvert\s*\.\s*"
     r"(?:DeserializeObject|DeserializeAnonymousType)\s*<"
 )
@@ -127,7 +129,7 @@ NEWTONSOFT_DESERIALIZE_RE = re.compile(
 # instance variable. We catch the non-static form too, but exclude
 # ``_deserializer`` (YamlDotNet pattern in SDK content loaders, which is
 # not at the FFI boundary and has its own validation surface).
-INSTANCE_DESERIALIZE_RE = re.compile(
+INSTANCE_DESERIALIZE_RE = _re_compile(
     r"\b(?P<recv>" + _IDENT + r")\s*\.\s*Deserialize\s*<"
 )
 
@@ -136,7 +138,7 @@ INSTANCE_DESERIALIZE_RE = re.compile(
 #   public sealed class MyDto : IValidatable, IComparable<MyDto>
 #   internal record MyDto(int X) : IValidatable;
 #   public partial class MyDto : SomeBase, DINOForge.SDK.Validation.IValidatable
-IVALIDATABLE_DECL_RE = re.compile(
+IVALIDATABLE_DECL_RE = _re_compile(
     r"\b(?:class|record|struct)\s+(?P<name>" + _IDENT + r")\b"
     r"[^{;]*?:\s*[^{;]*?\bIValidatable\b",
     re.DOTALL,
@@ -144,7 +146,7 @@ IVALIDATABLE_DECL_RE = re.compile(
 
 # JsonGuard.* call (either ValidateOrThrow or TryValidate). Stops at end
 # of statement.
-JSONGUARD_CALL_RE = re.compile(
+JSONGUARD_CALL_RE = _re_compile(
     r"\bJsonGuard\s*\.\s*(?:ValidateOrThrow|TryValidate)\s*\("
 )
 
@@ -178,13 +180,13 @@ PARAMETRIC_COLLECTION_OUTER = frozenset({
 # ``JsonGuard.ValidateOrThrow(dict[key], ...)``. We use ``re.DOTALL`` to span
 # multiple lines inside the loop body. ``JSONGUARD_CALL_RE`` is reused after
 # we confirm the foreach scaffolding.
-PER_ELEMENT_FOREACH_RE = re.compile(
+PER_ELEMENT_FOREACH_RE = _re_compile(
     r"\bforeach\s*\([^)]*\)\s*"
     r"(?:\{[^{}]*?\bJsonGuard\s*\.\s*(?:ValidateOrThrow|TryValidate)\s*\("
     r"|[^{;]*?\bJsonGuard\s*\.\s*(?:ValidateOrThrow|TryValidate)\s*\()",
     re.DOTALL,
 )
-PER_ELEMENT_LINQ_FOREACH_RE = re.compile(
+PER_ELEMENT_LINQ_FOREACH_RE = _re_compile(
     r"\.\s*ForEach\s*\([^)]*=>\s*[^)]*?"
     r"\bJsonGuard\s*\.\s*(?:ValidateOrThrow|TryValidate)\s*\(",
     re.DOTALL,

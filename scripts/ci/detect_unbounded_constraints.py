@@ -63,6 +63,8 @@ import argparse
 import json
 import re
 import sys
+
+from regex_timeout import compile as _re_compile
 from datetime import datetime
 from pathlib import Path
 
@@ -98,7 +100,7 @@ SEV_LOW = "LOW"
 # ----------------------------------------------------------------------------
 
 # <PackageReference Include="X" Version="..."/>
-PACKAGE_REF_RE = re.compile(
+PACKAGE_REF_RE = _re_compile(
     r'<\s*Package(?:Reference|Version)\s+'
     r'(?:[^>]*?)'              # any other attrs
     r'(?:Include|Update)\s*=\s*"(?P<id>[^"]+)"'
@@ -108,7 +110,7 @@ PACKAGE_REF_RE = re.compile(
 )
 
 # Same but Version-first, Include-second
-PACKAGE_REF_VERSION_FIRST_RE = re.compile(
+PACKAGE_REF_VERSION_FIRST_RE = _re_compile(
     r'<\s*Package(?:Reference|Version)\s+'
     r'(?:[^>]*?)'
     r'Version\s*=\s*"(?P<ver>[^"]*)"'
@@ -389,20 +391,20 @@ def scan_gitignore_overbroad(path: Path, repo_root: Path) -> list[dict]:
 # ----------------------------------------------------------------------------
 
 # if (... || true)   — tautology
-TAUTOLOGY_OR_TRUE_RE = re.compile(
+TAUTOLOGY_OR_TRUE_RE = _re_compile(
     r"\bif\s*\(\s*(?P<expr>[^()]*?)\|\|\s*true\s*\)"
 )
 # if (true || ...)
-TAUTOLOGY_TRUE_OR_RE = re.compile(
+TAUTOLOGY_TRUE_OR_RE = _re_compile(
     r"\bif\s*\(\s*true\s*\|\|"
 )
 # if (true)  — bare always-true
-BARE_IF_TRUE_RE = re.compile(r"\bif\s*\(\s*true\s*\)")
+BARE_IF_TRUE_RE = _re_compile(r"\bif\s*\(\s*true\s*\)")
 # if (!false)
-NOT_FALSE_RE = re.compile(r"\bif\s*\(\s*!\s*false\s*\)")
+NOT_FALSE_RE = _re_compile(r"\bif\s*\(\s*!\s*false\s*\)")
 # while (true)  — intentional infinite loop, NOT flagged.
 # x == x  / x != x — tautologies/contradictions in conditions
-SELF_COMPARE_RE = re.compile(
+SELF_COMPARE_RE = _re_compile(
     r"\bif\s*\(\s*(?P<a>[A-Za-z_]\w*)\s*==\s*(?P=a)\s*\)"
 )
 
@@ -474,28 +476,28 @@ def scan_csharp_tautological(path: Path, repo_root: Path) -> list[dict]:
 # to detect vacuous ``>= 0`` guards: if the variable is a `Count`, a `Length`,
 # a `uint`, a `nuint`, or a `*Count` field, comparing it to ``>= 0`` is a
 # tautology.
-NONNEGATIVE_NAME_RE = re.compile(
+NONNEGATIVE_NAME_RE = _re_compile(
     r"\.(Count|Length|Capacity|Size|LongCount|LongLength)\b"
 )
 
 # Local int-typed identifiers — naming alone isn't enough. We restrict the
 # numeric-guard rule to known-property accesses that are documented as
 # non-negative. The focus is on common false-confidence shapes.
-COUNT_GE_ZERO_RE = re.compile(
+COUNT_GE_ZERO_RE = _re_compile(
     r"\bif\s*\(\s*"
     r"(?P<lhs>[A-Za-z_][\w\.]*?\.(?:Count|Length|Capacity|Size))"
     r"\s*>=\s*0\s*\)"
 )
 
 # `if (x <= int.MaxValue)` for an int-typed variable — vacuous.
-LE_INTMAX_RE = re.compile(
+LE_INTMAX_RE = _re_compile(
     r"\bif\s*\(\s*(?P<lhs>[A-Za-z_]\w*)\s*<=\s*int\.MaxValue\s*\)"
 )
-LE_LONGMAX_RE = re.compile(
+LE_LONGMAX_RE = _re_compile(
     r"\bif\s*\(\s*(?P<lhs>[A-Za-z_]\w*)\s*<=\s*long\.MaxValue\s*\)"
 )
 # `if (x >= int.MinValue)` — vacuous for any int.
-GE_INTMIN_RE = re.compile(
+GE_INTMIN_RE = _re_compile(
     r"\bif\s*\(\s*(?P<lhs>[A-Za-z_]\w*)\s*>=\s*int\.MinValue\s*\)"
 )
 
@@ -579,7 +581,7 @@ def scan_csharp_numeric(path: Path, repo_root: Path) -> list[dict]:
 # string.Join(", ", items)  — capture the entire 2nd-arg expression so we can
 # inspect it for truncation. We require a closing paren that matches the Join
 # call so we capture the full expression (no chain leakage).
-JOIN_RE = re.compile(
+JOIN_RE = _re_compile(
     r"\bstring\.Join\s*\(\s*"
     r"(?:\"[^\"]*\"|'[^']*')"            # separator literal
     r"\s*,\s*"

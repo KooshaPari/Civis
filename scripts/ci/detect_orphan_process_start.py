@@ -104,6 +104,8 @@ import argparse
 import json
 import re
 import sys
+
+from regex_timeout import compile as _re_compile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -117,7 +119,7 @@ from pathlib import Path
 # from matching ``MyProcess.Start(``. We accept the
 # ``System.Diagnostics.Process.Start(`` qualified form by allowing the
 # ``Diagnostics.`` prefix as optional.
-PROCESS_START_RE = re.compile(
+PROCESS_START_RE = _re_compile(
     r"(?<![A-Za-z0-9_.])"
     r"(?:System\.Diagnostics\.)?Process\.Start\s*\("
 )
@@ -126,7 +128,7 @@ PROCESS_START_RE = re.compile(
 # form (declaration). Also accepts the block-form
 # ``using (var <name> = Process.Start(...)) { }`` (with parens).
 # Treated as the safe pattern; auto-skipped.
-USING_DECL_RE = re.compile(
+USING_DECL_RE = _re_compile(
     r"\busing\s*\(?\s*(?:var\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s+)?"
     r"[A-Za-z_][A-Za-z0-9_]*\s*=\s*"
     r"(?:System\.Diagnostics\.)?Process\.Start\s*\("
@@ -135,7 +137,7 @@ USING_DECL_RE = re.compile(
 # ``<lhs> = Process.Start(...)`` — an assignment form. ``lhs`` may be
 # ``_field``, ``proc``, ``this.proc``, etc. We do NOT require a type
 # decl prefix so that field-assignment in a method body matches.
-ASSIGN_RE = re.compile(
+ASSIGN_RE = _re_compile(
     r"(?P<lhs>(?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)"
     r"\s*=\s*"
     r"(?:System\.Diagnostics\.)?Process\.Start\s*\("
@@ -143,13 +145,13 @@ ASSIGN_RE = re.compile(
 
 # Trailing-comment opt-out token. Anywhere on the same line as the
 # match, suppresses the hit.
-PATTERN_102_ALLOWED_RE = re.compile(r"//\s*pattern-102-allowed\b")
+PATTERN_102_ALLOWED_RE = _re_compile(r"//\s*pattern-102-allowed\b")
 
 # Cleanup patterns — a ``catch`` block that calls ``Kill()`` or
 # ``Dispose()`` is treated as a covering cleanup path. We don't
 # actually parse the catch; we look for the tokens within the next ~20
 # lines after a ``catch`` keyword.
-CLEANUP_TOKEN_RE = re.compile(r"\b(?:Kill|Dispose)\s*\(")
+CLEANUP_TOKEN_RE = _re_compile(r"\b(?:Kill|Dispose)\s*\(")
 
 # Default scan root.
 DEFAULT_SCAN_ROOT = "src"

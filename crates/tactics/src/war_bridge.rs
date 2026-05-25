@@ -52,7 +52,7 @@ pub struct WarBridgeConfig {
 impl Default for WarBridgeConfig {
     fn default() -> Self {
         Self {
-            cadence_ticks: 32,
+            cadence_ticks: 16,
             engage_range_grid: 8,
             damage_radius_voxels: 2,
             damage_energy: 250,

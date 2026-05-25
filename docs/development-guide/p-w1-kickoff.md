@@ -29,6 +29,10 @@
 | FR-CIV-TACTICS-030 | implemented | `OperationalLayer` hook |
 | FR-CIV-TACTICS-031 | implemented | `tick_operational_movement` toward enemies |
 | FR-CIV-TACTICS-032 | implemented | `MilitaryUnit::hp` / `max_hp` on ECS |
+| FR-CIV-TACTICS-033 | implemented | `bfs_next_step` pathfinding |
+| FR-CIV-TACTICS-034 | implemented | `ModHost::military_tick` / `read_military` stub |
+| FR-CIV-TACTICS-035 | implemented | movement cadence 4, war cadence 16, 2 movement pulses |
+| FR-CIV-TACTICS-025-int | implemented | `replay_combat_events_restore_pending_damage` |
 
 ## First PR slice (recommended)
 
@@ -38,8 +42,9 @@
 4. **Doctrine GA** — **done**.
 5. **LOS / formations / war bridge** — **done**.
 6. **Per-soldier combat + doctrine fitness + operational hook** — **done** (#300).
-7. **Movement + HP + replay combat** — **done** (item 8).
-8. **Next:** Deeper operational AI (pathfinding), replay round-trip combat assertions, WASM mod hooks.
+7. **Movement + HP + replay combat** — **done** (#301).
+8. **Pathfinding + more work/tick + replay combat + military mod hook** — **done** (item 9).
+9. **Next:** Obstacle-aware pathfinding, replay full-tick combat determinism, WASM `civlab_military_tick` export.
 
 ## Run
 

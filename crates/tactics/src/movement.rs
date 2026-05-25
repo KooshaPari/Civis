@@ -1,5 +1,6 @@
 //! Operational-layer grid movement toward enemies (FR-CIV-TACTICS-031).
 
+use crate::pathfinding::bfs_next_step;
 use crate::war_bridge::MilitaryUnitSample;
 
 /// Movement cadence for the operational layer.
@@ -7,11 +8,16 @@ use crate::war_bridge::MilitaryUnitSample;
 pub struct OperationalMovementConfig {
     /// Apply movement when `tick % cadence_ticks == 0`.
     pub cadence_ticks: u64,
+    /// BFS search radius on the grid plane.
+    pub path_search_radius: u32,
 }
 
 impl Default for OperationalMovementConfig {
     fn default() -> Self {
-        Self { cadence_ticks: 8 }
+        Self {
+            cadence_ticks: 4,
+            path_search_radius: 24,
+        }
     }
 }
 
@@ -20,7 +26,9 @@ impl Default for OperationalMovementConfig {
 pub struct GridMove {
     /// Index into the `MilitaryUnitSample` slice passed to [`tick_operational_movement`].
     pub unit_index: usize,
+    /// New grid X coordinate after the movement step.
     pub new_grid_x: i32,
+    /// New grid Y coordinate after the movement step.
     pub new_grid_y: i32,
 }
 
@@ -28,23 +36,28 @@ fn manhattan(a: (i32, i32), b: (i32, i32)) -> i32 {
     (a.0 - b.0).abs() + (a.1 - b.1).abs()
 }
 
-/// Deterministic step toward the nearest enemy unit on the grid plane.
-pub fn tick_operational_movement(
-    tick: u64,
+/// One movement pulse: pathfind one step toward the nearest enemy for each unit.
+///
+/// Positions are snapshotted at pulse start so all units move simultaneously;
+/// after computing all moves the slice is updated in-place so the next pulse
+/// sees the new positions.
+pub fn operational_movement_pulse(
     config: &OperationalMovementConfig,
-    units: &[MilitaryUnitSample],
+    units: &mut [MilitaryUnitSample],
 ) -> Vec<GridMove> {
-    if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 {
-        return Vec::new();
-    }
+    // Snapshot positions so the read loop and write loop are separate.
+    let positions: Vec<(i32, i32)> = units.iter().map(|u| (u.grid_x, u.grid_y)).collect();
+    let factions: Vec<u32> = units.iter().map(|u| u.faction_id).collect();
+
     let mut moves = Vec::new();
-    for (i, unit) in units.iter().enumerate() {
+    for i in 0..units.len() {
+        let from = positions[i];
         let mut best: Option<(usize, i32)> = None;
-        for (j, other) in units.iter().enumerate() {
-            if i == j || unit.faction_id == other.faction_id {
+        for j in 0..units.len() {
+            if i == j || factions[i] == factions[j] {
                 continue;
             }
-            let dist = manhattan((unit.grid_x, unit.grid_y), (other.grid_x, other.grid_y));
+            let dist = manhattan(from, positions[j]);
             if dist == 0 {
                 continue;
             }
@@ -57,17 +70,39 @@ pub fn tick_operational_movement(
         let Some((enemy_idx, _)) = best else {
             continue;
         };
-        let enemy = &units[enemy_idx];
-        let dx = (enemy.grid_x - unit.grid_x).clamp(-1, 1);
-        let dy = (enemy.grid_y - unit.grid_y).clamp(-1, 1);
-        if dx == 0 && dy == 0 {
+        let to = positions[enemy_idx];
+        let Some((nx, ny)) = bfs_next_step(from, to, config.path_search_radius) else {
             continue;
-        }
+        };
         moves.push(GridMove {
             unit_index: i,
-            new_grid_x: unit.grid_x + dx,
-            new_grid_y: unit.grid_y + dy,
+            new_grid_x: nx,
+            new_grid_y: ny,
         });
     }
+
+    // Apply position updates so subsequent pulses see current positions.
+    for gm in &moves {
+        units[gm.unit_index].grid_x = gm.new_grid_x;
+        units[gm.unit_index].grid_y = gm.new_grid_y;
+    }
+
     moves
+}
+
+/// Deterministic pathfinding step(s) toward the nearest enemy unit on the grid plane.
+pub fn tick_operational_movement(
+    tick: u64,
+    config: &OperationalMovementConfig,
+    units: &mut [MilitaryUnitSample],
+    pulses: u8,
+) -> Vec<GridMove> {
+    if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 || pulses == 0 {
+        return Vec::new();
+    }
+    let mut all_moves = Vec::new();
+    for _ in 0..pulses {
+        all_moves.extend(operational_movement_pulse(config, units));
+    }
+    all_moves
 }

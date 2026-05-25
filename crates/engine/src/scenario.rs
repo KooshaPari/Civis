@@ -220,6 +220,12 @@ mods:
         let sim = scenario.into_simulation(99);
         assert_eq!(sim.mod_host().mods().len(), 1);
         assert_eq!(sim.mod_host().mods()[0].manifest.meta.id, "example-policy");
+        assert!(
+            sim.replay_log()
+                .events
+                .iter()
+                .any(|e| matches!(e, crate::ReplayEvent::ModLoaded { mod_id, .. } if mod_id == "example-policy"))
+        );
     }
 
     #[test]

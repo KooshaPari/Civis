@@ -57,9 +57,19 @@ civis-3d-catalog-check:
 civis-3d-scenario-check:
     cargo test -p civ-engine scenario --quiet
 
+civis-3d-web-check:
+    node --test web/tests/*.test.mjs
+
+civis-3d-mod-check:
+    cargo test -p civ-mod-host -p civlab-sdk --quiet
+
+# Build example-policy WASM guest (requires wasm32-wasi target).
+civis-3d-mod-wasm:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-example-policy-wasm.ps1
+
 # 3D verification gate: build + test + clippy --all-targets + fmt --check.
 # Used by P-V0..P-U1 phase PRs before push.
-civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check
+civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-check civis-3d-mod-check
     cargo build --workspace
     cargo test --workspace
     cargo clippy --workspace --all-targets -- -D warnings

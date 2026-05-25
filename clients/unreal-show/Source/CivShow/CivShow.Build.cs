@@ -18,6 +18,7 @@ public class CivShow : ModuleRules
             "Json",
             "JsonUtilities",
             "ProceduralMeshComponent",
+            "UMG",
         });
 
         PrivateDependencyModuleNames.AddRange(new[]

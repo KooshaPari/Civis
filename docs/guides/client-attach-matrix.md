@@ -46,7 +46,7 @@ Unreal: `UCivWsClient::SpawnEntity` / `UCivProtocolClient::SpawnEntity` — HTTP
 | Bevy | 160×160 chunk dots; click-to-focus — [`minimap-conventions.md`](minimap-conventions.md) |
 | Godot | 128×128 terrain texture + orbit dot |
 | Web dashboard | Terrain preview canvas; no click-to-focus yet |
-| **Unreal CivShow** | **Out of scope until implemented** — no overview map; use Bevy/Godot for minimap parity checks |
+| **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho) + `UCivMinimapWidget` UMG in `CivShowGameMode`; no click-to-focus yet |
 
 ## Services to start (local demo)
 

@@ -13,8 +13,8 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |---------|----------|-------------------|
 | **AX (agents)** | Good | `AGENTS.md` + `agent-smoke.ps1` + attach matrix; optional `-FullUnreal` off default verify |
 | **DX (developers)** | Good | `just civis-3d-verify` (catalog + scenario checks), `jsonrpc-surface.md`, `client-attach-matrix.md` |
-| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial** — Bevy full mesh; Godot/Unreal **VoxelDelta markers** only |
-| **Modding** | Partial (v1 manifest) | v1 done; v2 registry / WASM / phase hooks only if product needs full mod mesh |
+| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial** — Bevy full mesh; Godot/Unreal **VoxelDelta markers**; Unreal minimap UMG partial |
+| **Modding** | Partial (v3) | Manifest + `.civmod` + WASM policy tick + `ReplayEvent::ModLoaded`; no signing / economic WASM |
 
 **Gates (2026-05-25):** `ws_smoke` 32 tests · `just civis-3d-verify` pass (incl. `check-jsonrpc-catalog.ps1`, `civis-3d-scenario-check`).
 
@@ -39,7 +39,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | ID | Gap | Evidence | Finish criterion |
 |----|-----|----------|------------------|
-| DX-01 | **Modding API** v1 + v2 stub | `ModRegistry`, policy phase logs; no WASM | v3 WASM / `.civmod` per `fr-modding-roadmap.md` |
+| DX-01 | **Modding API** v3 partial | `wasmtime`, `.civmod`, `civlab-sdk`; 7 `civ-mod-host` tests | Capability API + economic WASM per `fr-modding-roadmap.md` |
 | DX-02 | ~~Scenario YAML~~ **Done** | [`scenario-yaml.md`](../guides/scenario-yaml.md); `civis-3d-scenario-check` in verify | Keep keys in sync with `scenario.rs` |
 | DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`jsonrpc-surface.md`](../api/jsonrpc-surface.md) + [`scripts/check-jsonrpc-catalog.ps1`](../../scripts/check-jsonrpc-catalog.ps1) in `civis-3d-verify` | Keep doc table in sync when adding `JsonRpcMethod` variants |
 | DX-04 | ~~Client attach matrix~~ **Done** | [`docs/guides/client-attach-matrix.md`](../guides/client-attach-matrix.md) | Update when new client or default URL changes |
@@ -56,7 +56,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | UX-01 | **`job` on `civ_pins`** wired from `Citizen` on agent entities | `spectator.rs` reads `Citizen.job`; `attach_citizen_to_agents` | **Mature** — `civ-engine` `civ_pins_include_job_when_citizen_component_present` |
 | UX-02 | ~~Cross-client spawn palette~~ **Partial–Good** | [`client-attach-matrix.md`](../guides/client-attach-matrix.md) — all five `kind`s on WS; `ws_smoke` covers civilian + vehicle | Optional `ws_smoke` per `port` / `hangar` |
 | UX-03 | **F3D0 voxel stream** partial on Godot/Unreal | Bevy: binary `Frame3d` mesh; Godot/Unreal: **VoxelDelta chunk markers** + snapshot throttle | Full voxel mesh on second client only if product needs parity with Bevy |
-| UX-04 | **Minimap conventions** — Bevy/Godot/web; Unreal none | `minimap-conventions.md`, `client-attach-matrix.md` UX-04 | **Documented** — Unreal out of scope until implemented |
+| UX-04 | **Minimap conventions** — Bevy/Godot/web; Unreal partial | `ACivMinimapCapture` + `UCivMinimapWidget` in CivShow | Click-to-focus + parity tests when product needs it |
 | UX-05 | **spectator_mode default** differs (Godot true, web false) | Confusing for demos | Document in attach matrix; align defaults or query params |
 | UX-06 | **Manor Lords L5** incremental only | `fr-l5-visual-pass.md` IN PROGRESS | Close scoped slices; defer art to Quixel |
 | UX-07 | **Modder-facing surface** none | No in-game mod browser; no hot reload | Post CIV-0700 MVP |
@@ -67,13 +67,13 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | Area | Status | Notes |
 |------|--------|-------|
-| WASM sandbox | Missing | Spec §3 — no `wasmtime` / host in workspace |
-| `.civmod` format | Missing | Spec §11 |
-| `civlab-sdk` guest crate | Missing | Spec §9 |
+| WASM sandbox | **Partial** | `wasmtime` policy tick in `civ-mod-host`; no full capability API |
+| `.civmod` format | **Partial** | ZIP load in `ModHost::load_civmod_archive` |
+| `civlab-sdk` guest crate | **Partial** | `crates/civlab-sdk` + `build-example-policy-wasm.ps1` |
 | `mods/` directory | **Partial** | `mods/manifest.schema.json`, `mods/example-policy/manifest.toml` |
-| Manifest host (`civ-mod-host`) | **Partial** | `crates/mod-host` — load/validate, no-op `tick`, 3 unit tests |
-| Engine scenario hook | **Partial** | `Scenario.mods`, `Simulation::register_mod_stubs` |
-| PolicyMod / EconomicMod hooks | Missing | No phase hooks in `engine.rs` |
+| Manifest host (`civ-mod-host`) | **Partial** | 7 unit tests; WASM + registry policy phase |
+| Engine scenario hook | **Partial** | `register_mod_stubs`; `ReplayEvent::ModLoaded` in replay |
+| PolicyMod / EconomicMod hooks | **Partial** | Economy phase `ModHost::tick`; military stub; no economic WASM |
 | Lua scenario path | Missing | Spec §12 |
 | Mod signing / dev mode | Missing | Spec §14 |
 

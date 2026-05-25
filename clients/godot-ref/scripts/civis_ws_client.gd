@@ -7,6 +7,7 @@ signal snapshot_received(snapshot: Dictionary)
 signal connection_changed(state: String)
 signal f3d0_frame_received(kind: String, tick: int, frame: Variant)
 
+## WebSocket URL for civ-server. Override via CIV_SERVER_WS env var or the Inspector.
 @export var ws_url := "ws://127.0.0.1:3000/ws?tick_format=binary"
 @export var reconnect_delay_sec := 3.0
 @export var snapshot_throttle_ms := 250

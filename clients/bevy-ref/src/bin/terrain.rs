@@ -127,7 +127,11 @@ fn smoothstep(t: f32) -> f32 {
 #[allow(clippy::unusual_byte_groupings)]
 fn hash_to_unit(x: i32, y: i32, seed: u64) -> f32 {
     let mut h: u64 = 0xcbf29ce484222325 ^ seed;
-    let bytes = [x.to_le_bytes(), y.to_le_bytes(), (seed as i32).to_le_bytes()];
+    let bytes = [
+        x.to_le_bytes(),
+        y.to_le_bytes(),
+        (seed as i32).to_le_bytes(),
+    ];
     for b in bytes.iter().flatten() {
         h ^= u64::from(*b);
         h = h.wrapping_mul(0x100000001b3);

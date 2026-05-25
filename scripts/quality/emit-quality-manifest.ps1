@@ -39,6 +39,9 @@ Invoke-Gate "dashboard_typecheck" {
 
 $repoRoot = (git rev-parse --show-toplevel).Trim()
 $optionalUnreal = & (Join-Path $PSScriptRoot 'Invoke-OptionalUnrealGates.ps1') -RepoRoot $repoRoot
+# Guard against null return when Invoke-OptionalUnrealGates.ps1 exits early
+# (no Unreal install detected and CIVIS_QUALITY_UNREAL is unset).
+if ($null -eq $optionalUnreal) { $optionalUnreal = @{} }
 foreach ($entry in $optionalUnreal.GetEnumerator()) {
     $results[$entry.Key] = $entry.Value
     if ($entry.Value.status -eq 'fail') { $Failed = $true }

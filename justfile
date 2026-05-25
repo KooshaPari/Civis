@@ -67,10 +67,12 @@ civis-3d-mod-check:
 civis-3d-mod-wasm:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-example-policy-wasm.ps1
 
-# 3D verification gate: build + test + clippy --all-targets + fmt --check.
+# 3D verification gate: check + test + clippy --all-targets + fmt --check.
+# Uses cargo check (not build) so the gate works when service binaries are
+# held open by the running dev stack (Windows exe-lock).
 # Used by P-V0..P-U1 phase PRs before push.
 civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-check civis-3d-mod-check
-    cargo build --workspace
+    cargo check --workspace
     cargo test --workspace
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check

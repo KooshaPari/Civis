@@ -10,7 +10,9 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
 use civ_agents::{spawn_civilian_at, Civilian as AgentCivilian, Position3d, Velocity};
-use civ_bevy_ref::{agent_color_from_id, agent_scale_multiplier, CameraTarget};
+use civ_bevy_ref::{
+    agent_color_from_id, agent_scale_multiplier, CameraTarget,
+};
 use civ_engine::Simulation;
 use civ_voxel::FIXED_SCALE;
 use terrain::{Biome, Terrain, SIZE};
@@ -158,15 +160,15 @@ fn setup(
     sim_state: Res<StandaloneSim>,
 ) {
     let camera_target = CameraTarget {
-        centre: [128.0, 0.0, 128.0],
+        centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
         distance: 240.0,
         azimuth_rad: std::f32::consts::FRAC_PI_4,
         elevation_rad: 0.8,
     };
-    let eye = Vec3::new(128.0, 200.0, 300.0);
-    let centre = Vec3::new(128.0, 0.0, 128.0);
+    let eye = camera_target.orbit_position();
+    let centre = Vec3::from_array(camera_target.centre);
 
-    commands.insert_resource(ClearColor(Color::srgb_u8(0x87, 0xb7, 0xe0)));
+    commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
     commands.insert_resource(AmbientLight {
         color: Color::srgb(0.72, 0.78, 0.9),
         brightness: 1_300.0,
@@ -178,36 +180,16 @@ fn setup(
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_xyz(eye.x + 80.0, eye.y + 120.0, eye.z + 40.0).looking_at(centre, Vec3::Y),
+        Transform::from_xyz(eye[0] + 80.0, eye[1] + 120.0, eye[2] + 40.0).looking_at(centre, Vec3::Y),
     ));
 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(eye.x, eye.y, eye.z).looking_at(centre, Vec3::Y),
+        Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
 
-    commands.spawn((
-        Camera2d,
-        Camera {
-            order: 1,
-            ..default()
-        },
-    ));
-
-    spawn_terrain(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &sim_state.terrain,
-        &mut terrain_visuals,
-    );
-    seed_initial_civilians(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &sim_state.sim,
-        &mut civilian_visuals,
-    );
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &sim_state.terrain, &mut terrain_visuals);
+    seed_initial_civilians(&mut commands, &mut meshes, &mut materials, &sim_state.sim, &mut civilian_visuals);
 
     let overlay = commands
         .spawn((
@@ -274,10 +256,7 @@ fn spawn_terrain(
         }
     }
 
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
@@ -301,11 +280,7 @@ fn spawn_terrain(
         },
     ));
 
-    let water_mesh = meshes.add(
-        Plane3d::default()
-            .mesh()
-            .size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE),
-    );
+    let water_mesh = meshes.add(Plane3d::default().mesh().size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE));
     let water = commands
         .spawn((
             PbrBundle {
@@ -401,13 +376,11 @@ fn seed_initial_civilians(
         let handle = visuals
             .materials
             .entry(material_key)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                    perceptual_roughness: 0.6,
-                    ..default()
-                })
-            })
+            .or_insert_with(|| materials.add(StandardMaterial {
+                base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
+                perceptual_roughness: 0.6,
+                ..default()
+            }))
             .clone();
         if let Some(entity) = visuals.pool.get(idx).copied() {
             commands.entity(entity).insert(handle);
@@ -415,11 +388,7 @@ fn seed_initial_civilians(
     }
 }
 
-fn tick_simulation(
-    time: Res<Time>,
-    mut timer: ResMut<SimTickTimer>,
-    mut state: ResMut<StandaloneSim>,
-) {
+fn tick_simulation(time: Res<Time>, mut timer: ResMut<SimTickTimer>, mut state: ResMut<StandaloneSim>) {
     if state.paused {
         return;
     }
@@ -440,12 +409,7 @@ fn input_controls(
         state.paused = !state.paused;
     }
 
-    for key in [
-        KeyCode::Digit1,
-        KeyCode::Digit2,
-        KeyCode::Digit3,
-        KeyCode::Digit4,
-    ] {
+    for key in [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4] {
         if keys.just_pressed(key) {
             let idx = match key {
                 KeyCode::Digit1 => 0,
@@ -528,8 +492,7 @@ fn orbit_camera_transform(
         return;
     };
     let eye = orbit.as_target().orbit_position();
-    *transform = Transform::from_xyz(eye[0], eye[1], eye[2])
-        .looking_at(Vec3::from_array(orbit.centre), Vec3::Y);
+    *transform = Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(Vec3::from_array(orbit.centre), Vec3::Y);
 }
 
 fn update_civilian_meshes(
@@ -560,11 +523,8 @@ fn update_civilian_meshes(
         if let Some((_, (civilian, pos, _vel))) = visible {
             let x = pos.coord.x as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
             let z = pos.coord.z as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
-            let y = sample_height(
-                &state.terrain,
-                x / TERRAIN_WORLD_SIZE,
-                z / TERRAIN_WORLD_SIZE,
-            ) * TERRAIN_HEIGHT_SCALE
+            let y = sample_height(&state.terrain, x / TERRAIN_WORLD_SIZE, z / TERRAIN_WORLD_SIZE)
+                * TERRAIN_HEIGHT_SCALE
                 + 1.0;
             if let Ok(mut transform) = transforms.get_mut(entity) {
                 transform.translation = Vec3::new(x, y, z);

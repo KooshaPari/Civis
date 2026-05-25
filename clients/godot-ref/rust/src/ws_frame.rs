@@ -75,16 +75,16 @@ pub fn decode_ws_packet_bytes(bytes: &[u8]) -> Result<DecodedWsPacket, String> {
 pub fn decoded_to_dictionary(packet: DecodedWsPacket) -> VarDictionary {
     let mut dict = VarDictionary::new();
     dict.set("ok", true);
-    dict.set("kind", packet.kind.as_str());
+    dict.set("kind", GString::from(&packet.kind));
     dict.set("tick", packet.tick as i64);
-    dict.set("json", packet.json.as_str());
+    dict.set("json", GString::from(&packet.json));
     dict
 }
 
 pub fn error_to_dictionary(err: String) -> VarDictionary {
     let mut dict = VarDictionary::new();
     dict.set("ok", false);
-    dict.set("error", err.as_str());
+    dict.set("error", GString::from(&err));
     dict
 }
 

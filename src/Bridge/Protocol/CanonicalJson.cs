@@ -223,14 +223,18 @@ public static class CanonicalJson
         return false;
     }
 
+    private static readonly long NegativeZeroDoubleBits = BitConverter.DoubleToInt64Bits(-0.0);
+
+    private static readonly int NegativeZeroFloatBits =
+        BitConverter.ToInt32(BitConverter.GetBytes(-0.0f), 0);
+
     private static bool IsNegativeZero(double value)
     {
-        return value == 0d && BitConverter.DoubleToInt64Bits(value) < 0;
+        return BitConverter.DoubleToInt64Bits(value) == NegativeZeroDoubleBits;
     }
 
     private static bool IsNegativeZero(float value)
     {
-        byte[] bytes = BitConverter.GetBytes(value);
-        return value == 0f && (bytes[3] & 0x80) != 0;
+        return BitConverter.ToInt32(BitConverter.GetBytes(value), 0) == NegativeZeroFloatBits;
     }
 }

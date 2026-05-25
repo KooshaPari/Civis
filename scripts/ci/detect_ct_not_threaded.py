@@ -135,13 +135,8 @@ def find_ct_violations(cs_file, allowlist):
                     # Check if ANY valid CT (original param or derived alias) is in args
                     has_valid_ct = False
                     for valid_ct in valid_cts:
-                        # For aliases like "linkedCts.Token", we need to match the full expression
-                        if '.' in valid_ct:
-                            # Match as word boundary: linkedCts.Token (not as substring)
-                            pattern = r'\b' + re.escape(valid_ct) + r'\b'
-                        else:
-                            # Simple param name
-                            pattern = r'\b' + re.escape(valid_ct) + r'\b'
+                        # Word-boundary match for param names and aliases (e.g. linkedCts.Token).
+                        pattern = r'\b' + re.escape(valid_ct) + r'\b'
                         if re.search(pattern, args):
                             has_valid_ct = True
                             break

@@ -48,8 +48,7 @@ namespace DINOForge.Runtime
             try
             {
                 string debugLog = Path.Combine(Paths.BepInExRootPath, "dinoforge_debug.log");
-                // unbounded-log-ok: static ctor, one-shot per AppDomain load (diagnostic probe) — Pattern #232 allowlisted
-                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [STATIC] Plugin class referenced\n");
+                File.AppendAllText(debugLog, $"[{DateTime.UtcNow:o}] [STATIC] Plugin class referenced\n"); // unbounded-log-ok: static ctor fires once per AppDomain load; one-shot probe before DebugLog is initialized — Pattern #232
             }
             catch { } // safe-swallow: diagnostic only
         }
@@ -1268,18 +1267,20 @@ namespace DINOForge.Runtime
 
                 yield return null;
 
-                ContentLoadResult? result = null;
+                ContentLoadResult loadResult = null!;
+                bool loadCompleted = false;
                 ModPlatform modPlatform = _modPlatform;
                 RunPhaseWithAbortGuard("ModPlatform.LoadPacks", () =>
                 {
-                    result = modPlatform.LoadPacks();
+                    loadResult = modPlatform.LoadPacks();
+                    loadCompleted = true;
                 });
 
-                if (result != null)
+                if (loadCompleted)
                 {
-                    _log?.LogInfo($"[RuntimeDriver.diag] LoadPacks returned, modPlatformReady={modPlatform != null}, packCount={result.LoadedPacks.Count} — entering UGUI push block");
-                    _log?.LogInfo($"[RuntimeDriver] Pack loading complete: success={result.IsSuccess}, " +
-                        $"loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+                    _log?.LogInfo($"[RuntimeDriver.diag] LoadPacks returned, modPlatformReady={modPlatform != null}, packCount={loadResult.LoadedPacks.Count} — entering UGUI push block");
+                    _log?.LogInfo($"[RuntimeDriver] Pack loading complete: success={loadResult.IsSuccess}, " +
+                        $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
                 }
@@ -1327,16 +1328,18 @@ namespace DINOForge.Runtime
             _log.LogInfo($"[RuntimeDriver] Processing deferred pack reload ({reason}).");
             yield return null;
 
-            ContentLoadResult? result = null;
+            ContentLoadResult loadResult = null!;
+            bool loadCompleted = false;
             RunPhaseWithAbortGuard("ModPlatform.LoadPacks", () =>
             {
-                result = _modPlatform.LoadPacks();
+                loadResult = _modPlatform.LoadPacks();
+                loadCompleted = true;
             });
 
-            if (result != null)
+            if (loadCompleted)
             {
-                _log.LogInfo($"[RuntimeDriver] Deferred pack reload complete: success={result.IsSuccess}, " +
-                    $"loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+                _log.LogInfo($"[RuntimeDriver] Deferred pack reload complete: success={loadResult.IsSuccess}, " +
+                    $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                 _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('deferred reload') — dfCanvas={_dfCanvas != null}, modPlatform={_modPlatform != null}");
                 PushLoadedPacksToUgui("deferred reload");
             }

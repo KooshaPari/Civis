@@ -136,7 +136,7 @@ public sealed class GameClient : IGameClient, IDisposable
     /// <exception cref="GameClientException">Thrown when the connection fails.</exception>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        await ConnectAsync(connectTimeout: null, ct);
+        await ConnectAsync(connectTimeout: null, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -169,7 +169,7 @@ public sealed class GameClient : IGameClient, IDisposable
 
             try
             {
-                await _pipe.ConnectAsync(linkedCts.Token);
+                await _pipe.ConnectAsync(linkedCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex) when (timeoutCts.Token.IsCancellationRequested)
             {
@@ -187,7 +187,7 @@ public sealed class GameClient : IGameClient, IDisposable
             LastFrame = 0;
             if (_options.PerformConnectHandshake)
             {
-                await PerformHandshakeAsync(linkedCts.Token);
+                await PerformHandshakeAsync(linkedCts.Token).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -234,7 +234,7 @@ public sealed class GameClient : IGameClient, IDisposable
         {
             // The connect handshake currently has no parameters — the server
             // mints the session id + ephemeral key and returns them.
-            JObject result = await SendRequestAsync<JObject>("connect", parameters: null, ct: ct);
+            JObject result = await SendRequestAsync<JObject>("connect", parameters: null, ct: ct).ConfigureAwait(false);
 
             string? sessionId = result.Value<string>("session_id");
             string? sessionKeyB64 = result.Value<string>("session_key_b64");
@@ -496,14 +496,14 @@ public sealed class GameClient : IGameClient, IDisposable
             if (attempt > 0)
             {
                 _logger.Warning("Retrying request '{Method}' (attempt {Attempt}/{MaxAttempts})", method, attempt + 1, _options.RetryCount + 1);
-                await Task.Delay(_options.RetryDelayMs, ct);
+                await Task.Delay(_options.RetryDelayMs, ct).ConfigureAwait(false);
             }
 
             try
             {
                 _logger.Debug("Sending request '{Method}' to pipe '{PipeName}' (attempt {Attempt}/{MaxAttempts})",
                     method, _options.PipeName, attempt + 1, _options.RetryCount + 1);
-                return await SendRequestCoreAsync<T>(method, parameters, ct);
+                return await SendRequestCoreAsync<T>(method, parameters, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -519,7 +519,7 @@ public sealed class GameClient : IGameClient, IDisposable
                 {
                     try
                     {
-                        await ConnectAsync(ct);
+                        await ConnectAsync(ct).ConfigureAwait(false);
                     }
                     catch (Exception reconnectEx) // safe-swallow: reconnect attempt; retry loop will surface terminal failure
                     {
@@ -555,7 +555,7 @@ public sealed class GameClient : IGameClient, IDisposable
         string requestJson = JsonConvert.SerializeObject(request, Formatting.None,
             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
-        await _sendLock.WaitAsync(ct);
+        await _sendLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -569,12 +569,12 @@ public sealed class GameClient : IGameClient, IDisposable
             {
                 if (_options.UseMessageFraming)
                 {
-                    await WriteFramedMessageAsync(requestJson, sendLinkedCts.Token);
+                    await WriteFramedMessageAsync(requestJson, sendLinkedCts.Token).ConfigureAwait(false);
                 }
                 else
                 {
                     // null-forgiveness-ok: _writer set in ConnectAsync before any write
-                    await Task.Run(() => _writer!.WriteLineAsync(requestJson), ct);
+                    await Task.Run(() => _writer!.WriteLineAsync(requestJson), ct).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException ex) when (sendTimeoutCts.Token.IsCancellationRequested)
@@ -595,7 +595,7 @@ public sealed class GameClient : IGameClient, IDisposable
             {
                 if (_options.UseMessageFraming)
                 {
-                    responseLine = await ReadFramedMessageAsync(readLinkedCts.Token);
+                    responseLine = await ReadFramedMessageAsync(readLinkedCts.Token).ConfigureAwait(false);
                 }
                 else
                 {
@@ -603,7 +603,7 @@ public sealed class GameClient : IGameClient, IDisposable
                     if (_reader is null)
                         throw new GameClientException("Not connected to the game bridge. Call ConnectAsync first.");
 
-                    responseLine = await ReadLineAsync(_reader, readLinkedCts.Token);
+                    responseLine = await ReadLineAsync(_reader, readLinkedCts.Token).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException ex) when (readTimeoutCts.Token.IsCancellationRequested)
@@ -676,6 +676,7 @@ public sealed class GameClient : IGameClient, IDisposable
         }
     }
 
+    // ct-threading-ok: StreamReader.ReadLineAsync has no CancellationToken overload; ct is polled via Task.Delay in the wait loop.
     private static async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken ct)
     {
         // Wrap StreamReader.ReadLineAsync in a cancellation-aware Task.WhenAny.
@@ -689,7 +690,7 @@ public sealed class GameClient : IGameClient, IDisposable
             {
                 ct.ThrowIfCancellationRequested();
                 Task delayTask = Task.Delay(200, ct);
-                await delayTask;
+                await delayTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (reader.BaseStream is NamedPipeClientStream pipe && !pipe.IsConnected)
             {
@@ -702,7 +703,7 @@ public sealed class GameClient : IGameClient, IDisposable
         // Safe: readTask.IsCompleted is true by loop exit invariant
         try
         {
-            return await readTask;
+            return await readTask.ConfigureAwait(false);
         }
         catch (NullReferenceException nre)
         {
@@ -733,8 +734,8 @@ public sealed class GameClient : IGameClient, IDisposable
         if (BitConverter.IsLittleEndian)
             Array.Reverse(lengthBytes);
 
-        await _pipe.WriteAsync(lengthBytes, 0, 4, ct);
-        await _pipe.WriteAsync(messageBytes, 0, messageBytes.Length, ct);
+        await _pipe.WriteAsync(lengthBytes, 0, 4, ct).ConfigureAwait(false);
+        await _pipe.WriteAsync(messageBytes, 0, messageBytes.Length, ct).ConfigureAwait(false);
 
         _logger.Debug("Wrote framed message: {LengthBytes} byte header + {MessageLengthBytes} byte payload",
             4, messageBytes.Length);
@@ -758,7 +759,7 @@ public sealed class GameClient : IGameClient, IDisposable
         int totalRead = 0;
         while (totalRead < 4)
         {
-            int n = await _pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead, ct);
+            int n = await _pipe.ReadAsync(lengthBuffer, totalRead, 4 - totalRead, ct).ConfigureAwait(false);
             if (n == 0)
             {
                 if (totalRead == 0)
@@ -788,7 +789,7 @@ public sealed class GameClient : IGameClient, IDisposable
 
         while (offset < frameLength)
         {
-            int bytesRead = await _pipe.ReadAsync(messageBuffer, offset, (int)(frameLength - offset), ct);
+            int bytesRead = await _pipe.ReadAsync(messageBuffer, offset, (int)(frameLength - offset), ct).ConfigureAwait(false);
 
             if (bytesRead == 0)
                 throw new ProtocolException(

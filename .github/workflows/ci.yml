@@ -33,7 +33,10 @@ jobs:
           cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
+        run: |
+          dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
+          dotnet restore src/Tests/DINOForge.Tests.csproj /p:RestoreLockedMode=true
+          dotnet restore src/Tests/Integration/DINOForge.Tests.Integration.csproj /p:RestoreLockedMode=true
         env:
           CI: 'true'
 

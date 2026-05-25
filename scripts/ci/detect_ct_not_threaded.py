@@ -105,6 +105,16 @@ def find_ct_violations(cs_file, allowlist):
             ct_aliases = find_ct_aliases(body_text)
             valid_cts.update(ct_aliases)
 
+            # APIs without CancellationToken overloads (e.g. StreamReader.ReadLineAsync):
+            # cooperative cancel via Task.Delay(..., ct) polling loop.
+            if re.search(
+                rf'Task\.Delay\s*\(\s*\d+\s*,\s*\b{re.escape(ct_param)}\b',
+                body_text,
+            ):
+                safe_methods.append(f"{relative}:{i+1}")
+                i += 1
+                continue
+
             # Conservative: only flag if there's an await that clearly lacks ANY valid CT
             # by searching for patterns like: await SomeMethod(...) where NO valid CT is in args
             found_violation = False
@@ -249,6 +259,7 @@ def run_self_test():
         # New token aliasing tests
         ("async Task DoWork(CancellationToken ct) { using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct); await SomethingAsync(linkedCts.Token); }", False, "Token alias from CreateLinkedTokenSource is safe"),
         ("async Task DoWork(CancellationToken ct) { using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct); await SomethingAsync(); }", True, "Token alias exists but not used in awaits"),
+        ("async Task<string?> ReadLineAsync(CancellationToken ct) { Task<string?> readTask = reader.ReadLineAsync(); while (!readTask.IsCompleted) { await Task.Delay(200, ct); } return await readTask; }", False, "Task.Delay(ct) polling loop threads cancellation"),
     ]
 
     passed = 0

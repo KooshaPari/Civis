@@ -29,6 +29,8 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
+        await EnsureMainMenuCanvasReadyAsync().ConfigureAwait(false);
+
         UiActionResult debugPanel = await QueryDfCanvasPanelAsync("DebugPanel").ConfigureAwait(false);
         debugPanel.MatchCount.Should().BeGreaterThan(0, "DebugPanel should exist on DFCanvas at main menu");
         debugPanel.MatchedNode.Should().NotBeNull();
@@ -179,6 +181,23 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         GameStatus closedStatus = await fixture.Client.StatusAsync();
         closedStatus.EntityCount.Should().Be(initialEntityCount,
             "entity count should match initial after mod menu closes");
+    }
+
+    private async Task EnsureMainMenuCanvasReadyAsync()
+    {
+        LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
+            .ConfigureAwait(false);
+        if (sceneResult.Success)
+        {
+            await Task.Delay(3000).ConfigureAwait(false);
+        }
+
+        UiActionResult modMenuPanel = await QueryDfCanvasPanelAsync("ModMenuPanel").ConfigureAwait(false);
+        if (modMenuPanel.MatchedNode?.Visible == true)
+        {
+            await fixture.Client.ToggleUiAsync("modmenu").ConfigureAwait(false);
+            await Task.Delay(400).ConfigureAwait(false);
+        }
     }
 
     private async Task<UiActionResult> QueryDfCanvasPanelAsync(string panelName)

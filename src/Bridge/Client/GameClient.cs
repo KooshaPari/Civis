@@ -360,8 +360,16 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<ScreenshotResult>("screenshot", path != null ? new { path } : null, ct);
 
     /// <inheritdoc />
-    public Task<LoadSceneResult> LoadSceneAsync(string scene, CancellationToken ct = default) =>
-        SendRequestAsync<LoadSceneResult>("loadScene", new { scene }, ct);
+    public Task<LoadSceneResult> LoadSceneAsync(string scene, CancellationToken ct = default)
+    {
+        // Explicit buildIndex avoids server treating omitted JSON int as 0 (JToken default).
+        if (int.TryParse(scene, out int buildIndex))
+        {
+            return SendRequestAsync<LoadSceneResult>("loadScene", new { scene, buildIndex }, ct);
+        }
+
+        return SendRequestAsync<LoadSceneResult>("loadScene", new { scene }, ct);
+    }
 
     /// <inheritdoc />
     public Task<StartGameResult> StartGameAsync(CancellationToken ct = default) =>

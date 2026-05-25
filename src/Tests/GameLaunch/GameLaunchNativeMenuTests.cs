@@ -119,11 +119,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         status.WorldReady.Should().BeTrue(
             "ECS world should be ready after scene transition");
 
-        await fixture.Client.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex);
-        await Task.Delay(2500);
-        await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
-            .ConfigureAwait(false);
-        await EnsureMainMenuWithModsButtonAsync();
+        await ResetToMainMenuAndInjectModsButtonAsync().ConfigureAwait(false);
+        await EnsureMainMenuWithModsButtonAsync(forceMainMenuReset: true).ConfigureAwait(false);
 
         UiActionResult finalQuery = await QueryModsButtonAsync();
         finalQuery.MatchCount.Should().BeGreaterThan(0,
@@ -182,28 +179,33 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         }
     }
 
-    private async Task EnsureMainMenuWithModsButtonAsync()
+    private async Task EnsureMainMenuWithModsButtonAsync(bool forceMainMenuReset = false)
     {
-        bool modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(10), pollMs: 250);
+        // Attach-mode collection runs many gameplay tests first; never trust a 2s fast-path poll.
+        bool attachMode = IsAttachMode();
+        if (!forceMainMenuReset && !attachMode
+            && await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(2), pollMs: 250).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        await ResetToMainMenuAndInjectModsButtonAsync().ConfigureAwait(false);
+
+        UiWaitResult modsWait = await fixture.Client!.WaitForUiAsync(
+                ModsButtonSelectors[1],
+                "visible",
+                timeoutMs: attachMode ? 30_000 : 20_000)
+            .ConfigureAwait(false);
+        bool modsVisible = modsWait.Ready
+            || await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(5), pollMs: 500)
+                .ConfigureAwait(false);
 
         if (!modsVisible)
         {
             await fixture.Client!.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
                 .ConfigureAwait(false);
-            modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(15), pollMs: 500);
-        }
-
-        if (!modsVisible)
-        {
-            LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
+            modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(15), pollMs: 500)
                 .ConfigureAwait(false);
-            if (sceneResult.Success)
-            {
-                await Task.Delay(2000).ConfigureAwait(false);
-                await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
-                    .ConfigureAwait(false);
-                modsVisible = await PollModsButtonVisibleAsync(TimeSpan.FromSeconds(15), pollMs: 500);
-            }
         }
 
         if (!modsVisible)
@@ -215,7 +217,67 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         }
 
         modsVisible.Should().BeTrue(
-            "native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe)");
+            "native Mods button should be injected on main menu (LoadScene 1, inject, poll, or clickButton probe)");
+    }
+
+    /// <summary>
+    /// Loads main menu (build index 1) and triggers injection before Mods UI assertions.
+    /// </summary>
+    private async Task ResetToMainMenuAndInjectModsButtonAsync()
+    {
+        int postLoadSettleMs = IsAttachMode() ? 5000 : 3500;
+        bool sceneLoaded = false;
+
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
+                .ConfigureAwait(false);
+            if (sceneResult.Success)
+            {
+                sceneLoaded = true;
+                break;
+            }
+
+            await Task.Delay(1500).ConfigureAwait(false);
+        }
+
+        if (sceneLoaded)
+        {
+            await Task.Delay(postLoadSettleMs).ConfigureAwait(false);
+            WaitResult world = await fixture.Client.WaitForWorldAsync(timeoutMs: 30_000).ConfigureAwait(false);
+            if (!world.Ready)
+            {
+                await Task.Delay(2000).ConfigureAwait(false);
+            }
+
+            // Main menu must expose Settings/Options before injection can clone a donor button.
+            UiWaitResult menuReady = await fixture.Client.WaitForUiAsync(
+                    "label=Settings",
+                    "visible",
+                    timeoutMs: 15_000)
+                .ConfigureAwait(false);
+            if (!menuReady.Ready)
+            {
+                await fixture.Client.WaitForUiAsync("label=Options", "visible", timeoutMs: 10_000)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+            .ConfigureAwait(false);
+        // NativeMenuInjector rescans every 2s; allow one rescan cycle after explicit inject.
+        await Task.Delay(IsAttachMode() ? 2500 : 500).ConfigureAwait(false);
+        await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+            .ConfigureAwait(false);
+        await Task.Delay(500).ConfigureAwait(false);
+    }
+
+    private static bool IsAttachMode()
+    {
+        string? value = Environment.GetEnvironmentVariable("DINO_GAME_ALREADY_RUNNING");
+        return value is "1"
+            || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<bool> PollModsButtonVisibleAsync(TimeSpan timeout, int pollMs)

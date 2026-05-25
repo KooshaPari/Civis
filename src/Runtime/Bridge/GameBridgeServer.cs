@@ -1186,7 +1186,13 @@ namespace DINOForge.Runtime.Bridge
         private JToken HandleLoadScene(JObject? parameters)
         {
             string sceneName = parameters?.Value<string>("scene") ?? "level0";
-            int buildIndex = parameters?.Value<int>("buildIndex") ?? -1;
+            // JToken.Value<int> returns 0 when the key is absent — treat missing buildIndex as unset.
+            int buildIndex = -1;
+            if (parameters?["buildIndex"] is JToken buildIndexToken
+                && buildIndexToken.Type != JTokenType.Null)
+            {
+                buildIndex = buildIndexToken.Value<int>();
+            }
 
             // If scene is purely numeric, treat as build index
             if (buildIndex < 0 && int.TryParse(sceneName, out int parsed))

@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1008";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Dictionary[key] without TryGetValue/ContainsKey guard";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`{0}[{1}]` throws KeyNotFoundException on miss. For user-sourced keys use `TryGetValue` and handle missing key explicitly.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Direct dictionary indexing with `dict[key]` throws KeyNotFoundException if the key is missing. When the key comes from user input, pack IDs, JSON properties, or other untrusted sources, this exception leaks an internal type. Use `dict.TryGetValue(key, out var value)` with explicit missing-key handling, or guard with `dict.ContainsKey(key)` first.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Dictionary[key] without TryGetValue/ContainsKey guard",
+            "`{0}[{1}]` throws KeyNotFoundException on miss. For user-sourced keys use `TryGetValue` and handle missing key explicitly.",
+            "Direct dictionary indexing with `dict[key]` throws KeyNotFoundException if the key is missing. When the key comes from user input, pack IDs, JSON properties, or other untrusted sources, this exception leaks an internal type. Use `dict.TryGetValue(key, out var value)` with explicit missing-key handling, or guard with `dict.ContainsKey(key)` first.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

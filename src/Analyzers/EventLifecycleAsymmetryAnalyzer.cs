@@ -17,37 +17,21 @@ namespace DINOForge.Analyzers
         public const string NoCleanupDiagnosticId = "DF0105a";
         private const string Category = "Resource Management";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Event subscription without matching unsubscribe";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Found `{0} += {1}` in class with Dispose/OnDestroy but no matching `-= {1}` in cleanup. Add `{0} -= {1}` in Dispose/OnDestroy to prevent listener leaks.";
-
-        private static readonly LocalizableString NoCleanupMessageFormat =
-            (LocalizableString)"{0} has event subscription '{1} += {2}' but no Dispose/OnDestroy/OnDisable/Close method - handler can never unsubscribe";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Event handler subscriptions (+=) without matching unsubscriptions (-=) in cleanup methods (Dispose, OnDestroy, OnDisable, Close) can cause memory leaks by preventing listener cleanup. Always add a matching -= in the same cleanup method where the += is registered. Use `// event-lifecycle-ok: <reason>` inline comment to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Event subscription without matching unsubscribe",
+            "Found `{0} += {1}` in class with Dispose/OnDestroy but no matching `-= {1}` in cleanup. Add `{0} -= {1}` in Dispose/OnDestroy to prevent listener leaks.",
+            "Event handler subscriptions (+=) without matching unsubscriptions (-=) in cleanup methods (Dispose, OnDestroy, OnDisable, Close) can cause memory leaks by preventing listener cleanup. Always add a matching -= in the same cleanup method where the += is registered. Use `// event-lifecycle-ok: <reason>` inline comment to suppress.");
 
-        private static readonly DiagnosticDescriptor NoCleanupRule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor NoCleanupRule = DinoDiagnosticDescriptors.Create(
             NoCleanupDiagnosticId,
-            Title,
-            NoCleanupMessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Event subscription without matching unsubscribe",
+            "{0} has event subscription '{1} += {2}' but no Dispose/OnDestroy/OnDisable/Close method - handler can never unsubscribe",
+            "Event handler subscriptions (+=) without matching unsubscriptions (-=) in cleanup methods (Dispose, OnDestroy, OnDisable, Close) can cause memory leaks by preventing listener cleanup. Always add a matching -= in the same cleanup method where the += is registered. Use `// event-lifecycle-ok: <reason>` inline comment to suppress.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule, NoCleanupRule);

@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1017";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Task result discarded — missing 'await' or '_'";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Call to async method '{0}' is not awaited — task result is discarded, exceptions are unobservable. Add 'await' or assign to '_'.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Calling an async method without awaiting its result is fire-and-forget asynchrony that hides exceptions and prevents caller synchronization. Always use 'await' for the result, or explicitly discard with '_' to document intent. Mark with `// fire-and-forget-ok: <reason>` only if truly intentional.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Task result discarded — missing 'await' or '_'",
+            "Call to async method '{0}' is not awaited — task result is discarded, exceptions are unobservable. Add 'await' or assign to '_'.",
+            "Calling an async method without awaiting its result is fire-and-forget asynchrony that hides exceptions and prevents caller synchronization. Always use 'await' for the result, or explicitly discard with '_' to document intent. Mark with `// fire-and-forget-ok: <reason>` only if truly intentional.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

@@ -19,25 +19,15 @@ public class EmptyCatchBlockAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1023";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"Empty catch block silently swallows exceptions";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Catch block has no body. Exception is silently swallowed. Add logging or '// safe-swallow: <reason>' marker.";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"An empty catch block hides exceptions entirely, breaking observability and making debugging impossible. Add logging via _logger.LogWarning(ex, \"context\") or document the deliberate swallow with an inline '// safe-swallow: <reason>' comment. Test cleanup handlers can use '// test-cleanup-ok' marker.";
-
     private const string Category = "Reliability";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: Description);
+        "Empty catch block silently swallows exceptions",
+        "Catch block has no body. Exception is silently swallowed. Add logging or '// safe-swallow: <reason>' marker.",
+        "An empty catch block hides exceptions entirely, breaking observability and making debugging impossible. Add logging via _logger.LogWarning(ex, \"context\") or document the deliberate swallow with an inline '// safe-swallow: <reason>' comment. Test cleanup handlers can use '// test-cleanup-ok' marker.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);

@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         private const string Category = "Design";
         private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Unbounded version constraint";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Version constraint `{0}` has no upper bound. Specify a maximum (e.g. \">=0.1.0 <1.0.0\") to avoid accepting unintended future versions.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Version constraints without upper bounds (e.g., \">=0.1.0\", \">0.1.0\", \"*\") accept any future version, creating compatibility risk. Pack manifests and SDK defaults MUST specify explicit upper bounds to prevent breaking changes from unvetted versions. Example: change \">=0.1.0\" to \">=0.1.0 <1.0.0\".";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Unbounded version constraint",
+            "Version constraint `{0}` has no upper bound. Specify a maximum (e.g. \">=0.1.0 <1.0.0\") to avoid accepting unintended future versions.",
+            "Version constraints without upper bounds (e.g., \">=0.1.0\", \">0.1.0\", \"*\") accept any future version, creating compatibility risk. Pack manifests and SDK defaults MUST specify explicit upper bounds to prevent breaking changes from unvetted versions. Example: change \">=0.1.0\" to \">=0.1.0 <1.0.0\".");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

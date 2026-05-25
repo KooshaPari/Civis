@@ -16,24 +16,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0123";
         private const string Category = "NuGetAPI";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Public class exposes mutable collection property";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Public property '{0}' exposes mutable '{1}<T>'. Use `IReadOnlyList<T> {{ get; init; }} = new List<T>();` for invariant protection. For YAML/JSON deserializer needs, use backing-field pattern + `[YamlIgnore]` accessor or document with `// public-mutable-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Public mutable collection properties in NuGet-published libraries (SDK, Bridge.Client, Bridge.Protocol) break encapsulation and allow external callers to violate invariants. Use immutable properties (IReadOnlyList<T>, IReadOnlyCollection<T>) with backing fields for deserialization. For intentional mutable properties (e.g., deserializer requirements), document with `// public-mutable-ok: <reason>` to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Public class exposes mutable collection property",
+            "Public property '{0}' exposes mutable '{1}<T>'. Use `IReadOnlyList<T> {{ get; init; }} = new List<T>();` for invariant protection. For YAML/JSON deserializer needs, use backing-field pattern + `[YamlIgnore]` accessor or document with `// public-mutable-ok: <reason>`.",
+            "Public mutable collection properties in NuGet-published libraries (SDK, Bridge.Client, Bridge.Protocol) break encapsulation and allow external callers to violate invariants. Use immutable properties (IReadOnlyList<T>, IReadOnlyCollection<T>) with backing fields for deserialization. For intentional mutable properties (e.g., deserializer requirements), document with `// public-mutable-ok: <reason>` to suppress.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

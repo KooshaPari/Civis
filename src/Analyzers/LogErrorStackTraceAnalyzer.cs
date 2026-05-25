@@ -44,23 +44,13 @@ namespace DINOForge.Analyzers
 
         private const string SuppressionMarker = "pattern-96-ok:";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"LogError discards exception stack trace";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"'{0}' uses '{1}.Message' but does not pass '{1}' as an argument; the stack trace is lost. Pass the exception (e.g. '{0}({1}, \"...\")') or interpolate '{{{1}}}' (without .Message) to render ToString(). Suppress with '// pattern-96-ok: <reason>'.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Pattern #96: passing only exception.Message to a logger drops the stack trace, exception type, and InnerException chain, making production debugging guesswork. Always pass the exception as a positional argument or interpolate {ex} (without .Message) so the default ToString() rendering covers type + message + stack. Suppress with '// pattern-96-ok: <reason>' marker on the same or preceding line.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description);
+            "LogError discards exception stack trace",
+            "'{0}' uses '{1}.Message' but does not pass '{1}' as an argument; the stack trace is lost. Pass the exception (e.g. '{0}({1}, \"...\")') or interpolate '{{{1}}}' (without .Message) to render ToString(). Suppress with '// pattern-96-ok: <reason>'.",
+            "Pattern #96: passing only exception.Message to a logger drops the stack trace, exception type, and InnerException chain, making production debugging guesswork. Always pass the exception as a positional argument or interpolate {ex} (without .Message) so the default ToString() rendering covers type + message + stack. Suppress with '// pattern-96-ok: <reason>' marker on the same or preceding line.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

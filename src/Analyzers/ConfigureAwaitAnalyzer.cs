@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0098";
         private const string Category = "Async";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"await missing ConfigureAwait(false) in library code";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Library-scope await should use .ConfigureAwait(false) to avoid capturing synchronization context. Suppress with `// configureawait-ok: <reason>` if app-scope.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Library code (SDK, Bridge, Domains) must call .ConfigureAwait(false) on all awaits to prevent capturing the synchronization context. This allows library consumers to use the library in UI contexts without deadlock. Application code (Runtime, Tools) may omit this when deliberately scoped to a synchronization context. Mark intentional omissions with `// configureawait-ok: <reason>`.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "await missing ConfigureAwait(false) in library code",
+            "Library-scope await should use .ConfigureAwait(false) to avoid capturing synchronization context. Suppress with `// configureawait-ok: <reason>` if app-scope.",
+            "Library code (SDK, Bridge, Domains) must call .ConfigureAwait(false) on all awaits to prevent capturing the synchronization context. This allows library consumers to use the library in UI contexts without deadlock. Application code (Runtime, Tools) may omit this when deliberately scoped to a synchronization context. Mark intentional omissions with `// configureawait-ok: <reason>`.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

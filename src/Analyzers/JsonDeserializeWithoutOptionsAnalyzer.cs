@@ -16,24 +16,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0120";
         private const string Category = "Serialization";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"JsonSerializer.Deserialize called without explicit options";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"JsonSerializer.Deserialize<{0}> with no options uses defaults (PascalCase, skip-unknown). Pass a canonical JsonSerializerOptions (e.g. CliJsonOptions.Default, PackCompilerJsonOptions.Default).";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Using JsonSerializer.Deserialize without explicit JsonSerializerOptions can cause silent failures due to case sensitivity and unknown property handling. Always pass a canonical options instance from CliJsonOptions.Default, PackCompilerJsonOptions.Default, or a well-defined constant.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "JsonSerializer.Deserialize called without explicit options",
+            "JsonSerializer.Deserialize<{0}> with no options uses defaults (PascalCase, skip-unknown). Pass a canonical JsonSerializerOptions (e.g. CliJsonOptions.Default, PackCompilerJsonOptions.Default).",
+            "Using JsonSerializer.Deserialize without explicit JsonSerializerOptions can cause silent failures due to case sensitivity and unknown property handling. Always pass a canonical options instance from CliJsonOptions.Default, PackCompilerJsonOptions.Default, or a well-defined constant.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1005";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"async void method outside event-handler context";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`async void` is unsafe outside event-handler signatures (caller can't catch exceptions). Use `async Task` instead, or annotate with `// async-void-ok: <reason>` if it's a legitimate event handler.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"The `async void` pattern is dangerous because exceptions thrown in the method cannot be caught by the caller, and there is no awaitable Task for synchronization. The only legitimate use is for event handlers with the signature `void MethodName(object sender, EventArgs e)`. For all other cases, use `async Task` or `async Task<T>`.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "async void method outside event-handler context",
+            "`async void` is unsafe outside event-handler signatures (caller can't catch exceptions). Use `async Task` instead, or annotate with `// async-void-ok: <reason>` if it's a legitimate event handler.",
+            "The `async void` pattern is dangerous because exceptions thrown in the method cannot be caught by the caller, and there is no awaitable Task for synchronization. The only legitimate use is for event handlers with the signature `void MethodName(object sender, EventArgs e)`. For all other cases, use `async Task` or `async Task<T>`.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

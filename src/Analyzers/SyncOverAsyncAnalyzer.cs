@@ -23,24 +23,13 @@ namespace DINOForge.Analyzers
         private const string Category = "Reliability";
         private const string SuppressionMarker = "sync-over-async-unavoidable:";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Sync-over-async blocking call (.Result / .Wait())";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Use `await` instead of `.Result` / `.Wait()`. Blocking on a task risks deadlock when continuations need the captured context. If unavoidable, document with `// sync-over-async-unavoidable: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Sync-over-async (calling .Result or .Wait() on a task) blocks the calling thread and can cause deadlock if the task's continuation requires the same SynchronizationContext. Always use `await` in async contexts, or document with `// sync-over-async-unavoidable: <reason>` if truly necessary.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Sync-over-async blocking call (.Result / .Wait())",
+            "Use `await` instead of `.Result` / `.Wait()`. Blocking on a task risks deadlock when continuations need the captured context. If unavoidable, document with `// sync-over-async-unavoidable: <reason>`.",
+            "Sync-over-async (calling .Result or .Wait() on a task) blocks the calling thread and can cause deadlock if the task's continuation requires the same SynchronizationContext. Always use `await` in async contexts, or document with `// sync-over-async-unavoidable: <reason>` if truly necessary.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1016";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Async void method should be Task-returning";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Method '{0}' is async void — exceptions are unobservable. Use async Task instead, or mark with `// async-void-ok: <reason>` if this is a legitimate event handler.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"The `async void` pattern is dangerous because exceptions thrown in the method cannot be caught by the caller, and there is no awaitable Task for synchronization. Use `async Task` instead. Annotate with `// async-void-ok: <reason>` only for event handlers.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Async void method should be Task-returning",
+            "Method '{0}' is async void — exceptions are unobservable. Use async Task instead, or mark with `// async-void-ok: <reason>` if this is a legitimate event handler.",
+            "The `async void` pattern is dangerous because exceptions thrown in the method cannot be caught by the caller, and there is no awaitable Task for synchronization. Use `async Task` instead. Annotate with `// async-void-ok: <reason>` only for event handlers.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

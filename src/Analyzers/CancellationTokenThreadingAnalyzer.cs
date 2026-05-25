@@ -15,23 +15,15 @@ namespace DINOForge.Analyzers
         private const string Category = "Async";
 
 #pragma warning disable RS1032
-        private static readonly LocalizableString Title = (LocalizableString)"CancellationToken not threaded to inner async call";
-
-        private static readonly LocalizableString MessageFormat = (LocalizableString)"CancellationToken is not threaded to inner async call";
 #pragma warning restore RS1032
 
-        private static readonly LocalizableString Description =
-            (LocalizableString)"When a method accepts a CancellationToken parameter, all inner async calls should pass it to respect cancellation. Failing to thread the token prevents graceful cancellation propagation.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "CancellationToken not threaded to inner async call",
+            "CancellationToken is not threaded to inner async call",
+            "When a method accepts a CancellationToken parameter, all inner async calls should pass it to respect cancellation. Failing to thread the token prevents graceful cancellation propagation.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

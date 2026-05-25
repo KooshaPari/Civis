@@ -16,24 +16,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0106";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"File.ReadAllText/WriteAllText/ReadAllLines/WriteAllLines without explicit Encoding";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"File.ReadAllText without explicit Encoding detected. Use SafeFileIO.ReadText(path) or pass Encoding.UTF8 explicitly.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"File I/O without explicit Encoding falls back to system default (Windows: code page 1252, Linux: UTF-8). This causes silent data loss on non-UTF-8 systems. Always specify Encoding.UTF8 explicitly or use SafeFileIO wrapper.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "File.ReadAllText/WriteAllText/ReadAllLines/WriteAllLines without explicit Encoding",
+            "File.ReadAllText without explicit Encoding detected. Use SafeFileIO.ReadText(path) or pass Encoding.UTF8 explicitly.",
+            "File I/O without explicit Encoding falls back to system default (Windows: code page 1252, Linux: UTF-8). This causes silent data loss on non-UTF-8 systems. Always specify Encoding.UTF8 explicitly or use SafeFileIO wrapper.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

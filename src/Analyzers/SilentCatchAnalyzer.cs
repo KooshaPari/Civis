@@ -16,24 +16,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0111";
         private const string Category = "Observability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Catch swallows exceptions silently";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, \"context\"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Catch blocks that do not produce a warning/error-level signal hide I/O, reflection, or resource-exhaustion failures, breaking observability and making debugging impossible. Always log exceptions at warning/error level, document safe-swallows inline, or remove the try/catch entirely. Use `catch (Exception ex) { _logger.LogWarning(ex, \"context\"); }` for production, or `// safe-swallow: <reason>` for intentional swallows.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Catch swallows exceptions silently",
+            "Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, \"context\"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch.",
+            "Catch blocks that do not produce a warning/error-level signal hide I/O, reflection, or resource-exhaustion failures, breaking observability and making debugging impossible. Always log exceptions at warning/error level, document safe-swallows inline, or remove the try/catch entirely. Use `catch (Exception ex) { _logger.LogWarning(ex, \"context\"); }` for production, or `// safe-swallow: <reason>` for intentional swallows.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

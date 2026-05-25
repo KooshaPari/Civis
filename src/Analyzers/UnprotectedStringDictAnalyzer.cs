@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0099";
         private const string Category = "Performance";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Dictionary<string, T> without explicit StringComparer";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Constructor missing StringComparer. For user-sourced keys use `StringComparer.Ordinal`. For UI-facing case-insensitive use `StringComparer.OrdinalIgnoreCase`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Dictionary<string, T> and ConcurrentDictionary<string, T> default to culture-sensitive comparison (StringComparer.CurrentCulture equivalent via default comparer). User-sourced keys (pack IDs, asset names, faction names) must use StringComparer.Ordinal to ensure deterministic key lookups across machines and cultures. UI-facing keys (menu names, HUD labels) may use OrdinalIgnoreCase for case-insensitive matching, but must be explicit.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Dictionary<string, T> without explicit StringComparer",
+            "Constructor missing StringComparer. For user-sourced keys use `StringComparer.Ordinal`. For UI-facing case-insensitive use `StringComparer.OrdinalIgnoreCase`.",
+            "Dictionary<string, T> and ConcurrentDictionary<string, T> default to culture-sensitive comparison (StringComparer.CurrentCulture equivalent via default comparer). User-sourced keys (pack IDs, asset names, faction names) must use StringComparer.Ordinal to ensure deterministic key lookups across machines and cultures. UI-facing keys (menu names, HUD labels) may use OrdinalIgnoreCase for case-insensitive matching, but must be explicit.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

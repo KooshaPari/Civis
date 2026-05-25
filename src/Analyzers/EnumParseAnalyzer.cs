@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1009";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Enum.Parse without TryParse fallback";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`Enum.Parse` throws on unknown input. Use `Enum.TryParse(...)` for user-sourced strings (YAML enums, JSON discriminators).";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"`Enum.Parse<TEnum>(string)` throws ArgumentException if the input string does not match any enum value. When parsing user-sourced data (YAML enum fields, JSON discriminators, pack content), this exception leaks internal type information. Use `Enum.TryParse<TEnum>(string, out var result)` with explicit error handling and fallback logic.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Enum.Parse without TryParse fallback",
+            "`Enum.Parse` throws on unknown input. Use `Enum.TryParse(...)` for user-sourced strings (YAML enums, JSON discriminators).",
+            "`Enum.Parse<TEnum>(string)` throws ArgumentException if the input string does not match any enum value. When parsing user-sourced data (YAML enum fields, JSON discriminators, pack content), this exception leaks internal type information. Use `Enum.TryParse<TEnum>(string, out var result)` with explicit error handling and fallback logic.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

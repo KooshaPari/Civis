@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0117";
         private const string Category = "Performance";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"StringBuilder created without capacity hint";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"StringBuilder created without capacity hint. `new StringBuilder()` allocates default 16-char capacity. If the expected output size is knowable, pass `new StringBuilder(estimatedCapacity)` to avoid reallocation. For unbounded loops, default to 4096.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Preallocating StringBuilder capacity avoids multiple internal buffer reallocations as the string grows, reducing GC pressure and improving performance.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "StringBuilder created without capacity hint",
+            "StringBuilder created without capacity hint. `new StringBuilder()` allocates default 16-char capacity. If the expected output size is knowable, pass `new StringBuilder(estimatedCapacity)` to avoid reallocation. For unbounded loops, default to 4096.",
+            "Preallocating StringBuilder capacity avoids multiple internal buffer reallocations as the string grows, reducing GC pressure and improving performance.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

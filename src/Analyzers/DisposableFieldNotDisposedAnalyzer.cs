@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1006";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Disposable field in class not implementing IDisposable";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Field `{0}` of type `{1}` is disposable. The containing class `{2}` should implement IDisposable and dispose the field in a Dispose method, or use `using` at field initialization (e.g., field with initializer `= new {...}`).";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Classes that hold disposable resource fields (Stream, Reader, Writer, HttpClient, Pipe, CancellationTokenSource, etc.) should either (a) implement IDisposable and explicitly dispose the field in Dispose(), or (b) use a field initializer with a `using` declaration if the field is a local scoped resource. This prevents resource leaks.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Disposable field in class not implementing IDisposable",
+            "Field `{0}` of type `{1}` is disposable. The containing class `{2}` should implement IDisposable and dispose the field in a Dispose method, or use `using` at field initialization (e.g., field with initializer `= new {...}`).",
+            "Classes that hold disposable resource fields (Stream, Reader, Writer, HttpClient, Pipe, CancellationTokenSource, etc.) should either (a) implement IDisposable and explicitly dispose the field in Dispose(), or (b) use a field initializer with a `using` declaration if the field is a local scoped resource. This prevents resource leaks.");
 
         private static readonly string[] DisposableTypeSuffixes = new[]
         {

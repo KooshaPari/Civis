@@ -15,29 +15,16 @@ public class LargeMethodParameterCountAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1026";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"Method has too many parameters";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Method '{0}' has {1} parameters (threshold: 7) — consider introducing a parameter object";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"Methods with >7 parameters indicate poor design and are difficult to call, test, and maintain. " +
-        "Consider introducing a parameter object (DTO) to group related parameters. " +
-        "Exempt with `// many-params-ok: <reason>` for special cases.";
-
     private const string Category = "Design";
     private const int ParameterThreshold = 7;
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Info,
-        isEnabledByDefault: true,
-        description: Description,
-        helpLinkUri: "https://github.com/KooshaPari/Dino/blob/main/docs/analyzers/DF1026.md");
+        "Method has too many parameters",
+        "Method '{0}' has {1} parameters (threshold: 7) — consider introducing a parameter object",
+        "Methods with >7 parameters indicate poor design and are difficult to call, test, and maintain. " + "Consider introducing a parameter object (DTO) to group related parameters. " + "Exempt with `// many-params-ok: <reason>` for special cases.", helpLinkUri: "https://github.com/KooshaPari/Dino/blob/main/docs/analyzers/DF1026.md");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 

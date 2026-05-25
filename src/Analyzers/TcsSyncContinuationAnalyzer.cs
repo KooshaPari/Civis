@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0097";
         private const string Category = "Concurrency";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"TaskCompletionSource missing RunContinuationsAsynchronously";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"TaskCompletionSource ctor without TaskCreationOptions.RunContinuationsAsynchronously risks sync-continuation deadlock. Pass `TaskCreationOptions.RunContinuationsAsynchronously` to the constructor, or document an intentional sync continuation with `// tcs-sync-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"TaskCompletionSource without TaskCreationOptions.RunContinuationsAsynchronously runs continuations synchronously on the producer's thread, causing main-thread starvation and potential deadlocks in cross-thread marshalling contexts. Always pass TaskCreationOptions.RunContinuationsAsynchronously. For intentional sync continuation, suppress with `// tcs-sync-ok: <reason>` (the trailing colon + reason are required, per Pattern #111 convention).";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "TaskCompletionSource missing RunContinuationsAsynchronously",
+            "TaskCompletionSource ctor without TaskCreationOptions.RunContinuationsAsynchronously risks sync-continuation deadlock. Pass `TaskCreationOptions.RunContinuationsAsynchronously` to the constructor, or document an intentional sync continuation with `// tcs-sync-ok: <reason>`.",
+            "TaskCompletionSource without TaskCreationOptions.RunContinuationsAsynchronously runs continuations synchronously on the producer's thread, causing main-thread starvation and potential deadlocks in cross-thread marshalling contexts. Always pass TaskCreationOptions.RunContinuationsAsynchronously. For intentional sync continuation, suppress with `// tcs-sync-ok: <reason>` (the trailing colon + reason are required, per Pattern #111 convention).");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

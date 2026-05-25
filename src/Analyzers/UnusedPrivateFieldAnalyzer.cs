@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1024";
         private const string Category = "Maintainability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Unused private field";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Private field '{0}' is declared but never read or written — remove it or use it";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Private fields that are declared but never referenced anywhere in the code are dead state. They should be removed to reduce code clutter and improve maintainability. Use // unused-field-ok: <reason> to suppress if the field is intentionally reserved or used via reflection.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Unused private field",
+            "Private field '{0}' is declared but never read or written — remove it or use it",
+            "Private fields that are declared but never referenced anywhere in the code are dead state. They should be removed to reduce code clutter and improve maintainability. Use // unused-field-ok: <reason> to suppress if the field is intentionally reserved or used via reflection.");
 
         private static readonly string[] ExemptAttributes = new[]
         {

@@ -19,25 +19,15 @@ public class MissingConfigureAwaitAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1019";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"await without ConfigureAwait(false) in library code";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"await expression should use .ConfigureAwait(false) in library code to avoid context capture — use 'await {0}.ConfigureAwait(false)'";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"Library code should avoid capturing the caller's synchronization context. Use 'await X.ConfigureAwait(false)' to prevent deadlocks when called from UI or sync-blocking contexts. Exempt with `// configureawait-ok: <reason>` for timing-sensitive operations like Task.Delay or Task.Yield.";
-
     private const string Category = "Reliability";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Info,
-        isEnabledByDefault: true,
-        description: Description);
+        "await without ConfigureAwait(false) in library code",
+        "await expression should use .ConfigureAwait(false) in library code to avoid context capture — use 'await {0}.ConfigureAwait(false)'",
+        "Library code should avoid capturing the caller's synchronization context. Use 'await X.ConfigureAwait(false)' to prevent deadlocks when called from UI or sync-blocking contexts. Exempt with `// configureawait-ok: <reason>` for timing-sensitive operations like Task.Delay or Task.Yield.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);

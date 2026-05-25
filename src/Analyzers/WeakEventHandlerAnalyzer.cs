@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1002";
         private const string Category = "Resource Management";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Static event subscription without weak reference";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Subscription to long-lived event `{0}` from instance `{1}` risks listener-leak. Use WeakEventManager pattern or ensure -= in Dispose/OnDestroy.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Subscriptions to static or long-lived event sources (e.g., SceneManager.sceneLoaded, AppDomain.UnhandledException) from instance objects without proper cleanup (Dispose/OnDestroy) can cause memory leaks by holding references indefinitely. Use WeakEventManager pattern or ensure matching -= in cleanup methods. Use `// weak-event-ok: <reason>` inline comment to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Static event subscription without weak reference",
+            "Subscription to long-lived event `{0}` from instance `{1}` risks listener-leak. Use WeakEventManager pattern or ensure -= in Dispose/OnDestroy.",
+            "Subscriptions to static or long-lived event sources (e.g., SceneManager.sceneLoaded, AppDomain.UnhandledException) from instance objects without proper cleanup (Dispose/OnDestroy) can cause memory leaks by holding references indefinitely. Use WeakEventManager pattern or ensure matching -= in cleanup methods. Use `// weak-event-ok: <reason>` inline comment to suppress.");
 
         // Known long-lived event sources (static/singleton-lifetime)
         private static readonly HashSet<string> KnownLongLivedEvents = new(StringComparer.Ordinal)

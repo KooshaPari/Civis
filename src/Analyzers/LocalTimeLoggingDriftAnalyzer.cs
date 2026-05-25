@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0103";
         private const string Category = "Performance";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"DateTime.Now used in logging context";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"DateTime.Now timestamp is local-time-dependent. Use DateTime.UtcNow for log persistence; format for human display only at read time.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Using DateTime.Now in logging timestamps creates time-dependent log entries that drift when system clocks change or logs are analyzed across timezones. Use DateTime.UtcNow for persistence and format only at display time.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "DateTime.Now used in logging context",
+            "DateTime.Now timestamp is local-time-dependent. Use DateTime.UtcNow for log persistence; format for human display only at read time.",
+            "Using DateTime.Now in logging timestamps creates time-dependent log entries that drift when system clocks change or logs are analyzed across timezones. Use DateTime.UtcNow for persistence and format only at display time.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

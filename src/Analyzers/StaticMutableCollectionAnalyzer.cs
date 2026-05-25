@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1001";
         private const string Category = "Concurrency";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Static mutable collection field modified without lock";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Static field `{0}` is a mutable collection; modifications from multiple threads risk race. Either: (a) initialize as `ConcurrentDictionary`/`ConcurrentBag`, (b) wrap modifications in `lock`, or (c) make it `static readonly` immutable view.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Static mutable collection fields (e.g., `static List<T>`, `static Dictionary<TKey, TValue>`, `static HashSet<T>`) accessed from multiple threads without synchronization are prone to race conditions. Tier 2 semantic analysis detects these declarations and recommends thread-safe alternatives.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Static mutable collection field modified without lock",
+            "Static field `{0}` is a mutable collection; modifications from multiple threads risk race. Either: (a) initialize as `ConcurrentDictionary`/`ConcurrentBag`, (b) wrap modifications in `lock`, or (c) make it `static readonly` immutable view.",
+            "Static mutable collection fields (e.g., `static List<T>`, `static Dictionary<TKey, TValue>`, `static HashSet<T>`) accessed from multiple threads without synchronization are prone to race conditions. Tier 2 semantic analysis detects these declarations and recommends thread-safe alternatives.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

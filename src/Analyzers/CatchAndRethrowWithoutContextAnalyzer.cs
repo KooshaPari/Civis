@@ -18,25 +18,15 @@ public class CatchAndRethrowWithoutContextAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1020";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"throw new Exception(ex.Message) loses exception context";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Throwing new {0} with only message loses inner exception chain; pass 'ex' as innerException";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"Rethrowing with only ex.Message drops the original exception as innerException, losing the stack trace and exception chain. Always pass the caught exception as the innerException parameter. Exempt with `// catch-rethrow-ok: <reason>` comment for deliberate exception translation.";
-
     private const string Category = "Reliability";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: Description);
+        "throw new Exception(ex.Message) loses exception context",
+        "Throwing new {0} with only message loses inner exception chain; pass 'ex' as innerException",
+        "Rethrowing with only ex.Message drops the original exception as innerException, losing the stack trace and exception chain. Always pass the caught exception as the innerException parameter. Exempt with `// catch-rethrow-ok: <reason>` comment for deliberate exception translation.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);

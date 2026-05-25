@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1003";
         private const string Category = "Concurrency";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"`await` inside `lock` block";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`await` inside `lock` risks IllegalMonitorStateException since continuation may run on different thread. Use `SemaphoreSlim.WaitAsync` for async-safe mutual exclusion.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"The C# `lock` statement uses Monitor.Enter/Exit which requires the same thread to enter and exit. If an `await` expression is used inside a lock block, the async continuation may resume on a different thread, causing IllegalMonitorStateException or deadlock. Replace with `SemaphoreSlim.WaitAsync()` or move await outside the lock. Use `// lock-await-ok: <reason>` inline comment to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "`await` inside `lock` block",
+            "`await` inside `lock` risks IllegalMonitorStateException since continuation may run on different thread. Use `SemaphoreSlim.WaitAsync` for async-safe mutual exclusion.",
+            "The C# `lock` statement uses Monitor.Enter/Exit which requires the same thread to enter and exit. If an `await` expression is used inside a lock block, the async continuation may resume on a different thread, causing IllegalMonitorStateException or deadlock. Replace with `SemaphoreSlim.WaitAsync()` or move await outside the lock. Use `// lock-await-ok: <reason>` inline comment to suppress.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

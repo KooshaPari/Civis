@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1014";
         private const string Category = "Maintainability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Hardcoded numeric threshold should be extracted to a named constant";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Numeric literal '{0}' used as threshold or argument — extract to a named const/readonly to make tuning explicit. If intentional, document with `// threshold-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Magic numeric literals (≥100) used as thresholds, timeouts, or method arguments reduce code clarity and maintainability. Extract these values to named const or readonly fields so future readers understand the semantics (e.g., 'MaxRetries', 'TimeoutMs', 'PollingIntervalMs') and can adjust them in one place. If the value is genuinely a semantic constant (e.g., 100 as part of a percentage calculation), document with `// threshold-ok: <reason>`.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Hardcoded numeric threshold should be extracted to a named constant",
+            "Numeric literal '{0}' used as threshold or argument — extract to a named const/readonly to make tuning explicit. If intentional, document with `// threshold-ok: <reason>`.",
+            "Magic numeric literals (≥100) used as thresholds, timeouts, or method arguments reduce code clarity and maintainability. Extract these values to named const or readonly fields so future readers understand the semantics (e.g., 'MaxRetries', 'TimeoutMs', 'PollingIntervalMs') and can adjust them in one place. If the value is genuinely a semantic constant (e.g., 100 as part of a percentage calculation), document with `// threshold-ok: <reason>`.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

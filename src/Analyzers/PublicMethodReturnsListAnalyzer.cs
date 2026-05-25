@@ -14,23 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1027";
         private const string Category = "Design";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Public method should return IReadOnlyList<T> instead of List<T>";
-
-        private static readonly LocalizableString MessageFormat = (LocalizableString)"Method '{0}' returns mutable List<T> publicly. Prefer IReadOnlyList<T> or IEnumerable<T>.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Exposing mutable List<T> from public methods allows callers to modify internal state. Prefer immutable return types like IReadOnlyList<T> or IEnumerable<T> to maintain encapsulation and prevent mutations. Use list-return-ok: marker to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Public method should return IReadOnlyList<T> instead of List<T>",
+            "Method '{0}' returns mutable List<T> publicly. Prefer IReadOnlyList<T> or IEnumerable<T>.",
+            "Exposing mutable List<T> from public methods allows callers to modify internal state. Prefer immutable return types like IReadOnlyList<T> or IEnumerable<T> to maintain encapsulation and prevent mutations. Use list-return-ok: marker to suppress.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

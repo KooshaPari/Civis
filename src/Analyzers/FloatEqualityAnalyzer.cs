@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1007";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Float ==/!= comparison without tolerance";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Direct `==`/`!=` comparison of `{0}` typed values risks precision-loss false negatives. Use `Math.Abs(a - b) < epsilon` (or `MathF.Abs` for float) for tolerance-based equality.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"IEEE 754 floating-point arithmetic introduces precision loss. Direct == and != comparisons often fail to detect meaningful equality due to rounding errors. Always use a tolerance-based comparison (Math.Abs(a - b) < epsilon) for float, double, or decimal equality checks in game code (balance, damage, range checks).";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Float ==/!= comparison without tolerance",
+            "Direct `==`/`!=` comparison of `{0}` typed values risks precision-loss false negatives. Use `Math.Abs(a - b) < epsilon` (or `MathF.Abs` for float) for tolerance-based equality.",
+            "IEEE 754 floating-point arithmetic introduces precision loss. Direct == and != comparisons often fail to detect meaningful equality due to rounding errors. Always use a tolerance-based comparison (Math.Abs(a - b) < epsilon) for float, double, or decimal equality checks in game code (balance, damage, range checks).");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

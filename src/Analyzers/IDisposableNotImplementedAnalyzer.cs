@@ -20,25 +20,15 @@ public class IDisposableNotImplementedAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1022";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"Class holds IDisposable field but doesn't implement IDisposable";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Class '{0}' has IDisposable field '{1}' of type '{2}' but doesn't implement IDisposable — resource leak risk";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"A class that holds fields of types like HttpClient, Process, Timer, SemaphoreSlim, etc., should implement IDisposable to ensure these resources are properly released. Exempt classes that inherit from MonoBehaviour, ComponentSystemBase, or SystemBase (which use OnDestroy). Suppress with `// idisposable-ok: <reason>` for deliberate cases.";
-
     private const string Category = "Reliability";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Info,
-        isEnabledByDefault: true,
-        description: Description);
+        "Class holds IDisposable field but doesn't implement IDisposable",
+        "Class '{0}' has IDisposable field '{1}' of type '{2}' but doesn't implement IDisposable — resource leak risk",
+        "A class that holds fields of types like HttpClient, Process, Timer, SemaphoreSlim, etc., should implement IDisposable to ensure these resources are properly released. Exempt classes that inherit from MonoBehaviour, ComponentSystemBase, or SystemBase (which use OnDestroy). Suppress with `// idisposable-ok: <reason>` for deliberate cases.");
 
     private static readonly string[] DisposableFieldTypes = new[]
     {

@@ -16,20 +16,15 @@ public class PublicMutableFieldAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1018";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"Public mutable field should be a property";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Public field '{0}' breaks encapsulation and binary compatibility — convert to property";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"Public fields expose implementation details and prevent adding validation or change notifications later. Convert to auto-properties. Mark intentional exceptions with `// public-field-ok: <reason>` if semantically required.";
-
     private const string Category = "Design";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-        DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info,
-        isEnabledByDefault: true, description: Description);
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
+        DiagnosticId,
+        Category,
+        DiagnosticSeverity.Info,
+        "Public mutable field should be a property",
+        "Public field '{0}' breaks encapsulation and binary compatibility — convert to property",
+        "Public fields expose implementation details and prevent adding validation or change notifications later. Convert to auto-properties. Mark intentional exceptions with `// public-field-ok: <reason>` if semantically required.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 

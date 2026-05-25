@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0102";
         private const string Category = "Resource Management";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Process.Start without using or assignment";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`Process.Start(...)` returns a Process handle. Wrap in `using var p = Process.Start(...)` or assign to a field/variable that's properly disposed to avoid resource leaks.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Process.Start() returns a Process handle. Discarding it without wrapping in `using` causes handle leaks. Wrap fire-and-forget calls in `using var _ = Process.Start(...)` or assign to a properly-disposed field or local variable.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Process.Start without using or assignment",
+            "`Process.Start(...)` returns a Process handle. Wrap in `using var p = Process.Start(...)` or assign to a field/variable that's properly disposed to avoid resource leaks.",
+            "Process.Start() returns a Process handle. Discarding it without wrapping in `using` causes handle leaks. Wrap fire-and-forget calls in `using var _ = Process.Start(...)` or assign to a properly-disposed field or local variable.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

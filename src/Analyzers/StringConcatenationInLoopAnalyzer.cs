@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1025";
         private const string Category = "Performance";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"String concatenation in loop creates GC pressure";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"String concatenation via `+=` inside a loop allocates new strings on each iteration. Use StringBuilder or string.Join instead to avoid quadratic allocation and GC pressure.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"String concatenation in loops (for, while, do, foreach) creates O(N²) heap allocations because each += creates a new string object and copies the entire previous string. This pattern is common in dynamically building content (YAML, JSON, HTML) and causes significant GC pressure in hot paths. Always use StringBuilder or string.Join for loop-based concatenation.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "String concatenation in loop creates GC pressure",
+            "String concatenation via `+=` inside a loop allocates new strings on each iteration. Use StringBuilder or string.Join instead to avoid quadratic allocation and GC pressure.",
+            "String concatenation in loops (for, while, do, foreach) creates O(N²) heap allocations because each += creates a new string object and copies the entire previous string. This pattern is common in dynamically building content (YAML, JSON, HTML) and causes significant GC pressure in hot paths. Always use StringBuilder or string.Join for loop-based concatenation.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

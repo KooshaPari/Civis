@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1004";
         private const string Category = "Performance";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Task.WhenAll over potentially unbounded enumeration";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"`Task.WhenAll(...Select(...))` over `{0}` may allocate N tasks for large N. Consider `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` cap for >10 expected items.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"The pattern `Task.WhenAll(items.Select(x => DoAsync(x)))` allocates one task per item in the enumeration. For large or dynamically-sized enumerations, this can cause memory and thread-pool exhaustion. For >10 expected items, use `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` to cap concurrency. Use `// task-whenall-ok: <reason>` inline comment to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Task.WhenAll over potentially unbounded enumeration",
+            "`Task.WhenAll(...Select(...))` over `{0}` may allocate N tasks for large N. Consider `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` cap for >10 expected items.",
+            "The pattern `Task.WhenAll(items.Select(x => DoAsync(x)))` allocates one task per item in the enumeration. For large or dynamically-sized enumerations, this can cause memory and thread-pool exhaustion. For >10 expected items, use `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` to cap concurrency. Use `// task-whenall-ok: <reason>` inline comment to suppress.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

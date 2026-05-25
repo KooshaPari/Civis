@@ -15,24 +15,13 @@ namespace DINOForge.Analyzers
         private const string Category = "Maintainability";
         private const int LineThreshold = 60;
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Method body exceeds 60 lines";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Method '{0}' has a body of {1} lines — consider decomposing into smaller helpers";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Methods with bodies exceeding 60 lines are hard to test, maintain, and understand. They often indicate mixed concerns or missing abstractions. Refactor into smaller, focused helpers or use intermediate state machine helpers. If the long method is justified (e.g., a dispatcher with many case labels or generated code), document with `// long-method-ok: <reason>`.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Method body exceeds 60 lines",
+            "Method '{0}' has a body of {1} lines — consider decomposing into smaller helpers",
+            "Methods with bodies exceeding 60 lines are hard to test, maintain, and understand. They often indicate mixed concerns or missing abstractions. Refactor into smaller, focused helpers or use intermediate state machine helpers. If the long method is justified (e.g., a dispatcher with many case labels or generated code), document with `// long-method-ok: <reason>`.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

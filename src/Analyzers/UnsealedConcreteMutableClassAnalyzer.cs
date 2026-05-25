@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1013";
         private const string Category = "Design";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Public concrete class with mutable state should be sealed or designed for inheritance";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Public class '{0}' is not sealed and has mutable private state but defines no virtual/abstract members for inheritance — seal it or add an extension point. If unsealable by design, document with `// unsealed-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Public concrete classes with mutable private state should either be sealed (if inheritance is not intended) or define protected virtual/abstract members (if inheritance is intended). An unsealed class with mutable state but no extension points creates a maintenance liability: subclasses can capture mutable state without proper lifecycle management. Seal the class or explicitly design for inheritance by adding protected virtual methods. If unsealable by design, document with `// unsealed-ok: <reason>`.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Public concrete class with mutable state should be sealed or designed for inheritance",
+            "Public class '{0}' is not sealed and has mutable private state but defines no virtual/abstract members for inheritance — seal it or add an extension point. If unsealable by design, document with `// unsealed-ok: <reason>`.",
+            "Public concrete classes with mutable private state should either be sealed (if inheritance is not intended) or define protected virtual/abstract members (if inheritance is intended). An unsealed class with mutable state but no extension points creates a maintenance liability: subclasses can capture mutable state without proper lifecycle management. Seal the class or explicitly design for inheritance by adding protected virtual methods. If unsealable by design, document with `// unsealed-ok: <reason>`.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

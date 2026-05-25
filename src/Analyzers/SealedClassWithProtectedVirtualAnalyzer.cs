@@ -22,25 +22,15 @@ public class SealedClassWithProtectedVirtualAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "DF1021";
 
-    private static readonly LocalizableString Title =
-        (LocalizableString)"Sealed class has unreachable protected virtual/abstract members";
-
-    private static readonly LocalizableString MessageFormat =
-        (LocalizableString)"Member '{0}' in sealed class '{1}' uses 'protected virtual' or 'protected abstract' but can never be overridden — make it private/internal or unseal the class";
-
-    private static readonly LocalizableString Description =
-        (LocalizableString)"A sealed class cannot be inherited, so protected virtual or abstract members are unreachable dead code. Either unseal the class to allow inheritance, or change the member accessibility to private or internal. Exempt with `// sealed-virtual-ok: <reason>` for deliberate cases.";
-
     private const string Category = "Design";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
         DiagnosticId,
-        Title,
-        MessageFormat,
         Category,
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: Description);
+        "Sealed class has unreachable protected virtual/abstract members",
+        "Member '{0}' in sealed class '{1}' uses 'protected virtual' or 'protected abstract' but can never be overridden — make it private/internal or unseal the class",
+        "A sealed class cannot be inherited, so protected virtual or abstract members are unreachable dead code. Either unseal the class to allow inheritance, or change the member accessibility to private or internal. Exempt with `// sealed-virtual-ok: <reason>` for deliberate cases.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);

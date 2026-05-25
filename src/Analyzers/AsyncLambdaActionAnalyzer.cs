@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1010";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Async lambda assigned to Action / fire-and-forget";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Async lambda discards Task — exceptions are unobservable. Use `Func<Task>` instead, or wrap in `Task.Run(async () => { ... })` with explicit error handling.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"An async lambda expression is assigned to a delegate type that does not return a Task (e.g., `Action`). This creates a fire-and-forget pattern where exceptions thrown in the lambda are not observed and may be lost. Use `Func<Task>` to preserve the Task result, or wrap in `Task.Run(...)` with explicit error handling via continuation or ContinueWith.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Async lambda assigned to Action / fire-and-forget",
+            "Async lambda discards Task — exceptions are unobservable. Use `Func<Task>` instead, or wrap in `Task.Run(async () => { ... })` with explicit error handling.",
+            "An async lambda expression is assigned to a delegate type that does not return a Task (e.g., `Action`). This creates a fire-and-forget pattern where exceptions thrown in the lambda are not observed and may be lost. Use `Func<Task>` to preserve the Task result, or wrap in `Task.Run(...)` with explicit error handling via continuation or ContinueWith.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

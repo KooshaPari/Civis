@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1011";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Blocking Task.Result or Wait() in async context";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Avoid '.Result' or '.Wait()' inside an async method — use 'await' instead to prevent deadlocks. If unavoidable, document with `// async-blocking-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Calling .Result or .Wait() on a Task inside an async method blocks the async context, risking deadlock if the task's continuation requires the same context. Always use `await` in async contexts, or document with `// async-blocking-ok: <reason>` if truly unavoidable.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Blocking Task.Result or Wait() in async context",
+            "Avoid '.Result' or '.Wait()' inside an async method — use 'await' instead to prevent deadlocks. If unavoidable, document with `// async-blocking-ok: <reason>`.",
+            "Calling .Result or .Wait() on a Task inside an async method blocks the async context, risking deadlock if the task's continuation requires the same context. Always use `await` in async contexts, or document with `// async-blocking-ok: <reason>` if truly unavoidable.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

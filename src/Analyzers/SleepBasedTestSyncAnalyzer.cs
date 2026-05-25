@@ -13,24 +13,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF0108";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Sleep-based test synchronization is fragile";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Thread.Sleep or Task.Delay in test methods is fragile across environments. Use TestWait.UntilAsync(predicate, timeout) instead for robust polling.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Fixed-duration sleeps in tests create environment-dependent flakiness (slow CI, fast local). Use polling with timeout instead.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Sleep-based test synchronization is fragile",
+            "Thread.Sleep or Task.Delay in test methods is fragile across environments. Use TestWait.UntilAsync(predicate, timeout) instead for robust polling.",
+            "Fixed-duration sleeps in tests create environment-dependent flakiness (slow CI, fast local). Use polling with timeout instead.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

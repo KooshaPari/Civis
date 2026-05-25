@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1012";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Use 'throw;' to preserve stack trace";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Replace 'throw ex;' with 'throw;' to preserve the original exception stack trace. If you intentionally want to reset the stack, document with `// rethrow-as-new-ok: <reason>`.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Rethrowing an exception variable with 'throw ex;' resets the stack trace to the current throw location, losing the original call site. Always use 'throw;' (bare rethrow) to preserve the stack trace. Only use 'throw ex;' when explicitly wrapping the exception in a new exception type with `// rethrow-as-new-ok: <reason>` documented.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Use 'throw;' to preserve stack trace",
+            "Replace 'throw ex;' with 'throw;' to preserve the original exception stack trace. If you intentionally want to reset the stack, document with `// rethrow-as-new-ok: <reason>`.",
+            "Rethrowing an exception variable with 'throw ex;' resets the stack trace to the current throw location, losing the original call site. Always use 'throw;' (bare rethrow) to preserve the stack trace. Only use 'throw ex;' when explicitly wrapping the exception in a new exception type with `// rethrow-as-new-ok: <reason>` documented.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);

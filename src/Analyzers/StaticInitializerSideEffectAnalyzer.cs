@@ -14,24 +14,13 @@ namespace DINOForge.Analyzers
         public const string DiagnosticId = "DF1028";
         private const string Category = "Reliability";
 
-        private static readonly LocalizableString Title =
-            (LocalizableString)"Static field initializer has side effect";
-
-        private static readonly LocalizableString MessageFormat =
-            (LocalizableString)"Static field '{0}' initializer creates an external resource. Defer to Lazy<T> or factory method.";
-
-        private static readonly LocalizableString Description =
-            (LocalizableString)"Static field initializers that instantiate external resources (HttpClient, Process, File I/O, synchronization primitives, streams) block program startup and prevent resource cleanup control. Use Lazy<T> or factory methods instead. Use static-side-effect-ok: marker to suppress.";
-
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        private static readonly DiagnosticDescriptor Rule = DinoDiagnosticDescriptors.Create(
             DiagnosticId,
-            Title,
-            MessageFormat,
             Category,
             DiagnosticSeverity.Info,
-            isEnabledByDefault: true,
-            description: Description,
-            helpLinkUri: null);
+            "Static field initializer has side effect",
+            "Static field '{0}' initializer creates an external resource. Defer to Lazy<T> or factory method.",
+            "Static field initializers that instantiate external resources (HttpClient, Process, File I/O, synchronization primitives, streams) block program startup and prevent resource cleanup control. Use Lazy<T> or factory methods instead. Use static-side-effect-ok: marker to suppress.");
 
         private static readonly string[] SideEffectTypeNames = new[]
         {

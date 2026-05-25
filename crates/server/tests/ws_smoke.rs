@@ -1701,3 +1701,53 @@ async fn ws_jsonrpc_sim_damage_accepts_event() {
     .await
     .expect("damage timeout");
 }
+
+/// FR-CIV-UX-006 — spawn palette kinds accepted over WS JSON-RPC.
+#[tokio::test]
+async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
+    let kinds = ["civilian", "vehicle", "airport", "port", "hangar"];
+    for (idx, kind) in kinds.iter().enumerate() {
+        let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(
+            40 + idx as u64,
+        )));
+        let addr = spawn_ws_bridge(sim, 4).await;
+        let url = format!("ws://{addr}/ws");
+        let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+        let id = 200 + idx as u64;
+        let req = format!(
+            r#"{{"jsonrpc":"2.0","id":{id},"method":"sim.spawn_entity","params":{{"kind":"{kind}","x":0.2,"y":0.3,"faction":0}}}}"#
+        );
+        socket
+            .send(Message::Text(req))
+            .await
+            .expect("send spawn_entity");
+
+        timeout(Duration::from_secs(2), async {
+            while let Some(frame) = socket.next().await {
+                let Message::Text(text) = frame.expect("ws frame") else {
+                    continue;
+                };
+                let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+                if value.get("id") == Some(&serde_json::json!(id)) {
+                    assert_eq!(
+                        value.pointer("/result/ok"),
+                        Some(&serde_json::json!(true)),
+                        "spawn_entity kind={kind}"
+                    );
+                    assert!(
+                        value
+                            .pointer("/result/entity_id")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            > 0,
+                        "entity_id for kind={kind}"
+                    );
+                    return;
+                }
+            }
+            panic!("ws closed before spawn_entity response for kind={kind}");
+        })
+        .await
+        .unwrap_or_else(|_| panic!("spawn_entity timeout for kind={kind}"));
+    }
+}

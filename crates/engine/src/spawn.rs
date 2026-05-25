@@ -20,6 +20,11 @@ pub fn grid_to_norm(pos: Position) -> (f32, f32) {
     )
 }
 
+/// Stable military pin id (matches `civ-server` `military_pins_from_sim`).
+pub fn military_pin_id(entity: Entity, enumerate_index: usize) -> u64 {
+    entity.to_bits().get() ^ u64::from(enumerate_index as u32)
+}
+
 /// Wire label for military units (Knight → Vehicle for spawn palette).
 pub fn unit_type_label(unit_type: UnitType) -> &'static str {
     match unit_type {

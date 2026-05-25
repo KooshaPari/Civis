@@ -389,6 +389,12 @@ pub struct DamagePulseSnapshot {
     pub x: f32,
     /// Normalized map Y.
     pub y: f32,
+    /// Attacking unit pin id when damage came from military contact.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_a: Option<u64>,
+    /// Defending unit pin id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_b: Option<u64>,
 }
 
 /// Military pin row for `sim.snapshot` (matches civ-watch wire shape).
@@ -483,7 +489,7 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
 
 /// Map ECS military units to spectator pins.
 pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSnapshot> {
-    use civ_engine::{grid_to_norm, unit_type_label, MilitaryUnit};
+    use civ_engine::{grid_to_norm, spawn::military_pin_id, unit_type_label, MilitaryUnit};
     sim.world
         .query::<&MilitaryUnit>()
         .iter()
@@ -491,7 +497,7 @@ pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSn
         .map(|(idx, (entity, unit))| {
             let (x, y) = grid_to_norm(unit.position);
             MilitaryPinSnapshot {
-                id: entity.to_bits().get() ^ u64::from(idx as u32),
+                id: military_pin_id(entity, idx),
                 x,
                 y,
                 unit_type: unit_type_label(unit.unit_type).to_string(),
@@ -544,11 +550,16 @@ pub fn snapshot_fields_from_sim(
         institutions: institutions_from_sim(sim),
         military_units: military_pins_from_sim(sim),
         damage_events: sim
-            .last_tick_damage_centers()
+            .last_tick_combat_pulses()
             .iter()
-            .map(|(x, y)| DamagePulseSnapshot { x: *x, y: *y })
+            .map(|pulse| DamagePulseSnapshot {
+                x: pulse.x,
+                y: pulse.y,
+                unit_a: pulse.unit_a,
+                unit_b: pulse.unit_b,
+            })
             .collect(),
-        damage_events_count: sim.last_tick_damage_centers().len() as u32,
+        damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
     }
 }

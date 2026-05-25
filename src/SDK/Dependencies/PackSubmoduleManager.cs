@@ -272,10 +272,10 @@ namespace DINOForge.SDK.Dependencies
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
-            await Task.Run(() => process.WaitForExit(), ct);
+            await WaitForProcessExitAsync(process, ct);
 
-            string output = await Task.Run(() => process.StandardOutput.ReadToEnd(), ct);
-            string error = await Task.Run(() => process.StandardError.ReadToEnd(), ct);
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
@@ -292,12 +292,24 @@ namespace DINOForge.SDK.Dependencies
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
-            await Task.Run(() => process.WaitForExit(), ct);
+            await WaitForProcessExitAsync(process, ct);
 
             if (process.ExitCode != 0)
             {
-                string error = await Task.Run(() => process.StandardError.ReadToEnd(), ct);
+                string error = process.StandardError.ReadToEnd();
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
+            }
+        }
+
+        /// <summary>
+        /// Polls until a process exits, honoring cancellation via Task.Delay backoff.
+        /// </summary>
+        private static async Task WaitForProcessExitAsync(Process process, CancellationToken ct)
+        {
+            while (!process.HasExited)
+            {
+                ct.ThrowIfCancellationRequested();
+                await Task.Delay(50, ct);
             }
         }
     }

@@ -235,7 +235,7 @@ namespace DINOForge.SDK.Registry
                 using HttpResponseMessage response = await _http
                     .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
-                string json = await Task.Run(() => response.Content.ReadAsStringAsync().GetAwaiter().GetResult(), cancellationToken);
+                string json = await ReadAsStringWithCancellationAsync(response.Content, cancellationToken);
 
                 RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, JsonOptions.Default);
 
@@ -352,6 +352,22 @@ namespace DINOForge.SDK.Registry
             {
                 _lock.Release();
             }
+        }
+
+        /// <summary>
+        /// Reads HTTP content as string with cooperative cancellation.
+        /// HttpContent.ReadAsStringAsync has no CancellationToken overload on netstandard2.0.
+        /// </summary>
+        private static async Task<string> ReadAsStringWithCancellationAsync(HttpContent content, CancellationToken ct)
+        {
+            Task<string> readTask = content.ReadAsStringAsync();
+            while (!readTask.IsCompleted)
+            {
+                ct.ThrowIfCancellationRequested();
+                await Task.Delay(200, ct);
+            }
+
+            return await readTask;
         }
 
         /// <summary>

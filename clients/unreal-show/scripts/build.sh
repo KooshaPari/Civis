@@ -59,11 +59,15 @@ fi
 
 case "$(uname -s 2>/dev/null || echo unknown)" in
   MINGW*|MSYS*|CYGWIN*|Windows*)
+    PS_ARGS=()
+    if [[ "${SKIP_RUST}" -eq 1 ]]; then
+      PS_ARGS+=(-SkipRust)
+    fi
     if command -v pwsh >/dev/null 2>&1; then
-      exec pwsh -NoProfile -File "${SCRIPT_DIR}/build.ps1" @([[ "${SKIP_RUST}" -eq 1 ]] && echo -SkipRust)
+      exec pwsh -NoProfile -File "${SCRIPT_DIR}/build.ps1" "${PS_ARGS[@]}"
     fi
     if command -v powershell.exe >/dev/null 2>&1; then
-      exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/build.ps1" @([[ "${SKIP_RUST}" -eq 1 ]] && echo -SkipRust)
+      exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/build.ps1" "${PS_ARGS[@]}"
     fi
     echo "Windows detected but PowerShell not found; rust-shim built only." >&2
     exit 2

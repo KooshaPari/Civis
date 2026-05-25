@@ -17,10 +17,17 @@ Manor Lordsâ€“grade means art direction, animation density, and UX polish on L3â
 
 ## Next L5 slices (ordered)
 
-1. Godot job-specific capsule materials + foot placement on terrain height.
-2. Bevy ambient + sky tint from `is_day` (not only directional illuminance).
-3. Unreal materials / Nanite terrain (artist-owned).
-4. Audio + UI density (out of scope for protocol milestone).
+1. Unreal materials / Nanite terrain (artist-owned; `Content/Materials/`).
+2. Godot drag-preview Y aligned to terrain foot helper.
+3. Audio + UI density (out of scope for protocol milestone).
+
+## Recently landed (parallel slice)
+
+| Item | Evidence |
+|------|----------|
+| Godot foot placement | `main.gd` `_world_y_at_norm` for civ/buildings/military/burst |
+| Bevy ambient + sky | `presentation_clear_color_rgb`, `AmbientLight` + `ClearColor` in `bevy_window.rs` |
+| Unreal CLI build | `clients/unreal-show/scripts/build.ps1` (exit 2 when UE not installed) |
 
 ## Acceptance
 

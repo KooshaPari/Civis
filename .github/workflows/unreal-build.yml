@@ -1,0 +1,45 @@
+# Optional Unreal compile check on Windows.
+# GitHub-hosted runners do not ship UE 5.4; expect exit code 2 (engine not found).
+# Install UE locally and run clients/unreal-show/scripts/build.ps1 for a real compile.
+name: Unreal build (optional)
+
+on:
+  pull_request:
+    paths:
+      - 'clients/unreal-show/**'
+      - '.github/workflows/unreal-build.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'clients/unreal-show/**'
+      - '.github/workflows/unreal-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unreal-show:
+    name: civ-show (rust-shim + UE if present)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Run automated build script
+        shell: pwsh
+        working-directory: clients/unreal-show
+        run: |
+          $out = & ./scripts/build.ps1 2>&1
+          $code = $LASTEXITCODE
+          $out | Write-Host
+          switch ($code) {
+            0 { Write-Host 'UE build succeeded (runner had engine installed).' }
+            2 {
+              Write-Host '::notice::UE 5.4 not on runner — rust-shim built; UE step skipped (expected on GitHub-hosted).'
+            }
+            default { exit $code }
+          }

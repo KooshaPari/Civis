@@ -20,7 +20,9 @@
 | FR-CIV-TACTICS-000 | implemented | — |
 | FR-CIV-TACTICS-001 | implemented | Per-soldier damage events (not only sphere carve) |
 | FR-CIV-TACTICS-010 | implemented | — |
-| FR-CIV-TACTICS-002+ | planned | Line-of-sight, unit formations, Phase 4 war bridge |
+| FR-CIV-TACTICS-020 | implemented | `line_of_sight` (voxel LOS) |
+| FR-CIV-TACTICS-021 | implemented | `formation_offsets` (line / wedge / square) |
+| FR-CIV-TACTICS-022 | implemented | `tick_war_bridge` in `phase_military` |
 
 ## First PR slice (recommended)
 
@@ -29,7 +31,8 @@
 3. **Web:** damage bursts + combat notifications — **done** (`scene3d.tsx`, `main.tsx`).
 4. **Watch:** per-unit `unit_a` / `unit_b` on military `DamagePulse` — **done**.
 5. **Doctrine GA:** `evolve_doctrine` every 64 ticks per faction in `phase_tactics` — **done**.
-6. **Next:** FR-CIV-TACTICS-002+ (LOS, formations, war bridge).
+6. **Done:** FR-CIV-TACTICS-020/021/022 (LOS, formations, war bridge).
+7. **Next:** Per-soldier combat events, operational layer hooks, richer doctrine fitness.
 
 ## Run
 

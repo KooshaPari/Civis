@@ -8,6 +8,7 @@ class IWebSocket;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCivWsSnapshot, const FString&, SnapshotJson);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCivWsConnection, const FString&, State);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCivF3d0Frame, const FString&, Kind, const FString&, FrameJson);
 
 /**
  * JSON-RPC WebSocket client for civ-server (mirrors Godot CivisWsClient).
@@ -49,7 +50,12 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Civis")
     FOnCivWsConnection OnConnectionChanged;
 
+    UPROPERTY(BlueprintAssignable, Category = "Civis")
+    FOnCivF3d0Frame OnF3d0FrameReceived;
+
 private:
+    void MaybeRequestSnapshotThrottled();
+    static FString FrameKindFromByte(uint8 KindByte);
     void SendRpc(const FString& Method, const FString& ParamsJsonObject);
     void HandleMessage(const FString& Text);
     void HandleBinary(const TArray<uint8>& Data);

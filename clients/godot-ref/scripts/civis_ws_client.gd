@@ -5,6 +5,7 @@ extends Node
 
 signal snapshot_received(snapshot: Dictionary)
 signal connection_changed(state: String)
+signal f3d0_frame_received(kind: String, tick: int, frame: Variant)
 
 @export var ws_url := "ws://127.0.0.1:3000/ws?tick_format=binary"
 @export var reconnect_delay_sec := 3.0
@@ -110,6 +111,22 @@ func _call_rpc(method: String, params: Dictionary) -> void:
 	_ws.send_text(JSON.stringify(body))
 
 func _handle_packet(packet: PackedByteArray) -> void:
+	if ClassDB.class_exists("CivisWsFrame"):
+		var decoded: Dictionary = CivisWsFrame.decode_ws_packet(packet)
+		if not decoded.get("ok", false):
+			return
+		var kind: String = str(decoded.get("kind", ""))
+		var tick: int = int(decoded.get("tick", 0))
+		if kind == "RpcJson":
+			var parsed = JSON.parse_string(str(decoded.get("json", "")))
+			if typeof(parsed) == TYPE_DICTIONARY:
+				_handle_rpc_response(parsed)
+			return
+		var frame = JSON.parse_string(str(decoded.get("json", "")))
+		f3d0_frame_received.emit(kind, tick, frame)
+		_maybe_refresh_snapshot()
+		return
+
 	if packet.size() >= 4:
 		var magic := packet.slice(0, 4).get_string_from_ascii()
 		if magic == "F3D0":
@@ -124,6 +141,7 @@ func _handle_packet(packet: PackedByteArray) -> void:
 	if msg.has("id") and (msg.has("result") or msg.has("error")):
 		_handle_rpc_response(msg)
 	elif msg.has("VoxelDelta") or msg.has("BuildingDiff") or msg.has("AgentAppearance"):
+		f3d0_frame_received.emit("legacy", 0, msg)
 		_maybe_refresh_snapshot()
 
 func _handle_rpc_response(msg: Dictionary) -> void:

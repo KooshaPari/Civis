@@ -8,6 +8,16 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod formation;
+mod los;
+mod war_bridge;
+
+pub use formation::{formation_offsets, FormationKind};
+pub use los::line_of_sight;
+pub use war_bridge::{
+    grid_to_world_coord, tick_war_bridge, MilitaryUnitSample, WarBridgeConfig,
+};
+
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -254,6 +264,61 @@ mod tests {
         evolve_doctrine(&mut lib2, &mut r2, 0.5);
         assert_eq!(lib1, lib2);
         assert_eq!(lib1.generation, 8);
+    }
+
+    /// FR-CIV-TACTICS-020 — line_of_sight blocks solid voxels between endpoints.
+    #[test]
+    fn line_of_sight_blocks_solid_voxels() {
+        let mut world = VoxelWorld::new(1);
+        let from = WorldCoord { x: 0, y: 0, z: 0 };
+        let to = WorldCoord { x: 8, y: 0, z: 0 };
+        assert!(line_of_sight(&world, from, to));
+        for x in 1..8 {
+            world.write(WorldCoord { x, y: 0, z: 0 }, MaterialId(1));
+        }
+        assert!(!line_of_sight(&world, from, to));
+    }
+
+    /// FR-CIV-TACTICS-021 — formation_offsets returns stable slot layouts.
+    #[test]
+    fn formation_offsets_line_and_wedge() {
+        let line = formation_offsets(FormationKind::Line, 3);
+        assert_eq!(line, vec![(-1, 0), (0, 0), (1, 0)]);
+        let wedge = formation_offsets(FormationKind::Wedge, 3);
+        assert_eq!(wedge.len(), 3);
+        assert_eq!(wedge[0], (0, 0));
+    }
+
+    /// FR-CIV-TACTICS-022 — war bridge queues damage when factions engage with LOS.
+    #[test]
+    fn war_bridge_queues_damage_on_cadence_with_los() {
+        let world = VoxelWorld::new(1);
+        let units = [
+            MilitaryUnitSample {
+                faction_id: 0,
+                grid_x: 0,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                faction_id: 1,
+                grid_x: 4,
+                grid_y: 0,
+            },
+        ];
+        let config = WarBridgeConfig {
+            cadence_ticks: 4,
+            ..WarBridgeConfig::default()
+        };
+        assert!(tick_war_bridge(3, &config, &units, &world).is_empty());
+        let events = tick_war_bridge(4, &config, &units, &world);
+        assert_eq!(
+            events.len(),
+            2,
+            "each faction should damage the opposing unit when in range with LOS"
+        );
+        assert!(events
+            .iter()
+            .all(|e| e.radius_voxels == config.damage_radius_voxels));
     }
 
     /// FR-CIV-TACTICS-011 — evolve_doctrine selects fitter doctrines.

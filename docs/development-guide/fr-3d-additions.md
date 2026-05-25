@@ -86,6 +86,10 @@
 - **FR-CIV-TACTICS-001** — Voxel-destructible damage application is deterministic.
 - **FR-CIV-TACTICS-010** — Doctrine evolution: GA over compositions converges to a
   reproducible solution under fixed seed.
+- **FR-CIV-TACTICS-020** — Voxel line-of-sight: solid materials block grid segments.
+- **FR-CIV-TACTICS-021** — Unit formation offsets (line / wedge / square).
+- **FR-CIV-TACTICS-022** — War bridge: military grid engagements queue voxel
+  `DamageEvent`s on a fixed cadence when LOS is clear.
 
 ## FR-CIV-PLANET (P-P1, crate `civ-planet`)
 

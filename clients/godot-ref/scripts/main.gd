@@ -52,6 +52,7 @@ var _civis_http: CivisClient
 @onready var civilians_root: Node3D = $Civilians
 @onready var buildings_root: Node3D = $Buildings
 @onready var military_root: Node3D = $Military
+@onready var voxel_overlay: F3d0VoxelOverlay = $VoxelOverlays
 @onready var ui = $UI
 
 var current_tool := "Inspect"
@@ -78,6 +79,7 @@ func _ready() -> void:
 	add_child(_ws_client)
 	_ws_client.snapshot_received.connect(_on_ws_snapshot)
 	_ws_client.connection_changed.connect(_on_ws_connection)
+	_ws_client.f3d0_frame_received.connect(_on_f3d0_frame)
 
 	_civis_http.connect(civ_watch_http)
 	_load_terrain()
@@ -357,6 +359,10 @@ func _on_ws_snapshot(snapshot: Dictionary) -> void:
 func _on_ws_connection(state: String) -> void:
 	if state != "live":
 		ui.get_node("BottomBar/HBoxContainer/TickLabel").text = "Conn: %s" % state
+
+func _on_f3d0_frame(kind: String, _tick: int, frame: Variant) -> void:
+	if kind == "VoxelDelta":
+		voxel_overlay.apply_voxel_delta_frame(frame)
 
 func _apply_snapshot(snapshot: Dictionary) -> void:
 	var tick := int(snapshot.get("tick", 0))

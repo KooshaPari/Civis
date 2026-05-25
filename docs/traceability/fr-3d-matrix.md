@@ -104,6 +104,9 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-001 | Voxel-destructible damage application is deterministic. | `crates/tactics/`, `engine.rs` | `apply_damage_is_deterministic`, `pending_damage_drains` | implemented |
 | FR-CIV-TACTICS-001-int | Damage pulses on watch/server snapshot + web impact markers. | `watch`, `server/jsonrpc`, `web/dashboard` | `snapshot_fields_from_sim_includes_damage_after_tick` | implemented |
 | FR-CIV-TACTICS-010 | Doctrine GA converges reproducibly under fixed seed. | `crates/tactics/`, `engine.rs` | `tactics::doctrine_ga_converges`, `phase_tactics_evolve_doctrine_on_cadence` | implemented |
+| FR-CIV-TACTICS-020 | Voxel line-of-sight is deterministic. | `crates/tactics/los.rs` | `line_of_sight_blocks_solid_voxels` | implemented |
+| FR-CIV-TACTICS-021 | Formation offsets are stable per kind/slot count. | `crates/tactics/formation.rs` | `formation_offsets_line_and_wedge` | implemented |
+| FR-CIV-TACTICS-022 | War bridge queues voxel damage on cadence with LOS. | `crates/tactics/war_bridge.rs`, `engine.rs` | `war_bridge_queues_damage_on_cadence_with_los` | implemented |
 
 ---
 

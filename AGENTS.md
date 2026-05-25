@@ -8,11 +8,14 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 |------|---------|
 | Agent smoke (fast) | `.\scripts\agent-smoke.ps1` |
 | Agent smoke (full UE) | `.\scripts\agent-smoke.ps1 -FullUnreal` (when `UE_ROOT`/UBT present) |
-| Full 3D workspace | `just civis-3d-verify` |
+| Full 3D workspace | `just civis-3d-verify` (catalog + scenario checks, then build/test/clippy/fmt) |
+| JSON-RPC catalog drift | `just civis-3d-catalog-check` |
+| Scenario YAML | `just civis-3d-scenario-check` |
 | Quality manifest (optional UE) | `scripts/quality/README.md`; `CIVIS_QUALITY_UNREAL=1` + `emit-quality-manifest.ps1` |
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
 | Godot GDExtension | `just godot-test` |
 | Unreal CivShow | `.\clients\unreal-show\scripts\build.ps1` (needs UE 5.7 + MSVC) |
+| Unreal PIE prep | `.\scripts\pie-validation.ps1` (starts backends, WS/terrain smoke, prints PIE checklist) |
 
 ## Attach matrix (do not guess URLs)
 
@@ -32,6 +35,7 @@ Default stack:
 | Godot attach | `docs/development-guide/fr-godot-attach.md` |
 | L5 visual pass | `docs/development-guide/fr-l5-visual-pass.md` |
 | Modding (spec only) | `docs/specs/CIV-0700-modding-api-spec.md` |
+| Scenario YAML | `docs/guides/scenario-yaml.md` |
 | Agent smoke | `docs/guides/agent-smoke.md` |
 | Web FR matrix (closed) | `docs/traceability/fr-web-matrix.md` |
 

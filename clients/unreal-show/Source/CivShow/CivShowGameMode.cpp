@@ -12,6 +12,8 @@
 #include "Serialization/JsonSerializer.h"
 #include "CivisJobColors.h"
 #include "VoxelTerrain.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
 
 ACivShowGameMode::ACivShowGameMode()
 {
@@ -39,6 +41,7 @@ void ACivShowGameMode::BeginPlay()
         false);
 
     WsClient->OnSnapshotReceived.AddDynamic(this, &ACivShowGameMode::OnWsSnapshot);
+    WsClient->OnF3d0FrameReceived.AddDynamic(this, &ACivShowGameMode::OnF3d0Frame);
     WsClient->ConnectServer(ServerWsUrl);
 }
 
@@ -74,6 +77,115 @@ void ACivShowGameMode::OnTerrainFetched()
     if (TerrainActor)
     {
         TerrainActor->BuildFromHeightmap(HttpClient->Heights, HttpClient->Biomes, Size);
+    }
+}
+
+void ACivShowGameMode::OnF3d0Frame(const FString& Kind, const FString& FrameJson)
+{
+    if (Kind == TEXT("VoxelDelta"))
+    {
+        ApplyVoxelDeltaOverlay(FrameJson);
+    }
+}
+
+static FVector ChunkWorldCentreFromId(const uint64 ChunkRaw)
+{
+    static constexpr float ChunkEdge = 16.0f;
+    int64 Cx = static_cast<int64>((ChunkRaw >> 40) & 0xFFFFFF);
+    int64 Cy = static_cast<int64>((ChunkRaw >> 16) & 0xFFFFFF);
+    int64 Cz = static_cast<int64>(ChunkRaw & 0xFFFF);
+    if (Cx & 0x800000)
+    {
+        Cx |= ~0xFFFFFFLL;
+    }
+    if (Cy & 0x800000)
+    {
+        Cy |= ~0xFFFFFFLL;
+    }
+    if (Cz & 0x8000)
+    {
+        Cz |= ~0xFFFFLL;
+    }
+    return FVector(
+        (static_cast<float>(Cx) + 0.5f) * ChunkEdge,
+        (static_cast<float>(Cy) + 0.5f) * ChunkEdge * 0.2f,
+        (static_cast<float>(Cz) + 0.5f) * ChunkEdge);
+}
+
+void ACivShowGameMode::ApplyVoxelDeltaOverlay(const FString& FrameJson)
+{
+    TSharedPtr<FJsonObject> Root;
+    const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(FrameJson);
+    if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+    {
+        return;
+    }
+
+    const TSharedPtr<FJsonObject>* VoxelObj = nullptr;
+    if (!Root->TryGetObjectField(TEXT("VoxelDelta"), VoxelObj) || !VoxelObj || !VoxelObj->IsValid())
+    {
+        return;
+    }
+
+    const TArray<TSharedPtr<FJsonValue>>* Deltas = nullptr;
+    if (!(*VoxelObj)->TryGetArrayField(TEXT("deltas"), Deltas) || !Deltas)
+    {
+        return;
+    }
+
+    int32 Shown = 0;
+    for (const TSharedPtr<FJsonValue>& DeltaVal : *Deltas)
+    {
+        if (Shown >= MaxChunkOverlays)
+        {
+            break;
+        }
+        const TSharedPtr<FJsonObject> Delta = DeltaVal->AsObject();
+        if (!Delta.IsValid())
+        {
+            continue;
+        }
+        const TSharedPtr<FJsonObject>* EventObj = nullptr;
+        if (!Delta->TryGetObjectField(TEXT("event"), EventObj) || !EventObj || !EventObj->IsValid())
+        {
+            continue;
+        }
+        double ChunkIdRaw = 0.0;
+        if (!(*EventObj)->TryGetNumberField(TEXT("chunk_id"), ChunkIdRaw) || ChunkIdRaw == 0.0)
+        {
+            continue;
+        }
+        const uint64 ChunkKey = static_cast<uint64>(ChunkIdRaw);
+
+        AActor* Marker = ChunkOverlayActors.FindRef(ChunkKey);
+        if (!Marker)
+        {
+            Marker = GetWorld()->SpawnActor<AStaticMeshActor>(
+                AStaticMeshActor::StaticClass(),
+                ChunkWorldCentreFromId(ChunkKey),
+                FRotator::ZeroRotator);
+            if (!Marker)
+            {
+                continue;
+            }
+            if (AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Marker))
+            {
+                if (UStaticMesh* Cube = LoadObject<UStaticMesh>(
+                        nullptr,
+                        TEXT("/Engine/BasicShapes/Cube.Cube")))
+                {
+                    MeshActor->GetStaticMeshComponent()->SetStaticMesh(Cube);
+                    MeshActor->GetStaticMeshComponent()->SetWorldScale3D(
+                        FVector(ChunkEdge * 0.9f, ChunkEdge * 0.35f, ChunkEdge * 0.9f));
+                }
+            }
+            ChunkOverlayActors.Add(ChunkKey, Marker);
+        }
+        else
+        {
+            Marker->SetActorLocation(ChunkWorldCentreFromId(ChunkKey));
+        }
+        ++Shown;
     }
 }
 

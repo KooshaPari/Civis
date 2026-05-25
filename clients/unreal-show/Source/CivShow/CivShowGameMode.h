@@ -40,7 +40,12 @@ private:
     UFUNCTION()
     void OnWsSnapshot(const FString& SnapshotJson);
 
+    UFUNCTION()
+    void OnF3d0Frame(const FString& Kind, const FString& FrameJson);
+
     void SyncCiviliansFromSnapshot(const FString& SnapshotJson);
+
+    void ApplyVoxelDeltaOverlay(const FString& FrameJson);
 
     void ApplyDayNight(bool bIsDay);
 
@@ -55,4 +60,10 @@ private:
 
     UPROPERTY()
     TMap<int32, ACivilianActor*> CivilianActors;
+
+    UPROPERTY()
+    TMap<uint64, AActor*> ChunkOverlayActors;
+
+    static constexpr int32 MaxChunkOverlays = 64;
+    static constexpr float ChunkEdge = 16.0f;
 };

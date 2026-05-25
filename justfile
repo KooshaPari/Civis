@@ -49,9 +49,17 @@ docs:
 
 # --- Civis 3D extension targets (feat/civis-3d-foundation) ---
 
+# JSON-RPC method catalog must match jsonrpc.rs (docs/api/jsonrpc-surface.md).
+civis-3d-catalog-check:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-jsonrpc-catalog.ps1
+
+# Scenario YAML + mods validation (civ-engine scenario::* tests).
+civis-3d-scenario-check:
+    cargo test -p civ-engine scenario --quiet
+
 # 3D verification gate: build + test + clippy --all-targets + fmt --check.
 # Used by P-V0..P-U1 phase PRs before push.
-civis-3d-verify:
+civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check
     cargo build --workspace
     cargo test --workspace
     cargo clippy --workspace --all-targets -- -D warnings

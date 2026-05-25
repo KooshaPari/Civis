@@ -109,6 +109,11 @@ jobs:
               /^machete$/i,
               /^civ-show/i,
               /^GitGuardian/i,
+              /^Kilo/i,
+              /^semgrep/i,
+              /^SonarCloud/i,
+              /^Cursor Bugbot/i,
+              /^CodeRabbit$/i,
             ];
 
             const contexts =

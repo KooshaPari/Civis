@@ -1,12 +1,11 @@
 name: Security Guard (Hooks)
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
   push:
-    branches:
-      - "**"
-
+    branches: [main]
 permissions:
   contents: read
 

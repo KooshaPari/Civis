@@ -78,6 +78,8 @@ Heavy quality runs **on your machine** via lefthook; GitHub Actions only **verif
 
 Optional full sweep on Actions (manual only): **Actions → Quality → Run workflow** (`workflow_dispatch` → `quality-full`).
 
+**PR merge without billable runners:** only `quality-manifest` + `pr-governance-gate` run on pull requests. Legacy workflows (`cargo-deny`, CodeQL, `quality-gate`, etc.) run on `main` push or `workflow_dispatch` only. Add label `local-first-ci` or `ci-billing-exception` on the PR to ignore stale red checks from before this policy.
+
 **`civ-server` protocol** — HTTP on the bind address; WebSocket JSON-RPC at `/ws`.
 
 | Kind | Methods / routes |

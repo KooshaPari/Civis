@@ -7,7 +7,7 @@ public class CivShowEditorTarget : TargetRules
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
-		IncludeOrderVersion = IncludeOrderVersion.Unreal5_4;
+		IncludeOrderVersion = global::UnrealBuildTool.EngineIncludeOrderVersion.Unreal5_6;
 
 		ExtraModuleNames.AddRange(new string[] { "CivShow" });
 	}

@@ -117,6 +117,16 @@ struct DamagePulse {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct DisasterEvent {
+    tick: u64,
+    kind: String,
+    x: f32,
+    y: f32,
+    radius: f32,
+    severity: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct Faction {
     id: u32,
     color: [u8; 3],
@@ -124,7 +134,7 @@ struct Faction {
     radius: f32,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 enum BuildingKind {
     Residential,
@@ -286,6 +296,7 @@ struct Snapshot {
     diplomacy_events: Vec<DiplomacyPulse>,
     military_units: Vec<MilitaryPin>,
     damage_events: Vec<DamagePulse>,
+    disaster_events: Vec<DisasterEvent>,
     birth_events: Vec<PopulationPulse>,
     death_events: Vec<PopulationPulse>,
     tech_tree: Vec<TechNode>,
@@ -714,11 +725,13 @@ fn make_snapshot(
         })
         .collect();
     let tech_nodes = tech_tree(laws, current_era);
+    let disaster_events = disaster_events(sim.state.tick, &factions, &buildings);
     let events = game_events(
         sim,
         &birth_events,
         &death_events,
         &diplomacy_events,
+        &disaster_events,
         &buildings,
         &tech_nodes,
     );
@@ -751,6 +764,7 @@ fn make_snapshot(
         diplomacy_events,
         military_units: military.to_vec(),
         damage_events: damage_events.to_vec(),
+        disaster_events,
         birth_events,
         death_events,
         tech_tree: tech_nodes,
@@ -816,6 +830,7 @@ fn game_events(
     births_this_tick: &[PopulationPulse],
     deaths_this_tick: &[PopulationPulse],
     diplomacy_events: &[DiplomacyPulse],
+    disaster_events: &[DisasterEvent],
     buildings: &[Building],
     tech_tree: &[TechNode],
 ) -> Vec<GameEvent> {
@@ -840,6 +855,18 @@ fn game_events(
             tick,
             kind: "death".to_string(),
             message: "A citizen died".to_string(),
+            faction_id: None,
+        });
+    }
+
+    for disaster in disaster_events {
+        events.push(GameEvent {
+            tick: disaster.tick,
+            kind: "disaster".to_string(),
+            message: format!(
+                "{} at ({:.2}, {:.2})",
+                disaster.kind, disaster.x, disaster.y
+            ),
             faction_id: None,
         });
     }
@@ -915,6 +942,71 @@ fn game_events(
         .into_iter()
         .rev()
         .collect()
+}
+
+fn disaster_events(
+    tick: u64,
+    factions: &[Faction],
+    buildings: &[Building],
+) -> Vec<DisasterEvent> {
+    if tick == 0 || tick % 1000 != 0 {
+        return Vec::new();
+    }
+    let roll = hash01(tick as f32 * 0.017);
+    if roll < 0.25 {
+        return vec![DisasterEvent {
+            tick,
+            kind: "Earthquake".to_string(),
+            x: hash01(tick as f32 * 0.11) * 0.8 + 0.1,
+            y: hash01(tick as f32 * 0.19 + 3.0) * 0.8 + 0.1,
+            radius: 0.18,
+            severity: 0.55,
+        }];
+    }
+    if roll < 0.5 {
+        let (x, y) = buildings
+            .iter()
+            .find(|building| building.kind == BuildingKind::Residential)
+            .map(|building| (building.x, building.y))
+            .unwrap_or_else(|| {
+                (
+                    hash01(tick as f32 * 0.07) * 0.8 + 0.1,
+                    hash01(tick as f32 * 0.13 + 9.0) * 0.8 + 0.1,
+                )
+            });
+        return vec![DisasterEvent {
+            tick,
+            kind: "Wildfire".to_string(),
+            x,
+            y,
+            radius: 0.12,
+            severity: 0.7,
+        }];
+    }
+    if roll < 0.75 {
+        let center = factions.first().map(|faction| faction.capital).unwrap_or([0.5, 0.5]);
+        return vec![DisasterEvent {
+            tick,
+            kind: "Flood".to_string(),
+            x: center[0],
+            y: center[1],
+            radius: 0.22,
+            severity: 0.6,
+        }];
+    }
+    vec![DisasterEvent {
+        tick,
+        kind: "Plague".to_string(),
+        x: 0.5,
+        y: 0.5,
+        radius: 0.26,
+        severity: 0.1,
+    }]
+}
+
+fn hash01(value: f32) -> f32 {
+    let hashed = (value * 12.9898).sin() * 43_758.547;
+    hashed - hashed.floor()
 }
 
 fn faction_for_point(x: f32, y: f32) -> Option<u32> {

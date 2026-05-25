@@ -1,15 +1,11 @@
 name: cargo-machete
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Cargo.toml', '**/Cargo.toml']
-  pull_request:
-    paths: ['Cargo.toml', '**/Cargo.toml']
-  schedule:
-    - cron: '47 6 * * 4'  # weekly Thursday
-  workflow_dispatch:
-
 jobs:
   machete:
     runs-on: ubuntu-latest

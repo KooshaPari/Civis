@@ -1,13 +1,13 @@
 name: Cargo Audit
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * 3"
   push:
     branches: [main]
-  pull_request:
-
 permissions:
   contents: read
 

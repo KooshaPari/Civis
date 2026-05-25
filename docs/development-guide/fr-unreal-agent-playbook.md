@@ -1,7 +1,7 @@
 # FR-CIV-UE-AGENT — Unreal showcase: agent playbook
 
 **Client:** `clients/unreal-show`  
-**Engine:** UE **5.4** (must match `CivShow.uproject` `EngineAssociation`)  
+**Engine:** UE **5.7** on this machine (`C:\Program Files\Epic Games\UE_5.7`); `CivShow.uproject` `EngineAssociation` updated to `5.7`. `build.ps1` also accepts 5.4/5.6 if installed.  
 **Role:** L5 visual showcase only — sim authority stays on `civ-server` / `civ-watch`
 
 ---

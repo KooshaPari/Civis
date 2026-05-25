@@ -1,12 +1,11 @@
 name: Legacy Tooling Gate (WARN Mode)
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  push:
-    branches: [main, master, develop]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
-
+  push:
+    branches: [main]
 permissions:
   contents: read
 

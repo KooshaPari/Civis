@@ -101,7 +101,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|
 | FR-CIV-TACTICS-000 | Stub. | `crates/tactics/` | `tactics::schema_version_stub` | implemented |
-| FR-CIV-TACTICS-001 | Voxel-destructible damage application is deterministic. | `crates/tactics/` | `tactics::damage_deterministic` | implemented |
+| FR-CIV-TACTICS-001 | Voxel-destructible damage application is deterministic. | `crates/tactics/`, `engine.rs` | `apply_damage_is_deterministic`, `pending_damage_drains` | implemented |
 | FR-CIV-TACTICS-010 | Doctrine GA converges reproducibly under fixed seed. | `crates/tactics/` | `tactics::doctrine_ga_converges` | implemented |
 
 ---

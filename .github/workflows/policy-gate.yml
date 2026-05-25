@@ -1,9 +1,11 @@
 name: Policy Gate
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
-
+  workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: read
   pull-requests: read

@@ -1,11 +1,11 @@
 name: Journey Gate
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-
 permissions:
   contents: read
 

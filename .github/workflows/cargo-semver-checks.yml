@@ -1,10 +1,11 @@
 name: cargo-semver-checks
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  pull_request:
-    paths: ['**/Cargo.toml']
   workflow_dispatch:
-
+  push:
+    branches: [main]
 jobs:
   semver-checks:
     runs-on: ubuntu-latest

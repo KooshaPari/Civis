@@ -24,7 +24,7 @@
 
 ## First PR slice (recommended)
 
-1. **Test:** `engine::tick` with queued `DamageEvent` reduces voxel count (integration test in `civ-engine`).
+1. **Test:** `engine::tick` with queued `DamageEvent` reduces voxel count — **done** (`pending_damage_drains_and_reduces_chunk_count` in `civ-engine`).
 2. **Server:** expose `damage_events` count on `sim.snapshot` (already partial via watch).
 3. **Web:** render damage_events markers on `scene3d.tsx` (red flash at norm coords).
 4. **Docs:** mark FR-CIV-TACTICS-001 integration row `implemented` when test lands.

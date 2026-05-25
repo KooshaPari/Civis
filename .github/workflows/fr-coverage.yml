@@ -1,6 +1,10 @@
 name: FR Coverage
 
-on: [pull_request]
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read

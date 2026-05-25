@@ -5,6 +5,8 @@
 
 ## Local-first CI (required for merge)
 
+**Billing bypass (repo policy):** Pull requests only run `quality-manifest` and `pr-governance-gate`. All other workflows are `workflow_dispatch` / `push: main` only. Label the PR `local-first-ci` to ignore legacy red checks in the governance gate.
+
 GitHub-hosted checks may fail immediately when org **Actions spending limits** are hit. Treat the committed manifest as the source of truth:
 
 ```bash

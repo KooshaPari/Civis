@@ -1,16 +1,11 @@
 name: Docs Site
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  pull_request:
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs-site.yml'
+  workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs-site.yml'
-
 jobs:
   docs-build:
     runs-on: ubuntu-latest

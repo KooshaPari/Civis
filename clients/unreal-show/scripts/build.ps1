@@ -25,8 +25,7 @@ $Uproject = Join-Path $ProjectRoot 'CivShow.uproject'
 $RustShimDir = Join-Path $ProjectRoot 'Source\Civis\rust-shim'
 $LibDir = Join-Path $ProjectRoot 'Source\Civis\lib'
 $LibName = 'civis_unreal_ffi.lib'
-$UeVersion = '5.4'
-$UeFolder = "UE_$UeVersion"
+$PreferredUeVersions = @('5.7', '5.4', '5.6', '5.5')
 $EditorTarget = 'CivShowEditor'
 $Platform = 'Win64'
 
@@ -34,53 +33,23 @@ function Write-Step([string] $Message) {
     Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
-function Get-EpicLauncherUeRoots {
-    $paths = [System.Collections.Generic.List[string]]::new()
-    $manifest = Join-Path $env:PROGRAMDATA 'Epic\UnrealEngineLauncher\LauncherInstalled.dat'
-    if (-not (Test-Path -LiteralPath $manifest)) {
-        return $paths
+function Get-UeRootAndVersion {
+    if ($env:UE_ROOT -and (Test-Path -LiteralPath $env:UE_ROOT)) {
+        $name = Split-Path -Leaf $env:UE_ROOT
+        $ver = if ($name -match '^UE_(.+)$') { $Matches[1] } else { 'custom' }
+        return @{ Root = (Resolve-Path -LiteralPath $env:UE_ROOT).Path; Version = $ver }
     }
-    try {
-        $json = Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($entry in @($json.InstallationList)) {
-            $loc = [string]$entry.InstallLocation
-            if ([string]::IsNullOrWhiteSpace($loc)) { continue }
-            $parent = Split-Path -Parent $loc.TrimEnd('\', '/')
-            $candidate = Join-Path $parent $UeFolder
-            if (Test-Path -LiteralPath $candidate) {
-                $paths.Add((Resolve-Path -LiteralPath $candidate).Path)
+    foreach ($ver in $PreferredUeVersions) {
+        $candidates = @(
+            (Join-Path ${env:ProgramFiles} "Epic Games\UE_$ver"),
+            (Join-Path ${env:ProgramFiles(x86)} "Epic Games\UE_$ver")
+        )
+        foreach ($path in $candidates) {
+            if ($path -and (Test-Path -LiteralPath $path)) {
+                return @{ Root = (Resolve-Path -LiteralPath $path).Path; Version = $ver }
             }
         }
     }
-    catch {
-        Write-Verbose "Could not parse Epic launcher manifest: $_"
-    }
-    return $paths
-}
-
-function Get-UeRoot {
-    if ($env:UE_ROOT -and (Test-Path -LiteralPath $env:UE_ROOT)) {
-        return (Resolve-Path -LiteralPath $env:UE_ROOT).Path
-    }
-
-    $candidates = @(
-        (Join-Path ${env:ProgramFiles} "Epic Games\$UeFolder"),
-        (Join-Path ${env:ProgramFiles(x86)} "Epic Games\$UeFolder"),
-        (Join-Path $env:LOCALAPPDATA "EpicGamesLauncher\Engine\$UeFolder")
-    )
-
-    foreach ($path in $candidates) {
-        if ($path -and (Test-Path -LiteralPath $path)) {
-            return (Resolve-Path -LiteralPath $path).Path
-        }
-    }
-
-    foreach ($path in (Get-EpicLauncherUeRoots)) {
-        if (Test-Path -LiteralPath $path) {
-            return $path
-        }
-    }
-
     return $null
 }
 
@@ -180,25 +149,26 @@ if ($SkipUe) {
     exit 0
 }
 
-$ueRoot = Get-UeRoot
-if (-not $ueRoot) {
+$ue = Get-UeRootAndVersion
+if (-not $ue) {
     Write-Host @"
 
-Unreal Engine $UeVersion was not found.
+No supported Unreal Engine install found (tried: $($PreferredUeVersions -join ', ')).
 
 Checked:
   - Environment variable UE_ROOT
-  - C:\Program Files\Epic Games\$UeFolder
+  - C:\Program Files\Epic Games\UE_*
   - Epic Launcher manifest ($env:PROGRAMDATA\Epic\UnrealEngineLauncher\LauncherInstalled.dat)
 
-Install UE $UeVersion from Epic Games Launcher, or set UE_ROOT to your engine directory.
+Install UE from Epic Games Launcher, or set UE_ROOT to your engine directory.
 Rust shim was built successfully; only the UE compile step was skipped.
 
 "@ -ForegroundColor Yellow
     exit 2
 }
 
-Write-Host "Using UE_ROOT: $ueRoot" -ForegroundColor Green
+$ueRoot = $ue.Root
+Write-Host "Using UE_$($ue.Version): $ueRoot" -ForegroundColor Green
 
 $ubt = Get-UnrealBuildTool -UeRoot $ueRoot
 if (-not $ubt) {

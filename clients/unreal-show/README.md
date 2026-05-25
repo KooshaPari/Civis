@@ -36,7 +36,9 @@ The script:
 | `1` | `cargo`, copy, or UBT failure |
 | `2` | UE 5.4 not installed (rust shim may still have built) |
 
-**UE detection order:** `UE_ROOT` env → `C:\Program Files\Epic Games\UE_5.4` → Epic Launcher `LauncherInstalled.dat` parent + `UE_5.4`.
+**UE detection order:** `UE_ROOT` env → `C:\Program Files\Epic Games\UE_{5.7,5.4,...}` → Epic Launcher manifest.
+
+**Toolchain:** UE 5.7 requires Visual Studio 2022 **17.8+** with MSVC **14.44.35207** (UBT rejects 14.40–14.43). Install via VS Installer → *MSVC v143 … (v14.44-17.14)*.
 
 Flags: `-SkipRust`, `-SkipUe`, `-Configuration DebugGame|Shipping`.
 
@@ -52,7 +54,7 @@ Flags: `-SkipRust`, `-SkipUe`, `-Configuration DebugGame|Shipping`.
 
 ## Run instructions (manual / editor)
 
-1. Install Unreal Engine 5.4
+1. Install Unreal Engine **5.7** (or 5.4; `build.ps1` auto-detects `UE_*` under Epic Games)
 2. Run `.\scripts\build.ps1` (or build rust-shim manually: `cd Source/Civis/rust-shim && cargo build --release`)
 3. Open `CivShow.uproject` in Unreal Editor (or use generated `CivShow.sln` after the automated build)
 6. Start backends (recommended dual attach, same as Godot):

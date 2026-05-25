@@ -3,18 +3,12 @@
 # Install UE locally and run clients/unreal-show/scripts/build.ps1 for a real compile.
 name: Unreal build (optional)
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
-  pull_request:
-    paths:
-      - 'clients/unreal-show/**'
-      - '.github/workflows/unreal-build.yml'
+  workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'clients/unreal-show/**'
-      - '.github/workflows/unreal-build.yml'
-  workflow_dispatch:
-
 permissions:
   contents: read
 

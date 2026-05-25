@@ -1,6 +1,10 @@
 name: Quality Gate
 
-on: [push, pull_request]
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read

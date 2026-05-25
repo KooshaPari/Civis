@@ -140,7 +140,7 @@ class TestReceiptPersisted:
         # Verify content
         receipt_data = json.loads(json_files[0].read_text())
         assert receipt_data["verdict"] == "pass"
-        assert receipt_data["confidence"] == 0.95
+        assert receipt_data["confidence"] == pytest.approx(0.95)
 
     def test_receipt_includes_raw_response(self, monkeypatch):
         """Receipt must include full raw_response, not summarized."""
@@ -211,7 +211,7 @@ class TestVerdictParsing:
         response = "VERDICT: pass\nCONFIDENCE: 0.87\nExplanation: ..."
         verdict, confidence = judge._parse_verdict(response)
         assert verdict == "pass"
-        assert confidence == 0.87
+        assert confidence == pytest.approx(0.87)
 
     def test_parse_no_confidence(self):
         """Test when confidence is not provided."""
@@ -285,7 +285,7 @@ class TestRetryBehavior:
         receipt = judge.judge(img, "test prompt")
         assert call_count["n"] == 2
         assert receipt.verdict == "pass"
-        assert receipt.confidence == 0.9
+        assert receipt.confidence == pytest.approx(0.9)
 
     def test_5xx_terminal_failure_after_retry(self, monkeypatch, tmp_path):
         """Both attempts return 503. ExternalJudgeUnavailable is raised."""

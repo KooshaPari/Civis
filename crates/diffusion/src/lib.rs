@@ -145,4 +145,191 @@ mod tests {
         let b = trajectory(0.01, p, 100);
         assert_eq!(a, b);
     }
+
+    // -----------------------------------------------------------------------
+    // Conservation of "mass" (adoption total / trajectory integrity)
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-DIFFUSION-006 — the trajectory vector length is exactly `ticks + 1`
+    /// (the initial state plus one entry per tick). No values are lost or doubled.
+    #[test]
+    fn trajectory_length_equals_ticks_plus_one() {
+        let p = DiffusionParams::default();
+        for ticks in [0, 1, 10, 100] {
+            let traj = trajectory(0.1, p, ticks);
+            assert_eq!(
+                traj.len(),
+                ticks + 1,
+                "ticks={ticks}: expected {} entries, got {}",
+                ticks + 1,
+                traj.len()
+            );
+        }
+    }
+
+    /// FR-CIV-DIFFUSION-007 — the first element of the trajectory is always the
+    /// (clamped) initial adoption fraction — no off-by-one in the output buffer.
+    #[test]
+    fn trajectory_first_element_is_initial_value() {
+        let p = DiffusionParams::default();
+        for f0 in [0.0_f32, 0.25, 0.5, 0.9, 1.0] {
+            let traj = trajectory(f0, p, 5);
+            assert!(
+                (traj[0] - f0).abs() < 1e-6,
+                "f0={f0}: first element should be {f0}, got {}",
+                traj[0]
+            );
+        }
+    }
+
+    /// FR-CIV-DIFFUSION-008 — the cumulative adoption increase over N ticks
+    /// equals the difference between the final and initial adoption fractions.
+    /// This verifies that `tick_increase` and `advance` are consistent (no
+    /// adoption is created or discarded between calls).
+    #[test]
+    fn cumulative_increase_equals_final_minus_initial() {
+        let p = DiffusionParams { p: 0.03, q: 0.38 };
+        let f0 = 0.05_f32;
+        let ticks = 50;
+        let traj = trajectory(f0, p, ticks);
+        let sum_of_increases: f32 = traj.windows(2).map(|w| w[1] - w[0]).sum();
+        let direct_delta = traj[ticks] - traj[0];
+        assert!(
+            (sum_of_increases - direct_delta).abs() < 1e-4,
+            "sum of increments {sum_of_increases} != final-initial {direct_delta}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Monotone spread (resources spread outward, never concentrate backward)
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-DIFFUSION-009 — adoption is strictly non-decreasing tick-by-tick
+    /// even when both coefficients are very small (nearly no spread).
+    #[test]
+    fn monotone_spread_with_minimal_coefficients() {
+        let p = DiffusionParams { p: 0.001, q: 0.001 };
+        let traj = trajectory(0.01, p, 300);
+        for window in traj.windows(2) {
+            assert!(
+                window[1] >= window[0] - 1e-7,
+                "non-monotone: {} → {}",
+                window[0],
+                window[1]
+            );
+        }
+    }
+
+    /// FR-CIV-DIFFUSION-010 — when imitation dominates (q >> p), adoption
+    /// still never decreases and reaches near-saturation faster than the
+    /// innovation-only case.
+    #[test]
+    fn imitation_dominated_curve_is_faster_than_innovation_only() {
+        let innovation_only = DiffusionParams { p: 0.03, q: 0.0 };
+        let imitation_heavy = DiffusionParams { p: 0.03, q: 0.8 };
+        let f0 = 0.01_f32;
+        let ticks = 50;
+
+        let traj_inno = trajectory(f0, innovation_only, ticks);
+        let traj_imit = trajectory(f0, imitation_heavy, ticks);
+
+        // Monotone for both.
+        for w in traj_imit.windows(2) {
+            assert!(w[1] >= w[0] - 1e-7, "imitation traj non-monotone");
+        }
+        for w in traj_inno.windows(2) {
+            assert!(w[1] >= w[0] - 1e-7, "innovation traj non-monotone");
+        }
+
+        // Imitation-heavy reaches higher adoption after the same number of ticks.
+        assert!(
+            traj_imit[ticks] > traj_inno[ticks],
+            "imitation-heavy ({}) should outpace innovation-only ({}) at tick {ticks}",
+            traj_imit[ticks],
+            traj_inno[ticks]
+        );
+    }
+
+    /// FR-CIV-DIFFUSION-011 — tick_increase is always non-negative for any
+    /// valid (non-negative p, q) parameter set, so adoption never reverses.
+    #[test]
+    fn tick_increase_is_always_nonnegative() {
+        let param_pairs = [
+            (0.0_f32, 0.0_f32),
+            (0.03, 0.0),
+            (0.0, 0.38),
+            (0.03, 0.38),
+            (1.0, 1.0),
+        ];
+        for (pv, qv) in param_pairs {
+            let params = DiffusionParams { p: pv, q: qv };
+            for f_tenth in 0..=10 {
+                let f = f_tenth as f32 / 10.0;
+                let inc = tick_increase(f, params);
+                assert!(
+                    inc >= 0.0,
+                    "p={pv} q={qv} f={f}: tick_increase should be >= 0, got {inc}"
+                );
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Edge cases: empty / degenerate inputs
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-DIFFUSION-012 — zero ticks: trajectory returns a single-element
+    /// vector equal to the (clamped) initial value; no panic.
+    #[test]
+    fn zero_ticks_returns_single_element() {
+        let p = DiffusionParams::default();
+        let traj = trajectory(0.5, p, 0);
+        assert_eq!(traj.len(), 1);
+        assert!((traj[0] - 0.5).abs() < 1e-6);
+    }
+
+    /// FR-CIV-DIFFUSION-013 — zero-coefficient params (p=0, q=0): adoption
+    /// cannot grow at all; advance() returns the same value forever.
+    #[test]
+    fn zero_coefficients_produce_no_growth() {
+        let p = DiffusionParams { p: 0.0, q: 0.0 };
+        let f0 = 0.3_f32;
+        let traj = trajectory(f0, p, 50);
+        for &v in &traj {
+            assert!(
+                (v - f0).abs() < 1e-6,
+                "p=q=0 should hold adoption constant at {f0}, got {v}"
+            );
+        }
+    }
+
+    /// FR-CIV-DIFFUSION-014 — fully-saturated start (f=1.0): adoption cannot
+    /// exceed 1.0 and remains at 1.0 for all ticks regardless of coefficients.
+    #[test]
+    fn fully_saturated_start_stays_at_one() {
+        let p = DiffusionParams::default();
+        let traj = trajectory(1.0, p, 20);
+        for &v in &traj {
+            assert!(
+                (v - 1.0).abs() < 1e-6,
+                "saturated trajectory should stay at 1.0, got {v}"
+            );
+        }
+    }
+
+    /// FR-CIV-DIFFUSION-015 — single-tick trajectory: advance() and
+    /// trajectory()[1] must agree exactly.
+    #[test]
+    fn single_tick_trajectory_matches_advance() {
+        let p = DiffusionParams { p: 0.05, q: 0.4 };
+        let f0 = 0.2_f32;
+        let traj = trajectory(f0, p, 1);
+        let direct = advance(f0, p);
+        assert!(
+            (traj[1] - direct).abs() < 1e-7,
+            "trajectory[1]={} != advance()={}",
+            traj[1],
+            direct
+        );
+    }
 }

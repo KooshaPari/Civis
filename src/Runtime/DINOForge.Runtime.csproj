@@ -190,7 +190,6 @@
     <Compile Include="Bridge\PackStatMappings.cs" />
     <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
     <Compile Include="Bridge\SessionHmac.cs" />
-    <Compile Include="UI\UiActionTrace.cs" />
   </ItemGroup>
 
   <!-- SDK and Bridge Protocol project references - always use ProjectReference for proper build ordering -->

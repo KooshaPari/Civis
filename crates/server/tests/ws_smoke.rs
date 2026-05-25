@@ -1543,3 +1543,36 @@ async fn ws_jsonrpc_sim_spawn_civilian_returns_entity_id() {
 
     assert!(entity_id > 0, "entity_id should be non-zero");
 }
+
+#[tokio::test]
+async fn ws_jsonrpc_sim_damage_accepts_event() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));
+    let addr = spawn_ws_bridge(sim, 4).await;
+    let url = format!("ws://{addr}/ws");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":8,"method":"sim.damage","params":{"x":1000000,"y":0,"z":1000000,"radius":4}}"#
+                .into(),
+        ))
+        .await
+        .expect("send sim.damage");
+
+    timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(8)) {
+                assert_eq!(value.pointer("/result/ok"), Some(&serde_json::json!(true)));
+                return;
+            }
+        }
+        panic!("ws closed before damage response");
+    })
+    .await
+    .expect("damage timeout");
+}

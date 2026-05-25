@@ -480,6 +480,16 @@ async fn apply_dispatch_effect(
                 }
             }
         }
+        DispatchEffect::ApplyDamage { event } => {
+            let mut sim = state.sim.lock().await;
+            sim.push_damage(event);
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("ok".to_owned(), serde_json::json!(true));
+                    obj.insert("queued".to_owned(), serde_json::json!(true));
+                }
+            }
+        }
     }
 }
 

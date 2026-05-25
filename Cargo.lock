@@ -2092,6 +2092,7 @@ dependencies = [
  "axum",
  "civ-agents",
  "civ-engine",
+ "civ-laws",
  "civ-protocol-3d",
  "civ-server",
  "civ-tactics",

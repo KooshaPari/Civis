@@ -83,7 +83,7 @@ Optional full sweep on Actions (manual only): **Actions → Quality → Run work
 | Kind | Methods / routes |
 |------|------------------|
 | HTTP | `GET /healthz` → `{ "tick": <u64> }` · `GET /replay/export` → `.civreplay` (`application/octet-stream`) · `POST /replay/import` → load `.civreplay` bytes into the bridge |
-| WS JSON-RPC | `health` · `sim.status` · `sim.snapshot` · `sim.command` (`params.action`: `noop` \| `tick`) · `sim.spawn_civilian` (`x`, `y` normalized 0–1, `faction`) · `sim.place_voxel` (`x`, `y`, `z`, `material`) · `sim.save_replay` · `sim.load_replay` (`params.path`) · `sim.reset` (`params.seed`) · `sim.set_policy` · `sim.set_speed` · `sim.get_speed` |
+| WS JSON-RPC | `health` · `sim.status` · `sim.snapshot` · `sim.command` (`noop` \| `tick`) · `sim.spawn_civilian` · `sim.place_voxel` · `sim.damage` (`x`,`y`,`z` world i64, `radius`, `energy`) · replay/policy/speed methods |
 
 **`POST /replay/import`** — replace the live bridge simulation from a raw `.civreplay` body (no filesystem path). Request: `Content-Type: application/octet-stream`. Success: `{ "ok": true, "tick": <u64> }`; invalid bytes → `400`. Updates both the in-memory sim and the bridge tick counter (same state as `GET /healthz`).
 

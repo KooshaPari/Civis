@@ -40,6 +40,27 @@ func set_orbit_target(target: Vector3, keep_height: bool = false) -> void:
 	_apply_orbit()
 
 
+## FR-CIV-UX-005 era / overview camera presets.
+func apply_preset(preset: String) -> void:
+	match preset:
+		"close":
+			_distance = 28.0
+			_pitch = 0.55
+			_yaw = 0.4
+		"orbit":
+			_distance = 55.0
+			_pitch = 0.6
+			_yaw = 0.0
+		"wide":
+			_distance = 120.0
+			_pitch = 0.75
+			_yaw = -0.5
+		_:
+			_distance = 50.0
+			_pitch = 0.6
+	_apply_orbit()
+
+
 func _apply_orbit() -> void:
 	var offset := Vector3(
 		_distance * cos(_pitch) * sin(_yaw),

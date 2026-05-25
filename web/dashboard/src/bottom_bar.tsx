@@ -194,7 +194,7 @@ export function BottomBar() {
   return (
     <footer className="bottom-bar">
       <div className="control-group">
-        <span className="control-label">View (read-only)</span>
+        <span className="control-label">View</span>
         <div className="tool-row">
           <ToolButton
             active={state.selectedTool === "InspectAgent"}
@@ -210,6 +210,92 @@ export function BottomBar() {
           />
         </div>
       </div>
+
+      {!state.readOnly ? (
+        <div className="control-group">
+          <span className="control-label">
+            Authoring ({state.attachMode === "server" ? "JSON-RPC" : "HTTP"})
+          </span>
+          <div className="tool-row">
+            <ToolButton
+              active={state.selectedTool === "PlaceVoxel"}
+              title="Place voxel on terrain click"
+              emoji="🧱"
+              onClick={() => dispatch({ type: "set_tool", tool: "PlaceVoxel" })}
+            />
+            <ToolButton
+              active={state.selectedTool === "SpawnCivilian"}
+              title="Spawn civilian (normalized coords)"
+              emoji="🧍"
+              onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })}
+            />
+            <ToolButton
+              active={state.selectedTool === "DamageBomb"}
+              title="Tactical voxel damage (sim.damage / control/damage)"
+              emoji="💥"
+              onClick={() => dispatch({ type: "set_tool", tool: "DamageBomb" })}
+            />
+          </div>
+          <div className="picker-row">
+            <label>
+              Material
+              <input
+                type="number"
+                min={0}
+                max={7}
+                value={state.selectedMaterial}
+                onChange={(e) =>
+                  dispatch({ type: "set_material", material: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Faction
+              <input
+                type="number"
+                min={0}
+                max={3}
+                value={state.selectedFaction}
+                onChange={(e) =>
+                  dispatch({ type: "set_selected_faction", faction: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Radius
+              <input
+                type="number"
+                min={1}
+                max={32}
+                value={state.damageRadius}
+                onChange={(e) =>
+                  dispatch({ type: "set_damage_radius", radius: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Spawn kind
+              <select
+                value={state.spawnKind}
+                onChange={(e) =>
+                  dispatch({
+                    type: "set_spawn_kind",
+                    kind: e.target.value as "civilian" | "vehicle" | "airport",
+                  })
+                }
+              >
+                <option value="civilian">Civilian</option>
+                <option value="vehicle" disabled>
+                  Vehicle (stub)
+                </option>
+                <option value="airport" disabled>
+                  Airport (stub)
+                </option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <div className="control-group">
         <span className="control-label">

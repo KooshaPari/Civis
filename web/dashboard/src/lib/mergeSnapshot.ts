@@ -1,8 +1,10 @@
 import type {
   Building,
   CivPin,
+  MilitaryPin,
   DiplomacyEvent,
   DiplomacyKind,
+  DamagePulse,
   EconomySnapshot,
   Faction,
   InstitutionRow,
@@ -10,14 +12,29 @@ import type {
   Road,
   RoadKind,
   Snapshot,
+  TechNode,
   TimeSpeed,
   TradeRoute,
 } from "../store";
+
+function parseTechTree(raw: unknown): TechNode[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      id: String(item.id ?? ""),
+      kind: String(item.kind ?? ""),
+      era_min: Number(item.era_min ?? 0),
+      unlocked: Boolean(item.unlocked ?? false),
+    };
+  });
+}
 
 /** Merge `sim.snapshot` JSON (with optional spectator fields) into dashboard `Snapshot`. */
 export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot {
   const r = (result ?? {}) as Record<string, unknown>;
   const civPins = parseCivPins(r.civ_pins);
+  const militaryUnits = parseMilitaryPins(r.military_units);
   const factions = parseFactions(r.factions);
   const buildings = parseBuildings(r.buildings);
   const roads = parseRoads(r.roads);
@@ -25,11 +42,13 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
   return {
     tick: Number(r.tick ?? 0),
     tick_dt_ms: Number(r.tick_dt_ms ?? 100),
+    current_era: Number(r.current_era ?? 0),
     population: Number(r.population ?? 0),
     voxel_dirty_count: Number(r.voxel_dirty_count ?? 0),
     voxel_chunk_count: Number(r.voxel_chunk_count ?? 0),
     sample_civilians: [],
     civ_pins: civPins,
+    military_units: militaryUnits,
     factions,
     buildings,
     roads,
@@ -37,8 +56,10 @@ export function mergeServerSnapshot(result: unknown, speed: TimeSpeed): Snapshot
     births_this_tick: Number(r.births_this_tick ?? 0),
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
+    damage_events: parseDamageEvents(r.damage_events),
     birth_events: parsePopulationPulses(r.birth_events),
     death_events: parsePopulationPulses(r.death_events),
+    tech_tree: parseTechTree(r.tech_tree),
     is_day: Boolean(r.is_day ?? true),
     economy: parseEconomyForServer(r),
     speed,
@@ -72,6 +93,17 @@ function parseDiplomacyEvents(raw: unknown): DiplomacyEvent[] {
       faction_a: Number(item.faction_a ?? 0),
       faction_b: Number(item.faction_b ?? 0),
       kind: parseDiplomacyKind(item.kind),
+    };
+  });
+}
+
+function parseDamageEvents(raw: unknown): DamagePulse[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      x: Number(item.x ?? 0),
+      y: Number(item.y ?? 0),
     };
   });
 }
@@ -143,6 +175,21 @@ function parseCivPins(raw: unknown): CivPin[] {
       dx: Number(p.dx ?? 0),
       dy: Number(p.dy ?? 0),
       job: parseJob(p.job),
+    };
+  });
+}
+
+function parseMilitaryPins(raw: unknown): MilitaryPin[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((unit, idx) => {
+    const u = unit as Record<string, unknown>;
+    return {
+      id: Number(u.id ?? idx),
+      x: Number(u.x ?? 0),
+      y: Number(u.y ?? 0),
+      unit_type: String(u.unit_type ?? "Soldier"),
+      faction: Number(u.faction ?? 0),
+      strength: Number(u.strength ?? 0),
     };
   });
 }

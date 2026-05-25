@@ -15,8 +15,10 @@ export function TopBar() {
   return (
     <header className="top-bar">
       <div className="brand-block">
-        <p className="eyebrow">Civis · ADR-009 spectator</p>
-        <h1>Live simulation observer</h1>
+        <p className="eyebrow">
+          Civis · {state.readOnly ? "spectator" : "L2 authoring"}
+        </p>
+        <h1>{state.readOnly ? "Live simulation observer" : "Simulation sandbox"}</h1>
         <p className="brand-sub">
           Attach: <strong>{modeLabel}</strong>
           {state.frame3dTick != null ? ` · F3D0 tick ${state.frame3dTick}` : null}
@@ -25,6 +27,7 @@ export function TopBar() {
       <div className="top-metrics">
         <Metric label="Tick" value={tick} />
         <Metric label="Population" value={state.snapshot?.population ?? metrics?.population ?? 0} />
+        <Metric label="⚔️ Soldiers" value={state.snapshot?.military_units?.length ?? 0} />
         {state.attachMode === "server" ? (
           <>
             <Metric label="Buildings" value={metrics?.building_count ?? 0} />
@@ -71,6 +74,13 @@ export function TopBar() {
           <span className="dark-light-label">
             {state.theme === "dark" ? "Light" : "Dark"}
           </span>
+        </button>
+        <button
+          type="button"
+          className="panel-toggle tech-tree-button"
+          onClick={() => dispatch({ type: "set_tech_tree_open", open: true })}
+        >
+          🔬 Tech Tree
         </button>
         <span className={`connection-pill ${state.connection}`}>Connection: {connectionLabel}</span>
         <a className="status-page-link" href="./status.html" title="WebSocket attach diagnostics">

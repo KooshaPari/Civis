@@ -198,6 +198,22 @@ impl CivisClient {
     }
 
     #[func]
+    fn post_damage(&self, x: i64, y: i64, z: i64, radius: i32) {
+        if validate_base_url(&self.base_url.to_string()).is_err() {
+            return;
+        }
+        let url = api_url(&self.base_url.to_string(), "control/damage");
+        let body = serde_json::json!({
+            "x": x,
+            "y": y,
+            "z": z,
+            "radius": radius.clamp(1, 32),
+            "energy": 1000,
+        });
+        let _ = runtime().block_on(async { self.client.post(url).json(&body).send().await });
+    }
+
+    #[func]
     fn post_spawn_civilian(&self, x: f32, y: f32, faction: i32) {
         if validate_base_url(&self.base_url.to_string()).is_err() {
             return;

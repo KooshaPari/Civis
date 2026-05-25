@@ -1,9 +1,13 @@
 # ADR-009: Web Client Strategy — Spectator-First (Not a Fourth Game Engine)
 
 **Date:** 2026-05-24
-**Status:** ACCEPTED
+**Status:** ACCEPTED (amended — see [ADR-009-amendment-web-l2-authoring](./ADR-009-amendment-web-l2-authoring.md))
 **Author:** Civis Architecture
 **Supersedes:** Implicit “web as v1 game client” reading of PRD E6.4
+
+> **Amendment (2026-05-24):** Web defaults to **L2 lite authoring** (spawn/voxel via
+> `sim.spawn_civilian` / `sim.place_voxel`). Use `?spectator=1` for read-only demos.
+> Full P-U1 UX remains Godot-first; see [product-quality-ladder](../roadmap/product-quality-ladder.md).
 
 ---
 

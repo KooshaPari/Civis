@@ -92,3 +92,11 @@ tooltip_text = "Era index from tick / era length (FR-CIV-UX-001 timelapse)"
 visible = false
 text = "Spawns: 0"
 tooltip_text = "Authoring spawn counter (watch attach only)"
+
+[node name="CameraOverview" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Cam Wide"
+tooltip_text = "FR-CIV-UX-005 wide orbit preset"
+
+[node name="CameraClose" type="Button" parent="BottomBar/HBoxContainer"]
+text = "Cam Close"
+tooltip_text = "FR-CIV-UX-005 close orbit preset"

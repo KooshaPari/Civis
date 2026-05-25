@@ -54,6 +54,8 @@ pub enum JsonRpcMethod {
     SimSpawnCivilian,
     /// Write one voxel (`sim.place_voxel`, FR-CIV-UX-003).
     SimPlaceVoxel,
+    /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
+    SimDamage,
 }
 
 impl JsonRpcMethod {
@@ -72,6 +74,7 @@ impl JsonRpcMethod {
             Self::SimGetSpeed => "sim.get_speed",
             Self::SimSpawnCivilian => "sim.spawn_civilian",
             Self::SimPlaceVoxel => "sim.place_voxel",
+            Self::SimDamage => "sim.damage",
         }
     }
 
@@ -90,6 +93,7 @@ impl JsonRpcMethod {
             "sim.get_speed" => Some(Self::SimGetSpeed),
             "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
+            "sim.damage" => Some(Self::SimDamage),
             _ => None,
         }
     }
@@ -536,6 +540,11 @@ pub enum DispatchEffect {
         /// Material id (0–255).
         material: u16,
     },
+    /// Queue tactical voxel damage (`sim.damage`).
+    ApplyDamage {
+        /// Damage event applied on next tactics phase (replay-logged).
+        event: civ_engine::DamageEvent,
+    },
 }
 
 /// Outcome of dispatching a JSON-RPC request.
@@ -843,6 +852,32 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
+        JsonRpcMethod::SimDamage => {
+            if !role_allows_operator(
+                ctx.require_role,
+                req.params.as_ref(),
+                ctx.connection_role.as_deref(),
+            ) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                match parse_damage_params(req.params.as_ref()) {
+                    Ok(event) => DispatchPlan {
+                        response: JsonRpcResponse::success(
+                            req.id,
+                            serde_json::json!({ "accepted": true }),
+                        ),
+                        effect: DispatchEffect::ApplyDamage { event },
+                    },
+                    Err(error) => DispatchPlan {
+                        response: JsonRpcResponse::failure(req.id, error),
+                        effect: DispatchEffect::None,
+                    },
+                }
+            }
+        }
         JsonRpcMethod::SimCommand => match parse_sim_command_action(req.params.as_ref()) {
             Some(SimCommandAction::Noop) => DispatchPlan {
                 response: JsonRpcResponse::success(req.id, serde_json::json!({ "accepted": true })),
@@ -908,6 +943,44 @@ pub fn parse_spawn_civilian_params(
         .map(|v| v as u32)
         .unwrap_or(0);
     Ok((x, y, faction))
+}
+
+/// Parse `sim.damage` params: `{ "x", "y", "z", "radius", "energy"? }` (fixed-point world coords).
+pub fn parse_damage_params(
+    params: Option<&Value>,
+) -> Result<civ_engine::DamageEvent, JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "Missing params".to_owned(),
+        data: None,
+    })?;
+    let x = p
+        .get("x")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("x"))?;
+    let y = p
+        .get("y")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("y"))?;
+    let z = p
+        .get("z")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("z"))?;
+    let radius = p
+        .get("radius")
+        .and_then(|v| v.as_u64())
+        .map(|v| v.clamp(1, 32) as u8)
+        .unwrap_or(8);
+    let energy = p
+        .get("energy")
+        .and_then(|v| v.as_u64())
+        .map(|v| v.min(u32::MAX as u64) as u32)
+        .unwrap_or(1000);
+    Ok(civ_engine::DamageEvent {
+        center: civ_voxel::WorldCoord { x, y, z },
+        radius_voxels: radius,
+        energy,
+    })
 }
 
 /// Parse `sim.place_voxel` params: `{ "x", "y", "z", "material" }`.
@@ -1330,6 +1403,35 @@ mod tests {
         let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "material": 4 });
         let (x, y, z, material) = parse_place_voxel_params(Some(&params)).expect("place params");
         assert_eq!((x, y, z, material), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn parse_damage_params_reads_world_coords() {
+        let params = serde_json::json!({ "x": 10, "y": 20, "z": 30, "radius": 4, "energy": 500 });
+        let event = parse_damage_params(Some(&params)).expect("damage");
+        assert_eq!(event.center.x, 10);
+        assert_eq!(event.radius_voxels, 4);
+        assert_eq!(event.energy, 500);
+    }
+
+    #[test]
+    fn dispatch_sim_damage_schedules_apply() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":11,"method":"sim.damage","params":{"x":1,"y":2,"z":3,"radius":8}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 3,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+            },
+        );
+        assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
     }
 
     #[test]

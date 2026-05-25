@@ -4,6 +4,8 @@ import { pushFrameSample } from "./lib/framePerf";
 import { readStoredTheme, type ThemeMode } from "./lib/theme";
 
 export type ToolKind = "PlaceVoxel" | "SpawnCivilian" | "DamageBomb" | "InspectAgent" | "Camera";
+
+export type SpawnKind = "civilian" | "vehicle" | "airport";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
 
 export type JobLabel = "farmer" | "warrior" | "scholar" | "trader" | "priest" | "admin" | "unemployed";
@@ -31,6 +33,15 @@ export type CivPin = {
   dx: number;
   dy: number;
   job: JobLabel | null;
+};
+
+export type MilitaryPin = {
+  id: number;
+  x: number;
+  y: number;
+  unit_type: string;
+  faction: number;
+  strength: number;
 };
 
 export type Faction = {
@@ -65,6 +76,13 @@ export type TradeRoute = {
   to_faction: number;
   goods: string;
   volume: number;
+};
+
+export type TechNode = {
+  id: string;
+  kind: string;
+  era_min: number;
+  unlocked: boolean;
 };
 
 export type FactionTreasury = {
@@ -117,14 +135,21 @@ export type DiplomacyEvent = {
   kind: DiplomacyKind;
 };
 
+export type DamagePulse = {
+  x: number;
+  y: number;
+};
+
 export type Snapshot = {
   tick: number;
   tick_dt_ms: number;
+  current_era: number;
   population: number;
   voxel_dirty_count: number;
   voxel_chunk_count: number;
   sample_civilians: SampleCivilian[];
   civ_pins: CivPin[];
+  military_units: MilitaryPin[];
   factions: Faction[];
   buildings: Building[];
   roads?: Road[];
@@ -133,8 +158,10 @@ export type Snapshot = {
   births_this_tick: number;
   deaths_this_tick: number;
   diplomacy_events: DiplomacyEvent[];
+  damage_events: DamagePulse[];
   birth_events: PopulationPulse[];
   death_events: PopulationPulse[];
+  tech_tree: TechNode[];
   is_day: boolean;
   speed: TimeSpeed;
 };
@@ -171,7 +198,9 @@ type State = {
   selectedEra: number;
   damageRadius: number;
   selectedFaction: number;
+  spawnKind: SpawnKind;
   selectedCivilian: CivilianFields | null;
+  selectedMilitary: MilitaryPin | null;
   connection: "live" | "reconnecting" | "disconnected";
   snapshot: Snapshot | null;
   serverMetrics: ServerMetrics | null;
@@ -187,6 +216,7 @@ type State = {
   terrain: Terrain | null;
   inspectorOpen: boolean;
   economyPanelOpen: boolean;
+  techTreeOpen: boolean;
   theme: ThemeMode;
   toast: Toast | null;
 };
@@ -199,7 +229,9 @@ type Action =
   | { type: "set_era"; era: number }
   | { type: "set_damage_radius"; radius: number }
   | { type: "set_selected_faction"; faction: number }
+  | { type: "set_spawn_kind"; kind: SpawnKind }
   | { type: "set_selected_civilian"; civilian: CivilianFields | null }
+  | { type: "set_selected_military"; military: MilitaryPin | null }
   | { type: "set_connection"; connection: State["connection"] }
   | { type: "set_snapshot"; snapshot: Snapshot | null }
   | { type: "set_server_metrics"; metrics: ServerMetrics | null }
@@ -215,6 +247,7 @@ type Action =
   | { type: "set_terrain"; terrain: Terrain | null }
   | { type: "set_inspector_open"; open: boolean }
   | { type: "set_economy_panel_open"; open: boolean }
+  | { type: "set_tech_tree_open"; open: boolean }
   | { type: "set_toast"; message: string | null }
   | { type: "clear_toast" };
 
@@ -227,7 +260,9 @@ const initialState: State = {
   selectedEra: 0,
   damageRadius: 8,
   selectedFaction: 0,
+  spawnKind: "civilian",
   selectedCivilian: null,
+  selectedMilitary: null,
   connection: "disconnected",
   snapshot: null,
   serverMetrics: null,
@@ -243,6 +278,7 @@ const initialState: State = {
   terrain: null,
   inspectorOpen: true,
   economyPanelOpen: true,
+  techTreeOpen: false,
   theme: readStoredTheme(
     typeof window !== "undefined"
       ? { search: window.location.search }
@@ -267,8 +303,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, damageRadius: action.radius };
     case "set_selected_faction":
       return { ...state, selectedFaction: action.faction };
+    case "set_spawn_kind":
+      return { ...state, spawnKind: action.kind };
     case "set_selected_civilian":
       return { ...state, selectedCivilian: action.civilian };
+    case "set_selected_military":
+      return { ...state, selectedMilitary: action.military };
     case "set_connection":
       return { ...state, connection: action.connection };
     case "set_snapshot":
@@ -323,6 +363,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, inspectorOpen: action.open };
     case "set_economy_panel_open":
       return { ...state, economyPanelOpen: action.open };
+    case "set_tech_tree_open":
+      return { ...state, techTreeOpen: action.open };
     case "set_toast":
       return {
         ...state,

@@ -1,5 +1,5 @@
 import { postControl } from "../control";
-import type { AttachMode, TimeSpeed, ToolKind } from "../store";
+import type { AttachMode, SpawnKind, TimeSpeed, ToolKind } from "../store";
 import { jsonRpcCall, normalizeServerSnapshot } from "./civisServer";
 import { getActiveServerSocket } from "./civisSocket";
 import { mergeServerSnapshot } from "./mergeSnapshot";
@@ -17,6 +17,7 @@ export type TerrainAuthoringInput = {
   material: number;
   faction: number;
   damageRadius: number;
+  spawnKind: SpawnKind;
 };
 
 type AuthoringDispatch = {
@@ -59,6 +60,9 @@ export async function executeTerrainAuthoring(
 
   switch (input.tool) {
     case "SpawnCivilian": {
+      if (input.spawnKind !== "civilian") {
+        throw new Error(`Spawn kind "${input.spawnKind}" is not wired yet (FR-CIV-UX-006)`);
+      }
       if (input.attachMode === "server") {
         const ws = getActiveServerSocket();
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -105,18 +109,24 @@ export async function executeTerrainAuthoring(
       return `Voxel placed (watch)`;
     }
     case "DamageBomb": {
-      if (input.attachMode === "server") {
-        throw new Error("Tactical damage is civ-watch only (?attach=watch)");
-      }
-      await postControl("/control/damage", {
+      const body = {
         x: worldX,
         y: worldY,
         z: worldZ,
         radius: input.damageRadius,
         energy: 1000,
-      });
+      };
+      if (input.attachMode === "server") {
+        const ws = getActiveServerSocket();
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          throw new Error("Not connected to civ-server");
+        }
+        await jsonRpcCall(ws, "sim.damage", body);
+      } else {
+        await postControl("/control/damage", body);
+      }
       await refreshAfterMutation(input.attachMode, input.speed, dispatch);
-      return `Damage at ${input.cellX}, ${input.cellY}`;
+      return `Damage queued at ${input.cellX}, ${input.cellY}`;
     }
     default:
       return `Cell ${input.cellX}, ${input.cellY}`;

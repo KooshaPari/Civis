@@ -7,6 +7,7 @@ import {
   Building,
   CivPin,
   Faction,
+  MilitaryPin,
   Road,
   Snapshot,
   Terrain,
@@ -44,6 +45,7 @@ type SceneRefs = {
   rockInstances: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null;
   snowPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
+  military: THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>[];
   territories: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>[];
   buildings: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
@@ -74,6 +76,7 @@ export function Scene3d() {
     rockInstances: null,
     snowPoints: null,
     civilians: [],
+    military: [],
     territories: [],
     buildings: [],
     roads: [],
@@ -145,6 +148,8 @@ export function Scene3d() {
 
     const civilianGroup = new THREE.Group();
     scene.add(civilianGroup);
+    const militaryGroup = new THREE.Group();
+    scene.add(militaryGroup);
     const buildingGroup = new THREE.Group();
     scene.add(buildingGroup);
 
@@ -268,6 +273,46 @@ export function Scene3d() {
         const wy = terrainHeightAt(terrain, sample.x, sample.y) + 0.7;
         mesh.position.set(wx, wy, wz);
         mesh.material.color.setHex(jobColor(pin.job));
+      });
+    };
+
+    const updateMilitary = () => {
+      const terrain = refs.current.activeTerrain;
+      const snapshot = stateRef.current.snapshot;
+      if (!terrain) return;
+      const units = snapshot?.military_units ?? [];
+      const combat = new Set<string>();
+      while (refs.current.military.length < units.length) {
+        const mesh = new THREE.Mesh(
+          new THREE.ConeGeometry(0.42, 1.05, 6),
+          new THREE.MeshStandardMaterial({
+            roughness: 0.6,
+            metalness: 0.2,
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0,
+          }),
+        );
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+        mesh.visible = false;
+        militaryGroup.add(mesh);
+        refs.current.military.push(mesh);
+      }
+      refs.current.military.forEach((mesh, index) => {
+        const unit = units[index];
+        if (!unit) {
+          mesh.visible = false;
+          return;
+        }
+        mesh.visible = true;
+        const wx = unit.x * terrain.size - terrain.size / 2;
+        const wz = unit.y * terrain.size - terrain.size / 2;
+        const wy = terrainHeightAt(terrain, unit.x, unit.y) + 0.85;
+        mesh.position.set(wx, wy, wz);
+        mesh.scale.setScalar(1 + unit.strength * 0.15);
+        mesh.material.color.setHex(factionColor(snapshot?.factions ?? [], unit.faction));
+        mesh.material.emissive.setHex(combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`) ? 0xff2222 : 0x000000);
+        mesh.material.emissiveIntensity = combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`) ? 0.8 : 0;
       });
     };
 
@@ -491,6 +536,17 @@ export function Scene3d() {
       if (current.selectedTool === "Camera") return;
 
       if (current.selectedTool === "InspectAgent") {
+        const militaryHit = raycaster.intersectObjects(refs.current.military, false)[0];
+        if (militaryHit) {
+          const index = refs.current.military.indexOf(militaryHit.object as THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>);
+          const unit = stateRef.current.snapshot?.military_units?.[index];
+          dispatch({
+            type: "set_selected_military",
+            military: unit ?? null,
+          });
+          dispatch({ type: "set_selected_civilian", civilian: null });
+          return;
+        }
         dispatch({
           type: "set_toast",
           message: `Terrain cell ${basePayload.x}, ${basePayload.y}`,
@@ -512,13 +568,14 @@ export function Scene3d() {
             attachMode: current.attachMode,
             speed: current.speed,
             tool: current.selectedTool,
-            cellX,
-            cellY,
+            cellX: basePayload.x,
+            cellY: basePayload.y,
             terrainSize: terrain.size,
             heightY: hit.point.y,
             material: current.selectedMaterial,
             faction: current.selectedFaction,
             damageRadius: current.damageRadius,
+            spawnKind: current.spawnKind,
           },
           {
             set_snapshot: (snapshot) =>
@@ -586,6 +643,7 @@ export function Scene3d() {
       }
       applyTerrain(terrain);
       updateCivilians();
+      updateMilitary();
       updateFactions();
       updateBuildings();
       updateRoads();
@@ -626,6 +684,7 @@ export function Scene3d() {
       if (burst) {
         state.snapshot.birth_events.forEach((event) => burst(event.x, event.y, 0x7ed957));
         state.snapshot.death_events.forEach((event) => burst(event.x, event.y, 0xff6b6b));
+        state.snapshot.damage_events.forEach((event) => burst(event.x, event.y, 0xff4d4d, "Impact"));
         state.snapshot.diplomacy_events.forEach((event) => {
           const faction = state.snapshot?.factions.find((item) => item.id === event.faction_a) ?? state.snapshot?.factions[0];
           if (!faction) return;
@@ -639,6 +698,7 @@ export function Scene3d() {
       }
     }
     updateCiviliansFromRefs(refs.current, performance.now());
+    updateMilitaryFromRefs(refs.current, state.snapshot);
     updateFactionsFromRefs(refs.current, state.snapshot);
     updateBuildingsFromRefs(refs.current, state.snapshot);
     updateRoadsFromRefs(refs.current, state.snapshot);
@@ -651,6 +711,27 @@ export function Scene3d() {
 
 function updateCiviliansFromRefs(refs: SceneRefs, now: number) {
   updateInterpolatedCivilians(refs, refs.activeTerrain, now);
+}
+
+function updateMilitaryFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
+  const terrain = refs.activeTerrain;
+  if (!terrain) return;
+  const units = snapshot?.military_units ?? [];
+  refs.military.forEach((mesh, index) => {
+    const unit = units[index];
+    if (!unit) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = true;
+    mesh.position.set(
+      unit.x * terrain.size - terrain.size / 2,
+      terrainHeightAt(terrain, unit.x, unit.y) + 0.85,
+      unit.y * terrain.size - terrain.size / 2,
+    );
+    mesh.material.color.setHex(factionColor(snapshot?.factions ?? [], unit.faction));
+    mesh.material.emissiveIntensity = 0;
+  });
 }
 
 function updateInterpolatedCivilians(refs: SceneRefs, terrain: Terrain | null, now: number) {
@@ -921,6 +1002,12 @@ function jobColor(job: CivPin["job"]) {
 
 function factionById(factions: Faction[], id: number) {
   return factions.find((faction) => faction.id === id) ?? null;
+}
+
+function factionColor(factions: Faction[], id: number) {
+  const faction = factionById(factions, id);
+  if (!faction) return 0xaaaaaa;
+  return (faction.color[0] << 16) | (faction.color[1] << 8) | faction.color[2];
 }
 
 function buildingDimensions(building: Building): [number, number, number] {

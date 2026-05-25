@@ -99,6 +99,22 @@ struct CivPin {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct MilitaryPin {
+    id: u64,
+    x: f32,
+    y: f32,
+    unit_type: String,
+    faction: u32,
+    strength: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct DamagePulse {
+    x: f32,
+    y: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct Faction {
     id: u32,
     color: [u8; 3],
@@ -231,6 +247,8 @@ struct Snapshot {
     births_this_tick: u32,
     deaths_this_tick: u32,
     diplomacy_events: Vec<DiplomacyPulse>,
+    military_units: Vec<MilitaryPin>,
+    damage_events: Vec<DamagePulse>,
     birth_events: Vec<PopulationPulse>,
     death_events: Vec<PopulationPulse>,
     tech_tree: Vec<TechNode>,
@@ -264,6 +282,7 @@ struct AppState {
     terrain_cache: TerrainCache,
     laws: Arc<LawDb>,
     sim: Arc<Mutex<Simulation>>,
+    military: Arc<Mutex<Vec<MilitaryPin>>>,
     target_era: Arc<AtomicU16>,
     speed: Arc<AtomicU8>,
 }
@@ -323,10 +342,16 @@ async fn main() {
     );
 
     let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+    let military = Arc::new(Mutex::new(Vec::new()));
     {
         let mut s = sim.lock().await;
         seed_voxels(&mut s);
         seed_civilians(&mut s, &terrain);
+    }
+    {
+        let mut s = sim.lock().await;
+        let mut units = military.lock().await;
+        seed_military(&mut s, &terrain, &mut units);
     }
 
     let state = AppState {
@@ -336,6 +361,7 @@ async fn main() {
         terrain_cache,
         laws,
         sim,
+        military,
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
     };
@@ -387,6 +413,8 @@ async fn simulation_worker(state: AppState) {
         }
         let snapshot = {
             let mut sim = state.sim.lock().await;
+            let mut military = state.military.lock().await;
+            let mut damage_events = Vec::new();
             for _ in 0..speed {
                 sim.tick();
                 if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
@@ -400,9 +428,28 @@ async fn simulation_worker(state: AppState) {
                     terrain.is_walkable(x, y)
                 });
                 *sim.rng_mut() = rng;
+                damage_events = tick_military(&mut sim, &terrain, &mut military);
+                for event in &damage_events {
+                    sim.push_damage(DamageEvent {
+                        center: WorldCoord {
+                            x: (event.x * civ_voxel::FIXED_SCALE as f32) as i64,
+                            y: 0,
+                            z: (event.y * civ_voxel::FIXED_SCALE as f32) as i64,
+                        },
+                        radius_voxels: 1,
+                        energy: 8,
+                    });
+                }
             }
             let current_era = state.target_era.load(Ordering::Relaxed);
-            make_snapshot(&sim, speed, &state.laws, current_era)
+            make_snapshot(
+                &sim,
+                &military,
+                &damage_events,
+                speed,
+                &state.laws,
+                current_era,
+            )
         };
         *state.latest.write().await = Some(snapshot.clone());
         let _ = state.tx.send(snapshot);
@@ -442,7 +489,98 @@ fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
     }
 }
 
-fn make_snapshot(sim: &Simulation, speed: u8, laws: &LawDb, current_era: u16) -> Snapshot {
+fn seed_military(sim: &mut Simulation, terrain: &Terrain, units: &mut Vec<MilitaryPin>) {
+    let factions = factions(sim.state.tick);
+    let mut next_id = 1_000_000_000_u64;
+    for faction in factions {
+        for _ in 0..5 {
+            let seed = next_id ^ (u64::from(faction.id) << 32);
+            units.push(MilitaryPin {
+                id: next_id,
+                x: (faction.capital[0] + noise_offset(seed, 0)).clamp(0.01, 0.99),
+                y: (faction.capital[1] + noise_offset(seed, 1)).clamp(0.01, 0.99),
+                unit_type: "Soldier".to_string(),
+                faction: faction.id,
+                strength: 1.0,
+            });
+            next_id += 1;
+        }
+    }
+    let _ = terrain;
+}
+
+fn tick_military(
+    sim: &mut Simulation,
+    _terrain: &Terrain,
+    units: &mut [MilitaryPin],
+) -> Vec<DamagePulse> {
+    let factions = factions(sim.state.tick);
+    let conflict_factions: Vec<u32> = sim
+        .diplomacy_events()
+        .iter()
+        .filter(|event| matches!(event.kind, DiplomacyKind::Conflict))
+        .flat_map(|event| [event.faction_a, event.faction_b])
+        .collect();
+    if conflict_factions.is_empty() {
+        return Vec::new();
+    }
+
+    let mut damage_events = Vec::new();
+    for unit in units.iter_mut() {
+        if !conflict_factions.contains(&unit.faction) {
+            continue;
+        }
+        if let Some(target) = factions
+            .iter()
+            .filter(|faction| faction.id != unit.faction && conflict_factions.contains(&faction.id))
+            .min_by(|a, b| {
+                let da = (unit.x - a.capital[0]).powi(2) + (unit.y - a.capital[1]).powi(2);
+                let db = (unit.x - b.capital[0]).powi(2) + (unit.y - b.capital[1]).powi(2);
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+        {
+            let dx = target.capital[0] - unit.x;
+            let dy = target.capital[1] - unit.y;
+            let dist = (dx * dx + dy * dy).sqrt().max(0.0001);
+            let seed = unit.id ^ (u64::from(unit.faction) << 32) ^ sim.state.tick;
+            unit.x = (unit.x + dx / dist * 0.01 + noise_offset(seed, 0) * 0.5).clamp(0.0, 1.0);
+            unit.y = (unit.y + dy / dist * 0.01 + noise_offset(seed, 1) * 0.5).clamp(0.0, 1.0);
+        }
+    }
+
+    for i in 0..units.len() {
+        for j in (i + 1)..units.len() {
+            if units[i].faction == units[j].faction {
+                continue;
+            }
+            if !conflict_factions.contains(&units[i].faction)
+                || !conflict_factions.contains(&units[j].faction)
+            {
+                continue;
+            }
+            let dx = units[i].x - units[j].x;
+            let dy = units[i].y - units[j].y;
+            if dx * dx + dy * dy <= 0.05 * 0.05 {
+                damage_events.push(DamagePulse {
+                    x: (units[i].x + units[j].x) * 0.5,
+                    y: (units[i].y + units[j].y) * 0.5,
+                });
+                units[i].strength = (units[i].strength - 0.05).max(0.0);
+                units[j].strength = (units[j].strength - 0.05).max(0.0);
+            }
+        }
+    }
+    damage_events
+}
+
+fn make_snapshot(
+    sim: &Simulation,
+    military: &[MilitaryPin],
+    damage_events: &[DamagePulse],
+    speed: u8,
+    laws: &LawDb,
+    current_era: u16,
+) -> Snapshot {
     let events = sim.last_tick_voxel_events();
     let sample_civilians = sample_civilians(sim);
     let civ_pins = civ_pins(sim);
@@ -506,6 +644,8 @@ fn make_snapshot(sim: &Simulation, speed: u8, laws: &LawDb, current_era: u16) ->
         births_this_tick: birth_events.len() as u32,
         deaths_this_tick: death_events.len() as u32,
         diplomacy_events,
+        military_units: military.to_vec(),
+        damage_events: damage_events.to_vec(),
         birth_events,
         death_events,
         tech_tree,
@@ -935,6 +1075,7 @@ mod api_tests {
             terrain_cache: TerrainCache::from_terrain(&terrain),
             laws: Arc::new(default_law_db()),
             sim,
+            military: Arc::new(Mutex::new(Vec::new())),
             target_era: Arc::new(AtomicU16::new(0)),
             speed: Arc::new(AtomicU8::new(1)),
         }

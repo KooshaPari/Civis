@@ -35,6 +35,14 @@ ci: lint test audit unused
 # Phenotype-aligned alias: Rust + optional infra note in README
 quality: civis-3d-verify
 
+# Emit `.ci/quality-manifest.json` after local gates (for cloud CI verification).
+quality-manifest:
+    bash scripts/quality/emit-quality-manifest.sh
+
+# Verify committed manifest only (same as GitHub Actions quality-manifest job).
+quality-manifest-verify:
+    bash scripts/quality/verify-quality-manifest.sh
+
 # Generate docs
 docs:
     cargo doc --no-deps --workspace

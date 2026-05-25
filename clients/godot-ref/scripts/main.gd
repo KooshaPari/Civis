@@ -13,7 +13,11 @@ extends Node3D
 @export var spectator_mode := true
 
 const TERRAIN_GRID_SIZE := 128
+const WORLD_SCALE := 1_000_000
 const MUTATION_TOOLS := ["Place Voxel", "Spawn Civilian", "Damage"]
+
+@export_enum("civilian", "vehicle", "airport") var spawn_kind := "civilian"
+@export_range(1, 32, 1) var damage_radius := 8
 
 const JOB_COLORS := {
 	"farmer": Color(0.49, 0.85, 0.34),
@@ -145,6 +149,13 @@ func _bind_ui() -> void:
 	else:
 		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").visible = true
 	ui.get_node("BottomBar/HBoxContainer/Material").value_changed.connect(_on_material_changed)
+	var cam: Camera3D = $Camera3D
+	ui.get_node("BottomBar/HBoxContainer/CameraOverview").pressed.connect(
+		func(): cam.apply_preset("wide")
+	)
+	ui.get_node("BottomBar/HBoxContainer/CameraClose").pressed.connect(
+		func(): cam.apply_preset("close")
+	)
 	_apply_speed(current_speed)
 
 func _apply_speed(speed: int) -> void:
@@ -178,6 +189,9 @@ func _handle_click() -> void:
 		else:
 			_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
 	elif current_tool == "Spawn Civilian":
+		if spawn_kind != "civilian":
+			push_warning("Spawn kind %s not wired (FR-CIV-UX-006)" % spawn_kind)
+			return
 		var norm_x := pos.x / float(TERRAIN_GRID_SIZE)
 		var norm_y := pos.z / float(TERRAIN_GRID_SIZE)
 		if attach_mode == "server":
@@ -186,6 +200,14 @@ func _handle_click() -> void:
 			_civis_http.post_spawn_civilian(norm_x, norm_y, 0)
 		spawn_count += 1
 		ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
+	elif current_tool == "Damage":
+		var wx := int(pos.x) * WORLD_SCALE
+		var wy := int(maxf(0.0, pos.y)) * WORLD_SCALE
+		var wz := int(pos.z) * WORLD_SCALE
+		if attach_mode == "server":
+			_ws_client.apply_damage(wx, wy, wz, damage_radius)
+		else:
+			_civis_http.post_damage(wx, wy, wz, damage_radius)
 
 func _on_timer_timeout() -> void:
 	_update_snapshot_watch()

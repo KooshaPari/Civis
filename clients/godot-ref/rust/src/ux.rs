@@ -49,6 +49,33 @@ pub fn spawn_batch_events(spawns: &[SpawnCivilianBody], start_id: u64) -> Vec<En
 /// Default ticks per era for timelapse UI (Godot + tests).
 pub const DEFAULT_ERA_LENGTH_TICKS: u32 = 5_000;
 
+/// Spawn palette entry (FR-CIV-UX-006); only [`SpawnKind::Civilian`] is wired on server.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpawnKind {
+    /// Civilian entity (wired).
+    Civilian,
+    /// Vehicle placeholder.
+    Vehicle,
+    /// Airport / port placeholder.
+    Airport,
+}
+
+impl SpawnKind {
+    /// Wire / UI label.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Civilian => "civilian",
+            Self::Vehicle => "vehicle",
+            Self::Airport => "airport",
+        }
+    }
+
+    /// Whether server JSON-RPC spawn is implemented for this kind.
+    pub const fn is_wired(self) -> bool {
+        matches!(self, Self::Civilian)
+    }
+}
+
 /// Valid timelapse speed multipliers (matches civ-watch `/control/speed`).
 pub const TIMELAPSE_SPEEDS: [u8; 4] = [1, 2, 4, 8];
 

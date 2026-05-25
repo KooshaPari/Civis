@@ -1,12 +1,12 @@
 # FR-CIV-WEB — Browser Spectator & Operations Client
 
-**Status:** IN PROGRESS (ADR-009 accepted; FR-CIV-WEB-000..006 landed in `web/`)
+**Status:** IN PROGRESS (ADR-009 + L2 authoring amendment; FR-CIV-WEB-000..008)
 **ADR:** [ADR-009-web-client-strategy](../adr/ADR-009-web-client-strategy.md)
 **Owner path:** `web/dashboard/`
 
-> The web client is **not** the shippable builder/sandbox game. Gameplay UX lives in
-> `clients/godot-ref` (P-U1) and visual polish in `clients/unreal-show`. Web proves protocol
-> attachment, replay tooling, and live observation.
+> Web is **not** a fourth full game engine (no GOAP, no build-graph editor, no Manor Lords
+> bar). It **does** support **L2 lite authoring** on the same protocol as Godot: spawn,
+> voxel place, inspect — within browser limits. Full P-U1 palette remains Godot-first.
 
 ---
 
@@ -14,10 +14,11 @@
 
 | In scope | Out of scope |
 |----------|----------------|
-| Connect to `civ-server` WS (`/ws`) or read-only `civ-watch` HTTP | Spawn editor, freehand build, voxel write tools |
-| Display `sim.snapshot` metrics | Feature parity with Godot P-U1 |
+| Connect to `civ-server` WS (`/ws`) or `civ-watch` HTTP/SSE | Full WorldBox spawn palette (FR-CIV-UX-004+) |
+| Display `sim.snapshot` metrics | Feature parity with Godot desktop P-U1 |
 | Import/export `.civreplay` via HTTP or RPC | Full PBR / Manor Lords visual bar |
-| Read-only 3D terrain/agents/buildings from snapshot or `F3D0` | Second gameplay ruleset in TypeScript |
+| 3D terrain/agents/buildings from snapshot or `F3D0` | Second gameplay ruleset reimplemented in TS |
+| **L2 authoring** (default on): `sim.spawn_civilian`, `sim.place_voxel`; watch `/control/*` | Bevy WASM game client |
 
 ---
 
@@ -33,6 +34,17 @@
 | **FR-CIV-WEB-005** | Replay: trigger `sim.save_replay` / load via `sim.load_replay` or `POST /replay/import`; show success/error. | Roundtrip test: save → load → snapshot tick matches within spec. |
 | **FR-CIV-WEB-006** | (Optional P2) Decode `F3D0` binary WS frames for smoother voxel deltas; still read-only. | Unit test: decode sample `F3D0` fixture; no encode/write path. |
 | **FR-CIV-WEB-007** | (Optional P2) Babylon.js viewer module replaces raw Three.js **rendering only**; same FR-CIV-WEB-003 data contract. | `?renderer=babylon`; falls back to Three if load fails; `web/src/rendererMode.mjs` tests. |
+| **FR-CIV-WEB-008** | L2 authoring: terrain click → spawn / place voxel on active attach. | `web/dashboard/src/lib/authoring.ts`; default authoring on; `?spectator=1` disables. |
+
+### Authoring query params
+
+| Param | Effect |
+|-------|--------|
+| (default) | Authoring **on** — Place / Spawn tools visible |
+| `?spectator=1` | Spectator only (legacy ADR-009 default) |
+| `?authoring=0` | Explicitly disable mutations |
+
+Server: `sim.spawn_civilian`, `sim.place_voxel`. Watch: `POST /control/*`. Damage: watch only.
 
 ---
 
@@ -41,6 +53,7 @@
 - HTML5 Godot export (see ADR-009 § Alternatives)
 - Bevy WASM game client
 - PlayCanvas/Babylon as authoritative gameplay layer
+- Replacing Godot for vehicles / airports / era camera presets
 
 ---
 

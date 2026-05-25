@@ -10,6 +10,7 @@ import { SidePanel } from "./side_panel";
 import { StoreProvider, useDashboardStore } from "./store";
 import { applyDocumentTheme } from "./lib/theme";
 import { TopBar } from "./top_bar";
+import { TechTreeModal } from "./tech_tree";
 import "./styles.css";
 
 const rootRoute = createRootRoute({
@@ -42,6 +43,7 @@ function App() {
       <EconomyPanel />
       <SidePanel />
       <BottomBar />
+      <TechTreeModal />
       {state.toast ? <div className="toast">{state.toast.message}</div> : null}
     </main>
   );

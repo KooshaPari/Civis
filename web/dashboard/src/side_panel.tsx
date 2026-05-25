@@ -21,7 +21,9 @@ export function SidePanel() {
         <>
           <h2>Spectator</h2>
           <p className="inspector-hint">
-            Read-only attach per ADR-009. Gameplay ships in Godot (P-U1).
+            {state.readOnly
+              ? "Spectator mode (?spectator=1). Metrics and replay only."
+              : "L2 web authoring: spawn, voxel, inspect. Full P-U1 palette in Godot."}
           </p>
 
           <ConnectionStatusCard />
@@ -49,7 +51,13 @@ export function SidePanel() {
             </section>
           ) : null}
 
-          {state.selectedTool === "InspectAgent" && state.selectedCivilian ? (
+          {state.selectedTool === "InspectAgent" && state.selectedMilitary ? (
+            <div className="inspector-fields">
+              <InspectorRow label="unit_type" value={state.selectedMilitary.unit_type} />
+              <InspectorRow label="strength" value={state.selectedMilitary.strength.toFixed(2)} />
+              <InspectorRow label="faction" value={state.selectedMilitary.faction} />
+            </div>
+          ) : state.selectedTool === "InspectAgent" && state.selectedCivilian ? (
             <div className="inspector-fields">
               {Object.entries(state.selectedCivilian).map(([key, value]) => (
                 <div key={key} className="inspector-row">

@@ -18,10 +18,11 @@
 | FR ID (proposed) | Requirement | Blocker |
 |------------------|-------------|---------|
 | FR-CIV-UX-002 | `sim.spawn_civilian` on **civ-server** JSON-RPC | **implemented** — `sim.spawn_civilian`; Godot `CivisWsClient` |
-| FR-CIV-UX-003 | `sim.place_voxel` on server | **implemented** — `sim.place_voxel`; Godot server attach |
-| FR-CIV-UX-004 | Drag-place vehicles / airports / ports | Asset pipeline + build schema |
-| FR-CIV-UX-005 | Era timelapse **camera** presets (not only tick label) | Godot scene tooling |
-| FR-CIV-UX-006 | Spawn palette UI (species, faction, loadout) | P-G1 genetics API on wire |
+| FR-CIV-UX-003 | `sim.place_voxel` on server | **implemented** |
+| FR-CIV-UX-004 | Drag-place vehicles / airports / ports | **stub** — palette entries; not wired |
+| FR-CIV-UX-005 | Era timelapse **camera** presets | **partial** — `camera.gd` wide/close; web TBD |
+| FR-CIV-UX-006 | Spawn palette UI | **partial** — civilian wired; vehicle/airport disabled |
+| — | `sim.damage` on server | **implemented** — web + Godot server attach |
 
 ## Authoring today
 

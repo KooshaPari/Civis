@@ -23,6 +23,7 @@ type Dispatch = React.Dispatch<
   | { type: "set_terrain"; terrain: Terrain | null }
   | { type: "set_server_metrics"; metrics: ServerMetrics | null }
   | { type: "set_attach_mode"; mode: "watch" | "server" }
+  | { type: "set_read_only"; readOnly: boolean }
   | { type: "set_frame3d_tick"; tick: number | null }
   | { type: "set_chunk_stats"; count: number; recentIds: number[]; loadedIds: number[] }
   | { type: "set_agent_stats"; count: number; recentIds: number[] }

@@ -53,6 +53,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Godot** civ-server attach | `clients/godot-ref/scripts/civis_ws_client.gd`, `main.gd` | Default `attach_mode=server`: WS JSON-RPC + F3D0-throttled `sim.snapshot`; terrain via civ-watch HTTP; `spectator_mode` default |
 | **Godot** P-U1 partial | `main.gd`, `era_timelapse.gd` | Buildings + job-colored civilians; era HUD; authoring on watch attach; see `fr-p-u1-roadmap.md` |
 | **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
+| **Web** FR-CIV-WEB-008 | `web/dashboard/src/lib/authoring.ts`, `bottom_bar.tsx` | L2 authoring default on; `?spectator=1` for read-only |
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
 | **Server** authoring RPC | `sim.spawn_civilian`, `sim.place_voxel` | Godot server attach; operator role when `require_role` |
 | **Roadmap** quality ladder | `docs/roadmap/product-quality-ladder.md` | L0–L5 definitions; Manor Lords = L5 on L3–L4 |

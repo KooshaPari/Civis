@@ -45,6 +45,9 @@ func spawn_civilian(x: float, y: float, faction: int = 0) -> void:
 func place_voxel(x: int, y: int, z: int, material: int) -> void:
 	_call_rpc("sim.place_voxel", {"x": x, "y": y, "z": z, "material": material})
 
+func apply_damage(x: int, y: int, z: int, radius: int, energy: int = 1000) -> void:
+	_call_rpc("sim.damage", {"x": x, "y": y, "z": z, "radius": radius, "energy": energy})
+
 func _close_ws() -> void:
 	if _ws != null:
 		_ws.close()
@@ -127,7 +130,7 @@ func _handle_rpc_response(msg: Dictionary) -> void:
 	var result = msg.get("result")
 	if method == "sim.snapshot" and typeof(result) == TYPE_DICTIONARY:
 		snapshot_received.emit(_normalize_snapshot(result))
-	elif method in ["sim.spawn_civilian", "sim.place_voxel"]:
+	elif method in ["sim.spawn_civilian", "sim.place_voxel", "sim.damage"]:
 		request_snapshot()
 	elif method == "health":
 		pass

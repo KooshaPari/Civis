@@ -1,2 +1,0 @@
-dinoforge_mcp
-tests

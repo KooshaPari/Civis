@@ -1,0 +1,195 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Build the detected project
+    cmds:
+      - task: build
+
+  detect:
+    desc: Detect the project language or build system
+    silent: true
+    cmds:
+      - |
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          echo dotnet
+        elif [ -f package.json ]; then
+          echo javascript
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          echo deno
+        elif [ -f pyproject.toml ]; then
+          echo python
+        elif [ -f go.mod ]; then
+          echo go
+        elif [ -f Cargo.toml ]; then
+          echo rust
+        elif [ -f pom.xml ]; then
+          echo maven
+        elif [ -f gradlew ] || [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          echo gradle
+        elif [ -f Makefile ]; then
+          echo make
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo taskfile
+        else
+          echo unknown
+        fi
+
+  build:
+    desc: Build the detected project
+    silent: true
+    cmds:
+      - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet build
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
+            bun run build
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm run build
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn build
+          else
+            npm run build
+          fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno task build
+        elif [ -f pyproject.toml ]; then
+          python -m build
+        elif [ -f go.mod ]; then
+          go build ./...
+        elif [ -f Cargo.toml ]; then
+          cargo build
+        elif [ -f pom.xml ]; then
+          mvn package
+        elif [ -f gradlew ]; then
+          ./gradlew build
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle build
+        elif [ -f Makefile ]; then
+          make build
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No build target detected beyond this Taskfile."
+        else
+          echo "No build target detected."
+        fi
+
+  test:
+    desc: Run tests for the detected project
+    silent: true
+    cmds:
+      - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet test
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
+            bun test
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm test
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn test
+          else
+            npm test
+          fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno test
+        elif [ -f pyproject.toml ]; then
+          pytest
+        elif [ -f go.mod ]; then
+          go test ./...
+        elif [ -f Cargo.toml ]; then
+          cargo test
+        elif [ -f pom.xml ]; then
+          mvn test
+        elif [ -f gradlew ]; then
+          ./gradlew test
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle test
+        elif [ -f Makefile ]; then
+          make test
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No test target detected beyond this Taskfile."
+        else
+          echo "No test target detected."
+        fi
+
+  lint:
+    desc: Run lint checks for the detected project
+    silent: true
+    cmds:
+      - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet format --verify-no-changes
+        elif [ -f package.json ]; then
+          if command -v bun >/dev/null 2>&1 && { [ -f bun.lockb ] || [ -f bun.lock ]; }; then
+            bun run lint
+          elif command -v pnpm >/dev/null 2>&1 && [ -f pnpm-lock.yaml ]; then
+            pnpm run lint
+          elif command -v yarn >/dev/null 2>&1 && [ -f yarn.lock ]; then
+            yarn lint
+          else
+            npm run lint
+          fi
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno lint
+        elif [ -f pyproject.toml ]; then
+          ruff check .
+        elif [ -f go.mod ]; then
+          go vet ./...
+        elif [ -f Cargo.toml ]; then
+          cargo clippy --all-targets --all-features -- -D warnings
+        elif [ -f pom.xml ]; then
+          mvn verify
+        elif [ -f gradlew ]; then
+          ./gradlew check
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle check
+        elif [ -f Makefile ]; then
+          make lint
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          task --list >/dev/null
+          echo "Taskfile syntax is valid."
+        else
+          task --list >/dev/null
+          echo "No lint target detected; Taskfile syntax is valid."
+        fi
+
+  clean:
+    desc: Clean build outputs
+    silent: true
+    cmds:
+      - |
+        language="$(task detect)"
+        echo "Detected project type: ${language}"
+        if ls *.sln >/dev/null 2>&1 || find . -name '*.csproj' -not -path './.git/*' | grep -q .; then
+          dotnet clean
+        elif [ -f package.json ]; then
+          rm -rf dist build .next coverage
+        elif [ -f deno.json ] || [ -f deno.jsonc ]; then
+          deno clean --quiet
+        elif [ -f pyproject.toml ]; then
+          rm -rf build dist *.egg-info .pytest_cache .ruff_cache
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+        elif [ -f go.mod ]; then
+          go clean
+        elif [ -f Cargo.toml ]; then
+          cargo clean
+        elif [ -f pom.xml ]; then
+          mvn clean
+        elif [ -f gradlew ]; then
+          ./gradlew clean
+        elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          gradle clean
+        elif [ -f Makefile ]; then
+          make clean
+        elif [ -f Taskfile.yml ] || [ -f Taskfile.yaml ]; then
+          echo "No clean target detected beyond this Taskfile."
+        else
+          echo "No clean target detected."
+        fi

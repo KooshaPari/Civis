@@ -1,12 +1,2 @@
+# Default owner for everything
 * @KooshaPari
-
-/.github/ @KooshaPari
-/CHANGELOG.md @KooshaPari
-/CONTRIBUTING.md @KooshaPari
-/RELEASING.md @KooshaPari
-/SECURITY.md @KooshaPari
-/VERSION @KooshaPari
-/docs/ @KooshaPari
-/packs/ @KooshaPari
-/schemas/ @KooshaPari
-/src/ @KooshaPari

@@ -1,2 +1,0 @@
-[console_scripts]
-dinoforge-mcp = dinoforge_mcp.server:main

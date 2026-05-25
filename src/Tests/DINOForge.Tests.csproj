@@ -14,9 +14,10 @@
          for our consumption pattern (we exercise the analyzer via Compilation, not by referencing
          net461 surface). Suppress to keep lefthook stream watchdog from drowning in noise. -->
     <NoWarn>$(NoWarn);NU1701</NoWarn>
-    <!-- KeyInputSystemTests require Unity/BepInEx types from Runtime when the game is installed -->
-    <GameInstalled Condition="Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
-    <GameInstalled Condition="!Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+    <!-- Align with Runtime: CI runners have no game install -->
+    <GameInstalled Condition="'$(CI)' == 'true'">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and !Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
   </PropertyGroup>
 
     <!-- Code coverage disabled (see below) -->
@@ -76,6 +77,14 @@
   <ItemGroup Condition="'$(GameInstalled)' != 'true'">
     <Compile Remove="KeyInputSystemTests.cs" />
     <Compile Remove="KeyInputSystemIntegrationTests.cs" />
+    <!-- Runtime CI allowlist omits Assets/ and UI/ — exclude tests that reference those namespaces -->
+    <Compile Remove="AssetServiceTests.cs" />
+    <Compile Remove="NativeInteropIntegrationTests.cs" />
+    <Compile Remove="SdkEdgeCaseTests.cs" />
+    <Compile Remove="SDK\UI\**" />
+    <Compile Remove="Bridge\ComponentMapTests.cs" />
+    <Compile Remove="RuntimeExtractionTests.cs" />
+    <Compile Remove="ParameterizedTests\RuntimeFsCheckProperties.cs" />
   </ItemGroup>
 
   <ItemGroup>

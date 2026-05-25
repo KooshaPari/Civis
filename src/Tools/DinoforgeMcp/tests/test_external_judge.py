@@ -108,11 +108,11 @@ class TestReceiptPersisted:
         # We'll do this more directly by mocking the judge call
         judge = KimiJudgeTier(api_key="test-key", timeout=1.0)
 
-        # Monkeypatch _call_moonshot to return deterministic result
+        # Monkeypatch _call_api (judge() routes here; _call_moonshot is legacy alias only)
         def mock_call(image_base64, media_type, prompt):
             return "pass", 0.95, {"choices": [{"message": {"content": "VERDICT: pass"}}]}
 
-        judge._call_moonshot = mock_call
+        judge._call_api = mock_call
 
         # Monkeypatch _persist to use our mock repo
         original_persist = judge._persist
@@ -172,7 +172,7 @@ class TestReceiptPersisted:
         def mock_call(image_base64, media_type, prompt):
             return "pass", 0.88, mock_response
 
-        judge._call_moonshot = mock_call
+        judge._call_api = mock_call
 
         # Mock _persist to not actually write
         judge._persist = lambda receipt: Path("/dev/null")

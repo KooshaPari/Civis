@@ -39,11 +39,11 @@ internal static class GameCaptureHelper
     internal static async Task<string?> CaptureAsync(string outputPath, CancellationToken ct = default)
     {
         // Primary: playcua-native (GPU-accelerated, optional fast native capture)
-        if (await TryPlayCuaAsync(outputPath, ct).ConfigureAwait(false))
+        if (await TryNativeCuaScreenshotAsync(FindPlayCuaNative, ct, outputPath).ConfigureAwait(false))
             return outputPath;
 
         // Secondary: bare-cua-native (optional, fast native capture)
-        if (await TryBareCuaAsync(outputPath, ct).ConfigureAwait(false))
+        if (await TryNativeCuaScreenshotAsync(FindBareCuaNative, ct, outputPath).ConfigureAwait(false))
             return outputPath;
 
         // Tertiary: Unity ScreenCapture.CaptureScreenshot() via file-signal
@@ -67,27 +67,26 @@ internal static class GameCaptureHelper
     }
 
     /// <summary>
-    /// Attempts to use bare-cua-native.exe for screenshot capture (optional fallback).
-    /// Looks for binary at: BARE_CUA_NATIVE env var, same directory as this DLL, or hardcoded path.
+    /// Shared native CUA screenshot path (playcua-native or bare-cua-native).
     /// </summary>
-    private static async Task<bool> TryBareCuaAsync(string outputPath, CancellationToken ct)
+    private static async Task<bool> TryNativeCuaScreenshotAsync(
+        Func<string?> findNative,
+        CancellationToken ct,
+        string outputPath)
     {
         try
         {
-            string? nativePath = FindBareCuaNative();
+            string? nativePath = findNative();
             if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
                 return false;
 
-            // Start the native process
             NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
             try
             {
-                // Capture screenshot by window title
                 byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
                 if (pngBytes.Length == 0)
                     return false;
 
-                // Write to output path
                 await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
                 return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
             }
@@ -98,45 +97,6 @@ internal static class GameCaptureHelper
         }
         catch
         {
-            // bare-cua not available or startup failed; fall through to next method
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Attempts to use playcua-native.exe for screenshot capture (optional, GPU-accelerated).
-    /// Looks for binary at: PLAYCUA_NATIVE_EXE env var, BARE_CUA_NATIVE fallback, same directory as this DLL, or hardcoded path.
-    /// PlayCUA is the primary method when available (tried before bare-cua).
-    /// </summary>
-    private static async Task<bool> TryPlayCuaAsync(string outputPath, CancellationToken ct)
-    {
-        try
-        {
-            string? nativePath = FindPlayCuaNative();
-            if (string.IsNullOrEmpty(nativePath) || !File.Exists(nativePath))
-                return false;
-
-            // Start the native process
-            NativeComputer computer = await NativeComputer.StartAsync(nativePath, "warn", ct).ConfigureAwait(false);
-            try
-            {
-                // Capture screenshot by window title
-                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: GameWindowTitle, ct: ct).ConfigureAwait(false);
-                if (pngBytes.Length == 0)
-                    return false;
-
-                // Write to output path
-                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
-            }
-            finally
-            {
-                await computer.DisposeAsync().ConfigureAwait(false);
-            }
-        }
-        catch
-        {
-            // playcua not available or startup failed; fall through to next method
             return false;
         }
     }

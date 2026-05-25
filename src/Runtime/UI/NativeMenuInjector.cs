@@ -755,6 +755,13 @@ namespace DINOForge.Runtime.UI
                 RepurposedModsButtonGoName = modsButton.gameObject.name;
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButtonFromSelectable: cloned '{modsButton.name}', registered for text intercept");
 
+                // #883: Re-apply donor visual state explicitly after clone so hover/press colors
+                // match the native MainMenuButton (red highlight). CloneSelectableAsButton already
+                // does this, but re-applying here also logs the applied transition + color block
+                // so the next debug session has a clear record of what was set.
+                NativeUiHelper.CopySelectableVisualState(modsButton, donor);
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} InjectButtonFromSelectable: visual state synced from donor — transition={modsButton.transition} highlightedColor={modsButton.colors.highlightedColor} selectedColor={modsButton.colors.selectedColor}");
+
                 // 2. Enforce "Mods" text on all text children (clone inherited donor label).
                 foreach (UnityEngine.UI.Text legacyText in modsButton.GetComponentsInChildren<UnityEngine.UI.Text>(true))
                 {
@@ -1213,6 +1220,16 @@ namespace DINOForge.Runtime.UI
         // Button click handler
         // ------------------------------------------------------------------ //
 
+        /// <summary>
+        /// Handles MODS button click on the native menu (main menu / pause menu).
+        /// Toggles the DINOForge mod management panel (same as F10 hotkey).
+        ///
+        /// DESIGN NOTE: The MODS button opens the DFCanvas mod panel overlay, not a native
+        /// settings-style submenu. This is intentional — DINO has no native settings API to
+        /// integrate with, and the mod management panel is the appropriate UI for pack
+        /// enable/disable, load order, and dependencies. F10 and the MODS button use the
+        /// same Toggle() path for consistency.
+        /// </summary>
         private void OnModsButtonClicked()
         {
             LogInfo($"[NativeMenuInjector.probe] OnModsButtonClicked FIRED at {DateTime.UtcNow:HH:mm:ss.fff}");

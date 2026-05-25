@@ -125,6 +125,9 @@ namespace DINOForge.Runtime
             return BuildPackDisplayInfos(_lastLoadResult);
         }
 
+        /// <summary>Returns the last pack load result (including errors) for UI display.</summary>
+        internal ContentLoadResult? GetLastLoadResult() => _lastLoadResult;
+
         /// <summary>Returns whether the last pack load result is available for diagnostics.</summary>
         internal bool HasLastLoadResult => _lastLoadResult != null;
 
@@ -813,7 +816,104 @@ namespace DINOForge.Runtime
                     errors: new List<string>().AsReadOnly()));
             }
 
+            DetectContentConflicts(packInfos);
+
             return packInfos;
+        }
+
+        private static Dictionary<string, int> ExtractContentSummary(PackManifest manifest)
+        {
+            var summary = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (manifest.Loads == null) return summary;
+
+            void Add(string key, List<string>? items)
+            {
+                if (items != null && items.Count > 0)
+                    summary[key] = items.Count;
+            }
+
+            Add("factions", manifest.Loads.Factions);
+            Add("units", manifest.Loads.Units);
+            Add("buildings", manifest.Loads.Buildings);
+            Add("weapons", manifest.Loads.Weapons);
+            Add("doctrines", manifest.Loads.Doctrines);
+            Add("scenarios", manifest.Loads.Scenarios);
+            Add("wave_templates", manifest.Loads.WaveTemplates);
+            Add("tech_nodes", manifest.Loads.TechNodes);
+            Add("audio", manifest.Loads.Audio);
+            Add("visuals", manifest.Loads.Visuals);
+            Add("localization", manifest.Loads.Localization);
+            Add("faction_patches", manifest.Loads.FactionPatches);
+            Add("resources", manifest.Loads.Resources);
+            Add("economy_profiles", manifest.Loads.EconomyProfiles);
+            Add("trade_routes", manifest.Loads.TradeRoutes);
+            Add("hud_elements", manifest.Loads.HudElements);
+            Add("menus", manifest.Loads.Menus);
+            Add("ui_themes", manifest.Loads.UiThemes);
+            Add("waves", manifest.Loads.Waves);
+            Add("stats", manifest.Loads.Stats);
+
+            if (manifest.Overrides != null)
+            {
+                void AddOverride(string key, List<string>? items)
+                {
+                    if (items != null && items.Count > 0)
+                    {
+                        string overrideKey = key + " (overrides)";
+                        summary[overrideKey] = items.Count;
+                    }
+                }
+                AddOverride("units", manifest.Overrides.Units);
+                AddOverride("buildings", manifest.Overrides.Buildings);
+                AddOverride("stats", manifest.Overrides.Stats);
+            }
+
+            return summary;
+        }
+
+        private static void DetectContentConflicts(List<PackDisplayInfo> packs)
+        {
+            var contentTypeOwners = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+            foreach (PackDisplayInfo pack in packs)
+            {
+                if (!pack.IsEnabled) continue;
+                foreach (string contentType in pack.ContentSummary.Keys)
+                {
+                    if (!contentTypeOwners.TryGetValue(contentType, out List<string>? owners))
+                    {
+                        owners = new List<string>();
+                        contentTypeOwners[contentType] = owners;
+                    }
+                    owners.Add(pack.Id);
+                }
+            }
+
+            for (int i = 0; i < packs.Count; i++)
+            {
+                PackDisplayInfo pack = packs[i];
+                if (pack.ContentSummary.Count == 0) continue;
+
+                var conflicts = new List<string>();
+                foreach (string contentType in pack.ContentSummary.Keys)
+                {
+                    if (!contentTypeOwners.TryGetValue(contentType, out List<string>? owners)) continue;
+                    foreach (string otherId in owners)
+                    {
+                        if (string.Equals(otherId, pack.Id, StringComparison.Ordinal)) continue;
+                        conflicts.Add($"{otherId} also loads: {contentType}");
+                    }
+                }
+
+                if (conflicts.Count > 0)
+                {
+                    packs[i] = new PackDisplayInfo(
+                        pack.Id, pack.Name, pack.Version, pack.Author, pack.Type,
+                        pack.Description, pack.LoadOrder, pack.IsEnabled,
+                        pack.Dependencies, pack.Conflicts, pack.Errors,
+                        pack.ContentSummary, conflicts.AsReadOnly());
+                }
+            }
         }
 
         private PackDisplayInfo GetCachedPackDisplayInfo(string manifestPath, PackLoader packLoader)
@@ -827,6 +927,7 @@ namespace DINOForge.Runtime
             }
 
             PackManifest manifest = packLoader.LoadFromFile(manifestPath);
+            Dictionary<string, int> contentSummary = ExtractContentSummary(manifest);
             PackDisplayInfo displayInfo = new PackDisplayInfo(
                 id: manifest.Id,
                 name: manifest.Name,
@@ -838,7 +939,8 @@ namespace DINOForge.Runtime
                 isEnabled: true,
                 dependencies: manifest.DependsOn.AsReadOnly(),
                 conflicts: manifest.ConflictsWith.AsReadOnly(),
-                errors: new List<string>().AsReadOnly());
+                errors: new List<string>().AsReadOnly(),
+                contentSummary: contentSummary);
 
             _packDisplayInfoCache[manifestPath] = new CachedPackDisplayInfo(
                 manifestFile.LastWriteTimeUtc,

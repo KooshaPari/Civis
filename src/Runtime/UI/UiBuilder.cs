@@ -129,17 +129,22 @@ namespace DINOForge.Runtime.UI
             t.fontSize = fontSize;
             t.color = color;
             t.alignment = alignment;
-            Font arialFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (arialFont == null)
+            // Unity 2021.3 renamed the built-in font from "Arial.ttf" to "LegacyRuntime.ttf".
+            // Try both names, then fall back to OS font, then leave the Text default font intact
+            // (never assign null — a null font causes Text to render nothing).
+            Font? resolvedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (resolvedFont == null)
+                resolvedFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (resolvedFont == null)
+                resolvedFont = Resources.Load<Font>("Arial");
+            if (resolvedFont == null)
             {
-                Debug.LogError($"[UiBuilder.MakeText] CRITICAL: Arial.ttf font not found! Text '{text}' will not render. Trying alternative: 'Arial'");
-                arialFont = Resources.Load<Font>("Arial");
-                if (arialFont == null)
-                {
-                    Debug.LogError($"[UiBuilder.MakeText] CRITICAL FALLBACK FAILED: No Arial font available at all!");
-                }
+                // Last resort: create a font from an OS-installed typeface.
+                resolvedFont = Font.CreateDynamicFontFromOSFont("Arial", fontSize);
             }
-            t.font = arialFont;
+            if (resolvedFont != null)
+                t.font = resolvedFont;
+            // If resolvedFont is still null, leave t.font as the Unity default (never assign null).
             t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
             t.supportRichText = true;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;

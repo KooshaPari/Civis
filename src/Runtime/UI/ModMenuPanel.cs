@@ -14,6 +14,10 @@ namespace DINOForge.Runtime.UI
     /// Layout: header bar | split (pack list / detail pane) | footer.
     /// Exposes the same public API as <see cref="ModMenuOverlay"/> so ModPlatform
     /// does not need changes.
+    ///
+    /// Entry points: Opened by F10 hotkey OR by clicking the injected MODS button on the
+    /// native menu (main menu / pause menu). Both paths call <see cref="Toggle"/> on this
+    /// panel's <see cref="IModMenuHost"/> implementation.
     /// </summary>
     public class ModMenuPanel : MonoBehaviour, IModMenuHost
     {
@@ -58,6 +62,8 @@ namespace DINOForge.Runtime.UI
         private Text? _detailDeps;
         private Text? _detailConflicts;
         private Text? _detailLoadOrder;
+        private Text? _detailContent;
+        private Text? _detailDetectedConflicts;
         private bool _listRefreshQueued;
 
         // ── Bootstrap ────────────────────────────────────────────────────────────
@@ -475,6 +481,24 @@ namespace DINOForge.Runtime.UI
 
             UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
 
+            // Content summary
+            _detailContent = UiBuilder.MakeText(_detailPane.transform, "DetailContent",
+                "Content: (none)", 12, new Color(0.6f, 0.85f, 0.6f, 1f));
+            LayoutElement contentLe = _detailContent.gameObject.AddComponent<LayoutElement>();
+            contentLe.preferredHeight = 40f;
+            contentLe.flexibleWidth = 1f;
+            contentLe.flexibleHeight = 0.5f;
+
+            // Auto-detected conflicts
+            _detailDetectedConflicts = UiBuilder.MakeText(_detailPane.transform, "DetailDetectedConflicts",
+                "", 12, new Color(0.9f, 0.6f, 0.2f, 1f));
+            LayoutElement dcLe = _detailDetectedConflicts.gameObject.AddComponent<LayoutElement>();
+            dcLe.preferredHeight = 30f;
+            dcLe.flexibleWidth = 1f;
+            dcLe.flexibleHeight = 0.5f;
+
+            UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
+
             // Action buttons row
             GameObject btnRow = new GameObject("ActionButtons", typeof(RectTransform));
             btnRow.transform.SetParent(_detailPane.transform, false);
@@ -705,7 +729,9 @@ namespace DINOForge.Runtime.UI
             LayoutElement nameLe = nameText.gameObject.AddComponent<LayoutElement>();
             nameLe.minWidth = 100f;
             nameLe.flexibleWidth = 1f;
-            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} nameText LayoutElement: minWidth={nameLe.minWidth}, flexibleWidth={nameLe.flexibleWidth}");
+            nameLe.minHeight = 16f;
+            nameLe.preferredHeight = ItemHeight - 8f;
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} nameText LayoutElement: minWidth={nameLe.minWidth}, flexibleWidth={nameLe.flexibleWidth}, minHeight={nameLe.minHeight}");
 
             // Error / Conflict badge
             if (hasErrors)
@@ -739,6 +765,7 @@ namespace DINOForge.Runtime.UI
             LayoutElement verLe = versionText.gameObject.AddComponent<LayoutElement>();
             verLe.preferredWidth = 50f;
             verLe.minWidth = 40f;
+            verLe.minHeight = 16f;
 
             // Click to select
             int capturedIndex = index;
@@ -772,6 +799,8 @@ namespace DINOForge.Runtime.UI
                 if (_detailDeps != null) _detailDeps.text = "Dependencies: none";
                 if (_detailConflicts != null) _detailConflicts.text = "Conflicts: none";
                 if (_detailLoadOrder != null) _detailLoadOrder.text = "Load Order: —";
+                if (_detailContent != null) _detailContent.text = "Content: (none)";
+                if (_detailDetectedConflicts != null) _detailDetectedConflicts.text = "";
                 return;
             }
 
@@ -811,6 +840,37 @@ namespace DINOForge.Runtime.UI
             if (_detailLoadOrder != null)
             {
                 _detailLoadOrder.text = $"Load Order: {p.LoadOrder}";
+            }
+
+            if (_detailContent != null)
+            {
+                if (p.ContentSummary.Count == 0)
+                {
+                    _detailContent.text = "Content: (none declared)";
+                }
+                else
+                {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
+                    sb.Append("<color=#88dd88>Content:</color>\n");
+                    foreach (System.Collections.Generic.KeyValuePair<string, int> kv in p.ContentSummary)
+                    {
+                        sb.Append($"  {kv.Key}: {kv.Value} file(s)\n");
+                    }
+                    _detailContent.text = sb.ToString().TrimEnd('\n');
+                }
+            }
+
+            if (_detailDetectedConflicts != null)
+            {
+                if (p.DetectedConflicts.Count == 0)
+                {
+                    _detailDetectedConflicts.text = "";
+                }
+                else
+                {
+                    _detailDetectedConflicts.text = "<color=#e8a020>Content Overlaps:</color>\n"
+                        + string.Join("\n", p.DetectedConflicts);
+                }
             }
 
             // Update toggle button label
@@ -871,8 +931,18 @@ namespace DINOForge.Runtime.UI
 
         private string BuildStatusLine()
         {
-            string errPart = _presenter.ErrorCount > 0 ? $"  {_presenter.ErrorCount} errors" : "  0 errors";
-            return $"{_presenter.Packs.Count} packs{errPart}  {_presenter.StatusMessage}";
+            string errPart = _presenter.ErrorCount > 0 ? $"  {_presenter.ErrorCount} errors" : "";
+            int totalContent = 0;
+            int enabledCount = 0;
+            foreach (PackDisplayInfo pack in _presenter.Packs)
+            {
+                if (!pack.IsEnabled) continue;
+                enabledCount++;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> kv in pack.ContentSummary)
+                    totalContent += kv.Value;
+            }
+            string contentPart = totalContent > 0 ? $"  ({totalContent} content files)" : "";
+            return $"{enabledCount}/{_presenter.Packs.Count} packs active{errPart}{contentPart}";
         }
     }
 }

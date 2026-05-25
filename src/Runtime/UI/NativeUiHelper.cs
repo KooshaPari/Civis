@@ -119,6 +119,10 @@ namespace DINOForge.Runtime.UI
                 nav.mode = Navigation.Mode.Automatic;
                 btn.navigation = nav;
 
+                // 4b. Copy visual state from the donor Selectable so hover/press
+                //     color transitions match the native MainMenuButton appearance.
+                CopySelectableVisualState(btn, donor);
+
                 // 5. Set label text.
                 SetButtonText(btn, newText);
 
@@ -127,6 +131,28 @@ namespace DINOForge.Runtime.UI
             catch { /* safe-swallow: best-effort Selectable-to-Button clone; caller handles null and logs the failure */
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Copies hover/press visual state from a donor <see cref="Selectable"/> onto a
+        /// freshly-created <see cref="Button"/> so it matches the native menu button appearance
+        /// (red highlight on hover/selection in DINO's MainMenuButton style).
+        /// Safe to call even when the donor has no configured color block — the default
+        /// Unity <see cref="ColorBlock"/> is used as-is in that case.
+        /// </summary>
+        /// <param name="target">The new Button that needs visual state.</param>
+        /// <param name="donor">The original Selectable whose visual properties are the template.</param>
+        internal static void CopySelectableVisualState(Button target, Selectable donor)
+        {
+            if (target == null || donor == null) return;
+            try
+            {
+                target.transition = donor.transition;
+                target.colors = donor.colors;
+                target.spriteState = donor.spriteState;
+                target.animationTriggers = donor.animationTriggers;
+            }
+            catch { /* safe-swallow: visual-state copy is best-effort; missing/destroyed donor is non-fatal */ }
         }
 
         private static void StripNonUiBehaviours(GameObject root)

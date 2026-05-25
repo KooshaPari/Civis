@@ -37,35 +37,13 @@ Invoke-Gate "dashboard_typecheck" {
     Pop-Location
 }
 
-$gitSha = (git rev-parse HEAD).Trim()
-$rust = (rustc --version 2>$null)
-if (-not $rust) { $rust = "unknown" }
-
-$attestationGates = $results.GetEnumerator() | ForEach-Object {
-    @{ key = $_.Key; status = $_.Value.status }
-} | Sort-Object { $_.key }
-
-$attestation = @{
-    git_sha = $gitSha
-    gates = @($attestationGates)
+$gatesJson = @{}
+foreach ($entry in $results.GetEnumerator()) {
+    $gatesJson[$entry.Key] = $entry.Value
 }
-
-$attestationJson = $attestation | ConvertTo-Json -Compress -Depth 6
-$hash = python -c "import hashlib,json,sys; att=json.loads(sys.argv[1]); print(hashlib.blake2b(json.dumps(att,separators=(',',':')).encode(),digest_size=32).hexdigest())" $attestationJson
-
-$body = [ordered]@{
-    version = "1"
-    repo = "Civis"
-    git_sha = $gitSha
-    created_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    runner = @{ host = $env:COMPUTERNAME; rust = $rust }
-    gates = $results
-    manifest_hash = $hash
-}
-
+$env:QUALITY_GATES_JSON = ($gatesJson | ConvertTo-Json -Compress -Depth 5)
+$env:MANIFEST_PATH = ".ci/quality-manifest.json"
 New-Item -ItemType Directory -Force -Path .ci | Out-Null
-$manifestPath = ".ci/quality-manifest.json"
-($body | ConvertTo-Json -Depth 8) + "`n" | Set-Content -Path $manifestPath -Encoding utf8NoBOM
-Write-Host "Wrote $manifestPath (git_sha=$gitSha, manifest_hash=$hash)"
-
-if ($Failed) { exit 1 }
+python (Join-Path $PSScriptRoot "write-quality-manifest.py")
+$writeExit = $LASTEXITCODE
+if ($Failed -or $writeExit -ne 0) { exit 1 }

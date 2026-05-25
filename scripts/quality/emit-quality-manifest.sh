@@ -50,17 +50,12 @@ run_gate dashboard_typecheck bash -lc 'cd web/dashboard && bun install --frozen-
 
 export MANIFEST_PATH="${MANIFEST}"
 export QUALITY_GATE_RESULTS="$(printf '%s\n' "${RESULTS[@]}")"
-python3 - <<'PY'
-import hashlib
+GATES_JSON="$(python3 - <<'PY'
 import json
 import os
-import subprocess
-from datetime import datetime, timezone
 
-root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-results = os.environ.get("QUALITY_GATE_RESULTS", "")
 gates = {}
-for row in results.splitlines():
+for row in os.environ.get("QUALITY_GATE_RESULTS", "").splitlines():
     if not row.strip():
         continue
     parts = row.split("|", 2)
@@ -68,46 +63,11 @@ for row in results.splitlines():
     status = parts[1] if len(parts) > 1 else "fail"
     detail = parts[2] if len(parts) > 2 else ""
     gates[name] = {"status": status, "detail": detail}
-
-git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-try:
-    rust = subprocess.check_output(["rustc", "--version"], text=True).strip()
-except Exception:
-    rust = "unknown"
-try:
-    host = subprocess.check_output(["hostname"], text=True).strip()
-except Exception:
-    host = "unknown"
-
-body = {
-    "version": "1",
-    "repo": "Civis",
-    "git_sha": git_sha,
-    "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "runner": {"host": host, "rust": rust},
-    "gates": gates,
-}
-attestation = {
-    "git_sha": git_sha,
-    "gates": sorted(
-        [{"key": k, "status": v["status"]} for k, v in gates.items()],
-        key=lambda x: x["key"],
-    ),
-}
-body["manifest_hash"] = hashlib.blake2b(
-    json.dumps(attestation, separators=(",", ":")).encode(),
-    digest_size=32,
-).hexdigest()
-
-path = os.environ["MANIFEST_PATH"]
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(body, f, indent=2)
-    f.write("\n")
-print(f"Wrote {path} (git_sha={git_sha}, manifest_hash={body['manifest_hash']})")
-failed = [k for k, v in gates.items() if v.get("status") != "pass"]
-if failed:
-    raise SystemExit(f"failed gates: {', '.join(failed)}")
+print(json.dumps(gates))
 PY
+)"
+export QUALITY_GATES_JSON="${GATES_JSON}"
+python3 "${ROOT}/scripts/quality/write-quality-manifest.py"
 
 if [[ "${FAIL}" -ne 0 ]]; then
   exit 1

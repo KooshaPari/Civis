@@ -185,8 +185,14 @@ mod tests {
         assert_eq!(p.morphology.eye_count, 255, "max eyes");
         assert!((p.behavior.aggression - 1.0).abs() < 1e-4, "max aggression");
         assert!((p.behavior.curiosity - 1.0).abs() < 1e-4, "max curiosity");
-        assert!((p.behavior.sociability - 1.0).abs() < 1e-4, "max sociability");
-        assert!((p.behavior.intelligence - 1.0).abs() < 1e-4, "max intelligence");
+        assert!(
+            (p.behavior.sociability - 1.0).abs() < 1e-4,
+            "max sociability"
+        );
+        assert!(
+            (p.behavior.intelligence - 1.0).abs() < 1e-4,
+            "max intelligence"
+        );
     }
 
     /// FR-CIV-SPECIES-006 — boundary byte 127 maps to a behaviour weight of
@@ -239,7 +245,10 @@ mod tests {
         let p_variant = express(&Dna(variant));
 
         // Morphology must be identical.
-        assert_eq!(p_base.morphology, p_variant.morphology, "morphology changed");
+        assert_eq!(
+            p_base.morphology, p_variant.morphology,
+            "morphology changed"
+        );
         // All behaviour weights except intelligence must be identical.
         assert_eq!(
             p_base.behavior.aggression, p_variant.behavior.aggression,

@@ -39,10 +39,14 @@ pub struct ModMeta {
     pub api_version: String,
     /// One of policy | economic | event | scenario.
     pub mod_type: ModType,
+    /// Mod author name or organisation.
     pub author: String,
+    /// Short description (max 256 chars).
     pub description: String,
+    /// Optional URL to the mod homepage.
     #[serde(default)]
     pub homepage: Option<String>,
+    /// SPDX license identifier (e.g. `MIT`).
     #[serde(default)]
     pub license: Option<String>,
 }
@@ -53,6 +57,7 @@ pub struct ModDependencies {
     /// Host API semver range (required).
     #[serde(rename = "civlab-api")]
     pub civlab_api: String,
+    /// Optional peer-mod version constraints (`{ "other-mod" = "^1" }`).
     #[serde(default)]
     pub mods: Option<std::collections::BTreeMap<String, String>>,
 }
@@ -60,24 +65,34 @@ pub struct ModDependencies {
 /// `[permissions]` table — all fields optional in file; defaults are false.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct ModPermissions {
+    /// Allow reading economy state.
     #[serde(default)]
     pub read_economy: bool,
+    /// Allow reading climate state.
     #[serde(default)]
     pub read_climate: bool,
+    /// Allow reading military state.
     #[serde(default)]
     pub read_military: bool,
+    /// Allow reading diplomacy state.
     #[serde(default)]
     pub read_diplomacy: bool,
+    /// Allow reading citizen state.
     #[serde(default)]
     pub read_citizens: bool,
+    /// Allow writing policy state.
     #[serde(default)]
     pub write_policy: bool,
+    /// Allow writing economy state.
     #[serde(default)]
     pub write_economy: bool,
+    /// Allow emitting world events.
     #[serde(default)]
     pub write_events: bool,
+    /// Allow modifying scenario configuration.
     #[serde(default)]
     pub write_scenario: bool,
+    /// Allow fund-transfer operations.
     #[serde(default)]
     pub transfer_funds: bool,
 }
@@ -85,18 +100,24 @@ pub struct ModPermissions {
 /// `[runtime]` optional overrides.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ModRuntime {
+    /// Maximum WASM heap in megabytes (host cap: 64).
     pub memory_mb: Option<u32>,
+    /// CPU budget in microseconds per tick (host cap: 50).
     pub cpu_us: Option<u32>,
 }
 
 /// Parsed manifest (TOML on disk).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ModManifest {
+    /// Required `[mod]` metadata table.
     #[serde(rename = "mod")]
     pub meta: ModMeta,
+    /// Required `[dependencies]` table.
     pub dependencies: ModDependencies,
+    /// Optional `[permissions]` table; defaults all to false.
     #[serde(default)]
     pub permissions: ModPermissions,
+    /// Optional `[runtime]` overrides.
     #[serde(default)]
     pub runtime: Option<ModRuntime>,
 }
@@ -198,7 +219,9 @@ fn validate_manifest(manifest: &ModManifest, path: &Path) -> Result<(), Manifest
     let valid_id = !id.is_empty()
         && id.as_bytes()[0].is_ascii_lowercase()
         && id.len() <= 64
-        && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
     if !valid_id {
         return Err(ManifestError::Validation {
             path: path.to_path_buf(),

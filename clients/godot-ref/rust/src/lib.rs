@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)] // godot_api generated closures
 
 mod ux;
+mod ws_frame;
 
 use godot::prelude::*;
 use once_cell::sync::OnceCell;
@@ -180,9 +181,9 @@ impl CivisClient {
                 pin_dict.set("idx", pin.idx as i64);
                 pin_dict.set("x", pin.x);
                 pin_dict.set("y", pin.y);
-                civ_pins.push(&pin_dict);
+                civ_pins.push(pin_dict.arg());
             }
-            dict.set("civ_pins", &civ_pins);
+            dict.set("civ_pins", civ_pins);
         }
         dict
     }

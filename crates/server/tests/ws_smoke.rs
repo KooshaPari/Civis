@@ -418,17 +418,15 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         "expected civ_pins when startup civilians exist"
     );
     assert!(
-        civ_pins.iter().any(|pin| {
-            pin.get("job")
-                .map(|j| !j.is_null())
-                .unwrap_or(false)
-        }),
+        civ_pins
+            .iter()
+            .any(|pin| { pin.get("job").map(|j| !j.is_null()).unwrap_or(false) }),
         "expected at least one civ_pin with non-null job (UX-01 Citizen wire), got {civ_pins:?}"
     );
     assert!(
-        civ_pins.iter().any(|pin| {
-            pin.get("job").and_then(|j| j.as_str()) == Some("farmer")
-        }),
+        civ_pins
+            .iter()
+            .any(|pin| { pin.get("job").and_then(|j| j.as_str()) == Some("farmer") }),
         "expected lowercase job label in civ_pins, got {civ_pins:?}"
     );
 }
@@ -918,11 +916,17 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
     .await
     .expect("sim.status timeout");
 
-    assert_eq!(
-        status_response
-            .pointer("/result/tick")
-            .and_then(|v| v.as_u64()),
-        Some(expected_tick)
+    // The background 10 Hz ticker may advance the simulation by one additional
+    // tick between `sim.load_replay` and the `sim.status` response, so we
+    // accept expected_tick or expected_tick+1 to avoid a spurious race failure.
+    let actual_tick = status_response
+        .pointer("/result/tick")
+        .and_then(|v| v.as_u64())
+        .expect("sim.status result.tick missing");
+    assert!(
+        actual_tick == expected_tick || actual_tick == expected_tick + 1,
+        "expected tick {expected_tick} or {} after load_replay, got {actual_tick}",
+        expected_tick + 1
     );
 }
 

@@ -113,6 +113,10 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-030 | Operational layer hook for engagements. | `crates/tactics/operational.rs` | (compile + `NoopOperationalLayer` in engine) | implemented |
 | FR-CIV-TACTICS-031 | Operational movement toward nearest enemy. | `crates/tactics/movement.rs` | `operational_movement_steps_toward_enemy` | implemented |
 | FR-CIV-TACTICS-032 | Per-soldier HP on military ECS component. | `engine.rs`, `spawn.rs` | `war_bridge_records_combat_replay_events` | implemented |
+| FR-CIV-TACTICS-033 | Operational pathfinding (BFS next step). | `crates/tactics/pathfinding.rs` | `pathfinding_bfs_steps_toward_enemy` | implemented |
+| FR-CIV-TACTICS-034 | Military-phase mod hook (`read_military`). | `crates/mod-host/`, `engine.rs` | `mod_registry_military_phase_emits_for_read_military` | implemented |
+| FR-CIV-TACTICS-035 | Higher per-tick military work (cadence + pulses). | `military_phase.rs`, `movement.rs`, `war_bridge.rs` | `operational_movement_steps_toward_enemy` | implemented |
+| FR-CIV-TACTICS-025-int | Replay restores combat `pending_damage`. | `replay.rs`, `engine.rs` | `replay_combat_events_restore_pending_damage` | implemented |
 
 ---
 

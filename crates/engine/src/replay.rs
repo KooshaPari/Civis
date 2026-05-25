@@ -37,6 +37,12 @@ pub enum ReplayEvent {
     },
     /// End-of-tick marker.
     Tick { tick: u64 },
+    /// Mod manifest registered (`mod.loaded.v1`, FR-MOD-004).
+    ModLoaded {
+        tick: u64,
+        mod_id: String,
+        version: String,
+    },
 }
 
 /// Persistent replay log.
@@ -166,6 +172,14 @@ impl ReplayLog {
     }
 
     /// Record a tick marker and extend the per-tick hash chain (FR-CORE-005 partial).
+    pub fn record_mod_loaded(&mut self, tick: u64, mod_id: &str, version: &str) {
+        self.events.push(ReplayEvent::ModLoaded {
+            tick,
+            mod_id: mod_id.to_string(),
+            version: version.to_string(),
+        });
+    }
+
     pub fn record_tick(&mut self, tick: u64) {
         self.events.push(ReplayEvent::Tick { tick });
         let prev = self.running_hash.unwrap_or(GENESIS);
@@ -217,6 +231,15 @@ impl ReplayLog {
         Ok(log)
     }
 
+    /// Count [`ReplayEvent::Combat`] markers in this log.
+    #[must_use]
+    pub fn combat_event_count(&self) -> usize {
+        self.events
+            .iter()
+            .filter(|e| matches!(e, ReplayEvent::Combat { .. }))
+            .count()
+    }
+
     /// Replay all events into a simulation.
     pub fn replay(&self, into: &mut Simulation) -> Result<(), ReplayError> {
         for event in &self.events {
@@ -245,6 +268,7 @@ impl ReplayLog {
                 ReplayEvent::Tick { tick } => {
                     into.apply_replay_tick(*tick);
                 }
+                ReplayEvent::ModLoaded { .. } => {}
             }
         }
         Ok(())

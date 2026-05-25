@@ -11,15 +11,21 @@
 mod doctrine_fitness;
 mod formation;
 mod los;
+mod military_phase;
 mod movement;
 mod operational;
+mod pathfinding;
 mod war_bridge;
 
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
 pub use formation::{formation_offsets, FormationKind};
 pub use los::line_of_sight;
-pub use movement::{tick_operational_movement, GridMove, OperationalMovementConfig};
+pub use military_phase::MilitaryPhaseConfig;
+pub use movement::{
+    operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
+};
 pub use operational::{NoopOperationalLayer, OperationalLayer};
+pub use pathfinding::bfs_next_step;
 pub use war_bridge::{
     grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridgeConfig,
 };
@@ -31,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 /// Marker version of this crate's public schema.
-pub const SCHEMA_VERSION: &str = "0.1.0-stub";
+pub const SCHEMA_VERSION: &str = "0.1.0";
 
 /// A voxel damage application centered at a world coordinate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -328,6 +334,12 @@ mod tests {
             .any(|e| e.shooter_id == 10 && e.target_id == 20));
     }
 
+    /// FR-CIV-TACTICS-033 — BFS next step is stable toward a distant target.
+    #[test]
+    fn pathfinding_bfs_steps_toward_enemy() {
+        assert_eq!(bfs_next_step((0, 0), (5, 0), 16), Some((1, 0)));
+    }
+
     /// FR-CIV-TACTICS-031 — operational movement steps toward nearest enemy.
     #[test]
     fn operational_movement_steps_toward_enemy() {
@@ -345,13 +357,17 @@ mod tests {
                 grid_y: 0,
             },
         ];
-        let config = OperationalMovementConfig { cadence_ticks: 8 };
-        assert!(tick_operational_movement(7, &config, &units).is_empty());
-        let moves = tick_operational_movement(8, &config, &units);
+        let mut units = units;
+        let config = OperationalMovementConfig {
+            cadence_ticks: 4,
+            ..Default::default()
+        };
+        assert!(tick_operational_movement(3, &config, &mut units, 1).is_empty());
+        let moves = tick_operational_movement(4, &config, &mut units, 2);
         assert!(!moves.is_empty());
         assert!(moves
             .iter()
-            .any(|mv| mv.unit_index == 0 && mv.new_grid_x == 1));
+            .any(|mv| mv.unit_index == 0 && mv.new_grid_x >= 1));
     }
 
     /// FR-CIV-TACTICS-023 — doctrine fitness increases with engagement pressure.

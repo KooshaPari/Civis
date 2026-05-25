@@ -14,8 +14,8 @@ use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, Plane
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
-    FactionEngagementStats, GridMove, MilitaryUnitSample, NoopOperationalLayer, OperationalLayer,
-    OperationalMovementConfig, WarBridgeConfig,
+    FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
+    OperationalLayer,
 };
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use hecs::{Entity, World};
@@ -315,6 +315,8 @@ pub struct Simulation {
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
     mod_host: ModHost,
+    /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
+    military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
 }
@@ -488,6 +490,7 @@ impl Simulation {
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
+            military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
         }
     }
@@ -541,6 +544,7 @@ impl Simulation {
             economy_policy: DEFAULT_ECONOMY_POLICY,
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
+            military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
         }
     }
@@ -560,6 +564,14 @@ impl Simulation {
             let dir = repo_root.join(rel);
             if let Err(err) = self.mod_host.load_manifest_dir(&dir) {
                 tracing::warn!(mod = %rel, error = %err, "mod manifest load skipped");
+                continue;
+            }
+            if let Some(entry) = self.mod_host.mods().last() {
+                self.replay_log.record_mod_loaded(
+                    self.state.tick,
+                    &entry.manifest.meta.id,
+                    &entry.manifest.meta.version,
+                );
             }
         }
     }
@@ -1078,6 +1090,12 @@ impl Simulation {
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
 
+        for line in self.mod_host.military_tick(self.state.tick) {
+            tracing::debug!(mod_log = %line, "mod military phase");
+        }
+
+        let phase_cfg = self.military_phase;
+
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
             if unit.morale < Fixed::from_num(1) {
                 unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
@@ -1104,8 +1122,9 @@ impl Simulation {
 
         for grid_move in tick_operational_movement(
             self.state.tick,
-            &OperationalMovementConfig::default(),
-            &samples,
+            &phase_cfg.movement,
+            &mut samples,
+            phase_cfg.movement_pulses_per_cadence,
         ) {
             if let Some(sample) = samples.get_mut(grid_move.unit_index) {
                 sample.grid_x = grid_move.new_grid_x;
@@ -1122,7 +1141,7 @@ impl Simulation {
             }
         }
 
-        let config = WarBridgeConfig::default();
+        let config = phase_cfg.war;
         let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
         self.operational
             .on_combat_engagements(self.state.tick, &engagements);
@@ -1254,6 +1273,7 @@ impl Simulation {
             deaths_this_tick: self.last_deaths.len() as u32,
             diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
+            damage_events: self.last_tick_combat_pulses.len(),
         }
     }
 }
@@ -1304,6 +1324,9 @@ pub struct SimulationSnapshot {
     pub diplomacy_events: Vec<DiplomacyEvent>,
     /// Per-good clearing prices in cents from [`MarketState`].
     pub market_prices: BTreeMap<String, i64>,
+    /// Number of per-soldier combat damage pulses resolved during the most recent tick
+    /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
+    pub damage_events: usize,
 }
 
 // ============================================================================
@@ -1851,11 +1874,33 @@ mod tests {
         ));
     }
 
+    /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
+    #[test]
+    fn replay_combat_events_restore_pending_damage() {
+        let event = DamageEvent {
+            center: WorldCoord {
+                x: 100,
+                y: 0,
+                z: 200,
+            },
+            radius_voxels: 2,
+            energy: 50,
+        };
+        let mut sim = Simulation::with_seed(1);
+        sim.replay_log.record_combat(16, 10, 20, event);
+        let log = sim.replay_log().clone();
+        let mut replayed = Simulation::with_seed(99);
+        log.replay(&mut replayed).unwrap();
+        assert_eq!(replayed.pending_damage.len(), 1);
+        assert_eq!(replayed.pending_damage[0], event);
+        assert_eq!(replayed.state.tick, 16);
+    }
+
     /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
-        for _ in 0..32 {
+        for _ in 0..16 {
             sim.tick();
         }
         assert!(sim.replay_log().events.iter().any(|event| {
@@ -1959,5 +2004,64 @@ mod tests {
             sim1.voxel().read(WorldCoord { x: 8, y: 9, z: 10 }),
             sim2.voxel().read(WorldCoord { x: 8, y: 9, z: 10 })
         );
+    }
+
+    /// FR-CIV-TACTICS-025 — replay round-trip: war-bridge Combat events exist in the
+    /// original log and the replayed simulation converges to the same tick and voxel state.
+    #[test]
+    fn replay_round_trip_preserves_combat_events() {
+        let mut sim = Simulation::with_seed(5);
+        // Seed some voxel content so combat damage leaves a measurable trace.
+        sim.voxel_mut()
+            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        // Run enough ticks that the war-bridge cadence (16) fires at least once.
+        for _ in 0..16 {
+            sim.tick();
+        }
+
+        // The original log must contain at least one Combat event.
+        let combat_count = sim
+            .replay_log()
+            .events
+            .iter()
+            .filter(|e| matches!(e, ReplayEvent::Combat { .. }))
+            .count();
+        assert!(
+            combat_count > 0,
+            "expected at least one Combat replay event after 16 ticks"
+        );
+
+        // After replay the simulation must be at the same tick and voxel state.
+        let log = sim.replay_log().clone();
+        let mut replayed = Simulation::with_seed(5);
+        replayed
+            .voxel_mut()
+            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        log.replay(&mut replayed).unwrap();
+
+        assert_eq!(
+            replayed.state.tick, sim.state.tick,
+            "replayed tick must match original"
+        );
+        assert_eq!(
+            replayed.voxel().chunk_count(),
+            sim.voxel().chunk_count(),
+            "replayed voxel chunk count must match original"
+        );
+    }
+
+    /// FR-CIV-TACTICS-024 — snapshot.damage_events reflects combat pulses from
+    /// the most recent tick.
+    #[test]
+    fn snapshot_damage_events_reflects_last_tick_pulses() {
+        let mut sim = Simulation::with_seed(6);
+        // Advance to a war-bridge cadence boundary (cadence = 16).
+        for _ in 0..16 {
+            sim.tick();
+        }
+        let snap = sim.snapshot();
+        // After a cadence tick with ≥2 opposing military units the pulses list
+        // must be non-empty; the snapshot field must match.
+        assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
     }
 }

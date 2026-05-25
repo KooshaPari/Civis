@@ -68,13 +68,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
     /// <summary>
     /// NATIVE-004 / SPEC-002 manual AC #7: pause menu contains injected Mods button after gameplay pause.
-    /// Unblocked when GameBridge gains simulateKey/ESC or a documented pause-menu handler (see skip reason).
     /// </summary>
-    [Fact(Skip =
-        "GameBridgeServer: pressKey is scanScene-only (HandlePressKey), not key simulation; " +
-        "invokeMethod pause-target discovery fails on current game builds. " +
-        "Manual: docs/specs/SPEC-002-native-menu-injector.md AC #7. " +
-        "MCP ESC path: game_navigate_to pause_menu (bare-cua), not GameBridge.")]
+    [SkippableFact]
     public async Task PauseMenu_HasModsButton_WhenOpened()
     {
         fixture.SkipIfNotInitialized();
@@ -87,9 +82,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         GameStatus status = await fixture.Client.StatusAsync();
         status.WorldReady.Should().BeTrue("ECS world should be ready before opening pause menu");
 
-        bool pauseOpened = await TryOpenPauseMenuAsync(fixture.Client);
-        pauseOpened.Should().BeTrue(
-            "pause menu must open via invokeMethod discovery once bridge pause simulation exists");
+        bool pauseOpened = await TryOpenPauseMenuAsync(fixture.Client!);
+        pauseOpened.Should().BeTrue("pause menu must open via bridge simulateKey (Escape) or invokeMethod fallback");
 
         await Task.Delay(2500);
 
@@ -381,6 +375,26 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
     private static async Task<bool> TryOpenPauseMenuAsync(GameClient client)
     {
+        StartGameResult esc = await client.PressEscapeAsync().ConfigureAwait(false);
+        if (esc.Success)
+        {
+            await Task.Delay(750).ConfigureAwait(false);
+            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+            {
+                return true;
+            }
+        }
+
+        StartGameResult simulate = await client.SimulateKeyAsync("Escape").ConfigureAwait(false);
+        if (simulate.Success)
+        {
+            await Task.Delay(750).ConfigureAwait(false);
+            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+            {
+                return true;
+            }
+        }
+
         (string target, string method)[] attempts =
         [
             ("PauseMenu", "Show"),
@@ -395,8 +409,14 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
         foreach ((string target, string method) in attempts)
         {
-            StartGameResult result = await client.InvokeMethodAsync(target, method);
-            if (result.Success)
+            StartGameResult result = await client.InvokeMethodAsync(target, method).ConfigureAwait(false);
+            if (!result.Success)
+            {
+                continue;
+            }
+
+            await Task.Delay(750).ConfigureAwait(false);
+            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
             {
                 return true;
             }

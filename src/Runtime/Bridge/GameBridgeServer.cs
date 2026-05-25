@@ -565,6 +565,10 @@ namespace DINOForge.Runtime.Bridge
                     return HandleListSaves();
                 case "pressKey":
                     return HandlePressKey(parameters);
+                case "simulateKey":
+                    return HandleSimulateKey(parameters);
+                case "pressEscape":
+                    return HandleSimulateKey(new JObject { ["key"] = "Escape" });
                 case "dismissLoadScreen":
                     return HandleDismissLoadScreen();
                 case "clickButton":
@@ -1826,6 +1830,18 @@ namespace DINOForge.Runtime.Bridge
             if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
+        }
+
+        /// <summary>
+        /// Injects a key press via Win32 SendInput (same path as MCP game input tools).
+        /// Parameter <c>key</c> defaults to Escape for pause-menu tests.
+        /// </summary>
+        private JToken HandleSimulateKey(JObject? parameters)
+        {
+            string key = parameters?.Value<string>("key") ?? "Escape";
+            bool ok = Win32KeyInput.TrySendKey(key, out string message);
+            DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleSimulateKey key='{key}' ok={ok} msg={message}");
+            return JToken.FromObject(new { success = ok, message });
         }
 
         private JToken HandlePressKey(JObject? parameters)

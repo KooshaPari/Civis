@@ -408,6 +408,18 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<StartGameResult>("pressKey", new { filter }, ct);
 
     /// <summary>
+    /// Simulates a key press via Win32 SendInput in the game process (e.g. Escape for pause menu).
+    /// </summary>
+    public Task<StartGameResult> SimulateKeyAsync(string key = "Escape", CancellationToken ct = default) =>
+        SendRequestAsync<StartGameResult>("simulateKey", new { key }, ct);
+
+    /// <summary>
+    /// Sends Escape via <see cref="SimulateKeyAsync"/> (bridge alias <c>pressEscape</c>).
+    /// </summary>
+    public Task<StartGameResult> PressEscapeAsync(CancellationToken ct = default) =>
+        SendRequestAsync<StartGameResult>("pressEscape", null, ct);
+
+    /// <summary>
     /// Invokes a void(0-param) method on any active MonoBehaviour matching target (type or GO name).
     /// </summary>
     public Task<StartGameResult> InvokeMethodAsync(string target, string method, CancellationToken ct = default) =>

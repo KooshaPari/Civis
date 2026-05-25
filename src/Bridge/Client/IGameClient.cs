@@ -160,6 +160,18 @@ public interface IGameClient : IDisposable
     Task<StartGameResult> ScanSceneAsync(string filter = "", CancellationToken ct = default);
 
     /// <summary>
+    /// Simulates a key press via Win32 SendInput in the game process.
+    /// </summary>
+    /// <param name="key">Key name (e.g. Escape, F9, F10).</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<StartGameResult> SimulateKeyAsync(string key = "Escape", CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends Escape via the bridge <c>pressEscape</c> endpoint.
+    /// </summary>
+    Task<StartGameResult> PressEscapeAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Invokes a void(0-param) method on any active MonoBehaviour matching target.
     /// </summary>
     /// <param name="target">MonoBehaviour type or GameObject name.</param>

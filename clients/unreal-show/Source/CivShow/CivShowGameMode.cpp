@@ -9,6 +9,7 @@
 #include "EngineUtils.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "CivisJobColors.h"
 #include "VoxelTerrain.h"
 
 ACivShowGameMode::ACivShowGameMode()
@@ -120,6 +121,7 @@ void ACivShowGameMode::SyncCiviliansFromSnapshot(const FString& SnapshotJson)
 
     TSet<int32> Seen;
     const float MapSize = 128.0f;
+    static constexpr float CivilianFootOffset = 55.0f;
 
     for (const TSharedPtr<FJsonValue>& Value : *Pins)
     {
@@ -132,15 +134,24 @@ void ACivShowGameMode::SyncCiviliansFromSnapshot(const FString& SnapshotJson)
         int32 Idx = 0;
         double X = 0.0;
         double Y = 0.0;
+        FString Job = TEXT("unemployed");
         Pin->TryGetNumberField(TEXT("idx"), Idx);
         Pin->TryGetNumberField(TEXT("x"), X);
         Pin->TryGetNumberField(TEXT("y"), Y);
+        Pin->TryGetStringField(TEXT("job"), Job);
         Seen.Add(Idx);
 
+        const float NormX = static_cast<float>(X);
+        const float NormY = static_cast<float>(Y);
+        const float WorldY = TerrainActor
+            ? TerrainActor->SampleWorldHeightAtNorm(NormX, NormY, CivilianFootOffset)
+            : 12.0f;
         const FVector WorldPos(
-            static_cast<float>(X) * MapSize,
-            12.0f,
-            static_cast<float>(Y) * MapSize);
+            NormX * MapSize,
+            WorldY,
+            NormY * MapSize);
+
+        const FLinearColor JobColor = FCivisJobColors::FromJobName(Job);
 
         ACivilianActor* Actor = CivilianActors.FindRef(Idx);
         if (!Actor)
@@ -152,12 +163,13 @@ void ACivShowGameMode::SyncCiviliansFromSnapshot(const FString& SnapshotJson)
             if (Actor)
             {
                 CivilianActors.Add(Idx, Actor);
-                Actor->SetJobColor(FLinearColor(0.55f, 0.72f, 0.95f));
+                Actor->SetJobColor(JobColor);
             }
         }
         else
         {
             Actor->SetActorLocation(WorldPos);
+            Actor->SetJobColor(JobColor);
         }
     }
 

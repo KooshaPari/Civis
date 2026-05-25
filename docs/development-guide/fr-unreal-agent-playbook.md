@@ -12,11 +12,14 @@ These do **not** need the Editor or UBT:
 
 | Task | Command / path |
 |------|----------------|
+| Offline preflight | `.\clients\unreal-show\scripts\verify-unreal-ready.ps1` |
 | Rust FFI shim | `.\clients\unreal-show\scripts\build.ps1 -SkipUe` |
+| UBT scaffolding | `CivShow.cpp`, `CivShow.Target.cs`, `CivShowEditor.Target.cs` (no `-projectfiles` wait) |
 | C++ / protocol edits | `Source/CivShow/*.cpp`, `CivWsClient`, `CivProtocolClient` |
+| L5 parity (landed) | Job colors (`CivisJobColors.h`), terrain foot height (`VoxelTerrain::SampleWorldHeightAtNorm`), cylinder civilians |
 | Parity with Godot | Compare `civis_ws_client.gd` ↔ `CivWsClient.cpp` method list |
-| Backend smoke | `cargo run -p civ-server` + `cargo run -p civ-watch`; WS tests already in `crates/server/tests/ws_smoke.rs` |
-| Docs / asset plan | This file + `fr-l5-visual-pass.md` |
+| Backend smoke | `cargo test -p civ-server --test ws_smoke` |
+| Docs / asset plan | This file + `fr-l5-visual-pass.md`; `Content/.gitignore` for Megascans |
 
 **Avoid** until UE is on disk: generating `.sln`, cooking content, Quixel import, Play-In-Editor.
 

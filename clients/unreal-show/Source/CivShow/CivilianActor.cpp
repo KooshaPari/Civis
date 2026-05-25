@@ -9,12 +9,14 @@ ACivilianActor::ACivilianActor()
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
     RootComponent = Mesh;
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
-    if (CubeMesh.Succeeded())
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(
+        TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+    if (CylinderMesh.Succeeded())
     {
-        Mesh->SetStaticMesh(CubeMesh.Object);
+        Mesh->SetStaticMesh(CylinderMesh.Object);
     }
-    Mesh->SetWorldScale3D(FVector(0.4f, 1.4f, 0.4f));
+    // Capsule-like proportions (Godot capsule radius 0.22, height 1.05).
+    Mesh->SetRelativeScale3D(FVector(0.44f, 1.05f, 0.44f));
 
     TintMaterial = nullptr;
 }
@@ -28,5 +30,6 @@ void ACivilianActor::SetJobColor(const FLinearColor& Color)
     if (TintMaterial)
     {
         TintMaterial->SetVectorParameterValue(TEXT("Tint"), Color);
+        TintMaterial->SetVectorParameterValue(TEXT("BaseColor"), Color);
     }
 }

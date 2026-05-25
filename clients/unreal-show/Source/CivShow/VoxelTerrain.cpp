@@ -24,6 +24,9 @@ static FColor BiomeColor(uint8 Biome)
 
 void AVoxelTerrain::BuildFromHeightmap(const TArray<float>& Heights, const TArray<uint8>& Biomes, int32 Size)
 {
+    CachedHeights = Heights;
+    GridSize = Size;
+
     TArray<FVector> Vertices;
     TArray<int32> Triangles;
     TArray<FVector> Normals;
@@ -80,4 +83,23 @@ void AVoxelTerrain::BuildFromHeightmap(const TArray<float>& Heights, const TArra
     }
 
     TerrainMesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, Colors, Tangents, true);
+}
+
+float AVoxelTerrain::SampleWorldHeightAtNorm(float NormX, float NormY, float FootOffset) const
+{
+    if (GridSize <= 0 || CachedHeights.Num() < GridSize * GridSize)
+    {
+        return FootOffset;
+    }
+
+    const int32 X = FMath::Clamp(
+        FMath::FloorToInt(NormX * static_cast<float>(GridSize - 1)),
+        0,
+        GridSize - 1);
+    const int32 Y = FMath::Clamp(
+        FMath::FloorToInt(NormY * static_cast<float>(GridSize - 1)),
+        0,
+        GridSize - 1);
+    const int32 Idx = Y * GridSize + X;
+    return CachedHeights[Idx] * HeightWorldScale + FootOffset;
 }

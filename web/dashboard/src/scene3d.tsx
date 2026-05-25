@@ -5,6 +5,7 @@ import {
   CSS2DObject,
   CSS2DRenderer,
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   executeConvoyAlongPath,
   executeTerrainAuthoring,
@@ -67,10 +68,11 @@ type SceneRefs = {
   > | null;
   snowPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
   rainPoints: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
-  civilians: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
-  military: THREE.Mesh<THREE.ConeGeometry, THREE.MeshStandardMaterial>[];
+  civilians: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[];
+  military: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[];
   territories: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>[];
-  buildings: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
+  buildings: THREE.Group[];
+  buildingRings: THREE.Mesh<THREE.TorusGeometry, THREE.MeshStandardMaterial>[];
   roads: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[];
   tradeRoutes: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>[];
   tradeCargo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>[];
@@ -114,6 +116,7 @@ export function Scene3d() {
     military: [],
     territories: [],
     buildings: [],
+    buildingRings: [],
     roads: [],
     tradeRoutes: [],
     tradeCargo: [],
@@ -229,6 +232,19 @@ export function Scene3d() {
     scene.add(buildingGroup);
     const labelGroup = new THREE.Group();
     scene.add(labelGroup);
+
+    const civilianGeometry = createCivilianGeometry();
+    const civilianMaterial = new THREE.MeshStandardMaterial({
+      roughness: 0.85,
+      metalness: 0.03,
+    });
+    const militaryGeometry = createMilitaryGeometry();
+    const militaryMaterial = new THREE.MeshStandardMaterial({
+      roughness: 0.6,
+      metalness: 0.2,
+      emissive: new THREE.Color(0x000000),
+      emissiveIntensity: 0,
+    });
 
     const applyTerrain = (terrain: Terrain) => {
       refs.current.activeTerrain = terrain;
@@ -385,13 +401,11 @@ export function Scene3d() {
       const snapshot = stateRef.current.snapshot;
       const civs = snapshot?.civ_pins ?? [];
       while (refs.current.civilians.length < CIVILIAN_POOL_SIZE) {
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(0.4, 1.4, 0.4),
-          new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.03 }),
-        );
+        const mesh = new THREE.Mesh(civilianGeometry, civilianMaterial);
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         mesh.visible = false;
+        mesh.frustumCulled = false;
         civilianGroup.add(mesh);
         refs.current.civilians.push(mesh);
       }
@@ -409,9 +423,16 @@ export function Scene3d() {
         );
         const wx = sample.x * terrain.size - terrain.size / 2;
         const wz = sample.y * terrain.size - terrain.size / 2;
-        const wy = terrainHeightAt(terrain, sample.x, sample.y) + 0.7;
+        const wy =
+          terrainHeightAt(terrain, sample.x, sample.y) +
+          0.12 +
+          Math.sin(performance.now() * 0.003 + index) * 0.05;
         mesh.position.set(wx, wy, wz);
         mesh.material.color.setHex(jobColor(pin.job));
+        const scale = hash01(index) * 0.4 + 0.8;
+        const indoors = isNearBuilding(terrain, snapshot?.buildings ?? [], sample);
+        const bodyScale = indoors ? 0.7 : 1;
+        mesh.scale.setScalar(scale * bodyScale);
       });
     };
 
@@ -420,20 +441,17 @@ export function Scene3d() {
       const snapshot = stateRef.current.snapshot;
       if (!terrain) return;
       const units = snapshot?.military_units ?? [];
-      const combat = new Set<string>();
+      const conflicted = new Set(
+        snapshot?.diplomacy_events
+          ?.filter((event) => event.kind === "Conflict")
+          .flatMap((event) => [event.faction_a, event.faction_b]) ?? [],
+      );
       while (refs.current.military.length < units.length) {
-        const mesh = new THREE.Mesh(
-          new THREE.ConeGeometry(0.42, 1.05, 6),
-          new THREE.MeshStandardMaterial({
-            roughness: 0.6,
-            metalness: 0.2,
-            emissive: new THREE.Color(0x000000),
-            emissiveIntensity: 0,
-          }),
-        );
+        const mesh = new THREE.Mesh(militaryGeometry, militaryMaterial);
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         mesh.visible = false;
+        mesh.frustumCulled = false;
         militaryGroup.add(mesh);
         refs.current.military.push(mesh);
       }
@@ -453,15 +471,11 @@ export function Scene3d() {
           factionColor(snapshot?.factions ?? [], unit.faction),
         );
         mesh.material.emissive.setHex(
-          combat.has(`${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`)
+          conflicted.has(unit.faction)
             ? 0xff2222
             : 0x000000,
         );
-        mesh.material.emissiveIntensity = combat.has(
-          `${unit.x.toFixed(3)}:${unit.y.toFixed(3)}`,
-        )
-          ? 0.8
-          : 0;
+        mesh.material.emissiveIntensity = conflicted.has(unit.faction) ? 0.8 : 0;
       });
     };
 
@@ -528,40 +542,63 @@ export function Scene3d() {
       if (!terrain) return;
       const buildings = snapshot?.buildings ?? [];
       while (refs.current.buildings.length < buildings.length) {
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0.04 }),
-        );
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        buildingGroup.add(mesh);
-        refs.current.buildings.push(mesh);
+        const node = createBuildingNode();
+        buildingGroup.add(node);
+        refs.current.buildings.push(node);
       }
-      refs.current.buildings.forEach((mesh, index) => {
+      const clusterData = clusterBuildingSet(buildings, terrain, snapshot?.factions ?? []);
+      while (refs.current.buildingRings.length < clusterData.length) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(1, 0.08, 8, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0x000000,
+            roughness: 0.9,
+            metalness: 0.05,
+            transparent: true,
+            opacity: 0.9,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.x = Math.PI / 2;
+        ring.castShadow = false;
+        ring.receiveShadow = false;
+        buildingGroup.add(ring);
+        refs.current.buildingRings.push(ring);
+      }
+      refs.current.buildings.forEach((node, index) => {
         const building = buildings[index];
         if (!building) {
-          mesh.visible = false;
+          node.visible = false;
           return;
         }
-        mesh.visible = true;
+        node.visible = true;
         const faction = factionById(
           snapshot?.factions ?? [],
           building.faction_id,
         );
-        const dims = buildingDimensions(building);
-        mesh.scale.set(dims[0], dims[1], dims[2]);
+        updateBuildingNode(node, building, faction);
         const wx = building.x * terrain.size - terrain.size / 2;
         const wz = building.y * terrain.size - terrain.size / 2;
-        const wy =
-          terrainHeightAt(terrain, building.x, building.y) + dims[1] * 0.5;
-        mesh.position.set(wx, wy, wz);
-        if (faction) {
-          mesh.material.color.setRGB(
-            Math.min(1, (faction.color[0] / 255) * 0.8 + 0.15),
-            Math.min(1, (faction.color[1] / 255) * 0.8 + 0.15),
-            Math.min(1, (faction.color[2] / 255) * 0.8 + 0.15),
-          );
+        const dims = buildingDimensions(building);
+        node.position.set(
+          wx,
+          terrainHeightAt(terrain, building.x, building.y) + dims[1] * 0.5,
+          wz,
+        );
+      });
+      refs.current.buildingRings.forEach((ring, index) => {
+        const cluster = clusterData[index];
+        if (!cluster) {
+          ring.visible = false;
+          return;
         }
+        ring.visible = true;
+        ring.position.set(cluster.x, cluster.y, cluster.z);
+        ring.scale.setScalar(Math.max(0.95, cluster.radius * 0.8));
+        ring.material.color.setHex(cluster.color);
+        ring.material.emissive.setHex(cluster.color);
+        ring.material.opacity = 0.7;
       });
     };
 
@@ -1208,8 +1245,14 @@ export function Scene3d() {
       tradeRouteGroup.clear();
       civilianGroup.clear();
       buildingGroup.clear();
+      civilianGeometry.dispose();
+      civilianMaterial.dispose();
+      militaryGeometry.dispose();
+      militaryMaterial.dispose();
+      refs.current.buildingRings = [];
       refs.current.tradeCargo = [];
       refs.current.tradeRoutes = [];
+      refs.current.buildings = [];
       refs.current.spawnBurst = undefined;
       disposeScene(scene);
       renderer.dispose();
@@ -1303,6 +1346,11 @@ function updateMilitaryFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
   const terrain = refs.activeTerrain;
   if (!terrain) return;
   const units = snapshot?.military_units ?? [];
+  const conflicted = new Set(
+    snapshot?.diplomacy_events
+      ?.filter((event) => event.kind === "Conflict")
+      .flatMap((event) => [event.faction_a, event.faction_b]) ?? [],
+  );
   refs.military.forEach((mesh, index) => {
     const unit = units[index];
     if (!unit) {
@@ -1318,7 +1366,8 @@ function updateMilitaryFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
     mesh.material.color.setHex(
       factionColor(snapshot?.factions ?? [], unit.faction),
     );
-    mesh.material.emissiveIntensity = 0;
+    mesh.material.emissive.setHex(conflicted.has(unit.faction) ? 0xff2222 : 0x000000);
+    mesh.material.emissiveIntensity = conflicted.has(unit.faction) ? 0.8 : 0;
   });
 }
 
@@ -1346,9 +1395,15 @@ function updateInterpolatedCivilians(
     const y = THREE.MathUtils.lerp(previousPin.y, currentPin.y, t);
     const wx = x * terrain.size - terrain.size / 2;
     const wz = y * terrain.size - terrain.size / 2;
-    const wy = terrainHeightAt(terrain, x, y) + 0.7;
+    const wy =
+      terrainHeightAt(terrain, x, y) +
+      0.12 +
+      Math.sin(now * 0.003 + index) * 0.05;
     mesh.position.set(wx, wy, wz);
     mesh.material.color.setHex(jobColor(currentPin.job));
+    const scale = hash01(index) * 0.4 + 0.8;
+    const indoors = isNearBuilding(terrain, current.buildings ?? [], { x, y });
+    mesh.scale.setScalar(scale * (indoors ? 0.7 : 1));
   });
 }
 
@@ -1530,6 +1585,70 @@ function clusterBuildings(buildings: Building[], terrain: Terrain) {
       y: avg.z * inv + 2,
       z: avg.y * inv * terrain.size - terrain.size / 2,
       label,
+    });
+  }
+  return clusters;
+}
+
+function clusterBuildingSet(
+  buildings: Building[],
+  terrain: Terrain,
+  factions: Faction[],
+) {
+  type ClusterNode = {
+    x: number;
+    y: number;
+    z: number;
+    radius: number;
+    color: number;
+  };
+  const clusters: ClusterNode[] = [];
+  const used = new Set<number>();
+  const radius = 3.0;
+  const radiusSq = radius * radius;
+  for (let i = 0; i < buildings.length; i += 1) {
+    if (used.has(i)) continue;
+    const queue = [i];
+    const group: Building[] = [];
+    used.add(i);
+    while (queue.length > 0) {
+      const currentIndex = queue.pop() as number;
+      const current = buildings[currentIndex];
+      group.push(current);
+      for (let j = 0; j < buildings.length; j += 1) {
+        if (used.has(j)) continue;
+        const candidate = buildings[j];
+        const dx = (candidate.x - current.x) * terrain.size;
+        const dz = (candidate.y - current.y) * terrain.size;
+        if (dx * dx + dz * dz <= radiusSq) {
+          used.add(j);
+          queue.push(j);
+        }
+      }
+    }
+    if (group.length < 3) continue;
+    const avg = group.reduce(
+      (acc, building) => {
+        acc.x += building.x * terrain.size - terrain.size / 2;
+        acc.y += terrainHeightAt(terrain, building.x, building.y);
+        acc.z += building.y * terrain.size - terrain.size / 2;
+        return acc;
+      },
+      { x: 0, y: 0, z: 0 },
+    );
+    const colorSource = factionById(factions, group[0].faction_id);
+    const color = colorSource
+      ? (colorSource.color[0] << 16) |
+        (colorSource.color[1] << 8) |
+        colorSource.color[2]
+      : 0xffffff;
+    const inv = 1 / group.length;
+    clusters.push({
+      x: avg.x * inv,
+      y: avg.y * inv + 0.12,
+      z: avg.z * inv,
+      radius: Math.min(radius * 0.95, 1.15 + group.length * 0.18),
+      color,
     });
   }
   return clusters;
@@ -1807,18 +1926,203 @@ function factionColor(factions: Faction[], id: number) {
   return (faction.color[0] << 16) | (faction.color[1] << 8) | faction.color[2];
 }
 
+function hash01(value: number) {
+  const hashed = Math.sin(value * 12.9898) * 43758.5453;
+  return hashed - Math.floor(hashed);
+}
+
+function isNearBuilding(
+  terrain: Terrain,
+  buildings: Building[],
+  point: { x: number; y: number },
+) {
+  const px = point.x * terrain.size - terrain.size / 2;
+  const pz = point.y * terrain.size - terrain.size / 2;
+  return buildings.some((building) => {
+    const bx = building.x * terrain.size - terrain.size / 2;
+    const bz = building.y * terrain.size - terrain.size / 2;
+    const dx = px - bx;
+    const dz = pz - bz;
+    return Math.sqrt(dx * dx + dz * dz) < 2.0;
+  });
+}
+
+function createCivilianGeometry() {
+  const body = new THREE.CapsuleGeometry(0.15, 0.6, 6, 10);
+  body.translate(0, 0.15, 0);
+  const head = new THREE.SphereGeometry(0.12, 10, 8);
+  head.translate(0, 0.72, 0);
+  const merged = mergeGeometries([body, head], false);
+  body.dispose();
+  head.dispose();
+  return merged ?? new THREE.CapsuleGeometry(0.15, 0.6, 6, 10);
+}
+
+function createMilitaryGeometry() {
+  const cone = new THREE.ConeGeometry(0.42, 1.05, 6);
+  cone.rotateX(Math.PI / 2);
+  cone.translate(0, 0.15, 0.16);
+  const shield = new THREE.CylinderGeometry(0.17, 0.17, 0.04, 24);
+  shield.rotateX(Math.PI / 2);
+  shield.translate(0, -0.02, -0.18);
+  const merged = mergeGeometries([cone, shield], false);
+  cone.dispose();
+  shield.dispose();
+  return merged ?? new THREE.ConeGeometry(0.42, 1.05, 6);
+}
+
 function buildingDimensions(building: Building): [number, number, number] {
   switch (building.kind) {
     case "Commercial":
-      return [1.3, 1.0, 0.9];
+      return [1.2, 0.8, 1.0];
     case "Industrial":
-      return [1.1, 2.0, 1.1];
+      return [0.6, 2.0, 0.6];
     case "Civic":
-      return [1.6, 1.9, 1.2];
+      return [1.5, 1.5, 1.2];
     case "Residential":
     default:
-      return [0.9, 0.8, 0.9];
+      return [0.8, 1.2, 0.8];
   }
+}
+
+function eraMaterialProps(era: number) {
+  if (era <= 1) {
+    return { roughness: 1, metalness: 0, tone: 0x8f6b42, roof: 0x6f5233 };
+  }
+  if (era <= 3) {
+    return { roughness: 0.8, metalness: 0.02, tone: 0x9b9b9b, roof: 0x7c7c7c };
+  }
+  return { roughness: 0.3, metalness: 0.1, tone: 0xc4d0d9, roof: 0x8ea0ad };
+}
+
+function createBuildingMaterial(era: number, color: number) {
+  const props = eraMaterialProps(era);
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: props.roughness,
+    metalness: props.metalness,
+    emissive: 0x000000,
+    emissiveIntensity: 0,
+  });
+  return mat;
+}
+
+function createBuildingNode() {
+  const node = new THREE.Group();
+  const base = new THREE.Group();
+  node.add(base);
+
+  const wallMat = createBuildingMaterial(0, 0xffffff);
+  const roofMat = createBuildingMaterial(0, 0xffffff);
+  const accentMat = createBuildingMaterial(0, 0xffffff);
+
+  const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), wallMat);
+  baseMesh.castShadow = true;
+  baseMesh.receiveShadow = true;
+  base.add(baseMesh);
+
+  const roofMesh = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.45, 4), roofMat);
+  roofMesh.castShadow = true;
+  roofMesh.receiveShadow = false;
+  roofMesh.visible = false;
+  base.add(roofMesh);
+
+  const signPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 8), accentMat);
+  signPole.castShadow = true;
+  signPole.receiveShadow = false;
+  signPole.visible = false;
+  base.add(signPole);
+
+  const signPanel = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.08), accentMat);
+  signPanel.castShadow = true;
+  signPanel.receiveShadow = false;
+  signPanel.visible = false;
+  base.add(signPanel);
+
+  const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.8, 8), accentMat);
+  chimney.castShadow = true;
+  chimney.receiveShadow = false;
+  chimney.visible = false;
+  base.add(chimney);
+
+  const pillars: THREE.Mesh[] = [];
+  for (let i = 0; i < 4; i += 1) {
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1, 8), accentMat);
+    pillar.castShadow = true;
+    pillar.receiveShadow = false;
+    pillar.visible = false;
+    base.add(pillar);
+    pillars.push(pillar);
+  }
+
+  node.userData = { baseMesh, roofMesh, signPole, signPanel, chimney, pillars, wallMat, roofMat, accentMat };
+  return node;
+}
+
+function updateBuildingNode(
+  node: THREE.Group,
+  building: Building,
+  faction: Faction | null,
+) {
+  const data = node.userData as {
+    baseMesh: THREE.Mesh;
+    roofMesh: THREE.Mesh;
+    signPole: THREE.Mesh;
+    signPanel: THREE.Mesh;
+    chimney: THREE.Mesh;
+    pillars: THREE.Mesh[];
+    wallMat: THREE.MeshStandardMaterial;
+    roofMat: THREE.MeshStandardMaterial;
+    accentMat: THREE.MeshStandardMaterial;
+  };
+  const dims = buildingDimensions(building);
+  const eraProps = eraMaterialProps(building.era);
+  const factionTone = faction
+    ? new THREE.Color(
+        faction.color[0] / 255,
+        faction.color[1] / 255,
+        faction.color[2] / 255,
+      )
+    : new THREE.Color(0xffffff);
+  const wallColor = new THREE.Color(eraProps.tone).lerp(factionTone, 0.28);
+  const roofColor = new THREE.Color(eraProps.roof).lerp(factionTone, 0.18);
+  data.wallMat.color.copy(wallColor);
+  data.wallMat.roughness = eraProps.roughness;
+  data.wallMat.metalness = eraProps.metalness;
+  data.wallMat.emissive.setHex(building.occupants > 0 ? 0x111100 : 0x000000);
+  data.wallMat.emissiveIntensity = building.occupants > 0 ? 0.28 : 0;
+  data.roofMat.color.copy(roofColor);
+  data.roofMat.roughness = Math.min(1, eraProps.roughness + 0.06);
+  data.roofMat.metalness = eraProps.metalness;
+  data.roofMat.emissive.setHex(building.occupants > 0 ? 0x111100 : 0x000000);
+  data.roofMat.emissiveIntensity = building.occupants > 0 ? 0.2 : 0;
+  data.accentMat.color.copy(wallColor.clone().multiplyScalar(0.85));
+  data.accentMat.roughness = eraProps.roughness;
+  data.accentMat.metalness = eraProps.metalness;
+  data.accentMat.emissive.setHex(building.occupants > 0 ? 0x111100 : 0x000000);
+  data.accentMat.emissiveIntensity = building.occupants > 0 ? 0.15 : 0;
+
+  data.baseMesh.scale.set(dims[0], dims[1], dims[2]);
+  data.baseMesh.position.set(0, dims[1] * 0.5, 0);
+  data.baseMesh.visible = true;
+  data.roofMesh.visible = building.kind === "Residential";
+  data.roofMesh.position.set(0, dims[1] + 0.25, 0);
+  data.roofMesh.scale.set(dims[0] * 0.9, 1, dims[2] * 0.9);
+  data.roofMesh.rotation.y = Math.PI * 0.25;
+  data.signPole.visible = building.kind === "Commercial";
+  data.signPole.position.set(0, dims[1] + 0.3, 0);
+  data.signPanel.visible = building.kind === "Commercial";
+  data.signPanel.position.set(0, dims[1] + 0.62, 0);
+  data.chimney.visible = building.kind === "Industrial";
+  data.chimney.position.set(0.15, dims[1] + 0.2, -0.05);
+  data.pillars.forEach((pillar, index) => {
+    pillar.visible = building.kind === "Civic";
+    if (!pillar.visible) return;
+    const px = index < 2 ? -0.42 : 0.42;
+    const pz = index % 2 === 0 ? 0.34 : -0.34;
+    pillar.position.set(px, 0.75, pz);
+  });
+  node.scale.set(1, 1, 1);
 }
 
 function controlLabel(tool: string) {

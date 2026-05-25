@@ -62,7 +62,7 @@ function Get-UeRoot {
 
 $root = Get-UeRoot
 if ($root) {
-    Write-Host "UE $UeVersion: $root"
+    Write-Host "UE ${UeVersion} at $root"
     $ubt = Join-Path $root 'Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe'
     if (Test-Path -LiteralPath $ubt) {
         Write-Host "UBT: $ubt"

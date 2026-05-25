@@ -44,6 +44,8 @@ Flags: `-SkipRust`, `-SkipUe`, `-Configuration DebugGame|Shipping`.
 
 **While UE downloads:** run `build.ps1 -SkipUe` (rust shim only). Agent playbook: [`docs/development-guide/fr-unreal-agent-playbook.md`](../../docs/development-guide/fr-unreal-agent-playbook.md).
 
+**While downloading:** `.\scripts\verify-unreal-ready.ps1` — checks Target.cs, module stub, rust `.lib`, runs `build.ps1 -SkipUe`.
+
 **After install:** `.\scripts\wait-for-ue.ps1` polls `detect-ue.ps1` every 2 minutes, then runs a full build. Probe only: `.\scripts\detect-ue.ps1` (exit `0` = found).
 
 **Materials / Nanite (L5):** artist-owned; not required for compile. **Quixel / Fab (Megascans)** — high value for ground materials and rocks on `VoxelTerrain`; import to `Content/Megascans/` (gitignore binaries). See agent playbook for Niagara / MetaHuman / etc.

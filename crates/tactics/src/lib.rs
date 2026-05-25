@@ -18,7 +18,9 @@ mod pathfinding;
 mod war_bridge;
 
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
-pub use formation::{formation_offsets, FormationKind};
+pub use formation::{
+    formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,
+};
 pub use los::line_of_sight;
 pub use military_phase::MilitaryPhaseConfig;
 pub use movement::{
@@ -292,10 +294,14 @@ mod tests {
     }
 
     /// FR-CIV-TACTICS-021 — formation_offsets returns stable slot layouts.
+    ///
+    /// Canonical frame: +dx = forward (depth), +dy = right flank.
+    /// Line spreads units along the dy (flank) axis, centred on the leader.
     #[test]
     fn formation_offsets_line_and_wedge() {
         let line = formation_offsets(FormationKind::Line, 3);
-        assert_eq!(line, vec![(-1, 0), (0, 0), (1, 0)]);
+        // centre = (3-1)/2 = 1 → dy offsets: -1, 0, 1; dx always 0
+        assert_eq!(line, vec![(0, -1), (0, 0), (0, 1)]);
         let wedge = formation_offsets(FormationKind::Wedge, 3);
         assert_eq!(wedge.len(), 3);
         assert_eq!(wedge[0], (0, 0));

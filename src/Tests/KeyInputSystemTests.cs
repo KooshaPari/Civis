@@ -9,14 +9,19 @@ using Xunit;
 
 namespace DINOForge.Tests;
 
+[CollectionDefinition("KeyInputSystem", DisableParallelization = true)]
+public sealed class KeyInputSystemTestCollection;
+
 /// <summary>
 /// SPEC-004 (KIS-T1–KIS-T8) unit tests for <see cref="KeyInputSystem"/> delegate wiring,
 /// resurrection flags, and Win32-style key edge detection. Runs without launching DINO;
 /// does not exercise ECS <see cref="KeyInputSystem.OnUpdate"/> or real <c>GetAsyncKeyState</c>.
 /// </summary>
 [Trait("Category", "KeyInputSystem")]
+[Collection("KeyInputSystem")]
 public sealed class KeyInputSystemTests : IDisposable
 {
+    private static readonly object PluginStaticLock = new();
     private readonly Action? _savedOnF9;
     private readonly Action? _savedOnF10;
     private readonly Action? _savedOnPackReload;
@@ -43,10 +48,20 @@ public sealed class KeyInputSystemTests : IDisposable
 
     private static void ResetPluginResurrectionFlags()
     {
-        Plugin.NeedsResurrection = false;
-        Plugin.NeedsDeferredResurrection = false;
-        Plugin.s_rootJustDestroyed = false;
+        lock (PluginStaticLock)
+        {
+            Plugin.PersistentRoot = null;
+            Plugin.NeedsResurrection = false;
+            Plugin.NeedsDeferredResurrection = false;
+            Plugin.s_rootJustDestroyed = false;
+            SetPrivateStatic(typeof(Plugin), "_resurrectionAttempts", 0);
+        }
     }
+
+    private static int GetResurrectionAttempts() =>
+        (int)typeof(Plugin)
+            .GetField("_resurrectionAttempts", BindingFlags.Static | BindingFlags.NonPublic)!
+            .GetValue(null)!;
 
     private static void ResetBackgroundEdgeState()
     {
@@ -142,12 +157,32 @@ public sealed class KeyInputSystemTests : IDisposable
     }
 
     /// <summary>
-    /// KIS-T6: SPEC-004 requires max 3 resurrection attempts; production uses grace-window
-    /// retry in ResurrectionFallbackLoop instead of a hard attempt cap on TryResurrect.
+    /// KIS-T6: SPEC-004 KIS-NF4 — max 3 consecutive resurrection attempts when PersistentRoot stays null.
     /// </summary>
-    [Fact(Skip = "KIS-T6: MaxResurrectionAttempts cap not implemented on Plugin.TryResurrect (SPEC-004 KIS-NF4 vs current code).")]
+    [Fact]
     public void TryResurrect_FourCallsWithNullPersistentRoot_ExecutesAtMostThreeTimes()
     {
+        lock (PluginStaticLock)
+        {
+            Plugin.PersistentRoot = null;
+            SetPrivateStatic(typeof(Plugin), "_resurrectionAttempts", 0);
+
+            for (int i = 0; i < 3; i++)
+            {
+                Plugin.PersistentRoot = null;
+                Plugin.TryResurrect("KIS-T6-scene", $"KIS-T6-{i + 1}");
+            }
+
+            GetResurrectionAttempts().Should().Be(3, "three failed resurrection attempts must be recorded");
+
+            Plugin.PersistentRoot = null;
+            Action fourth = () => Plugin.TryResurrect("KIS-T6-scene", "KIS-T6-4");
+            fourth.Should().NotThrow("cap exhausted — fourth call must be a no-op per SPEC-004 KIS-NF4");
+
+            GetResurrectionAttempts().Should().Be(4,
+                "three execution attempts plus one post-cap bump per SPEC-004 KIS-NF4");
+            Plugin.PersistentRoot.Should().BeNull();
+        }
     }
 
     // ── KIS-T7 / KIS-T8: Win32 edge detection (pure logic) ─────────────────────

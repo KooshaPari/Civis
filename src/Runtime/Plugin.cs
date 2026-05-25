@@ -78,6 +78,12 @@ namespace DINOForge.Runtime
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
 
+        /// <summary>Number of consecutive resurrection attempts since last successful resurrection.</summary>
+        private static int _resurrectionAttempts;
+
+        /// <summary>Maximum consecutive resurrection attempts before giving up (SPEC-004 KIS-NF4).</summary>
+        private const int MaxResurrectionAttempts = 3;
+
         /// <summary>
         /// Iter-144 #543 fix: Companion flag set by RuntimeDriver.OnDestroy BEFORE any teardown work.
         /// Resurrection check OR's this with NeedsResurrection to avoid the Unity fake-null trap
@@ -551,12 +557,53 @@ namespace DINOForge.Runtime
 
         internal static void TryResurrect(string sceneName, string trigger)
         {
-            // If PersistentRoot exists, RuntimeDriver is already running. But check if it was
-            // initialized — if not (Plugin.Awake() crashed before completing), initialize it.
-            if (PersistentRoot != null)
+            if (ReferenceEquals(PersistentRoot, null))
             {
+                if (IsResurrectionCapExhausted())
+                    return;
+
+                _resurrectionAttempts++;
+                try
+                {
+                    TryResurrectCreateRoot(sceneName, trigger);
+                }
+                catch (Exception)
+                {
+                    PersistentRoot = null;
+                }
+                return;
+            }
+
+            TryResurrectWhenRootAlive(trigger);
+        }
+
+        /// <summary>SPEC-004 KIS-NF4: pure C# cap gate — no Unity ECalls (unit-test safe).</summary>
+        private static bool IsResurrectionCapExhausted()
+        {
+            if (_resurrectionAttempts < MaxResurrectionAttempts)
+                return false;
+
+            if (_resurrectionAttempts == MaxResurrectionAttempts)
+            {
+                try
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] TryResurrect: giving up after {MaxResurrectionAttempts} consecutive failures — resurrection loop halted.");
+                }
+                catch { } // safe-swallow: diagnostic only; must not escape outside Unity player
+                _resurrectionAttempts++;
+            }
+
+            return true;
+        }
+
+        private static void TryResurrectWhenRootAlive(string trigger)
+        {
+            try
+            {
+                _resurrectionAttempts = 0;
+                NeedsResurrection = false;
                 // Check if RuntimeDriver component exists and is initialized
-                RuntimeDriver? existing = PersistentRoot.GetComponent<RuntimeDriver>();
+                RuntimeDriver? existing = PersistentRoot!.GetComponent<RuntimeDriver>();
                 if (existing != null && existing.IsInitialized)
                 {
                     DebugLog.Write("Plugin", $"[Plugin] TryResurrect ({trigger}): RuntimeDriver already running, ensuring KeyInputSystem is registered...");
@@ -575,14 +622,24 @@ namespace DINOForge.Runtime
                 }
                 // No RuntimeDriver component — create one
                 DebugLog.Write("Plugin", $"[Plugin] TryResurrect ({trigger}): PersistentRoot exists but no RuntimeDriver, adding component...");
-                RuntimeDriver driver = PersistentRoot.AddComponent<RuntimeDriver>();
+                RuntimeDriver driver = PersistentRoot!.AddComponent<RuntimeDriver>();
                 driver.Initialize(_resurrectionLog!, _resurrectionConfig!, _resurrectionDump, _resurrectionDumpPath);
-                return;
             }
+            catch (Exception ex)
+            {
+                try
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] TryResurrectWhenRootAlive FAILED ({trigger}): {ex.Message}");
+                }
+                catch { } // safe-swallow: diagnostic only
+            }
+        }
 
-            DebugLog.Write("Plugin", $"[Plugin] PersistentRoot null via {trigger} on '{sceneName}' — resurrecting...");
+        private static void TryResurrectCreateRoot(string sceneName, string trigger)
+        {
             try
             {
+                DebugLog.Write("Plugin", $"[Plugin] TryResurrect attempt {_resurrectionAttempts}/{MaxResurrectionAttempts} via {trigger} on '{sceneName}' — resurrecting...");
                 // Try to attach RuntimeDriver to DINO's main camera — DINO never destroys its own camera
                 Camera? cam = Camera.main ?? (Camera.allCameras.Length > 0 ? Camera.allCameras[0] : null);
                 GameObject host;
@@ -609,11 +666,18 @@ namespace DINOForge.Runtime
                 // created a new DefaultGameObjectInjectionWorld that the thread hasn't caught yet.
                 // This call bridges the gap so the pump is active without waiting for a poll cycle.
                 Bridge.KeyInputSystem.RecreateInCurrentWorld();
+                _resurrectionAttempts = 0;
+                NeedsResurrection = false;
                 DebugLog.Write("Plugin", $"[Plugin] Resurrection complete via {trigger} on '{sceneName}' host='{host.name}'.");
             }
             catch (Exception ex)
             {
-                DebugLog.Write("Plugin", $"[Plugin] Resurrection FAILED via {trigger}: {ex.Message}");
+                PersistentRoot = null;
+                try
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] Resurrection FAILED via {trigger}: {ex.Message}");
+                }
+                catch { } // safe-swallow: diagnostic only; must not escape and break KIS-NF4 cap semantics
             }
         }
 

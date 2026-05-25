@@ -1,6 +1,6 @@
 # Implementation Status
 
-**As of:** 2026-05-24  
+**As of:** 2026-05-25  
 **Authoritative code map:** root `Cargo.toml` workspace members (not legacy crate names in `TRACEABILITY_MATRIX.md`).
 
 ## Workspace crates (implemented in repo)
@@ -54,7 +54,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | **Godot** civ-server attach | `clients/godot-ref/scripts/civis_ws_client.gd`, `main.gd` | Default `attach_mode=server`: WS JSON-RPC + F3D0-throttled `sim.snapshot`; terrain via civ-watch HTTP; `spectator_mode` default |
 | **Godot** P-U1 | `main.gd`, `spawn_burst.gd`, `camera.gd` | Capsule civilians; spawn/damage burst; buildings + military; server attach + L2 authoring; camera presets |
 | **Unreal** HTTP + WS | `CivProtocolClient.cpp`, `CivWsClient.cpp`, `CivShowGameMode` | HTTP terrain/controls; WS JSON-RPC + `civ_pins` civilian sync |
-| **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Optional Babylon renderer; Three fallback |
+| **Web** FR-CIV-WEB-007 | `web/dashboard/src/babylon_scene.tsx`, `scene_view.tsx` | Babylon via `?renderer=babylon`; Three fallback; `rendererMode.test.mjs` |
 | **Web** FR-CIV-WEB-008 | `web/dashboard/src/lib/authoring.ts`, `bottom_bar.tsx` | L2 authoring default on; `?spectator=1` for read-only |
 | **Server** institutions on snapshot | `crates/server/src/jsonrpc.rs` | `sim.snapshot.institutions[]` from economy ledger |
 | **Server** authoring RPC | `sim.spawn_civilian`, `sim.spawn_entity`, `sim.place_voxel` | Vehicle → `Knight`; airport → `CityCenter`; port → `Market`; hangar → `Barracks`; `military_units` on `sim.snapshot` |
@@ -94,5 +94,8 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 - **Root [`README.md`](../README.md)** — `civ-server` HTTP/WS (`healthz`, replay export/import, JSON-RPC incl. `sim.get_speed`)
 - **`TRACEABILITY_MATRIX.md`** — FR catalog; crate column is target layout, not current tree
 - **`docs/development-guide/fr-3d-additions.md`** — FR-CIV-VOXEL/BUILD/AGENTS/… aligned with 3D workspace crates
+- **`docs/development-guide/pr-296-merge-readiness.md`** — merge #296 with local-first manifest CI
+- **`docs/development-guide/p-w1-kickoff.md`** — next phase after P-U1
+- **`docs/development-guide/fr-p-u1-roadmap.md`** — P-U1 complete checklist
 
 When assigning work: map CIV-01xx rows to new crates only when those crates exist; otherwise extend `civ-engine` or the 3D crate named in `fr-3d-additions.md`.

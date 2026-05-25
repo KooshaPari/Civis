@@ -132,7 +132,10 @@ Status values: `planned` | `in_progress` | `implemented`
 |---|---|---|---|---|
 | FR-CIV-UX-000 | Spawn API: N UI spawns emit N entity-create events. | `clients/godot-ref/` | `ux::spawn_emits_entity_events` | implemented |
 | FR-CIV-UX-001 | Era timelapse: configurable rate without divergence vs real-time. | `clients/godot-ref/` | `ux::timelapse_no_divergence` | implemented |
+| FR-CIV-UX-004 | Drag-place + convoy along path. | `godot-ref`, `web/dashboard` | `ux::convoy_positions`, `spawnConvoy.ts` | implemented |
+| FR-CIV-UX-006 | Spawn palette incl. hangar. | `engine/spawn.rs`, server, watch | `spawn_kind_palette_is_wired` | implemented |
+| FR-CIV-GODOT-ATTACH-000..004 | Godot civ-server WS + watch terrain. | `civis_ws_client.gd` | `ws_smoke`, attach docs | implemented |
 
 ---
 
-*Last updated: 2026-05-24. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*
+*Last updated: 2026-05-25. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*

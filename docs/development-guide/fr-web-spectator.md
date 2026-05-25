@@ -33,7 +33,7 @@
 | **FR-CIV-WEB-004** | Operator controls limited to RPC already on server: `sim.command` tick/noop, `sim.set_speed`, `sim.set_policy`, `sim.reset` (with role header when required). | Integration test against `civ-server` smoke harness or mocked RPC; no custom game commands. |
 | **FR-CIV-WEB-005** | Replay: trigger `sim.save_replay` / load via `sim.load_replay` or `POST /replay/import`; show success/error. | Roundtrip test: save → load → snapshot tick matches within spec. |
 | **FR-CIV-WEB-006** | (Optional P2) Decode `F3D0` binary WS frames for smoother voxel deltas; still read-only. | Unit test: decode sample `F3D0` fixture; no encode/write path. |
-| **FR-CIV-WEB-007** | (Optional P2) Babylon.js viewer module replaces raw Three.js **rendering only**; same FR-CIV-WEB-003 data contract. | `?renderer=babylon`; falls back to Three if load fails; `web/src/rendererMode.mjs` tests. |
+| **FR-CIV-WEB-007** | Babylon.js viewer module replaces raw Three.js **rendering only**; same FR-CIV-WEB-003 data contract. | `?renderer=babylon`; `babylon_scene.tsx`; falls back to Three; `web/tests/rendererMode.test.mjs`. |
 | **FR-CIV-WEB-008** | L2 authoring: terrain click → spawn / place voxel on active attach. | `web/dashboard/src/lib/authoring.ts`; default authoring on; `?spectator=1` disables. |
 
 ### Authoring query params

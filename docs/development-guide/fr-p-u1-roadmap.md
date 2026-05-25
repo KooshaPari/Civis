@@ -30,6 +30,17 @@
 2. Default `attach_mode = server` — spawn/place via `sim.spawn_civilian` / `sim.place_voxel` (same timeline as web spectator).
 3. Run `civ-server` + `civ-watch` (terrain HTTP). Use `attach_mode = watch` only for legacy HTTP controls.
 
+## P-U1 complete (2026-05-25)
+
+Acceptance from `plan-3d-phases.md` P-U1 row is met on `feat/civis-3d-foundation`:
+
+- Spawn-anything palette (civilian + vehicle + airport + port + hangar)
+- Era timelapse (`FR-CIV-UX-001`)
+- Drag-place + convoy (`FR-CIV-UX-004`)
+- civ-server attach (`FR-CIV-GODOT-ATTACH-*`)
+
+**Next phase:** [P-W1 kickoff](./p-w1-kickoff.md). **Merge:** [PR #296 readiness](./pr-296-merge-readiness.md).
+
 ## Run
 
 ```bash

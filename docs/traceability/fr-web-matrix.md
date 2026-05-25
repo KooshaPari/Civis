@@ -12,5 +12,5 @@
 | FR-CIV-WEB-004 | implemented | `bottom_bar.tsx` — `sim.set_speed`, `sim.command` tick |
 | FR-CIV-WEB-005 | implemented | `bottom_bar.tsx` — `/replay/export`, `/replay/import` |
 | FR-CIV-WEB-006 | implemented | `web/tests/frame3d.test.mjs`; `useCivisAttach` binary handler |
-| FR-CIV-WEB-007 | partial | `?renderer=babylon`, `babylon_scene.tsx` + Three fallback |
+| FR-CIV-WEB-007 | implemented | `?renderer=babylon`, `babylon_scene.tsx`, `rendererMode.test.mjs`, Three fallback |
 | FR-CIV-WEB-008 | implemented | `authoring.ts`, bottom bar tools, `resolveAuthoringEnabled` |

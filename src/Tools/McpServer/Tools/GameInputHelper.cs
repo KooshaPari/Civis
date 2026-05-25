@@ -265,7 +265,47 @@ internal static class GameInputHelper
         }
     }
 
-    private static ushort GetVirtualKeyCode(string keyName)
+    /// <summary>
+    /// Sends a mouse move to the specified screen coordinates in the game window.
+    /// </summary>
+    internal static bool SendMouseMove(int x, int y)
+    {
+        try
+        {
+            int screenWidth = GetSystemMetrics(0);   // SM_CXSCREEN
+            int screenHeight = GetSystemMetrics(1);  // SM_CYSCREEN
+
+            int absX = (int)((x / (double)screenWidth) * 65535);
+            int absY = (int)((y / (double)screenHeight) * 65535);
+
+            INPUT[] inputs = new INPUT[1];
+
+            inputs[0] = new INPUT
+            {
+                type = INPUT_MOUSE,
+                U = new INPUTUNION
+                {
+                    mi = new MOUSEINPUT
+                    {
+                        dx = absX,
+                        dy = absY,
+                        mouseData = 0,
+                        dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            return FocusGameAndInject(() => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)))) == inputs.Length;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    internal static ushort GetVirtualKeyCode(string keyName)
     {
         return keyName.ToUpperInvariant() switch
         {

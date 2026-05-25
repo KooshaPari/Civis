@@ -1,0 +1,97 @@
+<Page
+    x:Class="DINOForge.DesktopCompanion.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="16" MaxWidth="600">
+
+            <!-- Header -->
+            <TextBlock
+                Text="Settings"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Foreground="{StaticResource DFAccentBrush}" />
+
+            <!-- Packs directory -->
+            <Border Style="{StaticResource DFCard}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Packs Directory" Style="{StaticResource DFSectionHeader}" />
+                    <TextBlock
+                        Text="Absolute path to the DINOForge packs root directory (contains pack.yaml subdirectories)."
+                        Style="{StaticResource DFSecondaryText}"
+                        TextWrapping="WrapWholeWords" />
+                    <TextBox
+                        x:Name="PacksDirBox"
+                        AutomationProperties.AutomationId="PacksDirBox"
+                        Text="{x:Bind ViewModel.PacksDirectory, Mode=TwoWay}"
+                        PlaceholderText="e.g. C:\DINOForge\packs"
+                        Header="Packs Directory" />
+                </StackPanel>
+            </Border>
+
+            <!-- Game directory -->
+            <Border Style="{StaticResource DFCard}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Game Directory" Style="{StaticResource DFSectionHeader}" />
+                    <TextBlock
+                        Text="Optional: path to the game installation. Used for future bridge connectivity."
+                        Style="{StaticResource DFSecondaryText}"
+                        TextWrapping="WrapWholeWords" />
+                    <TextBox
+                        x:Name="GameDirBox"
+                        AutomationProperties.AutomationId="GamePathInput"
+                        Text="{x:Bind ViewModel.GameDirectory, Mode=TwoWay}"
+                        PlaceholderText="e.g. G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option"
+                        Header="Game Directory" />
+                </StackPanel>
+            </Border>
+
+            <!-- Reload interval -->
+            <Border Style="{StaticResource DFCard}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Auto-Refresh Interval" Style="{StaticResource DFSectionHeader}" />
+                    <TextBlock
+                        Text="How often (in ms) to auto-refresh pack data. Set to 0 to disable auto-refresh."
+                        Style="{StaticResource DFSecondaryText}"
+                        TextWrapping="WrapWholeWords" />
+                    <Slider
+                        x:Name="IntervalSlider"
+                        AutomationProperties.AutomationId="IntervalSlider"
+                        Minimum="0"
+                        Maximum="10000"
+                        StepFrequency="500"
+                        TickFrequency="1000"
+                        TickPlacement="BottomRight"
+                        Value="{x:Bind ViewModel.ReloadIntervalMs, Mode=TwoWay}" />
+                    <TextBlock Style="{StaticResource DFSecondaryText}">
+                        <Run Text="Current: " />
+                        <Run Text="{x:Bind ViewModel.ReloadIntervalMs, Mode=OneWay}" />
+                        <Run Text=" ms" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Save -->
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button
+                    x:Name="SaveButton"
+                    AutomationProperties.AutomationId="SaveButton"
+                    Content="Save Settings"
+                    Style="{StaticResource DFAccentButton}"
+                    Command="{x:Bind ViewModel.SaveCommand}"
+                    IsEnabled="{x:Bind ViewModel.IsNotSaving, Mode=OneWay}" />
+                <TextBlock
+                    x:Name="SaveStatusText"
+                    AutomationProperties.AutomationId="SaveStatusText"
+                    Text="{x:Bind ViewModel.SaveStatus, Mode=OneWay}"
+                    Style="{StaticResource DFSecondaryText}"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

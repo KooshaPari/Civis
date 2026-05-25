@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 978,
+  "lod0_polycount": 978,
+  "lod1_polycount": 488,
+  "lod2_polycount": 240,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_clone_heavy_sketchfab_001"
+}

@@ -1,0 +1,305 @@
+{
+  "metadata": {
+    "timestamp": "2026-03-12T03:06:15.303Z",
+    "search_queries": [
+      "tatooine_buildings",
+      "star_wars_buildings",
+      "low_poly_star_wars"
+    ],
+    "total_candidates": 56,
+    "status": "METADATA_ONLY_NO_DOWNLOADS"
+  },
+  "scoring": {
+    "ideal_polycount": "200-1000 triangles",
+    "acceptable_polycount": "100-20000 triangles",
+    "theme_keywords": [
+      "desert",
+      "tatooine",
+      "outer-rim",
+      "scrap",
+      "settlement",
+      "building"
+    ],
+    "preferred_licenses": [
+      "CC-By",
+      "CC0"
+    ],
+    "preferred_formats": [
+      "glb",
+      "fbx",
+      "obj"
+    ]
+  },
+  "candidates": [
+    {
+      "model_id": "dae880b4ed0d4a58858ad1e4537351dc",
+      "title": "Tatooine_Building_Textured",
+      "author": "phamill327",
+      "url": "https://sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 1338,
+        "faces": 2584,
+        "estimated_triangles": 2584
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc/thumbnails/7e0b8ddcbd414827b19bcb29fc15f960/0ac9545e37584d91ba57801f25332257.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "view_count": 95,
+      "published_at": "2024-04-23T02:46:55.845169"
+    },
+    {
+      "model_id": "a43085f476844b13b683d67035066a35",
+      "title": "Tatooine Building",
+      "author": "phamill327",
+      "url": "https://sketchfab.com/models/a43085f476844b13b683d67035066a35",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 1310,
+        "faces": 2584,
+        "estimated_triangles": 2584
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/a43085f476844b13b683d67035066a35/thumbnails/17afe9f4d8f449579e01ec2200e36d93/7a4a3b2de1ad42498e27e87277f1efb1.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "view_count": 95,
+      "published_at": "2024-02-13T01:47:00.358047"
+    },
+    {
+      "model_id": "1c4e97b31fc94f72951883ec28db85be",
+      "title": "Tatooine Building 2",
+      "author": "ChristopherGatica",
+      "url": "https://sketchfab.com/models/1c4e97b31fc94f72951883ec28db85be",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 583,
+        "faces": 1074,
+        "estimated_triangles": 1074
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/1c4e97b31fc94f72951883ec28db85be/thumbnails/8af68752b7a441abaebca50663562e71/26e0d40de9154678bb2ecf58cb7a69f6.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "view_count": 18,
+      "published_at": "2023-04-30T04:00:18.605271"
+    },
+    {
+      "model_id": "98f4f61540c147a2800f7e74280c4f3f",
+      "title": "Tatooine Building1",
+      "author": "ChristopherGatica",
+      "url": "https://sketchfab.com/models/98f4f61540c147a2800f7e74280c4f3f",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 2419,
+        "faces": 4760,
+        "estimated_triangles": 4760
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/98f4f61540c147a2800f7e74280c4f3f/thumbnails/5213af41507c412c85e23c9a7941d99c/c24b68ac479045dd97f7e0bb3281e212.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "view_count": 40,
+      "published_at": "2023-04-30T03:39:34.382111"
+    },
+    {
+      "model_id": "a477c5b5bca44c4eade16f5bc094d39b",
+      "title": "Nubian N1 Naboo starfighter (black)",
+      "author": "richardas.rac",
+      "url": "https://sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 931,
+        "faces": 1293,
+        "estimated_triangles": 1293
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/b502d38103a94cbebc7964c7eeff9109.jpeg",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 11,
+      "published_at": "2026-03-10T15:27:59.858217"
+    },
+    {
+      "model_id": "b89c83d5b23941378fbc2d64781bcc21",
+      "title": "Nubian N1 Naboo starfighter (classic)",
+      "author": "richardas.rac",
+      "url": "https://sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 902,
+        "faces": 1274,
+        "estimated_triangles": 1274
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/82a733d2aea94416b91c476f17977489.jpeg",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 10,
+      "published_at": "2026-03-10T07:35:03.436565"
+    },
+    {
+      "model_id": "db9e1cc7a6724c55861b62fb59598349",
+      "title": "At-at  Star wars",
+      "author": "insanis_art",
+      "url": "https://sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 512,
+        "faces": 752,
+        "estimated_triangles": 752
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/f48e0d9fafbd403795e174821e6f852b.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 15,
+      "published_at": "2026-02-13T20:17:09.750761"
+    },
+    {
+      "model_id": "243706f6849c40a196c68cb9b8849b16",
+      "title": "Dark saber V1 low poly",
+      "author": "coolguyelimarano",
+      "url": "https://sketchfab.com/models/243706f6849c40a196c68cb9b8849b16",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 130,
+        "faces": 216,
+        "estimated_triangles": 216
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/af6f813326764ce087c739d33d897df5.jpeg",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 6,
+      "published_at": "2026-02-08T22:35:58.313271"
+    },
+    {
+      "model_id": "a7a4ef70d758481bbf446e8b592e4d63",
+      "title": "Clone Wars Shield",
+      "author": "Mistory09",
+      "url": "https://sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 337,
+        "faces": 494,
+        "estimated_triangles": 494
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/e1b1f083750149d3a03f9cbed0604e61.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 105,
+      "published_at": "2026-01-12T09:47:12.217405"
+    },
+    {
+      "model_id": "67c6d40786eb496b870fa7a4205be2e8",
+      "title": "Clone Wars DC-17",
+      "author": "Mistory09",
+      "url": "https://sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 588,
+        "faces": 1044,
+        "estimated_triangles": 1044
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/e999dd676ab64fa3add5a6c57af12aae.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 8,
+      "published_at": "2026-01-11T17:06:20.250622"
+    },
+    {
+      "model_id": "34b1c6affe9c472096b0470f79b3e02a",
+      "title": "Clone Wars Crate",
+      "author": "Mistory09",
+      "url": "https://sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 524,
+        "faces": 1044,
+        "estimated_triangles": 1044
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/27bcc20fd662468caa20ff42f83525a0.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "view_count": 10,
+      "published_at": "2026-01-11T14:19:25.082749"
+    },
+    {
+      "model_id": "448a3be9750a48fd993e56051fccd31d",
+      "title": "StarWars - Tatooine House3",
+      "author": "sxyza",
+      "url": "https://sketchfab.com/models/448a3be9750a48fd993e56051fccd31d",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 3630,
+        "faces": 5902,
+        "estimated_triangles": 5902
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/448a3be9750a48fd993e56051fccd31d/thumbnails/2a7e8d2b40f34962b2b88e988e06cebc/c9b1531558914bb1897b2d4635efe89a.jpeg",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.85,
+      "view_count": 131,
+      "published_at": "2025-04-16T15:13:39.217895"
+    },
+    {
+      "model_id": "322622aa5dab4e43bb7f8a8811fec066",
+      "title": "Sci-Fi scene buildings",
+      "author": "LouAndelin",
+      "url": "https://sketchfab.com/models/322622aa5dab4e43bb7f8a8811fec066",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 3689,
+        "faces": 6969,
+        "estimated_triangles": 6969
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/322622aa5dab4e43bb7f8a8811fec066/thumbnails/8aa77ddb3b3f40b09b529d2a837d7590/ef9742dba6314643ab94aaccfc6efe42.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.85,
+      "view_count": 67,
+      "published_at": "2023-04-30T04:29:39.436757"
+    },
+    {
+      "model_id": "953e5ea65a7148c79fac9e7912930d43",
+      "title": "Desert Building",
+      "author": "vincekelly2187",
+      "url": "https://sketchfab.com/models/953e5ea65a7148c79fac9e7912930d43",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 7394,
+        "faces": 14784,
+        "estimated_triangles": 14784
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/953e5ea65a7148c79fac9e7912930d43/thumbnails/b76acd1890c84076965719b8f648c1c0/639fe2e61bfb4a04b476d4aa7066bbaa.jpeg",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.85,
+      "view_count": 1494,
+      "published_at": "2023-01-10T05:31:34.354245"
+    },
+    {
+      "model_id": "21e38b1d6afa4113961187a84568513b",
+      "title": "First Time Bust",
+      "author": "LaceyHollow",
+      "url": "https://sketchfab.com/models/21e38b1d6afa4113961187a84568513b",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 2509,
+        "faces": 4840,
+        "estimated_triangles": 4840
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/e09f1a0ecda6491483ceee023f531f04.jpeg",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 0.85,
+      "view_count": 17,
+      "published_at": "2024-10-27T15:20:54.439202"
+    }
+  ]
+}

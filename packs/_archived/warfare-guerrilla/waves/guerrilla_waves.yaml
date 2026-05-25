@@ -1,0 +1,263 @@
+# Guerrilla Warfare Campaign Waves
+# Smaller but deadlier waves reflecting the asymmetric archetype
+
+- id: guer_wave_01
+  display_name: "Wave 1 - Skirmish"
+  description: Small raiding party probes the defenses.
+  wave_number: 1
+  delay_seconds: 120.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_partisan
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: guer_bowman
+      count: 4
+      spawn_delay: 1.5
+  difficulty_scaling:
+    count_multiplier: 1.0
+    health_multiplier: 1.0
+    damage_multiplier: 1.0
+
+- id: guer_wave_02
+  display_name: "Wave 2 - Raiding Party"
+  description: Fighters and trackers probe weaknesses in the defense.
+  wave_number: 2
+  delay_seconds: 180.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_partisan
+      count: 10
+      spawn_delay: 0.8
+    - unit_id: guer_fighter
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: guer_tracker
+      count: 3
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.1
+    health_multiplier: 1.0
+    damage_multiplier: 1.0
+
+- id: guer_wave_03
+  display_name: "Wave 3 - Hunter's Ambush"
+  description: Hunters and bowmen provide devastating ranged fire while fighters close in.
+  wave_number: 3
+  delay_seconds: 240.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 12
+      spawn_delay: 0.8
+    - unit_id: guer_hunter
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: guer_bowman
+      count: 6
+      spawn_delay: 1.0
+  difficulty_scaling:
+    count_multiplier: 1.1
+    health_multiplier: 1.05
+    damage_multiplier: 1.05
+
+- id: guer_wave_04
+  display_name: "Wave 4 - Cavalry Raid"
+  description: Horseback raiders strike from the flanks.
+  wave_number: 4
+  delay_seconds: 300.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 15
+      spawn_delay: 0.6
+    - unit_id: guer_horseback_raider
+      count: 6
+      spawn_delay: 1.5
+    - unit_id: guer_hunter
+      count: 5
+      spawn_delay: 1.0
+    - unit_id: guer_herbalist
+      count: 2
+      spawn_delay: 3.0
+  difficulty_scaling:
+    count_multiplier: 1.2
+    health_multiplier: 1.1
+    damage_multiplier: 1.05
+
+- id: guer_wave_05
+  display_name: "Wave 5 - Brute Force"
+  description: Heavy brutes and sappers batter the walls.
+  wave_number: 5
+  delay_seconds: 360.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 15
+      spawn_delay: 0.6
+    - unit_id: guer_brute
+      count: 5
+      spawn_delay: 2.0
+    - unit_id: guer_sapper
+      count: 4
+      spawn_delay: 2.0
+    - unit_id: guer_bowman
+      count: 8
+      spawn_delay: 0.8
+  difficulty_scaling:
+    count_multiplier: 1.2
+    health_multiplier: 1.1
+    damage_multiplier: 1.1
+
+- id: guer_wave_06
+  display_name: "Wave 6 - Berserker Charge"
+  description: Berserkers lead a frenzied assault on the defenses.
+  wave_number: 6
+  delay_seconds: 420.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 18
+      spawn_delay: 0.5
+    - unit_id: guer_berserker
+      count: 5
+      spawn_delay: 1.5
+    - unit_id: guer_brute
+      count: 4
+      spawn_delay: 2.0
+    - unit_id: guer_horseback_raider
+      count: 4
+      spawn_delay: 1.5
+  difficulty_scaling:
+    count_multiplier: 1.3
+    health_multiplier: 1.15
+    damage_multiplier: 1.15
+
+- id: guer_wave_07
+  display_name: "Wave 7 - Veteran Assault"
+  description: Veteran fighters lead a coordinated combined assault.
+  wave_number: 7
+  delay_seconds: 480.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 20
+      spawn_delay: 0.5
+    - unit_id: guer_veteran_fighter
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: guer_hunter
+      count: 8
+      spawn_delay: 0.8
+    - unit_id: guer_sapper
+      count: 5
+      spawn_delay: 1.5
+    - unit_id: guer_herbalist
+      count: 3
+      spawn_delay: 2.5
+  difficulty_scaling:
+    count_multiplier: 1.3
+    health_multiplier: 1.2
+    damage_multiplier: 1.2
+
+- id: guer_wave_08
+  display_name: "Wave 8 - Full Warband"
+  description: The entire warband mobilizes with all unit types in the field.
+  wave_number: 8
+  delay_seconds: 540.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_partisan
+      count: 15
+      spawn_delay: 0.5
+    - unit_id: guer_fighter
+      count: 20
+      spawn_delay: 0.4
+    - unit_id: guer_brute
+      count: 6
+      spawn_delay: 1.5
+    - unit_id: guer_hunter
+      count: 8
+      spawn_delay: 0.8
+    - unit_id: guer_horseback_raider
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: guer_berserker
+      count: 4
+      spawn_delay: 1.5
+    - unit_id: guer_sapper
+      count: 4
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.4
+    health_multiplier: 1.25
+    damage_multiplier: 1.2
+
+- id: guer_wave_09
+  display_name: "Wave 9 - Warchief's Vanguard"
+  description: The Warchief leads the veterans and berserkers in a devastating attack.
+  wave_number: 9
+  delay_seconds: 600.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: guer_fighter
+      count: 25
+      spawn_delay: 0.4
+    - unit_id: guer_veteran_fighter
+      count: 10
+      spawn_delay: 0.8
+    - unit_id: guer_berserker
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: guer_warchief
+      count: 1
+      spawn_delay: 0.0
+    - unit_id: guer_horseback_raider
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: guer_hunter
+      count: 10
+      spawn_delay: 0.6
+  difficulty_scaling:
+    count_multiplier: 1.5
+    health_multiplier: 1.3
+    damage_multiplier: 1.25
+
+- id: guer_wave_10
+  display_name: "Wave 10 - The Last Stand"
+  description: Every warrior in the warband commits to one final, overwhelming assault.
+  wave_number: 10
+  delay_seconds: 660.0
+  is_final_wave: true
+  spawn_groups:
+    - unit_id: guer_partisan
+      count: 25
+      spawn_delay: 0.3
+    - unit_id: guer_fighter
+      count: 30
+      spawn_delay: 0.3
+    - unit_id: guer_brute
+      count: 10
+      spawn_delay: 1.0
+    - unit_id: guer_hunter
+      count: 12
+      spawn_delay: 0.6
+    - unit_id: guer_horseback_raider
+      count: 10
+      spawn_delay: 0.8
+    - unit_id: guer_veteran_fighter
+      count: 12
+      spawn_delay: 0.6
+    - unit_id: guer_berserker
+      count: 8
+      spawn_delay: 0.8
+    - unit_id: guer_sapper
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: guer_warchief
+      count: 1
+      spawn_delay: 0.0
+  difficulty_scaling:
+    count_multiplier: 1.5
+    health_multiplier: 1.4
+    damage_multiplier: 1.3

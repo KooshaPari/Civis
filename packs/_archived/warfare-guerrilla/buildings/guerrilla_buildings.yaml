@@ -1,0 +1,150 @@
+# Guerrilla Buildings - Sturdy natural constructions
+
+- id: guer_chieftain_hall
+  display_name: "Chieftain's Hall"
+  description: The warchief's stronghold and command center for the warband.
+  building_type: command
+  health: 1800
+  cost:
+    food: 0
+    wood: 120
+    stone: 80
+    iron: 40
+    gold: 40
+    population: 0
+  production: {}
+
+- id: guer_war_lodge
+  display_name: War Lodge
+  description: Training ground where partisans and fighters are forged into warriors.
+  building_type: barracks
+  health: 1100
+  cost:
+    food: 0
+    wood: 80
+    stone: 40
+    iron: 20
+    gold: 15
+    population: 0
+  production:
+    guer_partisan: 2
+    guer_fighter: 1
+
+- id: guer_forge
+  display_name: Forge
+  description: Weapon smithy producing arms for brutes, veterans, and berserkers.
+  building_type: barracks
+  health: 900
+  cost:
+    food: 0
+    wood: 50
+    stone: 50
+    iron: 60
+    gold: 30
+    population: 0
+  production:
+    guer_brute: 1
+    guer_veteran_fighter: 1
+
+- id: guer_sapper_camp
+  display_name: Sapper Camp
+  description: Demolitions workshop producing fire pots and siege equipment.
+  building_type: barracks
+  health: 700
+  cost:
+    food: 0
+    wood: 40
+    stone: 30
+    iron: 40
+    gold: 20
+    population: 0
+  production:
+    guer_sapper: 1
+
+- id: guer_lookout_post
+  display_name: Lookout Post
+  description: Elevated observation platform providing early warning of approaching enemies.
+  building_type: defense
+  health: 500
+  cost:
+    food: 0
+    wood: 50
+    stone: 20
+    iron: 10
+    gold: 5
+    population: 0
+  production: {}
+
+- id: guer_spike_pit
+  display_name: Spike Pit
+  description: Concealed pit trap lined with sharpened stakes. Devastating against charging enemies.
+  building_type: defense
+  health: 800
+  cost:
+    food: 0
+    wood: 40
+    stone: 30
+    iron: 20
+    gold: 10
+    population: 0
+  production: {}
+
+- id: guer_hunting_ground
+  display_name: Hunting Ground
+  description: Managed hunting territory providing steady food and leather income.
+  building_type: economy
+  health: 600
+  cost:
+    food: 0
+    wood: 40
+    stone: 10
+    iron: 5
+    gold: 5
+    population: 0
+  production:
+    food: 6
+    wood: 2
+
+- id: guer_herb_garden
+  display_name: Herb Garden
+  description: Cultivated medicinal herb garden providing trade goods and healing supplies.
+  building_type: economy
+  health: 500
+  cost:
+    food: 20
+    wood: 30
+    stone: 10
+    iron: 0
+    gold: 10
+    population: 0
+  production:
+    gold: 3
+    food: 2
+
+- id: guer_elders_circle
+  display_name: "Elders' Circle"
+  description: Sacred council ground where tribal elders share ancient wisdom and unlock advanced techniques.
+  building_type: research
+  health: 800
+  cost:
+    food: 0
+    wood: 60
+    stone: 40
+    iron: 20
+    gold: 40
+    population: 0
+  production: {}
+
+- id: guer_palisade
+  display_name: Palisade
+  description: Sharpened wooden stake wall providing basic perimeter defense.
+  building_type: defense
+  health: 900
+  cost:
+    food: 0
+    wood: 50
+    stone: 10
+    iron: 5
+    gold: 0
+    population: 0
+  production: {}

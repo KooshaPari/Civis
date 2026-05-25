@@ -1,0 +1,26 @@
+{
+  "Id": "wave-5",
+  "DisplayName": "Wave 5",
+  "Description": "Heavy assault wave",
+  "WaveNumber": 5,
+  "DelaySeconds": 300.0,
+  "IsFinalWave": false,
+  "SpawnGroups": [
+    {
+      "UnitId": "skeleton",
+      "Count": 100,
+      "SpawnDelay": 0.1,
+      "SpawnPoint": "north_gate"
+    },
+    {
+      "UnitId": "ogre",
+      "Count": 5,
+      "SpawnDelay": 1.0
+    }
+  ],
+  "DifficultyScaling": {
+    "CountMultiplier": 1.5,
+    "HealthMultiplier": 1.2,
+    "DamageMultiplier": 1.1
+  }
+}

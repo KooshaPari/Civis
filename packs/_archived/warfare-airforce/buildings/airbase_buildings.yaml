@@ -1,0 +1,66 @@
+# Air Force Expansion — Airbase Buildings
+# Shared by both Western Coalition and Eastern Bloc factions
+
+# 1. Airstrip — Produces aerial units
+- id: af_airstrip
+  display_name: Airstrip
+  description: Hardened concrete runway with maintenance hangars. Required to deploy any aerial unit from this expansion.
+  building_type: barracks
+  health: 1800
+  cost:
+    food: 0
+    wood: 0
+    stone: 150
+    iron: 120
+    gold: 100
+    population: 0
+  production:
+    wc_fighter_jet: 1
+    wc_attack_helicopter: 1
+    wc_strategic_bomber: 1
+    wc_recon_drone: 2
+    eb_fighter_jet: 1
+    eb_attack_helicopter: 1
+    eb_ground_attack_jet: 1
+    eb_ew_jet: 1
+  defense_tags: []
+  visual_asset: mod-af-airstrip
+
+# 2. Radar Tower — Detection and targeting
+- id: af_radar_tower
+  display_name: Radar Tower
+  description: Long-range air search radar providing early warning and targeting data for air defence systems. Boosts aerial unit accuracy in sector.
+  building_type: watchtower
+  health: 900
+  cost:
+    food: 0
+    wood: 0
+    stone: 60
+    iron: 80
+    gold: 70
+    population: 0
+  production: {}
+  defense_tags: [Radar]
+  visual_asset: mod-af-radar-tower
+
+# 3. AA Battery — Anti-air defence
+- id: af_aa_battery
+  display_name: AA Battery
+  description: Surface-to-air missile battery defending the airbase perimeter. Intercepts low-altitude aerial attackers before they reach their targets.
+  building_type: guard_tower
+  health: 1100
+  cost:
+    food: 0
+    wood: 0
+    stone: 80
+    iron: 100
+    gold: 90
+    population: 0
+  production: {}
+  defense_tags: [AntiAir]
+  anti_air:
+    range: 30.0
+    damage: 35.0
+    fire_rate: 1.5
+    accuracy: 0.85
+  visual_asset: mod-af-aa-battery

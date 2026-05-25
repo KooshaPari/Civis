@@ -1,0 +1,31 @@
+# CIS Doctrines
+
+- id: mechanized_attrition
+  display_name: Mechanized Attrition
+  description: Drown the enemy in expendable droids. Maximize production speed and unit count at the expense of individual quality.
+  faction_archetype: industrial_swarm
+  modifiers:
+    spawn_rate: 1.5
+    cost: 0.7
+    hp: 0.85
+    damage: 0.9
+
+- id: rolling_thunder
+  display_name: Rolling Thunder
+  description: Mass armored assault combining AATs and B2 droids for a relentless mechanical advance.
+  faction_archetype: industrial_swarm
+  modifiers:
+    armor: 1.2
+    damage: 1.15
+    speed: 0.9
+    cost: 1.15
+
+- id: swarm_protocol
+  display_name: Swarm Protocol
+  description: Maximized droid throughput with aggressive forward movement and overwhelming fire volume.
+  faction_archetype: industrial_swarm
+  modifiers:
+    fire_rate: 1.3
+    speed: 1.15
+    accuracy: 0.8
+    spawn_rate: 1.3

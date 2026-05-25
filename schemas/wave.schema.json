@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/wave.schema.json",
+  "title": "DINOForge Wave Definition",
+  "description": "Schema for DINOForge wave definition files (waves/*.yaml). Maps to DINO's Components.WaveHolder, Components.SpawnWaveTrigger, Components.FinalWaveTrigger, and Components.EnemySpawner ECS components.",
+  "type": "object",
+  "required": ["id", "display_name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique wave identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable wave name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Wave description text."
+    },
+    "wave_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Wave sequence number (1-based)."
+    },
+    "delay_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Delay in seconds before this wave begins spawning."
+    },
+    "is_final_wave": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the final wave of the scenario."
+    },
+    "spawn_groups": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/SpawnGroup" },
+      "description": "Groups of units to spawn in this wave."
+    },
+    "difficulty_scaling": {
+      "$ref": "#/definitions/DifficultyScaling",
+      "description": "Optional difficulty scaling multipliers."
+    }
+  },
+  "definitions": {
+    "SpawnGroup": {
+      "type": "object",
+      "required": ["unit_id", "count"],
+      "properties": {
+        "unit_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to a UnitDefinition ID."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of units to spawn in this group."
+        },
+        "spawn_delay": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Stagger delay in seconds between individual unit spawns."
+        },
+        "spawn_point": {
+          "type": "string",
+          "description": "Optional spawn location identifier."
+        }
+      },
+      "additionalProperties": false
+    },
+    "DifficultyScaling": {
+      "type": "object",
+      "properties": {
+        "count_multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Multiplier for unit count."
+        },
+        "health_multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Multiplier for unit health."
+        },
+        "damage_multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Multiplier for unit damage."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

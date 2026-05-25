@@ -1,0 +1,257 @@
+# Clone Wars Campaign Waves
+# 10 waves of CIS droid assault escalation
+
+- id: cw_wave_01
+  display_name: "Wave 1 - Droid Scouts"
+  description: Initial probe with B1 droids and probe droids.
+  wave_number: 1
+  delay_seconds: 120.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 30
+      spawn_delay: 0.3
+    - unit_id: cis_probe_droid
+      count: 5
+      spawn_delay: 1.0
+  difficulty_scaling:
+    count_multiplier: 1.0
+    health_multiplier: 1.0
+    damage_multiplier: 1.0
+
+- id: cw_wave_02
+  display_name: "Wave 2 - Droid Advance"
+  description: B1 squads push forward with coordinated fire.
+  wave_number: 2
+  delay_seconds: 180.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 50
+      spawn_delay: 0.2
+    - unit_id: cis_b1_squad
+      count: 20
+      spawn_delay: 0.4
+  difficulty_scaling:
+    count_multiplier: 1.1
+    health_multiplier: 1.0
+    damage_multiplier: 1.0
+
+- id: cw_wave_03
+  display_name: "Wave 3 - Heavy Metal"
+  description: B2 Super Battle Droids join the assault.
+  wave_number: 3
+  delay_seconds: 240.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 60
+      spawn_delay: 0.2
+    - unit_id: cis_b1_squad
+      count: 25
+      spawn_delay: 0.3
+    - unit_id: cis_b2_super_battle_droid
+      count: 8
+      spawn_delay: 1.0
+  difficulty_scaling:
+    count_multiplier: 1.1
+    health_multiplier: 1.05
+    damage_multiplier: 1.0
+
+- id: cw_wave_04
+  display_name: "Wave 4 - Speeder Rush"
+  description: STAP riders flank while main force advances.
+  wave_number: 4
+  delay_seconds: 300.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 80
+      spawn_delay: 0.15
+    - unit_id: cis_b1_squad
+      count: 30
+      spawn_delay: 0.3
+    - unit_id: cis_stap_pilot
+      count: 10
+      spawn_delay: 0.8
+    - unit_id: cis_medical_droid
+      count: 3
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.2
+    health_multiplier: 1.1
+    damage_multiplier: 1.05
+
+- id: cw_wave_05
+  display_name: "Wave 5 - Armor Column"
+  description: AATs roll in with heavy fire support.
+  wave_number: 5
+  delay_seconds: 360.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_squad
+      count: 40
+      spawn_delay: 0.2
+    - unit_id: cis_b2_super_battle_droid
+      count: 15
+      spawn_delay: 0.6
+    - unit_id: cis_aat_crew
+      count: 3
+      spawn_delay: 3.0
+    - unit_id: cis_sniper_droid
+      count: 5
+      spawn_delay: 1.5
+  difficulty_scaling:
+    count_multiplier: 1.2
+    health_multiplier: 1.1
+    damage_multiplier: 1.1
+
+- id: cw_wave_06
+  display_name: "Wave 6 - Destroyer Shield"
+  description: Droidekas roll into position with devastating firepower.
+  wave_number: 6
+  delay_seconds: 420.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 100
+      spawn_delay: 0.1
+    - unit_id: cis_b2_super_battle_droid
+      count: 15
+      spawn_delay: 0.5
+    - unit_id: cis_droideka
+      count: 5
+      spawn_delay: 2.0
+    - unit_id: cis_dwarf_spider_droid
+      count: 4
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.3
+    health_multiplier: 1.15
+    damage_multiplier: 1.1
+
+- id: cw_wave_07
+  display_name: "Wave 7 - Commando Strike"
+  description: BX commando droids lead an elite assault.
+  wave_number: 7
+  delay_seconds: 480.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_squad
+      count: 50
+      spawn_delay: 0.2
+    - unit_id: cis_b2_super_battle_droid
+      count: 20
+      spawn_delay: 0.4
+    - unit_id: cis_bx_commando_droid
+      count: 10
+      spawn_delay: 0.8
+    - unit_id: cis_aat_crew
+      count: 4
+      spawn_delay: 2.5
+    - unit_id: cis_magnaguard
+      count: 3
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.3
+    health_multiplier: 1.2
+    damage_multiplier: 1.15
+
+- id: cw_wave_08
+  display_name: "Wave 8 - Full Assault"
+  description: Combined droid army with all unit types deployed.
+  wave_number: 8
+  delay_seconds: 540.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 150
+      spawn_delay: 0.1
+    - unit_id: cis_b1_squad
+      count: 60
+      spawn_delay: 0.2
+    - unit_id: cis_b2_super_battle_droid
+      count: 20
+      spawn_delay: 0.4
+    - unit_id: cis_stap_pilot
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: cis_aat_crew
+      count: 5
+      spawn_delay: 2.0
+    - unit_id: cis_droideka
+      count: 6
+      spawn_delay: 1.5
+  difficulty_scaling:
+    count_multiplier: 1.4
+    health_multiplier: 1.25
+    damage_multiplier: 1.2
+
+- id: cw_wave_09
+  display_name: "Wave 9 - Grievous Arrives"
+  description: General Grievous leads his MagnaGuard elite in a devastating strike.
+  wave_number: 9
+  delay_seconds: 600.0
+  is_final_wave: false
+  spawn_groups:
+    - unit_id: cis_b1_squad
+      count: 80
+      spawn_delay: 0.15
+    - unit_id: cis_b2_super_battle_droid
+      count: 25
+      spawn_delay: 0.3
+    - unit_id: cis_bx_commando_droid
+      count: 12
+      spawn_delay: 0.6
+    - unit_id: cis_magnaguard
+      count: 6
+      spawn_delay: 1.0
+    - unit_id: cis_general_grievous
+      count: 1
+      spawn_delay: 0.0
+    - unit_id: cis_aat_crew
+      count: 6
+      spawn_delay: 2.0
+  difficulty_scaling:
+    count_multiplier: 1.5
+    health_multiplier: 1.3
+    damage_multiplier: 1.25
+
+- id: cw_wave_10
+  display_name: "Wave 10 - Total Annihilation"
+  description: The entire Separatist army converges for the final push.
+  wave_number: 10
+  delay_seconds: 660.0
+  is_final_wave: true
+  spawn_groups:
+    - unit_id: cis_b1_battle_droid
+      count: 250
+      spawn_delay: 0.05
+    - unit_id: cis_b1_squad
+      count: 100
+      spawn_delay: 0.1
+    - unit_id: cis_b2_super_battle_droid
+      count: 40
+      spawn_delay: 0.2
+    - unit_id: cis_bx_commando_droid
+      count: 15
+      spawn_delay: 0.5
+    - unit_id: cis_droideka
+      count: 10
+      spawn_delay: 1.0
+    - unit_id: cis_dwarf_spider_droid
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: cis_aat_crew
+      count: 8
+      spawn_delay: 1.5
+    - unit_id: cis_magnaguard
+      count: 8
+      spawn_delay: 1.0
+    - unit_id: cis_general_grievous
+      count: 1
+      spawn_delay: 0.0
+  difficulty_scaling:
+    count_multiplier: 1.5
+    health_multiplier: 1.4
+    damage_multiplier: 1.3

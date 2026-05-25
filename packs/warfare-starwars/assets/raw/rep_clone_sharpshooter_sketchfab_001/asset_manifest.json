@@ -1,0 +1,38 @@
+{
+  "asset_id": "rep_clone_sharpshooter_sketchfab_001",
+  "canonical_name": "Clone Sharpshooter",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/a7fd12dc578d4c729e3930b79666c4ea",
+  "external_id": "a7fd12dc578d4c729e3930b79666c4ea",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\rep_clone_sharpshooter_sketchfab_001\\normalized.glb",
+  "sha256": "90a1d6b2b288ac5b806ea41bbb81e608c0237869d83553ed9e49816b72117165",
+  "polycount_estimate": 16756,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "unit",
+  "subtype": "infantry_ranged",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "republic"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=16756 LOD1=8378 LOD2=4189 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)",
+    "Normalized via Blender. LOD0=16756 LOD1=8378 LOD2=4189 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

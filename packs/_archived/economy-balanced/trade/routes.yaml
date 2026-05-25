@@ -1,0 +1,77 @@
+# Basic Trade Routes
+# Standard trade routes available through the merchant dirigible.
+# Gold is the premium currency obtained exclusively through trading.
+# Exchange rates reflect DINO's economy where gold is scarce and valuable.
+
+routes:
+  - id: trade-wood-to-gold
+    display_name: Lumber Export
+    source_resource: wood
+    target_resource: gold
+    exchange_rate: 10.0
+    cooldown_ticks: 120
+    max_per_transaction: 500
+    enabled: true
+
+  - id: trade-food-to-gold
+    display_name: Food Export
+    source_resource: food
+    target_resource: gold
+    exchange_rate: 12.0
+    cooldown_ticks: 120
+    max_per_transaction: 600
+    enabled: true
+
+  - id: trade-stone-to-gold
+    display_name: Stone Export
+    source_resource: stone
+    target_resource: gold
+    exchange_rate: 8.0
+    cooldown_ticks: 120
+    max_per_transaction: 400
+    enabled: true
+
+  - id: trade-iron-to-gold
+    display_name: Iron Export
+    source_resource: iron
+    target_resource: gold
+    exchange_rate: 5.0
+    cooldown_ticks: 150
+    max_per_transaction: 200
+    enabled: true
+
+  - id: trade-gold-to-iron
+    display_name: Iron Import
+    source_resource: gold
+    target_resource: iron
+    exchange_rate: 2.0
+    cooldown_ticks: 90
+    max_per_transaction: 100
+    enabled: true
+
+  - id: trade-wood-to-stone
+    display_name: Masonry Deal
+    source_resource: wood
+    target_resource: stone
+    exchange_rate: 1.5
+    cooldown_ticks: 60
+    max_per_transaction: 300
+    enabled: true
+
+  - id: trade-food-to-wood
+    display_name: Forestry Contract
+    source_resource: food
+    target_resource: wood
+    exchange_rate: 1.2
+    cooldown_ticks: 60
+    max_per_transaction: 400
+    enabled: true
+
+  - id: trade-stone-to-iron
+    display_name: Smelting Deal
+    source_resource: stone
+    target_resource: iron
+    exchange_rate: 2.5
+    cooldown_ticks: 90
+    max_per_transaction: 250
+    enabled: true

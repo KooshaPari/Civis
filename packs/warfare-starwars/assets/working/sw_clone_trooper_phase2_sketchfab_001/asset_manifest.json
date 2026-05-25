@@ -1,0 +1,37 @@
+{
+  "asset_id": "sw_clone_trooper_phase2_sketchfab_001",
+  "canonical_name": "",
+  "franchise_tag": "star_wars",
+  "source_platform": "",
+  "source_url": "",
+  "external_id": "",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "",
+  "acquired_at_utc": "",
+  "original_format": null,
+  "download_url": null,
+  "local_path": "working\\sw_clone_trooper_phase2_sketchfab_001\\normalized.glb",
+  "sha256": "e865a7dce4b69274eebe9b15eb16e977d2ef7622109471bd01be06a0a62f61e8",
+  "polycount_estimate": 35689,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": null,
+  "subtype": null,
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "republic"
+  ],
+  "notes": [
+    "ERROR: source_download.glb not found - run download first",
+    "Normalized via Blender. LOD0=35689 LOD1=17843 LOD2=8919 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

@@ -1,0 +1,48 @@
+factions:
+  - id: west
+    name: Western Coalition
+    description: "NATO-aligned modern military forces with advanced technology and combined arms doctrine."
+    alignment: Player
+    archetype: order
+    sub_factions:
+      - id: us_army
+        name: US Army
+        description: "Main ground combat force with heavy armor and air support."
+        specialization: combined_arms
+      - id: marines
+        name: US Marines
+        description: "Expeditionary force specializing in amphibious and rapid deployment."
+        specialization: rapid_deployment
+      - id: special_ops
+        name: Special Operations
+        description: "Tier-1 operators for surgical strikes and HVT elimination."
+        specialization: precision_strike
+    unit_roster:
+      cheap_infantry: conscript_rifleman
+      line_infantry: infantry_rifleman
+      elite_infantry: special_forces
+      anti_armor: designated_marksman
+      recon: humvee
+      heavy_vehicle: mbt_abrams
+      artillery: m777_howitzer
+      hero_commander: field_commander
+
+  - id: enemy
+    name: Hostile Forces
+    description: "Mixed irregular and conventional enemy forces with asymmetric tactics."
+    alignment: Enemy
+    archetype: asymmetric
+    sub_factions:
+      - id: irregulars
+        name: Irregular Militia
+        description: "Guerrilla fighters using hit-and-run and IED tactics."
+        specialization: guerrilla
+      - id: regulars
+        name: Enemy Regulars
+        description: "Conventional military forces with Soviet-era equipment."
+        specialization: conventional
+    unit_roster:
+      cheap_infantry: insurgent_fighter
+      line_infantry: enemy_regular
+      anti_armor: enemy_rpg
+      recon: enemy_technical

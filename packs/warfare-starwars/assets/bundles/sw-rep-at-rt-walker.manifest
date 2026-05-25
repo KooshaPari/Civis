@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 3110353725
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 6ae2098b1b91b0e0bb47c02c0e9041b4
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: a3954d9da6324b836c32a89fa85d00a9
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 6ae2098b1b91b0e0bb47c02c0e9041b4
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/Republic/sw-rep-at-rt-walker-primary.mat
+- Assets/Materials/Republic/sw-rep-at-rt-walker.mat
+- Assets/Prefabs/Republic/sw-rep-at-rt-walker.prefab
+Dependencies: []

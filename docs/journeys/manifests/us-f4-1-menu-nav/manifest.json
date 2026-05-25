@@ -1,0 +1,78 @@
+{
+  "id": "us-f4-1-menu-nav",
+  "intent": "User navigates menu with arrow keys",
+  "recording": "journeys/us-f4-1-menu-nav/us-f4-1-menu-nav.gif",
+  "keyframe_count": 5,
+  "passed": true,
+  "steps": [
+    {
+      "index": 0,
+      "slug": "launch",
+      "intent": "Launch game",
+      "screenshot_path": "journeys/manifests/us-f4-1-menu-nav/frame-000.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 1,
+      "slug": "open-menu",
+      "intent": "Open mod menu",
+      "screenshot_path": "journeys/manifests/us-f4-1-menu-nav/frame-001.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 2,
+      "slug": "nav-down",
+      "intent": "Navigate down",
+      "screenshot_path": "journeys/manifests/us-f4-1-menu-nav/frame-002.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 3,
+      "slug": "nav-up",
+      "intent": "Navigate up",
+      "screenshot_path": "journeys/manifests/us-f4-1-menu-nav/frame-003.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    },
+    {
+      "index": 4,
+      "slug": "close-menu",
+      "intent": "Close menu",
+      "screenshot_path": "journeys/manifests/us-f4-1-menu-nav/frame-004.png",
+      "description": "",
+      "assertions": {
+        "must_contain": [],
+        "must_not_contain": [],
+        "ocr_required": false
+      },
+      "annotations": []
+    }
+  ],
+  "verification": {
+    "mode": "pending",
+    "timestamp": "2026-04-23T02:58:36.274219"
+  }
+}

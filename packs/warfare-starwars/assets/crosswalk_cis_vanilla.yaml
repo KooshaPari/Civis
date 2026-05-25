@@ -1,0 +1,169 @@
+# CIS Faction — Vanilla DINO Building Reskin Crosswalk
+# Maps every vanilla DINO building type to its CIS Star Wars replacement.
+# Used by AssetSwapRegistry at pack load time.
+# Source: VanillaCatalog.InferBuildingType() — all 13 vanilla types covered.
+
+schema_version: "1.0"
+pack_id: warfare-starwars
+faction: cis
+
+swaps:
+  - vanilla_id: house
+    swap_id: cis_house_droid_pod
+    display_name: Droid Storage Pod
+    description: >
+      Stacked droid deactivation rack structure. Dark grey / rust-orange palette with
+      organic curves and droid silhouettes visible inside. CIS techno-organic aesthetic.
+    target_prefab: buildings/cis_house_droid_pod.prefab
+    target_texture: textures/cis_house_droid_pod_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-C.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: farm
+    swap_id: cis_farm_fuel_harvester
+    display_name: Fuel Cell Harvester
+    description: >
+      Ground-boring fuel extractor with alien techno-organic aesthetic. Rotating bore head,
+      liquid conduit glow (red), alien panel overlays.
+    target_prefab: buildings/cis_farm_fuel_harvester.prefab
+    target_texture: textures/cis_farm_fuel_harvester_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-E.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: granary
+    swap_id: cis_granary_power_depot
+    display_name: Power Cell Depot
+    description: >
+      Battery and capacitor bank for CIS energy storage. Stacked rectangular cells with
+      hazard stripes and red energy indicator displays. Dark palette.
+    target_prefab: buildings/cis_granary_power_depot.prefab
+    target_texture: textures/cis_granary_power_depot_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-D.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: hospital
+    swap_id: cis_hospital_repair_station
+    display_name: Droid Repair Station
+    description: >
+      Open-frame repair cradle with articulated maintenance arm. Exposed structural frame,
+      dangling tool arms, droid parts visible on racks. Utilitarian CIS aesthetic.
+    target_prefab: buildings/cis_hospital_repair_station.prefab
+    target_texture: textures/cis_hospital_repair_station_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-B.obj
+    source_license: CC0
+    effort_hours: 2.5
+    status: placeholder
+
+  - vanilla_id: forester_house
+    swap_id: cis_forester_raw_extractor
+    display_name: Raw Material Extractor
+    description: >
+      Small automated extractor with spider-leg anchors. Four anchor legs, rotating claw
+      head, minimal CIS branding. Alien-tech spider aesthetic.
+    target_prefab: buildings/cis_forester_raw_extractor.prefab
+    target_texture: textures/cis_forester_raw_extractor_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-A.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+    notes: CIS variant needs spider-leg attachment kit (custom Blender addition)
+
+  - vanilla_id: stone_cutter
+    swap_id: cis_stone_scrap_works
+    display_name: Scrap Metal Works
+    description: >
+      Low-tech ore crusher with shrapnel aesthetic. Exposed gears, jagged mesh panels,
+      debris pile effect, VFX sparks emitter point.
+    target_prefab: buildings/cis_stone_scrap_works.prefab
+    target_texture: textures/cis_stone_scrap_works_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-F.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: iron_mine
+    swap_id: cis_iron_ore_plant
+    display_name: Ore Processing Plant
+    description: >
+      Compact CIS mining tower with ore conveyor belt. Rust-orange paint, conveyor arm,
+      grinder housing. Techno Union industrial branding.
+    target_prefab: buildings/cis_iron_ore_plant.prefab
+    target_texture: textures/cis_iron_ore_plant_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-A.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: infinite_iron_mine
+    swap_id: cis_iron_endless_extractor
+    display_name: Endless Ore Extractor
+    description: >
+      Dual-bore heavy extraction with Techno Union branding. Two bore towers, Techno Union
+      insignia, larger pad footprint. Variant of cis_iron_ore_plant.
+    target_prefab: buildings/cis_iron_endless_extractor.prefab
+    target_texture: textures/cis_iron_endless_extractor_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-A.obj
+    source_license: CC0
+    effort_hours: 1.5
+    status: placeholder
+    notes: Two-tower version; mirror and offset from cis_iron_ore_plant
+
+  - vanilla_id: soul_mine
+    swap_id: cis_soul_dark_energy_tap
+    display_name: Dark Side Energy Tap
+    description: >
+      Sith-adjacent dark energy extraction lattice. Black lattice frame structure with
+      red/purple resonance glow and alien rune engravings.
+    target_prefab: buildings/cis_soul_dark_energy_tap.prefab
+    target_texture: textures/cis_soul_dark_energy_tap_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-B.obj
+    source_license: CC0
+    effort_hours: 4
+    status: placeholder
+    notes: Requires custom Blender dark emission shader for red/purple glow + rune decals
+
+  - vanilla_id: builder_house
+    swap_id: cis_builder_droid_bay
+    display_name: Construction Droid Bay
+    description: >
+      Droid-operated assembly depot with lifting arm and storage rack. B1 worker droid
+      silhouettes on racks, lifting arm, CIS grey/orange finish.
+    target_prefab: buildings/cis_builder_droid_bay.prefab
+    target_texture: textures/cis_builder_droid_bay_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-B.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: engineer_guild
+    swap_id: cis_guild_techno_workshop
+    display_name: Techno Union Workshop
+    description: >
+      Wat Tambor's engineering faction facility. Asymmetric wing layout, organic-tech
+      hybrid panel language, Techno Union logo, alien architecture sensibility.
+    target_prefab: buildings/cis_guild_techno_workshop.prefab
+    target_texture: textures/cis_guild_techno_workshop_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-G.obj
+    source_license: CC0
+    effort_hours: 4.5
+    status: placeholder
+    notes: Asymmetric layout requires manual Blender rearrangement of Kenney pieces
+
+  - vanilla_id: gate
+    swap_id: cis_gate_security_barrier
+    display_name: CIS Security Barrier
+    description: >
+      Armored sliding gate with sentry droid alcoves on flanking pillars. Dark grey barrier
+      plate, red energy field indicator stripe, recessed droid niches.
+    target_prefab: buildings/cis_gate_security_barrier.prefab
+    target_texture: textures/cis_gate_security_barrier_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/wall-gate.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder

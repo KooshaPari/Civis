@@ -1,0 +1,168 @@
+# Republic Faction — Vanilla DINO Building Reskin Crosswalk
+# Maps every vanilla DINO building type to its Republic Star Wars replacement.
+# Used by AssetSwapRegistry at pack load time.
+# Source: VanillaCatalog.InferBuildingType() — all 13 vanilla types covered.
+
+schema_version: "1.0"
+pack_id: warfare-starwars
+faction: republic
+
+swaps:
+  - vanilla_id: house
+    swap_id: rep_house_clone_quarters
+    display_name: Clone Quarters Pod
+    description: >
+      Modular circular habitat unit. White durasteel panels, blue stripe, clone crest emblem,
+      low dome roof. TABS-style squat proportions.
+    target_prefab: buildings/rep_house_clone_quarters.prefab
+    target_texture: textures/rep_house_clone_quarters_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-C.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: farm
+    swap_id: rep_farm_hydroponic
+    display_name: Hydroponic Farm Array
+    description: >
+      Tiered planting bays with energy grow-lights and nutrient feed tubes. Transparent
+      walls with blue-green glow. Clean Republic aesthetic.
+    target_prefab: buildings/rep_farm_hydroponic.prefab
+    target_texture: textures/rep_farm_hydroponic_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-E.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: granary
+    swap_id: rep_granary_synthesizer
+    display_name: Nutrient Synthesizer
+    description: >
+      Tall cylindrical silo with Republic emblem, side hatch, and data display panel.
+      Metallic white/blue finish.
+    target_prefab: buildings/rep_granary_synthesizer.prefab
+    target_texture: textures/rep_granary_synthesizer_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-D.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: hospital
+    swap_id: rep_hospital_medbay
+    display_name: Clone Medical Bay
+    description: >
+      Forward surgical facility. White prefab walls, Republic red insignia (no cross),
+      clean interior suggestion. Compact footprint.
+    target_prefab: buildings/rep_hospital_medbay.prefab
+    target_texture: textures/rep_hospital_medbay_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-B.obj
+    source_license: CC0
+    effort_hours: 2.5
+    status: placeholder
+
+  - vanilla_id: forester_house
+    swap_id: rep_forester_extraction_post
+    display_name: Resource Extraction Post
+    description: >
+      Small outpost with sensor array and resource gathering arm. Compact footprint,
+      antenna dish, Republic branding. Minimal silhouette.
+    target_prefab: buildings/rep_forester_extraction_post.prefab
+    target_texture: textures/rep_forester_extraction_post_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-A.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: stone_cutter
+    swap_id: rep_stone_durasteel_refinery
+    display_name: Durasteel Refinery
+    description: >
+      Industrial smelter converting raw ore to durasteel plating. Chimneys, molten-glow
+      windows, conveyor input. Republic white/grey industrial aesthetic.
+    target_prefab: buildings/rep_stone_durasteel_refinery.prefab
+    target_texture: textures/rep_stone_durasteel_refinery_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-F.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: iron_mine
+    swap_id: rep_iron_tibanna_extractor
+    display_name: Tibanna Gas Extractor
+    description: >
+      Derrick-style atmospheric extraction rig. Tall derrick frame, pressurized tanks,
+      gas conduit tubing. Republic insignia on tank.
+    target_prefab: buildings/rep_iron_tibanna_extractor.prefab
+    target_texture: textures/rep_iron_tibanna_extractor_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-A.obj
+    source_license: CC0
+    effort_hours: 3
+    status: placeholder
+
+  - vanilla_id: infinite_iron_mine
+    swap_id: rep_iron_deep_core_rig
+    display_name: Deep-Core Tibanna Rig
+    description: >
+      Expanded twin-derrick heavy extraction platform. Two derrick towers, larger footprint,
+      flare exhaust stack. Variant of rep_iron_tibanna_extractor.
+    target_prefab: buildings/rep_iron_deep_core_rig.prefab
+    target_texture: textures/rep_iron_deep_core_rig_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-A.obj
+    source_license: CC0
+    effort_hours: 1.5
+    status: placeholder
+    notes: Duplicate + mirror of rep_iron_tibanna_extractor, add flare stack piece
+
+  - vanilla_id: soul_mine
+    swap_id: rep_soul_crystal_excavator
+    display_name: Force Crystal Excavator
+    description: >
+      Kyber crystal mining facility. Angular cage frame structure with purple/blue crystal
+      emission glow inside. Subtle Force resonance visual effect.
+    target_prefab: buildings/rep_soul_crystal_excavator.prefab
+    target_texture: textures/rep_soul_crystal_excavator_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/tower-B.obj
+    source_license: CC0
+    effort_hours: 4
+    status: placeholder
+    notes: Requires custom Blender emission shader for crystal glow (purple/blue)
+
+  - vanilla_id: builder_house
+    swap_id: rep_builder_engineer_corps
+    display_name: Republic Engineer Corps
+    description: >
+      Mobile engineering depot with crane arm and tool racks. Supply crates, Republic
+      Corps emblem, functional industrial look.
+    target_prefab: buildings/rep_builder_engineer_corps.prefab
+    target_texture: textures/rep_builder_engineer_corps_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-B.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder
+
+  - vanilla_id: engineer_guild
+    swap_id: rep_guild_engineering_lab
+    display_name: Advanced Engineering Lab
+    description: >
+      Multi-bay R&D facility for weapon and vehicle research. Large footprint with
+      holographic display dome, Republic white/blue, symmetrical wings.
+    target_prefab: buildings/rep_guild_engineering_lab.prefab
+    target_texture: textures/rep_guild_engineering_lab_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/structure-G.obj
+    source_license: CC0
+    effort_hours: 4
+    status: placeholder
+    notes: Multi-structure compound; combine 2-3 Kenney pieces
+
+  - vanilla_id: gate
+    swap_id: rep_gate_blast_gate
+    display_name: Republic Blast Gate
+    description: >
+      Reinforced blast door with two flanking guard pillars and gate mechanism. Republic
+      insignia above door. White/grey durasteel finish with blue energy trim.
+    target_prefab: buildings/rep_gate_blast_gate.prefab
+    target_texture: textures/rep_gate_blast_gate_albedo.png
+    source_base: source/kenney/sci-fi-rts/Models/wall-gate.obj
+    source_license: CC0
+    effort_hours: 2
+    status: placeholder

@@ -1,0 +1,998 @@
+Build started 3/11/2026 11:42:41 PM.
+Logging verbosity is set to: Detailed.     0>Process = "c:\program files\dotnet\dotnet.exe"
+       MSBuild executable path = "C:\Program Files\dotnet\sdk\8.0.419\MSBuild.dll"
+       Command line arguments = "C:\Program Files\dotnet\sdk\8.0.419\MSBuild.dll -maxcpucount -verbosity:m -nologo -restore -consoleloggerparameters:Summary -verbosity:diag src/Tools/Cli/DINOForge.Tools.Cli.csproj -nologo /flp:logfile=cli-compile.log -distributedlogger:Microsoft.DotNet.Tools.MSBuild.MSBuildLogger,C:\Program Files\dotnet\sdk\8.0.419\dotnet.dll*Microsoft.DotNet.Tools.MSBuild.MSBuildForwardingLogger,C:\Program Files\dotnet\sdk\8.0.419\dotnet.dll"
+       Current directory = "C:\Users\koosh\Dino"
+       MSBuild version = "17.11.48+02bf66295"
+       Based on the Windows registry key LongPathsEnabled, the LongPaths feature is enabled.
+       The SDK "Microsoft.NET.Sdk" was successfully resolved by the "DefaultSdkResolver" resolver to location "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\Sdk" and version "".
+       Assembly loaded during Evaluation: Microsoft.NET.StringTools, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.StringTools.dll, MVID: a6df08db-4589-427d-8720-dbb53fdf37b0, AssemblyLoadContext: Default)
+       Property 'MSBuildExtensionsPath' with value 'C:\Program Files\dotnet\sdk\8.0.419\' expanded from the environment.
+       Property reassignment: $(MSBuildProjectExtensionsPath)="C:\Users\koosh\Dino\src\Tools\Cli\obj\" (previous value: "obj\") at C:\Program Files\dotnet\sdk\8.0.419\Current\Microsoft.Common.props (60,5)
+       Property 'MSBuildUserExtensionsPath' with value 'C:\Users\koosh\AppData\Local\Microsoft\MSBuild' expanded from the environment.
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem}" (previous value: "{CandidateAssemblyFiles}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (91,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (92,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (93,5)
+       The "DefaultSdkResolver" resolver attempted to resolve the SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator".
+       Warnings: null
+       Errors: MSB4276: The default SDK resolver failed to resolve SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator" because directory "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.SDK.WorkloadAutoImportPropsLocator\Sdk" did not exist.
+       Assembly loaded during Evaluation: Microsoft.Build.NuGetSdkResolver, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Build.NuGetSdkResolver.dll, MVID: ae254ffe-3ea7-4bba-8a74-0bd55e8cfe87, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Build.NuGetSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver, Version=8.0.419.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll, MVID: fa56586f-4205-4611-b778-a0f2880deeab, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.DotNet.Cli.Utils, Version=8.0.419.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.DotNet.Cli.Utils.dll, MVID: 80c9c3c1-6a74-4def-ab59-cb501443a137, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.NET.Sdk.WorkloadManifestReader, Version=8.0.419.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadManifestReader.dll, MVID: ccc37049-a7ea-433a-87cd-83ccd7a599bd, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.Deployment.DotNet.Releases, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Deployment.DotNet.Releases.dll, MVID: 34f9f9be-a352-437d-b864-e54aac6740dd, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       The SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator" was successfully resolved by the "Microsoft.DotNet.MSBuildWorkloadSdkResolver" resolver to location "C:\Program Files\dotnet\packs\Aspire.Hosting.Sdk\8.2.0\Sdk" and version "null".
+       Property reassignment: $(TargetsForTfmSpecificContentInPackage)=";PackTool;_PackProjectToolValidation" (previous value: ";PackTool") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackProjectTool.props (15,5)
+       Property reassignment: $(OutputType)="Exe" (previous value: "Library") at C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj (4,5)
+       Property reassignment: $(ImplicitUsings)="enable" (previous value: "disable") at C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj (7,5)
+       Property reassignment: $(PublishProfileImported)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.ImportPublishProfile.targets (28,5)
+       Assembly loaded during Evaluation: NuGet.Frameworks, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\NuGet.Frameworks.dll, MVID: 36fa17a1-abb6-4cce-b85c-dd32a6dcc45f, AssemblyLoadContext: Assembly.LoadFile(C:\Program Files\dotnet\sdk\8.0.419\NuGet.Frameworks.dll))
+       Property reassignment: $(TargetPlatformVersion)="" (previous value: "0.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets (69,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**" (previous value: ";bin\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (122,5)
+       Property reassignment: $(OutputPath)="bin\Debug\net8.0\" (previous value: "bin\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (137,5)
+       Property reassignment: $(IntermediateOutputPath)="obj\Debug\net8.0\" (previous value: "obj\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (142,5)
+       The "DefaultSdkResolver" resolver attempted to resolve the SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator".
+       Warnings: null
+       Errors: MSB4276: The default SDK resolver failed to resolve SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator" because directory "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.SDK.WorkloadManifestTargetsLocator\Sdk" did not exist.
+       The SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator" was successfully resolved by the "Microsoft.DotNet.MSBuildWorkloadSdkResolver" resolver to location "C:\Program Files\dotnet\sdk-manifests\8.0.100\microsoft.net.sdk.android\34.0.43" and version "null".
+       Property reassignment: $(_FrameworkIdentifierForImplicitDefine)="NET" (previous value: "NETCOREAPP") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (187,5)
+       Property reassignment: $(_FrameworkVersionForImplicitDefine)="8_0" (previous value: "8.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (192,5)
+       Property reassignment: $(CommandLineArgsForDesignTimeEvaluation)="-langversion:latest -define:TRACE" (previous value: "-langversion:latest") at C:\Program Files\dotnet\sdk\8.0.419\Roslyn\Microsoft.CSharp.Core.targets (200,5)
+       Assembly loaded during Evaluation: Microsoft.Build.Utilities.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Build.Utilities.Core.dll, MVID: 3ef2c93a-1391-4e37-a4e3-a5d04b06a824, AssemblyLoadContext: Default)
+       Property reassignment: $(_DebugSymbolsProduced)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (175,5)
+       Property reassignment: $(_DocumentationFileProduced)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (185,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.1E739592" (previous value: "DINOForge.Tools.Cli.csproj") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (392,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.1E739592.Up2Date" (previous value: "DINOForg.1E739592") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (393,5)
+       Property reassignment: $(ProcessorArchitecture)="msil" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (541,5)
+       Property reassignment: $(DelaySign)="" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (580,5)
+       Property 'LOCALAPPDATA' with value 'C:\Users\koosh\AppData\Local' expanded from the environment.
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Auto" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3896,5)
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Off" (previous value: "Auto") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3897,5)
+       Property reassignment: $(_TargetsThatPrepareProjectReferences)="
+             AssignProjectConfiguration;
+             _SplitProjectReferencesByFileExistence
+           " (previous value: "_SplitProjectReferencesByFileExistence") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (5099,5)
+       Property 'MSBuildExtensionsPath32' with value 'C:\Program Files\dotnet\sdk\8.0.419' expanded from the environment.
+       Assembly loaded during Evaluation: System.Threading.Tasks.Parallel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.25\System.Threading.Tasks.Parallel.dll, MVID: fc449f48-e481-49f5-9405-cb8700248eac, AssemblyLoadContext: Default)
+       Property reassignment: $(ProjectAssetsFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\project.assets.json" (previous value: "C:\Users\koosh\Dino\src\Tools\Cli\obj\/project.assets.json") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (24,5)
+       Property reassignment: $(ProjectAssetsCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.assets.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.assets.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (29,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           " (previous value: "
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (80,5)
+       Property reassignment: $(PrepareResourcesDependsOn)="
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+             
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           
+           " (previous value: "
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (86,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (27,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (29,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (32,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (33,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (34,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (35,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc;**/.DS_Store" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (36,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ;
+             ResolveTargetingPackAssets;
+           " (previous value: "
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets (14,5)
+       Property reassignment: $(_GenerateRuntimeConfigurationPropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genruntimeconfig.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genruntimeconfig.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (44,5)
+       Property reassignment: $(_GeneratePublishDependencyFilePropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genpublishdeps.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genpublishdeps.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (46,5)
+       Property reassignment: $(_GenerateSingleFileBundlePropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genbundle.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genbundle.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (48,5)
+       Property reassignment: $(GenerateRuntimeConfigDevFile)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (81,5)
+       Property 'USERPROFILE' with value 'C:\Users\koosh' expanded from the environment.
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (97,5)
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh\.dotnet\store" (previous value: "C:\Users\koosh") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (98,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32" (previous value: "Any CPU,x86,x64") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (136,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32,ARM64" (previous value: "Any CPU,x86,x64,ARM32") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (140,5)
+       Property reassignment: $(CoreBuildDependsOn)="
+             _CheckForBuildWithNoBuild;
+             
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ;
+             GenerateBuildDependencyFile;
+             GenerateBuildRuntimeConfigurationFiles
+           " (previous value: "
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (197,5)
+       Property reassignment: $(CoreCleanDependsOn)="
+             _SdkBeforeClean;
+             
+           " (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (206,5)
+       Property reassignment: $(RebuildDependsOn)="
+             _SdkBeforeRebuild;
+             
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           
+           " (previous value: "
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (213,5)
+       Property reassignment: $(CompileDependsOn)="
+             
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ;
+             _CreateAppHost;
+             _CreateComHost;
+             _GetIjwHostPaths;
+           " (previous value: "
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (679,5)
+       Property reassignment: $(CreateSatelliteAssembliesDependsOn)="
+             
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ;
+             CoreGenerateSatelliteAssemblies
+           " (previous value: "
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (1065,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl;_InitializeBitbucketGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation;TranslateBitbucketGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (13,5)
+       Property reassignment: $(DesignerRuntimeImplementationProjectOutputGroupDependsOn)="
+             
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ;
+             _GenerateDesignerDepsFile;
+             _GenerateDesignerRuntimeConfigFile;
+             GetCopyToOutputDirectoryItems;
+             _GatherDesignerShadowCopyFiles;
+           " (previous value: "
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets (21,5)
+       Property reassignment: $(_GenerateToolsSettingsFileCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.toolssettingsinput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.toolssettingsinput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (68,5)
+       Property reassignment: $(_ShimInputCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.shiminput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.shiminput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (137,5)
+       Property reassignment: $(_ShimCreatedSentinelFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.shimcreated.sentinel" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.shimcreated.sentinel") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (139,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG" (previous value: "TRACE") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (31,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG;NET;NET8_0;NETCOREAPP" (previous value: "TRACE;DEBUG") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (34,5)
+       Property reassignment: $(WarningsAsErrors)=";NU1605;SYSLIB0011" (previous value: ";NU1605") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (48,5)
+       Property reassignment: $(GenerateNuspecDependsOn)="Build;_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; " (previous value: "_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\NuGet.Build.Tasks.Pack\build\NuGet.Build.Tasks.Pack.targets (59,5)
+       Property reassignment: $(_IsNotSetContainersTargetsDir)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.targets (59,5)
+       Property reassignment: $(_IsSDKContainerAllowedVersion)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (5,5)
+       Property reassignment: $(_ContainerIsTargetingNet8TFM)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (15,5)
+       Assembly loaded during Evaluation: System.Reflection.Emit.Lightweight, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.25\System.Reflection.Emit.Lightweight.dll, MVID: 8cb69745-c699-490b-af20-efb951f9ab20, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: System.Reflection.Emit.ILGeneration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.25\System.Reflection.Emit.ILGeneration.dll, MVID: 93b28bd4-15fd-436f-a9eb-e4ba8dadc38e, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: System.Reflection.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.25\System.Reflection.Primitives.dll, MVID: 8db18b5f-c6d0-45a5-a5fc-da0ed6fd33c8, AssemblyLoadContext: Default)
+       Overriding target "ResolveFrameworkReferences" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "ResolveFrameworkReferences" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets".
+       Overriding target "Run" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Run" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GenerateSupportedTargetFrameworkAlias" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GenerateSupportedTargetFrameworkAlias" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GetReferenceAssemblyPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetReferenceAssemblyPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "GetFrameworkPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetFrameworkPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "DesignerRuntimeImplementationProjectOutputGroup" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "DesignerRuntimeImplementationProjectOutputGroup" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets".
+       Overriding target "Publish" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Publish" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "ResolveReadyToRunCompilers" in project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.CrossGen.targets" with target "ResolveReadyToRunCompilers" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "GetCopyToPublishDirectoryItems" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetCopyToPublishDirectoryItems" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+     1>Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" on node 1 (Restore target(s)).
+     1>Target "_LoadRestoreGraphEntryPoints" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_FilterRestoreGraphProjectInputItems" depends on it):
+     1>Added Item(s): RestoreGraphProjectInputItems=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+       Task "GetRestoreSolutionProjectsTask" skipped, due to false condition; ( $(MSBuildProjectFullPath.EndsWith('.metaproj')) == 'true' AND @(RestoreGraphProjectInputItems) == '' ) was evaluated as ( False == 'true' AND C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj == '' ).
+     1>Done building target "_LoadRestoreGraphEntryPoints" in project "DINOForge.Tools.Cli.csproj".
+     1>Target "_FilterRestoreGraphProjectInputItems" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_GenerateRestoreGraph" depends on it):
+       Set Property: RestoreProjectFilterMode=exclusionlist
+       Added Item(s): _FilteredRestoreGraphProjectInputItemsTmp=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+       Using "RemoveDuplicates" task from assembly "Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a".
+       Task "RemoveDuplicates"
+         Output Item(s): FilteredRestoreGraphProjectInputItemsWithoutDuplicates=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+       Done executing task "RemoveDuplicates".
+       Using "MSBuild" task from assembly "Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a".
+       Task "MSBuild"
+         Task Parameter:BuildInParallel=True
+         Task Parameter:SkipNonexistentTargets=True
+         Task Parameter:Properties=ExcludeRestorePackageImports=true
+         Task Parameter:Projects=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+         Task Parameter:Targets=_IsProjectRestoreSupported
+         Global Properties:
+           ExcludeRestorePackageImports=true
+     0>Property 'MSBuildExtensionsPath' with value 'C:\Program Files\dotnet\sdk\8.0.419\' expanded from the environment.
+       Property reassignment: $(MSBuildProjectExtensionsPath)="C:\Users\koosh\Dino\src\Tools\Cli\obj\" (previous value: "obj\") at C:\Program Files\dotnet\sdk\8.0.419\Current\Microsoft.Common.props (60,5)
+       Property 'MSBuildUserExtensionsPath' with value 'C:\Users\koosh\AppData\Local\Microsoft\MSBuild' expanded from the environment.
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem}" (previous value: "{CandidateAssemblyFiles}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (91,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (92,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (93,5)
+       Property reassignment: $(TargetsForTfmSpecificContentInPackage)=";PackTool;_PackProjectToolValidation" (previous value: ";PackTool") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackProjectTool.props (15,5)
+       Property reassignment: $(OutputType)="Exe" (previous value: "Library") at C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj (4,5)
+       Property reassignment: $(ImplicitUsings)="enable" (previous value: "disable") at C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj (7,5)
+       Property reassignment: $(PublishProfileImported)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.ImportPublishProfile.targets (28,5)
+       Property reassignment: $(TargetPlatformVersion)="" (previous value: "0.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets (69,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**" (previous value: ";bin\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (122,5)
+       Property reassignment: $(OutputPath)="bin\Debug\net8.0\" (previous value: "bin\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (137,5)
+       Property reassignment: $(IntermediateOutputPath)="obj\Debug\net8.0\" (previous value: "obj\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (142,5)
+       Property reassignment: $(_FrameworkIdentifierForImplicitDefine)="NET" (previous value: "NETCOREAPP") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (187,5)
+       Property reassignment: $(_FrameworkVersionForImplicitDefine)="8_0" (previous value: "8.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (192,5)
+       Property reassignment: $(CommandLineArgsForDesignTimeEvaluation)="-langversion:latest -define:TRACE" (previous value: "-langversion:latest") at C:\Program Files\dotnet\sdk\8.0.419\Roslyn\Microsoft.CSharp.Core.targets (200,5)
+       Property reassignment: $(_DebugSymbolsProduced)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (175,5)
+       Property reassignment: $(_DocumentationFileProduced)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (185,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.1E739592" (previous value: "DINOForge.Tools.Cli.csproj") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (392,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.1E739592.Up2Date" (previous value: "DINOForg.1E739592") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (393,5)
+       Property reassignment: $(ProcessorArchitecture)="msil" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (541,5)
+       Property reassignment: $(DelaySign)="" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (580,5)
+       Property 'LOCALAPPDATA' with value 'C:\Users\koosh\AppData\Local' expanded from the environment.
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Auto" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3896,5)
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Off" (previous value: "Auto") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3897,5)
+       Property reassignment: $(_TargetsThatPrepareProjectReferences)="
+             AssignProjectConfiguration;
+             _SplitProjectReferencesByFileExistence
+           " (previous value: "_SplitProjectReferencesByFileExistence") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (5099,5)
+       Property 'MSBuildExtensionsPath32' with value 'C:\Program Files\dotnet\sdk\8.0.419' expanded from the environment.
+       Property reassignment: $(ProjectAssetsFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\project.assets.json" (previous value: "C:\Users\koosh\Dino\src\Tools\Cli\obj\/project.assets.json") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (24,5)
+       Property reassignment: $(ProjectAssetsCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.assets.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.assets.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (29,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           " (previous value: "
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (80,5)
+       Property reassignment: $(PrepareResourcesDependsOn)="
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+             
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           
+           " (previous value: "
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (86,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (27,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (29,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (32,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (33,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (34,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (35,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc;**/.DS_Store" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (36,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ;
+             ResolveTargetingPackAssets;
+           " (previous value: "
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets (14,5)
+       Property reassignment: $(_GenerateRuntimeConfigurationPropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genruntimeconfig.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genruntimeconfig.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (44,5)
+       Property reassignment: $(_GeneratePublishDependencyFilePropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genpublishdeps.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genpublishdeps.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (46,5)
+       Property reassignment: $(_GenerateSingleFileBundlePropertyInputsCache)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.genbundle.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.genbundle.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (48,5)
+       Property reassignment: $(GenerateRuntimeConfigDevFile)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (81,5)
+       Property 'USERPROFILE' with value 'C:\Users\koosh' expanded from the environment.
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (97,5)
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh\.dotnet\store" (previous value: "C:\Users\koosh") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (98,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32" (previous value: "Any CPU,x86,x64") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (136,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32,ARM64" (previous value: "Any CPU,x86,x64,ARM32") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (140,5)
+       Property reassignment: $(CoreBuildDependsOn)="
+             _CheckForBuildWithNoBuild;
+             
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ;
+             GenerateBuildDependencyFile;
+             GenerateBuildRuntimeConfigurationFiles
+           " (previous value: "
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (197,5)
+       Property reassignment: $(CoreCleanDependsOn)="
+             _SdkBeforeClean;
+             
+           " (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (206,5)
+       Property reassignment: $(RebuildDependsOn)="
+             _SdkBeforeRebuild;
+             
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           
+           " (previous value: "
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (213,5)
+       Property reassignment: $(CompileDependsOn)="
+             
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ;
+             _CreateAppHost;
+             _CreateComHost;
+             _GetIjwHostPaths;
+           " (previous value: "
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (679,5)
+       Property reassignment: $(CreateSatelliteAssembliesDependsOn)="
+             
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ;
+             CoreGenerateSatelliteAssemblies
+           " (previous value: "
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (1065,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl;_InitializeBitbucketGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation;TranslateBitbucketGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (13,5)
+       Property reassignment: $(DesignerRuntimeImplementationProjectOutputGroupDependsOn)="
+             
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ;
+             _GenerateDesignerDepsFile;
+             _GenerateDesignerRuntimeConfigFile;
+             GetCopyToOutputDirectoryItems;
+             _GatherDesignerShadowCopyFiles;
+           " (previous value: "
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets (21,5)
+       Property reassignment: $(_GenerateToolsSettingsFileCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.toolssettingsinput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.toolssettingsinput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (68,5)
+       Property reassignment: $(_ShimInputCacheFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.shiminput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.shiminput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (137,5)
+       Property reassignment: $(_ShimCreatedSentinelFile)="C:\Users\koosh\Dino\src\Tools\Cli\obj\Debug\net8.0\DINOForge.Tools.Cli.shimcreated.sentinel" (previous value: "obj\Debug\net8.0\DINOForge.Tools.Cli.shimcreated.sentinel") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (139,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG" (previous value: "TRACE") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (31,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG;NET;NET8_0;NETCOREAPP" (previous value: "TRACE;DEBUG") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (34,5)
+       Property reassignment: $(WarningsAsErrors)=";NU1605;SYSLIB0011" (previous value: ";NU1605") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (48,5)
+       Property reassignment: $(GenerateNuspecDependsOn)="Build;_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; " (previous value: "_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\NuGet.Build.Tasks.Pack\build\NuGet.Build.Tasks.Pack.targets (59,5)
+       Property reassignment: $(_IsNotSetContainersTargetsDir)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.targets (59,5)
+       Property reassignment: $(_IsSDKContainerAllowedVersion)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (5,5)
+       Property reassignment: $(_ContainerIsTargetingNet8TFM)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (15,5)
+       Overriding target "ResolveFrameworkReferences" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "ResolveFrameworkReferences" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets".
+       Overriding target "Run" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Run" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GenerateSupportedTargetFrameworkAlias" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GenerateSupportedTargetFrameworkAlias" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GetReferenceAssemblyPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetReferenceAssemblyPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "GetFrameworkPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetFrameworkPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "DesignerRuntimeImplementationProjectOutputGroup" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "DesignerRuntimeImplementationProjectOutputGroup" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets".
+       Overriding target "Publish" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Publish" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "ResolveReadyToRunCompilers" in project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.CrossGen.targets" with target "ResolveReadyToRunCompilers" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "GetCopyToPublishDirectoryItems" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetCopyToPublishDirectoryItems" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+     1>Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (1) is building "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (1:2) on node 1 (_IsProjectRestoreSupported target(s)).
+   1:2>Target "_IsProjectRestoreSupported" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (entry point):
+   1:2>Added Item(s): _ValidProjectsForRestore=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+   1:2>Done building target "_IsProjectRestoreSupported" in project "DINOForge.Tools.Cli.csproj".
+   1:2>Done Building Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (_IsProjectRestoreSupported target(s)).
+     1>_FilterRestoreGraphProjectInputItems:
+         Output Item(s): 
+             FilteredRestoreGraphProjectInputItems=
+                 C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceProjectFile=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceTargetName=_IsProjectRestoreSupported
+                         OriginalItemSpec=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+       Done executing task "MSBuild".
+       Task "MSBuild" skipped, due to false condition; ( '$(RestoreUseSkipNonexistentTargets)' != 'true' ) was evaluated as ( 'true' != 'true' ).
+       Assembly loaded during TaskRun: NuGet.Build.Tasks, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll, MVID: da6659e2-ab3c-4a1c-91d3-86fe81c4da96, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll)
+       Assembly loaded during TaskRun: NuGet.Common, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\NuGet.Common.dll, MVID: 71662c50-4eea-46ea-82bf-b2edfd33a945, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll)
+       Assembly loaded during TaskRun: NuGet.Commands, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\NuGet.Commands.dll, MVID: fd182425-a30a-445b-9628-b4c5f0ab1353, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll)
+       Assembly loaded during TaskRun: NuGet.ProjectModel, Version=6.11.1.2, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: C:\Program Files\dotnet\sdk\8.0.419\NuGet.ProjectModel.dll, MVID: de1018f8-9cea-4ea5-aafd-eccdf5a6f888, AssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll)
+       Using "WarnForInvalidProjectsTask" task from assembly "C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll".
+       Task "WarnForInvalidProjectsTask"
+         Task Parameter:AllProjects=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+         Task Parameter:
+             ValidProjects=
+                 C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceProjectFile=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceTargetName=_IsProjectRestoreSupported
+                         OriginalItemSpec=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+       Done executing task "WarnForInvalidProjectsTask".
+     1>Done building target "_FilterRestoreGraphProjectInputItems" in project "DINOForge.Tools.Cli.csproj".
+       Target "_FilterRestoreGraphProjectInputItems" skipped. Previously built successfully.
+     1>Target "_GetAllRestoreProjectPathItems" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_GenerateRestoreGraph" depends on it):
+       Using "NuGetMessageTask" task from assembly "C:\Program Files\dotnet\sdk\8.0.419\NuGet.Build.Tasks.dll".
+       Task "NuGetMessageTask"
+         Task Parameter:Importance=High
+         Task Parameter:Name=DeterminingProjectsToRestore
+         Determining projects to restore...
+       Done executing task "NuGetMessageTask".
+       Task "MSBuild"
+         Task Parameter:BuildInParallel=True
+         Task Parameter:SkipNonexistentTargets=True
+         Task Parameter:Properties=ExcludeRestorePackageImports=true
+         Task Parameter:SkipNonexistentProjects=true
+         Task Parameter:
+             Projects=
+                 C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceProjectFile=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+                         MSBuildSourceTargetName=_IsProjectRestoreSupported
+                         OriginalItemSpec=C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj
+         Task Parameter:Targets=_GenerateRestoreProjectPathWalk
+         Global Properties:
+           ExcludeRestorePackageImports=true
+     1>Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (1) is building "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (1:3) on node 1 (_GenerateRestoreProjectPathWalk target(s)).
+   1:3>Target "_GenerateRestoreProjectPathItemsAllFrameworks" skipped, due to false condition; ( '$(TargetFrameworks)' != '' ) was evaluated as ( '' != '' ).
+   1:3>Target "_GenerateRestoreProjectPathItemsPerFramework" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_GenerateRestoreProjectPathItemsCurrentProject" depends on it):
+       Using "ConvertToAbsolutePath" task from assembly "Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a".
+       Task "ConvertToAbsolutePath"
+         Task Parameter:
+             Paths=
+                 C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj
+                         OutputItemType=
+                         ReferenceSourceTarget=ProjectReference
+                         Targets=
+                 C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj
+                         OutputItemType=
+                         ReferenceSourceTarget=ProjectReference
+                         Targets=
+         Output Property: _RestoreGraphAbsoluteProjectPaths=C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj;C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj
+       Done executing task "ConvertToAbsolutePath".
+       Added Item(s): 
+           _RestoreProjectPathItems=
+               C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj
+               C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj
+   1:3>Done building target "_GenerateRestoreProjectPathItemsPerFramework" in project "DINOForge.Tools.Cli.csproj".
+   1:3>Target "_GenerateRestoreProjectPathItemsCurrentProject" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_GenerateRestoreProjectPathItems" depends on it):
+   1:3>Done building target "_GenerateRestoreProjectPathItemsCurrentProject" in project "DINOForge.Tools.Cli.csproj".
+   1:3>Target "_GenerateRestoreProjectPathItems" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (target "_GenerateRestoreProjectPathWalk" depends on it):
+       Task "RemoveDuplicates"
+         Output Item(s): 
+             _CurrentRestoreProjectPathItems=
+                 C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj
+                 C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj
+       Done executing task "RemoveDuplicates".
+   1:3>Done building target "_GenerateRestoreProjectPathItems" in project "DINOForge.Tools.Cli.csproj".
+   1:3>Target "_GenerateRestoreProjectPathWalk" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (entry point):
+       Task "MSBuild"
+         Task Parameter:BuildInParallel=True
+         Task Parameter:SkipNonexistentTargets=True
+         Task Parameter:Properties=ExcludeRestorePackageImports=true
+         Task Parameter:SkipNonexistentProjects=true
+         Task Parameter:
+             Projects=
+                 C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj
+                 C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj
+         Task Parameter:Targets=_GenerateRestoreProjectPathWalk
+         Global Properties:
+           ExcludeRestorePackageImports=true
+     0>Property 'MSBuildExtensionsPath' with value 'C:\Program Files\dotnet\sdk\8.0.419\' expanded from the environment.
+       Property reassignment: $(MSBuildProjectExtensionsPath)="C:\Users\koosh\Dino\src\Bridge\Client\obj\" (previous value: "obj\") at C:\Program Files\dotnet\sdk\8.0.419\Current\Microsoft.Common.props (60,5)
+       Property 'MSBuildUserExtensionsPath' with value 'C:\Users\koosh\AppData\Local\Microsoft\MSBuild' expanded from the environment.
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem}" (previous value: "{CandidateAssemblyFiles}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (91,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (92,5)
+       Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (93,5)
+       Property reassignment: $(TargetsForTfmSpecificContentInPackage)=";PackTool;_PackProjectToolValidation" (previous value: ";PackTool") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackProjectTool.props (15,5)
+       Property reassignment: $(ImplicitUsings)="enable" (previous value: "disable") at C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj (6,5)
+       Property reassignment: $(PublishProfileImported)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.ImportPublishProfile.targets (28,5)
+       Property reassignment: $(TargetPlatformVersion)="" (previous value: "0.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets (69,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**" (previous value: ";bin\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (122,5)
+       Property reassignment: $(OutputPath)="bin\Debug\net8.0\" (previous value: "bin\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (137,5)
+       Property reassignment: $(IntermediateOutputPath)="obj\Debug\net8.0\" (previous value: "obj\Debug\") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (142,5)
+       Property reassignment: $(_FrameworkIdentifierForImplicitDefine)="NET" (previous value: "NETCOREAPP") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (187,5)
+       Property reassignment: $(_FrameworkVersionForImplicitDefine)="8_0" (previous value: "8.0") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (192,5)
+       Property reassignment: $(CommandLineArgsForDesignTimeEvaluation)="-langversion:latest -define:TRACE" (previous value: "-langversion:latest") at C:\Program Files\dotnet\sdk\8.0.419\Roslyn\Microsoft.CSharp.Core.targets (200,5)
+       Property reassignment: $(_DebugSymbolsProduced)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (175,5)
+       Property reassignment: $(_DocumentationFileProduced)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (185,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.BD5FEC0C" (previous value: "DINOForge.Bridge.Client.csproj") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (392,5)
+       Property reassignment: $(MSBuildCopyMarkerName)="DINOForg.BD5FEC0C.Up2Date" (previous value: "DINOForg.BD5FEC0C") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (393,5)
+       Property reassignment: $(ProcessorArchitecture)="msil" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (541,5)
+       Property reassignment: $(DelaySign)="" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (580,5)
+       Property 'LOCALAPPDATA' with value 'C:\Users\koosh\AppData\Local' expanded from the environment.
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Auto" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3896,5)
+       Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Off" (previous value: "Auto") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (3897,5)
+       Property reassignment: $(_TargetsThatPrepareProjectReferences)="
+             AssignProjectConfiguration;
+             _SplitProjectReferencesByFileExistence
+           " (previous value: "_SplitProjectReferencesByFileExistence") at C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets (5099,5)
+       Property 'MSBuildExtensionsPath32' with value 'C:\Program Files\dotnet\sdk\8.0.419' expanded from the environment.
+       Property reassignment: $(ProjectAssetsFile)="C:\Users\koosh\Dino\src\Bridge\Client\obj\project.assets.json" (previous value: "C:\Users\koosh\Dino\src\Bridge\Client\obj\/project.assets.json") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (24,5)
+       Property reassignment: $(ProjectAssetsCacheFile)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.assets.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.assets.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (29,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           " (previous value: "
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (80,5)
+       Property reassignment: $(PrepareResourcesDependsOn)="
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+             
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           
+           " (previous value: "
+             ;
+             PrepareResourceNames;
+             ResGen;
+             CompileLicxFiles
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (86,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (27,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (29,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (32,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (33,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (34,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (35,5)
+       Property reassignment: $(DefaultItemExcludes)=";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc;**/.DS_Store" (previous value: ";bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;**/*.user;**/*.*proj;**/*.sln;**/*.vssscc") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (36,5)
+       Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+             
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ;
+             ResolveTargetingPackAssets;
+           " (previous value: "
+             
+             ResolveProjectReferences;
+             FindInvalidProjectReferences;
+             GetFrameworkPaths;
+             GetReferenceAssemblyPaths;
+             PrepareForBuild;
+             ResolveSDKReferences;
+             ExpandSDKReferences;
+           ;
+             ResolvePackageDependenciesForBuild;
+             _HandlePackageFileConflicts;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets (14,5)
+       Property reassignment: $(_GenerateRuntimeConfigurationPropertyInputsCache)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.genruntimeconfig.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.genruntimeconfig.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (44,5)
+       Property reassignment: $(_GeneratePublishDependencyFilePropertyInputsCache)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.genpublishdeps.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.genpublishdeps.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (46,5)
+       Property reassignment: $(_GenerateSingleFileBundlePropertyInputsCache)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.genbundle.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.genbundle.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (48,5)
+       Property reassignment: $(GenerateRuntimeConfigDevFile)="false" (previous value: "true") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (81,5)
+       Property 'USERPROFILE' with value 'C:\Users\koosh' expanded from the environment.
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (97,5)
+       Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="C:\Users\koosh\.dotnet\store" (previous value: "C:\Users\koosh") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (98,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32" (previous value: "Any CPU,x86,x64") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (136,5)
+       Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32,ARM64" (previous value: "Any CPU,x86,x64,ARM32") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (140,5)
+       Property reassignment: $(CoreBuildDependsOn)="
+             _CheckForBuildWithNoBuild;
+             
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ;
+             GenerateBuildDependencyFile;
+             GenerateBuildRuntimeConfigurationFiles
+           " (previous value: "
+             BuildOnlySettings;
+             PrepareForBuild;
+             PreBuildEvent;
+             ResolveReferences;
+             PrepareResources;
+             ResolveKeySource;
+             Compile;
+             ExportWindowsMDFile;
+             UnmanagedUnregistration;
+             GenerateSerializationAssemblies;
+             CreateSatelliteAssemblies;
+             GenerateManifests;
+             GetTargetPath;
+             PrepareForRun;
+             UnmanagedRegistration;
+             IncrementalClean;
+             PostBuildEvent
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (197,5)
+       Property reassignment: $(CoreCleanDependsOn)="
+             _SdkBeforeClean;
+             
+           " (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (206,5)
+       Property reassignment: $(RebuildDependsOn)="
+             _SdkBeforeRebuild;
+             
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           
+           " (previous value: "
+             BeforeRebuild;
+             Clean;
+             Build;
+             AfterRebuild;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (213,5)
+       Property reassignment: $(CompileDependsOn)="
+             
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ;
+             _CreateAppHost;
+             _CreateComHost;
+             _GetIjwHostPaths;
+           " (previous value: "
+             ResolveReferences;
+             ResolveKeySource;
+             SetWin32ManifestProperties;
+             _SetPreferNativeArm64Win32ManifestProperties;
+             FindReferenceAssembliesForReferences;
+             _GenerateCompileInputs;
+             BeforeCompile;
+             _TimeStampBeforeCompile;
+             _GenerateCompileDependencyCache;
+             CoreCompile;
+             _TimeStampAfterCompile;
+             AfterCompile;
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (679,5)
+       Property reassignment: $(CreateSatelliteAssembliesDependsOn)="
+             
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ;
+             CoreGenerateSatelliteAssemblies
+           " (previous value: "
+             ;
+             _GenerateSatelliteAssemblyInputs;
+             ComputeIntermediateSatelliteAssemblies;
+             GenerateSatelliteAssemblies
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (1065,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.GitLab\build\Microsoft.SourceLink.GitLab.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.AzureRepos.Git\build\Microsoft.SourceLink.AzureRepos.Git.targets (13,5)
+       Property reassignment: $(SourceLinkUrlInitializerTargets)=";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl;_InitializeBitbucketGitSourceLinkUrl" (previous value: ";_InitializeGitHubSourceLinkUrl;_InitializeGitLabSourceLinkUrl;_InitializeAzureReposGitSourceLinkUrl") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (12,5)
+       Property reassignment: $(SourceControlManagerUrlTranslationTargets)=";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation;TranslateBitbucketGitUrlsInSourceControlInformation" (previous value: ";TranslateGitHubUrlsInSourceControlInformation;TranslateGitLabUrlsInSourceControlInformation;TranslateAzureReposGitUrlsInSourceControlInformation") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.SourceLink.Bitbucket.Git\build\Microsoft.SourceLink.Bitbucket.Git.targets (13,5)
+       Property reassignment: $(DesignerRuntimeImplementationProjectOutputGroupDependsOn)="
+             
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ;
+             _GenerateDesignerDepsFile;
+             _GenerateDesignerRuntimeConfigFile;
+             GetCopyToOutputDirectoryItems;
+             _GatherDesignerShadowCopyFiles;
+           " (previous value: "
+             ;
+             
+             ;
+             BuildOnlySettings;
+             PrepareForBuild;
+             AssignTargetPaths;
+             ResolveReferences
+           
+           ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets (21,5)
+       Property reassignment: $(_GenerateToolsSettingsFileCacheFile)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.toolssettingsinput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.toolssettingsinput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (68,5)
+       Property reassignment: $(_ShimInputCacheFile)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.shiminput.cache" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.shiminput.cache") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (137,5)
+       Property reassignment: $(_ShimCreatedSentinelFile)="C:\Users\koosh\Dino\src\Bridge\Client\obj\Debug\net8.0\DINOForge.Bridge.Client.shimcreated.sentinel" (previous value: "obj\Debug\net8.0\DINOForge.Bridge.Client.shimcreated.sentinel") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.PackTool.targets (139,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG" (previous value: "TRACE") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (31,5)
+       Property reassignment: $(DefineConstants)="TRACE;DEBUG;NET;NET8_0;NETCOREAPP" (previous value: "TRACE;DEBUG") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (34,5)
+       Property reassignment: $(WarningsAsErrors)=";NU1605;SYSLIB0011" (previous value: ";NU1605") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (48,5)
+       Property reassignment: $(PackageDescription)="Package Description" (previous value: "") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\NuGet.Build.Tasks.Pack\build\NuGet.Build.Tasks.Pack.targets (34,5)
+       Property reassignment: $(GenerateNuspecDependsOn)="Build;_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; " (previous value: "_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; ") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\NuGet.Build.Tasks.Pack\build\NuGet.Build.Tasks.Pack.targets (59,5)
+       Property reassignment: $(_IsNotSetContainersTargetsDir)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.targets (59,5)
+       Property reassignment: $(_IsSDKContainerAllowedVersion)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (5,5)
+       Property reassignment: $(_ContainerIsTargetingNet8TFM)="true" (previous value: "false") at C:\Program Files\dotnet\sdk\8.0.419\Containers\build\Microsoft.NET.Build.Containers.targets (15,5)
+       Overriding target "ResolveFrameworkReferences" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "ResolveFrameworkReferences" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets".
+       Overriding target "Run" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Run" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GenerateSupportedTargetFrameworkAlias" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GenerateSupportedTargetFrameworkAlias" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets".
+       Overriding target "GetReferenceAssemblyPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetReferenceAssemblyPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "GetFrameworkPaths" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetFrameworkPaths" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets".
+       Overriding target "DesignerRuntimeImplementationProjectOutputGroup" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "DesignerRuntimeImplementationProjectOutputGroup" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets".
+       Overriding target "Publish" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "Publish" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "ResolveReadyToRunCompilers" in project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.CrossGen.targets" with target "ResolveReadyToRunCompilers" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+       Overriding target "GetCopyToPublishDirectoryItems" in project "C:\Program Files\dotnet\sdk\8.0.419\Microsoft.Common.CurrentVersion.targets" with target "GetCopyToPublishDirectoryItems" from project "C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets".
+   1:3>Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (1:3) is building "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (2) on node 1 (_GenerateRestoreProjectPathWalk target(s)).
+     2>Target "_GenerateRestoreProjectPathItemsAllFrameworks" skipped, due to false condition; ( '$(TargetFrameworks)' != '' ) was evaluated as ( '' != '' ).
+     2>Target "_GenerateRestoreProjectPathItemsPerFramework" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (target "_GenerateRestoreProjectPathItemsCurrentProject" depends on it):
+       Task "ConvertToAbsolutePath"
+         Task Parameter:
+             Paths=
+                 C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+                         OutputItemType=
+                         ReferenceSourceTarget=ProjectReference
+                         Targets=
+         Output Property: _RestoreGraphAbsoluteProjectPaths=C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+       Done executing task "ConvertToAbsolutePath".
+       Added Item(s): _RestoreProjectPathItems=C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+     2>Done building target "_GenerateRestoreProjectPathItemsPerFramework" in project "DINOForge.Bridge.Client.csproj".
+     2>Target "_GenerateRestoreProjectPathItemsCurrentProject" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (target "_GenerateRestoreProjectPathItems" depends on it):
+     2>Done building target "_GenerateRestoreProjectPathItemsCurrentProject" in project "DINOForge.Bridge.Client.csproj".
+     2>Target "_GenerateRestoreProjectPathItems" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (target "_GenerateRestoreProjectPathWalk" depends on it):
+       Task "RemoveDuplicates"
+         Output Item(s): _CurrentRestoreProjectPathItems=C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+       Done executing task "RemoveDuplicates".
+     2>Done building target "_GenerateRestoreProjectPathItems" in project "DINOForge.Bridge.Client.csproj".
+     2>Target "_GenerateRestoreProjectPathWalk" in file "C:\Program Files\dotnet\sdk\8.0.419\NuGet.targets" from project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (entry point):
+       Task "MSBuild"
+         Task Parameter:BuildInParallel=True
+         Task Parameter:SkipNonexistentTargets=True
+         Task Parameter:Properties=ExcludeRestorePackageImports=true
+         Task Parameter:SkipNonexistentProjects=true
+         Task Parameter:Projects=C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+         Task Parameter:Targets=_GenerateRestoreProjectPathWalk
+         Global Properties:
+           ExcludeRestorePackageImports=true
+     1>Done executing task "MSBuild" -- FAILED.
+     2>Done executing task "MSBuild" -- FAILED.
+   1:3>Done executing task "MSBuild" -- FAILED.
+   1:3>Done building target "_GenerateRestoreProjectPathWalk" in project "DINOForge.Tools.Cli.csproj" -- FAILED.
+     2>Done building target "_GenerateRestoreProjectPathWalk" in project "DINOForge.Bridge.Client.csproj" -- FAILED.
+     1>Done building target "_GetAllRestoreProjectPathItems" in project "DINOForge.Tools.Cli.csproj" -- FAILED.
+   1:3>Done Building Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (_GenerateRestoreProjectPathWalk target(s)) -- FAILED.
+     1>Done Building Project "C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj" (Restore target(s)) -- FAILED.
+     2>Done Building Project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (_GenerateRestoreProjectPathWalk target(s)) -- FAILED.
+
+Build FAILED.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.04

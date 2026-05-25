@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 49010,
+  "lod0_polycount": 49010,
+  "lod1_polycount": 24499,
+  "lod2_polycount": 12240,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "C:/Users/koosh/Dino/packs/warfare-starwars/assets\\working\\cis_b2_super_droid_sketchfab_001"
+}

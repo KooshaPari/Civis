@@ -1,0 +1,23 @@
+# Air Force Expansion — Aerial Doctrines
+
+# Western Coalition: Air Superiority Doctrine
+- id: wc_air_superiority
+  display_name: Air Superiority Doctrine
+  description: Establish control of the skies before committing ground forces. Fighter jets and drones clear enemy air defences; bombers then strike at will.
+  faction_id: western-coalition
+  bonuses:
+    aerial_damage_bonus: 0.15
+    aerial_accuracy_bonus: 0.10
+    aerial_speed_bonus: 0.05
+  tags: [Aerial, Precision, AirSuperior]
+
+# Eastern Bloc: Mass Aviation Doctrine
+- id: eb_mass_aviation
+  display_name: Mass Aviation Doctrine
+  description: Overwhelm enemy air defences with sheer volume of sorties. Quantity over quality — saturate the target area with rockets and bombs.
+  faction_id: eastern-bloc
+  bonuses:
+    aerial_damage_bonus: 0.20
+    aerial_hp_bonus: 0.10
+    aerial_fire_rate_bonus: 0.08
+  tags: [Aerial, Attrition, Saturation]

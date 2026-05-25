@@ -1,0 +1,36 @@
+{
+  "asset_id": "sw_b2_super_droid_sketchfab_001",
+  "canonical_name": "",
+  "franchise_tag": "star_wars",
+  "source_platform": "",
+  "source_url": "",
+  "external_id": "",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "",
+  "acquired_at_utc": "",
+  "original_format": null,
+  "download_url": null,
+  "local_path": "working\\sw_b2_super_droid_sketchfab_001\\normalized.glb",
+  "sha256": "c7fc071f480cd02459f6958e99f5293394098db8cf259048990247577b502f78",
+  "polycount_estimate": 49010,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": null,
+  "subtype": null,
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=49010 LOD1=24499 LOD2=12240 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

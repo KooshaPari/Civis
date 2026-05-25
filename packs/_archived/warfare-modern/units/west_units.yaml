@@ -1,0 +1,366 @@
+# Western Alliance Units - Order Archetype
+# Balanced stats, moderate cost, disciplined
+
+# 1. Militia - Rifleman
+- id: west_rifleman
+  display_name: Rifleman
+  description: Basic militia infantry armed with assault rifles. Quick to train, low cost.
+  unit_class: MilitiaLight
+  faction_id: west
+  tier: 1
+  weapon: assault_rifle
+  vanilla_mapping: militia
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine]
+  stats:
+    hp: 80.0
+    damage: 12.0
+    armor: 2.0
+    range: 18.0
+    speed: 5.0
+    accuracy: 0.6
+    fire_rate: 3.0
+    morale: 70.0
+    cost:
+      food: 30
+      wood: 0
+      stone: 0
+      iron: 10
+      gold: 5
+      population: 1
+
+# 2. Line Infantry - Infantry Squad
+- id: west_infantry_squad
+  display_name: Infantry Squad
+  description: Standard line infantry, backbone of the Western Alliance.
+  unit_class: CoreLineInfantry
+  faction_id: west
+  tier: 1
+  weapon: battle_rifle
+  vanilla_mapping: line_infantry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [HoldLine, AdvanceFire]
+  stats:
+    hp: 120.0
+    damage: 16.0
+    armor: 5.0
+    range: 22.0
+    speed: 4.5
+    accuracy: 0.7
+    fire_rate: 2.0
+    morale: 90.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 0
+      iron: 20
+      gold: 10
+      population: 1
+
+# 3. Heavy Infantry - Heavy Gunner
+- id: west_heavy_gunner
+  display_name: Heavy Gunner
+  description: Machine gun specialist providing suppressive fire and area denial.
+  unit_class: HeavyInfantry
+  faction_id: west
+  tier: 2
+  weapon: machine_gun
+  vanilla_mapping: heavy_infantry
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [HoldLine, AntiMass]
+  stats:
+    hp: 150.0
+    damage: 10.0
+    armor: 8.0
+    range: 20.0
+    speed: 3.5
+    accuracy: 0.6
+    fire_rate: 6.0
+    morale: 85.0
+    cost:
+      food: 50
+      wood: 0
+      stone: 0
+      iron: 35
+      gold: 20
+      population: 2
+
+# 4. Ranged Infantry - Marksman
+- id: west_marksman
+  display_name: Marksman
+  description: Designated marksman providing precision fire at extended range.
+  unit_class: Skirmisher
+  faction_id: west
+  tier: 2
+  weapon: marksman_rifle
+  vanilla_mapping: ranged_infantry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [Kite, AdvanceFire]
+  stats:
+    hp: 90.0
+    damage: 28.0
+    armor: 3.0
+    range: 30.0
+    speed: 4.5
+    accuracy: 0.85
+    fire_rate: 1.0
+    morale: 80.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 0
+      iron: 25
+      gold: 15
+      population: 1
+
+# 5. Cavalry - APC Crew
+- id: west_apc_crew
+  display_name: APC Crew
+  description: Armored personnel carrier providing rapid mechanized transport and fire support.
+  unit_class: FastVehicle
+  faction_id: west
+  tier: 2
+  weapon: mounted_mg
+  vanilla_mapping: cavalry
+  defense_tags: [HeavyArmor, Mechanical]
+  behavior_tags: [AdvanceFire, Charge]
+  stats:
+    hp: 250.0
+    damage: 14.0
+    armor: 15.0
+    range: 22.0
+    speed: 8.0
+    accuracy: 0.55
+    fire_rate: 8.0
+    morale: 100.0
+    cost:
+      food: 20
+      wood: 0
+      stone: 0
+      iron: 60
+      gold: 40
+      population: 3
+
+# 6. Siege - Mortar Team
+- id: west_mortar_team
+  display_name: Mortar Team
+  description: Indirect fire support providing area bombardment against grouped enemies.
+  unit_class: Artillery
+  faction_id: west
+  tier: 2
+  weapon: mortar
+  vanilla_mapping: siege
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [SiegePriority, AntiMass]
+  stats:
+    hp: 70.0
+    damage: 40.0
+    armor: 2.0
+    range: 35.0
+    speed: 3.0
+    accuracy: 0.5
+    fire_rate: 0.25
+    morale: 75.0
+    cost:
+      food: 50
+      wood: 10
+      stone: 0
+      iron: 40
+      gold: 25
+      population: 2
+
+# 7. Support - Combat Medic
+- id: west_combat_medic
+  display_name: Combat Medic
+  description: Field medic providing healing and morale support to nearby units.
+  unit_class: SupportEngineer
+  faction_id: west
+  tier: 2
+  weapon: pistol
+  vanilla_mapping: support
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [HoldLine]
+  stats:
+    hp: 90.0
+    damage: 8.0
+    armor: 3.0
+    range: 10.0
+    speed: 5.0
+    accuracy: 0.6
+    fire_rate: 2.0
+    morale: 95.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 0
+      iron: 15
+      gold: 20
+      population: 1
+
+# 8. Scout - Recon Scout
+- id: west_recon_scout
+  display_name: Recon Scout
+  description: Fast-moving reconnaissance unit with extended sight range and stealth capability.
+  unit_class: Recon
+  faction_id: west
+  tier: 1
+  weapon: smg
+  vanilla_mapping: scout
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 65.0
+    damage: 8.0
+    armor: 1.0
+    range: 12.0
+    speed: 7.0
+    accuracy: 0.6
+    fire_rate: 5.0
+    morale: 70.0
+    cost:
+      food: 25
+      wood: 0
+      stone: 0
+      iron: 10
+      gold: 10
+      population: 1
+
+# 9. Elite - Special Forces
+- id: west_special_forces
+  display_name: Special Forces
+  description: Elite operators with superior training, equipment, and combat effectiveness.
+  unit_class: EliteLineInfantry
+  faction_id: west
+  tier: 3
+  weapon: battle_rifle
+  vanilla_mapping: elite
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [AdvanceFire, Charge]
+  stats:
+    hp: 180.0
+    damage: 22.0
+    armor: 10.0
+    range: 24.0
+    speed: 5.5
+    accuracy: 0.9
+    fire_rate: 2.5
+    morale: 120.0
+    cost:
+      food: 60
+      wood: 0
+      stone: 0
+      iron: 50
+      gold: 50
+      population: 2
+
+# 10. Hero - Commander
+- id: west_commander
+  display_name: Commander
+  description: Senior officer providing morale bonus and tactical coordination to all nearby units.
+  unit_class: HeroCommander
+  faction_id: west
+  tier: 3
+  weapon: pistol
+  vanilla_mapping: hero
+  defense_tags: [HeavyArmor, Biological, Heroic]
+  behavior_tags: [HoldLine, MoralePressure]
+  stats:
+    hp: 250.0
+    damage: 12.0
+    armor: 12.0
+    range: 12.0
+    speed: 4.5
+    accuracy: 0.75
+    fire_rate: 2.0
+    morale: 150.0
+    cost:
+      food: 80
+      wood: 0
+      stone: 0
+      iron: 40
+      gold: 80
+      population: 3
+
+# 11. Wall Defender - Bunker Guard
+- id: west_bunker_guard
+  display_name: Bunker Guard
+  description: Fortified defensive specialist trained to hold positions against overwhelming numbers.
+  unit_class: StaticMG
+  faction_id: west
+  tier: 2
+  weapon: machine_gun
+  vanilla_mapping: wall_defender
+  defense_tags: [Fortified, Biological]
+  behavior_tags: [HoldLine, AntiMass]
+  stats:
+    hp: 130.0
+    damage: 10.0
+    armor: 12.0
+    range: 22.0
+    speed: 2.5
+    accuracy: 0.65
+    fire_rate: 6.0
+    morale: 100.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 10
+      iron: 30
+      gold: 15
+      population: 1
+
+# 12. Skirmisher - Sniper
+- id: west_sniper
+  display_name: Sniper
+  description: Long-range precision shooter specializing in high-value target elimination.
+  unit_class: Skirmisher
+  faction_id: west
+  tier: 3
+  weapon: sniper_rifle
+  vanilla_mapping: skirmisher
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 60.0
+    damage: 45.0
+    armor: 1.0
+    range: 40.0
+    speed: 4.0
+    accuracy: 0.95
+    fire_rate: 0.4
+    morale: 80.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 0
+      iron: 30
+      gold: 35
+      population: 1
+
+# 13. Special - Drone Operator
+- id: west_drone_operator
+  display_name: Drone Operator
+  description: Remote warfare specialist controlling armed reconnaissance drones for precision strikes.
+  unit_class: AirstrikeProxy
+  faction_id: west
+  tier: 3
+  weapon: drone_strike
+  vanilla_mapping: special
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [SiegePriority, AntiArmor]
+  stats:
+    hp: 50.0
+    damage: 50.0
+    armor: 0.0
+    range: 50.0
+    speed: 3.0
+    accuracy: 0.8
+    fire_rate: 0.1
+    morale: 70.0
+    cost:
+      food: 30
+      wood: 0
+      stone: 0
+      iron: 50
+      gold: 60
+      population: 1

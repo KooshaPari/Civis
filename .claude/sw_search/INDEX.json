@@ -1,0 +1,159 @@
+{
+  "project": "DINOForge Star Wars Environment Assets Search",
+  "search_date": "2026-03-12T03:06:15Z",
+  "status": "METADATA_COLLECTION_COMPLETE",
+  "deliverables": {
+    "summary_report": {
+      "file": "SUMMARY.txt",
+      "format": "text",
+      "description": "Executive summary with key findings and next steps"
+    },
+    "detailed_report": {
+      "file": "REPORT.md",
+      "format": "markdown",
+      "description": "Comprehensive analysis with scoring methodology and recommendations"
+    },
+    "top_3_candidates": {
+      "file": "candidates.json",
+      "format": "json",
+      "count": 3,
+      "description": "Top 3 recommended models with full metadata"
+    },
+    "top_15_candidates": {
+      "file": "all_candidates.json",
+      "format": "json",
+      "count": 15,
+      "description": "Extended list of top 15 candidates"
+    },
+    "raw_search_data": [
+      {
+        "file": "tatooine_buildings.json",
+        "query": "tatooine+buildings",
+        "results": 20,
+        "description": "Raw API results for Tatooine-themed buildings"
+      },
+      {
+        "file": "star_wars_buildings.json",
+        "query": "star+wars+buildings",
+        "results": 20,
+        "description": "Raw API results for Star Wars buildings"
+      },
+      {
+        "file": "low_poly_star_wars.json",
+        "query": "low+poly+star+wars",
+        "results": 20,
+        "description": "Raw API results for low-poly Star Wars models"
+      }
+    ]
+  },
+  "search_statistics": {
+    "queries_executed": 3,
+    "total_unique_candidates": 56,
+    "top_recommendations": 3,
+    "extended_list": 15,
+    "polycount_distribution": {
+      "very_low_100_500": 5,
+      "ideal_500_2000": 28,
+      "acceptable_2000_5000": 15,
+      "high_detail_5000_plus": 8
+    }
+  },
+  "top_3_executive_summary": [
+    {
+      "rank": 1,
+      "score": 1.0,
+      "title": "Tatooine_Building_Textured",
+      "author": "phamill327",
+      "model_id": "dae880b4ed0d4a58858ad1e4537351dc",
+      "triangles": 2584,
+      "url": "https://sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc",
+      "license": "Not Specified",
+      "downloadable": false,
+      "reason": "Perfect Tatooine aesthetic, ideal polycount for modular building, textured"
+    },
+    {
+      "rank": 2,
+      "score": 1.0,
+      "title": "Tatooine Building",
+      "author": "phamill327",
+      "model_id": "a43085f476844b13b683d67035066a35",
+      "triangles": 2584,
+      "url": "https://sketchfab.com/models/a43085f476844b13b683d67035066a35",
+      "license": "Not Specified",
+      "downloadable": false,
+      "reason": "Second excellent Tatooine building, same polycount range, variant from same author"
+    },
+    {
+      "rank": 3,
+      "score": 0.95,
+      "title": "Nubian N1 Naboo Starfighter (Black)",
+      "author": "richardas.rac",
+      "model_id": "a477c5b5bca44c4eade16f5bc094d39b",
+      "triangles": 1293,
+      "url": "https://sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b",
+      "license": "CC Attribution",
+      "downloadable": true,
+      "reason": "Excellent low-poly Star Wars prop, CC-licensed, immediately available"
+    }
+  ],
+  "implementation_paths": [
+    {
+      "option": "A",
+      "name": "Acquire phamill327 Assets (Best Aesthetic)",
+      "steps": [
+        "Contact phamill327 on Sketchfab",
+        "Request commercial use license for two Tatooine buildings",
+        "Download in GLB format",
+        "Integrate into warfare-starwars pack"
+      ],
+      "pros": ["Perfect aesthetic match", "Excellent polycount", "Professional quality"],
+      "cons": ["Requires author negotiation", "Download restricted"]
+    },
+    {
+      "option": "B",
+      "name": "Use CC-Licensed + Create Variants",
+      "steps": [
+        "Download Nubian N1 starfighter (CC-BY, immediate)",
+        "Combine with other low-poly props",
+        "Recreate Tatooine building aesthetic in Blender",
+        "Create modular 35-building pack from scratch"
+      ],
+      "pros": ["Immediate downloads", "Full creative control", "Unlimited use"],
+      "cons": ["Requires original artwork", "Time investment", "May not match reference"]
+    },
+    {
+      "option": "C",
+      "name": "Mixed Approach",
+      "steps": [
+        "Download CC-licensed props (immediate use)",
+        "Negotiate with phamill327 for buildings",
+        "Fill gaps with custom models or other authors",
+        "Create 20-30 building modular pack"
+      ],
+      "pros": ["Balanced effort/quality", "Legal and fast start", "Professional foundation"],
+      "cons": ["Coordination effort", "Multiple authors"]
+    }
+  ],
+  "scoring_methodology": {
+    "base_score": 0.5,
+    "factors": [
+      {
+        "criterion": "Polycount (200-1500 triangles)",
+        "adjustment": "+0.45",
+        "result": "0.95"
+      },
+      {
+        "criterion": "Polycount (100-5000 triangles)",
+        "adjustment": "+0.35",
+        "result": "0.85"
+      },
+      {
+        "criterion": "Theme keywords (tatooine, desert, building, scrap, settlement)",
+        "adjustment": "+0.15",
+        "result": "varies"
+      }
+    ],
+    "final_range": "0.0-1.0 (capped)"
+  },
+  "notes": "No models downloaded - metadata collection only. All URLs and preview images are valid and publicly accessible."
+}

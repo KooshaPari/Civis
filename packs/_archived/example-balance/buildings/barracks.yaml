@@ -1,0 +1,18 @@
+# Barracks - primary unit production building
+id: barracks
+display_name: Barracks
+description: Trains and musters infantry units for the defense.
+building_type: barracks
+
+cost:
+  food: 0
+  wood: 50
+  stone: 30
+  iron: 10
+  gold: 0
+  population: 0
+
+health: 500
+
+production:
+  militia: 1

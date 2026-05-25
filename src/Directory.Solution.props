@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      The solution graph has intermittent opaque failures under default parallel
+      restore/build in this environment. Force serialized orchestration at the
+      solution level so the standard `dotnet build src/DINOForge.sln` path is
+      stable without special CLI flags.
+    -->
+    <BuildInParallel>false</BuildInParallel>
+    <RestoreBuildInParallel>false</RestoreBuildInParallel>
+  </PropertyGroup>
+</Project>

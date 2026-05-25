@@ -1,0 +1,178 @@
+UNIT ASSETS MANIFEST - FILES INDEX
+===================================
+Generated: 2026-03-12
+
+MANIFEST FILES CREATED
+======================
+
+1. UNIT_ASSETS_COMPLETE.json
+   Location: packs/warfare-starwars/assets/UNIT_ASSETS_COMPLETE.json
+   Purpose: Complete metadata manifest for all 26 units
+   Contents:
+     - manifest_version: "1.0"
+     - pack_id: "warfare-starwars"
+     - 26 units with full asset specs
+     - Summary statistics
+   Format: JSON
+   Size: ~12 KB
+   Status: ✓ Created
+
+2. UNIT_ASSETS_VALIDATION.txt
+   Location: packs/warfare-starwars/assets/UNIT_ASSETS_VALIDATION.txt
+   Purpose: Validation report for unit assets
+   Contents:
+     - Manifest structure overview
+     - Unit inventory (26 total)
+     - File verification status
+     - Texture coverage (26/26 = 100%)
+     - Mesh placeholder status
+     - Poly budget allocations
+     - Pack integration readiness
+   Format: Plain text
+   Size: ~8 KB
+   Status: ✓ Created
+
+3. UNIT_MANIFEST_INTEGRATION_SUMMARY.md
+   Location: packs/warfare-starwars/assets/UNIT_MANIFEST_INTEGRATION_SUMMARY.md
+   Purpose: Complete integration guide and reference
+   Contents:
+     - Overview of all deliverables
+     - File specifications
+     - Asset allocations
+     - Integration status
+     - Validation commands
+     - Next steps for mesh assembly
+   Format: Markdown
+   Size: ~12 KB
+   Status: ✓ Created
+
+4. manifest.yaml (UPDATED)
+   Location: packs/warfare-starwars/manifest.yaml (worktree)
+   Changes:
+     - Added units section with all 26 units
+     - Updated faction definitions with rosters
+     - Created CIS Infiltrators variant (3 units)
+     - Improved description and metadata
+   Format: YAML
+   Status: ✓ Updated
+
+5. MANIFEST_COMPLETION_CHECKLIST.md
+   Location: packs/warfare-starwars/MANIFEST_COMPLETION_CHECKLIST.md
+   Purpose: Task completion tracking
+   Contents:
+     - Three main tasks all marked complete
+     - Texture verification (26/26)
+     - Mesh reference status
+     - Pack integration readiness
+   Format: Markdown
+   Status: ✓ Created
+
+ASSET FILES VERIFIED
+====================
+
+Texture Files: 26/26 present (100% coverage)
+
+  Republic Units:
+    ✓ assets/textures/units/republic_rep_arc_trooper_albedo.png
+    ✓ assets/textures/units/republic_rep_arf_trooper_albedo.png
+    ✓ assets/textures/units/republic_rep_atte_crew_albedo.png
+    ✓ assets/textures/units/republic_rep_barc_speeder_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_commando_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_heavy_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_medic_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_militia_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_sharpshooter_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_sniper_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_trooper_albedo.png
+    ✓ assets/textures/units/republic_rep_clone_wall_guard_albedo.png
+    ✓ assets/textures/units/republic_rep_jedi_knight_albedo.png
+
+  Confederacy Units:
+    ✓ assets/textures/units/cis_cis_aat_crew_albedo.png
+    ✓ assets/textures/units/cis_cis_b1_battle_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_b1_squad_albedo.png
+    ✓ assets/textures/units/cis_cis_b2_super_battle_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_bx_commando_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_droideka_albedo.png
+    ✓ assets/textures/units/cis_cis_dwarf_spider_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_general_grievous_albedo.png
+    ✓ assets/textures/units/cis_cis_magnaguard_albedo.png
+    ✓ assets/textures/units/cis_cis_medical_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_probe_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_sniper_droid_albedo.png
+    ✓ assets/textures/units/cis_cis_stap_pilot_albedo.png
+
+Mesh Files: 26 references (placeholders - Blender export pending)
+  Location: assets/meshes/
+  Status: ⏳ FBX assembly pending
+  References documented in manifest.yaml with:
+    - Placeholder flags (true)
+    - Source file paths
+    - Assembly instructions
+    - Poly budgets
+
+UNIT INVENTORY
+==============
+
+REPUBLIC (13 units):
+  1. rep_clone_militia (300 tris)
+  2. rep_clone_trooper (350 tris)
+  3. rep_clone_heavy (380 tris)
+  4. rep_clone_sharpshooter (300 tris)
+  5. rep_barc_speeder (450 tris)
+  6. rep_atte_crew (400 tris)
+  7. rep_clone_medic (300 tris)
+  8. rep_arf_trooper (340 tris)
+  9. rep_arc_trooper (380 tris)
+  10. rep_jedi_knight (500 tris)
+  11. rep_clone_wall_guard (320 tris)
+  12. rep_clone_sniper (310 tris)
+  13. rep_clone_commando (390 tris)
+  Total: ~4,600 tris
+
+CONFEDERACY (13 units):
+  1. cis_b1_battle_droid (280 tris)
+  2. cis_b1_squad (800 tris)
+  3. cis_b2_super_battle_droid (420 tris)
+  4. cis_sniper_droid (300 tris)
+  5. cis_stap_pilot (380 tris)
+  6. cis_aat_crew (1000 tris)
+  7. cis_medical_droid (280 tris)
+  8. cis_probe_droid (280 tris)
+  9. cis_bx_commando_droid (320 tris)
+  10. cis_general_grievous (500 tris)
+  11. cis_droideka (380 tris)
+  12. cis_dwarf_spider_droid (420 tris)
+  13. cis_magnaguard (420 tris)
+  Total: ~5,400 tris
+
+GRAND TOTAL: 26 units, ~9,000 tris
+
+VALIDATION STATUS
+=================
+
+✓ All 26 units documented in manifest.yaml
+✓ All 26 unit textures present (100% coverage)
+✓ File references verified (textures exist)
+✓ UNIT_ASSETS_COMPLETE.json generated with full specs
+✓ Validation report created
+✓ Integration summary provided
+✓ Manifest completion checklist verified
+✓ Pack ready for validation phase
+
+NEXT STEPS
+==========
+
+Phase 1: Blender Mesh Assembly (PENDING)
+  1. Run: blender_batch_export.py
+  2. Export all 26 unit FBX meshes
+  3. Place in: assets/meshes/
+
+Phase 2: Pack Validation (READY)
+  Command: dotnet run --project src/Tools/PackCompiler -- validate packs/warfare-starwars
+
+Phase 3: Runtime Integration (READY)
+  Load pack in BepInEx mod loader
+  Verify all units appear in game UI
+  Test faction assignment and spawning
+

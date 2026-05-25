@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/projectile.schema.json",
+  "title": "DINOForge Projectile Definition",
+  "description": "Schema for DINOForge projectile definition files (projectiles/*.yaml).",
+  "type": "object",
+  "required": ["id", "display_name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique projectile identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable projectile name."
+    },
+    "speed": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Travel speed in world units per second."
+    },
+    "damage": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Damage dealt on impact."
+    },
+    "aoe_radius": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Area-of-effect blast radius. 0 = no AoE."
+    },
+    "visual_prefab": {
+      "type": "string",
+      "description": "Visual prefab asset ID for the projectile in flight."
+    },
+    "impact_effect": {
+      "type": "string",
+      "description": "VFX asset ID played on impact."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,7 @@
+[
+  { "id": "intro",  "voice": "en-US-AriaNeural", "text": "DINOForge mod platform. Feature demonstration." },
+  { "id": "mods",   "voice": "en-US-AriaNeural", "text": "The Mods button was automatically injected into the native main menu in under ten seconds." },
+  { "id": "f9",     "voice": "en-US-AriaNeural", "text": "Pressing F9 opens the debug overlay panel, showing live entity counts and runtime stats." },
+  { "id": "f10",    "voice": "en-US-AriaNeural", "text": "Pressing F10 opens the mod menu, where packs can be browsed and toggled." },
+  { "id": "outro",  "voice": "en-US-AriaNeural", "text": "All three features confirmed working. DINOForge is ready for testing." }
+]

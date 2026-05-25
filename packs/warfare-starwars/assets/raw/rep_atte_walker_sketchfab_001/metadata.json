@@ -1,0 +1,18 @@
+{
+  "id": "rep_atte_walker",
+  "type": "Heavy",
+  "name": "AT-TE Walker (Animated)",
+  "model_id": "81ef81cf6c554055b741b43a1a08d69f",
+  "source_url": "https://sketchfab.com/models/81ef81cf6c554055b741b43a1a08d69f",
+  "artist": "R3negadeAidan",
+  "license": "CC Attribution",
+  "view_count": 23006,
+  "like_count": 317,
+  "extracted_files": [
+    "Sketchfab_2023_07_16_01_18_15.blend"
+  ],
+  "extracted_textures": 2,
+  "downloadedAt": "2026-03-13T23:17:40Z",
+  "phase": "2B",
+  "note": "Downloaded in raw format (FBX/Blend/OBJ). Will be converted to GLB in Phase 3C by AssetPipeline."
+}

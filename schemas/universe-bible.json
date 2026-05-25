@@ -1,0 +1,221 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/universe-bible.json",
+  "title": "DINOForge Universe Bible",
+  "description": "Schema for a themed universe definition that enables deterministic mod pack generation.",
+  "type": "object",
+  "required": ["id", "name", "version"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this universe (e.g. 'star-wars-clone-wars').",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for this universe."
+    },
+    "description": {
+      "type": "string"
+    },
+    "era": {
+      "type": "string",
+      "description": "Era or time period (e.g. 'Clone Wars 22-19 BBY')."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "author": {
+      "type": "string"
+    },
+    "faction_taxonomy": {
+      "$ref": "#/definitions/FactionTaxonomy"
+    },
+    "crosswalk": {
+      "$ref": "#/definitions/CrosswalkDictionary"
+    },
+    "naming": {
+      "$ref": "#/definitions/NamingGuide"
+    },
+    "style": {
+      "$ref": "#/definitions/StyleGuide"
+    }
+  },
+  "definitions": {
+    "FactionTaxonomy": {
+      "type": "object",
+      "properties": {
+        "factions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaxonomyFaction"
+          }
+        }
+      }
+    },
+    "TaxonomyFaction": {
+      "type": "object",
+      "required": ["id", "name", "alignment", "archetype"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "alignment": {
+          "type": "string",
+          "enum": ["Player", "Enemy", "Neutral"]
+        },
+        "archetype": {
+          "type": "string",
+          "enum": ["order", "industrial_swarm", "asymmetric", "custom"]
+        },
+        "sub_factions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "specialization": { "type": "string" }
+            }
+          }
+        },
+        "unit_roster": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "CrosswalkDictionary": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CrosswalkEntry"
+          }
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CrosswalkPattern"
+          }
+        }
+      }
+    },
+    "CrosswalkEntry": {
+      "type": "object",
+      "required": ["vanilla_id", "themed_id"],
+      "properties": {
+        "vanilla_id": { "type": "string" },
+        "themed_id": { "type": "string" },
+        "themed_name": { "type": "string" },
+        "themed_description": { "type": "string" },
+        "sprite_override": { "type": "string" },
+        "sound_override": { "type": "string" },
+        "stat_modifiers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "CrosswalkPattern": {
+      "type": "object",
+      "required": ["vanilla_pattern", "themed_pattern"],
+      "properties": {
+        "vanilla_pattern": { "type": "string" },
+        "themed_pattern": { "type": "string" },
+        "themed_name_pattern": { "type": "string" },
+        "themed_description_pattern": { "type": "string" },
+        "stat_modifiers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "NamingGuide": {
+      "type": "object",
+      "properties": {
+        "faction_rules": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FactionNamingRules"
+          }
+        },
+        "global_rules": {
+          "$ref": "#/definitions/NamingRuleSet"
+        }
+      }
+    },
+    "FactionNamingRules": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/NamingRuleSet"
+          }
+        }
+      }
+    },
+    "NamingRuleSet": {
+      "type": "object",
+      "properties": {
+        "prefix": { "type": "string" },
+        "suffix": { "type": "string" },
+        "pattern": { "type": "string" },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "StyleGuide": {
+      "type": "object",
+      "properties": {
+        "faction_styles": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FactionStyle"
+          }
+        },
+        "global": {
+          "type": "object",
+          "properties": {
+            "tone": { "type": "string" },
+            "ui_theme": { "type": "string" },
+            "font_style": { "type": "string" }
+          }
+        }
+      }
+    },
+    "FactionStyle": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "secondary": { "type": "string" },
+            "tertiary": { "type": "string" },
+            "ui_highlight": { "type": "string" }
+          }
+        },
+        "audio": {
+          "type": "object",
+          "properties": {
+            "march": { "type": "string" },
+            "ambient": { "type": "string" },
+            "combat": { "type": "string" },
+            "victory": { "type": "string" },
+            "defeat": { "type": "string" }
+          }
+        },
+        "architecture": { "type": "string" },
+        "visual_theme": { "type": "string" }
+      }
+    }
+  }
+}

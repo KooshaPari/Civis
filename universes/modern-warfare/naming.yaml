@@ -1,0 +1,50 @@
+faction_rules:
+  west:
+    rules:
+      unit:
+        overrides:
+          militia: Conscript
+          soldier: Rifleman
+          elite: SF Operator
+          scout: Recon Team
+          sniper: Designated Marksman
+          commander: Field Commander
+      vehicle:
+        overrides:
+          light: HMMWV
+          medium: Stryker ICV
+          heavy: M1A2 Abrams
+          recon: M-ATV
+      building:
+        prefix: "FOB "
+      weapon:
+        overrides:
+          rifle: M4A1 Carbine
+          dmr: M110 SASS
+          sniper: M24 SWS
+          mg: M240B
+          at: Javelin ATGM
+          pistol: M17 (SIG P320)
+
+  enemy:
+    rules:
+      unit:
+        overrides:
+          militia: Insurgent
+          soldier: Regular Infantry
+          elite: Commando
+          at: RPG Team
+      vehicle:
+        suffix: " Technical"
+      building:
+        prefix: "Enemy "
+      weapon:
+        overrides:
+          rifle: AK-74M
+          mg: PKM
+          at: RPG-7
+          sniper: SVD Dragunov
+
+global_rules:
+  prefix: ""
+  suffix: ""

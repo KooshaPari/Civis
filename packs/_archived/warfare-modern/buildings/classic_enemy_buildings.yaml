@@ -1,0 +1,150 @@
+# Classic Enemy Buildings - Cheap, fast to build
+
+- id: ce_command_tent
+  display_name: Command Tent
+  description: Makeshift command center. Cheap but fragile.
+  building_type: command
+  health: 1200
+  cost:
+    food: 0
+    wood: 60
+    stone: 40
+    iron: 30
+    gold: 20
+    population: 0
+  production: {}
+
+- id: ce_training_camp
+  display_name: Training Camp
+  description: Basic training facility mass-producing conscripts and regulars.
+  building_type: barracks
+  health: 800
+  cost:
+    food: 0
+    wood: 50
+    stone: 30
+    iron: 20
+    gold: 10
+    population: 0
+  production:
+    ce_conscript: 4
+    ce_regulars: 2
+
+- id: ce_weapons_cache
+  display_name: Weapons Cache
+  description: Hidden weapons stockpile for producing heavier units.
+  building_type: barracks
+  health: 600
+  cost:
+    food: 0
+    wood: 30
+    stone: 20
+    iron: 40
+    gold: 15
+    population: 0
+  production:
+    ce_mg_crew: 1
+    ce_shock_troops: 1
+
+- id: ce_mortar_pit
+  display_name: Mortar Pit
+  description: Crude artillery emplacement for field artillery production.
+  building_type: barracks
+  health: 500
+  cost:
+    food: 0
+    wood: 20
+    stone: 30
+    iron: 40
+    gold: 15
+    population: 0
+  production:
+    ce_field_artillery: 1
+
+- id: ce_guard_post
+  display_name: Guard Post
+  description: Simple watchtower with a mounted weapon.
+  building_type: defense
+  health: 400
+  cost:
+    food: 0
+    wood: 30
+    stone: 20
+    iron: 15
+    gold: 5
+    population: 0
+  production: {}
+
+- id: ce_pillbox
+  display_name: Pillbox
+  description: Reinforced defensive bunker, sturdy but slow to build.
+  building_type: defense
+  health: 1800
+  cost:
+    food: 0
+    wood: 10
+    stone: 100
+    iron: 50
+    gold: 15
+    population: 0
+  production: {}
+
+- id: ce_supply_dump
+  display_name: Supply Dump
+  description: Captured supply stockpile providing basic resource income.
+  building_type: economy
+  health: 500
+  cost:
+    food: 0
+    wood: 30
+    stone: 20
+    iron: 10
+    gold: 5
+    population: 0
+  production:
+    food: 4
+    iron: 1
+
+- id: ce_scrap_yard
+  display_name: Scrap Yard
+  description: Salvage operation providing secondary resource income.
+  building_type: economy
+  health: 500
+  cost:
+    food: 0
+    wood: 20
+    stone: 15
+    iron: 20
+    gold: 5
+    population: 0
+  production:
+    iron: 2
+    gold: 1
+
+- id: ce_field_workshop
+  display_name: Field Workshop
+  description: Improvised research facility for unlocking better equipment.
+  building_type: research
+  health: 600
+  cost:
+    food: 0
+    wood: 40
+    stone: 30
+    iron: 30
+    gold: 20
+    population: 0
+  production: {}
+
+- id: ce_sandbag_wall
+  display_name: Sandbag Wall
+  description: Cheap and fast to erect, but not very durable.
+  building_type: defense
+  health: 600
+  cost:
+    food: 0
+    wood: 5
+    stone: 30
+    iron: 5
+    gold: 0
+    population: 0
+  production: {}

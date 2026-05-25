@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 1279049991
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 4e64b358e693e9bf5062ca648f764bf9
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: a3954d9da6324b836c32a89fa85d00a9
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 4e64b358e693e9bf5062ca648f764bf9
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Prefabs/CIS/sw-cis-hmp-droid-gunship.prefab
+- Assets/Materials/CIS/sw-cis-hmp-droid-gunship-primary.mat
+- Assets/Materials/CIS/sw-cis-hmp-droid-gunship.mat
+Dependencies: []

@@ -1,0 +1,166 @@
+# DINOForge Pack Manifest Schema
+# All mod packs must conform to this schema
+
+type: object
+required:
+  - id
+  - name
+  - version
+  - framework_version
+  - author
+  - type
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Unique pack identifier (lowercase, hyphens allowed)
+
+  name:
+    type: string
+    description: Human-readable pack name
+
+  version:
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.]+)?$"
+    description: Semantic version
+
+  framework_version:
+    type: string
+    description: "Compatible DINOForge version range (e.g. '>=0.1.0 <1.0.0')"
+
+  author:
+    type: string
+    description: Pack author name
+
+  type:
+    type: string
+    enum:
+      - content
+      - balance
+      - ruleset
+      - total_conversion
+      - utility
+    description: Pack category
+
+  description:
+    type: string
+    description: Brief pack description
+
+  depends_on:
+    type: array
+    items:
+      type: string
+    default: []
+    description: List of required pack IDs
+
+  conflicts_with:
+    type: array
+    items:
+      type: string
+    default: []
+    description: List of incompatible pack IDs
+
+  load_order:
+    type: integer
+    default: 100
+    description: Load priority (lower = earlier)
+
+  game_version:
+    type: string
+    description: "Compatible DINO game version range"
+
+  loads:
+    type: object
+    description: Content declarations
+    properties:
+      factions:
+        type: array
+        items:
+          type: string
+      units:
+        type: array
+        items:
+          type: string
+      buildings:
+        type: array
+        items:
+          type: string
+      weapons:
+        type: array
+        items:
+          type: string
+      projectiles:
+        type: array
+        items:
+          type: string
+      effects:
+        type: array
+        items:
+          type: string
+      doctrines:
+        type: array
+        items:
+          type: string
+      audio:
+        type: array
+        items:
+          type: string
+      visuals:
+        type: array
+        items:
+          type: string
+      localization:
+        type: array
+        items:
+          type: string
+      wave_templates:
+        type: array
+        items:
+          type: string
+      tech_nodes:
+        type: array
+        items:
+          type: string
+      scenarios:
+        type: array
+        items:
+          type: string
+
+  overrides:
+    type: object
+    description: Registry entries this pack overrides
+    properties:
+      units:
+        type: array
+        items:
+          type: string
+      buildings:
+        type: array
+        items:
+          type: string
+      stats:
+        type: array
+        items:
+          type: string
+
+  asset_policy:
+    type: object
+    description: Asset sourcing and licensing metadata
+    properties:
+      allow_generated:
+        type: boolean
+        default: true
+      allow_public_assets:
+        type: boolean
+        default: true
+      allow_borrowed_assets:
+        type: string
+        enum: [yes, only_with_permission, no]
+        default: only_with_permission
+      credits_manifest:
+        type: string
+        description: Path to credits file
+      provenance_manifest:
+        type: string
+        description: Path to asset provenance tracking file

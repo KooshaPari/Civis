@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 835416092
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 8fd57e7b1d3e7abb57c27a5ec4767075
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: a3954d9da6324b836c32a89fa85d00a9
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 8fd57e7b1d3e7abb57c27a5ec4767075
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/Republic/sw-rep-laat-gunship.mat
+- Assets/Materials/Republic/sw-rep-laat-gunship-primary.mat
+- Assets/Prefabs/Republic/sw-rep-laat-gunship.prefab
+Dependencies: []

@@ -1,0 +1,54 @@
+# Western Alliance Faction - Order Archetype
+# Balanced, disciplined, strong combined arms doctrine
+
+faction:
+  id: west
+  display_name: Western Alliance
+  description: A disciplined military coalition employing combined arms doctrine with balanced forces and strong defensive infrastructure.
+  theme: modern
+  archetype: order
+  doctrine: combined_arms
+
+economy:
+  gather_bonus: 1.0
+  upkeep_modifier: 1.0
+  research_speed: 1.1
+  build_speed: 1.0
+
+army:
+  morale_style: disciplined
+  unit_cap_modifier: 1.0
+  elite_cost_modifier: 1.0
+  spawn_rate_modifier: 1.0
+
+roster:
+  cheap_infantry: west_rifleman
+  line_infantry: west_infantry_squad
+  elite_infantry: west_special_forces
+  anti_armor: west_heavy_gunner
+  support_weapon: west_mortar_team
+  recon: west_recon_scout
+  light_vehicle: west_apc_crew
+  heavy_vehicle: west_bunker_guard
+  artillery: west_mortar_team
+  hero_commander: west_commander
+  spike_unit: west_drone_operator
+
+buildings:
+  barracks: west_barracks
+  workshop: west_armory
+  artillery_foundry: west_artillery_depot
+  tower_mg: west_watchtower
+  heavy_defense: west_bunker
+  command_center: west_command_post
+  economy_primary: west_supply_depot
+  economy_secondary: west_fuel_refinery
+  research_facility: west_tech_lab
+  wall_segment: west_concrete_wall
+
+visuals:
+  primary_color: "#2E5A1C"
+  accent_color: "#C4A84D"
+
+audio:
+  weapon_pack: modern_weapons

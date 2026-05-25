@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 1403,
+  "lod0_polycount": 1403,
+  "lod1_polycount": 706,
+  "lod2_polycount": 361,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "C:/Users/koosh/Dino/packs/warfare-starwars/assets\\working\\cis_heavy_foundry_sketchfab_001"
+}

@@ -1,0 +1,38 @@
+[project]
+name = "dinoforge-mcp"
+version = "0.1.0"
+description = "FastMCP 3.x server for DINOForge – asset pipeline, game automation, catalog tools"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=3.0.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+dinoforge-mcp = "dinoforge_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.optional-dependencies]
+vision = [
+    "imagehash>=4.3.1",
+    "transformers>=4.40.0",
+    "torch>=2.0.0",
+    "Pillow>=10.0.0",
+]
+opencv = [
+    "opencv-python-headless>=4.8.0",
+    "numpy>=1.24.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.1.0",
+]

@@ -1,0 +1,20 @@
+{
+  "id": "rep_clone_engineer",
+  "name": "Clone Engineer",
+  "type": "infantry_tech",
+  "faction": "republic",
+  "source": {
+    "sketchfab_id": "1fd3c5dfd9864394b1cbaf780e1779bd",
+    "artist": "Outworld Studios",
+    "url": "https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd",
+    "license": "CC-BY"
+  },
+  "polycount_estimated": 22500,
+  "lod_targets": [100, 60, 30],
+  "material_config": {
+    "faction": "republic",
+    "color_primary": "#4488FF",
+    "color_secondary": "#FFFFFF"
+  },
+  "status": "pending_download"
+}

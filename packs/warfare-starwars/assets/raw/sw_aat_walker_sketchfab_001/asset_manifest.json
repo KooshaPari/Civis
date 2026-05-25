@@ -1,0 +1,17 @@
+{
+  "asset_id": "sw_aat_walker_sketchfab_001",
+  "name": "AAT Tank",
+  "model_id": "9ed126f4616a482fabee52b0e0d46e52",
+  "phase": "v0.8.0",
+  "status": "success",
+  "downloaded": "2026-03-12T23:39:14.734115",
+  "license": "CC-BY-4.0",
+  "attribution": "ARKON MAREK on Sketchfab \u2014 free download enabled",
+  "source": "https://sketchfab.com/3d-models/star-wars-aat-9ed126f4616a482fabee52b0e0d46e52",
+  "notes": [
+    "[2026-03-14] Placeholder GLB created (minimal unit cube). Original model not available for API download (Free plan / author-disabled download). Replace with real asset when obtained manually.",
+    "[2026-03-14] Replaced model_id with ARKON MAREK AAT (download-enabled). Original Mind Mulch model had downloads disabled."
+  ],
+  "technical_status": "discovered",
+  "local_path": "raw/sw_aat_walker_sketchfab_001/source_download.glb"
+}

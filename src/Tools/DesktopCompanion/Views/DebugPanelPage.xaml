@@ -1,0 +1,72 @@
+<Page
+    x:Class="DINOForge.DesktopCompanion.Views.DebugPanelPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:data="using:DINOForge.DesktopCompanion.Data"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock
+            Grid.Row="0"
+            Text="Debug Panel"
+            Style="{StaticResource TitleTextBlockStyle}"
+            Foreground="{StaticResource DFAccentBrush}" />
+
+        <TextBlock
+            Grid.Row="1"
+            Text="Mirrors the in-game F9 debug overlay. Data is read from the filesystem — launch the game with DINOForge for live ECS data."
+            Style="{StaticResource DFSecondaryText}"
+            TextWrapping="WrapWholeWords" />
+
+        <!-- Refresh -->
+        <Button
+            Grid.Row="2"
+            x:Name="DebugRefreshButton"
+            AutomationProperties.AutomationId="DebugRefreshButton"
+            Content="Refresh"
+            Style="{StaticResource DFAccentButton}"
+            Command="{x:Bind ViewModel.RefreshCommand}"
+            HorizontalAlignment="Left" />
+
+        <!-- Sections -->
+        <ScrollViewer Grid.Row="3">
+            <ItemsControl
+                x:Name="DebugSectionsControl"
+                AutomationProperties.AutomationId="DebugSectionsControl"
+                ItemsSource="{x:Bind ViewModel.Sections, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="data:DebugSectionViewModel">
+                        <Expander
+                            Header="{x:Bind SectionName}"
+                            IsExpanded="True"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            Margin="0,4">
+                            <ItemsControl ItemsSource="{x:Bind Lines, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock
+                                            Text="{x:Bind}"
+                                            Style="{StaticResource DFMonoText}"
+                                            Margin="8,1" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</Page>

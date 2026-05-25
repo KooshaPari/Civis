@@ -1,0 +1,45 @@
+# Air Force Expansion Pack
+# Modern aerial warfare — Western Coalition and Eastern Bloc air arms
+#
+# NOTE: Star Wars aerial units (V-19 Torrent Starfighter, Tri-Fighter) are defined
+# in the warfare-starwars pack (units/republic_units.yaml and units/cis_units.yaml)
+# using vanilla_mapping: aerial_fighter and unit_class: AirstrikeProxy.
+# This pack provides analogous modern-era aerial units for the warfare-modern factions.
+# The in-game "warfare-airforce" display in pack status refers to this expansion.
+
+id: warfare-airforce
+name: Air Force Expansion
+version: 0.1.0
+framework_version: ">=0.1.0"
+author: DINOForge
+description: |
+  Modern aerial warfare expansion adding air units and airbase infrastructure for
+  the Western Coalition and Eastern Bloc factions from warfare-modern.
+
+  Content features:
+  - 8 aerial units: jet fighters, close air support aircraft, attack helicopters,
+    strategic bombers, drones, and electronic warfare platforms per faction
+  - 3 airbase buildings: airstrip, radar tower, and AA battery
+  - 1 aerial doctrine per faction: air superiority vs mass aviation
+
+  Units use vanilla_mapping: aerial_fighter and unit_class: AirstrikeProxy,
+  matching the DINO ECS aerial subsystem. Anti-air buildings use defense_tags: [AntiAir].
+
+type: content
+
+depends_on:
+  - warfare-modern
+
+conflicts_with: []
+
+loads:
+  factions:
+    - factions
+  units:
+    - units
+  weapons:
+    - weapons
+  buildings:
+    - buildings
+  doctrines:
+    - doctrines

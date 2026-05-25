@@ -1,0 +1,31 @@
+# Militia - cheap early-game infantry unit
+id: militia
+display_name: Town Militia
+description: Lightly armed citizens called to defend the settlement.
+unit_class: MilitiaLight
+faction_id: defenders
+tier: 1
+
+stats:
+  hp: 50
+  damage: 8
+  armor: 1
+  range: 0
+  speed: 3.5
+  accuracy: 0.5
+  fire_rate: 1.0
+  morale: 60
+  cost:
+    food: 20
+    wood: 5
+    stone: 0
+    iron: 0
+    gold: 0
+    population: 1
+
+defense_tags:
+  - Unarmored
+  - Biological
+
+behavior_tags:
+  - HoldLine

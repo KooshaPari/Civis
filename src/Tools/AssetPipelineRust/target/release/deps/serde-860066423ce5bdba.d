@@ -1,0 +1,14 @@
+C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\deps\libserde-860066423ce5bdba.rmeta: C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src/lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\integer128.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\mod.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\de.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\ser.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\build\serde-66e82e5eefaf1856\out/private.rs
+
+C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\deps\libserde-860066423ce5bdba.rlib: C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src/lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\integer128.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\mod.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\de.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\ser.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\build\serde-66e82e5eefaf1856\out/private.rs
+
+C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\deps\serde-860066423ce5bdba.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src/lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\integer128.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\mod.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\de.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\ser.rs C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\build\serde-66e82e5eefaf1856\out/private.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src/lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\integer128.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\mod.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\de.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serde-1.0.228\src\private\ser.rs:
+C:\Users\koosh\Dino\src\Tools\AssetPipelineRust\target\release\build\serde-66e82e5eefaf1856\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\koosh\\Dino\\src\\Tools\\AssetPipelineRust\\target\\release\\build\\serde-66e82e5eefaf1856\\out

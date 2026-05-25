@@ -1,0 +1,424 @@
+# Lord's Troops - Vanilla DINO Units (14 units total)
+# Tier 1: Basic Infantry
+- id: vanilla_swordsman
+  display_name: Swordsman
+  description: Basic melee infantry with sword and shield. The backbone of any army.
+  unit_class: MilitiaLight
+  faction_id: lords_troops
+  tier: 1
+  vanilla_dino_name: Swordsman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Swordsman"
+  stats:
+    hp: 50.0
+    damage: 8.0
+    armor: 2.0
+    range: 0.0
+    speed: 5.5
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 80.0
+    cost:
+      food: 20
+      wood: 0
+      stone: 0
+      iron: 5
+      gold: 3
+      population: 1
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [HoldLine]
+  weapon: melee_sword
+
+- id: vanilla_archer
+  display_name: Archer
+  description: Ranged infantry armed with bow and arrows. Provides ranged support.
+  unit_class: CoreLineInfantry
+  faction_id: lords_troops
+  tier: 1
+  vanilla_dino_name: Archer
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Archer"
+  stats:
+    hp: 45.0
+    damage: 7.0
+    armor: 1.0
+    range: 18.0
+    speed: 5.0
+    accuracy: 0.8
+    fire_rate: 1.5
+    morale: 75.0
+    cost:
+      food: 25
+      wood: 10
+      stone: 0
+      iron: 3
+      gold: 2
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: ranged_bow
+
+- id: vanilla_healer
+  display_name: Healer
+  description: Support unit that restores health to nearby allies. Non-combat specialist.
+  unit_class: Skirmisher
+  faction_id: lords_troops
+  tier: 1
+  vanilla_dino_name: Healer
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Healer"
+  stats:
+    hp: 40.0
+    damage: 2.0
+    armor: 1.0
+    range: 15.0
+    speed: 5.0
+    accuracy: 0.0
+    fire_rate: 0.5
+    morale: 70.0
+    cost:
+      food: 30
+      wood: 5
+      stone: 0
+      iron: 2
+      gold: 5
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine, MoralePressure]
+  weapon: none
+
+# Tier 2: Specialized Infantry
+- id: vanilla_axe_warrior
+  display_name: Axe Warrior
+  description: Heavy melee infantry with two-handed axe. Slow but devastating damage.
+  unit_class: HeavyInfantry
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Axe Warrior
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Axe_Warrior"
+  stats:
+    hp: 60.0
+    damage: 12.0
+    armor: 3.0
+    range: 0.0
+    speed: 4.5
+    accuracy: 0.6
+    fire_rate: 0.7
+    morale: 85.0
+    cost:
+      food: 35
+      wood: 0
+      stone: 0
+      iron: 15
+      gold: 8
+      population: 1
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [Charge, AntiMass]
+  weapon: melee_axe
+
+- id: vanilla_spearman
+  display_name: Spearman
+  description: Infantry with pike, effective against cavalry and heavy units.
+  unit_class: AntiArmor
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Spearman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Spearman"
+  stats:
+    hp: 55.0
+    damage: 9.0
+    armor: 2.5
+    range: 0.0
+    speed: 5.0
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 80.0
+    cost:
+      food: 30
+      wood: 0
+      stone: 0
+      iron: 8
+      gold: 4
+      population: 1
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [HoldLine, AntiArmor]
+  weapon: melee_pike
+
+- id: vanilla_crossbowman
+  display_name: Crossbowman
+  description: Heavy ranged infantry with crossbow. Slower fire rate, higher armor penetration.
+  unit_class: CoreLineInfantry
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Crossbowman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Crossbowman"
+  stats:
+    hp: 50.0
+    damage: 9.0
+    armor: 1.5
+    range: 20.0
+    speed: 4.5
+    accuracy: 0.85
+    fire_rate: 1.0
+    morale: 75.0
+    cost:
+      food: 35
+      wood: 15
+      stone: 0
+      iron: 5
+      gold: 3
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [AdvanceFire]
+  weapon: ranged_crossbow
+
+- id: vanilla_hammerguy
+  display_name: Hammerguy
+  description: Infantry with warhammer. Effective at breaking through fortifications.
+  unit_class: HeavyInfantry
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Hammerguy
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Hammerguy"
+  stats:
+    hp: 58.0
+    damage: 11.0
+    armor: 3.0
+    range: 0.0
+    speed: 4.8
+    accuracy: 0.65
+    fire_rate: 0.8
+    morale: 82.0
+    cost:
+      food: 32
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 6
+      population: 1
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [Charge, AntiStructure]
+  weapon: melee_hammer
+
+# Tier 3: Elite and Mounted Units
+- id: vanilla_foot_knight
+  display_name: Foot Knight
+  description: Elite armored infantry. High HP and armor, expensive to produce.
+  unit_class: EliteLineInfantry
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Foot Knight
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Foot_Knight"
+  stats:
+    hp: 80.0
+    damage: 10.0
+    armor: 4.5
+    range: 0.0
+    speed: 4.0
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 90.0
+    cost:
+      food: 50
+      wood: 0
+      stone: 0
+      iron: 25
+      gold: 15
+      population: 2
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [HoldLine, SiegePriority]
+  weapon: melee_sword_shield
+
+- id: vanilla_horseman
+  display_name: Horseman
+  description: Light cavalry with sword. Mobile scout and skirmisher.
+  unit_class: FastVehicle
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Horseman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Horseman"
+  stats:
+    hp: 55.0
+    damage: 9.0
+    armor: 1.5
+    range: 0.0
+    speed: 10.0
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 80.0
+    cost:
+      food: 50
+      wood: 0
+      stone: 0
+      iron: 8
+      gold: 10
+      population: 2
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [Charge, Kite]
+  weapon: melee_sword
+
+- id: vanilla_horse_archer
+  display_name: Horse Archer
+  description: Light cavalry archer. Mobile ranged unit with charge capability.
+  unit_class: FastVehicle
+  faction_id: lords_troops
+  tier: 2
+  vanilla_dino_name: Horse Archer
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Horse_Archer"
+  stats:
+    hp: 50.0
+    damage: 8.0
+    armor: 1.0
+    range: 18.0
+    speed: 9.5
+    accuracy: 0.75
+    fire_rate: 1.2
+    morale: 75.0
+    cost:
+      food: 55
+      wood: 10
+      stone: 0
+      iron: 5
+      gold: 8
+      population: 2
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: ranged_bow_mounted
+
+- id: vanilla_mounted_knight
+  display_name: Mounted Knight
+  description: Elite heavy cavalry. Devastating charge attack and sustained melee.
+  unit_class: ShockMelee
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Mounted Knight
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Mounted_Knight"
+  stats:
+    hp: 85.0
+    damage: 13.0
+    armor: 4.0
+    range: 0.0
+    speed: 8.5
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 95.0
+    cost:
+      food: 70
+      wood: 0
+      stone: 0
+      iron: 20
+      gold: 20
+      population: 3
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_lance
+
+# Tier 3: Siege Units
+- id: vanilla_catapult
+  display_name: Catapult
+  description: Siege artillery that launches projectiles in an arc. Effective against buildings and massed units.
+  unit_class: Artillery
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Catapult
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Catapult"
+  stats:
+    hp: 70.0
+    damage: 20.0
+    armor: 2.0
+    range: 25.0
+    speed: 2.5
+    accuracy: 0.6
+    fire_rate: 0.5
+    morale: 70.0
+    cost:
+      food: 0
+      wood: 80
+      stone: 40
+      iron: 30
+      gold: 20
+      population: 3
+  defense_tags: [Mechanical]
+  behavior_tags: [SiegePriority, AntiMass, AntiStructure]
+  weapon: ranged_catapult
+
+- id: vanilla_ballista
+  display_name: Ballista
+  description: Heavy crossbow siege engine. Direct fire anti-armor and anti-structure weapon.
+  unit_class: HeavySiege
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Ballista
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Ballista"
+  stats:
+    hp: 75.0
+    damage: 18.0
+    armor: 2.0
+    range: 28.0
+    speed: 2.0
+    accuracy: 0.8
+    fire_rate: 0.6
+    morale: 70.0
+    cost:
+      food: 0
+      wood: 70
+      stone: 50
+      iron: 40
+      gold: 25
+      population: 3
+  defense_tags: [Mechanical]
+  behavior_tags: [SiegePriority, AntiArmor, AntiStructure]
+  weapon: ranged_ballista
+
+- id: vanilla_trebuchet
+  display_name: Trebuchet
+  description: Heavy siege engine. Longest range, highest damage, slowest fire rate.
+  unit_class: HeavySiege
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Trebuchet
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Trebuchet"
+  stats:
+    hp: 80.0
+    damage: 25.0
+    armor: 2.5
+    range: 32.0
+    speed: 1.5
+    accuracy: 0.7
+    fire_rate: 0.4
+    morale: 70.0
+    cost:
+      food: 0
+      wood: 100
+      stone: 60
+      iron: 50
+      gold: 30
+      population: 4
+  defense_tags: [Mechanical]
+  behavior_tags: [SiegePriority, AntiMass, AntiStructure]
+  weapon: ranged_trebuchet
+
+- id: vanilla_burrdam_chimera
+  display_name: Burrdam Chimera
+  description: Exotic heavy unit with unique appearance. Rare and powerful melee combatant.
+  unit_class: WalkerHeavy
+  faction_id: lords_troops
+  tier: 3
+  vanilla_dino_name: Burrdam Chimera
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Burrdam_Chimera"
+  stats:
+    hp: 120.0
+    damage: 15.0
+    armor: 5.0
+    range: 0.0
+    speed: 3.5
+    accuracy: 0.6
+    fire_rate: 0.8
+    morale: 100.0
+    cost:
+      food: 100
+      wood: 0
+      stone: 0
+      iron: 80
+      gold: 50
+      population: 4
+  defense_tags: [HeavyArmor, Exotic]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_claws

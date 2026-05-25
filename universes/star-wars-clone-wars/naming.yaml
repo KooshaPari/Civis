@@ -1,0 +1,49 @@
+faction_rules:
+  republic:
+    rules:
+      unit:
+        prefix: "Clone "
+        overrides:
+          walker: AT-TE
+          speeder: BARC Speeder
+          sniper: Clone Sharpshooter
+          commander: Jedi General
+      vehicle:
+        pattern: "AT-{name}"
+        overrides:
+          light_walker: AT-RT
+          heavy_walker: AT-TE
+          assault_walker: AT-AP
+      building:
+        prefix: "Republic "
+      weapon:
+        prefix: "DC-"
+        overrides:
+          rifle: DC-15A Blaster Rifle
+          carbine: DC-15S Blaster Carbine
+          sniper_rifle: DC-15x Sniper Rifle
+          pistol: DC-17 Blaster Pistol
+          heavy: Z-6 Rotary Blaster
+
+  cis:
+    rules:
+      unit:
+        overrides:
+          militia: B1 Battle Droid
+          soldier: B2 Super Battle Droid
+          elite: Droideka
+          scout: Dwarf Spider Droid
+          heavy: Hailfire Droid
+      vehicle:
+        suffix: " Droid"
+      building:
+        prefix: "CIS "
+      weapon:
+        overrides:
+          rifle: E-5 Blaster Rifle
+          heavy: Wrist Blaster
+          cannon: Repeating Blaster
+
+global_rules:
+  prefix: ""
+  suffix: ""

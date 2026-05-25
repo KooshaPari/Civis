@@ -1,0 +1,273 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using DINOForge.SDK.Dependencies;
+using FluentAssertions;
+using Xunit;
+
+namespace DINOForge.Tests
+{
+    /// <summary>
+    /// Tests for pack submodule management and packs.lock file format.
+    /// Note: actual git operations are integration tests; these test data structures.
+    /// </summary>
+    public class PackSubmoduleTests
+    {
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, true);
+            }
+            catch { /* best effort cleanup */ }
+        }
+
+        [Fact]
+        public void PacksLock_Format_IsReadable()
+        {
+            // Verify packs.lock format (path + SHA)
+            string lockContent = "# packs.lock\npacks/warfare-modern abc123def456\npacks/example-balance def456abc789";
+            string[] lines = lockContent.Split('\n');
+
+            int entryCount = 0;
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line)) continue;
+                string[] parts = line.Split(' ');
+                parts.Should().HaveCount(2, "each lock entry should have path and SHA");
+                parts[0].Should().StartWith("packs/");
+                (parts[1].Length == 12 || parts[1].Length == 40).Should().BeTrue("SHA should be 12 or 40 chars");
+                entryCount++;
+            }
+
+            entryCount.Should().Be(2);
+        }
+
+        [Fact]
+        public void PackRepoName_ExtractedFromUrl_Correctly()
+        {
+            string[] urls = {
+                "https://github.com/KooshaPari/warfare-modern.git",
+                "https://github.com/KooshaPari/example-balance",
+                "git@github.com:KooshaPari/scenario-pack.git"
+            };
+
+            string[] expected = { "warfare-modern", "example-balance", "scenario-pack" };
+
+            for (int i = 0; i < urls.Length; i++)
+            {
+                string url = urls[i];
+                string repoName = url.TrimEnd('/').Split('/').Last();
+                if (repoName.EndsWith(".git")) repoName = repoName[..^4];
+                repoName.Should().Be(expected[i]);
+            }
+        }
+
+        [Fact]
+        public void SubmodulePath_DefaultsTo_PacksSlashName()
+        {
+            string repoUrl = "https://github.com/KooshaPari/warfare-starwars";
+            string repoName = repoUrl.TrimEnd('/').Split('/').Last();
+            string expectedPath = $"packs/{repoName}";
+            expectedPath.Should().Be("packs/warfare-starwars");
+        }
+
+        [Fact]
+        public void GitmodulesContent_ParsedCorrectly()
+        {
+            string gitmodules = @"[submodule ""packs/warfare-modern""]
+	path = packs/warfare-modern
+	url = https://github.com/KooshaPari/warfare-modern
+[submodule ""packs/example-balance""]
+	path = packs/example-balance
+	url = https://github.com/KooshaPari/example-balance";
+
+            var packPaths = new List<string>();
+            string currentPath = "";
+            foreach (string line in gitmodules.Split('\n'))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.StartsWith("path = ")) currentPath = trimmed.Substring(7);
+                else if (trimmed.StartsWith("url = ") && !string.IsNullOrEmpty(currentPath))
+                {
+                    if (currentPath.StartsWith("packs/")) packPaths.Add(currentPath);
+                    currentPath = "";
+                }
+            }
+
+            packPaths.Should().HaveCount(2);
+            packPaths.Should().Contain("packs/warfare-modern");
+            packPaths.Should().Contain("packs/example-balance");
+        }
+
+        [Fact]
+        public void SubmoduleUrl_ExtractsCorrectly_FromGitmodules()
+        {
+            string gitmodules = @"[submodule ""packs/warfare-modern""]
+	path = packs/warfare-modern
+	url = https://github.com/KooshaPari/warfare-modern.git";
+
+            var urls = new Dictionary<string, string>();
+            string currentPath = "";
+            foreach (string line in gitmodules.Split('\n'))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.StartsWith("path = ")) currentPath = trimmed.Substring(7);
+                else if (trimmed.StartsWith("url = "))
+                {
+                    string url = trimmed.Substring(6);
+                    if (!string.IsNullOrEmpty(currentPath))
+                    {
+                        urls[currentPath] = url;
+                        currentPath = "";
+                    }
+                }
+            }
+
+            urls.Should().HaveCount(1);
+            urls["packs/warfare-modern"].Should().Be("https://github.com/KooshaPari/warfare-modern.git");
+        }
+
+        [Fact]
+        public void LockFile_WithMultiplePacks_ParsesAllEntries()
+        {
+            string lockContent = @"# packs.lock - generated by dinoforge pack lock
+# Generated: 2026-03-11 12:00:00 UTC
+
+packs/warfare-modern abc123def456abc123def456
+packs/example-balance def456abc789def456abc789
+packs/scenario-tutorial 789def456abc789def456abc";
+
+            var entries = new Dictionary<string, string>();
+            foreach (string line in lockContent.Split('\n'))
+            {
+                if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line)) continue;
+                string[] parts = line.Split(' ');
+                if (parts.Length == 2)
+                    entries[parts[0]] = parts[1];
+            }
+
+            entries.Should().HaveCount(3);
+            entries["packs/warfare-modern"].Should().Be("abc123def456abc123def456");
+            entries["packs/example-balance"].Should().Be("def456abc789def456abc789");
+            entries["packs/scenario-tutorial"].Should().Be("789def456abc789def456abc");
+        }
+
+        // ── PackSubmoduleManager.ListPacks ─────────────────────────────────
+
+        [Fact]
+        public void PackSubmoduleManager_ListPacks_NoGitmodules_ReturnsEmpty()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var manager = new PackSubmoduleManager(tempDir);
+                List<PackSubmoduleEntry> result = manager.ListPacks();
+                result.Should().BeEmpty();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ListPacks_WithSubmodules_ReturnsEntries()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string gitmodulesPath = Path.Combine(tempDir, ".gitmodules");
+                File.WriteAllText(gitmodulesPath, @"[submodule ""packs/warfare-modern""]
+	path = packs/warfare-modern
+	url = https://github.com/KooshaPari/warfare-modern
+[submodule ""packs/example-balance""]
+	path = packs/example-balance
+	url = https://github.com/KooshaPari/example-balance
+[submodule ""external/tool""]
+	path = external/tool
+	url = https://github.com/KooshaPari/tool");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                List<PackSubmoduleEntry> result = manager.ListPacks();
+
+                result.Should().HaveCount(2);
+                result.Should().Contain(e => e.Path == "packs/warfare-modern");
+                result.Should().Contain(e => e.Path == "packs/example-balance");
+                result.Should().NotContain(e => e.Path == "external/tool");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_NoLockFile_ReturnsEmpty()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+                result.Should().BeEmpty();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_WithEntries_ReturnsEntries()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string lockPath = Path.Combine(tempDir, "packs.lock");
+                File.WriteAllText(lockPath, "# packs.lock\npacks/war1 abc123\npacks/war2 def456\n");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+
+                result.Should().HaveCount(2);
+                result["packs/war1"].Should().Be("abc123");
+                result["packs/war2"].Should().Be("def456");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public void PackSubmoduleManager_ReadLockFile_SkipsCommentsAndEmptyLines()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"test_pack_{Guid.NewGuid()}");
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+                string lockPath = Path.Combine(tempDir, "packs.lock");
+                File.WriteAllText(lockPath, "# comment\n  # indented comment\n\n  \n packs/war1 abc123  \n\npacks/war2 def456\n");
+
+                var manager = new PackSubmoduleManager(tempDir);
+                Dictionary<string, string> result = manager.ReadLockFile();
+
+                result.Should().HaveCount(2);
+                result["packs/war1"].Should().Be("abc123");
+                result["packs/war2"].Should().Be("def456");
+            }
+            finally
+            {
+                TryDeleteDirectory(tempDir);
+            }
+        }
+    }
+}

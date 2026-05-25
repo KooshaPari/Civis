@@ -1,0 +1,36 @@
+{
+  "asset_id": "rep_clone_engineer_sketchfab_001",
+  "canonical_name": "Clone Engineer",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/1fd3c5dfd9864394b1cbaf780e1779bd",
+  "external_id": "1fd3c5dfd9864394b1cbaf780e1779bd",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\rep_clone_engineer_sketchfab_001\\normalized.glb",
+  "sha256": "90a1d6b2b288ac5b806ea41bbb81e608c0237869d83553ed9e49816b72117165",
+  "polycount_estimate": 16756,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "unit",
+  "subtype": "infantry_tech",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "republic"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=16756 LOD1=8378 LOD2=4189 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

@@ -1,0 +1,21 @@
+{
+  "Id": "barracks",
+  "DisplayName": "Republic Barracks",
+  "Description": "Trains clone trooper infantry units",
+  "BuildingType": "barracks",
+  "Cost": {
+    "Food": 0,
+    "Wood": 50,
+    "Stone": 30,
+    "Iron": 0,
+    "Gold": 0,
+    "Population": 0
+  },
+  "Health": 500,
+  "Production": {
+    "clone-trooper": 2
+  },
+  "DefenseTags": [
+    "Fortified"
+  ]
+}

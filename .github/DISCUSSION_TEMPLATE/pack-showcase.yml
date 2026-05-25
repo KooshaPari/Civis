@@ -1,0 +1,22 @@
+title: "[Showcase] "
+body:
+  - type: input
+    id: pack-name
+    attributes:
+      label: Pack name
+    validations:
+      required: true
+  - type: input
+    id: pack-link
+    attributes:
+      label: Download link or repository
+  - type: textarea
+    id: description
+    attributes:
+      label: What does it do?
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / videos (optional)

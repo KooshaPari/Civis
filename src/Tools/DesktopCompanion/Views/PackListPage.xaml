@@ -1,0 +1,128 @@
+<Page
+    x:Class="DINOForge.DesktopCompanion.Views.PackListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:data="using:DINOForge.DesktopCompanion.Data"
+    xmlns:vm="using:DINOForge.DesktopCompanion.ViewModels"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock
+            Grid.Row="0"
+            Text="Pack List"
+            Style="{StaticResource TitleTextBlockStyle}"
+            Foreground="{StaticResource DFAccentBrush}" />
+
+        <!-- Status + Reload -->
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                Grid.Column="0"
+                Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                Style="{StaticResource DFSecondaryText}"
+                VerticalAlignment="Center" />
+            <Button
+                Grid.Column="1"
+                x:Name="PackReloadButton"
+                AutomationProperties.AutomationId="PackReloadButton"
+                Content="Reload"
+                Style="{StaticResource DFAccentButton}"
+                Command="{x:Bind ViewModel.ReloadCommand}" />
+        </Grid>
+
+        <!-- Loading indicator -->
+        <ProgressBar
+            Grid.Row="2"
+            IsIndeterminate="True"
+            Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+        <!-- Pack list -->
+        <ListView
+            Grid.Row="3"
+            x:Name="PackListView"
+            ItemsSource="{x:Bind ViewModel.Packs, Mode=OneWay}"
+            SelectedItem="{x:Bind ViewModel.SelectedPack, Mode=TwoWay}"
+            SelectionMode="Single">
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="data:PackViewModel">
+                    <Border Style="{StaticResource DFCard}" Margin="0,4">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Enable toggle — IsOn TwoWay so the toggle actually writes back -->
+                            <ToggleSwitch
+                                Grid.Column="0"
+                                AutomationProperties.AutomationId="{x:Bind PackToggleId}"
+                                IsOn="{x:Bind Enabled, Mode=TwoWay}"
+                                OnContent=""
+                                OffContent=""
+                                VerticalAlignment="Center" />
+
+                            <!-- Pack info -->
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock
+                                    Text="{x:Bind Name}"
+                                    Style="{StaticResource DFBodyText}"
+                                    FontWeight="SemiBold" />
+                                <TextBlock
+                                    Style="{StaticResource DFSecondaryText}">
+                                    <Run Text="{x:Bind Id}" />
+                                    <Run Text=" • " />
+                                    <Run Text="{x:Bind Version}" />
+                                    <Run Text=" • " />
+                                    <Run Text="{x:Bind Author}" />
+                                </TextBlock>
+                                <TextBlock
+                                    Text="{x:Bind Type}"
+                                    Style="{StaticResource DFSecondaryText}"
+                                    Foreground="{StaticResource DFAccentBrush}" />
+                            </StackPanel>
+
+                            <!-- Error badge -->
+                            <Border
+                                Grid.Column="2"
+                                Background="{StaticResource DFErrorBrush}"
+                                CornerRadius="12"
+                                Padding="8,2"
+                                VerticalAlignment="Center"
+                                Visibility="{x:Bind HasErrors, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock
+                                    Text="{x:Bind ErrorCountText}"
+                                    Foreground="White"
+                                    FontSize="11" />
+                            </Border>
+
+                            <!-- Load order -->
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="{x:Bind LoadOrderText}"
+                                Style="{StaticResource DFSecondaryText}"
+                                VerticalAlignment="Center"
+                                ToolTipService.ToolTip="Load order" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

@@ -1,0 +1,274 @@
+# Air Force Expansion — Aerial Units
+# Western Coalition and Eastern Bloc air arms
+
+# ============================================================
+# WESTERN COALITION AERIAL UNITS
+# ============================================================
+
+# 1. WC Fighter Jet - F/A-18 Super Hornet equivalent
+- id: wc_fighter_jet
+  display_name: Fighter Jet
+  description: Multirole carrier-capable jet fighter. Dominant in air-to-air combat and capable of precision ground strikes.
+  unit_class: AirstrikeProxy
+  faction_id: western-coalition
+  tier: 3
+  weapon: wc_air_to_air_missiles
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, Charge]
+  stats:
+    hp: 180.0
+    damage: 22.0
+    armor: 4.0
+    range: 30.0
+    speed: 15.0
+    accuracy: 0.85
+    fire_rate: 2.5
+    morale: 110.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 50
+      gold: 80
+      population: 2
+  aerial:
+    cruise_altitude: 25.0
+    ascend_speed: 12.0
+    descend_speed: 7.0
+  visual_asset: mod-wc-fighter-jet
+
+# 2. WC Attack Helicopter - AH-64 Apache equivalent
+- id: wc_attack_helicopter
+  display_name: Attack Helicopter
+  description: Heavy attack rotorcraft with Hellfire missiles and 30mm chain gun. Devastates armored columns at low altitude.
+  unit_class: AirstrikeProxy
+  faction_id: western-coalition
+  tier: 3
+  weapon: wc_hellfire_missiles
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, AntiArmor]
+  stats:
+    hp: 220.0
+    damage: 28.0
+    armor: 8.0
+    range: 22.0
+    speed: 9.0
+    accuracy: 0.9
+    fire_rate: 2.0
+    morale: 105.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 60
+      gold: 90
+      population: 2
+  aerial:
+    cruise_altitude: 10.0
+    ascend_speed: 5.0
+    descend_speed: 4.0
+  visual_asset: mod-wc-attack-helicopter
+
+# 3. WC Strategic Bomber - B-2 Spirit equivalent
+- id: wc_strategic_bomber
+  display_name: Strategic Bomber
+  description: Stealth heavy bomber delivering precision-guided munitions at long range. Devastates fortified positions and command centers.
+  unit_class: AirstrikeProxy
+  faction_id: western-coalition
+  tier: 4
+  weapon: wc_guided_bombs
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, Siege]
+  stats:
+    hp: 250.0
+    damage: 45.0
+    armor: 3.0
+    range: 40.0
+    speed: 11.0
+    accuracy: 0.95
+    fire_rate: 0.5
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 80
+      gold: 140
+      population: 3
+  aerial:
+    cruise_altitude: 30.0
+    ascend_speed: 8.0
+    descend_speed: 6.0
+  visual_asset: mod-wc-strategic-bomber
+
+# 4. WC Recon Drone - MQ-9 Reaper equivalent
+- id: wc_recon_drone
+  display_name: Recon Drone
+  description: Unmanned aerial vehicle providing persistent surveillance and precision strike capability. Operates without risk to pilots.
+  unit_class: AirstrikeProxy
+  faction_id: western-coalition
+  tier: 2
+  weapon: wc_drone_missiles
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, Scout]
+  stats:
+    hp: 80.0
+    damage: 14.0
+    armor: 1.0
+    range: 28.0
+    speed: 7.0
+    accuracy: 0.92
+    fire_rate: 1.5
+    morale: 120.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 20
+      gold: 45
+      population: 1
+  aerial:
+    cruise_altitude: 18.0
+    ascend_speed: 4.0
+    descend_speed: 3.0
+  visual_asset: mod-wc-recon-drone
+
+# ============================================================
+# EASTERN BLOC AERIAL UNITS
+# ============================================================
+
+# 5. EB Fighter Jet - MiG-29 Fulcrum equivalent
+- id: eb_fighter_jet
+  display_name: Fulcrum Fighter
+  description: Agile Soviet-era air superiority fighter. Highly maneuverable with powerful R-77 missiles; deadly in close-range dogfights.
+  unit_class: AirstrikeProxy
+  faction_id: eastern-bloc
+  tier: 3
+  weapon: eb_air_to_air_missiles
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, Charge]
+  stats:
+    hp: 170.0
+    damage: 20.0
+    armor: 4.0
+    range: 26.0
+    speed: 14.0
+    accuracy: 0.80
+    fire_rate: 2.8
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 45
+      gold: 70
+      population: 2
+  aerial:
+    cruise_altitude: 25.0
+    ascend_speed: 11.0
+    descend_speed: 7.0
+  visual_asset: mod-eb-fighter-jet
+
+# 6. EB Attack Helicopter - Mi-24 Hind equivalent
+- id: eb_attack_helicopter
+  display_name: Hind Gunship
+  description: Soviet gunship-transport hybrid. Heavily armored for its class with rocket pods and a nose-mounted cannon. Can survive punishment.
+  unit_class: AirstrikeProxy
+  faction_id: eastern-bloc
+  tier: 3
+  weapon: eb_rocket_pods
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, AntiArmor, Resilient]
+  stats:
+    hp: 280.0
+    damage: 24.0
+    armor: 14.0
+    range: 18.0
+    speed: 8.0
+    accuracy: 0.78
+    fire_rate: 2.2
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 55
+      gold: 75
+      population: 2
+  aerial:
+    cruise_altitude: 8.0
+    ascend_speed: 4.0
+    descend_speed: 3.5
+  visual_asset: mod-eb-attack-helicopter
+
+# 7. EB Ground Attack Jet - Su-25 Frogfoot equivalent
+- id: eb_ground_attack_jet
+  display_name: Frogfoot Strike Jet
+  description: Rugged close air support jet built to absorb ground fire. Delivers unguided rockets and bombs in close support of advancing infantry.
+  unit_class: AirstrikeProxy
+  faction_id: eastern-bloc
+  tier: 3
+  weapon: eb_unguided_rockets
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AdvanceFire, Siege, Resilient]
+  stats:
+    hp: 200.0
+    damage: 32.0
+    armor: 10.0
+    range: 20.0
+    speed: 10.0
+    accuracy: 0.72
+    fire_rate: 1.8
+    morale: 95.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 50
+      gold: 65
+      population: 2
+  aerial:
+    cruise_altitude: 12.0
+    ascend_speed: 6.0
+    descend_speed: 5.0
+  visual_asset: mod-eb-ground-attack-jet
+
+# 8. EB Electronic Warfare Jet - Su-24MP equivalent
+- id: eb_ew_jet
+  display_name: Electronic Warfare Jet
+  description: Specialized jamming aircraft suppressing enemy radar and communications. Degrades Western Coalition targeting accuracy in an area.
+  unit_class: AirstrikeProxy
+  faction_id: eastern-bloc
+  tier: 3
+  weapon: eb_jamming_systems
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, Support, Debuff]
+  stats:
+    hp: 150.0
+    damage: 8.0
+    armor: 3.0
+    range: 35.0
+    speed: 12.0
+    accuracy: 0.65
+    fire_rate: 1.0
+    morale: 90.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 40
+      gold: 85
+      population: 2
+  aerial:
+    cruise_altitude: 22.0
+    ascend_speed: 9.0
+    descend_speed: 6.0
+  visual_asset: mod-eb-ew-jet

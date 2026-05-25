@@ -1,0 +1,6 @@
+title: "[Announcement] "
+labels: ["announcement"]
+body:
+  - type: markdown
+    attributes:
+      value: Official DINOForge announcements from maintainers.

@@ -1,0 +1,20 @@
+{
+  "generated": "2026-03-12T20:19:35.040005Z",
+  "total_assets": 1,
+  "successful": 1,
+  "failed": 0,
+  "assets": [
+    {
+      "asset_id": "sw_star_wars_building_cf2f3b9d",
+      "sketchfab_model_id": "cf2f3b9d265e45f7ab36b440c8bf690d",
+      "model_name": "Star Wars: Buildings Coruscant",
+      "file_path": "packs\\warfare-starwars\\assets\\raw\\sw_star_wars_building_cf2f3b9d\\sw_star_wars_building_cf2f3b9d.glb",
+      "file_size": 39658940,
+      "format": "glb",
+      "vertex_count": 0,
+      "face_count": 0,
+      "downloaded": "2026-03-12T20:19:35.006041Z",
+      "status": "complete"
+    }
+  ]
+}

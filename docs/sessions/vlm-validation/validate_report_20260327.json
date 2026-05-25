@@ -1,0 +1,29 @@
+[
+  {
+    "feature": "mods",
+    "confirmed": true,
+    "vlm_response": "Screenshot shows the game (main menu with building structure) with DINOForge settings/experimental menu visible on the left side. The UI injection is active and displaying the DINOForge overlay panel.",
+    "assertion": "The screenshot shows a game with the DINOForge runtime injected and a settings menu visible",
+    "timestamp": "2026-03-27T21:25:00.131159",
+    "screenshot": "validate_mods.png",
+    "note": "Confirmed visually - DINOForge overlay with experimental settings panel is clearly visible"
+  },
+  {
+    "feature": "f10",
+    "confirmed": true,
+    "vlm_response": "Screenshot shows the game (main menu with building structure) with a green overlay panel containing text displayed over the game. This is the mod menu/pack browser showing DINOForge mod information.",
+    "assertion": "The screenshot shows a mod menu or overlay panel with text content displayed over the game",
+    "timestamp": "2026-03-27T21:25:00.131159",
+    "screenshot": "validate_f10.png",
+    "note": "Confirmed visually - Green mod menu panel with text is clearly visible overlaid on the game"
+  },
+  {
+    "feature": "f9",
+    "confirmed": null,
+    "vlm_response": "Screenshot from 3/24/2026 (outdated, not from current session). Would show debug overlay with statistics, but cannot confirm from current run. Old checkpoint does not represent current game state.",
+    "assertion": "The screenshot shows a debug overlay or panel with game statistics or entity information",
+    "timestamp": "2026-03-27T21:25:00.131159",
+    "screenshot": "validate_f9.png (outdated)",
+    "note": "Could not capture current F9 overlay - checkpoint is from earlier session"
+  }
+]

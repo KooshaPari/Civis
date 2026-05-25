@@ -1,0 +1,138 @@
+UNIT ASSETS MANIFEST VALIDATION REPORT
+======================================
+Generated: 2026-03-12
+
+MANIFEST STRUCTURE
+------------------
+- Schema version: 1.0
+- Pack ID: warfare-starwars
+- Total units defined: 26
+
+UNIT INVENTORY (by faction)
+---------------------------
+REPUBLIC UNITS (13):
+  1. rep_clone_militia
+  2. rep_clone_trooper
+  3. rep_clone_heavy
+  4. rep_clone_sharpshooter
+  5. rep_barc_speeder
+  6. rep_clone_medic
+  7. rep_arf_trooper
+  8. rep_arc_trooper
+  9. rep_jedi_knight
+  10. rep_clone_wall_guard
+  11. rep_clone_sniper
+  12. rep_clone_commando
+  13. rep_atte_crew (AAT - listed in manifest but texture found in textures/units)
+
+CONFEDERACY UNITS (13):
+  1. cis_b1_battle_droid
+  2. cis_b1_squad
+  3. cis_b2_super_battle_droid
+  4. cis_sniper_droid
+  5. cis_stap_pilot
+  6. cis_aat_crew
+  7. cis_medical_droid
+  8. cis_probe_droid
+  9. cis_bx_commando_droid
+  10. cis_general_grievous
+  11. cis_droideka
+  12. cis_dwarf_spider_droid
+  13. cis_magnaguard
+
+FILE VERIFICATION
+-----------------
+
+TEXTURE FILES (26 found):
+  Republic:
+    ✓ republic_rep_arc_trooper_albedo.png
+    ✓ republic_rep_arf_trooper_albedo.png
+    ✓ republic_rep_atte_crew_albedo.png
+    ✓ republic_rep_barc_speeder_albedo.png
+    ✓ republic_rep_clone_commando_albedo.png
+    ✓ republic_rep_clone_heavy_albedo.png
+    ✓ republic_rep_clone_medic_albedo.png
+    ✓ republic_rep_clone_militia_albedo.png
+    ✓ republic_rep_clone_sharpshooter_albedo.png
+    ✓ republic_rep_clone_sniper_albedo.png
+    ✓ republic_rep_clone_trooper_albedo.png
+    ✓ republic_rep_clone_wall_guard_albedo.png
+    ✓ republic_rep_jedi_knight_albedo.png
+
+  Confederacy:
+    ✓ cis_cis_aat_crew_albedo.png
+    ✓ cis_cis_b1_battle_droid_albedo.png
+    ✓ cis_cis_b1_squad_albedo.png
+    ✓ cis_cis_b2_super_battle_droid_albedo.png
+    ✓ cis_cis_bx_commando_droid_albedo.png
+    ✓ cis_cis_droideka_albedo.png
+    ✓ cis_cis_dwarf_spider_droid_albedo.png
+    ✓ cis_cis_general_grievous_albedo.png
+    ✓ cis_cis_magnaguard_albedo.png
+    ✓ cis_cis_medical_droid_albedo.png
+    ✓ cis_cis_probe_droid_albedo.png
+    ✓ cis_cis_sniper_droid_albedo.png
+    ✓ cis_cis_stap_pilot_albedo.png
+
+MESH FILES (2 found - PLACEHOLDERS):
+  - meshes/rep_clone_militia.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_trooper.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_heavy.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_sharpshooter.fbx (MISSING - placeholder ref)
+  - meshes/rep_barc_speeder.fbx (MISSING - placeholder ref)
+  - meshes/rep_atte_crew.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_medic.fbx (MISSING - placeholder ref)
+  - meshes/rep_arf_trooper.fbx (MISSING - placeholder ref)
+  - meshes/rep_arc_trooper.fbx (MISSING - placeholder ref)
+  - meshes/rep_jedi_knight.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_wall_guard.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_sniper.fbx (MISSING - placeholder ref)
+  - meshes/rep_clone_commando.fbx (MISSING - placeholder ref)
+  - meshes/cis_b1_battle_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_b1_squad.fbx (MISSING - placeholder ref)
+  - meshes/cis_b2_super_battle_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_sniper_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_stap.fbx (MISSING - placeholder ref)
+  - meshes/cis_stap_pilot_combined.fbx (MISSING - placeholder ref)
+  - meshes/cis_aat.fbx (MISSING - placeholder ref)
+  - meshes/cis_medical_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_probe_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_bx_commando_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_general_grievous.fbx (MISSING - placeholder ref)
+  - meshes/cis_droideka.fbx (MISSING - placeholder ref)
+  - meshes/cis_dwarf_spider_droid.fbx (MISSING - placeholder ref)
+  - meshes/cis_magnaguard.fbx (MISSING - placeholder ref)
+
+ASSET SUMMARY
+-------------
+Status: PARTIAL - All textures present, mesh files are placeholders (expected)
+
+Texture coverage: 26/26 (100%) ✓
+Mesh coverage: 0/26 (0%) - all marked as placeholder: true
+  
+Total unique unit textures: 26
+Total files in manifest: 26 units x 2 (mesh + texture) = 52 asset refs
+
+POLY BUDGET ALLOCATIONS
+------------------------
+Infantry units (standard): 250-350 tris
+Infantry heavy/elite: 380-420 tris
+Heroes: 500 tris
+Vehicles: 380-450 tris
+Average poly count: ~346 tris/unit
+Total budget: ~9,000 tris across all 26 units
+
+PACK INTEGRATION READINESS
+---------------------------
+✓ All 26 units documented in manifest.yaml
+✓ All texture files present (26/26)
+✗ Mesh files are placeholders (Blender assembly pending)
+✓ UNIT_ASSETS_COMPLETE.json created with all metadata
+✓ Schema validation possible (textures exist)
+
+NEXT STEPS
+----------
+1. Blender mesh assembly (using source files listed in manifest comments)
+2. Export FBX files to meshes/ directory
+3. Validate all file references resolve correctly
+4. Run pack validation: dotnet run --project src/Tools/PackCompiler -- validate packs/warfare-starwars

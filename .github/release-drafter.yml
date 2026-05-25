@@ -1,0 +1,61 @@
+name-template: 'DINOForge v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  ## Summary
+
+  $CHANGES
+
+  ## Release Governance
+
+  - [ ] `VERSION` matches the release tag
+  - [ ] `CHANGELOG.md` contains the finalized release section
+  - [ ] CI, formatting, and coverage are green
+  - [ ] checksums and artifacts were reviewed
+
+categories:
+  - title: Features
+    labels:
+      - feature
+      - semver:minor
+  - title: Fixes
+    labels:
+      - fix
+      - bug
+      - semver:patch
+  - title: Security
+    labels:
+      - security
+  - title: Documentation
+    labels:
+      - docs
+  - title: Tooling and CI
+    labels:
+      - ci
+      - build
+      - dependencies
+      - perf
+      - revert
+      - security
+
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+no-changes-template: '- No categorized changes.'
+
+version-resolver:
+  major:
+    labels:
+      - semver:major
+      - breaking
+  minor:
+    labels:
+      - semver:minor
+      - feature
+  patch:
+    labels:
+      - semver:patch
+      - fix
+      - bug
+      - docs
+      - ci
+      - dependencies
+      - security
+  default: patch

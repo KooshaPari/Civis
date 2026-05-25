@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kooshapari.github.io/Dino/schemas/total-conversion.schema.json",
+  "title": "DINOForge Total Conversion Pack Schema",
+  "description": "Schema for total conversion packs that replace all game content",
+  "type": "object",
+  "required": ["id", "name", "version", "type", "factions", "replaces_vanilla"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique pack identifier (lowercase with hyphens)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable pack name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the pack"
+    },
+    "framework_version": {
+      "type": "string",
+      "description": "Framework version constraint (e.g. >=0.5.0)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["total_conversion"],
+      "description": "Pack type (must be total_conversion)"
+    },
+    "author": {
+      "type": "string",
+      "description": "Pack author name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the total conversion"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Visual/narrative theme (e.g. star-wars, modern, futuristic)"
+    },
+    "replaces_vanilla": {
+      "type": "object",
+      "description": "Maps vanilla faction IDs to replacement faction IDs",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "factions": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/definitions/TcFaction"
+      },
+      "description": "List of replacement factions"
+    },
+    "asset_replacements": {
+      "type": "object",
+      "description": "Asset mapping overrides",
+      "properties": {
+        "textures": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Vanilla texture path → mod asset path mappings"
+        },
+        "audio": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Vanilla audio path → mod asset path mappings"
+        },
+        "ui": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Vanilla UI asset → mod asset path mappings"
+        }
+      }
+    },
+    "conflicts_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of pack IDs that conflict with this total conversion"
+    },
+    "singleton": {
+      "type": "boolean",
+      "description": "If true, only one total conversion can be active at a time"
+    }
+  },
+  "definitions": {
+    "TcFaction": {
+      "type": "object",
+      "required": ["id", "replaces", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique faction identifier within this pack"
+        },
+        "replaces": {
+          "type": "string",
+          "description": "Vanilla faction ID being replaced (player, enemy_classic, enemy_guerrilla)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable faction name"
+        },
+        "theme": {
+          "type": "string",
+          "description": "Optional faction-specific theme override"
+        },
+        "archetype": {
+          "type": "string",
+          "enum": ["order", "industrial_swarm", "asymmetric", "custom"],
+          "description": "Faction combat archetype"
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unit IDs belonging to this faction"
+        },
+        "buildings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Building IDs belonging to this faction"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "empty-faction",
+  "name": "Empty Faction",
+  "units": [],
+  "buildings": [],
+  "doctrines": [],
+  "color": "#FFFFFF",
+  "secondary_color": "#000000"
+}

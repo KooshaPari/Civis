@@ -1,0 +1,35 @@
+faction_styles:
+  republic:
+    colors:
+      primary: "#FFFFFF"
+      secondary: "#CC0000"
+      tertiary: "#1A1A2E"
+      ui_highlight: "#FFD700"
+    audio:
+      march: republic_march
+      ambient: coruscant_ambient
+      combat: clone_wars_battle
+      victory: republic_victory
+      defeat: republic_defeat
+    architecture: sleek_modular
+    visual_theme: clean_white_red
+
+  cis:
+    colors:
+      primary: "#4A4A4A"
+      secondary: "#0066CC"
+      tertiary: "#1A1A1A"
+      ui_highlight: "#00BFFF"
+    audio:
+      march: droid_march
+      ambient: factory_ambient
+      combat: droid_battle
+      victory: cis_victory
+      defeat: cis_defeat
+    architecture: industrial_angular
+    visual_theme: dark_metallic_blue
+
+global:
+  tone: cinematic
+  ui_theme: holographic
+  font_style: aurebesh_inspired

@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_b1_battle_droid_sketchfab_001",
+  "canonical_name": "B1 Battle Droid",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/5e098a79422b476388f59b189c5bbd4e",
+  "external_id": "5e098a79422b476388f59b189c5bbd4e",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_b1_battle_droid_sketchfab_001\\normalized.glb",
+  "sha256": "f2dccf1461c538ddcaee6152d1af32e8b3ce9786de835fa7ee47c34a09a104a6",
+  "polycount_estimate": 1788,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "infantry",
+  "subtype": "infantry",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=1788 LOD1=894 LOD2=447 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

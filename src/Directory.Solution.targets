@@ -1,0 +1,40 @@
+<Project>
+  <!--
+    Override the generated solution targets so solution-level project dispatch is
+    serialized. The SDK-generated metaproj hardcodes BuildInParallel="True".
+  -->
+  <Target Name="Build" Outputs="@(CollectedBuildOutput)">
+    <MSBuild
+      BuildInParallel="$(BuildInParallel)"
+      Properties="BuildingSolutionFile=true;CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents);SolutionDir=$(SolutionDir);SolutionExt=$(SolutionExt);SolutionFileName=$(SolutionFileName);SolutionName=$(SolutionName);SolutionPath=$(SolutionPath)"
+      Projects="@(ProjectReference)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
+    </MSBuild>
+  </Target>
+
+  <Target Name="Clean">
+    <MSBuild
+      Targets="Clean"
+      BuildInParallel="$(BuildInParallel)"
+      Properties="BuildingSolutionFile=true;CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents);SolutionDir=$(SolutionDir);SolutionExt=$(SolutionExt);SolutionFileName=$(SolutionFileName);SolutionName=$(SolutionName);SolutionPath=$(SolutionPath)"
+      Projects="@(ProjectReference->Reverse())" />
+  </Target>
+
+  <Target Name="Rebuild" Outputs="@(CollectedBuildOutput)">
+    <MSBuild
+      Targets="Rebuild"
+      BuildInParallel="$(BuildInParallel)"
+      Properties="BuildingSolutionFile=true;CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents);SolutionDir=$(SolutionDir);SolutionExt=$(SolutionExt);SolutionFileName=$(SolutionFileName);SolutionName=$(SolutionName);SolutionPath=$(SolutionPath)"
+      Projects="@(ProjectReference)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
+    </MSBuild>
+  </Target>
+
+  <Target Name="Publish">
+    <MSBuild
+      Targets="Publish"
+      BuildInParallel="$(BuildInParallel)"
+      Properties="BuildingSolutionFile=true;CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents);SolutionDir=$(SolutionDir);SolutionExt=$(SolutionExt);SolutionFileName=$(SolutionFileName);SolutionName=$(SolutionName);SolutionPath=$(SolutionPath)"
+      Projects="@(ProjectReference)" />
+  </Target>
+</Project>

@@ -1,0 +1,933 @@
+# Addressables Catalog - Star Wars Clone Wars Mod Pack
+# Generated: 2026-03-14T02:03:14Z
+# Source: asset_pipeline.yaml (all phases)
+
+version: "1.1"
+catalog_type: full
+pack_id: warfare-starwars
+
+entries:
+  - key: sw-clone-trooper-republic
+    address: units/Clone_Trooper_Republic
+    path: prefabs/Clone_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_7_0_critical
+    lod_levels:
+      - level: 0
+        polycount: 35600
+      - level: 1
+        polycount: 21360
+      - level: 2
+        polycount: 10680
+
+  - key: sw-general-grievous
+    address: units/General_Grievous_CIS
+    path: prefabs/General_Grievous_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_7_0_critical
+    lod_levels:
+      - level: 0
+        polycount: 4500
+      - level: 1
+        polycount: 2700
+      - level: 2
+        polycount: 1350
+
+  - key: sw-b2-super-droid
+    address: units/B2_Super_Droid_CIS
+    path: prefabs/B2_Super_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_7_0_critical
+    lod_levels:
+      - level: 0
+        polycount: 49000
+      - level: 1
+        polycount: 29400
+      - level: 2
+        polycount: 14700
+
+  - key: sw-barc-speeder
+    address: vehicles/BARC_Speeder_Republic
+    path: prefabs/BARC_Speeder_Republic.prefab
+    type: vehicle
+    faction: republic
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 28000
+      - level: 1
+        polycount: 19600
+      - level: 2
+        polycount: 11200
+
+  - key: sw-atte-walker
+    address: vehicles/AT_TE_Walker_Republic
+    path: prefabs/AT_TE_Walker_Republic.prefab
+    type: vehicle
+    faction: republic
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 85000
+      - level: 1
+        polycount: 59500
+      - level: 2
+        polycount: 34000
+
+  - key: sw-v19-torrent
+    address: vehicles/V19_Torrent_Republic
+    path: prefabs/V19_Torrent_Republic.prefab
+    type: vehicle
+    faction: republic
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 52000
+      - level: 1
+        polycount: 36400
+      - level: 2
+        polycount: 20800
+
+  - key: sw-aat-walker
+    address: vehicles/AAT_Walker_CIS
+    path: prefabs/AAT_Walker_CIS.prefab
+    type: vehicle
+    faction: cis
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 1346
+      - level: 1
+        polycount: 942
+      - level: 2
+        polycount: 538
+
+  - key: sw-stap-speeder
+    address: vehicles/STAP_Speeder_CIS
+    path: prefabs/STAP_Speeder_CIS.prefab
+    type: vehicle
+    faction: cis
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 18500
+      - level: 1
+        polycount: 12950
+      - level: 2
+        polycount: 7400
+
+  - key: sw-dwarf-spider-droid
+    address: vehicles/Dwarf_Spider_Droid_CIS
+    path: prefabs/Dwarf_Spider_Droid_CIS.prefab
+    type: vehicle
+    faction: cis
+    phase: v0_7_1_vehicles
+    lod_levels:
+      - level: 0
+        polycount: 42000
+      - level: 1
+        polycount: 29400
+      - level: 2
+        polycount: 16800
+
+  - key: sw-arc-trooper
+    address: units/ARC_Trooper_Republic
+    path: prefabs/ARC_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_0_elite
+    lod_levels:
+      - level: 0
+        polycount: 29600
+      - level: 1
+        polycount: 17760
+      - level: 2
+        polycount: 8880
+
+  - key: sw-clone-sharpshooter
+    address: units/Clone_Sharpshooter_Republic
+    path: prefabs/Clone_Sharpshooter_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 13500
+      - level: 1
+        polycount: 8100
+      - level: 2
+        polycount: 4050
+
+  - key: sw-clone-heavy
+    address: units/Clone_Heavy_Republic
+    path: prefabs/Clone_Heavy_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 9000
+      - level: 1
+        polycount: 5400
+      - level: 2
+        polycount: 2700
+
+  - key: sw-clone-medic
+    address: units/Clone_Medic_Republic
+    path: prefabs/Clone_Medic_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 20000
+      - level: 1
+        polycount: 12000
+      - level: 2
+        polycount: 6000
+
+  - key: sw-arf-trooper
+    address: units/ARF_Trooper_Republic
+    path: prefabs/ARF_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 17500
+      - level: 1
+        polycount: 10500
+      - level: 2
+        polycount: 5250
+
+  - key: sw-clone-militia
+    address: units/Clone_Militia_Republic
+    path: prefabs/Clone_Militia_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 12000
+      - level: 1
+        polycount: 7200
+      - level: 2
+        polycount: 3600
+
+  - key: sw-clone-engineer
+    address: units/Clone_Engineer_Republic
+    path: prefabs/Clone_Engineer_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v0_8_1_infantry
+    lod_levels:
+      - level: 0
+        polycount: 22500
+      - level: 1
+        polycount: 13500
+      - level: 2
+        polycount: 6750
+
+  - key: sw-b1-battle-droid
+    address: units/B1_Battle_Droid_CIS
+    path: prefabs/B1_Battle_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_9_0_cis_droids
+    lod_levels:
+      - level: 0
+        polycount: 4500
+      - level: 1
+        polycount: 2700
+      - level: 2
+        polycount: 1350
+
+  - key: sw-cis-sniper-droid
+    address: units/CIS_Sniper_Droid
+    path: prefabs/CIS_Sniper_Droid.prefab
+    type: unit
+    faction: cis
+    phase: v0_9_0_cis_droids
+    lod_levels:
+      - level: 0
+        polycount: 6800
+      - level: 1
+        polycount: 4080
+      - level: 2
+        polycount: 2040
+
+  - key: sw-bx-commando-droid
+    address: units/BX_Commando_Droid_CIS
+    path: prefabs/BX_Commando_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_9_0_cis_droids
+    lod_levels:
+      - level: 0
+        polycount: 8200
+      - level: 1
+        polycount: 4920
+      - level: 2
+        polycount: 2460
+
+  - key: sw-droideka
+    address: units/Droideka_CIS
+    path: prefabs/Droideka_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_9_0_cis_droids
+    lod_levels:
+      - level: 0
+        polycount: 9500
+      - level: 1
+        polycount: 5700
+      - level: 2
+        polycount: 2850
+
+  - key: sw-probe-droid
+    address: units/Probe_Droid_CIS
+    path: prefabs/Probe_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v0_9_0_cis_droids
+    lod_levels:
+      - level: 0
+        polycount: 3200
+      - level: 1
+        polycount: 1920
+      - level: 2
+        polycount: 960
+
+  - key: sw-v19-torrent-unit
+    address: vehicles/sw-rep-v19-torrent
+    path: prefabs/sw-rep-v19-torrent.prefab
+    type: vehicle
+    faction: republic
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 16000
+      - level: 1
+        polycount: 9600
+      - level: 2
+        polycount: 4800
+
+  - key: sw-jedi-knight
+    address: units/sw-rep-jedi-knight
+    path: prefabs/sw-rep-jedi-knight.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 16000
+      - level: 1
+        polycount: 9600
+      - level: 2
+        polycount: 4800
+
+  - key: sw-clone-wall-guard
+    address: units/sw-rep-clone-wall-guard
+    path: prefabs/sw-rep-clone-wall-guard.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 10000
+      - level: 1
+        polycount: 6000
+      - level: 2
+        polycount: 3000
+
+  - key: sw-clone-sniper
+    address: units/sw-rep-clone-sniper
+    path: prefabs/sw-rep-clone-sniper.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 11000
+      - level: 1
+        polycount: 6600
+      - level: 2
+        polycount: 3300
+
+  - key: sw-clone-commando
+    address: units/sw-rep-clone-commando
+    path: prefabs/sw-rep-clone-commando.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 15000
+      - level: 1
+        polycount: 9000
+      - level: 2
+        polycount: 4500
+
+  - key: sw-b1-squad
+    address: units/sw-cis-b1-squad
+    path: prefabs/sw-cis-b1-squad.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 9000
+      - level: 1
+        polycount: 5400
+      - level: 2
+        polycount: 2700
+
+  - key: sw-medical-droid
+    address: units/sw-cis-medical-droid
+    path: prefabs/sw-cis-medical-droid.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 8500
+      - level: 1
+        polycount: 5100
+      - level: 2
+        polycount: 2550
+
+  - key: sw-magnaguard
+    address: units/sw-cis-magnaguard
+    path: prefabs/sw-cis-magnaguard.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 14000
+      - level: 1
+        polycount: 8400
+      - level: 2
+        polycount: 4200
+
+  - key: sw-tri-fighter
+    address: vehicles/sw-cis-tri-fighter
+    path: prefabs/sw-cis-tri-fighter.prefab
+    type: vehicle
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 16000
+      - level: 1
+        polycount: 9600
+      - level: 2
+        polycount: 4800
+
+  - key: sw-clone-barracks
+    address: buildings/Clone_Barracks_Republic
+    path: prefabs/Clone_Barracks_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 45000
+      - level: 1
+        polycount: 36000
+      - level: 2
+        polycount: 22500
+
+  - key: sw-weapons-factory
+    address: buildings/Weapons_Factory_Republic
+    path: prefabs/Weapons_Factory_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 38000
+      - level: 1
+        polycount: 30400
+      - level: 2
+        polycount: 19000
+
+  - key: sw-vehicle-bay
+    address: buildings/Vehicle_Bay_Republic
+    path: prefabs/Vehicle_Bay_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 52000
+      - level: 1
+        polycount: 41600
+      - level: 2
+        polycount: 26000
+
+  - key: sw-guard-tower
+    address: buildings/Guard_Tower_Republic
+    path: prefabs/Guard_Tower_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 28000
+      - level: 1
+        polycount: 22400
+      - level: 2
+        polycount: 14000
+
+  - key: sw-shield-generator
+    address: buildings/Shield_Generator_Republic
+    path: prefabs/Shield_Generator_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 35000
+      - level: 1
+        polycount: 28000
+      - level: 2
+        polycount: 17500
+
+  - key: sw-droid-factory
+    address: buildings/Droid_Factory_CIS
+    path: prefabs/Droid_Factory_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 42000
+      - level: 1
+        polycount: 33600
+      - level: 2
+        polycount: 21000
+
+  - key: sw-assembly-line
+    address: buildings/Assembly_Line_CIS
+    path: prefabs/Assembly_Line_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 36000
+      - level: 1
+        polycount: 28800
+      - level: 2
+        polycount: 18000
+
+  - key: sw-heavy-foundry
+    address: buildings/Heavy_Foundry_CIS
+    path: prefabs/Heavy_Foundry_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 48000
+      - level: 1
+        polycount: 38400
+      - level: 2
+        polycount: 24000
+
+  - key: sw-sentry-turret
+    address: buildings/Sentry_Turret_CIS
+    path: prefabs/Sentry_Turret_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 22000
+      - level: 1
+        polycount: 17600
+      - level: 2
+        polycount: 11000
+
+  - key: sw-ray-shield
+    address: buildings/Ray_Shield_CIS
+    path: prefabs/Ray_Shield_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_0_0_buildings
+    lod_levels:
+      - level: 0
+        polycount: 32000
+      - level: 1
+        polycount: 25600
+      - level: 2
+        polycount: 16000
+
+  - key: sw-command-center
+    address: buildings/Command_Center_Republic
+    path: prefabs/Command_Center_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 55000
+      - level: 1
+        polycount: 44000
+      - level: 2
+        polycount: 27500
+
+  - key: sw-supply-station
+    address: buildings/Supply_Station_Republic
+    path: prefabs/Supply_Station_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 30000
+      - level: 1
+        polycount: 24000
+      - level: 2
+        polycount: 15000
+
+  - key: sw-tibanna-refinery
+    address: buildings/Tibanna_Refinery_Republic
+    path: prefabs/Tibanna_Refinery_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 40000
+      - level: 1
+        polycount: 32000
+      - level: 2
+        polycount: 20000
+
+  - key: sw-research-lab
+    address: buildings/Research_Lab_Republic
+    path: prefabs/Research_Lab_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 42000
+      - level: 1
+        polycount: 33600
+      - level: 2
+        polycount: 21000
+
+  - key: sw-blast-wall
+    address: buildings/Blast_Wall_Republic
+    path: prefabs/Blast_Wall_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 18000
+      - level: 1
+        polycount: 14400
+      - level: 2
+        polycount: 9000
+
+  - key: sw-skyshield-generator
+    address: buildings/Skyshield_Generator_Republic
+    path: prefabs/Skyshield_Generator_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 35000
+      - level: 1
+        polycount: 28000
+      - level: 2
+        polycount: 17500
+
+  - key: sw-tactical-center
+    address: buildings/Tactical_Center_CIS
+    path: prefabs/Tactical_Center_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 55000
+      - level: 1
+        polycount: 44000
+      - level: 2
+        polycount: 27500
+
+  - key: sw-mining-facility
+    address: buildings/Mining_Facility_CIS
+    path: prefabs/Mining_Facility_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 40000
+      - level: 1
+        polycount: 32000
+      - level: 2
+        polycount: 20000
+
+  - key: sw-processing-plant
+    address: buildings/Processing_Plant_CIS
+    path: prefabs/Processing_Plant_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 38000
+      - level: 1
+        polycount: 30400
+      - level: 2
+        polycount: 19000
+
+  - key: sw-tech-union-lab
+    address: buildings/Tech_Union_Lab_CIS
+    path: prefabs/Tech_Union_Lab_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 45000
+      - level: 1
+        polycount: 36000
+      - level: 2
+        polycount: 22500
+
+  - key: sw-durasteel-barrier
+    address: buildings/Durasteel_Barrier_CIS
+    path: prefabs/Durasteel_Barrier_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 18000
+      - level: 1
+        polycount: 14400
+      - level: 2
+        polycount: 9000
+
+  - key: sw-vulture-nest
+    address: buildings/Vulture_Nest_CIS
+    path: prefabs/Vulture_Nest_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_1_0_buildings_expansion
+    lod_levels:
+      - level: 0
+        polycount: 32000
+      - level: 1
+        polycount: 25600
+      - level: 2
+        polycount: 16000
+
+  # ── Faction-prefixed aliases (bundle name realignment) ──────────────────
+  - key: sw-cis-b1-battle-droid
+    address: units/B1_Battle_Droid_CIS
+    path: prefabs/B1_Battle_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-b2-super-droid
+    address: units/B2_Super_Droid_CIS
+    path: prefabs/B2_Super_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-droideka
+    address: units/Droideka_CIS
+    path: prefabs/Droideka_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-stap
+    address: units/STAP_Speeder_CIS
+    path: prefabs/STAP_Speeder_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-spider-droid
+    address: units/Dwarf_Spider_Droid_CIS
+    path: prefabs/Dwarf_Spider_Droid_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-magna-guard
+    address: units/MagnaGuard_CIS
+    path: prefabs/MagnaGuard_CIS.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-at-te-walker
+    address: units/AT_TE_Walker_Republic
+    path: prefabs/AT_TE_Walker_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-clone-sniper
+    address: units/Clone_Sharpshooter_Republic
+    path: prefabs/Clone_Sharpshooter_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-arc-trooper
+    address: units/ARC_Trooper_Republic
+    path: prefabs/ARC_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-arf-trooper
+    address: units/ARF_Trooper_Republic
+    path: prefabs/ARF_Trooper_Republic.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-command-center
+    address: buildings/Command_Center_Republic
+    path: prefabs/Command_Center_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-vehicle-bay
+    address: buildings/Vehicle_Bay_Republic
+    path: prefabs/Vehicle_Bay_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-shield-generator
+    address: buildings/Shield_Generator_Republic
+    path: prefabs/Shield_Generator_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-supply-depot
+    address: buildings/Supply_Station_Republic
+    path: prefabs/Supply_Station_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-rep-research-lab
+    address: buildings/Research_Lab_Republic
+    path: prefabs/Research_Lab_Republic.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-command-center
+    address: buildings/Tactical_Center_CIS
+    path: prefabs/Tactical_Center_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-droid-factory
+    address: buildings/Droid_Factory_CIS
+    path: prefabs/Droid_Factory_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-aa-tower
+    address: buildings/AA_Tower_CIS
+    path: prefabs/AA_Tower_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-shield-generator
+    address: buildings/Ray_Shield_CIS
+    path: prefabs/Ray_Shield_CIS.prefab
+    type: building
+    faction: cis
+    phase: v1_2_0_bundle_realign
+
+  - key: sw-cis-b1-squad
+    address: units/sw-cis-b1-squad
+    path: prefabs/sw-cis-b1-squad.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 9000
+      - level: 1
+        polycount: 5400
+      - level: 2
+        polycount: 2700
+
+  - key: sw-cis-aat
+    address: vehicles/sw-cis-aat
+    path: prefabs/sw-cis-aat.prefab
+    type: vehicle
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 16000
+      - level: 1
+        polycount: 9600
+      - level: 2
+        polycount: 4800
+
+  - key: sw-cis-medical-droid
+    address: units/sw-cis-medical-droid
+    path: prefabs/sw-cis-medical-droid.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 8500
+      - level: 1
+        polycount: 5100
+      - level: 2
+        polycount: 2550
+
+  - key: sw-cis-probe-droid
+    address: units/sw-cis-probe-droid
+    path: prefabs/sw-cis-probe-droid.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_units_phase5
+    lod_levels:
+      - level: 0
+        polycount: 7000
+      - level: 1
+        polycount: 4200
+      - level: 2
+        polycount: 2100
+
+metadata:
+  generated_at: 2026-03-25T00:00:00Z
+  total_entries: 75
+  total_units: 43
+  total_buildings: 30
+  total_lod_variants: 168

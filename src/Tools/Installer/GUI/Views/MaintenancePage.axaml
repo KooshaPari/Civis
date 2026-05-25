@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DINOForge.Installer.ViewModels"
+             x:Class="DINOForge.Installer.Views.MaintenancePage"
+             x:DataType="vm:MaintenancePageViewModel"
+             Background="#1a1a2e">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,40,0,20" Spacing="8">
+            <TextBlock Text="DINOForge Already Installed"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="#4a90d9"
+                       HorizontalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <TextBlock Text="Installed version:"
+                           Foreground="#8888aa"
+                           FontSize="14"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding InstalledVersion}"
+                           Foreground="#aaaacc"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="6"
+                        IsVisible="{Binding UpdateAvailable}">
+                <TextBlock Text="Installer version:"
+                           Foreground="#8888aa"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding CurrentVersion}"
+                           Foreground="#88cc88"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="(update available)"
+                           Foreground="#88cc88"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Action buttons -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="16">
+
+            <TextBlock Text="What would you like to do?"
+                       Foreground="#aaaacc"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,8"/>
+
+            <!-- Repair -->
+            <Button Command="{Binding SelectRepairCommand}"
+                    Width="360"
+                    Height="80"
+                    Background="#1e2040"
+                    BorderBrush="#3a3a6a"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0"
+                               Text="[R]"
+                               FontSize="22"
+                               Foreground="#4a90d9"
+                               VerticalAlignment="Center"
+                               Margin="0,0,14,0"/>
+                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="Repair"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock Text="Re-copy files, restore missing components"
+                                   FontSize="12"
+                                   Foreground="#8888aa"/>
+                    </StackPanel>
+                </Grid>
+            </Button>
+
+            <!-- Update (only enabled when an update is available) -->
+            <Button Command="{Binding SelectUpdateCommand}"
+                    Width="360"
+                    Height="80"
+                    Background="#1e2040"
+                    BorderBrush="#3a3a6a"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    IsEnabled="{Binding UpdateAvailable}">
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0"
+                               Text="[U]"
+                               FontSize="22"
+                               Foreground="#88cc88"
+                               VerticalAlignment="Center"
+                               Margin="0,0,14,0"/>
+                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="Update"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock Text="Install newer version over existing"
+                                   FontSize="12"
+                                   Foreground="#8888aa"/>
+                    </StackPanel>
+                </Grid>
+            </Button>
+
+            <!-- Uninstall -->
+            <Button Command="{Binding SelectUninstallCommand}"
+                    Width="360"
+                    Height="80"
+                    Background="#1e2040"
+                    BorderBrush="#4a2020"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0"
+                               Text="[X]"
+                               FontSize="22"
+                               Foreground="#cc4444"
+                               VerticalAlignment="Center"
+                               Margin="0,0,14,0"/>
+                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="Uninstall"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock Text="Remove DINOForge from this installation"
+                                   FontSize="12"
+                                   Foreground="#8888aa"/>
+                    </StackPanel>
+                </Grid>
+            </Button>
+
+        </StackPanel>
+
+        <!-- Cancel -->
+        <StackPanel Grid.Row="2"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,20">
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    Background="Transparent"
+                    Foreground="#555577"
+                    Padding="16,6"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

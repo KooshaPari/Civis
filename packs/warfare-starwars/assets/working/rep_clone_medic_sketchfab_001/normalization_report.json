@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 35609,
+  "lod0_polycount": 35609,
+  "lod1_polycount": 17802,
+  "lod2_polycount": 8899,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_clone_medic_sketchfab_001"
+}

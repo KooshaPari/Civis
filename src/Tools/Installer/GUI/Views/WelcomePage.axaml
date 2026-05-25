@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DINOForge.Installer.ViewModels"
+             x:Class="DINOForge.Installer.Views.WelcomePage"
+             x:DataType="vm:WelcomePageViewModel"
+             Background="#1a1a2e">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,40,0,20" Spacing="8">
+            <TextBlock Text="⚙ DINOForge"
+                       FontSize="42"
+                       FontWeight="Bold"
+                       Foreground="#4a90d9"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Mod Platform for Diplomacy is Not an Option"
+                       FontSize="16"
+                       Foreground="#8888aa"
+                       HorizontalAlignment="Center"/>
+            <TextBlock FontSize="12"
+                       Foreground="#555577"
+                       HorizontalAlignment="Center">
+                <Run Text="Version "/>
+                <Run Text="{Binding CurrentVersion}"/>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- Update banner -->
+        <Border Grid.Row="0"
+                IsVisible="{Binding HasUpdate}"
+                Background="#1a3a1a"
+                BorderBrush="#2a7a2a"
+                BorderThickness="1"
+                CornerRadius="4"
+                Margin="40,8"
+                Padding="12,8"
+                VerticalAlignment="Bottom">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="New version available:" Foreground="#88cc88" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding UpdateVersion}" Foreground="#aaffaa" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="Download"
+                        Command="{Binding OpenUpdateUrlCommand}"
+                        Background="#2a7a2a"
+                        Foreground="White"
+                        Padding="12,4"/>
+            </Grid>
+        </Border>
+
+        <!-- Mode selection -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="16">
+
+            <TextBlock Text="How would you like to install DINOForge?"
+                       Foreground="#aaaacc"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,8"/>
+
+            <!-- Player mode button -->
+            <Button Command="{Binding SelectPlayerModeCommand}"
+                    Width="320"
+                    Height="90"
+                    Background="#1e2040"
+                    BorderBrush="#3a3a6a"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Install for Players"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="BepInEx + DINOForge runtime + example packs"
+                               FontSize="12"
+                               Foreground="#8888aa"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Developer mode button -->
+            <Button Command="{Binding SelectDevModeCommand}"
+                    Width="320"
+                    Height="90"
+                    Background="#1e2040"
+                    BorderBrush="#3a3a6a"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Install for Developers"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Player install + SDK, schemas, PackCompiler, debug tools"
+                               FontSize="12"
+                               Foreground="#8888aa"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+        </StackPanel>
+
+        <!-- Footer links -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,16"
+                    Spacing="4">
+            <Button Content="Check for Updates"
+                    Command="{Binding CheckForUpdatesCommand}"
+                    Background="Transparent"
+                    Foreground="#4a90d9"
+                    Padding="4,2"
+                    IsEnabled="{Binding !IsCheckingUpdate}"/>
+            <TextBlock Text="|" Foreground="#333355" VerticalAlignment="Center"/>
+            <TextBlock Text="github.com/KooshaPari/Dino"
+                       Foreground="#555577"
+                       VerticalAlignment="Center"
+                       FontSize="12"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

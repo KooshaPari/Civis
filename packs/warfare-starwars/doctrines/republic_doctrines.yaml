@@ -1,0 +1,31 @@
+# Galactic Republic Doctrines
+
+- id: elite_discipline
+  display_name: Elite Discipline
+  description: Clone troopers fight with superior training and discipline, maximizing accuracy and morale retention.
+  faction_archetype: order
+  modifiers:
+    accuracy: 1.15
+    morale: 1.2
+    fire_rate: 1.05
+    damage: 1.05
+
+- id: jedi_leadership
+  display_name: Jedi Leadership
+  description: Jedi generals inspire clone forces, boosting morale and movement speed in offensive operations.
+  faction_archetype: order
+  modifiers:
+    morale: 1.3
+    speed: 1.15
+    damage: 1.1
+    cost: 1.1
+
+- id: defensive_formation
+  display_name: Defensive Formation
+  description: Disciplined defensive posture maximizing fortification effectiveness and ranged defense.
+  faction_archetype: order
+  modifiers:
+    armor: 1.2
+    range: 1.1
+    hp: 1.1
+    speed: 0.9

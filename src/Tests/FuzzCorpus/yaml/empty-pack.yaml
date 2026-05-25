@@ -1,0 +1,4 @@
+# Pack with all optional fields missing
+id: minimal-pack
+name: Minimal
+version: 1.0.0

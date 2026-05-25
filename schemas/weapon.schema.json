@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/weapon.schema.json",
+  "title": "DINOForge Weapon Definition",
+  "description": "Schema for DINOForge weapon definition files (weapons/*.yaml).",
+  "type": "object",
+  "required": ["id", "display_name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique weapon identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable weapon name."
+    },
+    "weapon_class": {
+      "type": "string",
+      "description": "Weapon class (e.g. rifle, cannon, missile, melee)."
+    },
+    "damage_type": {
+      "type": "string",
+      "description": "Damage type (e.g. kinetic, explosive, energy, melee)."
+    },
+    "base_damage": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base damage value."
+    },
+    "range": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Effective range in world units."
+    },
+    "rate_of_fire": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Attacks per second."
+    },
+    "projectile_id": {
+      "type": "string",
+      "description": "Projectile definition ID used by this weapon."
+    },
+    "aoe_radius": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Area-of-effect blast radius. 0 = no AoE."
+    }
+  },
+  "additionalProperties": false
+}

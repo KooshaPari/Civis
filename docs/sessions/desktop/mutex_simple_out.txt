@@ -1,0 +1,31 @@
+SIMPLE_MUTEX_FINDER 03/25/2026 00:03:08
+=== VERIFYING CLEAN STATE ===
+Killing remaining processes...
+=== BEFORE LAUNCH ===
+=== LAUNCHING GAME ===
+LAUNCHED PID=46072 at 03/25/2026 00:03:13
+=== 10s AFTER LAUNCH ===
+GAME_ALIVE title='Fatal error' handles=319
+=== 20s AFTER LAUNCH (should show Fatal error) ===
+GAME_ALIVE title='Fatal error'
+=== COMPREHENSIVE MUTEX SCAN AT 20s ===
+MUTEX 'Global\Door 407_Diplomacy is Not an Option' = NOT_FOUND
+MUTEX 'Local\Door 407_Diplomacy is Not an Option' = NOT_FOUND
+MUTEX 'Global\Door 407_Diplomacy is Not an Option.exe' = NOT_FOUND
+MUTEX 'Global\Door 407' = NOT_FOUND
+MUTEX 'Global\Door' = NOT_FOUND
+MUTEX 'Door 407_Diplomacy is Not an Option' = NOT_FOUND
+MUTEX 'Global\Diplomacy is Not an Option' = NOT_FOUND
+MUTEX 'Diplomacy is Not an Option' = NOT_FOUND
+MUTEX 'Global\Diplomacy_is_Not_an_Option' = NOT_FOUND
+MUTEX 'Global\DiplomacyIsNotAnOption' = NOT_FOUND
+MUTEX 'Global\DiplomacyisNotanOption' = NOT_FOUND
+MUTEX 'Global\diplomacyisnotanoption' = NOT_FOUND
+MUTEX 'Global\UnityPlayer' = NOT_FOUND
+MUTEX 'Global\Unity' = NOT_FOUND
+MUTEX 'Global\Unity.Mutex' = NOT_FOUND
+MUTEX 'Global\Unity.SingleInstance' = NOT_FOUND
+MUTEX 'Global\{6B7B3B7B-3B7B-3B7B-3B7B-3B7B3B7B3B7B}' = NOT_FOUND
+MUTEX 'Global\Single_Instance' = NOT_FOUND
+=== FINAL SCAN (after kill) ===
+DONE 03/25/2026 00:03:36

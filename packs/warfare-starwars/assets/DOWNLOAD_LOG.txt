@@ -1,0 +1,25 @@
+
+Starting Sketchfab asset downloads...
+Timestamp: 2026-03-12 13:07:17
+
+=== Phase 1: Known models ===
+
+--- sw_venator_prefab_001 (8a1e1760391c4ac6a50373c2bf5efa2e) ---
+  Getting model info...
+  Model: Star Wars: The Clone Wars: Venator Prefab
+  Fetching download URLs...
+    API Rate Limited: Waiting 5 seconds...
+  WARNING: Download not available (restricted model)
+
+=== Phase 2: Search results ===
+
+--- Search: star wars building ---
+  Found 10 models
+    1. Star Wars: Buildings Coruscant
+
+--- sw_star_wars_building_cf2f3b9d (cf2f3b9d265e45f7ab36b440c8bf690d) ---
+  Getting model info...
+  Model: Star Wars: Buildings Coruscant
+  Fetching download URLs...
+  Format: glb (~37MB)
+  Downloading from S3...

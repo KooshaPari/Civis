@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DINOForge Stat Override",
+  "description": "Schema for stat override YAML files that modify entity stats via packs.",
+  "type": "object",
+  "required": ["overrides"],
+  "properties": {
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "value"],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "SDK model path (e.g. unit.stats.hp)"
+          },
+          "value": {
+            "type": "number"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["override", "add", "multiply"],
+            "default": "override"
+          },
+          "filter": {
+            "type": "string",
+            "description": "Optional ECS component filter (e.g. Components.MeleeUnit)"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

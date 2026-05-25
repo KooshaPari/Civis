@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: DINOForge Discussions
+    url: https://github.com/KooshaPari/Dino/discussions
+    about: Ask usage questions, request help, or propose ideas before opening a new issue.
+  - name: Security Reporting
+    url: https://github.com/KooshaPari/Dino/security/policy
+    about: Report suspected vulnerabilities privately using the repository security policy.
+  - name: Support Guidelines
+    url: https://github.com/KooshaPari/Dino/blob/main/SUPPORT.md
+    about: Review support expectations, self-service checks, and issue routing guidance.

@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_bx_commando_droid_sketchfab_001",
+  "canonical_name": "BX Commando Droid",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/a81e788ebf864caa87a678cb49f97744",
+  "external_id": "a81e788ebf864caa87a678cb49f97744",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_bx_commando_droid_sketchfab_001\\normalized.glb",
+  "sha256": "05e61d6921a5fbb4df0f54ca34bc5c6559bb2b5d4df94148ec00d61a925e5026",
+  "polycount_estimate": 23064,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "elite",
+  "subtype": "elite",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=23064 LOD1=11532 LOD2=5766 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

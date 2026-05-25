@@ -1,0 +1,20 @@
+{
+  "id": "rep_clone_militia",
+  "name": "Clone Militia / Cadet",
+  "type": "infantry_basic",
+  "faction": "republic",
+  "source": {
+    "sketchfab_id": "dcc28349c49b40c8be0fd1618fc65e00",
+    "artist": "Just Ryk",
+    "url": "https://sketchfab.com/3d-models/clone-cadet-var-dcc28349c49b40c8be0fd1618fc65e00",
+    "license": "CC-BY"
+  },
+  "polycount_estimated": 12000,
+  "lod_targets": [100, 60, 30],
+  "material_config": {
+    "faction": "republic",
+    "color_primary": "#4488FF",
+    "color_secondary": "#FFFFFF"
+  },
+  "status": "pending_download"
+}

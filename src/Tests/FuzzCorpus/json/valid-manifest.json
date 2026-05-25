@@ -1,0 +1,10 @@
+{
+  "id": "test-pack",
+  "name": "Test Pack",
+  "version": "0.1.0",
+  "framework_version": ">=0.1.0",
+  "author": "Test",
+  "type": "content",
+  "depends_on": [],
+  "conflicts_with": []
+}

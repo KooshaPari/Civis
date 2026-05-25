@@ -1,0 +1,32 @@
+# Example Balance Pack
+# Demonstrates a content pack with units, buildings, and a faction
+
+id: example-balance
+name: Example Balance
+version: 0.1.0
+framework_version: ">=0.1.0 <1.0.0"
+author: DINOForge Examples
+type: content
+description: |
+  Buffs all vanilla melee units (+50% HP, +20% move speed via multiply overrides on
+  Components.MeleeUnit). Changes are applied globally — every melee unit in the base
+  game is affected.
+
+  Also adds three new content entries not present in vanilla:
+  - Faction: Defenders (order archetype, elite discipline doctrine)
+  - Unit: Town Militia (75 HP, 8 damage, 2 armor, 45 food — cheap early-game infantry)
+  - Building: Barracks (infantry training facility for the Defenders faction)
+
+  Reference pack for new modders: demonstrates stat overrides, unit definitions,
+  faction registration, and building wiring in a single minimal pack.
+
+depends_on: []
+conflicts_with: []
+
+loads:
+  units:
+    - units
+  buildings:
+    - buildings
+  factions:
+    - factions

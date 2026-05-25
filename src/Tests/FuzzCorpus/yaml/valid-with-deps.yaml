@@ -1,0 +1,11 @@
+id: mod-child
+name: Child Mod
+version: 1.2.3
+framework_version: ">=0.1.0 <2.0.0"
+author: DINOForge Agents
+type: content
+depends_on:
+  - "base-mod"
+conflicts_with:
+  - "rival-mod"
+load_order: 200

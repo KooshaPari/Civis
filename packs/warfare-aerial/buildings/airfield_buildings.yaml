@@ -1,0 +1,134 @@
+# Airfield Buildings for Vanilla DINO
+# Infrastructure for deploying and maintaining aerial units
+
+# Tier 1 - Basic Airfield
+
+- id: aviary
+  display_name: Aviary
+  description: Basic aerial unit training structure. Can produce tier 1 flying units.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 150
+    stone: 50
+    iron: 20
+    gold: 30
+  health: 500
+  production:
+    aerial_recon_scout: 1
+
+- id: wyvern_roost
+  display_name: Wyvern Roost
+  description: Beast lair for training wyverns and harpies. Unlocks tier 2 aerial units.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 250
+    stone: 100
+    iron: 50
+    gold: 60
+  health: 800
+  production:
+    aerial_wyvern_scout: 1
+
+# Tier 2 - Defense Tower
+
+- id: ballista_tower
+  display_name: Ballista Tower
+  description: Anti-air defensive tower. Excellent vs flying units, poor vs ground.
+  building_type: Defense
+  cost:
+    food: 0
+    wood: 100
+    stone: 150
+    iron: 40
+    gold: 25
+  health: 600
+
+# Tier 3 - Advanced Airfield
+
+- id: phoenix_nest
+  display_name: Phoenix Nest
+  description: Magical aviary for phoenixes. Unlocks tier 3 elite aerial units.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 400
+    stone: 200
+    iron: 100
+    gold: 150
+  health: 1200
+  production:
+    aerial_phoenix_hatchling: 1
+
+- id: dragon_cave
+  display_name: Dragon Cave
+  description: Lair for dragon whelps. Produces devastating heavy aerial attackers.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 500
+    stone: 300
+    iron: 150
+    gold: 200
+  health: 1500
+  production:
+    aerial_dragon_whelp: 1
+
+# Tier 4 - Ultimate Air Fortress
+
+- id: cloud_citadel
+  display_name: Cloud Citadel
+  description: Legendary floating fortress. Produces roc patrols and serves as air superiority base.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 800
+    stone: 500
+    iron: 300
+    gold: 400
+  health: 2500
+  production:
+    aerial_roc_patrol: 1
+
+# Faction-specific buildings
+
+- id: thunder_cannon
+  display_name: Thunder Cannon
+  description: Mage-crafted anti-air artillery. Devastating vs flying units.
+  building_type: Defense
+  cost:
+    food: 0
+    wood: 150
+    stone: 200
+    iron: 80
+    gold: 100
+  health: 700
+
+- id: boneyard
+  display_name: Undead Boneyard
+  description: Necromantic aerial infrastructure. Summons wraiths and spectral forces.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 0
+    stone: 100
+    iron: 60
+    gold: 120
+  health: 900
+  production:
+    aerial_skeleton_wraith: 1
+
+- id: hive_cluster
+  display_name: Hive Cluster
+  description: Bug aerial production. Generates massive bee swarms.
+  building_type: Production
+  cost:
+    food: 50
+    wood: 0
+    stone: 0
+    iron: 30
+    gold: 40
+  health: 600
+  production:
+    aerial_swarm_bees: 1

@@ -1,0 +1,12 @@
+{
+  "assetId": "cis_b1_squad",
+  "lod": "LOD2",
+  "targetQuality": 0.3,
+  "triangleCount": 405,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 70
+  }
+}

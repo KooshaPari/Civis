@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 23064,
+  "lod0_polycount": 23064,
+  "lod1_polycount": 11532,
+  "lod2_polycount": 5766,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\cis_bx_commando_droid_sketchfab_001"
+}

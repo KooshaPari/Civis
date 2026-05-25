@@ -1,0 +1,381 @@
+{
+  "manifest_version": "1.0",
+  "pack_id": "warfare-starwars",
+  "generated_at": "2026-03-12T00:00:00Z",
+  "asset_type": "units",
+  "total_units": 26,
+  "units": [
+    {
+      "id": "rep_clone_militia",
+      "faction": "republic",
+      "display_name": "Clone Militia",
+      "role": "infantry",
+      "poly_count": 300,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_militia.fbx",
+        "textures": ["textures/rep_clone_militia_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_trooper",
+      "faction": "republic",
+      "display_name": "Clone Trooper",
+      "role": "infantry",
+      "poly_count": 350,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_trooper.fbx",
+        "textures": ["textures/rep_clone_trooper_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_heavy",
+      "faction": "republic",
+      "display_name": "Clone Heavy Trooper",
+      "role": "infantry_heavy",
+      "poly_count": 380,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_heavy.fbx",
+        "textures": ["textures/rep_clone_heavy_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_sharpshooter",
+      "faction": "republic",
+      "display_name": "Clone Sharpshooter",
+      "role": "ranged",
+      "poly_count": 300,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_sharpshooter.fbx",
+        "textures": ["textures/rep_clone_sharpshooter_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_barc_speeder",
+      "faction": "republic",
+      "display_name": "BARC Speeder",
+      "role": "vehicle",
+      "poly_count": 450,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_barc_speeder.fbx",
+        "textures": ["textures/rep_barc_speeder_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_atte_crew",
+      "faction": "republic",
+      "display_name": "AT-TE Crew",
+      "role": "vehicle",
+      "poly_count": 400,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_atte_crew.fbx",
+        "textures": ["textures/rep_atte_crew_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_medic",
+      "faction": "republic",
+      "display_name": "Clone Medic",
+      "role": "support",
+      "poly_count": 300,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_medic.fbx",
+        "textures": ["textures/rep_clone_medic_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_arf_trooper",
+      "faction": "republic",
+      "display_name": "ARF Trooper",
+      "role": "infantry_elite",
+      "poly_count": 340,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_arf_trooper.fbx",
+        "textures": ["textures/rep_arf_trooper_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_arc_trooper",
+      "faction": "republic",
+      "display_name": "ARC Trooper",
+      "role": "infantry_elite",
+      "poly_count": 380,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_arc_trooper.fbx",
+        "textures": ["textures/rep_arc_trooper_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_jedi_knight",
+      "faction": "republic",
+      "display_name": "Jedi Knight",
+      "role": "hero",
+      "poly_count": 500,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_jedi_knight.fbx",
+        "textures": ["textures/rep_jedi_knight_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_wall_guard",
+      "faction": "republic",
+      "display_name": "Clone Wall Guard",
+      "role": "defender",
+      "poly_count": 320,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_wall_guard.fbx",
+        "textures": ["textures/rep_clone_wall_guard_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_sniper",
+      "faction": "republic",
+      "display_name": "Clone Sniper",
+      "role": "ranged_elite",
+      "poly_count": 310,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_sniper.fbx",
+        "textures": ["textures/rep_clone_sniper_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "rep_clone_commando",
+      "faction": "republic",
+      "display_name": "Clone Commando",
+      "role": "infantry_elite",
+      "poly_count": 390,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/rep_clone_commando.fbx",
+        "textures": ["textures/rep_clone_commando_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_b1_battle_droid",
+      "faction": "confederacy",
+      "display_name": "B1 Battle Droid",
+      "role": "infantry",
+      "poly_count": 280,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_b1_battle_droid.fbx",
+        "textures": ["textures/cis_b1_battle_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_b1_squad",
+      "faction": "confederacy",
+      "display_name": "B1 Squad",
+      "role": "squad",
+      "poly_count": 800,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_b1_squad.fbx",
+        "textures": ["textures/cis_b1_squad_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_b2_super_battle_droid",
+      "faction": "confederacy",
+      "display_name": "B2 Super Battle Droid",
+      "role": "infantry_heavy",
+      "poly_count": 420,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_b2_super_battle_droid.fbx",
+        "textures": ["textures/cis_b2_super_battle_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_sniper_droid",
+      "faction": "confederacy",
+      "display_name": "Sniper Droid",
+      "role": "ranged_elite",
+      "poly_count": 300,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_sniper_droid.fbx",
+        "textures": ["textures/cis_sniper_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_stap_pilot",
+      "faction": "confederacy",
+      "display_name": "STAP Pilot",
+      "role": "vehicle",
+      "poly_count": 380,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_stap_pilot.fbx",
+        "textures": ["textures/cis_stap_pilot_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_aat_crew",
+      "faction": "confederacy",
+      "display_name": "AAT Crew",
+      "role": "vehicle",
+      "poly_count": 1000,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_aat.fbx",
+        "textures": ["textures/cis_aat_crew_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_medical_droid",
+      "faction": "confederacy",
+      "display_name": "Medical Droid",
+      "role": "support",
+      "poly_count": 280,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_medical_droid.fbx",
+        "textures": ["textures/cis_medical_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_probe_droid",
+      "faction": "confederacy",
+      "display_name": "Probe Droid",
+      "role": "scout",
+      "poly_count": 280,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_probe_droid.fbx",
+        "textures": ["textures/cis_probe_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_bx_commando_droid",
+      "faction": "confederacy",
+      "display_name": "BX Commando Droid",
+      "role": "infantry_elite",
+      "poly_count": 320,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_bx_commando_droid.fbx",
+        "textures": ["textures/cis_bx_commando_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_general_grievous",
+      "faction": "confederacy",
+      "display_name": "General Grievous",
+      "role": "hero",
+      "poly_count": 500,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_general_grievous.fbx",
+        "textures": ["textures/cis_general_grievous_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_droideka",
+      "faction": "confederacy",
+      "display_name": "Droideka",
+      "role": "vehicle",
+      "poly_count": 380,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_droideka.fbx",
+        "textures": ["textures/cis_droideka_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_dwarf_spider_droid",
+      "faction": "confederacy",
+      "display_name": "DSD1 Dwarf Spider Droid",
+      "role": "vehicle",
+      "poly_count": 420,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_dwarf_spider_droid.fbx",
+        "textures": ["textures/cis_dwarf_spider_droid_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    },
+    {
+      "id": "cis_magnaguard",
+      "faction": "confederacy",
+      "display_name": "IG-100 MagnaGuard",
+      "role": "infantry_elite",
+      "poly_count": 420,
+      "texture_count": 1,
+      "files": {
+        "mesh": "meshes/cis_magnaguard.fbx",
+        "textures": ["textures/cis_magnaguard_albedo.png"]
+      },
+      "status": "placeholder",
+      "source": "Kenney.nl CC0"
+    }
+  ],
+  "summary": {
+    "republic_units": 13,
+    "confederacy_units": 13,
+    "total_poly_count": 9400,
+    "average_poly_per_unit": 362,
+    "all_files_exist": false,
+    "placeholder_status": "all_units_placeholder"
+  }
+}

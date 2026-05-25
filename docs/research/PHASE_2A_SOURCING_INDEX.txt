@@ -1,0 +1,149 @@
+================================================================================
+PHASE 2A: INFANTRY SOURCING INDEX
+================================================================================
+
+SKETCHFAB API TOKEN: df0764455f124549a58f8a156ad8177d
+
+UNIT SOURCING MATRIX:
+================================================================================
+
+1. CLONE SHARPSHOOTER (Ranged Specialist)
+   ├─ Sketchfab ID: a7fd12dc578d4c729e3930b79666c4ea
+   ├─ Artist: imveryokay
+   ├─ URL: https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea
+   ├─ License: CC-BY
+   ├─ Polycount: ~13.5K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_clone_sharpshooter_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/a7fd12dc578d4c729e3930b79666c4ea/download \
+        -o packs/warfare-starwars/assets/raw/rep_clone_sharpshooter_sketchfab_001/model.glb
+
+2. CLONE HEAVY TROOPER (Heavy Weapons)
+   ├─ Sketchfab ID: f92a5b62741f4f8abe3537353eb36b18
+   ├─ Artist: alanh1213
+   ├─ URL: https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18
+   ├─ License: CC-BY
+   ├─ Polycount: ~9K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_clone_heavy_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/f92a5b62741f4f8abe3537353eb36b18/download \
+        -o packs/warfare-starwars/assets/raw/rep_clone_heavy_sketchfab_001/model.glb
+
+3. CLONE MEDIC (Support/Medical)
+   ├─ Sketchfab ID: e7f2a1fbfdcd41f59ba03fe48ae39004
+   ├─ Artist: Marr Velz
+   ├─ URL: https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004
+   ├─ License: CC-BY
+   ├─ Polycount: ~20K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_clone_medic_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/e7f2a1fbfdcd41f59ba03fe48ae39004/download \
+        -o packs/warfare-starwars/assets/raw/rep_clone_medic_sketchfab_001/model.glb
+
+4. ARF TROOPER (Scout/Reconnaissance)
+   ├─ Sketchfab ID: 631b759ce00a4496a1960ae0ff49cde0
+   ├─ Artist: thomas_125
+   ├─ URL: https://sketchfab.com/3d-models/clone-scout-trooper-631b759ce00a4496a1960ae0ff49cde0
+   ├─ License: CC-BY
+   ├─ Polycount: ~17.5K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_arf_trooper_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/631b759ce00a4496a1960ae0ff49cde0/download \
+        -o packs/warfare-starwars/assets/raw/rep_arf_trooper_sketchfab_001/model.glb
+
+5. CLONE MILITIA/CADET (Tier-1 Basic)
+   ├─ Sketchfab ID: dcc28349c49b40c8be0fd1618fc65e00
+   ├─ Artist: Just Ryk (@dryk4085)
+   ├─ URL: https://sketchfab.com/3d-models/clone-cadet-var-dcc28349c49b40c8be0fd1618fc65e00
+   ├─ License: CC-BY
+   ├─ Polycount: ~12K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_clone_militia_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/dcc28349c49b40c8be0fd1618fc65e00/download \
+        -o packs/warfare-starwars/assets/raw/rep_clone_militia_sketchfab_001/model.glb
+
+6. CLONE ENGINEER (Technician)
+   ├─ Sketchfab ID: 1fd3c5dfd9864394b1cbaf780e1779bd
+   ├─ Artist: Outworld Studios (@outworldstudios)
+   ├─ URL: https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd
+   ├─ License: CC-BY
+   ├─ Polycount: ~22.5K
+   ├─ Asset Dir: packs/warfare-starwars/assets/raw/rep_clone_engineer_sketchfab_001/
+   ├─ Metadata: metadata.json (created)
+   └─ Download (Phase 2B):
+      curl -H "Authorization: Bearer df0764455f124549a58f8a156ad8177d" \
+        https://api.sketchfab.com/v3/models/1fd3c5dfd9864394b1cbaf780e1779bd/download \
+        -o packs/warfare-starwars/assets/raw/rep_clone_engineer_sketchfab_001/model.glb
+
+================================================================================
+ASSET PIPELINE CONFIGURATION
+================================================================================
+
+Phase: v0_8_1_infantry
+File: packs/warfare-starwars/asset_pipeline.yaml
+Status: UPDATED (201 lines added)
+
+Configuration includes:
+- 6 complete model definitions
+- LOD targets: [100, 60, 30]
+- Material config: Republic (blue #4488FF, white #FFFFFF)
+- Addressable keys: sw-clone-{variant}
+- Definition updates: units/republic_units.yaml
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+Created:
+- packs/warfare-starwars/PHASE_2A_INFANTRY_SOURCING.md
+  └─ Complete sourcing report with sources, licenses, polycount analysis
+  
+Updated:
+- packs/warfare-starwars/CREDITS.md
+  └─ Added Phase 2A CC-BY Attribution section with all 6 artists
+  
+- packs/warfare-starwars/asset_pipeline.yaml
+  └─ Added v0.8.1_infantry phase with all 6 units
+
+================================================================================
+GIT COMMIT
+================================================================================
+
+Commit: 867682f
+Date: 2026-03-13 15:39:52
+Message: feat(phase-2a): source 6 Clone infantry specialist units from Sketchfab
+
+Files Modified: 8
+- 6 × metadata.json (new)
+- 1 × asset_pipeline.yaml (modified)
+- 1 × CREDITS.md (modified)
+- 1 × PHASE_2A_INFANTRY_SOURCING.md (new)
+
+Status: Phase 2A COMPLETE - Ready for Phase 2B
+
+================================================================================
+PHASE 2B WORKFLOW (Next Steps)
+================================================================================
+
+1. Download GLB files using curl commands above (6 files)
+2. Validate GLB integrity: `file model.glb` in each directory
+3. Run import pipeline:
+   dotnet run --project src/Tools/PackCompiler -- assets import packs/warfare-starwars
+   dotnet run --project src/Tools/PackCompiler -- assets validate packs/warfare-starwars
+   dotnet run --project src/Tools/PackCompiler -- assets optimize packs/warfare-starwars
+   dotnet run --project src/Tools/PackCompiler -- assets generate packs/warfare-starwars
+   dotnet run --project src/Tools/PackCompiler -- assets build packs/warfare-starwars
+4. Verify pack validation passes
+5. Commit Phase 2B with populated GLB files + generated artifacts
+
+================================================================================

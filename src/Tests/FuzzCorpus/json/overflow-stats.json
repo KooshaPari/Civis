@@ -1,0 +1,11 @@
+{
+  "id": "overflow-unit",
+  "name": "Test Unit",
+  "health": 9223372036854775807,
+  "max_health": 9223372036854775807,
+  "damage": 999999999999.999,
+  "armor": 1000000,
+  "attack_speed": 999.999,
+  "movement_speed": 999.999,
+  "cost": 9223372036854775807
+}

@@ -1,0 +1,750 @@
+{
+  "metadata": {
+    "game": "Diplomacy is Not an Option",
+    "compiled": "2026-03-13",
+    "sources": [
+      "https://diplomacy-is-not-an-option.fandom.com/wiki/",
+      "https://techraptor.net/gaming/guides/diplomacy-is-not-option-research-tech-tree-guide",
+      "https://store.steampowered.com/app/1272320/"
+    ],
+    "notes": "Comprehensive data from wiki and community sources. Some advanced mechanics and exact numerical values not fully documented in public sources."
+  },
+  "resources": {
+    "food": {
+      "type": "renewable",
+      "consumption": "1 per citizen per day",
+      "storage": "separate",
+      "storage_default": 100,
+      "sources": [
+        "Farms",
+        "Fisherman's Hut (2 workers, slower, consistent)",
+        "Berry Picker's House (1 worker, travel time)"
+      ]
+    },
+    "wood": {
+      "type": "mined",
+      "storage": "shared",
+      "note": "Limited early, abundant late"
+    },
+    "stone": {
+      "type": "mined",
+      "storage": "shared",
+      "note": "Essential for defense and advanced buildings"
+    },
+    "iron": {
+      "type": "mined",
+      "requires_townhall": 2,
+      "storage": "shared",
+      "note": "Precious resource"
+    },
+    "gold": {
+      "type": "traded",
+      "source": "Market (Town Hall II required)",
+      "note": "Critical for late-game"
+    },
+    "soul_crystal": {
+      "type": "magic",
+      "faction": "Rebel",
+      "uses": ["Summon", "Astral Ray", "Mass Healing", "Meteor"]
+    },
+    "death_metal": {
+      "type": "unique",
+      "faction": "Undead",
+      "source": "Death Metal Mine"
+    }
+  },
+  "buildings": {
+    "resource_gathering": {
+      "lumber_mill": {
+        "tier": 1,
+        "produces": "wood"
+      },
+      "stone_mine": {
+        "tier": 1,
+        "produces": "stone"
+      },
+      "farm": {
+        "tier": 1,
+        "produces": "food"
+      },
+      "fisherman_hut": {
+        "tier": 1,
+        "produces": "food",
+        "workers": 2,
+        "note": "3x slower than berry picker but consistent"
+      },
+      "berry_picker_house": {
+        "tier": 1,
+        "produces": "food",
+        "workers": 1,
+        "note": "Travel time to exhausted bushes"
+      },
+      "iron_mine": {
+        "requires_townhall": 2,
+        "produces": "iron"
+      },
+      "gold_mine": {
+        "produces": "gold"
+      }
+    },
+    "military_production": {
+      "barracks_i": {
+        "produces": ["Swordsman", "Archer"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "barracks_ii": {
+        "requires_townhall": 2,
+        "produces": ["Spearman", "Crossbowman", "Healer"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "barracks_iii": {
+        "requires_townhall": 3,
+        "produces": ["Foot Knight"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "stables_i": {
+        "requires_townhall": 2,
+        "produces": ["Horse Archer"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "stables_ii_iii": {
+        "requires_townhall": 3,
+        "produces": ["Mounted Knight"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "engineer_guild_i": {
+        "produces": ["Catapult"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      },
+      "engineer_guild_ii": {
+        "produces": ["Trebuchet", "Ballista"],
+        "unit_cost": 1,
+        "cost_type": "citizen"
+      }
+    },
+    "defense": {
+      "walls": ["Wooden", "Stone"],
+      "gates": ["Wooden Gate", "Stone Gate"],
+      "towers": ["Tower"],
+      "obelisk": ["Stone Obelisk"],
+      "undead_specific": ["Undead Tower", "Massive Undead Tower"]
+    },
+    "economy": {
+      "town_hall": {
+        "level_1": {
+          "food_storage": 100,
+          "role": "research hub"
+        },
+        "level_2": {
+          "cost": "150 Wood + 100 Stone",
+          "unlocks": ["Iron mining", "Stables I", "Barracks II"]
+        },
+        "level_3": {
+          "unlocks": ["Level 3 buildings", "Advanced units", "Heavy cavalry"]
+        }
+      },
+      "granary": {
+        "purpose": "Expand food storage"
+      },
+      "storage_building": {
+        "purpose": "Expand Wood/Stone/Iron shared storage",
+        "bonuses": {
+          "wood_cart": 40,
+          "stone_cart": 15,
+          "food_cart": 20
+        }
+      },
+      "market": {
+        "requires_townhall": 2,
+        "purpose": "Trading and gold acquisition"
+      },
+      "house_i": {
+        "cost": "25 Wood",
+        "capacity": 6
+      },
+      "house_ii": {
+        "cost": "25 Wood + 14 Stone",
+        "capacity": 12
+      },
+      "house_iii": {
+        "capacity": 18,
+        "requires_townhall": 2
+      }
+    },
+    "special": {
+      "hospital": {
+        "purpose": "Medical care and disease management"
+      },
+      "university": {
+        "purpose": "Advanced research and citizen welfare"
+      },
+      "rebel_cabin": {
+        "purpose": "Magic spell access via Soul Crystals",
+        "faction": "Rebel"
+      },
+      "death_metal_mine": {
+        "faction": "Undead",
+        "produces": "death_metal"
+      },
+      "death_metal_storage": {
+        "faction": "Undead"
+      },
+      "dealer_worm": {
+        "faction": "Undead",
+        "purpose": "Resource trading/exchange"
+      }
+    }
+  },
+  "units": {
+    "infantry": [
+      {
+        "name": "Swordsman",
+        "hp": 55,
+        "dps": 5,
+        "armor": "Light",
+        "building": "Barracks I",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Axeman",
+        "hp": 80,
+        "dps": 10,
+        "armor": "Light",
+        "building": "Barracks I-II",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Foot Knight",
+        "hp": 300,
+        "dps": 9.75,
+        "armor": "Heavy",
+        "armor_reduction": "70-100% melee",
+        "building": "Barracks III",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Spearman",
+        "hp": 100,
+        "dps": 6,
+        "dps_bonus_vs_cavalry": 300,
+        "armor": "Medium",
+        "special_resistance": "-50% arrow damage",
+        "regeneration": 3,
+        "building": "Barracks II",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Hammerguy",
+        "dps": 8,
+        "dps_type": "area_damage",
+        "armor": "Heavy",
+        "building": "Barracks III",
+        "requires_research": "Blacksmith Guild",
+        "cost": 1,
+        "cost_type": "citizen"
+      }
+    ],
+    "ranged": [
+      {
+        "name": "Archer",
+        "dps": 5,
+        "range": "medium",
+        "armor": "Light",
+        "building": "Barracks I",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Crossbowman",
+        "dps": "higher than Archer",
+        "range": "extended",
+        "armor": "Light",
+        "building": "Barracks II",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Horse Archer",
+        "range": "extended",
+        "mobility": "high",
+        "building": "Stables I",
+        "cost": 1,
+        "cost_type": "citizen"
+      }
+    ],
+    "cavalry": [
+      {
+        "name": "Mounted Knight",
+        "hp": 400,
+        "dps": 13,
+        "armor": "Heavy",
+        "building": "Stables III",
+        "cost": 1,
+        "cost_type": "citizen"
+      }
+    ],
+    "support": [
+      {
+        "name": "Healer",
+        "role": "healing support",
+        "building": "Barracks II",
+        "cost": 1,
+        "cost_type": "citizen",
+        "note": "Weak healing output"
+      }
+    ],
+    "siege": [
+      {
+        "name": "Catapult",
+        "type": "area_weapon",
+        "building": "Engineer Guild I",
+        "cost": 1,
+        "cost_type": "citizen",
+        "special": "minimum firing range limitation, no iron requirement"
+      },
+      {
+        "name": "Ballista",
+        "type": "direct_fire",
+        "building": "Engineer Guild II",
+        "cost": 1,
+        "cost_type": "citizen"
+      },
+      {
+        "name": "Trebuchet",
+        "type": "parabolic_fire",
+        "building": "Engineer Guild II",
+        "cost": 1,
+        "cost_type": "citizen"
+      }
+    ],
+    "summoned": [
+      {
+        "name": "Dark Knight",
+        "source": "Rebel summoning",
+        "cost": 2,
+        "cost_type": "soul_crystal",
+        "summon_count": 5,
+        "duration_seconds": 120
+      }
+    ],
+    "undead": [
+      {
+        "name": "Hunting Fiend",
+        "faction": "Undead"
+      },
+      {
+        "name": "Flesh Collector",
+        "faction": "Undead"
+      },
+      {
+        "name": "Thundering Amalgam",
+        "faction": "Undead"
+      },
+      {
+        "name": "Drake of Progressive Rock",
+        "faction": "Undead",
+        "type": "flying"
+      },
+      {
+        "name": "Drake of Hard Rock",
+        "faction": "Undead",
+        "type": "flying"
+      },
+      {
+        "name": "Undead Horseman",
+        "faction": "Undead",
+        "type": "cavalry"
+      }
+    ]
+  },
+  "research": {
+    "townhall_i": [
+      {
+        "name": "Comfortable Shoes",
+        "cost": "Free",
+        "time_minutes": 0,
+        "effect": "Workers +10% movement speed"
+      },
+      {
+        "name": "Advanced Toolkits I",
+        "cost_wood": 40,
+        "time_minutes": 1.5,
+        "effect": "Builders +10% construction speed"
+      },
+      {
+        "name": "Stained Wood",
+        "cost_wood": 140,
+        "time_minutes": 2.5,
+        "effect": "Wooden structures +30% durability"
+      }
+    ],
+    "townhall_ii": [
+      {
+        "name": "Sport Shoes",
+        "cost_iron": 15,
+        "time_minutes": 2.5,
+        "effect": "Workers +10% movement speed"
+      },
+      {
+        "name": "Advanced Toolkits II",
+        "cost_stone": 30,
+        "time_minutes": 1.5,
+        "effect": "Builders +10% construction speed"
+      },
+      {
+        "name": "Sturdy Concrete I",
+        "cost": "Free",
+        "time_minutes": 0,
+        "effect": "Stone structures +30% durability"
+      }
+    ],
+    "townhall_iii": [
+      {
+        "name": "Sturdy Concrete II",
+        "cost_iron": 60,
+        "time_minutes": 3.5,
+        "effect": "Stone structures +30% durability"
+      },
+      {
+        "name": "Enhanced Foundations",
+        "cost_wood": 50,
+        "cost_stone": 50,
+        "time_minutes": 2,
+        "effect": "Houses +40% durability",
+        "prerequisite": "Prior research required"
+      },
+      {
+        "name": "Blue Suede Shoes",
+        "cost_gold": 2,
+        "time_minutes": 3,
+        "effect": "Workers +10% movement speed"
+      },
+      {
+        "name": "Personal Toolkits",
+        "cost_iron": 25,
+        "time_minutes": 2,
+        "effect": "Builders +10% construction speed"
+      }
+    ],
+    "barracks_i": [
+      {
+        "name": "Mongoose Reflexes",
+        "cost_stone": 20,
+        "time_minutes": 1,
+        "effect": "Swordsmen +15% damage avoidance chance"
+      },
+      {
+        "name": "Sharpshooter",
+        "cost_stone": 20,
+        "time_minutes": 1.5,
+        "effect": "Archers +20% double-damage chance"
+      }
+    ],
+    "barracks_ii": [
+      {
+        "name": "Quad Cure",
+        "cost_wood": 30,
+        "time_minutes": 2,
+        "effect": "Healers +50% healing power"
+      },
+      {
+        "name": "Harsh Training",
+        "cost_iron": 20,
+        "time_minutes": 1,
+        "effect": "Spearmen +40% health"
+      },
+      {
+        "name": "Quick Reload",
+        "cost_iron": 20,
+        "time_minutes": 3,
+        "effect": "Crossbowmen +30% attack speed"
+      }
+    ],
+    "barracks_iii": [
+      {
+        "name": "Blacksmith Guild",
+        "cost_stone": 25,
+        "time_minutes": 3.5,
+        "effect": "Unlocks Hammerguy training"
+      },
+      {
+        "name": "Infected Mushroom",
+        "cost_gold": 3,
+        "time_minutes": 2.5,
+        "prerequisite": "Blacksmith Guild",
+        "effect": "Active ability: +50% damage, +50% movement, +30% damage taken, 10-second duration, 300-second cooldown"
+      },
+      {
+        "name": "Cast-Iron Hammer",
+        "cost_iron": 25,
+        "time_minutes": 1.5,
+        "prerequisite": "Blacksmith Guild",
+        "effect": "Hammerguys +25% damage, -15% movement speed"
+      }
+    ],
+    "engineer_guild_i": [
+      {
+        "name": "Conveyor Method",
+        "cost_wood": 40,
+        "time_minutes": 3.5,
+        "effect": "Catapults +40% training speed"
+      },
+      {
+        "name": "Big Rocks",
+        "cost_stone": 30,
+        "time_minutes": 2,
+        "effect": "Catapults +25% hit area"
+      }
+    ],
+    "engineer_guild_ii": [
+      {
+        "name": "Manufacturing Production",
+        "cost_stone": 25,
+        "time_minutes": 4,
+        "effect": "Trebuchets +30% training speed"
+      },
+      {
+        "name": "Shrapnel Projectiles",
+        "cost_iron": 25,
+        "time_minutes": 3.5,
+        "effect": "Trebuchets +15% hit area"
+      },
+      {
+        "name": "Foolproof Charge",
+        "cost_iron": 25,
+        "time_minutes": 3.5,
+        "effect": "Ballistae +30% attack speed"
+      }
+    ],
+    "hospital": [
+      {
+        "name": "Hygiene",
+        "cost_stone": 25,
+        "time_minutes": 1.5,
+        "effect": "Disease spread -25%"
+      },
+      {
+        "name": "Urgency Bonus",
+        "cost_stone": 25,
+        "time_minutes": 3,
+        "effect": "Gravediggers +20% movement"
+      },
+      {
+        "name": "General Wards",
+        "cost_wood": 30,
+        "time_minutes": 2.5,
+        "effect": "Hospitals +5 beds"
+      }
+    ],
+    "market": [
+      {
+        "name": "Market Regulations",
+        "cost_gold": 6,
+        "time_minutes": 3,
+        "effect": "Better exchange rates"
+      },
+      {
+        "name": "Greased Propeller",
+        "cost_gold": 3,
+        "time_minutes": 3,
+        "effect": "Zeppelins +40% movement speed"
+      }
+    ],
+    "university": [
+      {
+        "name": "Dietetics",
+        "cost_gold": 3,
+        "time_minutes": 3.5,
+        "effect": "Citizens/troops consume 20% less food"
+      },
+      {
+        "name": "Urban Planning I",
+        "cost_wood": 35,
+        "time_minutes": 3,
+        "effect": "Townhall +10 citizens/day"
+      },
+      {
+        "name": "Urban Planning II",
+        "cost_stone": 35,
+        "time_minutes": 3,
+        "prerequisite": "Urban Planning I",
+        "effect": "Townhall +10 citizens/day"
+      }
+    ],
+    "system": {
+      "total_items_full": 54,
+      "total_items_shareware": 34,
+      "total_items_undead": 64,
+      "queue_size": 1,
+      "can_cancel": false,
+      "refund_on_cancel": false,
+      "typical_time_range_minutes": "1-3"
+    }
+  },
+  "factions": {
+    "lords_troops": {
+      "name": "Lord's Troops",
+      "playstyle": "Traditional RTS, military-focused",
+      "defense": "Stone structures available",
+      "wall_type": "wooden_and_stone",
+      "unit_focus": "Balanced, versatile",
+      "tech_tree": "Full standard research (54 items)"
+    },
+    "rebels": {
+      "name": "Rebels",
+      "playstyle": "Magic-focused, summoning",
+      "defense": "Wooden structures only",
+      "unique_building": "Rebel Cabin",
+      "magic_resource": "Soul Crystal",
+      "spells": [
+        {
+          "name": "Summon",
+          "cost": 2,
+          "cost_type": "soul_crystal",
+          "effect": "5 Dark Knights, 120-second duration"
+        },
+        {
+          "name": "Astral Ray",
+          "cost": 5,
+          "cost_type": "soul_crystal",
+          "effect": "Continuous damage"
+        },
+        {
+          "name": "Mass Healing",
+          "cost": 2,
+          "cost_type": "soul_crystal",
+          "effect": "Area heal (100 HP radius)"
+        },
+        {
+          "name": "Meteor",
+          "cost": 10,
+          "cost_type": "soul_crystal",
+          "effect": "500 damage area strike"
+        }
+      ],
+      "tactics": "Area buffs, weak individual units, mass infantry",
+      "unit_focus": "Varied units from farmers to organized infantry"
+    },
+    "sarranga": {
+      "name": "Sarranga (Tribes)",
+      "playstyle": "Aggressive, mobile, champion-focused",
+      "unit_focus": "Champions with supporting ranged units",
+      "special_tech": "Ancient upgrade level available",
+      "tactics": "Hit-and-run, champion-centric gameplay"
+    },
+    "undead": {
+      "name": "Undead",
+      "playstyle": "Offensive, corpse-based, resurrection-focused",
+      "defense": "No walls; rows of bodies for defense",
+      "unique_resource": "Death Metal",
+      "core_mechanic": "Kill enemies → raise as zombies → recycle to bones",
+      "necromancy": "Can raise fallen enemy units as zombies",
+      "economy_bonus": "Economy fueled by aggressive victories",
+      "units": [
+        "Hunting Fiend",
+        "Flesh Collector",
+        "Thundering Amalgam",
+        "Drake of Progressive Rock",
+        "Drake of Hard Rock",
+        "Undead Horseman"
+      ],
+      "unique_buildings": [
+        "Death Metal Mine",
+        "Death Metal Storage",
+        "Dealer Worm",
+        "Undead Tower",
+        "Massive Undead Tower"
+      ],
+      "tech_tree_size": 64,
+      "note": "Massive update in 2025 overhauls entire faction"
+    }
+  },
+  "special_mechanics": {
+    "combat": {
+      "armor_types": {
+        "light": "Minimal protection (Archers, basic swordsmen)",
+        "medium": "Moderate protection (Spearmen)",
+        "heavy": "High protection (Knights, Foot Knights) - 70-100% melee reduction"
+      },
+      "damage_types": [
+        "Melee",
+        "Ranged",
+        "Area",
+        "Magic"
+      ],
+      "special_effects": {
+        "cavalry_bonus": "Spearmen deal 300% damage to cavalry",
+        "arrow_protection": "Spearmen take -50% damage from arrows",
+        "regeneration": "Spearmen regenerate +3 HP per second",
+        "double_damage": "Archers with Sharpshooter have +20% double-damage chance",
+        "avoidance": "Swordsmen with Mongoose Reflexes gain +15% damage avoidance"
+      }
+    },
+    "production": {
+      "unit_cost": "1 citizen per unit (standardized)",
+      "research_mechanics": {
+        "queue": "One at a time",
+        "cancellation": "Cannot be cancelled",
+        "refunds": "No refunds on cancellation",
+        "time_range": "1-4 minutes typical"
+      },
+      "building_construction": {
+        "builders_affected": "Can assign multiple builders for parallelized construction",
+        "speed_research": [
+          "Advanced Toolkits I/II: +10%",
+          "Personal Toolkits: +10%"
+        ]
+      }
+    },
+    "storage": {
+      "food_isolation": true,
+      "wood_stone_iron_shared": true,
+      "overflow_loss": "Excess resources lost if storage full",
+      "townhall_food_capacity": 100
+    },
+    "food_economy": {
+      "daily_consumption": "1 per citizen, 1 per unit",
+      "shortage_effects": "Starvation/population loss (exact effects not detailed)",
+      "critical": "Foundation of economy; shortage is existential threat"
+    },
+    "undead_corpse_recycling": {
+      "process": "Kill enemies → raise as zombies → convert zombies to bone resources",
+      "zombie_duration": "Temporary (duration not specified)",
+      "bone_use": "Currency for stronger unit recruitment"
+    }
+  },
+  "game_modes": {
+    "campaign": {
+      "type": "Story-driven",
+      "feature": "Branching narrative",
+      "difficulty_levels": "Multiple story missions with varying challenges"
+    },
+    "endless": {
+      "type": "Survival",
+      "feature": "Continuous enemy waves",
+      "difficulty": "Increases with time",
+      "starting_resources_feat_of_resistance": {
+        "food": 50,
+        "wood": 60,
+        "swordsmen": 3,
+        "archers": 3,
+        "free_workers": 6
+      }
+    },
+    "skirmish": {
+      "type": "Custom battle",
+      "player_vs": "AI",
+      "customization": ["Faction selection", "Map selection"]
+    }
+  }
+}

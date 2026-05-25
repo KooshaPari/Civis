@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_probe_droid_sketchfab_001",
+  "canonical_name": "Probe Droid",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/495f6c8ded324807b37a9783faa7ec02",
+  "external_id": "495f6c8ded324807b37a9783faa7ec02",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_probe_droid_sketchfab_001\\normalized.glb",
+  "sha256": "7c4ddcf49a03d99c7973b5eb855f5e1de04567a8e23e9d0502f5a6a59876ddbe",
+  "polycount_estimate": 40575,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "utility",
+  "subtype": "utility",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=40575 LOD1=20286 LOD2=10143 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

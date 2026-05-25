@@ -1,0 +1,72 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature. Please describe what you'd like to see.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Runtime
+        - SDK
+        - PackCompiler
+        - Warfare Domain
+        - Economy Domain
+        - Scenario Domain
+        - UI Domain
+        - DumpTools
+        - Schemas
+        - Pack System
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: move-class
+    attributes:
+      label: Agent Move Class
+      description: Which legal move class does this map to?
+      options:
+        - create schema
+        - extend registry
+        - add content pack
+        - patch mapping
+        - write validator
+        - add test fixture
+        - add debug view
+        - add migration
+        - add compatibility rule
+        - add documentation manifest
+        - other / not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you've considered.
+    validations:
+      required: false

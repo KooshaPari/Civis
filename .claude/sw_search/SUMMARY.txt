@@ -1,0 +1,150 @@
+================================================================================
+SKETCHFAB STAR WARS ENVIRONMENT ASSETS - SEARCH RESULTS SUMMARY
+================================================================================
+Generated: 2026-03-12 03:06 UTC
+Status: METADATA COLLECTION ONLY (No downloads performed)
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+Total Candidates Found: 56 models
+Top 3 Recommendations: Tatooine-themed buildings by phamill327 + low-poly starfighter
+
+PRIMARY CONSTRAINT: Download Restrictions
+- Candidates 1-2 (best match): NOT DOWNLOADABLE from Sketchfab (author restriction)
+- Candidate 3 (runner-up): CC-Licensed, DOWNLOADABLE
+- Solution: Contact authors for licensing or recreate in-house
+
+================================================================================
+TOP 3 CANDIDATES (Ranked by Confidence Score)
+================================================================================
+
+[1.0] TATOOINE_BUILDING_TEXTURED
+  ID: dae880b4ed0d4a58858ad1e4537351dc
+  Author: phamill327
+  Polycount: 2,584 triangles (1,338 vertices) - IDEAL
+  License: Not Specified
+  Downloadable: NO (requires author contact)
+  Preview: https://media.sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc/...
+  URL: https://sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc
+  Theme Match: PERFECT (Tatooine, textured, modular)
+  Published: 2024-04-23
+
+[1.0] TATOOINE BUILDING
+  ID: a43085f476844b13b683d67035066a35
+  Author: phamill327
+  Polycount: 2,584 triangles (1,310 vertices) - IDEAL
+  License: Not Specified
+  Downloadable: NO (requires author contact)
+  Preview: https://media.sketchfab.com/models/a43085f476844b13b683d67035066a35/...
+  URL: https://sketchfab.com/models/a43085f476844b13b683d67035066a35
+  Theme Match: PERFECT (Tatooine, modular)
+  Published: 2024-02-13
+
+[0.95] NUBIAN N1 NABOO STARFIGHTER (BLACK)
+  ID: a477c5b5bca44c4eade16f5bc094d39b
+  Author: richardas.rac
+  Polycount: 1,293 triangles (931 vertices) - EXCELLENT LOW-POLY
+  License: CC Attribution (PERMISSIVE)
+  Downloadable: YES - Ready to use
+  Preview: https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/...
+  URL: https://sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b
+  Theme Match: GOOD (Star Wars prop, low-poly aesthetic)
+  Published: 2026-03-10 (Recent!)
+
+================================================================================
+ADDITIONAL STRONG CANDIDATES (Available in all_candidates.json)
+================================================================================
+
+Rank 4: Tatooine Building 2 (ChristopherGatica) - 1,074 tri - Score 1.0
+Rank 5: Tatooine Building1 (ChristopherGatica) - 4,760 tri - Score 1.0
+Rank 6: StarWars - Tatooine House3 (sxyza) - 5,902 tri - Score 0.85
+Rank 7: At-at Star Wars (insanis_art) - 752 tri - Score 0.95
+Rank 8: Dark Saber V1 Low Poly (coolguyelimarano) - 216 tri - Score 0.95
+
+================================================================================
+POLYCOUNT ANALYSIS
+================================================================================
+
+Distribution of 56 candidates:
+  100-500 triangles:        5 models (very low-poly props)
+  500-2,000 triangles:      28 models (ideal modular range)
+  2,000-5,000 triangles:    15 models (acceptable detailed)
+  5,000+ triangles:         8 models (high detail, not ideal)
+
+Sweet Spot (200-1,500 tri): 18 candidates - GOOD SELECTION
+
+================================================================================
+LICENSE ASSESSMENT
+================================================================================
+
+- CC Attribution: 3 models (permissive, recommended)
+- CC0: 2 models (public domain, best)
+- Not Specified: 51 models (verify before use, contact author)
+
+Recommendation: Prioritize CC-licensed assets OR negotiate with phamill327
+for the excellent Tatooine buildings.
+
+================================================================================
+DOWNLOAD FORMAT SUPPORT
+================================================================================
+
+All models support: GLB, OBJ, FBX, USDZ
+- GLB: Recommended (contains textures, most portable)
+- FBX: Good for Blender modifications
+- OBJ: Fallback option
+
+================================================================================
+NEXT STEPS FOR IMPLEMENTATION
+================================================================================
+
+OPTION A: Acquire phamill327 Assets (Best Aesthetic)
+  1. Contact phamill327 on Sketchfab
+  2. Request commercial use license for two Tatooine buildings
+  3. Download in GLB format
+  4. Integrate into warfare-starwars pack
+
+OPTION B: Use CC-Licensed + Create Variants
+  1. Download Nubian N1 starfighter (CC-BY, immediate)
+  2. Combine with other low-poly props
+  3. Recreate Tatooine building aesthetic in Blender
+  4. Create modular 35-building pack from scratch
+
+OPTION C: Mixed Approach
+  1. Download CC-licensed props (immediate use)
+  2. Negotiate with phamill327 for buildings
+  3. Fill gaps with custom models or other authors
+  4. Create 20-30 building modular pack
+
+================================================================================
+DELIVERABLES CREATED
+================================================================================
+
+.claude/sw_search/
+  ├── candidates.json          (Top 3 detailed metadata)
+  ├── all_candidates.json      (Top 15 extended list)
+  ├── REPORT.md                (Full analysis & recommendations)
+  ├── SUMMARY.txt              (This file)
+  └── [Raw searches]
+      ├── tatooine_buildings.json         (20 results)
+      ├── star_wars_buildings.json        (20 results)
+      └── low_poly_star_wars.json         (20 results)
+
+Total data collected: ~416 KB of metadata
+Raw API responses: 20 models per query × 3 queries = 60 raw results
+
+================================================================================
+CONFIDENCE SCORING METHODOLOGY
+================================================================================
+
+Base: 0.5
++ Polycount fit (200-1500 tri): +0.45 → 0.95
++ Polycount acceptable (100-5000 tri): +0.35 → 0.85
++ Theme keywords (tatooine, desert, building): +0.15
+Final: 0.0-1.0 (capped at 1.0)
+
+Tatooine buildings: Perfect match on all factors = 1.0
+Low-poly starfighter: Excellent polycount, good theme, licensed = 0.95
+
+================================================================================

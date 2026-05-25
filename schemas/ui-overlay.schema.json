@@ -1,0 +1,192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/ui-overlay.schema.json",
+  "title": "DINOForge UI Overlay Definition",
+  "description": "Schema for DINOForge UI overlay, HUD element, menu, and theme definition files.",
+  "type": "object",
+  "definitions": {
+    "hud_element": {
+      "type": "object",
+      "required": ["id", "type", "position", "width", "height"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique HUD element identifier (e.g. 'player-health-bar')."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["health_bar", "resource_counter", "minimap", "unit_portrait", "alert_banner", "custom"],
+          "description": "Display type of this HUD element."
+        },
+        "position": {
+          "type": "string",
+          "enum": ["top_left", "top_right", "bottom_left", "bottom_right", "center"],
+          "description": "Screen position anchor for this HUD element."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Width of the HUD element in pixels."
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Height of the HUD element in pixels."
+        },
+        "visible_in": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["gameplay", "pause", "main_menu"]
+          },
+          "description": "Game states where this HUD element is visible."
+        },
+        "color_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "description": "Color overrides for this HUD element (property name to hex color code)."
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Opacity value for the HUD element (0.0 to 1.0)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of what this HUD element displays."
+        }
+      },
+      "additionalProperties": false
+    },
+    "menu_item": {
+      "type": "object",
+      "required": ["id", "label", "action"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique menu item identifier."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display label for this menu item."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["toggle", "navigate", "command", "separator", "custom"],
+          "description": "Action type for this menu item."
+        },
+        "target": {
+          "type": "string",
+          "description": "Target identifier for navigate/toggle/command actions."
+        },
+        "enabled_condition": {
+          "type": "string",
+          "description": "Optional condition to enable/disable this menu item."
+        }
+      },
+      "additionalProperties": false
+    },
+    "menu": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique menu identifier (e.g. 'main-menu', 'mods-submenu')."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display title for this menu."
+        },
+        "parent_menu_id": {
+          "type": ["string", "null"],
+          "description": "Parent menu ID for navigation. Empty or null indicates a root menu."
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/menu_item" },
+          "description": "List of menu items in this menu."
+        },
+        "background_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Background color of this menu in hex format."
+        },
+        "font_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Font size for menu items in pixels."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of what this menu represents."
+        }
+      },
+      "additionalProperties": false
+    },
+    "theme": {
+      "type": "object",
+      "required": ["id", "name", "primary_color", "secondary_color", "accent_color"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique theme identifier (e.g. 'dark-theme', 'faction-blue')."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name for this theme."
+        },
+        "primary_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Primary color in hex format. Used for main UI elements."
+        },
+        "secondary_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Secondary color in hex format. Used for secondary UI elements."
+        },
+        "accent_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Accent color in hex format. Used for highlights and interactive elements."
+        },
+        "font_family": {
+          "type": "string",
+          "description": "Font family name (e.g. 'Arial', 'Courier New'). Empty string means use default."
+        },
+        "border_radius": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Border radius in pixels. Controls how rounded corners are on UI elements."
+        },
+        "background_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Optional background color for menus and panels in hex format."
+        },
+        "text_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Optional text color for default text in hex format."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of this theme."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

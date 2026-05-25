@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_sniper_droid_sketchfab_001",
+  "canonical_name": "CIS Sniper Droid",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/f6b41f2f3efe4143a51a2dfe901d7bb9",
+  "external_id": "f6b41f2f3efe4143a51a2dfe901d7bb9",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_sniper_droid_sketchfab_001\\normalized.glb",
+  "sha256": "b7c06a3c5d94c9c751d896eafced41edf0031941ff1af53d4f4d3eeaa0cdcc32",
+  "polycount_estimate": 72827,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "infantry_ranged",
+  "subtype": "infantry_ranged",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=72827 LOD1=36412 LOD2=18205 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

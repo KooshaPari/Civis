@@ -1,0 +1,38 @@
+{
+  "asset_id": "rep_clone_heavy_sketchfab_001",
+  "canonical_name": "Clone Heavy Trooper",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/f92a5b62741f4f8abe3537353eb36b18",
+  "external_id": "f92a5b62741f4f8abe3537353eb36b18",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\rep_clone_heavy_sketchfab_001\\normalized.glb",
+  "sha256": "c3b2ae292a030c84bc0a3e26c32fe0bf084e5ac83d24ca4d09be280ec3c3300d",
+  "polycount_estimate": 978,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "unit",
+  "subtype": "infantry_heavy",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "republic"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=978 LOD1=488 LOD2=240 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)",
+    "Normalized via Blender. LOD0=978 LOD1=488 LOD2=240 triangles",
+    "Stylized with faction \u0027republic\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

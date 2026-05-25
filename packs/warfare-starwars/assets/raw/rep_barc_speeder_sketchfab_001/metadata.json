@@ -1,0 +1,18 @@
+{
+  "id": "rep_barc_speeder",
+  "type": "Light",
+  "name": "-Star Wars- BARC Speeder Bike",
+  "model_id": "56ff0b8c18744664aa121db5d2039eb3",
+  "source_url": "https://sketchfab.com/models/56ff0b8c18744664aa121db5d2039eb3",
+  "artist": "ARKON MAREK",
+  "license": "CC Attribution",
+  "view_count": 10258,
+  "like_count": 257,
+  "extracted_files": [
+    "Barc Speeder Exported2.fbx"
+  ],
+  "extracted_textures": 3,
+  "downloadedAt": "2026-03-13T23:17:15Z",
+  "phase": "2B",
+  "note": "Downloaded in raw format (FBX/Blend/OBJ). Will be converted to GLB in Phase 3C by AssetPipeline."
+}

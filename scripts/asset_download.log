@@ -1,0 +1,30 @@
+[2026-03-12T23:22:19.750667] [INFO] === DINOForge Asset Downloader (v0.7.0 Priority) ===
+[2026-03-12T23:22:19.762372] [INFO] Output directory: packs\warfare-starwars\assets\raw
+[2026-03-12T23:22:19.763384] [INFO] Token present: False
+[2026-03-12T23:22:19.764383] [INFO] 
+--- Processing: General Grievous (sw_general_grievous_sketchfab_001) ---
+[2026-03-12T23:22:19.766385] [INFO] Validating Sketchfab model 4b7e2d1f3c5a8e9b...
+[2026-03-12T23:22:20.413606] [ERROR] Model validation FAILED: {'exists': False, 'status': 401}
+[2026-03-12T23:22:20.414607] [INFO] 
+--- Processing: B1 Battle Droid (sw_b1_droid_sketchfab_001) ---
+[2026-03-12T23:22:20.416609] [INFO] Validating Sketchfab model 3a5f8b2c1d9e4f6a...
+[2026-03-12T23:22:20.666613] [ERROR] Model validation FAILED: {'exists': False, 'status': 401}
+[2026-03-12T23:22:20.669134] [INFO] 
+--- Processing: AT-TE Walker (sw_at_te_sketchfab_001) ---
+[2026-03-12T23:22:20.670143] [INFO] Validating Sketchfab model 7e1f3a5b2c8d4e9a...
+[2026-03-12T23:22:20.974038] [ERROR] Model validation FAILED: {'exists': False, 'status': 401}
+[2026-03-12T23:22:20.976037] [INFO] 
+--- Processing: Jedi Temple (sw_jedi_temple_sketchfab_001) ---
+[2026-03-12T23:22:20.977545] [INFO] Validating Sketchfab model 8f2e4a1c3b7d5e9a...
+[2026-03-12T23:22:21.500296] [ERROR] Model validation FAILED: {'exists': False, 'status': 401}
+[2026-03-12T23:22:21.501297] [INFO] 
+--- Processing: B2 Super Battle Droid (sw_b2_super_droid_sketchfab_001) ---
+[2026-03-12T23:22:21.503293] [INFO] Validating Sketchfab model 3c5a8e1f2b4d7e9c...
+[2026-03-12T23:22:21.756477] [ERROR] Model validation FAILED: {'exists': False, 'status': 401}
+[2026-03-12T23:22:21.757991] [INFO] 
+=== Summary ===
+[2026-03-12T23:22:21.760020] [INFO] Total: 5
+[2026-03-12T23:22:21.761018] [INFO] Downloaded: 0
+[2026-03-12T23:22:21.762017] [INFO] Validated: 0
+[2026-03-12T23:22:21.764018] [INFO] Failed: 5
+[2026-03-12T23:22:21.767531] [INFO] Results saved to: packs\warfare-starwars\assets\raw\download_results.json

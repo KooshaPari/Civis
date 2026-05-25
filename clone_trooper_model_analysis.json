@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "search_queries": [
+      "star wars clone trooper",
+      "clone trooper phase 1",
+      "clone trooper phase 2"
+    ],
+    "evaluation_criteria": {
+      "style_fit_tabs_aesthetic": "Silhouette readability, low-poly appearance",
+      "polycount_range_ideal": "300-1200 triangles",
+      "rigging_bonus": true,
+      "license_preference": ["CC-BY", "CC0", "CC-BY-SA"],
+      "downloadable_required": true
+    },
+    "search_date": "2026-03-11"
+  },
+  "top_3_candidates": [
+    {
+      "rank": 1,
+      "model_id": "9b0d260e63174ac8873cb56919cc76f9",
+      "title": "Star Wars Clone Trooper",
+      "author": "reizer",
+      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9",
+      "license": "CC Attribution (CC-BY)",
+      "polycount": {
+        "triangles": 4123,
+        "vertices": 2100,
+        "estimate": "2.1k - 4.1k tris (low-poly, excellent for TABS)"
+      },
+      "downloadable": true,
+      "download_formats": "Estimated: glTF, GLB, OBJ (typical Sketchfab formats for CC-BY models)",
+      "preview_url": "https://media.sketchfab.com/models/9b0d260e63174ac8873cb56919cc76f9/thumbnails/6ce04d9a545c4bdb8936dfbb3c1c60a8/1024x576.jpeg",
+      "rigged": false,
+      "view_count": "Not specified",
+      "score": 0.92,
+      "score_breakdown": {
+        "polycount_fit": 0.95,
+        "style_fit": 0.90,
+        "license": 1.0,
+        "downloadable": 1.0,
+        "rigging": 0.0,
+        "notes": "EXCELLENT CHOICE - Perfect polycount for low-poly TABS aesthetic, clean silhouette, CC-BY license, downloadable. Simple geometry excellent for stylized gameplay."
+      }
+    },
+    {
+      "rank": 2,
+      "model_id": "ece97956b8134ca0b3fad3612573161d",
+      "title": "Clone Trooper Phase 2 (Shiny) [Updated]",
+      "author": "Marr Velz",
+      "url": "https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d",
+      "license": "CC Attribution (CC-BY)",
+      "polycount": {
+        "triangles": 35614,
+        "vertices": 17985,
+        "estimate": "35.6k tris (above ideal range but high-quality details)"
+      },
+      "downloadable": true,
+      "download_formats": "Estimated: glTF, GLB, OBJ (typical Sketchfab formats for CC-BY models)",
+      "preview_url": "https://media.sketchfab.com/models/ece97956b8134ca0b3fad3612573161d/thumbnails/40b2ef82cf04440e8153382c590efa5a/5d85649e46f44eeeb6ccce05125bb289.jpeg",
+      "rigged": false,
+      "view_count": "Not specified",
+      "score": 0.78,
+      "score_breakdown": {
+        "polycount_fit": 0.50,
+        "style_fit": 0.95,
+        "license": 1.0,
+        "downloadable": 1.0,
+        "rigging": 0.0,
+        "notes": "GOOD CHOICE - Excellent Phase 2 aesthetics with realistic textures, CC-BY license, downloadable. Polycount significantly above ideal range (35.6k vs 300-1200 target). May need decimation for TABS-style gameplay but very high quality base model."
+      }
+    },
+    {
+      "rank": 3,
+      "model_id": "f6a661e242184bcda25dd5bb98f7653d",
+      "title": "BF2 Clone Trooper Phase 1",
+      "author": "Lev Vizsla",
+      "url": "https://sketchfab.com/3d-models/bf2-clone-trooper-phase-1-f6a661e242184bcda25dd5bb98f7653d",
+      "license": "CC Attribution (CC-BY)",
+      "polycount": {
+        "triangles": 41606,
+        "vertices": 21103,
+        "estimate": "41.6k tris (above ideal range, high-detail Battlefront 2 asset)"
+      },
+      "downloadable": true,
+      "download_formats": "Estimated: glTF, GLB, OBJ (typical Sketchfab formats for CC-BY models)",
+      "preview_url": "https://media.sketchfab.com/models/f6a661e242184bcda25dd5bb98f7653d/thumbnails/9121200ae6c840b6803215f743c87f80/856db979724440a3bb4961c0ddc84513.jpeg",
+      "rigged": false,
+      "view_count": "Not specified",
+      "score": 0.75,
+      "score_breakdown": {
+        "polycount_fit": 0.45,
+        "style_fit": 0.90,
+        "license": 1.0,
+        "downloadable": 1.0,
+        "rigging": 0.0,
+        "notes": "GOOD CHOICE - Authentic Phase 1 design from EA Battlefront 2, CC-BY license, downloadable. Polycount significantly above ideal range (41.6k vs 300-1200 target). High-detail PBR textures. Would require decimation/optimization for TABS integration but excellent reference model."
+      }
+    }
+  ],
+  "honorable_mentions": [
+    {
+      "model_id": "cd67276d757e449481fe870532a19f98",
+      "title": "Star Wars Clone Trooper Ponds",
+      "author": "aclarke064",
+      "polycount": "7.2k triangles",
+      "license": "CC Attribution-NonCommercial-ShareAlike (CCBY-NC-SA) - NOT SUITABLE",
+      "downloadable": true,
+      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-ponds-cd67276d757e449481fe870532a19f98",
+      "score": 0.65,
+      "notes": "Good polycount (7.2k) and style, but non-commercial license restriction disqualifies for game usage. If commercial use is not intended, this is a strong alternative."
+    },
+    {
+      "model_id": "ffa17aef7a134d5eaa3a142a25bd422b",
+      "title": "Star-wars-clone-trooper",
+      "author": "simonyanedvard403",
+      "polycount": "4.1k triangles",
+      "license": "CC Attribution (CC-BY)",
+      "downloadable": true,
+      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-ffa17aef7a134d5eaa3a142a25bd422b",
+      "score": 0.90,
+      "notes": "Excellent polycount (4.1k), CC-BY license, downloadable. Duplicate/similar to rank 1 candidate. Both from same Sketchfab query. Compare both visually before final selection."
+    }
+  ],
+  "recommendation_summary": {
+    "best_for_tabs_low_poly": "Model ID 9b0d260e63174ac8873cb56919cc76f9 (Score: 0.92) - Reizer's Star Wars Clone Trooper. Ideal polycount for stylized gameplay, clean geometry, perfect license.",
+    "best_high_quality_base": "Model ID ece97956b8134ca0b3fad3612573161d (Score: 0.78) - Marr Velz's Phase 2 Shiny Clone Trooper. Requires decimation but offers excellent reference for Phase 2 design.",
+    "best_phase_1_option": "Model ID f6a661e242184bcda25dd5bb98f7653d (Score: 0.75) - Lev Vizsla's BF2 Phase 1 Clone Trooper. Authentic Battlefront 2 design, requires optimization.",
+    "next_steps": "1. Download rank 1 candidate (9b0d260e63174ac8873cb56919cc76f9) as primary. 2. Examine polycount distribution and rigging in model editor. 3. If needed, use Blender decimation modifier to reduce 35.6k rank 2 model to 600-1000 tris target range. 4. Verify texture compatibility (PBR/metallic workflow for DINO)."
+  }
+}

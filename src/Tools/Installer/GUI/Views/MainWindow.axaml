@@ -1,0 +1,98 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DINOForge.Installer.ViewModels"
+        xmlns:views="using:DINOForge.Installer.Views"
+        x:Class="DINOForge.Installer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="DINOForge Installer"
+        Width="720"
+        Height="520"
+        MinWidth="600"
+        MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="#1a1a2e">
+
+    <Window.Resources>
+        <vm:WizardPageConverter x:Key="PageConverter"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#4a90d9"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5aa0e9"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#2d2d44"/>
+            <Setter Property="Foreground" Value="#aaaacc"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Page content area -->
+        <ContentControl Grid.Row="0" Content="{Binding CurrentPageViewModel}">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="{x:Type vm:WelcomePageViewModel}">
+                    <views:WelcomePage DataContext="{Binding}" />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:GamePathPageViewModel}">
+                    <views:GamePathPage DataContext="{Binding}" />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:OptionsPageViewModel}">
+                    <views:OptionsPage DataContext="{Binding}" />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:ProgressPageViewModel}">
+                    <views:ProgressPage DataContext="{Binding}" />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:MaintenancePageViewModel}">
+                    <views:MaintenancePage DataContext="{Binding}" />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- Navigation bar (hidden on Maintenance and Progress pages which use their own actions) -->
+        <Border Grid.Row="1"
+                Background="#12122a"
+                Padding="20,12"
+                IsVisible="{Binding ShowNavBar}">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+
+                <!-- Step indicator -->
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Spacing="6">
+                    <TextBlock Foreground="#666688" FontSize="12" Text="Step "/>
+                    <TextBlock Foreground="#aaaacc" FontSize="12"
+                               Text="{Binding CurrentPage, Converter={StaticResource PageConverter}}"/>
+                    <TextBlock Foreground="#666688" FontSize="12" Text=" of 4"/>
+                </StackPanel>
+
+                <!-- Back button -->
+                <Button Grid.Column="1"
+                        Classes="secondary"
+                        Content="&lt;- Back"
+                        Command="{Binding GoBackCommand}"
+                        IsVisible="{Binding CanGoBack}"
+                        Margin="0,0,8,0"/>
+
+                <!-- Next / Install button -->
+                <Button Grid.Column="2"
+                        Classes="primary"
+                        Content="{Binding NextButtonLabel}"
+                        Command="{Binding GoNextCommand}"
+                        IsVisible="{Binding CanGoNext}"/>
+
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>

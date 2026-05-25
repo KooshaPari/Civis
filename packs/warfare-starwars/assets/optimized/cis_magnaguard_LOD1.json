@@ -1,0 +1,12 @@
+{
+  "assetId": "cis_magnaguard",
+  "lod": "LOD1",
+  "targetQuality": 0.6,
+  "triangleCount": 1260,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 40
+  }
+}

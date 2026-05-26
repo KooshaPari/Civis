@@ -477,6 +477,19 @@ namespace DINOForge.Runtime
                     if (_resurrectionFallbackStopEvent.Wait(PollIntervalMs)) break;
 #pragma warning restore DF0116
                     iterationCount++;
+
+                    // GameLaunch attach-mode: KeyInputSystem may be absent from the ECS world while the
+                    // plugin and PersistentRoot survive scene transitions. Restart the bridge pipe when
+                    // its server thread died (BridgeServerThreadAlive=False after OnDestroy).
+                    try
+                    {
+                        SharedBridgeServer?.EnsureServerAlive();
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback EnsureServerAlive: {ex.Message}");
+                    }
+
                     // Iter-144 #547 H5: emit periodic heartbeat to prove Mono runtime + this thread are alive.
                     // If the gray-freeze is a native deadlock at runtime level, heartbeats stop appearing
                     // immediately after OnDestroy. If they keep appearing, the hang is elsewhere.
@@ -703,26 +716,42 @@ namespace DINOForge.Runtime
 
         private static int _playerLoopEventSystemTick;
         private static string? _lastEventSystemReconcileKey;
+        private static bool _prevF9;
+        private static bool _prevF10;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetAsyncKeyState")]
+        private static extern short PluginGetAsyncKeyState(int vKey);
 
         private static void DINOForgePlayerLoopUpdate()
         {
-            // iter-145 H1: DFCanvas.Update never runs in DINO; reconcile EventSystem.current
-            // on the PlayerLoop path that actually ticks (same path as F9/F10).
             _playerLoopEventSystemTick++;
             if (_playerLoopEventSystemTick % 60 == 1)
             {
                 EnsureEventSystemAlive();
+                try { SharedBridgeServer?.EnsureServerAlive(); }
+                catch (Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] EnsureServerAlive: {ex.Message}"); }
             }
 
-            if (Input.GetKeyDown(KeyCode.F9))
+            const int VK_F9 = 0x78;
+            const int VK_F10 = 0x79;
+            const int KEY_PRESSED = unchecked((int)0x8000);
+
+            bool f9Now = (PluginGetAsyncKeyState(VK_F9) & KEY_PRESSED) != 0;
+            bool f10Now = (PluginGetAsyncKeyState(VK_F10) & KEY_PRESSED) != 0;
+
+            if (f9Now && !_prevF9)
             {
-                Bridge.KeyInputSystem.OnF9Pressed?.Invoke();
+                try { Bridge.KeyInputSystem.OnF9Pressed?.Invoke(); }
+                catch (System.Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] F9 handler threw: {ex.Message}"); }
+            }
+            if (f10Now && !_prevF10)
+            {
+                try { Bridge.KeyInputSystem.OnF10Pressed?.Invoke(); }
+                catch (System.Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] F10 handler threw: {ex.Message}"); }
             }
 
-            if (Input.GetKeyDown(KeyCode.F10))
-            {
-                Bridge.KeyInputSystem.OnF10Pressed?.Invoke();
-            }
+            _prevF9 = f9Now;
+            _prevF10 = f10Now;
         }
 
         private static void PatchPlayerLoopRejection()

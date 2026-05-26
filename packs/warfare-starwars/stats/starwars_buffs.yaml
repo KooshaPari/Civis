@@ -8,8 +8,8 @@ overrides:
     mode: multiply
     filter: Components.MeleeUnit
 
-  - target: unit.stats.damage
-    value: 1.25
+  - target: unit.stats.attack_cooldown
+    value: 0.8
     mode: multiply
     filter: Components.MeleeUnit
 
@@ -17,9 +17,9 @@ overrides:
   - target: unit.stats.hp
     value: 0.8
     mode: multiply
-    filter: Components.RangedUnit
+    filter: Components.RangeUnit
 
   - target: unit.stats.speed
     value: 1.2
     mode: multiply
-    filter: Components.RangedUnit
+    filter: Components.RangeUnit

@@ -97,6 +97,16 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
     {
         fixture.SkipIfNotInitialized();
 
+        await EnsureMainMenuCanvasReadyAsync().ConfigureAwait(false);
+
+        // Prior tests in the shared collection may leave the debug panel open.
+        UiActionResult debugState = await QueryDfCanvasPanelAsync("DebugPanel").ConfigureAwait(false);
+        if (debugState.MatchedNode?.Visible == true)
+        {
+            await fixture.Client!.ToggleUiAsync("debug").ConfigureAwait(false);
+            await Task.Delay(400).ConfigureAwait(false);
+        }
+
         StartGameResult openResult = await fixture.Client!.ToggleUiAsync("debug");
         openResult.Success.Should().BeTrue(
             "first ToggleUiAsync(debug) should open debug panel at main menu");

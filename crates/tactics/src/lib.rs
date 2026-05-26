@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 mod doctrine_fitness;
+mod fog_of_war;
 mod formation;
 mod grid_obstacles;
 mod los;
@@ -19,6 +20,7 @@ mod pathfinding;
 mod war_bridge;
 
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
+pub use fog_of_war::FogOfWar;
 pub use formation::{
     formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,
 };

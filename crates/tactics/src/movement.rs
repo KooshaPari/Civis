@@ -1,7 +1,7 @@
 //! Operational-layer grid movement toward enemies (FR-CIV-TACTICS-031).
 
 use crate::grid_obstacles::grid_cell_blocked;
-use crate::pathfinding::bfs_next_step_with_blocked;
+use crate::pathfinding::{astar_path_with_blocked, bfs_next_step_with_blocked};
 use crate::war_bridge::MilitaryUnitSample;
 use civ_voxel::{MaterialId, VoxelWorld};
 

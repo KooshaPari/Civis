@@ -47,16 +47,24 @@ public class CuaNativeClient : IAsyncDisposable
         psi.Environment[options.LogEnvironmentVariable] = logLevel;
 
         var client = new TClient();
-        client._proc = Process.Start(psi)
-            ?? throw new InvalidOperationException($"Failed to start {executable}");
-
-        JsonElement pong = await client.CallAsync("ping", null, ct).ConfigureAwait(false);
-        if (pong.ValueKind == JsonValueKind.Undefined || !pong.TryGetProperty("ok", out _))
+        try
         {
-            throw new InvalidOperationException($"{options.ProcessDisplayName} did not respond to ping");
-        }
+            client._proc = Process.Start(psi)
+                ?? throw new InvalidOperationException($"Failed to start {executable}");
 
-        return client;
+            JsonElement pong = await client.CallAsync("ping", null, ct).ConfigureAwait(false);
+            if (pong.ValueKind == JsonValueKind.Undefined || !pong.TryGetProperty("ok", out _))
+            {
+                throw new InvalidOperationException($"{options.ProcessDisplayName} did not respond to ping");
+            }
+
+            return client;
+        }
+        catch
+        {
+            await client.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task<byte[]> ScreenshotAsync(

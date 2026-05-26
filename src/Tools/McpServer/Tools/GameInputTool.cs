@@ -13,6 +13,8 @@ namespace DINOForge.Tools.McpServer.Tools;
 [McpServerToolType]
 public sealed class GameInputTool
 {
+    private GameInputTool() { }
+
     /// <summary>
     /// Sends keyboard or mouse input to the game window without requiring foreground.
     /// </summary>

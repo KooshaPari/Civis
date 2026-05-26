@@ -62,13 +62,18 @@ public sealed class GameProcessManager : IDisposable
         if (hidden)
             psi.WindowStyle = ProcessWindowStyle.Hidden;
 
+        Process? proc = null;
         try
         {
-            _process = Process.Start(psi);
-            return _process != null;
+            proc = Process.Start(psi);
+            if (proc is null)
+                return false;
+            _process = proc;
+            return true;
         }
         catch
         {
+            proc?.Dispose();
             return false;
         }
     }
@@ -106,13 +111,18 @@ public sealed class GameProcessManager : IDisposable
             RedirectStandardError = false,
         };
 
+        Process? proc = null;
         try
         {
-            _process = Process.Start(psi);
-            return _process != null;
+            proc = Process.Start(psi);
+            if (proc is null)
+                return false;
+            _process = proc;
+            return true;
         }
         catch
         {
+            proc?.Dispose();
             return false;
         }
     }
@@ -175,10 +185,24 @@ public sealed class GameProcessManager : IDisposable
 
     public void Dispose()
     {
-        if (_process != null)
+        if (_process is null)
+            return;
+
+        try
         {
-            try { _process.Dispose(); } catch { /* ignore */ }
-            _process = null;
+            if (!_process.HasExited)
+                _process.Kill();
         }
+        catch (InvalidOperationException)
+        {
+            /* process already exited */
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            /* best-effort kill */
+        }
+
+        try { _process.Dispose(); } catch (ObjectDisposedException) { /* ignore */ }
+        _process = null;
     }
 }

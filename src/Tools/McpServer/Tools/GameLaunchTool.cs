@@ -1,6 +1,7 @@
 #nullable enable
 using System.ComponentModel;
 using DINOForge.Bridge.Client;
+using DINOForge.Tools.McpServer;
 using ModelContextProtocol.Server;
 
 namespace DINOForge.Tools.McpServer.Tools;
@@ -45,7 +46,20 @@ public sealed class GameLaunchTool
             });
         }
 
-        bool launched = await processManager.LaunchAsync(gamePath).ConfigureAwait(false);
+        string? resolvedGamePath = null;
+        if (!string.IsNullOrWhiteSpace(gamePath))
+        {
+            try
+            {
+                resolvedGamePath = McpPathSafety.ResolveGameExecutablePath(gamePath);
+            }
+            catch (Exception ex)
+            {
+                return GameClientHelper.ToJson(new { success = false, message = ex.Message });
+            }
+        }
+
+        bool launched = await processManager.LaunchAsync(resolvedGamePath).ConfigureAwait(false);
         if (!launched)
         {
             return GameClientHelper.ToJson(new

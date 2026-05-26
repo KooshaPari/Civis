@@ -19,6 +19,8 @@ namespace DINOForge.Tools.McpServer.Tools;
 [McpServerToolType]
 public sealed class GameAnalyzeScreenTool
 {
+    private const string ReplicatePredictionsUrl = "https://api.replicate.com/v1/predictions";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = false,
@@ -146,7 +148,7 @@ public sealed class GameAnalyzeScreenTool
                 input = new { image = $"data:image/png;base64,{base64Image}" }
             }, JsonOptions);
             using var content = new StringContent(body, Encoding.UTF8, "application/json");
-            using var response = await SharedHttp.PostAsync("https://api.replicate.com/v1/predictions", content, ct).ConfigureAwait(false);
+            using var response = await SharedHttp.PostAsync(ReplicatePredictionsUrl, content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return null;
             string json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return ParseElements(json);

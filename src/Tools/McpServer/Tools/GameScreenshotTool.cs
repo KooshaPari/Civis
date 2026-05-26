@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using DINOForge.Bridge.Client;
+using DINOForge.Tools.McpServer;
 using DINOForge.Bridge.Protocol;
 using ModelContextProtocol.Server;
 
@@ -15,9 +16,7 @@ namespace DINOForge.Tools.McpServer.Tools;
 [McpServerToolType]
 public sealed class GameScreenshotTool
 {
-    private static readonly string BepInExDirectory =
-        Path.Combine(Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? "C:\\Program Files (x86)",
-            "Steam\\steamapps\\common\\Diplomacy is Not an Option\\BepInEx");
+    private GameScreenshotTool() { }
 
     /// <summary>
     /// Captures a screenshot of the game window and saves it to disk.
@@ -37,11 +36,15 @@ public sealed class GameScreenshotTool
     {
         try
         {
-            // Determine output path
             if (string.IsNullOrEmpty(path))
             {
-                path = Path.Combine(BepInExDirectory, $"game_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                string? bepInEx = McpPathSafety.TryResolveBepInExRoot();
+                string defaultRoot = bepInEx ?? McpPathSafety.ScreenshotTempRoot;
+                Directory.CreateDirectory(defaultRoot);
+                path = Path.Combine(defaultRoot, $"game_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
             }
+
+            path = McpPathSafety.ResolveScreenshotOutputPath(path);
 
             // Ensure output directory exists
             string? dir = Path.GetDirectoryName(path);

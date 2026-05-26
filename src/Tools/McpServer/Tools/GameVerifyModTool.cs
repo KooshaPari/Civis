@@ -1,6 +1,7 @@
 #nullable enable
 using System.ComponentModel;
 using DINOForge.Bridge.Client;
+using DINOForge.Tools.McpServer;
 using DINOForge.Bridge.Protocol;
 using ModelContextProtocol.Server;
 
@@ -26,11 +27,21 @@ public sealed class GameVerifyModTool
         [Description("Path to the pack directory or manifest file")] string packPath,
         CancellationToken ct = default)
     {
+        string safePackPath;
+        try
+        {
+            safePackPath = McpPathSafety.ResolvePackPath(packPath);
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(GameClientHelper.ToJson(new { loaded = false, packPath, error = ex.Message }));
+        }
+
         return GameClientHelper.InvokeBridgeAsync(
             client,
             ct,
             new { loaded = false, error = GameClientHelper.NotConnectedMessage },
-            (c, token) => c.VerifyModAsync(packPath, token),
+            (c, token) => c.VerifyModAsync(safePackPath, token),
             result => new
             {
                 packId = result.PackId,

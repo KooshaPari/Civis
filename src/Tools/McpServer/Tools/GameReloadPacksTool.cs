@@ -1,6 +1,7 @@
 #nullable enable
 using System.ComponentModel;
 using DINOForge.Bridge.Client;
+using DINOForge.Tools.McpServer;
 using DINOForge.Bridge.Protocol;
 using ModelContextProtocol.Server;
 
@@ -25,11 +26,24 @@ public sealed class GameReloadPacksTool
         [Description("Optional packs directory path override")] string? path = null,
         CancellationToken ct = default)
     {
+        string? safePath = null;
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            try
+            {
+                safePath = McpPathSafety.ResolvePackPath(path);
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(GameClientHelper.ToJson(new { success = false, error = ex.Message }));
+            }
+        }
+
         return GameClientHelper.InvokeBridgeAsync(
             client,
             ct,
             new { success = false, error = GameClientHelper.NotConnectedMessage },
-            (c, token) => c.ReloadPacksAsync(path, token),
+            (c, token) => c.ReloadPacksAsync(safePath, token),
             result => new
             {
                 success = result.Success,

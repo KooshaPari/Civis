@@ -13,7 +13,7 @@ namespace DINOForge.Tools.McpServer;
 /// Walks: env var -> installer-shipped paths.json -> hardcoded fallback -> throws.
 /// </summary>
 /// <remarks>
-/// Replaces three ad-hoc TODO sites that each had their own bespoke fallback chain:
+/// Replaces three ad-hoc sites that each had their own bespoke fallback chain:
 ///   - GameCaptureHelper.ResolveBepInExRoot (DINO game path)
 ///   - GameCaptureHelper.ResolveBareCuaPath (bare-cua-native)
 ///   - isolation_layer.PlayCUABackend._resolve_playcua_path (Python sibling, see native_dep_resolver.py)
@@ -62,11 +62,9 @@ public static class NativeDepResolver
         }
 
         // 3. Hardcoded fallbacks
-        foreach (var fallback in fallbacks)
-        {
-            if (!string.IsNullOrWhiteSpace(fallback) && Exists(fallback, requireFile))
-                return fallback;
-        }
+        string? fromFallback = fallbacks.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && Exists(f, requireFile));
+        if (fromFallback is not null)
+            return fromFallback;
 
         // 4. Loud error
         var fallbackList = fallbacks.Length > 0 ? string.Join(", ", fallbacks) : "<none>";

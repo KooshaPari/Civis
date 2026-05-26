@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using ScreenCapture.NET;
 using ScreenRecorderLib;
+using DINOForge.Tools.McpServer;
 using DINOForge.Tools.McpServer.Cua;
 
 namespace DINOForge.Tools.McpServer.Tools;
@@ -21,16 +22,13 @@ internal static class GameCaptureHelper
 {
     private const string GameWindowTitle = "Diplomacy is Not an Option";
 
-    private static readonly string BepInExRoot =
-        Path.Combine(
-            "G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option",
-            "BepInEx");
+    private static string? BepInExRoot => McpPathSafety.TryResolveBepInExRoot();
 
-    private static readonly string ScreenshotRequestFile =
-        Path.Combine(BepInExRoot, "dinoforge_screenshot_request.txt");
+    private static string? ScreenshotRequestFile =>
+        BepInExRoot is null ? null : Path.Combine(BepInExRoot, "dinoforge_screenshot_request.txt");
 
-    private static readonly string ScreenshotDoneFile =
-        Path.Combine(BepInExRoot, "dinoforge_screenshot_done.txt");
+    private static string? ScreenshotDoneFile =>
+        BepInExRoot is null ? null : Path.Combine(BepInExRoot, "dinoforge_screenshot_done.txt");
 
     /// <summary>
     /// Captures the game window to a PNG file. Returns the output path on success, null on failure.
@@ -38,34 +36,36 @@ internal static class GameCaptureHelper
     /// </summary>
     internal static async Task<string?> CaptureAsync(string outputPath, CancellationToken ct = default)
     {
+        string safeOutputPath = McpPathSafety.ResolveScreenshotOutputPath(outputPath);
+
         // Primary: playcua-native (GPU-accelerated, optional fast native capture)
         if (await CuaNativeSession.TryScreenshotAsync(
-                CuaNativeClientOptions.Play, CuaNativePaths.TryFindPlay(), GameWindowTitle, outputPath, ct)
+                CuaNativeClientOptions.Play, CuaNativePaths.TryFindPlay(), GameWindowTitle, safeOutputPath, ct)
             .ConfigureAwait(false))
-            return outputPath;
+            return safeOutputPath;
 
         // Secondary: bare-cua-native (optional, fast native capture)
         if (await CuaNativeSession.TryScreenshotAsync(
-                CuaNativeClientOptions.Bare, CuaNativePaths.TryFindBare(), GameWindowTitle, outputPath, ct)
+                CuaNativeClientOptions.Bare, CuaNativePaths.TryFindBare(), GameWindowTitle, safeOutputPath, ct)
             .ConfigureAwait(false))
-            return outputPath;
+            return safeOutputPath;
 
         // Tertiary: Unity ScreenCapture.CaptureScreenshot() via file-signal
         // Works for exclusive fullscreen on Parsec/virtual displays — reads directly from GPU backbuffer.
-        if (await TryUnityScreenCaptureAsync(outputPath, ct).ConfigureAwait(false))
-            return outputPath;
+        if (await TryUnityScreenCaptureAsync(safeOutputPath, ct).ConfigureAwait(false))
+            return safeOutputPath;
 
         // Quaternary: DXGI Desktop Duplication (works for exclusive DX11 on physical displays)
-        if (OperatingSystem.IsWindows() && await TryDxgiCaptureAsync(outputPath, ct).ConfigureAwait(false))
-            return outputPath;
+        if (OperatingSystem.IsWindows() && await TryDxgiCaptureAsync(safeOutputPath, ct).ConfigureAwait(false))
+            return safeOutputPath;
 
         // Quinary: Windows.Graphics.Capture via ScreenRecorderLib
-        if (await TryScreenRecorderLibAsync(outputPath, ct).ConfigureAwait(false))
-            return outputPath;
+        if (await TryScreenRecorderLibAsync(safeOutputPath, ct).ConfigureAwait(false))
+            return safeOutputPath;
 
         // Last resort: ffmpeg gdigrab
-        if (await TryFfmpegGdigrabAsync(outputPath, ct).ConfigureAwait(false))
-            return outputPath;
+        if (await TryFfmpegGdigrabAsync(safeOutputPath, ct).ConfigureAwait(false))
+            return safeOutputPath;
 
         return null;
     }
@@ -79,15 +79,18 @@ internal static class GameCaptureHelper
     {
         try
         {
-            if (!Directory.Exists(BepInExRoot))
+            string? bepRoot = BepInExRoot;
+            string? requestFile = ScreenshotRequestFile;
+            string? doneFile = ScreenshotDoneFile;
+            if (bepRoot is null || requestFile is null || doneFile is null || !Directory.Exists(bepRoot))
                 return false;
 
             // Clean up any stale done file from previous capture
-            if (File.Exists(ScreenshotDoneFile))
-                File.Delete(ScreenshotDoneFile);
+            if (File.Exists(doneFile))
+                File.Delete(doneFile);
 
             // Write request file with desired output path
-            await File.WriteAllTextAsync(ScreenshotRequestFile, outputPath, ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(requestFile, outputPath, ct).ConfigureAwait(false);
 
             // Wait for done file to appear (up to 10 seconds)
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -97,9 +100,9 @@ internal static class GameCaptureHelper
             {
                 while (!timeoutCts.Token.IsCancellationRequested)
                 {
-                    if (File.Exists(ScreenshotDoneFile))
+                    if (File.Exists(doneFile))
                     {
-                        File.Delete(ScreenshotDoneFile);
+                        File.Delete(doneFile);
                         // Give Unity one more frame to flush the file
                         await Task.Delay(200, ct).ConfigureAwait(false);
                         return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
@@ -110,7 +113,8 @@ internal static class GameCaptureHelper
             catch (OperationCanceledException) { } // safe-swallow: timeout expected behavior
 
             // Clean up request file if game didn't respond
-            try { File.Delete(ScreenshotRequestFile); } catch { } // safe-swallow: best-effort cleanup, non-critical
+            try { File.Delete(requestFile); } catch (IOException) { /* best-effort cleanup */ }
+            catch (UnauthorizedAccessException) { /* best-effort cleanup */ }
             return false;
         }
         catch { return false; } // safe-swallow: screenshot capture failed, return false to caller

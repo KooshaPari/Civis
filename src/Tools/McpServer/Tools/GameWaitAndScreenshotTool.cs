@@ -1,6 +1,7 @@
 #nullable enable
 using System.ComponentModel;
 using DINOForge.Bridge.Client;
+using DINOForge.Tools.McpServer;
 using ModelContextProtocol.Server;
 
 namespace DINOForge.Tools.McpServer.Tools;
@@ -12,7 +13,7 @@ namespace DINOForge.Tools.McpServer.Tools;
 [McpServerToolType]
 public sealed class GameWaitAndScreenshotTool
 {
-    private static readonly string TempDir = Path.Combine(Path.GetTempPath(), "DINOForge");
+    private static readonly string TempDir = McpPathSafety.ScreenshotTempRoot;
 
     /// <summary>
     /// Waits until the game screen changes visually, then captures a screenshot.

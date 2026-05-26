@@ -603,8 +603,8 @@ fn update_civilian_meshes(
                 transform.scale = Vec3::splat(agent_scale_multiplier(1.0));
             }
             let job = job_type_for_civilian_id(civilian.id);
-            if let Some(handle) = visuals.materials.get(&job).cloned() {
-                commands.entity(entity).insert(handle);
+            if let Some((_, handle)) = visuals.materials.iter().find(|(j, _)| *j == job) {
+                commands.entity(entity).insert(handle.clone());
             }
         }
     }

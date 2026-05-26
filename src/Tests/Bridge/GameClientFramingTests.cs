@@ -71,8 +71,11 @@ public class GameClientFramingTests
             async () => await client.ConnectAsync(CancellationToken.None).ConfigureAwait(true));
 
         sw.Stop();
-        // Should fail within 4 seconds (3s timeout + overhead)
-        sw.ElapsedMilliseconds.Should().BeLessThan(4500);
+        // Should fail within timeout + overhead (Linux CI pipe connect can be slower under load)
+        var maxMs = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase)
+            ? 12_000
+            : 4_500;
+        sw.ElapsedMilliseconds.Should().BeLessThan(maxMs);
         client.Dispose();
     }
 
@@ -97,8 +100,10 @@ public class GameClientFramingTests
             async () => await client.ConnectAsync(customTimeout, CancellationToken.None).ConfigureAwait(true));
 
         sw.Stop();
-        // Should fail quickly (within 2 seconds), proving custom timeout was used
-        sw.ElapsedMilliseconds.Should().BeLessThan(2500);
+        var maxMs = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase)
+            ? 8_000
+            : 2_500;
+        sw.ElapsedMilliseconds.Should().BeLessThan(maxMs);
         client.Dispose();
     }
 

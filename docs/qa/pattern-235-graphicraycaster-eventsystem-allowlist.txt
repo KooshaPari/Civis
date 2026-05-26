@@ -2,4 +2,5 @@
 # Allowlist for whitelisted GraphicRaycaster instantiations that don't require EventSystem guard.
 # One file path per line. Lines starting with # are comments.
 
-# EMPTY — no allowlisted sites. All GraphicRaycaster AddComponent calls are protected.
+# DFCanvas calls Plugin.EnsureEventSystemAlive() immediately before AddComponent (iter-145 H1)
+src/Runtime/UI/DFCanvas.cs

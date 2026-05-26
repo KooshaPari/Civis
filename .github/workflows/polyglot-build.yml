@@ -391,24 +391,22 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
-          dotnet-version: '11.0.100-preview.2'
-          include-prerelease: true
+          dotnet-version: '8.0.x'
 
       - name: Build PackCompiler (tests polyglot integration)
-        working-directory: src/Tools/PackCompiler
-        run: |
-          dotnet build -c Release
-          echo "✓ PackCompiler compiled successfully"
+        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Release
 
       - name: Run polyglot unit tests
-        working-directory: src
-        run: |
-          dotnet test Tests/GoResolverServiceTests.cs -c Release --verbosity normal --logger "console;verbosity=normal"
-          dotnet test Tests/Polyglot/PolyglotIntegrationTests.cs -c Release --verbosity normal --logger "console;verbosity=normal"
-          echo "✓ All polyglot tests passed"
+        run: >
+          dotnet test src/Tests/DINOForge.Tests.csproj -c Release
+          -p:GameInstalled=false
+          --filter "FullyQualifiedName~SdkPolyglotIntegration"
+          --verbosity normal
 
       - name: Verify AssetOptimizationService Zig integration
-        working-directory: src
-        run: |
-          dotnet test Tests/ -c Release -k "AssetOptimizationService" --verbosity normal || echo "⚠ Note: Zig library may not be available on Ubuntu (expected)"
-          echo "✓ Asset optimization service integration verified"
+        continue-on-error: true
+        run: >
+          dotnet test src/Tests/DINOForge.Tests.csproj -c Release
+          -p:GameInstalled=false
+          --filter "FullyQualifiedName~AssetOptimization"
+          --verbosity normal

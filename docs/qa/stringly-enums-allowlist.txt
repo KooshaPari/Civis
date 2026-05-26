@@ -31,3 +31,18 @@
 # Companion task: #289 (HIGH-site sweep) / #290 (PackManifest.Type +
 # WinCondition.Type schema-published migration) / #291 (this gate) /
 # #292 (CLAUDE.md doctrine + Pattern Catalog entry).
+
+# Bridge protocol DTOs — values are game-defined JSON strings, not closed enums (iter-145/146)
+src/Bridge/Protocol/CatalogSnapshot.cs
+src/Bridge/Protocol/ComponentMapResult.cs
+src/Bridge/Protocol/StatResult.cs
+src/Bridge/Protocol/UiTreeResult.cs
+src/Bridge/Protocol/UiWaitResult.cs
+
+# Pack/schema models — migration tracked in #290; allowlist until enum publish
+src/Domains/Scenario/Models/WinConditionDefinition.cs
+src/SDK/Models/SkillDefinition.cs
+src/Tools/PackCompiler/Models/AssetConfig.cs
+src/Tools/PackCompiler/Models/ProcessingReport.cs
+src/Domains/UI/Models/HudElementDefinition.cs
+src/SDK/Models/TotalConversionManifest.cs

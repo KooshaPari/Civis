@@ -169,13 +169,20 @@ public sealed class GameClient : IGameClient, IDisposable
 
             try
             {
-                // NamedPipeClientStream.ConnectAsync can ignore cancellation for missing pipes on Windows;
-                // race connect against an independent delay (do not link timeout token into ConnectAsync).
-                Task connectTask = _pipe.ConnectAsync(ct);
-                Task finished = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
+                // NamedPipeClientStream.ConnectAsync may ignore cancellation on some hosts; race connect
+                // against an independent delay and cancel the linked token when the delay wins.
+                Task connectTask = _pipe.ConnectAsync(linkedCts.Token);
+                Task delayTask = Task.Delay(timeout);
+                Task finished = await Task.WhenAny(connectTask, delayTask).ConfigureAwait(false);
                 if (finished != connectTask)
                 {
+                    await timeoutCts.CancelAsync().ConfigureAwait(false);
                     CleanupPipe();
+                    _ = connectTask.ContinueWith(
+                        static t => _ = t.Exception,
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted,
+                        TaskScheduler.Default);
                     throw new TimeoutException($"Connection timeout after {timeout.TotalSeconds}s");
                 }
 

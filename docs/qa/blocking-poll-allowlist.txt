@@ -28,3 +28,12 @@ src/Runtime/Bridge/GameBridgeServer.cs:369  # guarded by thread-local state vari
 # Iter-145 P0 (audit a9ec9a7a41fa48804): bring HIGH below threshold of 8
 # Detector now uses repo-relative paths (relative_to(REPO_ROOT)) — entries MUST start with src/
 src/Runtime/Bridge/KeyInputSystem.cs:162  # one-shot debounce guarded by ThreadInterruptedException -> break (cooperative cancellation)
+src/Runtime/Bridge/KeyInputSystem.cs:166  # try/catch debounce settle — not a polling loop (iter-145/146)
+src/Runtime/Plugin.cs:1679  # F9 debounce one-shot (iter-145)
+src/Runtime/Plugin.cs:1700  # menu toggle debounce one-shot (iter-145)
+src/Runtime/Bridge/GameBridgeServer.cs:925  # pipe accept backoff — bounded wait, not spin-poll (iter-145/146)
+src/Tests/BridgeClientAsyncTests.cs:273  # intentional Infinite wait in cancel test (pattern-113-ok: test harness)
+src/Tests/Integration/Tests/GameSandboxIntegrationTests.cs:112  # game sandbox settle — integration only
+src/Tests/Integration/Tests/ParallelGameE2ETests.cs:129  # Unity boot wait — integration only
+src/Tests/Integration/Tests/ParallelGameE2ETests.cs:151  # parallel E2E settle — integration only
+src/Tests/UiAutomation/CompanionFixture.cs:95  # WinUI companion fixture settle

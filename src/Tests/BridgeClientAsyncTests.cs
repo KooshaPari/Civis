@@ -270,7 +270,7 @@ public class BridgeClientAsyncTests
     {
         public override int Read(byte[] buffer, int offset, int count)
         {
-            Thread.Sleep(Timeout.Infinite);
+            Thread.Sleep(Timeout.Infinite); // pattern-113-ok: deliberate blocking stream for cancel test
             return 0;
         }
 

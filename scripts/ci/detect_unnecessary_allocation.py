@@ -145,7 +145,7 @@ def scan_file(file_path: Path, root: Path) -> list[AllocationHit]:
             continue
 
         method = match.group(1)  # ToList or ToArray
-        rel_path = str(file_path.relative_to(root))
+        rel_path = file_path.relative_to(root).as_posix()
 
         # Check for inline allowlist comment
         has_inline_ok = "// allocation-ok:" in line
@@ -184,7 +184,7 @@ def load_allowlist(allowlist_path: Path) -> set[str]:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            keys.add(line)
+            keys.add(line.replace("\\", "/"))
     except Exception as e:
         print(f"Error reading allowlist {allowlist_path}: {e}", file=sys.stderr)
 
@@ -193,14 +193,12 @@ def load_allowlist(allowlist_path: Path) -> set[str]:
 
 def is_allowlisted(hit: AllocationHit, allowlist_keys: set[str]) -> bool:
     """Check if a hit is allowlisted."""
-    # Check exact key match (severity|file|line)
-    if hit.allowlist_key in allowlist_keys:
+    key = hit.allowlist_key.replace("\\", "/")
+    file = hit.file.replace("\\", "/")
+    if key in allowlist_keys:
         return True
-
-    # Check file-level suppression
-    if hit.file in allowlist_keys:
+    if file in allowlist_keys:
         return True
-
     return False
 
 

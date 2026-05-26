@@ -33,7 +33,9 @@ def scan_file(filepath):
     graphicraycaster_pattern = re.compile(r'(AddComponent<GraphicRaycaster>\s*\(\)|new\s+GraphicRaycaster\s*\()')
 
     # Pattern: EventSystem guard within context
-    eventsystem_guard_pattern = re.compile(r'EventSystem\.(current\s*!=\s*null|current\s*==\s*null|\w+EventSystem)')
+    eventsystem_guard_pattern = re.compile(
+        r'EventSystem\.(current\s*!=\s*null|current\s*==\s*null|\w+EventSystem)|EnsureEventSystemAlive\s*\('
+    )
 
     for idx, line in enumerate(lines):
         if graphicraycaster_pattern.search(line):
@@ -71,7 +73,7 @@ def main():
             continue
         for cs_file in scan_dir.rglob('*.cs'):
             # Skip if allowlisted
-            if str(cs_file) in allowlist:
+            if cs_file.as_posix() in allowlist or str(cs_file) in allowlist:
                 continue
 
             high_count, violations = scan_file(cs_file)

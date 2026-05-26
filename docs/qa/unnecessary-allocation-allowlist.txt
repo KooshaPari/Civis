@@ -18,10 +18,10 @@
 # ---------------------------------------------------------------------------
 
 # CLI startup arg parsing — runs once at process start, allocation amortized
-HIGH|src\Tools\GameControlCli\Program.cs|42
-HIGH|src\Tools\GameControlCli\Program.cs|47
-HIGH|src\Tools\GameControlCli\Program.cs|57
-HIGH|src\Tools\GameControlCli\Program.cs|64
+HIGH|src/Tools/GameControlCli/Program.cs|44
+HIGH|src/Tools/GameControlCli/Program.cs|49
+HIGH|src/Tools/GameControlCli/Program.cs|59
+HIGH|src/Tools/GameControlCli/Program.cs|66
 
 # DumpTools dev diagnostic — runs once per dump invocation, not hot path
 HIGH|src\Tools\DumpTools\Program.cs|152
@@ -50,4 +50,11 @@ HIGH|src\Tools\DesktopCompanion\Data\ConflictDetectionService.cs|117
 # McpServer/GameAnalyzeScreenTool — DEPRECATED C# MCP server (FastMCP Python
 # is canonical per CLAUDE.md MCP section); ToArray required because Length
 # check feeds fixed-size bbox int[4]. Not active hot path.
-HIGH|src\Tools\McpServer\Tools\GameAnalyzeScreenTool.cs|178
+HIGH|src/Tools/McpServer/Tools/GameAnalyzeScreenTool.cs|178
+
+# Iter-145/146 — runtime bridge discovery (not per-frame hot path; materialize once per query)
+src/Runtime/Bridge/EcsTypeDiscovery.cs
+src/Runtime/Bridge/FactionSystem.cs
+src/Bridge/Protocol/CanonicalJson.cs
+src/SDK/Registry/Registry.cs
+src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs

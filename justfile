@@ -55,7 +55,8 @@ civis-3d-catalog-check:
 
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:
-    cargo test -p civ-engine scenario --quiet
+    # Single link job avoids intermittent LNK1104 on Windows when other cargo builds run.
+    cargo test -p civ-engine scenario --quiet -j 1
 
 civis-3d-web-check:
     node --test web/tests/*.test.mjs

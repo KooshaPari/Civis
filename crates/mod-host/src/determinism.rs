@@ -43,59 +43,15 @@ pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> 
 }
 
 fn reject_operator(op: Operator<'_>) -> Option<&'static str> {
+    // wasmparser renames atomic opcodes across versions; stable Debug prefix is enough for MVP.
+    let opcode = format!("{op:?}");
+    if opcode.contains("Atomic") {
+        return Some("atomic");
+    }
     match op {
         Operator::F32Nearest | Operator::F64Nearest => Some("f32.nearest/f64.nearest"),
         Operator::F32Sqrt | Operator::F64Sqrt => Some("f32.sqrt/f64.sqrt"),
         Operator::I32Clz | Operator::I64Clz => Some("i32.clz/i64.clz"),
-        Operator::MemoryAtomicNotify { .. }
-        | Operator::MemoryAtomicWait32 { .. }
-        | Operator::MemoryAtomicWait64 { .. } => Some("memory.atomic.wait/notify"),
-        Operator::I32AtomicLoad { .. }
-        | Operator::I64AtomicLoad { .. }
-        | Operator::I32AtomicLoad16U { .. }
-        | Operator::I32AtomicLoad8U { .. }
-        | Operator::I64AtomicLoad8U { .. }
-        | Operator::I32AtomicStore { .. }
-        | Operator::I64AtomicStore { .. }
-        | Operator::I32AtomicStore16 { .. }
-        | Operator::I32AtomicStore8 { .. }
-        | Operator::I64AtomicStore8 { .. }
-        | Operator::I32AtomicRmwAdd { .. }
-        | Operator::I64AtomicRmwAdd { .. }
-        | Operator::I32AtomicRmw8AddU { .. }
-        | Operator::I32AtomicRmw16AddU { .. }
-        | Operator::I64AtomicRmw8AddU { .. }
-        | Operator::I32AtomicRmwSub { .. }
-        | Operator::I64AtomicRmwSub { .. }
-        | Operator::I32AtomicRmw8SubU { .. }
-        | Operator::I32AtomicRmw16SubU { .. }
-        | Operator::I64AtomicRmw8SubU { .. }
-        | Operator::I32AtomicRmwAnd { .. }
-        | Operator::I64AtomicRmwAnd { .. }
-        | Operator::I32AtomicRmw8AndU { .. }
-        | Operator::I32AtomicRmw16AndU { .. }
-        | Operator::I64AtomicRmw8AndU { .. }
-        | Operator::I32AtomicRmwOr { .. }
-        | Operator::I64AtomicRmwOr { .. }
-        | Operator::I32AtomicRmw8OrU { .. }
-        | Operator::I32AtomicRmw16OrU { .. }
-        | Operator::I64AtomicRmw8OrU { .. }
-        | Operator::I32AtomicRmwXor { .. }
-        | Operator::I64AtomicRmwXor { .. }
-        | Operator::I32AtomicRmw8XorU { .. }
-        | Operator::I32AtomicRmw16XorU { .. }
-        | Operator::I64AtomicRmw8XorU { .. }
-        | Operator::I32AtomicRmwXchg { .. }
-        | Operator::I64AtomicRmwXchg { .. }
-        | Operator::I32AtomicRmw8XchgU { .. }
-        | Operator::I32AtomicRmw16XchgU { .. }
-        | Operator::I64AtomicRmw8XchgU { .. }
-        | Operator::I32AtomicRmwCmpxchg { .. }
-        | Operator::I64AtomicRmwCmpxchg { .. }
-        | Operator::I32AtomicRmw8CmpxchgU { .. }
-        | Operator::I32AtomicRmw16CmpxchgU { .. }
-        | Operator::I64AtomicRmw8CmpxchgU { .. }
-        | Operator::AtomicFence => Some("atomic.fence"),
         _ => None,
     }
 }
@@ -129,9 +85,6 @@ mod tests {
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let err = scan_wasm_determinism(&wasm).expect_err("sqrt should fail");
-        assert!(matches!(
-            err,
-            DeterminismError::RejectedInstruction { .. }
-        ));
+        assert!(matches!(err, DeterminismError::RejectedInstruction { .. }));
     }
 }

@@ -20,9 +20,10 @@ use signature::verify_wasm_signature;
 use thiserror::Error;
 use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
-pub use determinism::{DeterminismError, scan_wasm_determinism};
+pub use determinism::{scan_wasm_determinism, DeterminismError};
 pub use guest_state::{
-    GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave, MOD_GUEST_STATE_VERSION,
+    GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave,
+    MOD_GUEST_STATE_VERSION,
 };
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{
@@ -361,11 +362,7 @@ impl ModHost {
                     version: entry.manifest.meta.version.clone(),
                     mod_type: mod_type_label(entry.manifest.meta.mod_type).to_owned(),
                     has_wasm: entry.wasm_bytes.is_some(),
-                    guest_memory_len: self
-                        .guest_memory_by_mod
-                        .get(&id)
-                        .map(Vec::len)
-                        .unwrap_or(0),
+                    guest_memory_len: self.guest_memory_by_mod.get(&id).map(Vec::len).unwrap_or(0),
                 }
             })
             .collect()
@@ -919,6 +916,17 @@ write_policy = false
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
         assert_eq!(invoke_economy_tick(&wasm, 9, &mut mem).expect("invoke"), 9);
+    }
+
+    #[test]
+    fn mod_guest_state_save_round_trips_json() {
+        let mut host = ModHost::new();
+        host.restore_guest_memory("demo", vec![9, 8, 7]);
+        let json = host.export_guest_state().to_json().expect("json");
+        let mut other = ModHost::new();
+        let save = ModGuestStateSave::from_json(&json).expect("parse");
+        other.import_guest_state(&save).expect("import");
+        assert_eq!(other.guest_memory_snapshot("demo"), vec![9, 8, 7]);
     }
 
     #[test]

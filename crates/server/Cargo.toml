@@ -12,6 +12,7 @@ civ-agents = { path = "../agents" }
 civ-economy = { path = "../economy" }
 civ-voxel = { path = "../voxel" }
 civ-protocol-3d = { path = "../protocol-3d" }
+civ-mod-host = { path = "../mod-host" }
 axum = { version = "0.7", features = ["ws"] }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }

@@ -3,9 +3,8 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
-    spawn_civilian_at, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools,
-    Wardrobe,
+    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
+    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -147,25 +146,22 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
     const QUADRANT_SPREAD: i32 = 2_500;
 
     let faction_capitals = [
-        (-7_500, 7_500),   // faction 0: NW
-        (7_500, 7_500),    // faction 1: NE
-        (-7_500, -7_500),  // faction 2: SW
-        (7_500, -7_500),   // faction 3: SE
+        (-7_500, 7_500),  // faction 0: NW
+        (7_500, 7_500),   // faction 1: NE
+        (-7_500, -7_500), // faction 2: SW
+        (7_500, -7_500),  // faction 3: SE
     ];
 
+    let scale = FIXED_SCALE as f32;
+    let mut next_civilian_id = 1u64;
     for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
         for _ in 0..CIVILIANS_PER_FACTION {
-            let x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
-            let y = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
-            spawn_civilian_at(
-                world,
-                faction as u32,
-                Position3d {
-                    x,
-                    y,
-                    z: 0,
-                },
-            );
+            let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
+            let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
+            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
+            next_civilian_id += 1;
         }
     }
 }

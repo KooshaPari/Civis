@@ -77,11 +77,11 @@ internal static class AssetctlCommand
             AssetctlValidationResult result = pipeline.Validate(assetId, pipelineRoot);
             if (!result.Success)
             {
-                WriteError("validate", result.Message ?? "validate failed", outputFormat);
+                AssetctlOutput.WriteError("validate", result.Message ?? "validate failed", outputFormat);
                 return;
             }
 
-            if (!IsJsonOutput(outputFormat))
+            if (!AssetctlOutput.IsJsonOutput(outputFormat))
             {
                 AnsiConsole.MarkupLine("[green]✓[/] Asset validated.");
                 AnsiConsole.MarkupLine($"  Asset ID: [bold]{Markup.Escape(result.AssetId ?? string.Empty)}[/]");
@@ -89,7 +89,7 @@ internal static class AssetctlCommand
                 return;
             }
 
-            WriteJson(result);
+            AssetctlOutput.WriteJson(result);
             return;
         });
 
@@ -160,11 +160,11 @@ internal static class AssetctlCommand
             AssetctlStylizeResult result = pipeline.Stylize(assetId, profile, pipelineRoot, faction, blenderPath, dryRun);
             if (!result.Success)
             {
-                WriteError("stylize", result.Message ?? "stylize failed", outputFormat);
+                AssetctlOutput.WriteError("stylize", result.Message ?? "stylize failed", outputFormat);
                 return;
             }
 
-            if (!IsJsonOutput(outputFormat))
+            if (!AssetctlOutput.IsJsonOutput(outputFormat))
             {
                 AnsiConsole.MarkupLine("[green]✓[/] Asset stylized.");
                 AnsiConsole.MarkupLine($"  Profile: [bold]{Markup.Escape(result.Profile ?? string.Empty)}[/]");
@@ -176,7 +176,7 @@ internal static class AssetctlCommand
                 return;
             }
 
-            WriteJson(result);
+            AssetctlOutput.WriteJson(result);
             return;
         });
 
@@ -218,18 +218,18 @@ internal static class AssetctlCommand
             AssetctlRegisterResult result = pipeline.Register(assetId, pipelineRoot);
             if (!result.Success)
             {
-                WriteError("register", result.Message ?? "register failed", outputFormat);
+                AssetctlOutput.WriteError("register", result.Message ?? "register failed", outputFormat);
                 return;
             }
 
-            if (!IsJsonOutput(outputFormat))
+            if (!AssetctlOutput.IsJsonOutput(outputFormat))
             {
                 AnsiConsole.MarkupLine("[green]✓[/] Asset added to registry.");
                 AnsiConsole.MarkupLine($"  Total registered: [bold]{result.TotalRegistered}[/]");
                 return;
             }
 
-            WriteJson(result);
+            AssetctlOutput.WriteJson(result);
             return;
         });
 
@@ -277,7 +277,7 @@ internal static class AssetctlCommand
 
             if (!AllowedPipelineBundles.Contains(bundle, StringComparer.OrdinalIgnoreCase))
             {
-                WriteError("export-unity", $"Unsupported bundle '{bundle}'", outputFormat);
+                AssetctlOutput.WriteError("export-unity", $"Unsupported bundle '{bundle}'", outputFormat);
                 return;
             }
 
@@ -285,11 +285,11 @@ internal static class AssetctlCommand
             AssetctlExportResult result = pipeline.ExportUnity(assetId, pipelineRoot, bundle);
             if (!result.Success)
             {
-                WriteError("export-unity", result.Message ?? "export-unity failed", outputFormat);
+                AssetctlOutput.WriteError("export-unity", result.Message ?? "export-unity failed", outputFormat);
                 return;
             }
 
-            if (!IsJsonOutput(outputFormat))
+            if (!AssetctlOutput.IsJsonOutput(outputFormat))
             {
                 AnsiConsole.MarkupLine("[green]✓[/] Asset exported for Unity.");
                 AnsiConsole.MarkupLine($"  Bundle: [bold]{Markup.Escape(result.Bundle ?? string.Empty)}[/]");
@@ -297,7 +297,7 @@ internal static class AssetctlCommand
                 return;
             }
 
-            WriteJson(result);
+            AssetctlOutput.WriteJson(result);
             return;
         });
 
@@ -396,7 +396,7 @@ internal static class AssetctlCommand
                     },
                     ct).ConfigureAwait(false);
 
-                if (!IsJsonOutput(outputFormat))
+                if (!AssetctlOutput.IsJsonOutput(outputFormat))
                 {
                     Table table = new Table()
                         .Border(TableBorder.Rounded)
@@ -421,7 +421,7 @@ internal static class AssetctlCommand
                 }
 
                 SketchfabRateLimitState? state = client.GetRateLimitState();
-                WriteJson(new
+                AssetctlOutput.WriteJson(new
                 {
                     success = true,
                     command = "search-sketchfab",
@@ -460,11 +460,11 @@ internal static class AssetctlCommand
             }
             catch (SketchfabApiException ex)
             {
-                WriteError("search-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("search-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
             }
             catch (Exception ex)
             {
-                WriteError("search-sketchfab", $"Search failed: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("search-sketchfab", $"Search failed: {ex.Message}", outputFormat);
             }
 
             return;
@@ -536,15 +536,15 @@ internal static class AssetctlCommand
             string franchise = parseResult.GetValue(franchiseOption) ?? "star_wars";
             string ipStatus = parseResult.GetValue(ipStatusOption) ?? "fan_star_wars_private_only";
 
-            if (!TryParseModelRef(modelRef, out string source, out string modelId, out string parseError))
+            if (!AssetctlRefs.TryParseModelRef(modelRef, out string source, out string modelId, out string parseError))
             {
-                WriteError("download-sketchfab", parseError, outputFormat);
+                AssetctlOutput.WriteError("download-sketchfab", parseError, outputFormat);
                 return;
             }
 
             if (!string.Equals(source, "sketchfab", StringComparison.OrdinalIgnoreCase))
             {
-                WriteError("download-sketchfab", $"Unsupported source '{source}'. Expected 'sketchfab'.", outputFormat);
+                AssetctlOutput.WriteError("download-sketchfab", $"Unsupported source '{source}'. Expected 'sketchfab'.", outputFormat);
                 return;
             }
 
@@ -577,7 +577,7 @@ internal static class AssetctlCommand
                 {
                     PatchManifestIp(result, ipStatus);
 
-                    if (!IsJsonOutput(outputFormat))
+                    if (!AssetctlOutput.IsJsonOutput(outputFormat))
                     {
                         AnsiConsole.MarkupLine("[green]✓[/] Sketchfab download complete.");
                         AnsiConsole.MarkupLine($"  Model ID: [bold]{Markup.Escape(modelId)}[/]");
@@ -588,7 +588,7 @@ internal static class AssetctlCommand
                         return;
                     }
 
-                    WriteJson(new
+                    AssetctlOutput.WriteJson(new
                     {
                         success = true,
                         command = "download-sketchfab",
@@ -609,15 +609,15 @@ internal static class AssetctlCommand
                     return;
                 }
 
-                WriteError("download-sketchfab", result.ErrorMessage ?? "Download failed", outputFormat);
+                AssetctlOutput.WriteError("download-sketchfab", result.ErrorMessage ?? "Download failed", outputFormat);
             }
             catch (SketchfabApiException ex)
             {
-                WriteError("download-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("download-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
             }
             catch (Exception ex)
             {
-                WriteError("download-sketchfab", $"Download failed: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("download-sketchfab", $"Download failed: {ex.Message}", outputFormat);
             }
         });
 
@@ -743,7 +743,7 @@ internal static class AssetctlCommand
 
                 if (candidates.Count == 0)
                 {
-                    WriteError("download-batch-sketchfab", $"No candidates matched query '{query}'.", outputFormat);
+                    AssetctlOutput.WriteError("download-batch-sketchfab", $"No candidates matched query '{query}'.", outputFormat);
                     return;
                 }
 
@@ -758,7 +758,7 @@ internal static class AssetctlCommand
 
                 if (filteredCandidates.Count == 0)
                 {
-                    WriteError("download-batch-sketchfab", "All candidates were skipped as duplicates.", outputFormat);
+                    AssetctlOutput.WriteError("download-batch-sketchfab", "All candidates were skipped as duplicates.", outputFormat);
                     return;
                 }
 
@@ -778,7 +778,7 @@ internal static class AssetctlCommand
                     : 0;
                 SketchfabRateLimitState? state = client.GetRateLimitState();
 
-                if (!IsJsonOutput(outputFormat))
+                if (!AssetctlOutput.IsJsonOutput(outputFormat))
                 {
                     AnsiConsole.MarkupLine($"[green]✓[/] Batch complete: {succeeded}/{batchCandidates.Count} succeeded, {failed} failed.");
                     if (state is not null)
@@ -789,7 +789,7 @@ internal static class AssetctlCommand
                     return;
                 }
 
-                WriteJson(new
+                AssetctlOutput.WriteJson(new
                 {
                     success = true,
                     command = "download-batch-sketchfab",
@@ -824,11 +824,11 @@ internal static class AssetctlCommand
             }
             catch (SketchfabApiException ex)
             {
-                WriteError("download-batch-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("download-batch-sketchfab", $"Sketchfab API error: {ex.Message}", outputFormat);
             }
             catch (Exception ex)
             {
-                WriteError("download-batch-sketchfab", $"Batch download failed: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("download-batch-sketchfab", $"Batch download failed: {ex.Message}", outputFormat);
             }
         });
 
@@ -863,7 +863,7 @@ internal static class AssetctlCommand
                     "Monitor quota with assetctl sketchfab-quota"
                 ];
 
-                if (!IsJsonOutput(outputFormat))
+                if (!AssetctlOutput.IsJsonOutput(outputFormat))
                 {
                     if (validation.IsValid)
                     {
@@ -878,7 +878,7 @@ internal static class AssetctlCommand
                     return;
                 }
 
-                WriteJson(new
+                AssetctlOutput.WriteJson(new
                 {
                     valid = validation.IsValid,
                     plan = validation.Plan,
@@ -890,7 +890,7 @@ internal static class AssetctlCommand
             }
             catch (Exception ex)
             {
-                WriteError("validate-sketchfab-token", $"Token validation failed: {ex.Message}", outputFormat);
+                AssetctlOutput.WriteError("validate-sketchfab-token", $"Token validation failed: {ex.Message}", outputFormat);
             }
         });
 
@@ -929,11 +929,11 @@ internal static class AssetctlCommand
 
             if (state is null)
             {
-                WriteError("sketchfab-quota", "No rate limit state available. Run a Sketchfab command first.", outputFormat);
+                AssetctlOutput.WriteError("sketchfab-quota", "No rate limit state available. Run a Sketchfab command first.", outputFormat);
                 return;
             }
 
-            if (!IsJsonOutput(outputFormat))
+            if (!AssetctlOutput.IsJsonOutput(outputFormat))
             {
                 AnsiConsole.MarkupLine("[bold]Sketchfab Quota[/]");
                 AnsiConsole.MarkupLine($"Remaining: [green]{state.Remaining}[/], reset in [yellow]{state.ResetInSeconds}[/] seconds.");
@@ -941,7 +941,7 @@ internal static class AssetctlCommand
                 return;
             }
 
-            WriteJson(new
+            AssetctlOutput.WriteJson(new
             {
                 remaining = state.Remaining,
                 reset_at = state.ResetAtUtc.ToString("O", CultureInfo.InvariantCulture),
@@ -951,75 +951,6 @@ internal static class AssetctlCommand
         });
 
         return command;
-    }
-
-    private static bool IsJsonOutput(string outputFormat)
-    {
-        return string.Equals(outputFormat, "json", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void WriteError(string command, string message, string outputFormat)
-    {
-        if (IsJsonOutput(outputFormat))
-        {
-            WriteJson(new
-            {
-                success = false,
-                command,
-                message
-            });
-            return;
-        }
-
-        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(command)}: {Markup.Escape(message)}");
-    }
-
-    private static void WriteJson(object payload)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
-    }
-
-    private static bool TryParseCandidateRef(string candidateRef, out string source, out string externalId, out string parseError)
-    {
-        source = string.Empty;
-        externalId = string.Empty;
-        parseError = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(candidateRef))
-        {
-            parseError = "candidate reference cannot be empty; expected <source>:<externalId>";
-            return false;
-        }
-
-        int separatorIndex = candidateRef.IndexOf(':');
-        if (separatorIndex <= 0 || separatorIndex == candidateRef.Length - 1)
-        {
-            parseError = "candidate reference must be in format <source>:<externalId>";
-            return false;
-        }
-
-        string left = candidateRef.Substring(0, separatorIndex).Trim();
-        string right = candidateRef[(separatorIndex + 1)..].Trim();
-
-        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
-        {
-            parseError = "candidate reference must be in format <source>:<externalId>";
-            return false;
-        }
-
-        source = left;
-        externalId = right;
-        return true;
-    }
-
-    private static bool TryParseModelRef(string modelRef, out string source, out string modelId, out string parseError)
-    {
-        if (!TryParseCandidateRef(modelRef, out source, out modelId, out parseError))
-        {
-            return false;
-        }
-
-        return true;
     }
 
     private static string ReadEnvironment(string name, string defaultValue)

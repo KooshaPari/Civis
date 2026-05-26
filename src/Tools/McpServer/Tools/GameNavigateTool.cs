@@ -51,7 +51,7 @@ public sealed class GameNavigateTool
                     continue;
 
                 long fileSize = new FileInfo(screenshotPath).Length;
-                string currentState = DetectGameState(fileSize);
+                string currentState = GameScreenshotHeuristics.InferUiStateFromPngSizeBytes(fileSize);
 
                 // Check if we've reached the target state
                 if (currentState == safeTarget)
@@ -98,29 +98,6 @@ public sealed class GameNavigateTool
         {
             return GameClientHelper.ToJson(new { success = false, error = ex.Message });
         }
-    }
-
-    /// <summary>
-    /// Detects the current game UI state based on screenshot file size heuristics.
-    /// File size is a simple proxy for screen complexity:
-    /// - main_menu: medium size (menu UI only, less geometry)
-    /// - gameplay: large size (entities, terrain, full detail)
-    /// - pause_menu: medium size (menu overlay on gameplay)
-    /// - loading: small size (blank screen)
-    /// </summary>
-    private static string DetectGameState(long fileSizeBytes)
-    {
-        // File size heuristics (calibrated for 1920x1080 PNG):
-        // - Loading/blank: < 50KB (mostly uniform color, highly compressible)
-        // - Menu UI only: 50-150KB (UI elements, less scene detail)
-        // - Gameplay: > 150KB (full scene + entities, more detail)
-
-        return fileSizeBytes switch
-        {
-            < 50_000 => "loading",                    // Very small = loading/blank
-            < 150_000 => "main_menu",                 // Medium = menu UI
-            _ => "gameplay"                           // Large = full gameplay scene
-        };
     }
 
     /// <summary>

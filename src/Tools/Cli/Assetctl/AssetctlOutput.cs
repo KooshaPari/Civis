@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using DINOForge.Tools.Cli.Json;
 using Spectre.Console;
 
 namespace DINOForge.Tools.Cli.Assetctl
@@ -12,11 +12,7 @@ namespace DINOForge.Tools.Cli.Assetctl
     /// </summary>
     public static class AssetctlOutput
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
+        private static readonly JsonSerializerOptions JsonOptions = CliJsonOptions.Indented;
 
         /// <summary>Returns true when the given format string requests JSON output.</summary>
         public static bool IsJsonOutput(string? format) =>
@@ -24,7 +20,7 @@ namespace DINOForge.Tools.Cli.Assetctl
 
         /// <summary>Serialises <paramref name="value"/> as indented JSON and writes it to stdout.</summary>
         public static void WriteJson(object value) =>
-            Console.WriteLine(JsonSerializer.Serialize(value, _jsonOptions));
+            Console.WriteLine(JsonSerializer.Serialize(value, JsonOptions));
 
         /// <summary>
         /// Writes a human-readable error to stderr (table mode) or a JSON error payload to stdout (json mode).
@@ -33,7 +29,7 @@ namespace DINOForge.Tools.Cli.Assetctl
         {
             if (IsJsonOutput(format))
             {
-                WriteJson(new { success = false, command, error = message });
+                WriteJson(new { success = false, command, message });
             }
             else
             {

@@ -31,7 +31,7 @@ internal static class IntakeCommand
             string outputFormat = parseResult.GetValue(formatOption) ?? "text";
             string pipelineRoot = parseResult.GetValue(pipelineRootOption) ?? "assets-pipeline";
 
-            if (!TryParseCandidateRef(candidateRef, out string source, out string externalId, out string parseError))
+            if (!AssetctlRefs.TryParseCandidateRef(candidateRef, out string source, out string externalId, out string parseError))
             {
                 AssetctlOutput.WriteError("intake", parseError, outputFormat);
                 return Task.CompletedTask;
@@ -61,38 +61,5 @@ internal static class IntakeCommand
         });
 
         return command;
-    }
-
-    private static bool TryParseCandidateRef(string candidateRef, out string source, out string externalId, out string parseError)
-    {
-        source = string.Empty;
-        externalId = string.Empty;
-        parseError = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(candidateRef))
-        {
-            parseError = "candidate reference cannot be empty; expected <source>:<externalId>";
-            return false;
-        }
-
-        int separatorIndex = candidateRef.IndexOf(':');
-        if (separatorIndex <= 0 || separatorIndex == candidateRef.Length - 1)
-        {
-            parseError = "candidate reference must be in format <source>:<externalId>";
-            return false;
-        }
-
-        string left = candidateRef[..separatorIndex].Trim();
-        string right = candidateRef[(separatorIndex + 1)..].Trim();
-
-        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
-        {
-            parseError = "candidate reference must be in format <source>:<externalId>";
-            return false;
-        }
-
-        source = left;
-        externalId = right;
-        return true;
     }
 }

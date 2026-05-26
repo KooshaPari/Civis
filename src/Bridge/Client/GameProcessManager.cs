@@ -68,7 +68,7 @@ public sealed class GameProcessManager
                 using (var _ = Process.Start(steamInfo)) { }
 
                 // Wait for the game process to appear
-                if (await WaitForProcessAsync(timeoutMs: 30000, ct))
+                if (await WaitForProcessAsync(timeoutMs: 30000, ct).ConfigureAwait(false))
                     return true;
             }
             catch (OperationCanceledException)
@@ -100,7 +100,7 @@ public sealed class GameProcessManager
             // Process keeps running after Dispose — Dispose only releases the parent's handle, not the child process.
             using (var _ = Process.Start(startInfo)) { }
 
-            return await WaitForProcessAsync(timeoutMs: 30000, ct);
+            return await WaitForProcessAsync(timeoutMs: 30000, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -128,7 +128,7 @@ public sealed class GameProcessManager
             process.Kill();
 
             // Wait for process exit using polling (netstandard2.0 compatible)
-            await WaitForProcessExitAsync(process, ct);
+            await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex) // safe-swallow: Process already exited — Kill() is a no-op
         {
@@ -178,7 +178,7 @@ public sealed class GameProcessManager
             try
             {
                 // netstandard2.0: Use polling to wait for process exit
-                await WaitForProcessExitAsync(processInLoop, ct);
+                await WaitForProcessExitAsync(processInLoop, ct).ConfigureAwait(false);
                 return;
             }
             catch (OperationCanceledException)
@@ -189,7 +189,7 @@ public sealed class GameProcessManager
             catch (Exception ex) // safe-swallow: handle may have become invalid during HasExited check; re-poll
             {
                 GC.KeepAlive(ex);
-                await Task.Delay(500, ct);
+                await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
     }
@@ -228,7 +228,7 @@ public sealed class GameProcessManager
             if (process is not null)
                 return true;
 
-            await Task.Delay(pollInterval, ct);
+            await Task.Delay(pollInterval, ct).ConfigureAwait(false);
             elapsed = elapsed + pollInterval;
         }
 
@@ -247,7 +247,7 @@ public sealed class GameProcessManager
             if (process.HasExited)
                 return;
 
-            await Task.Delay(pollIntervalMs, ct);
+            await Task.Delay(pollIntervalMs, ct).ConfigureAwait(false);
         }
 
         ct.ThrowIfCancellationRequested();

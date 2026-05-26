@@ -212,15 +212,7 @@ public static class CanonicalJson
             }
         }
 
-        foreach (JToken child in token.Children())
-        {
-            if (ContainsUnsafeNumericValue(child))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return token.Children().Any(ContainsUnsafeNumericValue);
     }
 
     private static readonly long NegativeZeroDoubleBits = BitConverter.DoubleToInt64Bits(-0.0);

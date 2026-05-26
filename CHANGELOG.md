@@ -1663,7 +1663,7 @@ v0.24.0 closure-gate status (Iter-110/111/112):
   - Re-enabled EndToEnd journeys with proper game instance detection
   - Added DLL lock mitigation in test fixtures
 
-## [Unreleased]
+## [0.18.1] - 2026-04-09
 
 ### Added
 
@@ -1900,7 +1900,7 @@ v0.24.0 closure-gate status (Iter-110/111/112):
 - **RuntimeDriver.OnDestroy fires early** (RT-005, NATIVE-001/003) — Root GameObject with `HideAndDontSave` destroyed at frame ~6s instead of persisting ≥ 600 frames; blocks native "Mods" button injection + F9/F10 hotkey survival
 - **UGUI overlay visibility** (OVL-006) — HudStrip `AlphaBase` suppression fix merged; awaits verification in live game
 
-## [Unreleased]
+## [0.13.0] - 2026-03-22
 
 ### Added
 

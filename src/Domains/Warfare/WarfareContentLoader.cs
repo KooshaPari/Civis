@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using DINOForge.Domains.Warfare.Archetypes;
 using DINOForge.SDK.IO;
 using DINOForge.SDK.Models;
@@ -86,6 +88,30 @@ namespace DINOForge.Domains.Warfare
             LoadArchetypes(Path.Combine(packDir, "archetypes"), packId);
         }
 
+        /// <summary>
+        /// Load all warfare definitions from a pack directory asynchronously.
+        /// </summary>
+        /// <param name="packDir">The root directory of the pack.</param>
+        /// <param name="packId">The pack identifier (for registration + logging).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task LoadPackAsync(string packDir, string packId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(packDir)) throw new ArgumentException("Pack directory is required.", nameof(packDir));
+            if (string.IsNullOrWhiteSpace(packId)) throw new ArgumentException("Pack ID is required.", nameof(packId));
+            if (!Directory.Exists(packDir))
+                throw new DirectoryNotFoundException($"Pack directory not found: {packDir}");
+
+            await LoadFactionsAsync(Path.Combine(packDir, "factions"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadUnitsAsync(Path.Combine(packDir, "units"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadBuildingsAsync(Path.Combine(packDir, "buildings"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadWeaponsAsync(Path.Combine(packDir, "weapons"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadProjectilesAsync(Path.Combine(packDir, "projectiles"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadDoctrinesAsync(Path.Combine(packDir, "doctrines"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadWavesAsync(Path.Combine(packDir, "waves"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadSquadsAsync(Path.Combine(packDir, "squads"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadArchetypesAsync(Path.Combine(packDir, "archetypes"), packId, cancellationToken).ConfigureAwait(false);
+        }
+
         private void LoadFactions(string dir, string packId)
         {
             foreach (string file in EnumerateYaml(dir))
@@ -97,6 +123,20 @@ namespace DINOForge.Domains.Warfare
                         throw new InvalidOperationException("Faction definition is missing faction.id.");
                     _factions.Register(id, def!, RegistrySource.Pack, packId, DefaultLoadOrder);
                 });
+            }
+        }
+
+        private async Task LoadFactionsAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<FactionDefinition>(file, packId, "faction", def =>
+                {
+                    string id = def?.Faction?.Id ?? string.Empty;
+                    if (string.IsNullOrEmpty(id))
+                        throw new InvalidOperationException("Faction definition is missing faction.id.");
+                    _factions.Register(id, def!, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -112,6 +152,18 @@ namespace DINOForge.Domains.Warfare
             }
         }
 
+        private async Task LoadUnitsAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<UnitDefinition>(file, packId, "unit", def =>
+                {
+                    RequireId(def?.Id, "unit");
+                    _units.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         private void LoadBuildings(string dir, string packId)
         {
             foreach (string file in EnumerateYaml(dir))
@@ -121,6 +173,18 @@ namespace DINOForge.Domains.Warfare
                     RequireId(def?.Id, "building");
                     _buildings.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
                 });
+            }
+        }
+
+        private async Task LoadBuildingsAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<BuildingDefinition>(file, packId, "building", def =>
+                {
+                    RequireId(def?.Id, "building");
+                    _buildings.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -136,6 +200,18 @@ namespace DINOForge.Domains.Warfare
             }
         }
 
+        private async Task LoadWeaponsAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<WeaponDefinition>(file, packId, "weapon", def =>
+                {
+                    RequireId(def?.Id, "weapon");
+                    _weapons.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         private void LoadProjectiles(string dir, string packId)
         {
             foreach (string file in EnumerateYaml(dir))
@@ -145,6 +221,18 @@ namespace DINOForge.Domains.Warfare
                     RequireId(def?.Id, "projectile");
                     _projectiles.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
                 });
+            }
+        }
+
+        private async Task LoadProjectilesAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<ProjectileDefinition>(file, packId, "projectile", def =>
+                {
+                    RequireId(def?.Id, "projectile");
+                    _projectiles.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -160,6 +248,18 @@ namespace DINOForge.Domains.Warfare
             }
         }
 
+        private async Task LoadDoctrinesAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<DoctrineDefinition>(file, packId, "doctrine", def =>
+                {
+                    RequireId(def?.Id, "doctrine");
+                    _doctrines.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         private void LoadWaves(string dir, string packId)
         {
             foreach (string file in EnumerateYaml(dir))
@@ -169,6 +269,18 @@ namespace DINOForge.Domains.Warfare
                     RequireId(def?.Id, "wave");
                     _waves.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
                 });
+            }
+        }
+
+        private async Task LoadWavesAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<WaveDefinition>(file, packId, "wave", def =>
+                {
+                    RequireId(def?.Id, "wave");
+                    _waves.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -184,6 +296,18 @@ namespace DINOForge.Domains.Warfare
             }
         }
 
+        private async Task LoadSquadsAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                await ProcessFileAsync<SquadDefinition>(file, packId, "squad", def =>
+                {
+                    RequireId(def?.Id, "squad");
+                    _squads.Register(def!.Id, def, RegistrySource.Pack, packId, DefaultLoadOrder);
+                }, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         private void LoadArchetypes(string dir, string packId)
         {
             foreach (string file in EnumerateYaml(dir))
@@ -191,6 +315,37 @@ namespace DINOForge.Domains.Warfare
                 try
                 {
                     string yaml = SafeFileIO.ReadText(file);
+                    ArchetypeDto? dto = _deserializer.Deserialize<ArchetypeDto>(yaml);
+                    if (dto == null)
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(dto.Id))
+                        throw new InvalidOperationException("Archetype definition is missing id.");
+
+                    var archetype = new FactionArchetype(
+                        dto.Id,
+                        dto.DisplayName ?? dto.Id,
+                        dto.Description ?? string.Empty,
+                        dto.BaseModifiers ?? new Dictionary<string, float>(StringComparer.Ordinal));
+
+                    _archetypes.Register(archetype);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load archetype from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadArchetypesAsync(string dir, string packId, CancellationToken cancellationToken)
+        {
+            foreach (string file in EnumerateYaml(dir))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
                     ArchetypeDto? dto = _deserializer.Deserialize<ArchetypeDto>(yaml);
                     if (dto == null)
                         continue;
@@ -232,6 +387,26 @@ namespace DINOForge.Domains.Warfare
                     return;
 
                 // Task #319 — IValidatable semantic check at the deserialize site.
+                JsonGuard.ValidateOrThrow(def, file);
+                register(def);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to load {kind} from {file} in pack '{packId}'.", ex);
+            }
+        }
+
+        private async Task ProcessFileAsync<T>(string file, string packId, string kind, Action<T?> register, CancellationToken cancellationToken) where T : class
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                T? def = _deserializer.Deserialize<T>(yaml);
+                if (def == null)
+                    return;
+
                 JsonGuard.ValidateOrThrow(def, file);
                 register(def);
             }

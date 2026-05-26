@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DINOForge.SDK.IO;
 
@@ -16,6 +18,21 @@ public static class SafeFileIO
 
     /// <summary>Read text file as UTF-8; throws DecoderFallbackException on invalid bytes.</summary>
     public static string ReadText(string path) => StripBom(StrictUtf8.GetString(File.ReadAllBytes(path)));
+
+    /// <summary>Read text file as UTF-8 asynchronously; throws DecoderFallbackException on invalid bytes.</summary>
+    public static async Task<string> ReadTextAsync(string path, CancellationToken cancellationToken = default)
+    {
+        byte[] bytes;
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+        using (var memory = new MemoryStream())
+        {
+            await stream.CopyToAsync(memory).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            bytes = memory.ToArray();
+        }
+
+        return StripBom(StrictUtf8.GetString(bytes));
+    }
 
     /// <summary>Read text file lines as UTF-8; throws on invalid bytes.</summary>
     public static string[] ReadAllLines(string path) => StripBom(StrictUtf8.GetString(File.ReadAllBytes(path))).Split(new[] { "\r\n", "\r", "\n" }, System.StringSplitOptions.None);

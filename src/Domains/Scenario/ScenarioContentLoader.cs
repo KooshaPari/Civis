@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using DINOForge.Domains.Scenario.Models;
 using DINOForge.Domains.Scenario.Registries;
 using DINOForge.SDK;
@@ -48,6 +50,20 @@ namespace DINOForge.Domains.Scenario
         }
 
         /// <summary>
+        /// Load all scenario definitions from a pack directory asynchronously.
+        /// </summary>
+        /// <param name="packDir">The root directory of the pack.</param>
+        /// <param name="packId">The pack identifier (for logging and error reporting).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task LoadPackAsync(string packDir, string packId, CancellationToken cancellationToken = default)
+        {
+            if (!Directory.Exists(packDir))
+                throw new DirectoryNotFoundException($"Pack directory not found: {packDir}");
+
+            await LoadScenariosAsync(Path.Combine(packDir, "scenarios"), packId, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Load all scenario definitions from a specific directory.
         /// </summary>
         /// <param name="scenariosDir">Directory containing scenario YAML files.</param>
@@ -67,6 +83,33 @@ namespace DINOForge.Domains.Scenario
                     if (scenario != null)
                     {
                         // Task #319 — IValidatable semantic check at the deserialize site.
+                        JsonGuard.ValidateOrThrow(scenario, file);
+                        _scenarioRegistry.Register(scenario);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load scenario from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadScenariosAsync(string scenariosDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(scenariosDir))
+                return;
+
+            string[] files = Directory.GetFiles(scenariosDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    ScenarioDefinition scenario = _deserializer.Deserialize<ScenarioDefinition>(yaml);
+                    if (scenario != null)
+                    {
                         JsonGuard.ValidateOrThrow(scenario, file);
                         _scenarioRegistry.Register(scenario);
                     }

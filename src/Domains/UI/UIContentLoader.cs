@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using DINOForge.Domains.UI.Models;
 using DINOForge.Domains.UI.Registries;
 using DINOForge.SDK;
@@ -55,6 +57,22 @@ namespace DINOForge.Domains.UI
             LoadThemes(Path.Combine(packDir, "themes"), packId);
         }
 
+        /// <summary>
+        /// Load all UI definitions from a pack directory asynchronously.
+        /// </summary>
+        /// <param name="packDir">The root directory of the pack.</param>
+        /// <param name="packId">The pack identifier (for logging).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task LoadPackAsync(string packDir, string packId, CancellationToken cancellationToken = default)
+        {
+            if (!Directory.Exists(packDir))
+                throw new DirectoryNotFoundException($"Pack directory not found: {packDir}");
+
+            await LoadHudElementsAsync(Path.Combine(packDir, "hud_elements"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadMenusAsync(Path.Combine(packDir, "menus"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadThemesAsync(Path.Combine(packDir, "themes"), packId, cancellationToken).ConfigureAwait(false);
+        }
+
         private void LoadHudElements(string elementsDir, string packId)
         {
             if (!Directory.Exists(elementsDir))
@@ -72,6 +90,41 @@ namespace DINOForge.Domains.UI
                         foreach (HudElementDefinition element in wrapper.HudElements)
                         {
                             // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(element, file);
+                            _hudElementRegistry.Register(element);
+                        }
+                    }
+                    else if (wrapper?.HudElement != null)
+                    {
+                        JsonGuard.ValidateOrThrow(wrapper.HudElement, file);
+                        _hudElementRegistry.Register(wrapper.HudElement);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load HUD element from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadHudElementsAsync(string elementsDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(elementsDir))
+                return;
+
+            string[] files = Directory.GetFiles(elementsDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    HudElementWrapper wrapper = _deserializer.Deserialize<HudElementWrapper>(yaml);
+                    if (wrapper?.HudElements != null && wrapper.HudElements.Count > 0)
+                    {
+                        foreach (HudElementDefinition element in wrapper.HudElements)
+                        {
                             JsonGuard.ValidateOrThrow(element, file);
                             _hudElementRegistry.Register(element);
                         }
@@ -125,6 +178,41 @@ namespace DINOForge.Domains.UI
             }
         }
 
+        private async Task LoadMenusAsync(string menusDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(menusDir))
+                return;
+
+            string[] files = Directory.GetFiles(menusDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    MenuWrapper wrapper = _deserializer.Deserialize<MenuWrapper>(yaml);
+                    if (wrapper?.Menus != null && wrapper.Menus.Count > 0)
+                    {
+                        foreach (MenuDefinition menu in wrapper.Menus)
+                        {
+                            JsonGuard.ValidateOrThrow(menu, file);
+                            _menuRegistry.Register(menu);
+                        }
+                    }
+                    else if (wrapper?.Menu != null)
+                    {
+                        JsonGuard.ValidateOrThrow(wrapper.Menu, file);
+                        _menuRegistry.Register(wrapper.Menu);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load menu from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
         private void LoadThemes(string themesDir, string packId)
         {
             if (!Directory.Exists(themesDir))
@@ -142,6 +230,41 @@ namespace DINOForge.Domains.UI
                         foreach (ThemeDefinition theme in wrapper.Themes)
                         {
                             // Task #319 — IValidatable semantic check at the deserialize site.
+                            JsonGuard.ValidateOrThrow(theme, file);
+                            _themeRegistry.Register(theme);
+                        }
+                    }
+                    else if (wrapper?.Theme != null)
+                    {
+                        JsonGuard.ValidateOrThrow(wrapper.Theme, file);
+                        _themeRegistry.Register(wrapper.Theme);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load theme from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadThemesAsync(string themesDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(themesDir))
+                return;
+
+            string[] files = Directory.GetFiles(themesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    ThemeWrapper wrapper = _deserializer.Deserialize<ThemeWrapper>(yaml);
+                    if (wrapper?.Themes != null && wrapper.Themes.Count > 0)
+                    {
+                        foreach (ThemeDefinition theme in wrapper.Themes)
+                        {
                             JsonGuard.ValidateOrThrow(theme, file);
                             _themeRegistry.Register(theme);
                         }

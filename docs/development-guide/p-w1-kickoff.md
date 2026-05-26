@@ -41,6 +41,9 @@
 | FR-CIV-TACTICS-039 | implemented | `grid_cell_impassable` + occupied-cell path blocking |
 | FR-CIV-TACTICS-040 | implemented | `invoke_military_tick(wasm, sim_tick)` capability API |
 | FR-CIV-TACTICS-041 | implemented | combat payloads in replay hash chain |
+| FR-CIV-TACTICS-042 | implemented | fog-of-war gating in `tick_war_bridge` |
+| FR-CIV-TACTICS-043 | implemented | Ed25519 `mod.wasm.sig` verification |
+| FR-CIV-TACTICS-044 | implemented | policy/military tick capability API + SDK version |
 
 ## First PR slice (recommended)
 
@@ -54,7 +57,8 @@
 8. **Pathfinding + more work/tick + replay combat + military mod hook** — **done** (item 9).
 9. **Obstacle pathfinding + replay combat determinism + military WASM** — **done** (item 10).
 10. **Occupied-cell blocking + military WASM tick API + combat hash chain** — **done** (item 11).
-11. **Next:** Fog-of-war in war bridge, mod signing, full WASM capability surface.
+11. **Fog in war bridge + mod signing + WASM capability surface** — **done** (item 12).
+12. **Next:** Wire fog by default in scenarios, economic WASM hooks, capability host imports.
 
 ## Run
 

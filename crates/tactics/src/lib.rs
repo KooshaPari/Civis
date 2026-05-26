@@ -35,8 +35,8 @@ pub use pathfinding::{
     astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked,
 };
 pub use war_bridge::{
-    grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridge,
-    WarBridgeConfig,
+    build_fog_for_units, grid_to_world_coord, tick_war_bridge, CombatEngagement,
+    MilitaryUnitSample, WarBridge, WarBridgeConfig,
 };
 
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
@@ -336,8 +336,8 @@ mod tests {
             cadence_ticks: 4,
             ..WarBridgeConfig::default()
         };
-        assert!(tick_war_bridge(3, &config, &units, &world).is_empty());
-        let engagements = tick_war_bridge(4, &config, &units, &world);
+        assert!(tick_war_bridge(3, &config, &units, &world, None).is_empty());
+        let engagements = tick_war_bridge(4, &config, &units, &world, None);
         assert_eq!(engagements.len(), 2);
         assert!(engagements
             .iter()

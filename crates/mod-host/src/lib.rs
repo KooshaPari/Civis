@@ -7,15 +7,18 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod signature;
 mod wasm_guest;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use signature::verify_wasm_signature;
 use thiserror::Error;
 use wasm_guest::{invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
+pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{WasmGuestError, MOD_WASM_NAME as MOD_WASM_FILE};
 
 /// Supported mod kinds per CIV-0700 §4.1.
@@ -55,6 +58,9 @@ pub struct ModMeta {
     /// SPDX license identifier (e.g. `MIT`).
     #[serde(default)]
     pub license: Option<String>,
+    /// Hex-encoded Ed25519 public key for `mod.wasm` signature verification.
+    #[serde(default)]
+    pub author_pubkey_hex: Option<String>,
 }
 
 /// `[dependencies]` table.
@@ -375,7 +381,7 @@ impl ModHost {
             {
                 continue;
             }
-            match invoke_policy_tick(wasm) {
+            match invoke_policy_tick(wasm, sim_tick) {
                 Ok(code) => lines.push(format!(
                     "mod:{}:wasm_policy_tick:tick={sim_tick}:code={code}",
                     entry.manifest.meta.id
@@ -449,6 +455,7 @@ pub fn read_civmod_archive(
 
     let mut manifest_contents: Option<String> = None;
     let mut wasm_bytes: Option<Vec<u8>> = None;
+    let mut wasm_sig: Option<Vec<u8>> = None;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| ManifestError::Archive {
             path: archive_path.to_path_buf(),
@@ -482,6 +489,15 @@ pub fn read_civmod_archive(
                     message: e.to_string(),
                 })?;
             wasm_bytes = Some(buf);
+        } else if name == MOD_WASM_SIG_NAME {
+            let mut buf = Vec::new();
+            entry
+                .read_to_end(&mut buf)
+                .map_err(|e| ManifestError::Archive {
+                    path: archive_path.to_path_buf(),
+                    message: e.to_string(),
+                })?;
+            wasm_sig = Some(buf);
         }
     }
 
@@ -491,7 +507,44 @@ pub fn read_civmod_archive(
     })?;
 
     let manifest = parse_manifest(&contents, archive_path)?;
+    enforce_wasm_signature(
+        archive_path,
+        &manifest,
+        wasm_bytes.as_deref(),
+        wasm_sig.as_deref(),
+    )?;
     Ok((manifest, wasm_bytes))
+}
+
+fn enforce_wasm_signature(
+    path: &Path,
+    manifest: &ModManifest,
+    wasm: Option<&[u8]>,
+    sig: Option<&[u8]>,
+) -> Result<(), ManifestError> {
+    let Some(wasm) = wasm else {
+        return Ok(());
+    };
+    if cfg!(feature = "mod-dev") {
+        return Ok(());
+    }
+    match (sig, manifest.meta.author_pubkey_hex.as_deref()) {
+        (None, None) => Ok(()),
+        (Some(sig_bytes), Some(pk)) => {
+            verify_wasm_signature(wasm, sig_bytes, pk).map_err(|e| ManifestError::Validation {
+                path: path.to_path_buf(),
+                message: e.to_string(),
+            })
+        }
+        (Some(_), None) => Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "author_pubkey_hex required when mod.wasm.sig is present".to_owned(),
+        }),
+        (None, Some(_)) => Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: format!("missing {MOD_WASM_SIG_NAME} for signed mod"),
+        }),
+    }
 }
 
 fn is_unsafe_zip_entry_name(name: &str) -> bool {
@@ -683,7 +736,7 @@ write_policy = false
             )
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
-        assert_eq!(invoke_policy_tick(&wasm).expect("invoke"), 42);
+        assert_eq!(invoke_policy_tick(&wasm, 7).expect("invoke"), 42);
     }
 
     #[test]
@@ -697,6 +750,23 @@ write_policy = false
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         assert_eq!(invoke_military_tick(&wasm, 11).expect("invoke"), 11);
+    }
+
+    /// When `just civis-3d-mod-wasm` has been run, repo example-policy loads WASM on tick.
+    #[test]
+    fn example_policy_dir_wasm_ticks_when_built() {
+        let dir = example_policy_mod_dir();
+        let wasm_path = dir.join(MOD_WASM_NAME);
+        if !wasm_path.is_file() {
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_manifest_dir(&dir).expect("example-policy dir");
+        let lines = host.tick(1);
+        assert!(
+            lines.iter().any(|l| l.contains("wasm_policy_tick")),
+            "expected wasm_policy_tick after building mod.wasm: {lines:?}"
+        );
     }
 
     #[test]

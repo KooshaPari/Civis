@@ -1148,7 +1148,14 @@ impl Simulation {
         }
 
         let config = phase_cfg.war;
-        let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
+        let fog = civ_tactics::build_fog_for_units(&config, &samples, &self.voxel);
+        let engagements = tick_war_bridge(
+            self.state.tick,
+            &config,
+            &samples,
+            &self.voxel,
+            fog.as_ref(),
+        );
         self.operational
             .on_combat_engagements(self.state.tick, &engagements);
         self.last_tick_engagements = engagements.clone();

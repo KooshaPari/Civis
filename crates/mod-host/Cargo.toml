@@ -7,12 +7,19 @@ license.workspace = true
 publish = false
 
 [dependencies]
+ed25519-dalek = { version = "2", features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1"
 toml = "0.8"
 wasmtime = "26"
 zip = "2"
 
+[features]
+default = []
+mod-dev = []
+
 [dev-dependencies]
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
 tempfile = "3"
 wat = "1"

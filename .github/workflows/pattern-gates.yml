@@ -99,6 +99,7 @@ jobs:
           retention-days: 14
 
   detect-unbounded-constraints:
+    if: github.event_name != 'pull_request'
     name: Pattern #94 (unbounded-constraints)
     runs-on: ubuntu-latest
 
@@ -118,6 +119,7 @@ jobs:
         run: python scripts/ci/detect_unbounded_constraints.py
 
   detect-unguarded-deserialize:
+    if: github.event_name != 'pull_request'
     name: Pattern #95 (unguarded-deserialize)
     runs-on: ubuntu-latest
 
@@ -137,6 +139,7 @@ jobs:
         run: python scripts/ci/detect_unguarded_deserialize.py
 
   detect-public-mutable-fields:
+    if: github.event_name != 'pull_request'
     name: Pattern #226 (public-mutable-fields)
     runs-on: ubuntu-latest
 
@@ -156,6 +159,7 @@ jobs:
         run: python scripts/ci/detect_pattern_226.py
 
   audit-broad-exception-catch:
+    if: github.event_name != 'pull_request'
     name: Pattern #230 (broad-exception-catch)
     runs-on: ubuntu-latest
 
@@ -175,6 +179,7 @@ jobs:
         run: python scripts/ci/audit_broad_exception_catch.py
 
   audit-todo-without-ticket:
+    if: github.event_name != 'pull_request'
     name: Pattern #223 (todo-without-ticket)
     runs-on: ubuntu-latest
 

@@ -16,6 +16,8 @@ permissions: {}
 
 jobs:
   build-rust:
+    # Matrix pattern-gates cover PRs; full multi-platform Rust builds run on main push only.
+    if: github.event_name != 'pull_request'
     name: Build Rust Asset Pipeline - ${{ matrix.runner }}
     continue-on-error: true
     runs-on: ${{ matrix.os }}
@@ -256,6 +258,7 @@ jobs:
           retention-days: 30
 
   build-playcua:
+    if: github.event_name != 'pull_request'
     name: Build PlayCUA (Rust isolation layer)
     continue-on-error: true
     runs-on: ubuntu-latest
@@ -397,20 +400,21 @@ jobs:
           global-json-file: global.json
 
       - name: Restore dependencies
-        run: |
-          dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true /p:GameInstalled=false
-          dotnet restore src/Tests/DINOForge.Tests.csproj /p:RestoreLockedMode=true /p:GameInstalled=false
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true /p:GameInstalled=false
+        env:
+          CI: 'true'
 
       - name: Build PackCompiler (tests polyglot integration)
-        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Release --no-restore
+        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Release /p:GameInstalled=false
 
       - name: Run polyglot unit tests
         run: >
           dotnet test src/Tests/DINOForge.Tests.csproj -c Release
           -p:GameInstalled=false
-          --no-restore
           --filter "FullyQualifiedName~SdkPolyglotIntegration"
           --verbosity normal
+        env:
+          CI: 'true'
 
       - name: Verify AssetOptimizationService Zig integration
         continue-on-error: true

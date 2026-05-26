@@ -31,6 +31,8 @@ jobs:
         run: dotnet format src/DINOForge.CI.NoRuntime.sln --verify-no-changes --verbosity diagnostic
 
   sonarcloud:
+    # PR quality gate is enforced by the SonarCloud GitHub App (KooshaPari_Dino).
+    if: github.event_name != 'pull_request'
     name: SonarCloud Quality
     continue-on-error: true
     runs-on: ubuntu-latest

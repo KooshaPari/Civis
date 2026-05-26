@@ -1,5 +1,7 @@
 # SonarCloud PR 188 — Security Hotspot Manual Follow-up
 
+> **Gate note:** SonarCloud counts **security hotspot review** only after you mark each item in the **SonarCloud UI** (Project → Security Hotspots, or the PR **Security Hotspots** tab). Config-only changes in `sonar-project.properties` do not satisfy the “% reviewed” new-code gate; use **Safe** / **Fixed** there for accepted or remediated items.
+
 Source: SonarCloud public API (`/api/hotspots/search`; `issues/search` with `types=SECURITY_HOTSPOT` is not supported).
 Fetched: 2026-05-26T04:51Z UTC · project `KooshaPari_Dino` · pull request **188** · **44** hotspots (status `TO_REVIEW`).
 
@@ -62,6 +64,7 @@ Fetched: 2026-05-26T04:51Z UTC · project `KooshaPari_Dino` · pull request **18
 
 ## Follow-up
 
+- **0% reviewed gate:** Complete reviews in SonarCloud UI; this checklist is tracking only.
 - **fix (6):** C# `S6444` timeouts (2), GitHub Actions `S7637` SHA pins (3).
 - **accept (29):** `scripts/ci/**` ReDoS (`S5852`) — dev-only, bounded inputs; mark Safe in Sonar after scan exclusions land.
 - **review (9):** non-CI regex, HTTP strings, workflow secret scope.

@@ -61,3 +61,62 @@ src/Tools/DumpTools/GameLaunchAnalyzer.cs
 # null-guards each element before insertion (#278 / Pattern #95 line-locked
 # allowlist).
 HIGH|src/Runtime/ModPlatform.cs|877|List
+
+# ----------------------------------------------------------------------------
+# PR188 — audited exceptions (line-locked). Grandfathered until #264/#266.
+# ----------------------------------------------------------------------------
+
+# GameBridge NDJSON — local CLI/debug bridge; parse errors return JSON-RPC
+# -32700; null/empty method rejected before dispatch.
+HIGH|src/Runtime/Bridge/GameBridgeServer.cs|480|JsonRpcRequest
+
+# ModPlatform disabled_packs.json — same self-written pack-id list as :877.
+HIGH|src/Runtime/ModPlatform.cs|1102|List
+
+# Rust asset pipeline interop — JSON from trusted native subprocess output;
+# malformed payloads throw before use (#264).
+HIGH|src/Runtime/RustAssetPipelineInterop.cs|111|AssetData
+HIGH|src/Runtime/RustAssetPipelineInterop.cs|187|AssetData[]
+
+# assetctl CLI — reads manifests/reports the tool wrote under .dinoforge/;
+# Sketchfab responses validated at HTTP layer before deserialize.
+HIGH|src/Tools/Cli/Assetctl/AssetCatalogStore.cs|423|AssetCatalogEntry
+HIGH|src/Tools/Cli/Assetctl/AssetctlCommand.cs|986|AssetManifest
+HIGH|src/Tools/Cli/Assetctl/AssetctlPipeline.cs|322|NormalizationReport
+HIGH|src/Tools/Cli/Assetctl/AssetctlPipeline.cs|509|StylizationReport
+HIGH|src/Tools/Cli/Assetctl/AssetctlPipeline.cs|560|List
+HIGH|src/Tools/Cli/Assetctl/AssetctlPipeline.cs|999|AssetManifest
+HIGH|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|66|List
+HIGH|src/Tools/Cli/Assetctl/LocalSourceAdapter.cs|114|List
+HIGH|src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs|653|AssetManifest
+HIGH|src/Tools/Cli/Assetctl/Sketchfab/SketchfabAdapter.cs|147|BatchManifestItem[]
+HIGH|src/Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs|179|SketchfabSearchResponse
+HIGH|src/Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs|285|SketchfabModelMetadata
+HIGH|src/Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs|428|Dictionary
+
+# assetctl show — optional metadata blob re-hydrated for display only.
+LOW|src/Tools/Cli/Assetctl/AssetLibraryCommand.cs|377|object
+
+# DesktopCompanion — local pack manifest under user data dir (same trust as
+# AppConfigService / DisabledPacksService bare-file suppressions above).
+HIGH|src/Tools/DesktopCompanion/Data/FileSystemPackDataService.cs|62|PackManifest
+
+# CUA MCP native client — deserializes JsonElement from co-located CUA helper
+# subprocess; CallAsync already enforces JSON shape at RPC boundary (#266).
+HIGH|src/Tools/McpServer/Cua/CuaNativeClient.cs|137|List
+HIGH|src/Tools/McpServer/Cua/CuaNativeClient.cs|148|WindowInfo
+HIGH|src/Tools/McpServer/Cua/CuaNativeClient.cs|174|ProcessStatus
+
+# SDK native interop — IValidatable DTOs; validation deferred to pipeline stage
+# (#266 will add JsonGuard pairing at each FFI exit).
+MED|src/SDK/NativeInterop/GoDependencyResolver.cs|131|ResolverOutput
+MED|src/SDK/NativeInterop/RustAssetPipeline.cs|129|ImportedAsset
+MED|src/SDK/NativeInterop/RustAssetPipeline.cs|195|OptimizedAsset
+MED|src/SDK/NativeInterop/RustAssetPipeline.cs|336|ImportedAsset
+
+# PackCompiler — round-trip of self-written imported/optimized artifacts;
+# PackCompilerJsonOptions:30 is doc-comment false positive (no deserialize call).
+MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|129|ImportedAsset
+MED|src/Tools/PackCompiler/DirectAssetPipeline.cs|192|OptimizedAsset
+MED|src/Tools/PackCompiler/Services/GoResolverService.cs|122|ResolverOutput
+MED|src/Tools/PackCompiler/Json/PackCompilerJsonOptions.cs|30|/c

@@ -36,16 +36,10 @@ namespace DINOForge.Analyzers
         {
             var method = (MethodDeclarationSyntax)context.Node;
 
-            // Skip if not marked as async
-            if (!method.Modifiers.Any(m => m.IsKind(SyntaxKind.AsyncKeyword)))
+            if (!DinoAnalyzerSyntaxHelpers.IsAsyncVoidMethod(method))
                 return;
 
-            // Skip if return type is not void
-            if (!method.ReturnType.ToString().Equals("void", StringComparison.Ordinal))
-                return;
-
-            // Skip if marked with async-void-ok
-            if (HasAsyncVoidOkComment(method))
+            if (DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(method, "async-void-ok:"))
                 return;
 
             // Check if this is a legitimate event handler pattern:
@@ -76,29 +70,5 @@ namespace DINOForge.Analyzers
                    secondParamType == "EventArgs";
         }
 
-        private static bool HasAsyncVoidOkComment(MethodDeclarationSyntax method)
-        {
-            // Check leading trivia
-            var leadingTrivia = method.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
-            {
-                if (CheckTrivia(trivia))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool CheckTrivia(SyntaxTrivia trivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("async-void-ok:"))
-                    return true;
-            }
-            return false;
-        }
     }
 }

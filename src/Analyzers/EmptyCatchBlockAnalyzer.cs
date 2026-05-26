@@ -102,72 +102,26 @@ public class EmptyCatchBlockAnalyzer : DiagnosticAnalyzer
     /// <summary>
     /// Checks for safe-swallow marker in trivia.
     /// </summary>
-    private static bool HasSafeSwallowMarker(SyntaxNode node)
-    {
-        var leadingTrivia = node.GetLeadingTrivia();
-        foreach (var trivia in leadingTrivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("safe-swallow:", StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-        }
-
-        // Check trailing trivia of the previous token
-        var previousToken = node.GetFirstToken().GetPreviousToken();
-        if (previousToken != default && previousToken.HasTrailingTrivia)
-        {
-            foreach (var trivia in previousToken.TrailingTrivia)
-            {
-                if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                    trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-                {
-                    var commentText = trivia.ToFullString();
-                    if (commentText.Contains("safe-swallow:", StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-            }
-        }
-
-        return false;
-    }
+    private static bool HasSafeSwallowMarker(SyntaxNode node) =>
+        DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(node, "safe-swallow:", StringComparison.OrdinalIgnoreCase) ||
+        HasMarkerOnPreviousTokenTrailingTrivia(node, "safe-swallow:");
 
     /// <summary>
     /// Checks for test-cleanup-ok marker in trivia (only for test files).
     /// </summary>
-    private static bool HasTestCleanupOkMarker(SyntaxNode node)
+    private static bool HasTestCleanupOkMarker(SyntaxNode node) =>
+        DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(node, "test-cleanup-ok", StringComparison.OrdinalIgnoreCase) ||
+        HasMarkerOnPreviousTokenTrailingTrivia(node, "test-cleanup-ok");
+
+    private static bool HasMarkerOnPreviousTokenTrailingTrivia(SyntaxNode node, string marker)
     {
-        var leadingTrivia = node.GetLeadingTrivia();
-        foreach (var trivia in leadingTrivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("test-cleanup-ok", StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-        }
-
-        // Check trailing trivia of the previous token
         var previousToken = node.GetFirstToken().GetPreviousToken();
-        if (previousToken != default && previousToken.HasTrailingTrivia)
-        {
-            foreach (var trivia in previousToken.TrailingTrivia)
-            {
-                if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                    trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-                {
-                    var commentText = trivia.ToFullString();
-                    if (commentText.Contains("test-cleanup-ok", StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-            }
-        }
+        if (previousToken == default || !previousToken.HasTrailingTrivia)
+            return false;
 
-        return false;
+        return DinoAnalyzerSyntaxHelpers.AnyTriviaContains(
+            previousToken.TrailingTrivia,
+            marker,
+            StringComparison.OrdinalIgnoreCase);
     }
 }

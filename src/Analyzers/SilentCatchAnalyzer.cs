@@ -334,18 +334,9 @@ namespace DINOForge.Analyzers
             return false;
         }
 
-        private static bool CheckTrivia(SyntaxTrivia trivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("safe-swallow:") ||
-                    commentText.Contains("test-cleanup-ok"))
-                    return true;
-            }
-            return false;
-        }
+        private static bool CheckTrivia(SyntaxTrivia trivia) =>
+            DinoAnalyzerSyntaxHelpers.TriviaContains(trivia, "safe-swallow:") ||
+            DinoAnalyzerSyntaxHelpers.TriviaContains(trivia, "test-cleanup-ok");
 
         // #848 Gap Class #1 helper: detect `catch (Exception) { return; }` or `catch { return; }`
         // with no logging, rethrow, or use of the caught exception. The body is a single plain
@@ -414,5 +405,6 @@ namespace DINOForge.Analyzers
 
             return false;
         }
+
     }
 }

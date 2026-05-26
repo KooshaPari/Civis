@@ -36,7 +36,7 @@ namespace DINOForge.Analyzers
             var invocation = (InvocationExpressionSyntax)context.Node;
 
             // Skip if leading-trivia contains enum-parse-ok marker
-            if (HasEnumParseOkComment(invocation))
+            if (DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(invocation, "enum-parse-ok:"))
                 return;
 
             // Check if this is an Enum.Parse call (generic or non-generic)
@@ -89,28 +89,5 @@ namespace DINOForge.Analyzers
             return null;
         }
 
-        private static bool HasEnumParseOkComment(InvocationExpressionSyntax expr)
-        {
-            var leadingTrivia = expr.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
-            {
-                if (CheckTrivia(trivia))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool CheckTrivia(SyntaxTrivia trivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("enum-parse-ok:"))
-                    return true;
-            }
-            return false;
-        }
     }
 }

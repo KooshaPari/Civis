@@ -36,7 +36,7 @@ namespace DINOForge.Analyzers
             var binaryExpr = (BinaryExpressionSyntax)context.Node;
 
             // Skip if leading-trivia contains float-equality-ok marker
-            if (HasFloatEqualityOkComment(binaryExpr))
+            if (DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(binaryExpr, "float-equality-ok:"))
                 return;
 
             // Get semantic model for type checking
@@ -94,28 +94,5 @@ namespace DINOForge.Analyzers
             return false;
         }
 
-        private static bool HasFloatEqualityOkComment(BinaryExpressionSyntax expr)
-        {
-            var leadingTrivia = expr.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
-            {
-                if (CheckTrivia(trivia))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool CheckTrivia(SyntaxTrivia trivia)
-        {
-            if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-            {
-                var commentText = trivia.ToFullString();
-                if (commentText.Contains("float-equality-ok:"))
-                    return true;
-            }
-            return false;
-        }
     }
 }

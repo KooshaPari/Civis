@@ -36,16 +36,10 @@ namespace DINOForge.Analyzers
         {
             var method = (MethodDeclarationSyntax)ctx.Node;
 
-            // Skip if not marked as async
-            if (!method.Modifiers.Any(m => m.IsKind(SyntaxKind.AsyncKeyword)))
+            if (!DinoAnalyzerSyntaxHelpers.IsAsyncVoidMethod(method))
                 return;
 
-            // Skip if return type is not void
-            if (!method.ReturnType.ToString().Equals("void", StringComparison.Ordinal))
-                return;
-
-            // Skip if marked with async-void-ok
-            if (HasAsyncVoidOkMarker(method))
+            if (DinoAnalyzerSyntaxHelpers.LeadingTriviaContains(method, "async-void-ok:"))
                 return;
 
             // Skip test files
@@ -61,20 +55,5 @@ namespace DINOForge.Analyzers
             ctx.ReportDiagnostic(diagnostic);
         }
 
-        private static bool HasAsyncVoidOkMarker(MethodDeclarationSyntax method)
-        {
-            var leadingTrivia = method.GetLeadingTrivia();
-            foreach (var trivia in leadingTrivia)
-            {
-                if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                    trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
-                {
-                    var commentText = trivia.ToFullString();
-                    if (commentText.Contains("async-void-ok:"))
-                        return true;
-                }
-            }
-            return false;
-        }
     }
 }

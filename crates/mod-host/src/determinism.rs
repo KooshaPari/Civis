@@ -15,12 +15,28 @@ pub enum DeterminismError {
         /// Human-readable opcode label.
         instruction: String,
     },
+    /// Float instructions present while `determinism-strict` feature is enabled.
+    #[error("float contamination: {count} float instructions (strict mode)")]
+    FloatContamination {
+        /// Number of float opcodes observed.
+        count: u32,
+    },
 }
 
-/// Scan a WASM module for instructions that break replay determinism.
-///
-/// MVP rules (CIV-0700 §3.5): reject platform-sensitive float ops and atomics.
-pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> {
+/// Summary from scanning a WASM module (float data-flow stub, FR-CIV-TACTICS-057).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DeterminismScanReport {
+    /// Count of `f32` / `f64` opcodes (internal use may be OK; strict mode rejects).
+    pub float_instruction_count: u32,
+    /// Hard-rejected opcodes (atomics, sqrt, nearest, clz).
+    pub hard_rejections: Vec<String>,
+}
+
+/// Scan a WASM module and return opcode statistics.
+pub fn scan_wasm_determinism_report(
+    wasm_bytes: &[u8],
+) -> Result<DeterminismScanReport, DeterminismError> {
+    let mut report = DeterminismScanReport::default();
     for payload in Parser::new(0).parse_all(wasm_bytes) {
         let payload = payload.map_err(|e| DeterminismError::Parse(e.to_string()))?;
         if let Payload::CodeSectionEntry(body) = payload {
@@ -31,19 +47,43 @@ pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> 
                 let op = reader
                     .read()
                     .map_err(|e| DeterminismError::Parse(e.to_string()))?;
+                if is_float_operator(&op) {
+                    report.float_instruction_count += 1;
+                }
                 if let Some(label) = reject_operator(op) {
-                    return Err(DeterminismError::RejectedInstruction {
-                        instruction: label.to_string(),
-                    });
+                    report.hard_rejections.push(label.to_string());
                 }
             }
         }
     }
+    Ok(report)
+}
+
+/// Scan a WASM module for instructions that break replay determinism.
+///
+/// MVP rules (CIV-0700 §3.5): reject platform-sensitive float ops and atomics.
+/// With feature `determinism-strict`, any float opcode fails the scan.
+pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> {
+    let report = scan_wasm_determinism_report(wasm_bytes)?;
+    if let Some(first) = report.hard_rejections.first() {
+        return Err(DeterminismError::RejectedInstruction {
+            instruction: first.clone(),
+        });
+    }
+    if cfg!(feature = "determinism-strict") && report.float_instruction_count > 0 {
+        return Err(DeterminismError::FloatContamination {
+            count: report.float_instruction_count,
+        });
+    }
     Ok(())
 }
 
+fn is_float_operator(op: &Operator<'_>) -> bool {
+    let opcode = format!("{op:?}");
+    opcode.contains("F32") || opcode.contains("F64")
+}
+
 fn reject_operator(op: Operator<'_>) -> Option<&'static str> {
-    // wasmparser renames atomic opcodes across versions; stable Debug prefix is enough for MVP.
     let opcode = format!("{op:?}");
     if opcode.contains("Atomic") {
         return Some("atomic");
@@ -86,5 +126,22 @@ mod tests {
         let wasm = wat::parse_str(WAT).expect("wat");
         let err = scan_wasm_determinism(&wasm).expect_err("sqrt should fail");
         assert!(matches!(err, DeterminismError::RejectedInstruction { .. }));
+    }
+
+    #[test]
+    fn report_counts_float_ops_without_hard_reject() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                f32.const 1.0
+                drop
+                i32.const 0)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let report = scan_wasm_determinism_report(&wasm).expect("scan");
+        assert!(report.float_instruction_count >= 1);
+        assert!(report.hard_rejections.is_empty());
+        scan_wasm_determinism(&wasm).expect("non-sqrt float allowed in default mode");
     }
 }

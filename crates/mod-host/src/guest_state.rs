@@ -74,4 +74,6 @@ pub struct ModBrowserEntry {
     pub has_wasm: bool,
     /// Current guest scratch byte length.
     pub guest_memory_len: usize,
+    /// Float opcode count from determinism scan (0 when WASM absent).
+    pub float_instruction_count: u32,
 }

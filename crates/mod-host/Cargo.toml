@@ -19,6 +19,7 @@ zip = "2"
 [features]
 default = []
 mod-dev = []
+determinism-strict = []
 
 [dev-dependencies]
 ed25519-dalek = { version = "2", features = ["rand_core"] }

@@ -34,7 +34,7 @@ use civ_agents::{
     drift_toward_home, spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Needs,
     Position3d, Velocity,
 };
-use civ_engine::{Citizen, DiplomacyKind, JobType, ModBrowserEntry, Simulation};
+use civ_engine::{Citizen, CivSaveBundle, DiplomacyKind, JobType, ModBrowserEntry, Simulation};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
@@ -1716,6 +1716,11 @@ fn sanitize_save_filename(filename: &str) -> Result<String, String> {
 
 fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
     let name = sanitize_save_filename(filename)?;
+    Ok(dir.join(format!("{name}.civsave")))
+}
+
+fn legacy_replay_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
+    let name = sanitize_save_filename(filename)?;
     Ok(dir.join(format!("{name}.civreplay")))
 }
 
@@ -1733,7 +1738,7 @@ async fn save_handler(
         )
     })?;
     let sim = state.sim.lock().await;
-    sim.save_replay(&path).map_err(|err| {
+    CivSaveBundle::save_dir(&path, &sim).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ControlOk {
@@ -1764,15 +1769,37 @@ async fn load_handler(
         )
     })?;
     let mut sim = state.sim.lock().await;
-    let loaded = Simulation::load_replay_from_file(&path).map_err(|err| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ControlOk {
-                ok: false,
-                message: Some(err.to_string()),
-            }),
-        )
-    })?;
+    let loaded = if CivSaveBundle::is_save_dir(&path) {
+        CivSaveBundle::load_dir(&path).map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ControlOk {
+                    ok: false,
+                    message: Some(err.to_string()),
+                }),
+            )
+        })?
+    } else {
+        let replay_path =
+            legacy_replay_path(state.saves_dir.as_ref(), &req.filename).map_err(|message| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ControlOk {
+                        ok: false,
+                        message: Some(message),
+                    }),
+                )
+            })?;
+        Simulation::load_replay_from_file(&replay_path).map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ControlOk {
+                    ok: false,
+                    message: Some(err.to_string()),
+                }),
+            )
+        })?
+    };
     *sim = loaded;
     let tick = sim.state.tick;
     Ok(Json(LoadResponse { ok: true, tick }))

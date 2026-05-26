@@ -21,6 +21,7 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
@@ -64,6 +65,9 @@ pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
     FORMAT_VERSION, MAGIC,
+};
+pub use save_bundle::{
+    CivSaveBundle, CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
 };
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,

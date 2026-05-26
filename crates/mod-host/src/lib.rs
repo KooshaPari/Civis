@@ -20,7 +20,9 @@ use signature::verify_wasm_signature;
 use thiserror::Error;
 use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
-pub use determinism::{scan_wasm_determinism, DeterminismError};
+pub use determinism::{
+    scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
+};
 pub use guest_state::{
     GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave,
     MOD_GUEST_STATE_VERSION,
@@ -206,6 +208,8 @@ pub struct LoadedMod {
     pub manifest: ModManifest,
     /// Optional `mod.wasm` bytes when present beside manifest or in archive.
     pub wasm_bytes: Option<Vec<u8>>,
+    /// Float opcode count from the last determinism scan (0 when WASM absent).
+    pub float_instruction_count: u32,
 }
 
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
@@ -363,6 +367,7 @@ impl ModHost {
                     mod_type: mod_type_label(entry.manifest.meta.mod_type).to_owned(),
                     has_wasm: entry.wasm_bytes.is_some(),
                     guest_memory_len: self.guest_memory_by_mod.get(&id).map(Vec::len).unwrap_or(0),
+                    float_instruction_count: entry.float_instruction_count,
                 }
             })
             .collect()
@@ -401,11 +406,8 @@ impl ModHost {
         let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
-        self.registry.register(LoadedMod {
-            root: mod_dir.to_path_buf(),
-            manifest,
-            wasm_bytes,
-        });
+        self.registry
+            .register(make_loaded_mod(mod_dir.to_path_buf(), manifest, wasm_bytes));
         Ok(())
     }
 
@@ -419,11 +421,8 @@ impl ModHost {
         let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
-        self.registry.register(LoadedMod {
-            root: archive_path,
-            manifest,
-            wasm_bytes,
-        });
+        self.registry
+            .register(make_loaded_mod(archive_path, manifest, wasm_bytes));
         Ok(())
     }
 
@@ -642,6 +641,23 @@ pub fn read_civmod_archive(
         wasm_sig.as_deref(),
     )?;
     Ok((manifest, wasm_bytes))
+}
+
+fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<u8>>) -> LoadedMod {
+    let float_instruction_count = wasm_bytes
+        .as_ref()
+        .map(|wasm| {
+            scan_wasm_determinism_report(wasm)
+                .map(|report| report.float_instruction_count)
+                .unwrap_or(0)
+        })
+        .unwrap_or(0);
+    LoadedMod {
+        root,
+        manifest,
+        wasm_bytes,
+        float_instruction_count,
+    }
 }
 
 fn mod_type_label(kind: ModType) -> &'static str {
@@ -1170,11 +1186,7 @@ write_policy = false
 
         let manifest = load_manifest(&path).expect("manifest");
         let mut registry = ModRegistry::new();
-        registry.register(LoadedMod {
-            root: dir.path().to_path_buf(),
-            manifest,
-            wasm_bytes: None,
-        });
+        registry.register(make_loaded_mod(dir.path().to_path_buf(), manifest, None));
 
         assert!(registry.on_policy_phase(1).is_empty());
     }

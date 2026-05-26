@@ -18,6 +18,12 @@ function Invoke-Gate {
     Write-Host "  pass $Name"
 }
 
+# Ensure Rust toolchain is on PATH (cargo may not be visible when invoked via pwsh hook).
+$cargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
+if (Test-Path $cargoBin) {
+    $env:PATH = "$cargoBin$([IO.Path]::PathSeparator)$env:PATH"
+}
+
 Write-Host "==> civis quality manifest (local gates)"
 
 if (Get-Command just -ErrorAction SilentlyContinue) {

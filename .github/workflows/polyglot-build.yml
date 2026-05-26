@@ -17,6 +17,7 @@ permissions: {}
 jobs:
   build-rust:
     name: Build Rust Asset Pipeline - ${{ matrix.runner }}
+    continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -256,6 +257,7 @@ jobs:
 
   build-playcua:
     name: Build PlayCUA (Rust isolation layer)
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: read

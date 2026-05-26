@@ -8,6 +8,8 @@ REGEX_TIMEOUT = 1
 
 
 def compile(pattern: str, flags: int = 0) -> re.Pattern[str]:
-    if sys.version_info >= (3, 11):
+    try:
         return re.compile(pattern, flags, timeout=REGEX_TIMEOUT)
-    return re.compile(pattern, flags)
+    except TypeError:
+        # re.compile(..., timeout=...) requires Python 3.13+
+        return re.compile(pattern, flags)

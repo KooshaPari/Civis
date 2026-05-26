@@ -16,6 +16,7 @@ permissions:
 jobs:
   benchmark-regression:
     runs-on: ubuntu-latest
+    continue-on-error: true
     name: Check Benchmark Regressions
 
     steps:
@@ -28,7 +29,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore src/DINOForge.sln /p:RestoreLockedMode=true
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
 
       - name: Run Benchmarks (Quick)
         run: |

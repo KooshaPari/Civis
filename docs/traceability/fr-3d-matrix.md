@@ -134,6 +134,15 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-048 | Example economic mod directory + WASM tick. | `mods/example-economic/`, `mod-host` | `example_economic_dir_wasm_ticks_when_built` | implemented |
 | FR-CIV-TACTICS-049 | Host guest memory read/write imports. | `wasm_guest.rs` | `host_memory_import_read_write` | implemented |
 | FR-CIV-TACTICS-050 | Scenario military cadence/range tuning. | `scenario.rs`, `baseline.yaml` | `scenario_military_wires_military_phase` | implemented |
+| FR-CIV-TACTICS-051 | Baseline scenario loads example-economic mod. | `scenarios/baseline.yaml` | `baseline_yaml_parses` | implemented |
+| FR-CIV-TACTICS-052 | Per-mod guest memory snapshots on ModHost. | `mod-host` | `guest_memory_persists_across_invocations` | implemented |
+| FR-CIV-TACTICS-053 | Full capability host imports (`sim_tick`, import list). | `wasm_guest.rs`, `civlab-sdk` | `sim_tick_host_import_visible_to_guest` | implemented |
+| FR-CIV-TACTICS-054 | Mod browser on watch/server snapshot + dashboard. | `watch`, `server`, `web/dashboard` | `mods_panel` | implemented |
+| FR-CIV-TACTICS-055 | Mod guest state JSON save/load stub. | `guest_state.rs`, `engine.rs` | `mod_guest_state_save_round_trips_json` | implemented |
+| FR-CIV-TACTICS-056 | WASM determinism scan at mod load. | `determinism.rs` | `rejects_f32_sqrt` | implemented |
+| FR-CIV-TACTICS-057 | Float opcode count in determinism report. | `determinism.rs` | `report_counts_float_ops_without_hard_reject` | implemented |
+| FR-CIV-TACTICS-058 | `.civsave/` debug save folder. | `save_bundle.rs`, `civ-watch` | `civsave_folder_round_trips_mod_guest_state` | implemented |
+| FR-CIV-TACTICS-059 | Package example mods as `.civmod`. | `justfile`, `package-example-mod.ps1` | `civis-3d-mod-package-all` | implemented |
 
 ---
 

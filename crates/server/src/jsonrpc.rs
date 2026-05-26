@@ -382,6 +382,8 @@ pub struct SnapshotFields {
     pub voxel_damage_removed_this_tick: u32,
     /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
+    /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
+    pub mod_lifecycle: Vec<String>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -492,6 +494,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.mods).unwrap_or(Value::Null),
         );
     }
+    if !fields.mod_lifecycle.is_empty() {
+        obj.insert(
+            "mod_lifecycle".to_owned(),
+            serde_json::to_value(&fields.mod_lifecycle).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
 }
 
@@ -570,6 +578,9 @@ pub fn snapshot_fields_from_sim(
         damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
         mods: sim.mod_browser_entries(),
+        mod_lifecycle: sim
+            .replay_log()
+            .mod_loaded_bus_at_tick(sim.state.tick),
     }
 }
 
@@ -1814,6 +1825,7 @@ mod tests {
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
+                    mod_lifecycle: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1865,6 +1877,7 @@ mod tests {
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
+                    mod_lifecycle: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1921,6 +1934,7 @@ mod tests {
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
+                    mod_lifecycle: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,

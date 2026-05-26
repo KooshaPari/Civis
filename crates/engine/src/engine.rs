@@ -195,6 +195,15 @@ pub struct Resources {
     pub energy: Fixed, // Joules
 }
 
+/// Simple trade route between two factions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRoute {
+    pub from_faction: u32,
+    pub to_faction: u32,
+    pub goods: String,
+    pub volume: Fixed,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiplomacyKind {
     TradeAgreement,
@@ -270,6 +279,10 @@ pub struct WorldState {
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
     pub faction_treasury: HashMap<u32, Fixed>,
+    /// Faction ID -> resource holdings.
+    pub faction_resources: HashMap<u32, Resources>,
+    /// Active trade routes connecting factions.
+    pub trade_routes: Vec<TradeRoute>,
     pub resources: Resources,
 }
 
@@ -290,6 +303,55 @@ impl Default for WorldState {
                 (1, Fixed::from_num(8_000)),
                 (2, Fixed::from_num(8_000)),
             ]),
+            faction_resources: HashMap::from([
+                (
+                    0,
+                    Resources {
+                        food: Fixed::from_num(120),
+                        wood: Fixed::from_num(90),
+                        metal: Fixed::from_num(70),
+                        energy: Fixed::from_num(50),
+                    },
+                ),
+                (
+                    1,
+                    Resources {
+                        food: Fixed::from_num(80),
+                        wood: Fixed::from_num(110),
+                        metal: Fixed::from_num(100),
+                        energy: Fixed::from_num(40),
+                    },
+                ),
+                (
+                    2,
+                    Resources {
+                        food: Fixed::from_num(60),
+                        wood: Fixed::from_num(70),
+                        metal: Fixed::from_num(120),
+                        energy: Fixed::from_num(60),
+                    },
+                ),
+            ]),
+            trade_routes: vec![
+                TradeRoute {
+                    from_faction: 0,
+                    to_faction: 1,
+                    goods: "grain".to_string(),
+                    volume: Fixed::from_num(12),
+                },
+                TradeRoute {
+                    from_faction: 1,
+                    to_faction: 2,
+                    goods: "ore".to_string(),
+                    volume: Fixed::from_num(10),
+                },
+                TradeRoute {
+                    from_faction: 2,
+                    to_faction: 0,
+                    goods: "cloth".to_string(),
+                    volume: Fixed::from_num(8),
+                },
+            ],
             resources: Resources::default(),
         }
     }
@@ -328,6 +390,8 @@ pub struct Simulation {
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     last_tick_engagements: Vec<CombatEngagement>,
+    /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
+    last_tick_mod_lifecycle: Vec<String>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -508,6 +572,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -563,6 +628,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -599,13 +665,15 @@ impl Simulation {
                 continue;
             }
             if let Some(entry) = self.mod_host.mods().last() {
-                self.replay_log
-                    .record_mod_loaded(&civ_mod_host::ModLoadedRecord {
-                        mod_id: entry.manifest.meta.id.clone(),
-                        mod_name: entry.manifest.meta.name.clone(),
-                        version: entry.manifest.meta.version.clone(),
-                        tick: self.state.tick,
-                    });
+                let record = civ_mod_host::ModLoadedRecord {
+                    mod_id: entry.manifest.meta.id.clone(),
+                    mod_name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    tick: self.state.tick,
+                };
+                let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+                self.replay_log.record_mod_loaded(&record);
+                self.last_tick_mod_lifecycle.push(bus_json);
             }
         }
     }
@@ -857,6 +925,7 @@ impl Simulation {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
+        self.last_tick_mod_lifecycle.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -894,6 +963,12 @@ impl Simulation {
     #[must_use]
     pub fn mod_loaded_bus_events(&self) -> Vec<String> {
         self.replay_log.mod_loaded_bus_events()
+    }
+
+    /// `mod.loaded.v1` bus JSON emitted on the most recent tick (scenario load or hot reload).
+    #[must_use]
+    pub fn last_tick_mod_lifecycle(&self) -> &[String] {
+        &self.last_tick_mod_lifecycle
     }
 
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
@@ -1328,7 +1403,69 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+    }
+
+    fn tick_trade_routes(&mut self) {
+        for route in &self.state.trade_routes {
+            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
+                continue;
+            }
+
+            let resource = route_resource(&route.goods);
+            let available = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            if available <= Fixed::ZERO {
+                continue;
+            }
+
+            let quantity = route.volume.min(available);
+            {
+                let from_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.from_faction)
+                    .or_default();
+                adjust_resource(from_resources, resource, Fixed::ZERO - quantity);
+            }
+            {
+                let to_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.to_faction)
+                    .or_default();
+                adjust_resource(to_resources, resource, quantity);
+            }
+
+            let supply = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            let demand = {
+                let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
+                    continue;
+                };
+                resource_amount(to_resources, resource)
+            };
+            let margin = (demand - supply).max(Fixed::ZERO);
+            let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
+
+            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&route.from_faction) {
+                *from_treasury += profit;
+            }
+            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&route.to_faction) {
+                *to_treasury -= profit;
+            }
+        }
     }
 
     /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
@@ -1381,6 +1518,34 @@ impl Simulation {
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
         }
+    }
+}
+
+fn route_resource(goods: &str) -> ResourceType {
+    match goods {
+        "grain" => ResourceType::Food,
+        "timber" => ResourceType::Wood,
+        "ore" | "tools" => ResourceType::Metal,
+        "cloth" | "salt" => ResourceType::Energy,
+        _ => ResourceType::Food,
+    }
+}
+
+fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
+    match resource {
+        ResourceType::Food => resources.food,
+        ResourceType::Wood => resources.wood,
+        ResourceType::Metal => resources.metal,
+        ResourceType::Energy => resources.energy,
+    }
+}
+
+fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
+    match resource {
+        ResourceType::Food => resources.food += delta,
+        ResourceType::Wood => resources.wood += delta,
+        ResourceType::Metal => resources.metal += delta,
+        ResourceType::Energy => resources.energy += delta,
     }
 }
 

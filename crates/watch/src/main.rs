@@ -439,6 +439,10 @@ async fn main() {
     let military = Arc::new(Mutex::new(Vec::new()));
     {
         let mut s = sim.lock().await;
+        s.register_mod_stubs(&[
+            "mods/example-policy".to_owned(),
+            "mods/example-economic".to_owned(),
+        ]);
         seed_voxels(&mut s);
         seed_civilians(&mut s, &terrain);
     }
@@ -922,6 +926,32 @@ fn game_events(
                 "Era {} reached: {} technology unlocked",
                 node.era_min, node.id
             ),
+            faction_id: None,
+        });
+    }
+
+    let mut mod_buses = sim.replay_log().mod_loaded_bus_at_tick(tick);
+    if tick <= 1 {
+        for bus in sim.replay_log().mod_loaded_bus_at_tick(0) {
+            if !mod_buses.iter().any(|existing| existing == &bus) {
+                mod_buses.push(bus.clone());
+            }
+        }
+    }
+    for bus in &mod_buses {
+        let message = serde_json::from_str::<serde_json::Value>(bus)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("mod_name")
+                    .and_then(|name| name.as_str())
+                    .map(|name| format!("Mod loaded: {name}"))
+            })
+            .unwrap_or_else(|| "Mod loaded".to_string());
+        events.push(GameEvent {
+            tick,
+            kind: "mod.loaded".to_string(),
+            message,
             faction_id: None,
         });
     }

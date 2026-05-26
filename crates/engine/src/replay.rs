@@ -205,6 +205,36 @@ impl ReplayLog {
         });
     }
 
+    /// `mod.loaded.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
+    #[must_use]
+    pub fn mod_loaded_bus_at_tick(&self, tick: u64) -> Vec<String> {
+        self.events
+            .iter()
+            .filter_map(|event| match event {
+                ReplayEvent::ModLoaded {
+                    tick: event_tick,
+                    bus_json,
+                    ..
+                } if *event_tick == tick && !bus_json.is_empty() => Some(bus_json.clone()),
+                ReplayEvent::ModLoaded {
+                    tick: event_tick,
+                    mod_id,
+                    mod_name,
+                    version,
+                    ..
+                } if *event_tick == tick => Some(civ_mod_host::format_mod_loaded_event_json(
+                    &civ_mod_host::ModLoadedRecord {
+                        mod_id: mod_id.clone(),
+                        mod_name: mod_name.clone(),
+                        version: version.clone(),
+                        tick: *event_tick,
+                    },
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Collect `mod.loaded.v1` JSON payloads from recorded mod-load events.
     #[must_use]
     pub fn mod_loaded_bus_events(&self) -> Vec<String> {

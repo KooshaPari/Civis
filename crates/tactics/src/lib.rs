@@ -29,7 +29,7 @@ pub use movement::{
 };
 pub use operational::{NoopOperationalLayer, OperationalLayer};
 pub use grid_obstacles::grid_cell_blocked;
-pub use pathfinding::{bfs_next_step, bfs_next_step_with_blocked};
+pub use pathfinding::{astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked};
 pub use war_bridge::{
     grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridge,
     WarBridgeConfig,

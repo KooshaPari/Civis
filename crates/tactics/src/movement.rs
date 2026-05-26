@@ -1,7 +1,9 @@
 //! Operational-layer grid movement toward enemies (FR-CIV-TACTICS-031).
 
-use crate::pathfinding::bfs_next_step;
+use crate::grid_obstacles::grid_cell_blocked;
+use crate::pathfinding::bfs_next_step_with_blocked;
 use crate::war_bridge::MilitaryUnitSample;
+use civ_voxel::{MaterialId, VoxelWorld};
 
 /// Movement cadence for the operational layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,15 +39,11 @@ fn manhattan(a: (i32, i32), b: (i32, i32)) -> i32 {
 }
 
 /// One movement pulse: pathfind one step toward the nearest enemy for each unit.
-///
-/// Positions are snapshotted at pulse start so all units move simultaneously;
-/// after computing all moves the slice is updated in-place so the next pulse
-/// sees the new positions.
 pub fn operational_movement_pulse(
     config: &OperationalMovementConfig,
     units: &mut [MilitaryUnitSample],
+    world: &VoxelWorld<MaterialId>,
 ) -> Vec<GridMove> {
-    // Snapshot positions so the read loop and write loop are separate.
     let positions: Vec<(i32, i32)> = units.iter().map(|u| (u.grid_x, u.grid_y)).collect();
     let factions: Vec<u32> = units.iter().map(|u| u.faction_id).collect();
 
@@ -71,7 +69,10 @@ pub fn operational_movement_pulse(
             continue;
         };
         let to = positions[enemy_idx];
-        let Some((nx, ny)) = bfs_next_step(from, to, config.path_search_radius) else {
+        let blocked = |gx: i32, gy: i32| grid_cell_blocked(world, gx, gy);
+        let Some((nx, ny)) =
+            bfs_next_step_with_blocked(from, to, config.path_search_radius, &blocked)
+        else {
             continue;
         };
         moves.push(GridMove {
@@ -81,7 +82,6 @@ pub fn operational_movement_pulse(
         });
     }
 
-    // Apply position updates so subsequent pulses see current positions.
     for gm in &moves {
         units[gm.unit_index].grid_x = gm.new_grid_x;
         units[gm.unit_index].grid_y = gm.new_grid_y;
@@ -96,13 +96,14 @@ pub fn tick_operational_movement(
     config: &OperationalMovementConfig,
     units: &mut [MilitaryUnitSample],
     pulses: u8,
+    world: &VoxelWorld<MaterialId>,
 ) -> Vec<GridMove> {
     if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 || pulses == 0 {
         return Vec::new();
     }
     let mut all_moves = Vec::new();
     for _ in 0..pulses {
-        all_moves.extend(operational_movement_pulse(config, units));
+        all_moves.extend(operational_movement_pulse(config, units, world));
     }
     all_moves
 }

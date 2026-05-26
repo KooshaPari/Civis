@@ -10,6 +10,7 @@
 
 mod doctrine_fitness;
 mod formation;
+mod grid_obstacles;
 mod los;
 mod military_phase;
 mod movement;
@@ -27,9 +28,11 @@ pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };
 pub use operational::{NoopOperationalLayer, OperationalLayer};
-pub use pathfinding::bfs_next_step;
+pub use grid_obstacles::grid_cell_blocked;
+pub use pathfinding::{bfs_next_step, bfs_next_step_with_blocked};
 pub use war_bridge::{
-    grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridgeConfig,
+    grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridge,
+    WarBridgeConfig,
 };
 
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
@@ -346,6 +349,31 @@ mod tests {
         assert_eq!(bfs_next_step((0, 0), (5, 0), 16), Some((1, 0)));
     }
 
+    /// FR-CIV-TACTICS-036 — movement routes around solid voxels on the grid plane.
+    #[test]
+    fn operational_movement_avoids_voxel_obstacle() {
+        use crate::war_bridge::grid_to_world_coord;
+        let mut world = VoxelWorld::new(1);
+        world.write(grid_to_world_coord(1, 0), MaterialId(1));
+        let mut units = [
+            MilitaryUnitSample {
+                unit_id: 1,
+                faction_id: 0,
+                grid_x: 0,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                unit_id: 2,
+                faction_id: 1,
+                grid_x: 4,
+                grid_y: 0,
+            },
+        ];
+        let config = OperationalMovementConfig::default();
+        let moves = tick_operational_movement(4, &config, &mut units, 1, &world);
+        assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
+    }
+
     /// FR-CIV-TACTICS-031 — operational movement steps toward nearest enemy.
     #[test]
     fn operational_movement_steps_toward_enemy() {
@@ -368,8 +396,9 @@ mod tests {
             cadence_ticks: 4,
             ..Default::default()
         };
-        assert!(tick_operational_movement(3, &config, &mut units, 1).is_empty());
-        let moves = tick_operational_movement(4, &config, &mut units, 2);
+        let world = VoxelWorld::new(1);
+        assert!(tick_operational_movement(3, &config, &mut units, 1, &world).is_empty());
+        let moves = tick_operational_movement(4, &config, &mut units, 2, &world);
         assert!(!moves.is_empty());
         assert!(moves
             .iter()

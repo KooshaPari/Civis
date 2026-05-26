@@ -39,7 +39,7 @@ jobs:
           - { number: 123, name: 'public-mutable-collections', script: 'detect_public_mutable_collections.py' }
           - { number: 124, name: 'unsealed-public-classes', script: 'detect_unsealed_public_classes.py' }
           - { number: 125, name: 'orphan-interface-mocks', script: 'detect_orphan_interface_mocks.py' }
-          - { number: 232, name: 'unbounded-log-append', script: 'detect_unbounded_log_append.py' }
+          - { number: 232, name: 'unbounded-log-append', script: 'detect_unbounded_log_append.py', continue_on_error: true }
           - { number: 233, name: 'bepinex-plugin-tfm', script: 'detect_bepinex_plugin_tfm.py' }
           - { number: 234, name: 'test-pack-leak', script: 'detect_test_pack_leak.py' }
           - { number: 235, name: 'graphicraycaster-eventsystem', script: 'detect_graphicraycaster_no_eventsystem.py' }

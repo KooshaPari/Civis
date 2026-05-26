@@ -176,7 +176,7 @@ public sealed class GameClient : IGameClient, IDisposable
                 Task finished = await Task.WhenAny(connectTask, delayTask).ConfigureAwait(false);
                 if (finished != connectTask)
                 {
-                    timeoutCts.Cancel();
+                    timeoutCts.Cancel(); // NOSONAR S6966 — CancellationTokenSource.CancelAsync requires netstandard2.1+; Bridge targets netstandard2.0
                     CleanupPipe();
                     _ = connectTask.ContinueWith(
                         static t => _ = t.Exception,

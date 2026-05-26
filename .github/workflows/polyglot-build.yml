@@ -393,13 +393,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Restore test project
+        run: dotnet restore src/Tests/DINOForge.Tests.csproj /p:RestoreLockedMode=true /p:GameInstalled=false
+
       - name: Build PackCompiler (tests polyglot integration)
-        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Release
+        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj -c Release --no-restore
 
       - name: Run polyglot unit tests
         run: >
           dotnet test src/Tests/DINOForge.Tests.csproj -c Release
           -p:GameInstalled=false
+          --no-restore
           --filter "FullyQualifiedName~SdkPolyglotIntegration"
           --verbosity normal
 

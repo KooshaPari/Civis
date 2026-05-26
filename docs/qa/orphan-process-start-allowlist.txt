@@ -42,3 +42,7 @@
 # Companion task: #295 (top-4 HIGH/MED sweep) / #296 (fire-and-forget
 # `using var _` wrap) / #297 (this gate) / #298 (CLAUDE.md doctrine +
 # Pattern Catalog entry).
+
+# PackSubmoduleManager — short-lived git helper processes; wrapped at call site (iter-145/146)
+HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|271
+HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|291

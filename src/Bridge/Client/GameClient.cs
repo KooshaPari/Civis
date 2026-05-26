@@ -176,7 +176,7 @@ public sealed class GameClient : IGameClient, IDisposable
                 Task finished = await Task.WhenAny(connectTask, delayTask).ConfigureAwait(false);
                 if (finished != connectTask)
                 {
-                    await timeoutCts.CancelAsync().ConfigureAwait(false);
+                    timeoutCts.Cancel();
                     CleanupPipe();
                     _ = connectTask.ContinueWith(
                         static t => _ = t.Exception,

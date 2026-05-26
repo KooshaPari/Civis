@@ -56,6 +56,9 @@
 | FR-CIV-TACTICS-054 | implemented | mod browser on watch/server snapshot + dashboard |
 | FR-CIV-TACTICS-055 | implemented | `ModGuestStateSave` JSON export/import |
 | FR-CIV-TACTICS-056 | implemented | WASM determinism scan at mod load |
+| FR-CIV-TACTICS-057 | implemented | float opcode count in determinism report |
+| FR-CIV-TACTICS-058 | implemented | `.civsave/` folder stub (`CivSaveBundle`) |
+| FR-CIV-TACTICS-059 | implemented | `civis-3d-mod-package-all` for example mods |
 
 ## First PR slice (recommended)
 
@@ -74,7 +77,8 @@
 13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
 14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
 15. **Guest memory save/load + mod browser + determinism scan** — **done** (item 16).
-16. **Next:** Full CIV-1000 save bundles, float data-flow scan, mod distribution.
+16. **CIV-1000 civsave folder + float scan report + mod packaging** — **done** (item 17).
+17. **Next:** Compressed `.civsave.zst`, full float data-flow trace, in-game mod install.
 
 ## Run
 

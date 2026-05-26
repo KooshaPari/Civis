@@ -11,11 +11,11 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 | Full 3D workspace | `just civis-3d-verify` (catalog + scenario + web + mod-host, then check/test/clippy/fmt) |
 | JSON-RPC catalog drift | `just civis-3d-catalog-check` |
 | Scenario YAML | `just civis-3d-scenario-check` |
-| Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` |
-| Example `.civmod` | `just civis-3d-mod-package` → `mods/example-policy/example-policy.civmod` |
+| Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` + `mods/example-economic/mod.wasm` |
+| Example `.civmod` | `just civis-3d-mod-package` → `example-policy.civmod`; `just civis-3d-mod-package-all` → policy + economic |
 | Quality manifest (optional UE) | `scripts/quality/README.md`; `CIVIS_QUALITY_UNREAL=1` + `emit-quality-manifest.ps1` |
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
-| Godot GDExtension | `just godot-test` |
+| Godot GDExtension | `just godot-test` (`--manifest-path clients/godot-ref/rust/Cargo.toml`) |
 | Unreal CivShow | `.\clients\unreal-show\scripts\build.ps1` (needs UE 5.7 + MSVC) |
 | Unreal PIE prep | `.\scripts\pie-validation.ps1` (starts backends, WS/terrain smoke, prints PIE checklist) |
 
@@ -50,7 +50,7 @@ Default stack:
 
 ## Do not (agents)
 
-- Do not implement full CIV-0700 (capability enforcement, mod signing, in-game mod browser, determinism scan) — `civ-mod-host` v3 **partial**: manifest + `.civmod` ZIP + `wasmtime` policy tick + `ReplayEvent::ModLoaded`; no economic WASM hooks yet.
+- Do not implement full CIV-0700 (capability enforcement, mod browser UI, full signing pipeline) — `civ-mod-host` v3 **partial**: manifest + `.civmod` ZIP + `wasmtime` policy/economic ticks + Ed25519 verify when `author_pubkey_hex` + `mod.wasm.sig` present (`mod-dev` skips verify); determinism scan unless `mod-dev`.
 - Do not assume Quixel/Megascans assets are in git (`Content/Megascans/` is local-only).
 - Do not edit non-primary worktrees unless the user asked.
 - Do not skip `agent-smoke` or `civis-3d-verify` when changing JSON-RPC or snapshot shapes.
@@ -61,12 +61,12 @@ Default stack:
 - **Phenotype org:** parent `AGENTS.md` under Phenotype repos
 - **AgilePlus:** `cd /repos/AgilePlus && agileplus <command>` before large features
 
-## Maturity status (2026-05-25)
+## Maturity status (2026-05-26)
 
 **Mature:** determinism/replay, `civ-server` WS tests (incl. spawn palette), `civ-watch`, web L2 authoring, Godot/Bevy/Unreal server attach, JSON-RPC catalog + `just civis-3d-verify`.
 
-**Partial:** modding v3 (WASM policy tick, `.civmod`, `civlab-sdk`); F3D0 — Bevy full mesh, Godot/Unreal **VoxelDelta markers**; Unreal minimap UMG (256² capture).
+**Partial:** modding v3 — **25** `civ-mod-host` unit tests (`just civis-3d-mod-check`), WASM policy/economy/military ticks, `.civmod`, `civlab-sdk`, partial Ed25519 verify + `just civis-3d-mod-package-all`; `scenarios/baseline.yaml` loads **`example-policy`** + **`example-economic`**; F3D0 — Bevy full `Frame3d`, Godot/Unreal **16³ procedural mesh** when dense `voxels` (4096), else chunk markers; Unreal minimap UMG (256² capture).
 
-**Deferred (product):** Quixel L5 art, mod signing, in-game mod browser, full `mod.loaded.v1` replay-bus JSON.
+**Deferred (product):** Quixel L5 art, mod signing CLI/publish workflow, in-game mod browser, full `mod.loaded.v1` replay-bus JSON.
 
 See `docs/development-guide/fr-ax-dx-ux-maturity-audit.md`.

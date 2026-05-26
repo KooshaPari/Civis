@@ -14,6 +14,7 @@ import {
 } from "./lib/authoring";
 import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
 import { postControl } from "./control";
+import { useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import {
@@ -114,6 +115,7 @@ export function Scene3d() {
   const { state, dispatch } = useDashboardStore();
   const speedRef = useRef<TimeSpeed>(state.speed);
   const stateRef = useRef(state);
+  useDashboardShortcuts();
   const refs = useRef<SceneRefs>({
     terrainMesh: null,
     waterMesh: null,

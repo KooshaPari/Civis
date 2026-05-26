@@ -1,6 +1,6 @@
 # FR-CIV-MATURITY — AX / DX / UX / Modding maturity audit
 
-**Date:** 2026-05-25
+**Date:** 2026-05-26
 **Scope:** Civis 3D workspace (`feat/civis-3d-foundation` line) — what is **mature** vs **immature** for agents, developers, players/modders.
 
 Legend: **Mature** = documented + tested + automatable · **Partial** = works but gaps · **Immature** = spec-only or stub · **Missing** = no code path.
@@ -16,7 +16,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial–good** — Bevy full mesh; Godot/Unreal **16³ mesh** when dense `voxels`; Unreal minimap UMG |
 | **Modding** | Partial (v3) | Manifest + `.civmod` + WASM policy tick + `ReplayEvent::ModLoaded`; no signing / economic WASM |
 
-**Gates (2026-05-25):** `ws_smoke` 32 tests · `just civis-3d-verify` pass (incl. `check-jsonrpc-catalog.ps1`, `civis-3d-scenario-check`).
+**Gates (2026-05-26):** `agent-smoke.ps1` **PASS** · `just civis-3d-verify` **PASS** (catalog, scenario, web, mod-host) · `just godot-test` via `--manifest-path clients/godot-ref/rust/Cargo.toml`.
 
 **Recommended finish order:** P0 agent contracts → P1 protocol/attach parity → P2 modding MVP hooks → P3 L5 polish.
 
@@ -39,7 +39,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | ID | Gap | Evidence | Finish criterion |
 |----|-----|----------|------------------|
-| DX-01 | **Modding API** v3 partial | `wasmtime`, `.civmod`, `civlab-sdk`; 7 `civ-mod-host` tests | Capability API + economic WASM per `fr-modding-roadmap.md` |
+| DX-01 | **Modding API** v3 partial | `wasmtime`, `.civmod`, `civlab-sdk`; **25+** `civ-mod-host` tests (27 in crate) | Capability API + signing polish per `fr-modding-roadmap.md` |
 | DX-02 | ~~Scenario YAML~~ **Done** | [`scenario-yaml.md`](../guides/scenario-yaml.md); `civis-3d-scenario-check` in verify | Keep keys in sync with `scenario.rs` |
 | DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`jsonrpc-surface.md`](../api/jsonrpc-surface.md) + [`scripts/check-jsonrpc-catalog.ps1`](../../scripts/check-jsonrpc-catalog.ps1) in `civis-3d-verify` | Keep doc table in sync when adding `JsonRpcMethod` variants |
 | DX-04 | ~~Client attach matrix~~ **Done** | [`docs/guides/client-attach-matrix.md`](../guides/client-attach-matrix.md) | Update when new client or default URL changes |
@@ -71,9 +71,9 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | `.civmod` format | **Partial** | ZIP load in `ModHost::load_civmod_archive` |
 | `civlab-sdk` guest crate | **Partial** | `crates/civlab-sdk` + `build-example-policy-wasm.ps1` |
 | `mods/` directory | **Partial** | `mods/manifest.schema.json`, `mods/example-policy/manifest.toml` |
-| Manifest host (`civ-mod-host`) | **Partial** | 7 unit tests; WASM + registry policy phase |
+| Manifest host (`civ-mod-host`) | **Partial** | 25+ unit tests; WASM policy/economy/military ticks + registry phases |
 | Engine scenario hook | **Partial** | `register_mod_stubs`; `ReplayEvent::ModLoaded` in replay |
-| PolicyMod / EconomicMod hooks | **Partial** | Economy phase `ModHost::tick`; military stub; no economic WASM |
+| PolicyMod / EconomicMod hooks | **Partial** | Policy + economy + military WASM ticks; baseline loads `example-policy` + `example-economic` |
 | Lua scenario path | Missing | Spec §12 |
 | Mod signing / dev mode | Missing | Spec §14 |
 
@@ -178,17 +178,17 @@ VS 2022 without `VC\Tools\MSVC` remains insufficient until the C++ workload is i
 
 ## Loop status
 
-**Last verified:** 2026-05-25 (local, `feat/civis-3d-foundation` workspace)
+**Last verified:** 2026-05-26 (local, `feat/p-w1-tactics-012` workspace)
 
 | Gate | Result |
 |------|--------|
-| `.\scripts\agent-smoke.ps1` | **PASS** — civ-server 32/32 `ws_smoke`, civ-watch, Unreal preflight |
+| `.\scripts\agent-smoke.ps1` | **PASS** — `ws_smoke`, catalog/scenario/mod-host/godot gates, civ-watch, Unreal preflight |
 | `.\scripts\agent-smoke.ps1 -FullUnreal` | **PASS** when UE 5.7 + VS 2026 present — full `build.ps1` |
-| `just civis-3d-verify` | **PASS** — workspace check/test/clippy/fmt + catalog/scenario/web/mod-host |
-| `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm` (gitignored) |
-| `just godot-test` | **PASS** — F3D0 mesh + WS decode (13 tests) |
+| `just civis-3d-verify` | **PASS** — workspace check/clippy/fmt + catalog/scenario/web/mod-host |
+| `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm`, `mods/example-economic/mod.wasm` (gitignored) |
+| `just godot-test` | **PASS** — `cargo test --manifest-path clients/godot-ref/rust/Cargo.toml` (F3D0 mesh + WS decode) |
 | `just civis-3d-catalog-check` | **PASS** — 14 methods: `jsonrpc.rs` ↔ `jsonrpc-surface.md` |
-| `just civis-3d-scenario-check` | **PASS** — 7 `scenario::*` tests |
+| `just civis-3d-scenario-check` | **PASS** — `civ-engine` `scenario::*` tests (`-j 1` on Windows; see `agent-smoke.md`) |
 
 ### Open P0
 

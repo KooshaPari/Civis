@@ -1,336 +1,179 @@
-#![cfg(feature = "bevy")]
-
-mod terrain;
-
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::log::LogPlugin;
-use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
-use bevy::ui::IsDefaultUiCamera;
-use civ_agents::{spawn_civilian_at, Civilian as AgentCivilian, Position3d};
-use civ_bevy_ref::{agent_scale_multiplier, CameraTarget};
-use civ_engine::JobType;
-use civ_engine::Simulation;
-use civ_voxel::FIXED_SCALE;
-use terrain::{Biome, Terrain, SIZE};
+use std::f32::consts::PI;
 
-const TITLE: &str = "Civis 3D — Standalone";
-const TERRAIN_WORLD_SIZE: f32 = 256.0;
-const TERRAIN_SCALE_XZ: f32 = TERRAIN_WORLD_SIZE / (SIZE as f32 - 1.0);
-const TERRAIN_HEIGHT_SCALE: f32 = 28.0;
-const WATER_LEVEL: f32 = 0.38;
-const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
-const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
-const MIN_ORBIT_ELEVATION: f32 = 0.08;
-const MIN_ORBIT_DISTANCE: f32 = 20.0;
-const MAX_ORBIT_DISTANCE: f32 = 500.0;
-const CIVILIAN_POOL: usize = 256;
-const SIM_TICK_RATE_HZ: f32 = 10.0;
+const GRID: usize = 256;
+const WORLD_SIZE: f32 = 256.0;
+const HEIGHT_SCALE: f32 = 46.0;
+const CAMERA_START: Vec3 = Vec3::new(128.0, 200.0, 300.0);
+const CAMERA_TARGET_START: Vec3 = Vec3::new(128.0, 0.0, 128.0);
 
-#[derive(Resource, Debug, Clone, Copy)]
-struct OrbitCamera {
-    centre: [f32; 3],
-    azimuth: f32,
-    elevation: f32,
-    distance: f32,
+#[derive(Resource, Clone, Copy)]
+struct CameraRig {
+    target: Vec3,
+    yaw: f32,
+    pitch: f32,
 }
 
-impl OrbitCamera {
-    fn from_target(target: CameraTarget) -> Self {
+impl Default for CameraRig {
+    fn default() -> Self {
         Self {
-            centre: target.centre,
-            azimuth: target.azimuth_rad,
-            elevation: target.elevation_rad,
-            distance: target.distance,
+            target: CAMERA_TARGET_START,
+            yaw: -0.12,
+            pitch: -0.72,
         }
     }
-
-    fn as_target(&self) -> CameraTarget {
-        CameraTarget {
-            centre: self.centre,
-            distance: self.distance,
-            azimuth_rad: self.azimuth,
-            elevation_rad: self.elevation,
-        }
-    }
-
-    fn adjust_distance(&mut self, delta: f32) {
-        self.distance = (self.distance + delta).clamp(MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
-    }
-
-    fn pan_centre(&mut self, right: f32, forward: f32) {
-        let sin = self.azimuth.sin();
-        let cos = self.azimuth.cos();
-        self.centre[0] += right * cos + forward * sin;
-        self.centre[2] += -right * sin + forward * cos;
-    }
 }
-
-#[derive(Resource)]
-struct StandaloneSim {
-    sim: Simulation,
-    terrain: Terrain,
-    paused: bool,
-}
-
-#[derive(Resource)]
-struct SimTickTimer(Timer);
-
-#[derive(Resource, Default)]
-struct TerrainVisuals {
-    water: Option<Entity>,
-    trees: Vec<Entity>,
-}
-
-#[derive(Resource, Default)]
-struct CivilianVisuals {
-    pool: Vec<Entity>,
-    materials: Vec<(JobType, Handle<StandardMaterial>)>,
-}
-
-#[derive(Resource, Default)]
-struct UiState {
-    text: Option<Entity>,
-}
-
-#[derive(Component)]
-struct OverlayText;
-
-#[derive(Component)]
-struct CivilianMarker {
-    pool_index: usize,
-}
-
-#[derive(Component)]
-struct TreeMarker;
-
-#[derive(Component)]
-struct TerrainMarker;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins
-                .build()
-                .disable::<bevy::ui::UiPlugin>()
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: TITLE.to_string(),
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(LogPlugin {
-                    filter: "bevy_ui::layout=error".to_string(),
-                    level: bevy::log::Level::INFO,
-                    ..default()
-                }),
-            WireframePlugin,
-        ))
-        .insert_resource(StandaloneSim {
-            sim: Simulation::with_seed(42),
-            terrain: Terrain::generate(42),
-            paused: false,
+        .insert_resource(ClearColor(Color::srgba(0.54, 0.74, 0.92, 1.0)))
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 500.0,
         })
-        .insert_resource(SimTickTimer(Timer::from_seconds(
-            1.0 / SIM_TICK_RATE_HZ,
-            TimerMode::Repeating,
-        )))
-        .insert_resource(OrbitCamera::from_target(CameraTarget {
-            centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
-            distance: 240.0,
-            azimuth_rad: std::f32::consts::FRAC_PI_4,
-            elevation_rad: 0.8,
-        }))
-        .insert_resource(TerrainVisuals::default())
-        .insert_resource(CivilianVisuals::default())
-        .insert_resource(UiState::default())
-        .add_systems(Startup, setup_all)
-        .add_systems(
-            Update,
-            (
-                orbit_camera_input,
-                orbit_camera_transform,
-                input_controls,
-                tick_simulation,
-                update_civilian_meshes,
-                update_overlay,
-            ),
-        )
+        .insert_resource(CameraRig::default())
+        .add_plugins(DefaultPlugins)
+        .add_systems(Startup, setup)
+        .add_systems(Update, (camera_input, update_camera))
         .run();
 }
 
-fn setup_all(
+fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut terrain_visuals: ResMut<TerrainVisuals>,
-    mut civilian_visuals: ResMut<CivilianVisuals>,
-    mut ui_state: ResMut<UiState>,
-    sim_state: Res<StandaloneSim>,
 ) {
-    let camera_target = CameraTarget {
-        centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
-        distance: 240.0,
-        azimuth_rad: std::f32::consts::FRAC_PI_4,
-        elevation_rad: 0.8,
-    };
-    let eye = camera_target.orbit_position();
-    let centre = Vec3::from_array(camera_target.centre);
-
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
-        IsDefaultUiCamera,
-    ));
-
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(
-            Sphere::new(2.0)
-                .mesh()
-                .ico(5)
-                .expect("failed to build startup sphere"),
-        ),
-        material: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.95, 0.12, 0.12),
-            perceptual_roughness: 0.8,
-            ..default()
-        }),
-        transform: Transform::from_xyz(128.0, 20.0, 128.0),
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_translation(CAMERA_START)
+            .looking_at(CAMERA_TARGET_START, Vec3::Y),
         ..default()
-    },));
-
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(
-            Plane3d::default()
-                .mesh()
-                .size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE),
-        ),
-        material: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.18, 0.6, 0.18),
-            perceptual_roughness: 1.0,
-            ..default()
-        }),
-        transform: Transform::from_xyz(TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5),
-        ..default()
-    },));
-
-    commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
-    commands.insert_resource(AmbientLight {
-        color: Color::srgb(0.72, 0.78, 0.9),
-        brightness: 500.0,
     });
 
-    commands.spawn((
-        DirectionalLight {
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
             illuminance: 15_000.0,
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_xyz(eye[0] + 80.0, eye[1] + 120.0, eye[2] + 40.0)
-            .looking_at(centre, Vec3::Y),
-    ));
+        transform: Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -PI / 4.0,
+            PI / 8.0,
+            0.0,
+        )),
+        ..default()
+    });
 
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 15_000.0,
-            shadows_enabled: false,
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(terrain_mesh()),
+        material: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
             ..default()
-        },
-        Transform::from_xyz(eye[0] - 120.0, eye[1] + 90.0, eye[2] - 140.0)
-            .looking_at(centre, Vec3::Y),
-    ));
+        }),
+        ..default()
+    });
 
-    spawn_terrain(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &sim_state.terrain,
-        &mut terrain_visuals,
-    );
-    seed_initial_civilians(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &sim_state.sim,
-        &mut civilian_visuals,
-    );
-
-    let overlay = commands
-        .spawn((
-            TextBundle::from_section(
-                "loading...",
-                TextStyle {
-                    font_size: 16.0,
-                    color: Color::srgb(0.96, 0.97, 0.99),
-                    ..default()
-                },
-            )
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                left: Val::Px(10.0),
-                top: Val::Px(10.0),
-                ..default()
-            }),
-            OverlayText,
-        ))
-        .id();
-    ui_state.text = Some(overlay);
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Mesh::from(bevy::math::primitives::Sphere { radius: 2.0 })),
+        material: materials.add(Color::srgb(0.9, 0.05, 0.05)),
+        transform: Transform::from_xyz(128.0, 20.0, 128.0),
+        ..default()
+    });
 }
 
-fn spawn_terrain(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    terrain: &Terrain,
-    visuals: &mut TerrainVisuals,
+fn camera_input(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut mouse_motion: EventReader<MouseMotion>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mut rig: ResMut<CameraRig>,
 ) {
-    let h_min = terrain.heights.iter().cloned().fold(f32::MAX, f32::min);
-    let h_max = terrain.heights.iter().cloned().fold(f32::MIN, f32::max);
-    info!(
-        "[standalone] terrain height range raw={:.3}..{:.3} world_y={:.1}..{:.1}",
-        h_min,
-        h_max,
-        h_min * TERRAIN_HEIGHT_SCALE,
-        h_max * TERRAIN_HEIGHT_SCALE
+    let dt = time.delta_seconds();
+    let mut move_dir = Vec3::ZERO;
+    let forward_flat = Vec3::new(rig.yaw.sin(), 0.0, rig.yaw.cos());
+    let right_flat = Vec3::new(forward_flat.z, 0.0, -forward_flat.x);
+
+    if keys.pressed(KeyCode::KeyW) {
+        move_dir += forward_flat;
+    }
+    if keys.pressed(KeyCode::KeyS) {
+        move_dir -= forward_flat;
+    }
+    if keys.pressed(KeyCode::KeyD) {
+        move_dir += right_flat;
+    }
+    if keys.pressed(KeyCode::KeyA) {
+        move_dir -= right_flat;
+    }
+    if keys.pressed(KeyCode::Space) {
+        move_dir += Vec3::Y;
+    }
+    if keys.pressed(KeyCode::ShiftLeft) {
+        move_dir -= Vec3::Y;
+    }
+    if move_dir.length_squared() > 0.0 {
+        rig.target += move_dir.normalize() * 90.0 * dt;
+    }
+
+    if mouse_buttons.pressed(MouseButton::Right) {
+        let delta = mouse_motion
+            .read()
+            .fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
+        rig.yaw -= delta.x * 0.003;
+        rig.pitch = (rig.pitch - delta.y * 0.003).clamp(-1.45, -0.2);
+    } else {
+        mouse_motion.clear();
+    }
+}
+
+fn update_camera(mut query: Query<&mut Transform, With<Camera>>, rig: Res<CameraRig>) {
+    let distance = 170.0;
+    let dir = Vec3::new(
+        rig.yaw.sin() * rig.pitch.cos(),
+        rig.pitch.sin(),
+        rig.yaw.cos() * rig.pitch.cos(),
     );
+    let eye = rig.target - dir * distance + Vec3::Y * 28.0;
+    for mut transform in &mut query {
+        *transform = Transform::from_translation(eye).looking_at(rig.target, Vec3::Y);
+    }
+}
 
-    let mut positions = Vec::<[f32; 3]>::with_capacity(SIZE * SIZE);
-    let mut normals = Vec::<[f32; 3]>::with_capacity(SIZE * SIZE);
-    let mut colors = Vec::<[f32; 4]>::with_capacity(SIZE * SIZE);
+fn terrain_mesh() -> Mesh {
+    let mut positions = Vec::with_capacity(GRID * GRID);
+    let mut normals = Vec::with_capacity(GRID * GRID);
+    let mut colors = Vec::with_capacity(GRID * GRID);
+    let half = WORLD_SIZE * 0.5;
 
-    for z in 0..SIZE {
-        for x in 0..SIZE {
-            let idx = z * SIZE + x;
-            let height = terrain.heights[idx];
-            let normal = terrain_vertex_normal(terrain, x, z);
-            positions.push([
-                x as f32 * TERRAIN_SCALE_XZ,
-                height * TERRAIN_HEIGHT_SCALE,
-                z as f32 * TERRAIN_SCALE_XZ,
-            ]);
-            normals.push(normal);
-            let biome = terrain.biomes[idx];
-            let rgb = biome.rgb();
-            colors.push([
-                rgb[0] as f32 / 255.0,
-                rgb[1] as f32 / 255.0,
-                rgb[2] as f32 / 255.0,
-                1.0,
-            ]);
+    for z in 0..GRID {
+        for x in 0..GRID {
+            let fx = x as f32 / (GRID - 1) as f32;
+            let fz = z as f32 / (GRID - 1) as f32;
+            let wx = fx * WORLD_SIZE;
+            let wz = fz * WORLD_SIZE;
+            let height = terrain_height(wx, wz);
+            positions.push([wx - half, height, wz - half]);
+            normals.push([0.0, 1.0, 0.0]);
+            colors.push(color_for_height(height));
         }
     }
 
-    let mut indices = Vec::<u32>::new();
-    for z in 0..(SIZE - 1) {
-        for x in 0..(SIZE - 1) {
-            let i0 = (z * SIZE + x) as u32;
-            let i1 = i0 + 1;
-            let i2 = i0 + SIZE as u32;
-            let i3 = i2 + 1;
-            indices.extend_from_slice(&[i0, i2, i1, i1, i2, i3]);
+    let mut indices = Vec::with_capacity((GRID - 1) * (GRID - 1) * 6);
+    for z in 0..GRID - 1 {
+        for x in 0..GRID - 1 {
+            let i = (z * GRID + x) as u32;
+            indices.extend_from_slice(&[
+                i,
+                i + GRID as u32,
+                i + 1,
+                i + 1,
+                i + GRID as u32,
+                i + GRID as u32 + 1,
+            ]);
         }
     }
 
@@ -342,378 +185,67 @@ fn spawn_terrain(
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     mesh.insert_indices(Indices::U32(indices));
-
-    commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(mesh),
-            material: materials.add(StandardMaterial {
-                base_color: Color::WHITE,
-                perceptual_roughness: 1.0,
-                metallic: 0.0,
-                ..default()
-            }),
-            ..default()
-        },
-        TerrainMarker,
-        Wireframe,
-        WireframeColor {
-            color: Color::srgba(0.2, 0.3, 0.35, 0.2),
-        },
-    ));
-
-    let water_mesh = meshes.add(
-        Plane3d::default()
-            .mesh()
-            .size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE),
-    );
-    let water = commands
-        .spawn((
-            PbrBundle {
-                mesh: water_mesh,
-                material: materials.add(StandardMaterial {
-                    base_color: Color::srgba(0.15, 0.3, 0.55, 0.45),
-                    alpha_mode: AlphaMode::Blend,
-                    unlit: false,
-                    ..default()
-                }),
-                transform: Transform::from_xyz(
-                    TERRAIN_WORLD_SIZE * 0.5,
-                    WATER_LEVEL * TERRAIN_HEIGHT_SCALE,
-                    TERRAIN_WORLD_SIZE * 0.5,
-                ),
-                ..default()
-            },
-            TerrainMarker,
-        ))
-        .id();
-    visuals.water = Some(water);
-
-    let tree_mesh = meshes.add(Cuboid::new(1.2, 2.4, 1.2));
-    for z in 0..SIZE {
-        for x in 0..SIZE {
-            let idx = z * SIZE + x;
-            if terrain.biomes[idx] != Biome::Forest {
-                continue;
-            }
-            if (x + z) % 11 != 0 {
-                continue;
-            }
-            let world_x = x as f32 * TERRAIN_SCALE_XZ;
-            let world_z = z as f32 * TERRAIN_SCALE_XZ;
-            let y = terrain.heights[idx] * TERRAIN_HEIGHT_SCALE + 1.2;
-            let tree = commands
-                .spawn((
-                    PbrBundle {
-                        mesh: tree_mesh.clone(),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::srgb(0.2, 0.34, 0.18),
-                            perceptual_roughness: 1.0,
-                            ..default()
-                        }),
-                        transform: Transform::from_xyz(world_x, y, world_z),
-                        ..default()
-                    },
-                    TreeMarker,
-                ))
-                .id();
-            visuals.trees.push(tree);
-        }
-    }
+    mesh
 }
 
-fn seed_initial_civilians(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    sim: &Simulation,
-    visuals: &mut CivilianVisuals,
-) {
-    let mesh = meshes.add(Cuboid::new(0.5, 1.0, 0.5));
-    for entity in 0..CIVILIAN_POOL {
-        let id = commands
-            .spawn((
-                PbrBundle {
-                    mesh: mesh.clone(),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.95, 0.95, 0.95),
-                        perceptual_roughness: 0.8,
-                        ..default()
-                    }),
-                    visibility: Visibility::Hidden,
-                    ..default()
-                },
-                CivilianMarker { pool_index: entity },
-            ))
-            .id();
-        visuals.pool.push(id);
+fn terrain_height(x: f32, z: f32) -> f32 {
+    let nx = x / WORLD_SIZE - 0.5;
+    let nz = z / WORLD_SIZE - 0.5;
+    let mut h = 0.0;
+    let mut amp = 1.0;
+    let mut freq = 0.018;
+    for _ in 0..5 {
+        h += value_noise(nx * freq, nz * freq) * amp;
+        freq *= 2.0;
+        amp *= 0.5;
     }
-
-    for (idx, (_, civilian)) in sim
-        .world
-        .query::<&AgentCivilian>()
-        .iter()
-        .take(CIVILIAN_POOL)
-        .enumerate()
-    {
-        let job = job_type_for_civilian_id(civilian.id);
-        let handle = job_material(job, materials, &mut visuals.materials);
-        if let Some(entity) = visuals.pool.get(idx).copied() {
-            commands.entity(entity).insert(handle);
-        }
-    }
+    h = h / 1.9375;
+    let ridge = (1.0 - (nx.abs() * 1.55).min(1.0)) * (1.0 - (nz.abs() * 1.55).min(1.0));
+    let island = 1.0 - ((nx * nx + nz * nz).sqrt() * 1.85).clamp(0.0, 1.0);
+    ((h * 0.62 + ridge * 0.18 + island * 0.20) - 0.18).clamp(0.0, 1.0) * HEIGHT_SCALE
 }
 
-fn tick_simulation(
-    time: Res<Time>,
-    mut timer: ResMut<SimTickTimer>,
-    mut state: ResMut<StandaloneSim>,
-) {
-    if state.paused {
-        return;
-    }
-    if timer.0.tick(time.delta()).just_finished() {
-        state.sim.tick();
-    }
-}
-
-fn input_controls(
-    keys: Res<ButtonInput<KeyCode>>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
-    mut orbit: ResMut<OrbitCamera>,
-    mut state: ResMut<StandaloneSim>,
-) {
-    if keys.just_pressed(KeyCode::Space) {
-        state.paused = !state.paused;
-    }
-
-    for key in [
-        KeyCode::Digit1,
-        KeyCode::Digit2,
-        KeyCode::Digit3,
-        KeyCode::Digit4,
-    ] {
-        if keys.just_pressed(key) {
-            let idx = match key {
-                KeyCode::Digit1 => 0,
-                KeyCode::Digit2 => 1,
-                KeyCode::Digit3 => 2,
-                _ => 3,
-            };
-            if let Some(faction) = state.sim.spectator_view().factions.get(idx) {
-                orbit.centre = [
-                    faction.capital[0] * TERRAIN_WORLD_SIZE,
-                    0.0,
-                    faction.capital[1] * TERRAIN_WORLD_SIZE,
-                ];
-            }
-        }
-    }
-
-    if buttons.just_pressed(MouseButton::Left) {
-        if let Ok(window) = windows.get_single() {
-            if let Some(cursor) = window.cursor_position() {
-                if let Ok((camera, camera_transform)) = camera_q.get_single() {
-                    if let Some(ray) = camera.viewport_to_world(camera_transform, cursor) {
-                        let dir = ray.direction;
-                        let origin = ray.origin;
-                        if dir.y.abs() > f32::EPSILON {
-                            let t = (0.0 - origin.y) / dir.y;
-                            if t > 0.0 {
-                                let hit = origin + dir * t;
-                                let x = (hit.x / TERRAIN_WORLD_SIZE).clamp(0.0, 0.99);
-                                let y = (hit.z / TERRAIN_WORLD_SIZE).clamp(0.0, 0.99);
-                                let mut rng = state.sim.rng_mut().clone();
-                                let next_id = 10_000_000 + state.sim.state.tick;
-                                let _ = spawn_civilian_at(
-                                    &mut state.sim.world,
-                                    next_id,
-                                    0,
-                                    x,
-                                    y,
-                                    &mut rng,
-                                );
-                                *state.sim.rng_mut() = rng;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn orbit_camera_input(
-    mut orbit: ResMut<OrbitCamera>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    mut motion: EventReader<MouseMotion>,
-    mut wheel: EventReader<MouseWheel>,
-) {
-    if buttons.pressed(MouseButton::Right) {
-        let delta = motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
-        orbit.azimuth -= delta.x * ORBIT_DRAG_SENSITIVITY;
-        orbit.elevation = (orbit.elevation + delta.y * ORBIT_DRAG_SENSITIVITY)
-            .clamp(MIN_ORBIT_ELEVATION, std::f32::consts::FRAC_PI_2 - 0.05);
+fn color_for_height(height: f32) -> [f32; 4] {
+    let t = height / HEIGHT_SCALE;
+    if t < 0.18 {
+        [0.20, 0.40, 0.86, 1.0]
+    } else if t < 0.24 {
+        [0.86, 0.78, 0.52, 1.0]
+    } else if t < 0.48 {
+        [0.28, 0.58, 0.24, 1.0]
+    } else if t < 0.68 {
+        [0.12, 0.34, 0.12, 1.0]
+    } else if t < 0.85 {
+        [0.50, 0.50, 0.52, 1.0]
     } else {
-        motion.clear();
-    }
-
-    for ev in wheel.read() {
-        let amount = match ev.unit {
-            MouseScrollUnit::Line => ev.y,
-            MouseScrollUnit::Pixel => ev.y * 0.02,
-        };
-        orbit.adjust_distance(-amount * ORBIT_SCROLL_SENSITIVITY);
+        [0.97, 0.97, 0.97, 1.0]
     }
 }
 
-fn orbit_camera_transform(
-    orbit: Res<OrbitCamera>,
-    mut camera_q: Query<&mut Transform, With<Camera3d>>,
-) {
-    let Ok(mut transform) = camera_q.get_single_mut() else {
-        return;
-    };
-    let eye = orbit.as_target().orbit_position();
-    *transform = Transform::from_xyz(eye[0], eye[1], eye[2])
-        .looking_at(Vec3::from_array(orbit.centre), Vec3::Y);
+fn value_noise(x: f32, z: f32) -> f32 {
+    let xi = x.floor();
+    let zi = z.floor();
+    let xf = x - xi;
+    let zf = z - zi;
+    let u = smooth(xf);
+    let v = smooth(zf);
+    let h00 = hash(xi, zi);
+    let h10 = hash(xi + 1.0, zi);
+    let h01 = hash(xi, zi + 1.0);
+    let h11 = hash(xi + 1.0, zi + 1.0);
+    let a = lerp(h00, h10, u);
+    let b = lerp(h01, h11, u);
+    lerp(a, b, v)
 }
 
-fn update_civilian_meshes(
-    mut commands: Commands,
-    state: Res<StandaloneSim>,
-    mut visuals: ResMut<CivilianVisuals>,
-    mut transforms: Query<&mut Transform>,
-    mut visibility: Query<&mut Visibility>,
-) {
-    let mut binding = state.sim.world.query::<(&AgentCivilian, &Position3d)>();
-    let mut civilians: Vec<_> = binding.iter().collect();
-    civilians.sort_by_key(|(_, (c, _))| c.id);
-
-    let pool = visuals.pool.clone();
-    for (slot, entity) in pool.into_iter().enumerate() {
-        let visible = civilians.get(slot);
-        if let Ok(mut vis) = visibility.get_mut(entity) {
-            *vis = if visible.is_some() {
-                Visibility::Visible
-            } else {
-                Visibility::Hidden
-            };
-        }
-        if let Some(&(_, (civilian, pos))) = visible {
-            let x = pos.coord.x as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
-            let z = pos.coord.z as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
-            let y = sample_height(
-                &state.terrain,
-                x / TERRAIN_WORLD_SIZE,
-                z / TERRAIN_WORLD_SIZE,
-            ) * TERRAIN_HEIGHT_SCALE
-                + 1.0;
-            if let Ok(mut transform) = transforms.get_mut(entity) {
-                transform.translation = Vec3::new(x, y, z);
-                transform.scale = Vec3::splat(agent_scale_multiplier(1.0));
-            }
-            let job = job_type_for_civilian_id(civilian.id);
-            if let Some((_, handle)) = visuals
-                .materials
-                .iter()
-                .find(|(cached_job, _)| *cached_job == job)
-            {
-                commands.entity(entity).insert(handle.clone());
-            }
-        }
-    }
+fn hash(x: f32, z: f32) -> f32 {
+    ((x * 127.1 + z * 311.7).sin() * 43_758.547).fract().abs()
 }
 
-fn job_material(
-    job: JobType,
-    materials: &mut Assets<StandardMaterial>,
-    cache: &mut Vec<(JobType, Handle<StandardMaterial>)>,
-) -> Handle<StandardMaterial> {
-    if let Some((_, handle)) = cache.iter().find(|(cached_job, _)| *cached_job == job) {
-        return handle.clone();
-    }
-
-    let color = match job {
-        JobType::Farmer => Color::srgb(0.18, 0.72, 0.22),
-        JobType::Warrior => Color::srgb(0.86, 0.18, 0.18),
-        JobType::Scholar => Color::srgb(0.32, 0.5, 0.92),
-        JobType::Trader => Color::srgb(0.86, 0.62, 0.16),
-        JobType::Priest => Color::srgb(0.72, 0.44, 0.88),
-        JobType::Admin => Color::srgb(0.4, 0.4, 0.4),
-        JobType::Unemployed => Color::srgb(0.82, 0.82, 0.82),
-    };
-    let handle = materials.add(StandardMaterial {
-        base_color: color,
-        perceptual_roughness: 0.65,
-        ..default()
-    });
-    cache.push((job, handle.clone()));
-    handle
+fn smooth(t: f32) -> f32 {
+    t * t * (3.0 - 2.0 * t)
 }
 
-fn job_type_for_civilian_id(id: u64) -> JobType {
-    match id % 7 {
-        0 => JobType::Farmer,
-        1 => JobType::Warrior,
-        2 => JobType::Scholar,
-        3 => JobType::Trader,
-        4 => JobType::Priest,
-        5 => JobType::Admin,
-        _ => JobType::Unemployed,
-    }
-}
-
-fn update_overlay(
-    state: Res<StandaloneSim>,
-    ui: Res<UiState>,
-    mut query: Query<&mut Text, With<OverlayText>>,
-) {
-    let Some(entity) = ui.text else {
-        return;
-    };
-    let Ok(mut text) = query.get_mut(entity) else {
-        return;
-    };
-    let climate = state.sim.climate();
-    let is_day = climate.day_phase >= 0.25 && climate.day_phase < 0.75;
-    let civilians = state.sim.world.query::<&AgentCivilian>().iter().count();
-    text.sections[0].value = format!(
-        "tick: {}\npopulation: {}\nera: {}\nday/night: {}\npaused: {}\ncivilians: {}",
-        state.sim.state.tick,
-        state.sim.state.population,
-        state.sim.state.tick / 600,
-        if is_day { "day" } else { "night" },
-        state.paused,
-        civilians,
-    );
-}
-
-fn sample_height(terrain: &Terrain, x: f32, z: f32) -> f32 {
-    let x = x.clamp(0.0, 0.999_999);
-    let z = z.clamp(0.0, 0.999_999);
-    let ix = (x * (terrain.size as f32 - 1.0)).round() as usize;
-    let iz = (z * (terrain.size as f32 - 1.0)).round() as usize;
-    terrain.heights[iz * terrain.size + ix]
-}
-
-fn terrain_vertex_normal(terrain: &Terrain, x: usize, z: usize) -> [f32; 3] {
-    let height_at = |x: isize, z: isize| -> f32 {
-        let x = x.clamp(0, (terrain.size - 1) as isize) as usize;
-        let z = z.clamp(0, (terrain.size - 1) as isize) as usize;
-        terrain.heights[z * terrain.size + x] * TERRAIN_HEIGHT_SCALE
-    };
-
-    let left = height_at(x as isize - 1, z as isize);
-    let right = height_at(x as isize + 1, z as isize);
-    let down = height_at(x as isize, z as isize - 1);
-    let up = height_at(x as isize, z as isize + 1);
-
-    let scale_x = 1.0 / TERRAIN_SCALE_XZ;
-    let scale_z = 1.0 / TERRAIN_SCALE_XZ;
-    let nx = (left - right) * scale_x;
-    let ny = 2.0;
-    let nz = (down - up) * scale_z;
-    Vec3::new(nx, ny, nz).normalize().to_array()
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
 }

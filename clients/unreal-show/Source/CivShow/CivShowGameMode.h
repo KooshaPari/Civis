@@ -22,6 +22,10 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
 
+    /** Move the local view to `WorldLocation` (XZ from minimap); Y is sampled from terrain when available. */
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void FocusCameraAtWorldLocation(FVector WorldLocation);
+
 protected:
     UPROPERTY(EditAnywhere, Category = "Civis")
     FString WatchHttpUrl = TEXT("http://127.0.0.1:9090");
@@ -50,6 +54,9 @@ private:
     void ApplyVoxelDeltaOverlay(const FString& FrameJson);
 
     void ApplyDayNight(bool bIsDay);
+
+    UFUNCTION()
+    void OnMinimapUvClicked(float U, float V);
 
     UPROPERTY()
     UCivProtocolClient* HttpClient = nullptr;

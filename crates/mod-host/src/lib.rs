@@ -398,10 +398,16 @@ impl ModHost {
         let manifest_path = mod_dir.join(CIVMOD_MANIFEST_NAME);
         let manifest = load_manifest(&manifest_path)?;
         let wasm_path = mod_dir.join(MOD_WASM_NAME);
-        let wasm_bytes = read_wasm_file(wasm_path.clone());
+        let wasm_bytes = read_optional_file(wasm_path);
+        let sig_bytes = read_optional_file(mod_dir.join(MOD_WASM_SIG_NAME));
         if let Some(ref wasm) = wasm_bytes {
             enforce_wasm_determinism(mod_dir, wasm)?;
-            enforce_wasm_signature(mod_dir, &manifest, Some(wasm.as_slice()), None)?;
+            enforce_wasm_signature(
+                mod_dir,
+                &manifest,
+                Some(wasm.as_slice()),
+                sig_bytes.as_deref(),
+            )?;
         }
         let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
@@ -539,13 +545,38 @@ pub fn format_mod_loaded_event(record: &ModLoadedRecord) -> String {
     )
 }
 
-/// Format `mod.error.v1` for host-side guest failures.
+/// Format `mod.loaded.v1` as JSON for the replay bus (FR-MOD-004 partial).
+#[must_use]
+pub fn format_mod_loaded_event_json(record: &ModLoadedRecord) -> String {
+    serde_json::json!({
+        "event": "mod.loaded.v1",
+        "mod_id": record.mod_id,
+        "mod_name": record.mod_name,
+        "version": record.version,
+        "tick": record.tick,
+    })
+    .to_string()
+}
+
+/// Format `mod.error.v1` as JSON for the replay bus (FR-MOD-004 partial stub).
+#[must_use]
+pub fn format_mod_error_event_json(mod_id: &str, tick: u64, message: &str) -> String {
+    serde_json::json!({
+        "event": "mod.error.v1",
+        "mod_id": mod_id,
+        "tick": tick,
+        "message": message,
+    })
+    .to_string()
+}
+
+/// Format `mod.error.v1` for host-side guest failures (log-line form).
 #[must_use]
 pub fn format_mod_error_event(mod_id: &str, tick: u64, message: &str) -> String {
     format!("mod.error.v1 mod_id={mod_id} tick={tick} message={message}")
 }
 
-fn read_wasm_file(path: PathBuf) -> Option<Vec<u8>> {
+fn read_optional_file(path: PathBuf) -> Option<Vec<u8>> {
     std::fs::read(path).ok()
 }
 
@@ -1189,6 +1220,108 @@ write_policy = false
         registry.register(make_loaded_mod(dir.path().to_path_buf(), manifest, None));
 
         assert!(registry.on_policy_phase(1).is_empty());
+    }
+
+    #[test]
+    fn signed_mod_rejects_tampered_wasm() {
+        use ed25519_dalek::Signer;
+        use rand::rngs::OsRng;
+
+        const WAT_SIGNED: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 1)
+            )
+        "#;
+        const WAT_TAMPERED: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 2)
+            )
+        "#;
+        let signed_wasm = wat::parse_str(WAT_SIGNED).expect("signed wat");
+        let tampered_wasm = wat::parse_str(WAT_TAMPERED).expect("tampered wat");
+        let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);
+        let signature = signing_key.sign(&signed_wasm);
+        let pk_hex: String = signing_key
+            .verifying_key()
+            .as_bytes()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let civmod = dir.path().join("signed-policy.civmod");
+        let manifest = format!(
+            r#"
+[mod]
+id = "signed-policy"
+name = "Signed"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+author_pubkey_hex = "{pk_hex}"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#
+        );
+
+        let file = std::fs::File::create(&civmod).expect("create");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+        zip.start_file(CIVMOD_MANIFEST_NAME, options)
+            .expect("manifest");
+        zip.write_all(manifest.as_bytes()).expect("write manifest");
+        zip.start_file(MOD_WASM_NAME, options).expect("wasm");
+        zip.write_all(&tampered_wasm).expect("write wasm");
+        zip.start_file(MOD_WASM_SIG_NAME, options).expect("sig");
+        zip.write_all(signature.to_bytes().as_slice())
+            .expect("write sig");
+        zip.finish().expect("finish");
+
+        let err = read_civmod_archive(&civmod).expect_err("tampered wasm must fail verify");
+        match err {
+            ManifestError::Validation { message, .. } => {
+                assert!(
+                    message.contains("signature verification failed"),
+                    "unexpected message: {message}"
+                );
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn mod_loaded_event_json_has_required_keys() {
+        let record = ModLoadedRecord {
+            mod_id: "example-policy".to_owned(),
+            mod_name: "Example Policy".to_owned(),
+            version: "0.1.0".to_owned(),
+            tick: 42,
+        };
+        let json = format_mod_loaded_event_json(&record);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.loaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert_eq!(v["mod_name"], "Example Policy");
+        assert_eq!(v["version"], "0.1.0");
+        assert_eq!(v["tick"], 42);
+    }
+
+    #[test]
+    fn mod_error_event_json_has_required_keys() {
+        let json = format_mod_error_event_json("demo-mod", 7, "guest trap");
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.error.v1");
+        assert_eq!(v["mod_id"], "demo-mod");
+        assert_eq!(v["tick"], 7);
+        assert_eq!(v["message"], "guest trap");
     }
 
     #[test]

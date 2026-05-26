@@ -599,11 +599,13 @@ impl Simulation {
                 continue;
             }
             if let Some(entry) = self.mod_host.mods().last() {
-                self.replay_log.record_mod_loaded(
-                    self.state.tick,
-                    &entry.manifest.meta.id,
-                    &entry.manifest.meta.version,
-                );
+                self.replay_log
+                    .record_mod_loaded(&civ_mod_host::ModLoadedRecord {
+                        mod_id: entry.manifest.meta.id.clone(),
+                        mod_name: entry.manifest.meta.name.clone(),
+                        version: entry.manifest.meta.version.clone(),
+                        tick: self.state.tick,
+                    });
             }
         }
     }
@@ -886,6 +888,12 @@ impl Simulation {
     /// Mutable borrow of the replay log (tests and integrity tooling).
     pub fn replay_log_mut(&mut self) -> &mut ReplayLog {
         &mut self.replay_log
+    }
+
+    /// `mod.loaded.v1` JSON payloads recorded on the replay bus (FR-MOD-004 partial).
+    #[must_use]
+    pub fn mod_loaded_bus_events(&self) -> Vec<String> {
+        self.replay_log.mod_loaded_bus_events()
     }
 
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.

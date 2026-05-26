@@ -1711,7 +1711,10 @@ fn sanitize_save_filename(filename: &str) -> Result<String, String> {
     if trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains("..") {
         return Err("filename must be a simple name".into());
     }
-    Ok(trimmed.trim_end_matches(".civreplay").to_string())
+    Ok(trimmed
+        .trim_end_matches(".civreplay")
+        .trim_end_matches(".civsave")
+        .to_string())
 }
 
 fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {

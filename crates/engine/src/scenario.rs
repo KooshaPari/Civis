@@ -339,6 +339,14 @@ mods:
                 .iter()
                 .any(|e| matches!(e, crate::ReplayEvent::ModLoaded { mod_id, .. } if mod_id == "example-policy"))
         );
+        let bus = sim.replay_log().mod_loaded_bus_events();
+        assert_eq!(bus.len(), 1);
+        let v: serde_json::Value = serde_json::from_str(&bus[0]).expect("mod.loaded bus json");
+        assert_eq!(v["event"], "mod.loaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert!(v.get("mod_name").is_some());
+        assert!(v.get("version").is_some());
+        assert!(v.get("tick").is_some());
     }
 
     #[test]

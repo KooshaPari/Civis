@@ -44,7 +44,13 @@ pub enum ReplayEvent {
     ModLoaded {
         tick: u64,
         mod_id: String,
+        /// Display name from manifest (empty for legacy replay logs).
+        #[serde(default)]
+        mod_name: String,
         version: String,
+        /// `mod.loaded.v1` JSON on the replay bus (empty for legacy logs).
+        #[serde(default)]
+        bus_json: String,
     },
 }
 
@@ -187,13 +193,44 @@ impl ReplayLog {
         });
     }
 
-    /// Record a tick marker and extend the per-tick hash chain (FR-CORE-005 partial).
-    pub fn record_mod_loaded(&mut self, tick: u64, mod_id: &str, version: &str) {
+    /// Record a `mod.loaded.v1` lifecycle event with replay-bus JSON (FR-MOD-004 partial).
+    pub fn record_mod_loaded(&mut self, record: &civ_mod_host::ModLoadedRecord) {
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(record);
         self.events.push(ReplayEvent::ModLoaded {
-            tick,
-            mod_id: mod_id.to_string(),
-            version: version.to_string(),
+            tick: record.tick,
+            mod_id: record.mod_id.clone(),
+            mod_name: record.mod_name.clone(),
+            version: record.version.clone(),
+            bus_json,
         });
+    }
+
+    /// Collect `mod.loaded.v1` JSON payloads from recorded mod-load events.
+    #[must_use]
+    pub fn mod_loaded_bus_events(&self) -> Vec<String> {
+        self.events
+            .iter()
+            .filter_map(|event| match event {
+                ReplayEvent::ModLoaded { bus_json, .. } if !bus_json.is_empty() => {
+                    Some(bus_json.clone())
+                }
+                ReplayEvent::ModLoaded {
+                    tick,
+                    mod_id,
+                    mod_name,
+                    version,
+                    ..
+                } => Some(civ_mod_host::format_mod_loaded_event_json(
+                    &civ_mod_host::ModLoadedRecord {
+                        mod_id: mod_id.clone(),
+                        mod_name: mod_name.clone(),
+                        version: version.clone(),
+                        tick: *tick,
+                    },
+                )),
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn record_tick(&mut self, tick: u64) {

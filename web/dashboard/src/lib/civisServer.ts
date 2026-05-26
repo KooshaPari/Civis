@@ -1,5 +1,15 @@
 /** Browser JSON-RPC client for `civ-server` (FR-CIV-WEB-002..005). */
 
+export type ModBrowserEntry = {
+  id: string;
+  name: string;
+  version: string;
+  mod_type: string;
+  has_wasm: boolean;
+  guest_memory_len: number;
+  float_instruction_count?: number;
+};
+
 export type ServerMetrics = {
   tick: number;
   population: number;
@@ -8,6 +18,7 @@ export type ServerMetrics = {
   market_prices: Record<string, number>;
   hash_chain_root?: string;
   speed_multiplier: number;
+  mods?: ModBrowserEntry[];
 };
 
 let rpcId = 1;
@@ -69,6 +80,7 @@ export function normalizeServerSnapshot(result: unknown): ServerMetrics {
     hash_chain_root:
       typeof r.hash_chain_root === "string" ? r.hash_chain_root : undefined,
     speed_multiplier: Number(r.speed_multiplier ?? 1),
+    mods: Array.isArray(r.mods) ? (r.mods as ModBrowserEntry[]) : undefined,
   };
 }
 

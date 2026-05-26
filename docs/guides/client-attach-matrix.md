@@ -4,11 +4,11 @@ Single reference for how each client talks to **civ-server** (WS JSON-RPC + opti
 
 | Client | Primary attach | Default URL | Terrain | Snapshot / pins | Spawn / place | F3D0 voxels | Spectator default |
 |--------|----------------|-------------|---------|-----------------|---------------|-------------|-------------------|
-| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **VoxelDelta** chunk overlays + snapshot throttle | `spectator_mode=true` |
+| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers + throttle | `spectator_mode=true` |
 | **Godot** watch mode | `attach_mode=watch` | HTTP `http://127.0.0.1:9090` | Same | SSE / poll via watch | `POST /control/*` when not spectator | — | — |
 | **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | `spectator_mode=false` |
 | **Bevy window** | civ-server WS | `ws://127.0.0.1:3000/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) |
-| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **VoxelDelta** chunk markers (`OnF3d0FrameReceived`) | Editor PIE |
+| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers (`OnF3d0FrameReceived`) | Editor PIE |
 | **civ-server tests** | In-process | `127.0.0.1:3000` | — | JSON-RPC | Full RPC surface | Replay tests | — |
 
 ### UX-05 — `spectator_mode` defaults
@@ -46,7 +46,7 @@ Unreal: `UCivWsClient::SpawnEntity` / `UCivProtocolClient::SpawnEntity` — HTTP
 | Bevy | 160×160 chunk dots; click-to-focus — [`minimap-conventions.md`](minimap-conventions.md) |
 | Godot | 128×128 terrain texture + orbit dot |
 | Web dashboard | Terrain preview canvas; no click-to-focus yet |
-| **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho) + `UCivMinimapWidget` UMG in `CivShowGameMode`; no click-to-focus yet |
+| **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho at ~(64,800,64), width 512) + `UCivMinimapWidget` UMG; **left-click** → UV → world XZ → `ACivShowGameMode::FocusCameraAtWorldLocation` |
 
 ## Services to start (local demo)
 

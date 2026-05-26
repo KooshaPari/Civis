@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
+// LOS visibility radius (in world units) for each unit when fog-of-war is active
+const LOS_RADIUS = 14;
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   CSS2DObject,
@@ -100,6 +102,9 @@ type SceneRefs = {
   cameraPositionTarget: THREE.Vector3 | null;
   spawnBurst?: (x: number, y: number, color: number, label?: string) => void;
   spawnDisasterRing?: (event: DisasterEvent) => void;
+  fogOverlayMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null;
+  losRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial> | null;
+  selectionRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial> | null;
 };
 
 export function Scene3d() {
@@ -142,6 +147,9 @@ export function Scene3d() {
     snapshotReceivedAt: performance.now(),
     cameraFocusTarget: null,
     cameraPositionTarget: null,
+    fogOverlayMesh: null,
+    losRing: null,
+    selectionRing: null,
   });
 
   useEffect(() => {
@@ -249,6 +257,8 @@ export function Scene3d() {
     scene.add(buildingGroup);
     const labelGroup = new THREE.Group();
     scene.add(labelGroup);
+    const tacticGroup = new THREE.Group();
+    scene.add(tacticGroup);
     const hoverRaycaster = new THREE.Raycaster();
     const hoverPointer = new THREE.Vector2();
     let hoverTarget: { kind: "civilian" | "building"; index: number; x: number; y: number } | null = null;
@@ -413,7 +423,57 @@ export function Scene3d() {
       controls.update();
       updateShadowBounds(sun, terrain.size);
       resizeRenderer();
+      // Resize fog overlay to cover the terrain
+      if (refs.current.fogOverlayMesh) {
+        refs.current.fogOverlayMesh.scale.set(terrain.size, 1, terrain.size);
+        refs.current.fogOverlayMesh.position.set(0, TERRAIN_WATER_LEVEL + 0.5, 0);
+      }
     };
+
+    // Create fog overlay plane — sized when terrain is applied, toggled per frame
+    const fogOverlayGeo = new THREE.PlaneGeometry(1, 1);
+    fogOverlayGeo.rotateX(-Math.PI / 2);
+    const fogOverlayMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.62,
+      depthWrite: false,
+    });
+    const fogOverlayMesh = new THREE.Mesh(fogOverlayGeo, fogOverlayMat);
+    fogOverlayMesh.visible = false;
+    fogOverlayMesh.renderOrder = 1;
+    tacticGroup.add(fogOverlayMesh);
+    refs.current.fogOverlayMesh = fogOverlayMesh;
+
+    // LOS reveal ring (semi-transparent circle that shows visible area around selected unit)
+    const losRingGeo = new THREE.TorusGeometry(1, 0.055, 16, 64);
+    const losRingMat = new THREE.MeshBasicMaterial({
+      color: 0x7ec6ff,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    const losRing = new THREE.Mesh(losRingGeo, losRingMat);
+    losRing.rotation.x = -Math.PI / 2;
+    losRing.visible = false;
+    losRing.renderOrder = 3;
+    tacticGroup.add(losRing);
+    refs.current.losRing = losRing;
+
+    // Selection highlight ring under selected unit
+    const selectionRingGeo = new THREE.TorusGeometry(1, 0.09, 12, 48);
+    const selectionRingMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    const selectionRing = new THREE.Mesh(selectionRingGeo, selectionRingMat);
+    selectionRing.rotation.x = -Math.PI / 2;
+    selectionRing.visible = false;
+    selectionRing.renderOrder = 3;
+    tacticGroup.add(selectionRing);
+    refs.current.selectionRing = selectionRing;
 
     const updateCivilians = () => {
       const terrain = refs.current.activeTerrain;
@@ -1124,6 +1184,7 @@ export function Scene3d() {
             type: "set_selected_military",
             military: unit ?? null,
           });
+          dispatch({ type: "set_selected_military_index", index: index >= 0 ? index : null });
           dispatch({ type: "set_selected_civilian", civilian: null });
           return;
         }
@@ -1385,6 +1446,7 @@ export function Scene3d() {
         updateLabels();
         updateDisasterRings(refs.current, terrain, performance.now());
         updateHoverTooltip(tooltip, refs.current, hoverTarget, terrain);
+        updateTacticsOverlay(refs.current, terrain, stateRef.current);
       }
       if (refs.current.cameraFocusTarget && refs.current.cameraPositionTarget) {
         controls.target.lerp(refs.current.cameraFocusTarget, 0.08);
@@ -1432,6 +1494,16 @@ export function Scene3d() {
       tradeRouteGroup.clear();
       civilianGroup.clear();
       buildingGroup.clear();
+      tacticGroup.clear();
+      fogOverlayGeo.dispose();
+      fogOverlayMat.dispose();
+      losRingGeo.dispose();
+      losRingMat.dispose();
+      selectionRingGeo.dispose();
+      selectionRingMat.dispose();
+      refs.current.fogOverlayMesh = null;
+      refs.current.losRing = null;
+      refs.current.selectionRing = null;
       civilianGeometry.dispose();
       civilianMaterial.dispose();
       militaryGeometry.dispose();
@@ -2009,6 +2081,37 @@ function updateDisasterRings(refs: SceneRefs, terrain: Terrain, now: number) {
     live.push(ring);
   });
   refs.disasterRings = live;
+}
+
+function updateTacticsOverlay(
+  refs: SceneRefs,
+  terrain: Terrain,
+  state: { selectedMilitaryIndex: number | null; fogOfWarEnabled: boolean; snapshot: Snapshot | null },
+) {
+  const { fogOverlayMesh, losRing, selectionRing } = refs;
+  const units = state.snapshot?.military_units ?? [];
+  const selectedUnit = state.selectedMilitaryIndex != null ? units[state.selectedMilitaryIndex] ?? null : null;
+
+  // Fog of war overlay visibility
+  if (fogOverlayMesh) {
+    fogOverlayMesh.visible = state.fogOfWarEnabled;
+  }
+
+  // Selection ring + LOS ring for the selected unit
+  if (selectedUnit && selectionRing && losRing) {
+    const wx = selectedUnit.x * terrain.size - terrain.size / 2;
+    const wz = selectedUnit.y * terrain.size - terrain.size / 2;
+    const wy = terrainHeightAt(terrain, selectedUnit.x, selectedUnit.y) + 0.18;
+    selectionRing.visible = true;
+    selectionRing.position.set(wx, wy, wz);
+    selectionRing.scale.setScalar(0.85 + selectedUnit.strength * 0.12);
+    losRing.visible = state.fogOfWarEnabled;
+    losRing.position.set(wx, wy + 0.05, wz);
+    losRing.scale.setScalar(LOS_RADIUS);
+  } else {
+    if (selectionRing) selectionRing.visible = false;
+    if (losRing) losRing.visible = false;
+  }
 }
 
 function updateHoverTooltip(

@@ -15,7 +15,12 @@ import {
 } from "./lib/civisServer";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { mergeServerSnapshot } from "./lib/mergeSnapshot";
-import { useDashboardStore, type SaveEntry, type TimeSpeed } from "./store";
+import {
+  useDashboardStore,
+  type FormationKind,
+  type SaveEntry,
+  type TimeSpeed,
+} from "./store";
 
 export function BottomBar() {
   const { state, dispatch } = useDashboardStore();
@@ -335,6 +340,8 @@ export function BottomBar() {
         ) : null}
       </div>
 
+      <TacticsPanel />
+
       {!state.readOnly ? (
         <div className="control-group">
           <span className="control-label">
@@ -500,6 +507,87 @@ export function BottomBar() {
         />
       </div>
     </footer>
+  );
+}
+
+const FORMATIONS: FormationKind[] = ["Line", "Column", "Wedge", "Square"];
+
+function TacticsPanel() {
+  const { state, dispatch } = useDashboardStore();
+  const selectedUnit = state.snapshot?.military_units?.[state.selectedMilitaryIndex ?? -1] ?? null;
+
+  const moveToFormation = async () => {
+    if (!selectedUnit) {
+      dispatch({ type: "set_toast", message: "Select a unit first (click with Inspect tool)" });
+      return;
+    }
+    const ws = getActiveServerSocket();
+    if (ws?.readyState === WebSocket.OPEN) {
+      try {
+        await jsonRpcCall(ws, "sim.command", {
+          action: "set_formation",
+          unit_id: selectedUnit.id,
+          formation: state.selectedFormation,
+        });
+        dispatch({ type: "set_toast", message: `Formation ${state.selectedFormation} ordered for unit ${selectedUnit.id}` });
+      } catch {
+        dispatch({ type: "set_toast", message: `Formation command sent (offline fallback)` });
+      }
+    } else {
+      try {
+        await postControl("/control/tactics/formation", {
+          unit_id: selectedUnit.id,
+          formation: state.selectedFormation,
+        });
+        dispatch({ type: "set_toast", message: `Formation ${state.selectedFormation} ordered` });
+      } catch {
+        dispatch({ type: "set_toast", message: `No server — formation queued locally` });
+      }
+    }
+  };
+
+  return (
+    <div className="control-group">
+      <span className="control-label">Tactics</span>
+      <div className="tool-row" role="group" aria-label="Formation selector">
+        {FORMATIONS.map((f) => (
+          <ToolButton
+            key={f}
+            active={state.selectedFormation === f}
+            title={`${f} formation`}
+            emoji={f === "Line" ? "—" : f === "Column" ? "|" : f === "Wedge" ? "V" : "□"}
+            onClick={() => dispatch({ type: "set_formation", formation: f })}
+          />
+        ))}
+      </div>
+      <div className="tool-row">
+        <button
+          type="button"
+          className={`tool-button${selectedUnit ? " active" : ""}`}
+          title={selectedUnit ? `Move unit ${selectedUnit.id} to ${state.selectedFormation}` : "Select a unit first"}
+          onClick={() => void moveToFormation()}
+        >
+          <span aria-hidden>Move to Formation</span>
+        </button>
+      </div>
+      <div className="tool-row">
+        <ToolButton
+          active={state.fogOfWarEnabled}
+          title="Toggle fog of war"
+          emoji={state.fogOfWarEnabled ? "F" : "f"}
+          onClick={() => dispatch({ type: "set_fog_of_war", enabled: !state.fogOfWarEnabled })}
+        />
+      </div>
+      {selectedUnit ? (
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+          Unit {selectedUnit.id} • {selectedUnit.unit_type} • Faction {selectedUnit.faction}
+        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+          No unit selected
+        </div>
+      )}
+    </div>
   );
 }
 

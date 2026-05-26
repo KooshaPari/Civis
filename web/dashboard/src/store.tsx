@@ -10,6 +10,8 @@ export type ToolKind =
   | "InspectAgent"
   | "Camera";
 
+export type FormationKind = "Line" | "Column" | "Wedge" | "Square";
+
 export type SpawnKind = "civilian" | "vehicle" | "airport" | "port" | "hangar";
 export type CameraPreset = "wide" | "close" | "orbit";
 export type TimeSpeed = 0 | 1 | 2 | 4 | 8;
@@ -318,6 +320,9 @@ type State = {
   notifications: NotificationItem[];
   soundEnabled: boolean;
   lastSaveTick: number | null;
+  selectedFormation: FormationKind;
+  selectedMilitaryIndex: number | null;
+  fogOfWarEnabled: boolean;
 };
 
 type Action =
@@ -361,7 +366,10 @@ type Action =
   | { type: "clear_notifications" }
   | { type: "set_sound_enabled"; enabled: boolean }
   | { type: "set_last_save_tick"; tick: number | null }
-  | { type: "clear_toast" };
+  | { type: "clear_toast" }
+  | { type: "set_formation"; formation: FormationKind }
+  | { type: "set_selected_military_index"; index: number | null }
+  | { type: "set_fog_of_war"; enabled: boolean };
 
 const initialState: State = {
   attachMode: "server",
@@ -403,6 +411,9 @@ const initialState: State = {
   notifications: [],
   soundEnabled: true,
   lastSaveTick: null,
+  selectedFormation: "Line",
+  selectedMilitaryIndex: null,
+  fogOfWarEnabled: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -525,6 +536,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, lastSaveTick: action.tick };
     case "clear_toast":
       return { ...state, toast: null };
+    case "set_formation":
+      return { ...state, selectedFormation: action.formation };
+    case "set_selected_military_index":
+      return { ...state, selectedMilitaryIndex: action.index };
+    case "set_fog_of_war":
+      return { ...state, fogOfWarEnabled: action.enabled };
     default:
       return state;
   }

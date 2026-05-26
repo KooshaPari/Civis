@@ -28,6 +28,8 @@ http://json-schema.org/draft-07/schema#
 
 # Phenotype journey manifest (lives under tools/, referenced from QA doc)
 tools/phenotype-journeys/schema/manifest.schema.json
+../../tools/phenotype-journeys/schema/manifest.schema.json
+manifest.schema.json
 
 # ----------------------------------------------------------------------------
 # Schemas that live OUTSIDE schemas/ on purpose

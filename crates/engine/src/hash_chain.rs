@@ -92,7 +92,12 @@ pub fn chain_root_from_payloads(
 }
 
 /// Canonical combat-event payload for the replay hash chain (FR-CIV-TACTICS-041).
+///
+/// The 9-field layout (all little-endian) encodes the full engagement context:
+/// `"combat"(6) | tick(8) | shooter_id(8) | target_id(8) | cx(8) | cy(8) | cz(8) |
+///  radius(1) | energy(4) | strength_damage(4)` = 69 bytes.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn combat_event_bytes(
     tick: u64,
     shooter_id: u64,
@@ -102,8 +107,9 @@ pub fn combat_event_bytes(
     center_z: i64,
     radius_voxels: u8,
     energy: u32,
+    strength_damage: u32,
 ) -> Vec<u8> {
-    let mut out = Vec::with_capacity(46);
+    let mut out = Vec::with_capacity(69);
     out.extend_from_slice(b"combat");
     out.extend_from_slice(&tick.to_le_bytes());
     out.extend_from_slice(&shooter_id.to_le_bytes());
@@ -113,6 +119,7 @@ pub fn combat_event_bytes(
     out.extend_from_slice(&center_z.to_le_bytes());
     out.push(radius_voxels);
     out.extend_from_slice(&energy.to_le_bytes());
+    out.extend_from_slice(&strength_damage.to_le_bytes());
     out
 }
 
@@ -173,7 +180,7 @@ mod tests {
     fn combat_payload_extends_chain() {
         let tick_payload = tick_event_bytes(1);
         let after_tick = chain_advance(&GENESIS, &tick_payload);
-        let combat = combat_event_bytes(1, 10, 20, 0, 0, 0, 2, 100, 50);
+        let combat = combat_event_bytes(1, 10, 20, 0, 0, 0, 2, 100, 0);
         let after_combat = chain_advance(&after_tick, &combat);
         let recomputed =
             chain_root_from_payloads([tick_payload.to_vec(), combat]).expect("root");

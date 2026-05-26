@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
 
-use crate::hash_chain::{chain_root_from_ticks, tick_event_bytes, tick_hash, GENESIS, HASH_LEN};
+use crate::hash_chain::{
+    chain_advance, chain_root_from_payloads, combat_event_bytes, tick_event_bytes, GENESIS, HASH_LEN,
+};
 use crate::io::{read_text, write_text};
 use civ_voxel::MaterialId;
 
@@ -170,6 +172,7 @@ impl ReplayLog {
             event.center.z,
             event.radius_voxels,
             event.energy,
+            0,
         );
         self.running_hash = Some(chain_advance(&prev, &payload));
     }
@@ -217,6 +220,7 @@ impl ReplayLog {
                 event.center.z,
                 event.radius_voxels,
                 event.energy,
+                0,
             )),
             _ => None,
         }))

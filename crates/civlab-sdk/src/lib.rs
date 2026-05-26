@@ -13,6 +13,13 @@ pub fn policy_tick(tick: u64) -> i32 {
     0
 }
 
+/// Economic-phase hook (no-op until host wires full capability API).
+#[must_use]
+pub fn economy_tick(tick: u64) -> i32 {
+    let _ = tick;
+    0
+}
+
 /// Military-phase hook (no-op until host wires full capability API).
 #[must_use]
 pub fn military_tick(tick: u64) -> i32 {
@@ -25,6 +32,13 @@ pub fn military_tick(tick: u64) -> i32 {
 #[no_mangle]
 pub extern "C" fn civlab_policy_tick(tick: i64) -> i32 {
     policy_tick(tick as u64)
+}
+
+/// WASM export for the economy phase (`civlab_economy_tick`).
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub extern "C" fn civlab_economy_tick(tick: i64) -> i32 {
+    economy_tick(tick as u64)
 }
 
 /// WASM export for the military phase (`civlab_military_tick`).
@@ -41,6 +55,11 @@ mod tests {
     #[test]
     fn policy_tick_is_noop() {
         assert_eq!(policy_tick(0), 0);
+    }
+
+    #[test]
+    fn economy_tick_is_noop() {
+        assert_eq!(economy_tick(0), 0);
     }
 
     #[test]

@@ -38,9 +38,9 @@ func _build_texture() -> void:
 				var idx := z * GRID + x
 				var color: Color
 				if not _biomes.is_empty() and idx < _biomes.size():
-					color = CivisClient.biome_color(int(_biomes[idx]))
+					color = SimulationHost.biome_color(int(_biomes[idx]))
 				elif idx < _heights.size():
-					color = CivisClient.height_color(_heights[idx])
+					color = SimulationHost.height_color(_heights[idx])
 				else:
 					color = Color.GRAY
 				img.set_pixel(x, z, color)

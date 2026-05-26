@@ -16,10 +16,12 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use signature::verify_wasm_signature;
 use thiserror::Error;
-use wasm_guest::{invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
+use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
-pub use wasm_guest::{WasmGuestError, MOD_WASM_NAME as MOD_WASM_FILE};
+pub use wasm_guest::{
+    WasmGuestError, HOST_CAPABILITY_API_VERSION, HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
+};
 
 /// Supported mod kinds per CIV-0700 §4.1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -367,11 +369,10 @@ impl ModHost {
         lines
     }
 
-    /// Per-tick hook — phase stubs + WASM `civlab_policy_tick` when loaded.
+    /// Policy-phase hook — stubs + WASM `civlab_policy_tick` when loaded.
     #[must_use]
     pub fn tick(&self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_policy_phase(sim_tick);
-        lines.extend(self.registry.on_economy_phase(sim_tick));
         for entry in self.registry.mods() {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
@@ -384,6 +385,34 @@ impl ModHost {
             match invoke_policy_tick(wasm, sim_tick) {
                 Ok(code) => lines.push(format!(
                     "mod:{}:wasm_policy_tick:tick={sim_tick}:code={code}",
+                    entry.manifest.meta.id
+                )),
+                Err(err) => lines.push(format_mod_error_event(
+                    &entry.manifest.meta.id,
+                    sim_tick,
+                    &err.to_string(),
+                )),
+            }
+        }
+        lines
+    }
+
+    /// Economic-phase hook — stubs + WASM `civlab_economy_tick` when loaded (FR-CIV-TACTICS-046).
+    #[must_use]
+    pub fn economy_tick(&self, sim_tick: u64) -> Vec<String> {
+        let mut lines = self.registry.on_economy_phase(sim_tick);
+        for entry in self.registry.mods() {
+            let Some(wasm) = entry.wasm_bytes.as_ref() else {
+                continue;
+            };
+            if entry.manifest.meta.mod_type != ModType::Economic
+                || !entry.manifest.permissions.read_economy
+            {
+                continue;
+            }
+            match invoke_economy_tick(wasm, sim_tick) {
+                Ok(code) => lines.push(format!(
+                    "mod:{}:wasm_economy_tick:tick={sim_tick}:code={code}",
                     entry.manifest.meta.id
                 )),
                 Err(err) => lines.push(format_mod_error_event(
@@ -639,6 +668,12 @@ pub fn example_policy_mod_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods/example-policy")
 }
 
+/// Repo-relative path to `mods/example-economic` from this crate's manifest dir.
+#[must_use]
+pub fn example_economic_mod_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods/example-economic")
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -673,6 +708,17 @@ write_policy = true
         assert_eq!(manifest.meta.mod_type, ModType::Policy);
         assert!(manifest.permissions.read_economy);
         assert!(manifest.permissions.write_policy);
+    }
+
+    #[test]
+    fn loads_example_economic_manifest() {
+        let dir = example_economic_mod_dir();
+        let manifest = load_manifest(dir.join("manifest.toml")).expect("example economic manifest");
+
+        assert_eq!(manifest.meta.id, "example-economic");
+        assert_eq!(manifest.meta.mod_type, ModType::Economic);
+        assert!(manifest.permissions.read_economy);
+        assert!(!manifest.permissions.write_policy);
     }
 
     #[test]
@@ -740,6 +786,36 @@ write_policy = false
     }
 
     #[test]
+    fn wasm_economy_tick_invokes_civlab_export() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                local.get 0
+                i32.wrap_i64)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        assert_eq!(invoke_economy_tick(&wasm, 9).expect("invoke"), 9);
+    }
+
+    #[test]
+    #[test]
+    fn wasm_guest_reads_capability_host_import() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "capability_api_version" (func $ver (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (call $ver))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        assert_eq!(
+            invoke_policy_tick(&wasm, 0).expect("invoke"),
+            wasm_guest::HOST_CAPABILITY_API_VERSION
+        );
+    }
+
+    #[test]
     fn wasm_military_tick_invokes_civlab_export() {
         const WAT: &str = r#"
             (module
@@ -754,6 +830,22 @@ write_policy = false
 
     /// When `just civis-3d-mod-wasm` has been run, repo example-policy loads WASM on tick.
     #[test]
+    fn example_economic_dir_wasm_ticks_when_built() {
+        let dir = example_economic_mod_dir();
+        let wasm_path = dir.join(MOD_WASM_NAME);
+        if !wasm_path.is_file() {
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_manifest_dir(&dir).expect("example-economic dir");
+        let lines = host.economy_tick(3);
+        assert!(
+            lines.iter().any(|l| l.contains("wasm_economy_tick")),
+            "expected wasm_economy_tick after building mod.wasm: {lines:?}"
+        );
+    }
+
+    #[test]
     fn example_policy_dir_wasm_ticks_when_built() {
         let dir = example_policy_mod_dir();
         let wasm_path = dir.join(MOD_WASM_NAME);
@@ -767,6 +859,23 @@ write_policy = false
             lines.iter().any(|l| l.contains("wasm_policy_tick")),
             "expected wasm_policy_tick after building mod.wasm: {lines:?}"
         );
+    }
+
+    #[test]
+    fn example_policy_civmod_loads_when_packaged() {
+        let civmod = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../mods/example-policy/example-policy.civmod");
+        if !civmod.is_file() {
+            eprintln!(
+                "skip example_policy_civmod_loads_when_packaged: run `just civis-3d-mod-package`"
+            );
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_mod_path(&civmod)
+            .expect("packaged example-policy.civmod");
+        assert_eq!(host.mods().len(), 1);
+        assert_eq!(host.mods()[0].manifest.meta.id, "example-policy");
     }
 
     #[test]

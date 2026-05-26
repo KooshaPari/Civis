@@ -8,9 +8,11 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 |------|---------|
 | Agent smoke (fast) | `.\scripts\agent-smoke.ps1` |
 | Agent smoke (full UE) | `.\scripts\agent-smoke.ps1 -FullUnreal` (when `UE_ROOT`/UBT present) |
-| Full 3D workspace | `just civis-3d-verify` (catalog + scenario checks, then build/test/clippy/fmt) |
+| Full 3D workspace | `just civis-3d-verify` (catalog + scenario + web + mod-host, then check/test/clippy/fmt) |
 | JSON-RPC catalog drift | `just civis-3d-catalog-check` |
 | Scenario YAML | `just civis-3d-scenario-check` |
+| Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` |
+| Example `.civmod` | `just civis-3d-mod-package` → `mods/example-policy/example-policy.civmod` |
 | Quality manifest (optional UE) | `scripts/quality/README.md`; `CIVIS_QUALITY_UNREAL=1` + `emit-quality-manifest.ps1` |
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
 | Godot GDExtension | `just godot-test` |

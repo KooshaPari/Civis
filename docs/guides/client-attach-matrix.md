@@ -71,7 +71,7 @@ cargo run -p civ-watch
 ## Parity gaps (see maturity audit)
 
 - `civ_pins.job` may be `null` until spawn sets `Citizen.job` (Unreal `CivisJobColors` ready when wired).
-- F3D0 **full mesh**: Bevy renders `Frame3d` voxels; Godot shows chunk **markers** on `VoxelDelta`; Unreal throttles snapshot only.
+- F3D0 mesh: Bevy full `Frame3d`; Godot/Unreal **16³ procedural mesh** when `deltas[].voxels` has 4096 ids, else chunk markers.
 
 ## Related docs
 

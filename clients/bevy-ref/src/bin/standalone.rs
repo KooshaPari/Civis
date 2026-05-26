@@ -28,13 +28,6 @@ const MAX_ORBIT_DISTANCE: f32 = 500.0;
 const CIVILIAN_POOL: usize = 256;
 const SIM_TICK_RATE_HZ: f32 = 10.0;
 
-#[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
-enum AppState {
-    #[default]
-    Loading,
-    Playing,
-}
-
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
     centre: [f32; 3],
@@ -140,9 +133,7 @@ fn main() {
         .insert_resource(TerrainVisuals::default())
         .insert_resource(CivilianVisuals::default())
         .insert_resource(UiState::default())
-        .init_state::<AppState>()
-        .add_systems(Startup, setup_camera)
-        .add_systems(OnEnter(AppState::Loading), setup_world)
+        .add_systems(Startup, setup_all)
         .add_systems(
             Update,
             (
@@ -157,7 +148,15 @@ fn main() {
         .run();
 }
 
-fn setup_camera(mut commands: Commands) {
+fn setup_all(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut terrain_visuals: ResMut<TerrainVisuals>,
+    mut civilian_visuals: ResMut<CivilianVisuals>,
+    mut ui_state: ResMut<UiState>,
+    sim_state: Res<StandaloneSim>,
+) {
     let camera_target = CameraTarget {
         centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
         distance: 240.0,
@@ -171,26 +170,45 @@ fn setup_camera(mut commands: Commands) {
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
-}
 
-fn setup_world(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut terrain_visuals: ResMut<TerrainVisuals>,
-    mut civilian_visuals: ResMut<CivilianVisuals>,
-    mut ui_state: ResMut<UiState>,
-    sim_state: Res<StandaloneSim>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let camera_target = CameraTarget {
-        centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
-        distance: 240.0,
-        azimuth_rad: std::f32::consts::FRAC_PI_4,
-        elevation_rad: 0.8,
-    };
-    let eye = camera_target.orbit_position();
-    let centre = Vec3::from_array(camera_target.centre);
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Sphere::new(2.0)
+                    .mesh()
+                    .ico(5)
+                    .expect("failed to build startup sphere"),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::srgb(0.95, 0.12, 0.12),
+                perceptual_roughness: 0.8,
+                ..default()
+            }),
+            transform: Transform::from_xyz(128.0, 20.0, 128.0),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::srgb(0.18, 0.6, 0.18),
+                perceptual_roughness: 1.0,
+                ..default()
+            }),
+            transform: Transform::from_xyz(
+                TERRAIN_WORLD_SIZE * 0.5,
+                0.0,
+                TERRAIN_WORLD_SIZE * 0.5,
+            ),
+            ..default()
+        },
+    ));
 
     commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
     commands.insert_resource(AmbientLight {
@@ -206,11 +224,6 @@ fn setup_world(
         },
         Transform::from_xyz(eye[0] + 80.0, eye[1] + 120.0, eye[2] + 40.0)
             .looking_at(centre, Vec3::Y),
-    ));
-
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
 
     spawn_terrain(
@@ -248,8 +261,6 @@ fn setup_world(
         ))
         .id();
     ui_state.text = Some(overlay);
-
-    next_state.set(AppState::Playing);
 }
 
 fn spawn_terrain(

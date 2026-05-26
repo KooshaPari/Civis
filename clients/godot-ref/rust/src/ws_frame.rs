@@ -1,5 +1,6 @@
 //! WebSocket payload decode for civ-server attach (F3D0 + JSON-RPC fallback).
 
+use crate::f3d0_mesh::{mesh_chunk_from_material_ids, CHUNK_VOXELS};
 use civ_protocol_3d::{decode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
 use godot::prelude::*;
 use serde_json::Value;
@@ -107,6 +108,43 @@ impl CivisWsFrame {
             Err(err) => error_to_dictionary(err),
         }
     }
+
+    #[func]
+    fn mesh_voxel_chunk(material_ids: PackedInt32Array) -> VarDictionary {
+        if material_ids.len() as usize != CHUNK_VOXELS {
+            return error_to_dictionary(format!(
+                "expected {CHUNK_VOXELS} material ids, got {}",
+                material_ids.len()
+            ));
+        }
+        let raw: Vec<u32> = (0..material_ids.len())
+            .map(|i| material_ids.get(i).unwrap_or(0).max(0) as u32)
+            .collect();
+        let mesh = mesh_chunk_from_material_ids(&raw);
+        if mesh.is_empty() {
+            return error_to_dictionary("empty chunk mesh".into());
+        }
+        let mut dict = VarDictionary::new();
+        dict.set("ok", true);
+        dict.set("vertices", packed_vec3_from_flat(&mesh.vertices));
+        dict.set("normals", packed_vec3_from_flat(&mesh.normals));
+        let mut indices = PackedInt32Array::new();
+        for index in mesh.indices {
+            indices.push(index);
+        }
+        dict.set("indices", indices);
+        dict
+    }
+}
+
+fn packed_vec3_from_flat(flat: &[f32]) -> PackedVector3Array {
+    let mut array = PackedVector3Array::new();
+    let mut i = 0usize;
+    while i + 2 < flat.len() {
+        array.push(Vector3::new(flat[i], flat[i + 1], flat[i + 2]));
+        i += 3;
+    }
+    array
 }
 
 #[godot_api]

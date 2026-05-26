@@ -316,7 +316,7 @@ pub struct Simulation {
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
     mod_host: ModHost,
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
-    military_phase: MilitaryPhaseConfig,
+    pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
 }
@@ -1254,6 +1254,9 @@ impl Simulation {
         for line in self.mod_host.tick(self.state.tick) {
             tracing::debug!(mod_log = %line, "mod policy phase");
         }
+        for line in self.mod_host.economy_tick(self.state.tick) {
+            tracing::debug!(mod_log = %line, "mod economy phase");
+        }
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
@@ -1266,6 +1269,39 @@ impl Simulation {
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.market_state.step(self.state.tick);
+    }
+
+    /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
+    pub fn configure_military_fog(&mut self, vision_radius: Option<u32>, grid_size: u32) {
+        if let Some(radius) = vision_radius {
+            self.military_phase.war.fog_vision_radius = Some(radius);
+            self.military_phase.war.fog_grid_size = grid_size.max(16);
+        }
+    }
+
+    /// Apply scenario military cadence/combat overrides (FR-CIV-TACTICS-050).
+    pub fn apply_scenario_military(
+        &mut self,
+        military: &crate::scenario::ScenarioMilitary,
+    ) {
+        if let Some(v) = military.movement_cadence_ticks {
+            self.military_phase.movement.cadence_ticks = v;
+        }
+        if let Some(v) = military.movement_pulses_per_cadence {
+            self.military_phase.movement_pulses_per_cadence = v;
+        }
+        if let Some(v) = military.war_cadence_ticks {
+            self.military_phase.war.cadence_ticks = v;
+        }
+        if let Some(v) = military.engage_range_grid {
+            self.military_phase.war.engage_range_grid = v.max(1);
+        }
+    }
+
+    /// Military phase configuration (tests and tooling).
+    #[must_use]
+    pub fn military_phase_config(&self) -> &MilitaryPhaseConfig {
+        &self.military_phase
     }
 
     /// Get snapshot of current state

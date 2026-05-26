@@ -64,9 +64,13 @@
 ## Run / verify
 
 ```bash
+just civis-3d-mod-wasm          # mods/example-policy/mod.wasm
+just civis-3d-mod-package       # example-policy.civmod (optional)
 cargo test -p civ-mod-host --quiet
-cargo test -p civ-engine scenario_mods --quiet
+just civis-3d-scenario-check
 ```
+
+See also [`mods/README.md`](../../mods/README.md).
 
 ## Related
 

@@ -63,9 +63,16 @@ civis-3d-web-check:
 civis-3d-mod-check:
     cargo test -p civ-mod-host -p civlab-sdk --quiet
 
-# Build example-policy WASM guest (requires wasm32-wasi target).
+# Build example-policy WASM guest (wasm32-unknown-unknown).
 civis-3d-mod-wasm:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-example-policy-wasm.ps1
+    rustup target add wasm32-unknown-unknown
+    cargo rustc -p civlab-sdk --release --target wasm32-unknown-unknown --crate-type cdylib
+    cp target/wasm32-unknown-unknown/release/civlab_sdk.wasm mods/example-policy/mod.wasm
+    cp target/wasm32-unknown-unknown/release/civlab_sdk.wasm mods/example-economic/mod.wasm
+
+# Package example-policy as example-policy.civmod.
+civis-3d-mod-package: civis-3d-mod-wasm
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1
 
 # 3D verification gate: check + test + clippy --all-targets + fmt --check.
 # Uses cargo check (not build) so the gate works when service binaries are

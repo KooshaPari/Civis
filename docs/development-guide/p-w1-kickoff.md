@@ -44,6 +44,12 @@
 | FR-CIV-TACTICS-042 | implemented | fog-of-war gating in `tick_war_bridge` |
 | FR-CIV-TACTICS-043 | implemented | Ed25519 `mod.wasm.sig` verification |
 | FR-CIV-TACTICS-044 | implemented | policy/military tick capability API + SDK version |
+| FR-CIV-TACTICS-045 | implemented | scenario `fog_vision_radius` wires military phase |
+| FR-CIV-TACTICS-046 | implemented | `civlab_economy_tick` WASM + `ModHost::economy_tick` |
+| FR-CIV-TACTICS-047 | implemented | `civlab::capability_api_version` host import |
+| FR-CIV-TACTICS-048 | implemented | `mods/example-economic` + economy WASM tick test |
+| FR-CIV-TACTICS-049 | implemented | `civlab::memory_read` / `memory_write` host imports |
+| FR-CIV-TACTICS-050 | implemented | scenario `military:` cadence/range overrides |
 
 ## First PR slice (recommended)
 
@@ -58,7 +64,9 @@
 9. **Obstacle pathfinding + replay combat determinism + military WASM** — **done** (item 10).
 10. **Occupied-cell blocking + military WASM tick API + combat hash chain** — **done** (item 11).
 11. **Fog in war bridge + mod signing + WASM capability surface** — **done** (item 12).
-12. **Next:** Wire fog by default in scenarios, economic WASM hooks, capability host imports.
+12. **Scenario fog + economic WASM + capability host imports** — **done** (item 13).
+13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
+14. **Next:** Wire example-economic in baseline scenario, host memory snapshots, full capability API.
 
 ## Run
 

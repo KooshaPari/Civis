@@ -66,7 +66,8 @@ pub use replay_format::{
     FORMAT_VERSION, MAGIC,
 };
 pub use scenario::{
-    baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
+    baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
+    SCENARIO_SCHEMA_VERSION,
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 

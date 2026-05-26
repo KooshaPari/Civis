@@ -31,6 +31,36 @@ pub struct Scenario {
     /// MVP: manifests are loaded; WASM guests are not executed yet (CIV-0700).
     #[serde(default)]
     pub mods: Vec<String>,
+    /// When set, enables faction fog-of-war in the war bridge (FR-CIV-TACTICS-045).
+    #[serde(default)]
+    pub fog_vision_radius: Option<u32>,
+    /// Square fog grid edge when fog is enabled (default 64).
+    #[serde(default = "default_fog_grid_size")]
+    pub fog_grid_size: u32,
+    /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
+    #[serde(default)]
+    pub military: ScenarioMilitary,
+}
+
+fn default_fog_grid_size() -> u32 {
+    64
+}
+
+/// Optional military-phase overrides from scenario YAML (FR-CIV-TACTICS-050).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct ScenarioMilitary {
+    /// Override [`OperationalMovementConfig::cadence_ticks`].
+    #[serde(default)]
+    pub movement_cadence_ticks: Option<u64>,
+    /// Override [`MilitaryPhaseConfig::movement_pulses_per_cadence`].
+    #[serde(default)]
+    pub movement_pulses_per_cadence: Option<u8>,
+    /// Override [`WarBridgeConfig::cadence_ticks`].
+    #[serde(default)]
+    pub war_cadence_ticks: Option<u64>,
+    /// Override [`WarBridgeConfig::engage_range_grid`].
+    #[serde(default)]
+    pub engage_range_grid: Option<i32>,
 }
 
 /// Errors while loading or validating a scenario file.
@@ -118,6 +148,8 @@ impl Scenario {
         let mut sim = Simulation::with_seed(rng_seed);
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
+        sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
+        sim.apply_scenario_military(&self.military);
         sim.register_mod_stubs(&self.mods);
         sim
     }
@@ -148,6 +180,34 @@ impl Scenario {
                 field: "scarcity_multiplier",
                 message: "must be non-negative".into(),
             });
+        }
+
+        if let Some(v) = self.military.movement_cadence_ticks {
+            if v == 0 {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "military.movement_cadence_ticks",
+                    message: "must be greater than 0".into(),
+                });
+            }
+        }
+        if let Some(v) = self.military.war_cadence_ticks {
+            if v == 0 {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "military.war_cadence_ticks",
+                    message: "must be greater than 0".into(),
+                });
+            }
+        }
+        if let Some(v) = self.military.engage_range_grid {
+            if v < 1 {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "military.engage_range_grid",
+                    message: "must be at least 1".into(),
+                });
+            }
         }
 
         Ok(())
@@ -201,7 +261,58 @@ mod tests {
         assert_eq!(scenario.population, 1_000_000);
         assert_eq!(scenario.base_consumption_joules, 5_000_000_000);
         assert!((scenario.scarcity_multiplier - 1.0).abs() < f64::EPSILON);
+        assert_eq!(scenario.fog_vision_radius, Some(8));
+        assert_eq!(scenario.fog_grid_size, 64);
         assert_eq!(scenario.mods, vec!["mods/example-policy"]);
+    }
+
+    #[test]
+    fn scenario_fog_wires_military_phase() {
+        let scenario = Scenario {
+            version: SCENARIO_SCHEMA_VERSION,
+            name: "fog".into(),
+            tick_start: 0,
+            population: 100,
+            base_consumption_joules: 1,
+            scarcity_multiplier: 1.0,
+            mods: vec![],
+            fog_vision_radius: Some(6),
+            fog_grid_size: 32,
+            military: ScenarioMilitary::default(),
+        };
+        let sim = scenario.into_simulation(1);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            Some(6)
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, 32);
+    }
+
+    #[test]
+    fn scenario_military_wires_military_phase() {
+        let scenario = Scenario {
+            version: SCENARIO_SCHEMA_VERSION,
+            name: "mil".into(),
+            tick_start: 0,
+            population: 100,
+            base_consumption_joules: 1,
+            scarcity_multiplier: 1.0,
+            mods: vec![],
+            fog_vision_radius: None,
+            fog_grid_size: default_fog_grid_size(),
+            military: ScenarioMilitary {
+                movement_cadence_ticks: Some(8),
+                movement_pulses_per_cadence: Some(3),
+                war_cadence_ticks: Some(32),
+                engage_range_grid: Some(12),
+            },
+        };
+        let sim = scenario.into_simulation(1);
+        let cfg = sim.military_phase_config();
+        assert_eq!(cfg.movement.cadence_ticks, 8);
+        assert_eq!(cfg.movement_pulses_per_cadence, 3);
+        assert_eq!(cfg.war.cadence_ticks, 32);
+        assert_eq!(cfg.war.engage_range_grid, 12);
     }
 
     #[test]
@@ -261,6 +372,9 @@ mods:
             base_consumption_joules: 1_000,
             scarcity_multiplier: 0.0,
             mods: vec![],
+            fog_vision_radius: None,
+            fog_grid_size: default_fog_grid_size(),
+            military: ScenarioMilitary::default(),
         };
 
         let mut zero_scarcity = base.clone();

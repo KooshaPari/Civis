@@ -12,3 +12,4 @@ military:
   engage_range_grid: 10
 mods:
   - mods/example-policy
+  - mods/example-economic

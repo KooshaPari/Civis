@@ -13,7 +13,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |---------|----------|-------------------|
 | **AX (agents)** | Good | `AGENTS.md` + `agent-smoke.ps1` + attach matrix; optional `-FullUnreal` off default verify |
 | **DX (developers)** | Good | `just civis-3d-verify` (catalog + scenario checks), `jsonrpc-surface.md`, `client-attach-matrix.md` |
-| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial** — Bevy full mesh; Godot/Unreal **VoxelDelta markers**; Unreal minimap UMG partial |
+| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial–good** — Bevy full mesh; Godot/Unreal **16³ mesh** when dense `voxels`; Unreal minimap UMG |
 | **Modding** | Partial (v3) | Manifest + `.civmod` + WASM policy tick + `ReplayEvent::ModLoaded`; no signing / economic WASM |
 
 **Gates (2026-05-25):** `ws_smoke` 32 tests · `just civis-3d-verify` pass (incl. `check-jsonrpc-catalog.ps1`, `civis-3d-scenario-check`).
@@ -132,7 +132,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | 1 | Wire `job` on `CivPin` | [x] Done |
 | 2 | F3D0 throttle doc for Godot | [x] Done — `fr-godot-attach.md` § F3D0; attach matrix notes throttle vs Bevy mesh path |
 | 3 | Unreal build + Play checklist | [x] Done — `build.ps1` on VS 2026 + UE 5.7; default smoke = preflight; full UBT via `-FullUnreal` |
-| 4 | Godot/Unreal F3D0 markers | [x] Done — `VoxelDelta` overlays documented; not full Bevy mesh |
+| 4 | Godot/Unreal F3D0 mesh | [x] Done — **16³ procedural mesh** when dense `voxels`; else chunk markers |
 
 ### Sprint D — Modding MVP (1 week)
 

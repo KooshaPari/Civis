@@ -4,7 +4,8 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
-    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
+    spawn_civilian_at, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools,
+    Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -138,6 +139,34 @@ pub fn attach_citizen_to_agents(world: &mut World) {
             job: Some(job_type_for_civilian_id(civilian.id)),
         };
         let _ = world.insert(entity, (citizen,));
+    }
+}
+
+fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
+    const CIVILIANS_PER_FACTION: usize = 32;
+    const QUADRANT_SPREAD: i32 = 2_500;
+
+    let faction_capitals = [
+        (-7_500, 7_500),   // faction 0: NW
+        (7_500, 7_500),    // faction 1: NE
+        (-7_500, -7_500),  // faction 2: SW
+        (7_500, -7_500),   // faction 3: SE
+    ];
+
+    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
+        for _ in 0..CIVILIANS_PER_FACTION {
+            let x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            let y = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            spawn_civilian_at(
+                world,
+                faction as u32,
+                Position3d {
+                    x,
+                    y,
+                    z: 0,
+                },
+            );
+        }
     }
 }
 
@@ -449,7 +478,8 @@ impl Simulation {
 
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
@@ -500,7 +530,8 @@ impl Simulation {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
@@ -585,6 +616,31 @@ impl Simulation {
     #[must_use]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
+    }
+
+    /// Mutable mod host (phase ticks and guest memory restore).
+    pub fn mod_host_mut(&mut self) -> &mut ModHost {
+        &mut self.mod_host
+    }
+
+    /// Export per-mod guest scratch memory for CIV-1000 save bundles.
+    #[must_use]
+    pub fn export_mod_guest_state(&self) -> civ_mod_host::ModGuestStateSave {
+        self.mod_host.export_guest_state()
+    }
+
+    /// Restore per-mod guest scratch memory after load.
+    pub fn restore_mod_guest_state(
+        &mut self,
+        save: &civ_mod_host::ModGuestStateSave,
+    ) -> Result<(), civ_mod_host::GuestStateError> {
+        self.mod_host.import_guest_state(save)
+    }
+
+    /// Loaded mods for mod-browser UI (`sim.snapshot` / civ-watch).
+    #[must_use]
+    pub fn mod_browser_entries(&self) -> Vec<civ_mod_host::ModBrowserEntry> {
+        self.mod_host.browser_entries()
     }
 
     /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
@@ -1399,12 +1455,12 @@ mod tests {
         }
     }
 
-    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
-    fn startup_spawns_32_civilians() {
+    fn startup_spawns_128_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 32);
+        assert_eq!(count_civilians(&sim.world), 128);
     }
 
     #[test]

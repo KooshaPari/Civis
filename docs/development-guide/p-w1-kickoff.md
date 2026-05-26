@@ -66,7 +66,8 @@
 11. **Fog in war bridge + mod signing + WASM capability surface** — **done** (item 12).
 12. **Scenario fog + economic WASM + capability host imports** — **done** (item 13).
 13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
-14. **Next:** Wire example-economic in baseline scenario, host memory snapshots, full capability API.
+14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
+15. **Next:** Save/load guest memory blobs (CIV-1000), mod browser UX, determinism scan.
 
 ## Run
 

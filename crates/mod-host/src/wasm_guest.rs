@@ -192,7 +192,13 @@ pub fn invoke_policy_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
-    invoke_tick_with_sim_tick(wasm_bytes, sim_tick, guest_memory, "civlab_policy_tick", "policy_tick")
+    invoke_tick_with_sim_tick(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        "civlab_policy_tick",
+        "policy_tick",
+    )
 }
 
 /// Invoke the economy-phase export (`civlab_economy_tick`, else `economy_tick`).
@@ -288,9 +294,6 @@ mod tests {
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
-        assert_eq!(
-            invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"),
-            17
-        );
+        assert_eq!(invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"), 17);
     }
 }

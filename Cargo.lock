@@ -2098,9 +2098,11 @@ dependencies = [
  "ed25519-dalek",
  "rand 0.8.6",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 1.0.69",
  "toml 0.8.23",
+ "wasmparser 0.224.1",
  "wasmtime",
  "wat",
  "zip",
@@ -3691,6 +3693,7 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.1.5",
+ "serde",
 ]
 
 [[package]]
@@ -7878,6 +7881,19 @@ dependencies = [
  "indexmap 2.14.0",
  "wasm-encoder 0.244.0",
  "wasmparser 0.244.0",
+]
+
+[[package]]
+name = "wasmparser"
+version = "0.224.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04f17a5917c2ddd3819e84c661fae0d6ba29d7b9c1f0e96c708c65a9c4188e11"
+dependencies = [
+ "bitflags 2.11.1",
+ "hashbrown 0.15.5",
+ "indexmap 2.14.0",
+ "semver",
+ "serde",
 ]
 
 [[package]]

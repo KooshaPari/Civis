@@ -113,6 +113,8 @@ fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins
+                .build()
+                .disable::<bevy::ui::UiPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: TITLE.to_string(),
@@ -218,16 +220,26 @@ fn setup_all(
     commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
     commands.insert_resource(AmbientLight {
         color: Color::srgb(0.72, 0.78, 0.9),
-        brightness: 1_300.0,
+        brightness: 0.8,
     });
 
     commands.spawn((
         DirectionalLight {
-            illuminance: 18_000.0,
+            illuminance: 3.0,
             shadows_enabled: true,
             ..default()
         },
         Transform::from_xyz(eye[0] + 80.0, eye[1] + 120.0, eye[2] + 40.0)
+            .looking_at(centre, Vec3::Y),
+    ));
+
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 1.5,
+            shadows_enabled: false,
+            ..default()
+        },
+        Transform::from_xyz(eye[0] - 120.0, eye[1] + 90.0, eye[2] - 140.0)
             .looking_at(centre, Vec3::Y),
     ));
 
@@ -603,8 +615,8 @@ fn update_civilian_meshes(
                 transform.scale = Vec3::splat(agent_scale_multiplier(1.0));
             }
             let job = job_type_for_civilian_id(civilian.id);
-            if let Some(handle) = visuals.materials.get(&job).cloned() {
-                commands.entity(entity).insert(handle);
+            if let Some((_, handle)) = visuals.materials.iter().find(|(cached_job, _)| *cached_job == job) {
+                commands.entity(entity).insert(handle.clone());
             }
         }
     }

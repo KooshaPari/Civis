@@ -380,6 +380,8 @@ pub struct SnapshotFields {
     pub damage_events_count: u32,
     /// Voxels removed by tactical damage on the last tick.
     pub voxel_damage_removed_this_tick: u32,
+    /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
+    pub mods: Vec<civ_mod_host::ModBrowserEntry>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -484,6 +486,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.damage_events).unwrap_or(Value::Null),
         );
     }
+    if !fields.mods.is_empty() {
+        obj.insert(
+            "mods".to_owned(),
+            serde_json::to_value(&fields.mods).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
 }
 
@@ -561,6 +569,7 @@ pub fn snapshot_fields_from_sim(
             .collect(),
         damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
+        mods: sim.mod_browser_entries(),
     }
 }
 

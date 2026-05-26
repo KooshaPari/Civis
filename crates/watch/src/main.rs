@@ -34,7 +34,7 @@ use civ_agents::{
     drift_toward_home, spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Needs,
     Position3d, Velocity,
 };
-use civ_engine::{Citizen, DiplomacyKind, JobType, Simulation};
+use civ_engine::{Citizen, DiplomacyKind, JobType, ModBrowserEntry, Simulation};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
@@ -310,6 +310,8 @@ struct Snapshot {
     is_day: bool,
     weather: WeatherSnapshot,
     speed: u8,
+    /// Loaded CivLab mods for dashboard mod browser (FR-CIV-TACTICS-054).
+    mods: Vec<ModBrowserEntry>,
 }
 
 /// Pre-serialized terrain JSON and a stable ETag for cheap repeat fetches.
@@ -781,6 +783,7 @@ fn make_snapshot(
         is_day,
         weather,
         speed,
+        mods: sim.mod_browser_entries(),
     }
 }
 

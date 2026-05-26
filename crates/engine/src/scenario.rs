@@ -265,7 +265,10 @@ mod tests {
         assert_eq!(scenario.fog_grid_size, 64);
         assert_eq!(scenario.military.war_cadence_ticks, Some(16));
         assert_eq!(scenario.military.engage_range_grid, Some(10));
-        assert_eq!(scenario.mods, vec!["mods/example-policy"]);
+        assert_eq!(
+            scenario.mods,
+            vec!["mods/example-policy", "mods/example-economic"]
+        );
     }
 
     #[test]

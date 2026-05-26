@@ -7,6 +7,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod determinism;
+mod guest_state;
 mod signature;
 mod wasm_guest;
 
@@ -18,6 +20,10 @@ use signature::verify_wasm_signature;
 use thiserror::Error;
 use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
+pub use determinism::{DeterminismError, scan_wasm_determinism};
+pub use guest_state::{
+    GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave, MOD_GUEST_STATE_VERSION,
+};
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{
     HostState, WasmGuestError, HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS,
@@ -314,6 +320,57 @@ impl ModHost {
         self.guest_memory_by_mod.insert(mod_id.to_owned(), trimmed);
     }
 
+    /// Export all per-mod guest scratch bytes for save files (CIV-1000 §16.3).
+    #[must_use]
+    pub fn export_guest_state(&self) -> ModGuestStateSave {
+        ModGuestStateSave {
+            version: MOD_GUEST_STATE_VERSION,
+            memories: self
+                .guest_memory_by_mod
+                .iter()
+                .map(|(mod_id, bytes)| ModGuestMemoryBlob {
+                    mod_id: mod_id.clone(),
+                    bytes: bytes.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    /// Restore guest scratch bytes from a save bundle.
+    pub fn import_guest_state(&mut self, save: &ModGuestStateSave) -> Result<(), GuestStateError> {
+        if save.version > MOD_GUEST_STATE_VERSION {
+            return Err(GuestStateError::UnsupportedVersion(save.version));
+        }
+        for blob in &save.memories {
+            self.restore_guest_memory(&blob.mod_id, blob.bytes.clone());
+        }
+        Ok(())
+    }
+
+    /// Loaded mods for mod-browser UI / `sim.snapshot` wire (FR-CIV-TACTICS-054).
+    #[must_use]
+    pub fn browser_entries(&self) -> Vec<ModBrowserEntry> {
+        self.registry
+            .mods()
+            .iter()
+            .map(|entry| {
+                let id = entry.manifest.meta.id.clone();
+                ModBrowserEntry {
+                    id: id.clone(),
+                    name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    mod_type: mod_type_label(entry.manifest.meta.mod_type).to_owned(),
+                    has_wasm: entry.wasm_bytes.is_some(),
+                    guest_memory_len: self
+                        .guest_memory_by_mod
+                        .get(&id)
+                        .map(Vec::len)
+                        .unwrap_or(0),
+                }
+            })
+            .collect()
+    }
+
     /// `mod.loaded.v1` lifecycle strings (replay / watch consumers).
     #[must_use]
     pub fn loaded_events(&self) -> Vec<String> {
@@ -338,7 +395,12 @@ impl ModHost {
         let mod_dir = mod_dir.as_ref();
         let manifest_path = mod_dir.join(CIVMOD_MANIFEST_NAME);
         let manifest = load_manifest(&manifest_path)?;
-        let wasm_bytes = read_wasm_file(mod_dir.join(MOD_WASM_NAME));
+        let wasm_path = mod_dir.join(MOD_WASM_NAME);
+        let wasm_bytes = read_wasm_file(wasm_path.clone());
+        if let Some(ref wasm) = wasm_bytes {
+            enforce_wasm_determinism(mod_dir, wasm)?;
+            enforce_wasm_signature(mod_dir, &manifest, Some(wasm.as_slice()), None)?;
+        }
         let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
@@ -573,6 +635,9 @@ pub fn read_civmod_archive(
     })?;
 
     let manifest = parse_manifest(&contents, archive_path)?;
+    if let Some(ref wasm) = wasm_bytes {
+        enforce_wasm_determinism(archive_path, wasm)?;
+    }
     enforce_wasm_signature(
         archive_path,
         &manifest,
@@ -580,6 +645,25 @@ pub fn read_civmod_archive(
         wasm_sig.as_deref(),
     )?;
     Ok((manifest, wasm_bytes))
+}
+
+fn mod_type_label(kind: ModType) -> &'static str {
+    match kind {
+        ModType::Policy => "policy",
+        ModType::Economic => "economic",
+        ModType::Event => "event",
+        ModType::Scenario => "scenario",
+    }
+}
+
+fn enforce_wasm_determinism(path: &Path, wasm: &[u8]) -> Result<(), ManifestError> {
+    if cfg!(feature = "mod-dev") {
+        return Ok(());
+    }
+    scan_wasm_determinism(wasm).map_err(|e| ManifestError::Validation {
+        path: path.to_path_buf(),
+        message: format!("determinism scan: {e}"),
+    })
 }
 
 fn enforce_wasm_signature(
@@ -838,6 +922,79 @@ write_policy = false
     }
 
     #[test]
+    fn mod_host_guest_memory_snapshot_roundtrip() {
+        let mut host = ModHost::new();
+        host.restore_guest_memory("demo", vec![1, 2, 3]);
+        assert_eq!(host.guest_memory_snapshot("demo"), vec![1, 2, 3]);
+        assert!(host.guest_memory_snapshot("missing").is_empty());
+    }
+
+    #[test]
+    fn capability_imports_list_is_complete() {
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"sim_tick"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"memory_read"));
+    }
+
+    #[test]
+    fn mod_host_economy_tick_persists_guest_memory() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "memory_read" (func $read (param i32) (result i32)))
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (call $read)
+                (if (result i32)
+                  (i32.eqz)
+                  (then
+                    (i32.const 0)
+                    (i32.const 55)
+                    (call $write)
+                    (i32.const 55))
+                  (else
+                    (i32.const 0)
+                    (call $read))))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "mem-econ"
+name = "Mem Econ"
+version = "0.0.1"
+api_version = "1"
+mod_type = "economic"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+read_economy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let _ = host.economy_tick(1);
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
+        let _ = host.economy_tick(2);
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
+    }
+
+    #[test]
     fn wasm_guest_reads_capability_host_import() {
         const WAT: &str = r#"
             (module
@@ -865,7 +1022,10 @@ write_policy = false
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
-        assert_eq!(invoke_military_tick(&wasm, 11, &mut mem).expect("invoke"), 11);
+        assert_eq!(
+            invoke_military_tick(&wasm, 11, &mut mem).expect("invoke"),
+            11
+        );
     }
 
     /// When `just civis-3d-mod-wasm` has been run, repo example-policy loads WASM on tick.

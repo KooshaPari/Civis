@@ -117,6 +117,11 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-034 | Military-phase mod hook (`read_military`). | `crates/mod-host/`, `engine.rs` | `mod_registry_military_phase_emits_for_read_military` | implemented |
 | FR-CIV-TACTICS-035 | Higher per-tick military work (cadence + pulses). | `military_phase.rs`, `movement.rs`, `war_bridge.rs` | `operational_movement_steps_toward_enemy` | implemented |
 | FR-CIV-TACTICS-025-int | Replay restores combat `pending_damage`. | `replay.rs`, `engine.rs` | `replay_combat_events_restore_pending_damage` | implemented |
+| FR-CIV-TACTICS-025-int2 | Replay combat drains match live voxel state. | `engine.rs` | `replay_combat_drains_to_same_voxel_state_as_live` | implemented |
+| FR-CIV-TACTICS-025-int3 | Combat replay log deterministic per seed. | `engine.rs` | `replay_combat_log_deterministic_for_seed_rerun` | implemented |
+| FR-CIV-TACTICS-036 | Voxel obstacle grid for operational movement. | `grid_obstacles.rs`, `movement.rs` | `operational_movement_avoids_voxel_obstacle` | implemented |
+| FR-CIV-TACTICS-037 | A* obstacle-aware pathfinding. | `pathfinding.rs` | `astar_path_with_blocked` | implemented |
+| FR-CIV-TACTICS-038 | WASM `civlab_military_tick` host invoke. | `wasm_guest.rs`, `civlab-sdk` | `wasm_military_tick_invokes_civlab_export` | implemented |
 
 ---
 

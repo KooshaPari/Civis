@@ -33,6 +33,11 @@
 | FR-CIV-TACTICS-034 | implemented | `ModHost::military_tick` / `read_military` stub |
 | FR-CIV-TACTICS-035 | implemented | movement cadence 4, war cadence 16, 2 movement pulses |
 | FR-CIV-TACTICS-025-int | implemented | `replay_combat_events_restore_pending_damage` |
+| FR-CIV-TACTICS-036 | implemented | voxel `grid_cell_blocked` + BFS/A* obstacles |
+| FR-CIV-TACTICS-037 | implemented | `astar_path` obstacle-aware routing |
+| FR-CIV-TACTICS-038 | implemented | `civlab_military_tick` WASM export + host invoke |
+| FR-CIV-TACTICS-025-int2 | implemented | `replay_combat_drains_to_same_voxel_state_as_live` |
+| FR-CIV-TACTICS-025-int3 | implemented | `replay_combat_log_deterministic_for_seed_rerun` |
 
 ## First PR slice (recommended)
 
@@ -44,7 +49,8 @@
 6. **Per-soldier combat + doctrine fitness + operational hook** — **done** (#300).
 7. **Movement + HP + replay combat** — **done** (#301).
 8. **Pathfinding + more work/tick + replay combat + military mod hook** — **done** (item 9).
-9. **Next:** Obstacle-aware pathfinding, replay full-tick combat determinism, WASM `civlab_military_tick` export.
+9. **Obstacle pathfinding + replay combat determinism + military WASM** — **done** (item 10).
+10. **Next:** Occupied-cell blocking, military WASM capability API, combat events in hash chain.
 
 ## Run
 

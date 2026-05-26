@@ -699,6 +699,33 @@ write_policy = false
     }
 
     #[test]
+    fn load_mod_path_accepts_civmod_extension() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let civmod = dir.path().join("policy.civmod");
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 3)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let file = std::fs::File::create(&civmod).expect("create");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+        zip.start_file(CIVMOD_MANIFEST_NAME, options)
+            .expect("manifest");
+        zip.write_all(MINIMAL_POLICY_MANIFEST.as_bytes())
+            .expect("write");
+        zip.start_file(MOD_WASM_NAME, options).expect("wasm");
+        zip.write_all(&wasm).expect("write wasm");
+        zip.finish().expect("finish");
+
+        let mut host = ModHost::new();
+        host.load_mod_path(&civmod).expect("load_mod_path");
+        assert_eq!(host.mods().len(), 1);
+    }
+
+    #[test]
     fn load_civmod_with_wasm_invokes_on_tick() {
         let dir = tempfile::tempdir().expect("tempdir");
         let civmod = dir.path().join("policy.civmod");

@@ -276,8 +276,8 @@ namespace DINOForge.Tests
         }
 
         /// <summary>
-        /// SPEC-007 Feature 2: The list pane must explicitly control its layout so the
-        /// ScrollRect content cannot collapse to an empty body.
+        /// SPEC-007 Feature 2: The list pane uses explicit RectTransform sizing (not
+        /// VerticalLayoutGroup/ScrollRect) so pack rows stay visible when layout rebuild is broken.
         /// </summary>
         [Fact]
         [Trait("UserStory", "US-F3.1")]
@@ -285,10 +285,14 @@ namespace DINOForge.Tests
         {
             string body = ExtractMethodBody(ReadRuntimeUiSource("ModMenuPanel.cs"), "BuildListPane");
 
-            body.Should().Contain("paneLayout.childControlWidth = true;",
-                "the list pane should size rows predictably");
-            body.Should().Contain("paneLayout.childAlignment = TextAnchor.UpperLeft;",
-                "the list pane should anchor items to the top instead of leaving them centered or clipped");
+            body.Should().Contain("paneLe.preferredWidth = ListWidth;",
+                "the list pane should have an explicit fixed width");
+            body.Should().Contain("paneLe.minWidth = ListWidth;",
+                "the list pane minimum width should match ListWidth");
+            body.Should().Contain("_listContent = contentRt;",
+                "the list pane should wire the pack list content container");
+            body.Should().Contain("contentRt.offsetMax = new Vector2(0f, -32f);",
+                "list content should reserve space below the header");
         }
 
         /// <summary>

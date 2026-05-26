@@ -37,19 +37,19 @@ jobs:
         run: dotnet test src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj --verbosity normal --no-build
 
       - name: Test asset pipeline - import
-        run: dotnet run --no-build --project src/Tools/PackCompiler -- pipeline import packs/warfare-starwars
+        run: dotnet run --no-build --project src/Tools/PackCompiler -- assets import packs/warfare-starwars
 
       - name: Test asset pipeline - validate
-        run: dotnet run --no-build --project src/Tools/PackCompiler -- pipeline validate packs/warfare-starwars
+        run: dotnet run --no-build --project src/Tools/PackCompiler -- assets validate packs/warfare-starwars
 
       - name: Test asset pipeline - optimize
-        run: dotnet run --no-build --project src/Tools/PackCompiler -- pipeline optimize packs/warfare-starwars
+        run: dotnet run --no-build --project src/Tools/PackCompiler -- assets optimize packs/warfare-starwars
 
       - name: Test asset pipeline - generate
-        run: dotnet run --no-build --project src/Tools/PackCompiler -- pipeline generate packs/warfare-starwars
+        run: dotnet run --no-build --project src/Tools/PackCompiler -- assets generate packs/warfare-starwars
 
       - name: Test full pipeline build
-        run: dotnet run --no-build --project src/Tools/PackCompiler -- pipeline build packs/warfare-starwars
+        run: dotnet run --no-build --project src/Tools/PackCompiler -- assets build packs/warfare-starwars
 
       - name: Upload pipeline artifacts
         if: always()

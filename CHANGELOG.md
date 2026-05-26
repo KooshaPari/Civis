@@ -5,7 +5,12 @@ All notable changes to DINOForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.25.0-dev] - In Progress
+## [Unreleased]
+
+### Changed
+- CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.
+
+## [0.25.0-dev] - 2026-05-25
 
 #### Stabilization — Tests, Specs, Journey Viewer Schema (2026-05-23)
 

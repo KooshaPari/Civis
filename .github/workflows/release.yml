@@ -410,7 +410,9 @@ jobs:
       # Build Rust AssetPipeline binary
       # ---------------------------------------------------------------
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b # stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
 
       - name: Build Rust AssetPipeline (Release)
         continue-on-error: true

@@ -24,14 +24,16 @@ pub use fog_of_war::FogOfWar;
 pub use formation::{
     formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,
 };
+pub use grid_obstacles::{grid_cell_blocked, grid_cell_impassable, grid_cell_occupied};
 pub use los::line_of_sight;
 pub use military_phase::MilitaryPhaseConfig;
 pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };
 pub use operational::{NoopOperationalLayer, OperationalLayer};
-pub use grid_obstacles::grid_cell_blocked;
-pub use pathfinding::{astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked};
+pub use pathfinding::{
+    astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked,
+};
 pub use war_bridge::{
     grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridge,
     WarBridgeConfig,
@@ -349,6 +351,35 @@ mod tests {
     #[test]
     fn pathfinding_bfs_steps_toward_enemy() {
         assert_eq!(bfs_next_step((0, 0), (5, 0), 16), Some((1, 0)));
+    }
+
+    /// FR-CIV-TACTICS-039 — movement routes around cells occupied by other units.
+    #[test]
+    fn operational_movement_avoids_occupied_cell() {
+        let mut units = [
+            MilitaryUnitSample {
+                unit_id: 1,
+                faction_id: 0,
+                grid_x: 0,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                unit_id: 2,
+                faction_id: 0,
+                grid_x: 1,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                unit_id: 3,
+                faction_id: 1,
+                grid_x: 4,
+                grid_y: 0,
+            },
+        ];
+        let config = OperationalMovementConfig::default();
+        let world = VoxelWorld::new(1);
+        let moves = tick_operational_movement(4, &config, &mut units, 1, &world);
+        assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
     }
 
     /// FR-CIV-TACTICS-036 — movement routes around solid voxels on the grid plane.

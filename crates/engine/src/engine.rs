@@ -1880,6 +1880,22 @@ mod tests {
         ));
     }
 
+    /// FR-CIV-TACTICS-041 — combat events extend the replay hash chain.
+    #[test]
+    fn combat_events_extend_replay_hash_chain() {
+        let event = DamageEvent {
+            center: WorldCoord { x: 10, y: 0, z: 20 },
+            radius_voxels: 2,
+            energy: 100,
+        };
+        let mut log = ReplayLog::default();
+        log.record_tick(1);
+        let after_tick = log.running_hash;
+        log.record_combat(1, 10, 20, event);
+        log.verify_hash_chain().expect("chain");
+        assert_ne!(log.running_hash, after_tick);
+    }
+
     /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
     #[test]
     fn replay_combat_events_restore_pending_damage() {
@@ -1921,7 +1937,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert!(!combat.is_empty(), "expected war-bridge combat in replay log");
+        assert!(
+            !combat.is_empty(),
+            "expected war-bridge combat in replay log"
+        );
 
         let mut from_replay = Simulation::with_seed(seed);
         for (tick, event) in combat {

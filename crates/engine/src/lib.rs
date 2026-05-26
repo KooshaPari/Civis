@@ -48,7 +48,8 @@ pub use civ_tactics::{
     OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
 pub use hash_chain::{
-    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+    chain_advance, chain_root_from_payloads, chain_root_from_ticks, combat_event_bytes, hash_hex,
+    tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};

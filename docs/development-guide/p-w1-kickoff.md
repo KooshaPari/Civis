@@ -38,6 +38,9 @@
 | FR-CIV-TACTICS-038 | implemented | `civlab_military_tick` WASM export + host invoke |
 | FR-CIV-TACTICS-025-int2 | implemented | `replay_combat_drains_to_same_voxel_state_as_live` |
 | FR-CIV-TACTICS-025-int3 | implemented | `replay_combat_log_deterministic_for_seed_rerun` |
+| FR-CIV-TACTICS-039 | implemented | `grid_cell_impassable` + occupied-cell path blocking |
+| FR-CIV-TACTICS-040 | implemented | `invoke_military_tick(wasm, sim_tick)` capability API |
+| FR-CIV-TACTICS-041 | implemented | combat payloads in replay hash chain |
 
 ## First PR slice (recommended)
 
@@ -50,7 +53,8 @@
 7. **Movement + HP + replay combat** — **done** (#301).
 8. **Pathfinding + more work/tick + replay combat + military mod hook** — **done** (item 9).
 9. **Obstacle pathfinding + replay combat determinism + military WASM** — **done** (item 10).
-10. **Next:** Occupied-cell blocking, military WASM capability API, combat events in hash chain.
+10. **Occupied-cell blocking + military WASM tick API + combat hash chain** — **done** (item 11).
+11. **Next:** Fog-of-war in war bridge, mod signing, full WASM capability surface.
 
 ## Run
 

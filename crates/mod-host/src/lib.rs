@@ -346,7 +346,7 @@ impl ModHost {
             if !entry.manifest.permissions.read_military {
                 continue;
             }
-            match invoke_military_tick(wasm) {
+            match invoke_military_tick(wasm, sim_tick) {
                 Ok(code) => lines.push(format!(
                     "mod:{}:wasm_military_tick:tick={sim_tick}:code={code}",
                     entry.manifest.meta.id
@@ -690,12 +690,13 @@ write_policy = false
     fn wasm_military_tick_invokes_civlab_export() {
         const WAT: &str = r#"
             (module
-              (func (export "civlab_military_tick") (result i32)
-                i32.const 11)
+              (func (export "civlab_military_tick") (param i64) (result i32)
+                local.get 0
+                i32.wrap_i64)
             )
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
-        assert_eq!(invoke_military_tick(&wasm).expect("invoke"), 11);
+        assert_eq!(invoke_military_tick(&wasm, 11).expect("invoke"), 11);
     }
 
     #[test]

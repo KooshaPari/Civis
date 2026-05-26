@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
 
-use crate::hash_chain::{chain_root_from_ticks, tick_event_bytes, tick_hash, GENESIS, HASH_LEN};
+use crate::hash_chain::{
+    chain_advance, chain_root_from_payloads, combat_event_bytes, tick_event_bytes, GENESIS,
+    HASH_LEN,
+};
 use crate::io::{read_text, write_text};
 use civ_voxel::MaterialId;
 
@@ -160,6 +163,19 @@ impl ReplayLog {
             target_id,
             event,
         });
+        let prev = self.running_hash.unwrap_or(GENESIS);
+        let payload = combat_event_bytes(
+            tick,
+            shooter_id,
+            target_id,
+            event.center.x,
+            event.center.y,
+            event.center.z,
+            event.radius_voxels,
+            event.energy,
+            0,
+        );
+        self.running_hash = Some(chain_advance(&prev, &payload));
     }
 
     /// Record a research outcome.
@@ -183,14 +199,30 @@ impl ReplayLog {
     pub fn record_tick(&mut self, tick: u64) {
         self.events.push(ReplayEvent::Tick { tick });
         let prev = self.running_hash.unwrap_or(GENESIS);
-        self.running_hash = Some(tick_hash(&prev, &tick_event_bytes(tick)));
+        self.running_hash = Some(chain_advance(&prev, &tick_event_bytes(tick)));
     }
 
-    /// Recompute the hash-chain root from [`ReplayEvent::Tick`] markers in event order.
+    /// Recompute the hash-chain root from tick + combat markers in event order.
     #[must_use]
     pub fn recompute_running_hash(&self) -> Option<[u8; HASH_LEN]> {
-        chain_root_from_ticks(self.events.iter().filter_map(|event| match event {
-            ReplayEvent::Tick { tick } => Some(*tick),
+        chain_root_from_payloads(self.events.iter().filter_map(|event| match event {
+            ReplayEvent::Tick { tick } => Some(tick_event_bytes(*tick).to_vec()),
+            ReplayEvent::Combat {
+                tick,
+                shooter_id,
+                target_id,
+                event,
+            } => Some(combat_event_bytes(
+                *tick,
+                *shooter_id,
+                *target_id,
+                event.center.x,
+                event.center.y,
+                event.center.z,
+                event.radius_voxels,
+                event.energy,
+                0,
+            )),
             _ => None,
         }))
     }

@@ -19,7 +19,11 @@ pub enum WasmGuestError {
     },
 }
 
-fn invoke_tick_export(wasm_bytes: &[u8], primary: &str, fallback: &str) -> Result<i32, WasmGuestError> {
+fn invoke_tick_export(
+    wasm_bytes: &[u8],
+    primary: &str,
+    fallback: &str,
+) -> Result<i32, WasmGuestError> {
     let engine = wasmtime::Engine::default();
     let module = wasmtime::Module::new(&engine, wasm_bytes)?;
     let mut store = wasmtime::Store::new(&engine, ());
@@ -44,6 +48,21 @@ pub fn invoke_policy_tick(wasm_bytes: &[u8]) -> Result<i32, WasmGuestError> {
 }
 
 /// Invoke the military-phase export (`civlab_military_tick`, else `military_tick`).
-pub fn invoke_military_tick(wasm_bytes: &[u8]) -> Result<i32, WasmGuestError> {
+///
+/// Prefers `(i64) -> i32` exports that receive the simulation tick (FR-CIV-TACTICS-040);
+/// falls back to legacy zero-arg exports when absent.
+pub fn invoke_military_tick(wasm_bytes: &[u8], sim_tick: u64) -> Result<i32, WasmGuestError> {
+    let engine = wasmtime::Engine::default();
+    let module = wasmtime::Module::new(&engine, wasm_bytes)?;
+    let mut store = wasmtime::Store::new(&engine, ());
+    let instance = wasmtime::Instance::new(&mut store, &module, &[])?;
+    let tick_arg = i64::try_from(sim_tick).unwrap_or(i64::MAX);
+
+    if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut store, "civlab_military_tick") {
+        return Ok(func.call(&mut store, tick_arg)?);
+    }
+    if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut store, "military_tick") {
+        return Ok(func.call(&mut store, tick_arg)?);
+    }
     invoke_tick_export(wasm_bytes, "civlab_military_tick", "military_tick")
 }

@@ -46,3 +46,25 @@
 # PackSubmoduleManager — short-lived git helper processes; wrapped at call site (iter-145/146)
 HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|271
 HIGH|src/SDK/Dependencies/PackSubmoduleManager.cs|291
+
+# OrphanProcessHandleAnalyzer — detector implementation; comment/example strings only (PR 188)
+src/Analyzers/OrphanProcessHandleAnalyzer.cs
+
+# Analyzer tests — intentional Process.Start fixtures for diagnostic coverage (PR 188)
+src/Tests/Analyzers/OrphanProcessHandleAnalyzerTests.cs
+
+# GameLaunch fixture — game process owned for test session; disposed in fixture teardown (PR 188)
+MED|src/Tests/GameLaunch/GameLaunchFixture.cs|117
+
+# PackCompiler CLI tests — short-lived build subprocess (PR 188)
+MED|src/Tests/PackCompilerCliTests.cs|53
+
+# Desktop Companion — shell-execute / browser-open; no await failure path (PR 188)
+src/Tools/DesktopCompanion/ViewModels/BrowseViewModel.cs
+src/Tools/DesktopCompanion/ViewModels/UpdateViewModel.cs
+
+# MCP server — session-scoped child processes (game launch, CUA native helper) (PR 188)
+MED|src/Tools/McpServer/Cua/CuaNativeClient.cs|50
+MED|src/Tools/McpServer/GameProcessManager.cs|67
+MED|src/Tools/McpServer/GameProcessManager.cs|111
+MED|src/Tools/McpServer/Program.cs|35

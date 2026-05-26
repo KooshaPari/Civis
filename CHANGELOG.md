@@ -1866,33 +1866,49 @@ v0.24.0 closure-gate status (Iter-110/111/112):
 
 ### Added
 
-- **CLI `--format json`** — all commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
+- **CLI `--format json`** — all 13 commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; `ui-expect` sets exit code 1 on failure in JSON mode; `CommandOutput` helper provides `WriteJson`/`WriteJsonError`/`CreateFormatOption`/`IsJson` utilities; errors suppress ANSI markup when `--format json` is active
 - **CLI UI automation commands** — `ui tree`, `ui query`, `ui click`, `ui wait`, `ui expect` wired into the root CLI command
+- **Desktop Companion UI — Complete** — DashboardViewModel, PackListViewModel, SettingsViewModel, DebugViewModel + XAML pages; Dashboard shows pack count + load status; Pack List supports enable/disable toggle with service persistence; Settings page loads/saves game path + backup location; Debug panel queries entity count from Bridge
+- **Asset Swap Phase 2 timing fixes** — bundle disk patches now happen in `OnCreate` (immediate); live `RenderMesh` swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` instead of arbitrary 600-frame delay
+- **`scripts/install-companion.ps1`** — `irm .../install-companion.ps1 | iex`; auto-fetches latest release, installs WindowsAppRuntime if needed, SHA256 verification, desktop shortcut
+- **`scripts/install-companion.sh`** — `curl -fsSL .../install-companion.sh | bash` (WSL)
+- **Release workflow** — Desktop Companion zip + sha256 added as release artifacts (`DINOForge.Companion-vX.Y.Z-win-x64.zip`)
+- **`WORKLOG.md`** — unified active work item log (WI-001 through WI-006)
+- **`docs/WBS.md`** — full work breakdown structure covering M8-M11 (79 tasks)
+- **`docs/adr/ADR-011-desktop-companion.md`** — WinUI 3 / WindowsAppSDK companion app decision record
+- **`docs/adr/ADR-012-fuzzing-strategy.md`** — FsCheck + SharpFuzz fuzzing strategy decision record
+- **`docs/roadmap/index.md`** — M9 (Desktop Companion), M10 (Fuzzing), M11 (Coverage + Code Completion) milestones added
+- **`docs/product-requirements-document.md`** v0.6.0 — Desktop Companion, fuzzing, and code completion requirements (user/tech/biz)
+- `SyncCommand` CLI command for content synchronization
+- `packs/warfare-aerial/` — new aerial warfare pack with airfield buildings and aerial unit doctrines
+- `packs/warfare-aerial/stats/aerial_buffs.yaml` — stat overrides for aerial units
+- `packs/warfare-starwars/stats/starwars_buffs.yaml` — stat overrides for Star Wars units
 
 ### Fixed
 
 - **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading a `GameObject` from the bundle and extracting `Mesh`/`Material` via `MeshFilter`/`MeshRenderer`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; Unity AssetBundles built from prefabs (all warfare-starwars bundles) previously caused every swap to silently return false
 - **warfare-starwars visual_asset alignment** — updated 14 unit and 9 building `visual_asset` fields to match actual bundle file names in `assets/bundles/` (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`, `sw-command-center` → `sw-rep-command-center`); mismatched names meant `ContentLoader.RegisterAssetSwaps` skipped those units and no swaps were registered
-
-### Changed
-
-- **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112`
-
-### Added
-
-- **CLI `--format json`** — all 13 commands (`status`, `query`, `resources`, `override`, `dump`, `reload`, `screenshot`, `component-map`, `ui-query`, `ui-tree`, `ui-click`, `ui-wait`, `ui-expect`, `verify`) now accept `--format json`; errors suppress ANSI markup when JSON mode active; `ui-expect` sets exit code 1 on assertion failure in JSON mode
-- **Desktop Companion UI — Complete** — DashboardViewModel, PackListViewModel, SettingsViewModel, DebugViewModel + XAML pages; Dashboard shows pack count + load status; Pack List supports enable/disable toggle with service persistence; Settings page loads/saves game path + backup location; Debug panel queries entity count from Bridge
-- **Asset Swap Phase 2 timing fixes** — bundle disk patches now happen in `OnCreate` (immediate); live `RenderMesh` swaps fire on first `OnUpdate` where `CalculateEntityCount() > 0` instead of arbitrary 600-frame delay
-- **warfare-starwars visual_asset alignment** — updated 14 unit + 9 building `visual_asset` fields to match actual bundle file names (e.g. `sw-droideka` → `sw-cis-droideka`, `sw-stap-speeder` → `sw-cis-stap`)
-
-### Fixed
-
-- **AssetSwapSystem prefab extraction** — `TrySwapRenderMeshFromBundle` now falls back to loading `GameObject` from bundle and extracting via `MeshFilter`/`SkinnedMeshRenderer` when direct `LoadAsset<Mesh>` returns null; fixes all warfare-starwars bundles built from prefabs
+- **Release workflow `workflow_dispatch`** — added manual trigger with `tag` input for retroactive artifact builds; checkout and version extraction use input tag when dispatched manually; `workflow_dispatch` checkout uses `main` branch for tag naming/upload target
+- **Release workflow .NET version** — installed only .NET 8 but PackCompiler targets net9.0; all releases since v0.7.1 failed before producing any artifacts; now installs both 8.0.x and 9.0.x
+- **Required-artifact gate in release workflow** — new verification step before GitHub Release publish; fails with named list of missing files if any of the 6 required artifacts (Installer EXE, SHA256, Windows ZIP, SDK NuGet, Templates NuGet, SHA256SUMS.txt) are absent
+- **PackCompiler CS1591 warnings** — suppressed missing XML doc warnings (internal tool, not a public library API)
+- **AssetValidationService / PrefabGenerationService CS8602/CS8604** — null-forgiving on LOD0/1/2 after validated non-null; compiler could not track through early-return guard
+- **CompanionTests double-compilation** — excluded `CompanionTests\` from main Tests project (has own `.csproj`, was accidentally globbed in causing CS0246 on missing Moq)
 - **Desktop Companion startup crash** — invalid WinUI 3 Symbol enum values and type coercion issues in x:Bind converters fixed; `NavigationView` settings footer de-duped; `PropertyChanged` bindings use correct `ConfigureAwait(true)` context
 - **Desktop Companion Pack List binding crashes** — added `HasErrors` computed property to `PackViewModel`; `int` fields now use string properties for TextBlock binding; `INotifyPropertyChanged` implementation via `ObservableObject`
 - **CI build order** — explicit pre-build of SDK/Bridge/Domains/Installer prevents metadata file not found errors on net11.0 parallel test compilation
 - **AssetSwapRegistry concurrent tests** — Guid-prefixed addresses + filter isolation eliminates flaky count mismatches in parallel test runs
-- **Release workflow** — `workflow_dispatch` checkout uses `main` branch; tag is used only for release naming/upload target
+
+### Changed
+
+- **Migrated to .NET 11 (Preview 2)** — all `net8.0`/`net9.0`/`net10.0` TFMs updated to `net11.0`; DesktopCompanion updated to `net11.0-windows10.0.26100.0`; Installer GUI updated to `net11.0-windows`; `netstandard2.0` (Runtime, SDK, BepInEx-facing) and `net472` (VFXPrefabGenerator) preserved unchanged; `global.json` pinned to `11.0.100-preview.2.26159.112`
+- Archived 6 inactive placeholder packs to `packs/_archived/` (economy-balanced, example-balance, scenario-tutorial, warfare-airforce, warfare-guerrilla, warfare-modern)
+- Synced all `packages.lock.json` files across projects
+- Added `stats` load sections to `packs/warfare-aerial/pack.yaml` and `packs/warfare-starwars/pack.yaml`
+- `AssetSwapRequest.VanillaMapping` — optional field passed from `UnitDefinition.VanillaMapping` so `AssetSwapSystem` can narrow entity targeting to the correct ECS archetype during live RenderMesh swap
+- `AssetSwapSystem` improvements — expanded entity query and swap logic using `VanillaMapping` for precision targeting
+- `ModPlatform` status message now surfaces first error detail for faster in-game debugging
+- `Plugin.cs` wires `HudIndicator` to receive pack counts on every load/reload via `OnHudCountsChanged`
 
 ### Known Regressions (Blocking; fixes in progress)
 
@@ -2393,45 +2409,6 @@ v0.24.0 closure-gate status (Iter-110/111/112):
 - Pack registry schema now includes optional `requires_spawner` boolean field
 - Updated warfare pack entries (modern, starwars, guerrilla) to flag M9 dependency
 - Documentation updated to clarify M9+ requirements for total conversion packs
-
-## [0.11.0] - 2026-03-15
-
-### Fixed
-
-- **Release workflow `workflow_dispatch`** — added manual trigger with `tag` input for retroactive artifact builds; checkout & version extraction use input tag when dispatched manually
-- **Release workflow .NET version** — installed only .NET 8 but PackCompiler targets net9.0; all releases since v0.7.1 failed before producing any artifacts; now installs both 8.0.x and 9.0.x
-- **Required-artifact gate in release workflow** — new verification step before GitHub Release publish; fails with named list of missing files if any of the 6 required artifacts (Installer EXE, SHA256, Windows ZIP, SDK NuGet, Templates NuGet, SHA256SUMS.txt) are absent
-- **PackCompiler CS1591 warnings** — suppressed missing XML doc warnings (internal tool, not a public library API)
-- **AssetValidationService / PrefabGenerationService CS8602/CS8604** — null-forgiving on LOD0/1/2 after validated non-null; compiler could not track through early-return guard
-- **CompanionTests double-compilation** — excluded `CompanionTests\` from main Tests project (has own `.csproj`, was accidentally globbed in causing CS0246 on missing Moq)
-
-### Added
-
-- **`scripts/install-companion.ps1`** — `irm .../install-companion.ps1 | iex`; auto-fetches latest release, installs WindowsAppRuntime if needed, SHA256 verification, desktop shortcut
-- **`scripts/install-companion.sh`** — `curl -fsSL .../install-companion.sh | bash` (WSL)
-- **Release workflow** — Desktop Companion zip + sha256 added as release artifacts (`DINOForge.Companion-vX.Y.Z-win-x64.zip`)
-- **`WORKLOG.md`** — unified active work item log (WI-001 through WI-006)
-- **`docs/WBS.md`** — full work breakdown structure covering M8-M11 (79 tasks)
-- **`docs/adr/ADR-011-desktop-companion.md`** — WinUI 3 / WindowsAppSDK companion app decision record
-- **`docs/adr/ADR-012-fuzzing-strategy.md`** — FsCheck + SharpFuzz fuzzing strategy decision record
-- **`docs/roadmap/index.md`** — M9 (Desktop Companion), M10 (Fuzzing), M11 (Coverage + Code Completion) milestones added
-- **`docs/product-requirements-document.md`** v0.6.0 — Desktop Companion, fuzzing, and code completion requirements (user/tech/biz)
-
-- `SyncCommand` CLI command for content synchronization
-- `packs/warfare-aerial/` — new aerial warfare pack with airfield buildings and aerial unit doctrines
-- `packs/warfare-aerial/stats/aerial_buffs.yaml` — stat overrides for aerial units
-- `packs/warfare-starwars/stats/starwars_buffs.yaml` — stat overrides for Star Wars units
-
-### Changed
-
-- Archived 6 inactive placeholder packs to `packs/_archived/` (economy-balanced, example-balance, scenario-tutorial, warfare-airforce, warfare-guerrilla, warfare-modern)
-- Synced all `packages.lock.json` files across projects
-- Added `stats` load sections to `packs/warfare-aerial/pack.yaml` and `packs/warfare-starwars/pack.yaml`
-
-- `AssetSwapRequest.VanillaMapping` — optional field passed from `UnitDefinition.VanillaMapping` so `AssetSwapSystem` can narrow entity targeting to the correct ECS archetype during live RenderMesh swap
-- `AssetSwapSystem` improvements — expanded entity query and swap logic using `VanillaMapping` for precision targeting
-- `ModPlatform` status message now surfaces first error detail for faster in-game debugging
-- `Plugin.cs` wires `HudIndicator` to receive pack counts on every load/reload via `OnHudCountsChanged`
 
 ## [0.10.0] - 2026-03-14
 

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use thiserror::Error;
-use wasm_guest::{invoke_policy_tick, MOD_WASM_NAME};
+use wasm_guest::{invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
 pub use wasm_guest::{WasmGuestError, MOD_WASM_NAME as MOD_WASM_FILE};
 
@@ -335,10 +335,30 @@ impl ModHost {
         Ok(())
     }
 
-    /// Military-phase hook (P-W1).
+    /// Military-phase hook (P-W1) — manifest stubs + WASM `civlab_military_tick` when loaded.
     #[must_use]
     pub fn military_tick(&self, sim_tick: u64) -> Vec<String> {
-        self.registry.on_military_phase(sim_tick)
+        let mut lines = self.registry.on_military_phase(sim_tick);
+        for entry in self.registry.mods() {
+            let Some(wasm) = entry.wasm_bytes.as_ref() else {
+                continue;
+            };
+            if !entry.manifest.permissions.read_military {
+                continue;
+            }
+            match invoke_military_tick(wasm) {
+                Ok(code) => lines.push(format!(
+                    "mod:{}:wasm_military_tick:tick={sim_tick}:code={code}",
+                    entry.manifest.meta.id
+                )),
+                Err(err) => lines.push(format_mod_error_event(
+                    &entry.manifest.meta.id,
+                    sim_tick,
+                    &err.to_string(),
+                )),
+            }
+        }
+        lines
     }
 
     /// Per-tick hook — phase stubs + WASM `civlab_policy_tick` when loaded.
@@ -664,6 +684,18 @@ write_policy = false
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         assert_eq!(invoke_policy_tick(&wasm).expect("invoke"), 42);
+    }
+
+    #[test]
+    fn wasm_military_tick_invokes_civlab_export() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_military_tick") (result i32)
+                i32.const 11)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        assert_eq!(invoke_military_tick(&wasm).expect("invoke"), 11);
     }
 
     #[test]

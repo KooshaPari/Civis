@@ -164,11 +164,11 @@ jobs:
             artifact-name: dinoforge_asset_pipeline_zig.dll
           - os: macos-latest
             runner: macos-arm64
-            zig-target: aarch64-macos-gnu
+            zig-target: aarch64-macos
             artifact-name: dinoforge_asset_pipeline_zig.dylib
           - os: macos-13
             runner: macos-x64
-            zig-target: x86_64-macos-gnu
+            zig-target: x86_64-macos
             artifact-name: dinoforge_asset_pipeline_zig.dylib
     permissions:
       contents: read

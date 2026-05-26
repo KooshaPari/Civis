@@ -1,0 +1,147 @@
+VFX SYSTEM DESIGN - WARFARE-STARWARS PACK
+==========================================
+Status: COMPLETE (Design Phase v1.0)
+Date: 2026-03-12
+Document: packs/warfare-starwars/VFX_SYSTEM_DESIGN.md (1737 lines)
+
+DELIVERABLES COMPLETED
+======================
+
+1. PROJECTILE VFX SYSTEM (13 types)
+   Republic:
+   - rep_blaster_bolt (#4488FF blue, 8-12 tris, trail particles)
+   - rep_blaster_sniper_bolt (brighter blue, faster)
+   
+   CIS:
+   - cis_blaster_bolt (#FF4400 red-orange, chaotic trail)
+   - cis_blaster_sniper_bolt (brighter orange, denser sparks)
+   
+   Lightsabers:
+   - lightsaber_blue_beam (#4488FF blue core, 16-24 tris)
+   - lightsaber_green_beam (#44FF44 green variant)
+   - grievous_purple_beam (#FF44FF purple variant)
+   
+   Electrostaff:
+   - electrostaff_bolt (#FFFF44 yellow, crackling effect)
+   
+   Explosives:
+   - atte_mass_driver_round (large blue sphere, 5.0 AoE)
+   - aat_laser_round (large orange sphere, 4.0 AoE)
+   - dsd1_laser_bolt (medium orange, 2.0 AoE)
+
+2. IMPACT EFFECTS (8 definitions)
+   Blaster Impacts:
+   - rep_blaster_impact (tight blue spark burst, 0.3s)
+   - cis_blaster_impact (chaotic orange burst, 0.35s)
+   - rep_blaster_sniper_impact (larger blue burst)
+   - cis_blaster_sniper_impact (larger orange burst)
+   
+   Explosions:
+   - explosion_large_blue (flash+smoke+debris+shockwave, 0.6s)
+   - explosion_large_orange (same structure, orange tones)
+   - explosion_medium_orange (3-phase burst, smaller)
+   
+   Lightsaber Impacts:
+   - lightsaber_impact_blue (ring + slash sparks)
+   - lightsaber_impact_green (green variant)
+   - lightsaber_impact_purple (wider spread for Grievous)
+   
+   Electrostaff:
+   - electrostaff_impact (electrical discharge + arc trails)
+
+3. ABILITY VFX (v1.1+ Future)
+   Jedi Force Abilities:
+   - jedi_force_push (blue hemisphere wave, 0.4s)
+   - jedi_force_pull (converging spiral field, 0.5s)
+   - jedi_lightsaber_whirl (spinning ring, 0.6s)
+   
+   CIS Abilities:
+   - droideka_shield_deploy (expanding ring → persistent dome)
+
+4. UI EFFECTS
+   - damage_number_popup (faction-colored floating text, 1.0s fade)
+   - health_bar_feedback (color shift: green→yellow→red, optional crack)
+   - unit_selection_highlight (faction-color outline+glow, 1 Hz pulse)
+   - ability_readiness_indicator (aura glow, cooldown progress ring)
+   - building_construction (sparkle burst, faction colors)
+   - building_destroyed (explosion+collapse+dust)
+
+5. ASSET INTEGRATION
+   - Addressables naming convention (warfare-starwars/projectiles/*, vfx/*, ui/*)
+   - Manifest entry schema with placeholder support
+   - Runtime loading pattern via Addressables.LoadAssetAsync<T>
+   - Bundle placement: packs/warfare-starwars/assets/warfare-starwars-assets.bundle
+
+6. YAML SCHEMA
+   - projectile.schema.json compatible (visual_prefab, impact_effect fields)
+   - weapon-to-projectile linkage (weapons/blasters.yaml with projectile_id)
+   - New vfx/effects.yaml registry (v1.1+, optional reusable effects)
+
+7. COLOR PALETTE REFERENCE
+   Republic: #4488FF blue, #6688FF light blue, #AADDFF very light
+   CIS: #FF4400 red-orange, #FF6600 bright orange, #C8A87A tan
+   Lightsabers: #4488FF blue, #44FF44 green, #FF44FF purple, #FFFF44 yellow
+   Explosions: #FFFFFF white flash, #CCCCCC gray smoke
+   All with emissive material intensity 1.5-2.5 for glow effect
+
+8. IMPLEMENTATION ROADMAP
+   v1.0 (COMPLETE): Schema, concepts, sourcing guide
+   v1.1 (2-4 weeks): Projectile meshes + impact particles + UI prefabs
+   v1.2 (2-3 weeks): Ability VFX (Jedi Force, Droideka shield, audio)
+   v1.3+ (stretch): Death effects, ambient battlefield, cinematic effects
+
+9. COMMUNITY CONTRIBUTION GUIDE
+   - Detailed workflows (Blender → FBX, Unity import, Addressables, DINO testing)
+   - Priority asset list (B1 Droid, Clone Trooper highest impact)
+   - Submission checklist with validation commands
+   - Particle system template (copy-paste foundation)
+   - Troubleshooting section (visibility, occlusion, direction issues)
+
+DESIGN PRINCIPLES IMPLEMENTED
+=============================
+✓ Low-poly VFX aesthetic (TABS-style, simple geometry, emissive focus)
+✓ Faction visual identity (Republic: organized blue, CIS: chaotic orange)
+✓ Color fidelity (palette from ASSET_PIPELINE.md)
+✓ Performance constraints (max 200 particles/effect, sprite-based preferred)
+✓ Clarity over spectacle (communicate game state, don't obscure vision)
+
+DOCUMENTATION QUALITY
+=====================
+✓ 1737 lines, 9 major sections
+✓ YAML code samples for all definitions
+✓ Particle system specs with particle counts, lifetimes, emission rates
+✓ Material properties (albedo, emissive, smoothness, metallic)
+✓ Mesh polygon budgets per asset type
+✓ Appendices: color palette, particle template, troubleshooting
+✓ External resource links (Unity docs, Kenney assets, color tools)
+✓ Community contribution workflows with step-by-step instructions
+
+FILES MODIFIED
+==============
+✓ Created: packs/warfare-starwars/VFX_SYSTEM_DESIGN.md (1737 lines)
+✓ Updated: CHANGELOG.md (added v1.0 VFX design documentation entry)
+
+VALIDATION
+==========
+✓ Pack structure: packs/warfare-starwars/VFX_SYSTEM_DESIGN.md exists
+✓ Schema compatibility: Projectile definitions match projectile.schema.json
+✓ Weapon linkage: Examples show projectile_id in weapons/blasters.yaml
+✓ Color accuracy: All hexcodes validated against ASSET_PIPELINE.md
+✓ Addressables pattern: Consistent with pack.yaml asset loading
+
+NEXT STEPS
+==========
+1. Agent/Community: Follow v1.1 implementation roadmap to create actual VFX assets
+2. VFX Artists: Use contribution guide for Blender modeling → Unity integration
+3. Testing: Validate projectiles in DINO with real weapons firing
+4. Iteration: Gather feedback on visual clarity, performance, faction differentiation
+5. Documentation: Update packs/README.md with VFX asset sourcing links
+
+DEPENDENCIES
+============
+✓ ASSET_PIPELINE.md (color palette, asset style guide)
+✓ projectile.schema.json (YAML validation)
+✓ weapons/blasters.yaml (weapon definitions)
+✓ Kenney CC0 asset packs (free source material)
+✓ Unity 2021.3.45f2 with Addressables v1.21.18
+

@@ -1,0 +1,16 @@
+{
+  "id": "cis_stap_speeder",
+  "type": "Light",
+  "name": "Speeder Bike",
+  "model_id": "b9426a70582f42e0819afb534f6c12d9",
+  "source_url": "https://sketchfab.com/models/b9426a70582f42e0819afb534f6c12d9",
+  "artist": "Mind Mulch for The Masses",
+  "license": "CC Attribution",
+  "extracted_files": [
+    "Unity2Skfb.gltf"
+  ],
+  "extracted_textures": 3,
+  "downloadedAt": "2026-03-13T23:19:37Z",
+  "phase": "2B",
+  "note": "Downloaded in raw format. Will be converted to GLB in Phase 3C."
+}

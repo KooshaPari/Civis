@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 3673484493
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: e66d05608f9299ccc34a5daacce28094
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 34c66e1a55654dedabb7cdcd0f409d91
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: e66d05608f9299ccc34a5daacce28094
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 135
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/CIS/sw-cis-octuptarra.mat
+- Assets/Materials/CIS/sw-cis-octuptarra-primary.mat
+- Assets/Prefabs/CIS/sw-cis-octuptarra.prefab
+Dependencies: []

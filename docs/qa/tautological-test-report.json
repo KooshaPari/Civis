@@ -1,0 +1,193 @@
+{
+  "scan_utc": "2026-05-24T22:19:22.357138Z",
+  "scan_date": "2026-05-24",
+  "total_test_methods": 3725,
+  "tautological_count": 20,
+  "allowlist_size": 24,
+  "new_instances": [],
+  "tautological_methods": [
+    {
+      "fqn": "DINOForge.Tests.Bridge.BridgeClientRobustnessTests.Disconnect_WhenAlreadyDisconnected_Succeeds",
+      "file": "BridgeClientRobustnessTests.cs",
+      "line": 51,
+      "method_line": 51,
+      "signature": "no_real_assertion",
+      "method": "Disconnect_WhenAlreadyDisconnected_Succeeds",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.Bridge.BridgeClientRobustnessTests.Dispose_CanBeCalledMultipleTimes",
+      "file": "BridgeClientRobustnessTests.cs",
+      "line": 175,
+      "method_line": 175,
+      "signature": "no_real_assertion",
+      "method": "Dispose_CanBeCalledMultipleTimes",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.CliTools.ProtocolTypeTests.GameStatus_AllPropertiesAccessible",
+      "file": "CliToolTests/ProtocolTypeTests.cs",
+      "line": 37,
+      "method_line": 37,
+      "signature": "no_real_assertion",
+      "method": "GameStatus_AllPropertiesAccessible",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.CliTools.ResourcesCommandTests.ResourcesCommand_AllPropertiesAccessible",
+      "file": "CliToolTests/ResourcesCommandTests.cs",
+      "line": 93,
+      "method_line": 93,
+      "signature": "no_real_assertion",
+      "method": "ResourcesCommand_AllPropertiesAccessible",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.CliTools.StatusCommandTests.StatusCommand_AllPropertiesAccessible",
+      "file": "CliToolTests/StatusCommandTests.cs",
+      "line": 97,
+      "method_line": 97,
+      "signature": "no_real_assertion",
+      "method": "StatusCommand_AllPropertiesAccessible",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.StateProperty_IsThreadSafe",
+      "file": "GameClientCoverageTests.cs",
+      "line": 253,
+      "method_line": 253,
+      "signature": "no_real_assertion",
+      "method": "StateProperty_IsThreadSafe",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.Dispose_CanBeCalledMultipleTimes",
+      "file": "GameClientCoverageTests.cs",
+      "line": 306,
+      "method_line": 306,
+      "signature": "no_real_assertion",
+      "method": "Dispose_CanBeCalledMultipleTimes",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.Dispose_AfterDisconnect_StillDisposes",
+      "file": "GameClientCoverageTests.cs",
+      "line": 318,
+      "method_line": 318,
+      "signature": "no_real_assertion",
+      "method": "Dispose_AfterDisconnect_StillDisposes",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.Options_AreSetCorrectly",
+      "file": "GameClientCoverageTests.cs",
+      "line": 1331,
+      "method_line": 1331,
+      "signature": "no_real_assertion",
+      "method": "Options_AreSetCorrectly",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.GameProcessManager_IsRunning_WhenGameNotRunning_ReturnsFalse",
+      "file": "GameClientCoverageTests.cs",
+      "line": 1349,
+      "method_line": 1349,
+      "signature": "no_real_assertion",
+      "method": "GameProcessManager_IsRunning_WhenGameNotRunning_ReturnsFalse",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GameClientCoverageTests.GameClient_Dispose_CanBeCalledMultipleTimes",
+      "file": "GameClientCoverageTests.cs",
+      "line": 2101,
+      "method_line": 2101,
+      "signature": "no_real_assertion",
+      "method": "GameClient_Dispose_CanBeCalledMultipleTimes",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.GoDependencyResolverTests.IsAvailable_WhenBinaryNotFound_ReturnsFalse",
+      "file": "NativeInteropTests.cs",
+      "line": 33,
+      "method_line": 33,
+      "signature": "no_real_assertion",
+      "method": "IsAvailable_WhenBinaryNotFound_ReturnsFalse",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.RustAssetPipelineTests.IsAvailable_DocumentsCurrentState",
+      "file": "NativeInteropTests.cs",
+      "line": 202,
+      "method_line": 202,
+      "signature": "no_real_assertion",
+      "method": "IsAvailable_DocumentsCurrentState",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.PackRegistryTests.PackRegistryClient_InvalidateCache_ResetsCache",
+      "file": "PackRegistryTests.cs",
+      "line": 330,
+      "method_line": 330,
+      "signature": "no_real_assertion",
+      "method": "PackRegistryClient_InvalidateCache_ResetsCache",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.SDK.UI.DFCanvasAdapterWireupTests.HudElementRendererAdapter_SetCanvasRoot_AcceptsNull",
+      "file": "SDK/UI/DFCanvasAdapterWireupTests.cs",
+      "line": 52,
+      "method_line": 52,
+      "signature": "no_real_assertion",
+      "method": "HudElementRendererAdapter_SetCanvasRoot_AcceptsNull",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.SDKCoverageTests.PackRegistryClient_InvalidateCache_ClearsCache",
+      "file": "SDKCoverageTests.cs",
+      "line": 82,
+      "method_line": 82,
+      "signature": "no_real_assertion",
+      "method": "PackRegistryClient_InvalidateCache_ClearsCache",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.ScenarioDomainCoverageTests.ScenarioValidator_MissingWinCondition_Fails",
+      "file": "ScenarioDomainCoverageTests.cs",
+      "line": 335,
+      "method_line": 335,
+      "signature": "no_real_assertion",
+      "method": "ScenarioValidator_MissingWinCondition_Fails",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_RegisterCorrectly_WithModPlatform",
+      "file": "VFXSystemTests.cs",
+      "line": 95,
+      "method_line": 88,
+      "signature": "Assert.True(true)",
+      "method": "VFXSystems_RegisterCorrectly_WithModPlatform",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_HandleMissingPoolManager_Gracefully",
+      "file": "VFXSystemTests.cs",
+      "line": 107,
+      "method_line": 101,
+      "signature": "Assert.True(true)",
+      "method": "VFXSystems_HandleMissingPoolManager_Gracefully",
+      "in_allowlist": true
+    },
+    {
+      "fqn": "DINOForge.Tests.VFXIntegrationTestDocumentation.VFXSystems_ScaleWithGameLoad_AsExpected",
+      "file": "VFXSystemTests.cs",
+      "line": 120,
+      "method_line": 113,
+      "signature": "Assert.True(true)",
+      "method": "VFXSystems_ScaleWithGameLoad_AsExpected",
+      "in_allowlist": true
+    }
+  ],
+  "scan_root": "C:/Users/koosh/Dino/src/Tests",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/known-tautological-tests.txt",
+  "files_scanned": 372
+}

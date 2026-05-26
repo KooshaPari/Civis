@@ -1,0 +1,171 @@
+# DINOForge Unit Definition Schema
+
+type: object
+required:
+  - id
+  - display_name
+  - unit_class
+  - faction_id
+  - stats
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9_]*$"
+
+  display_name:
+    type: string
+
+  description:
+    type: string
+
+  unit_class:
+    type: string
+    enum:
+      - MilitiaLight
+      - CoreLineInfantry
+      - EliteLineInfantry
+      - HeavyInfantry
+      - Skirmisher
+      - AntiArmor
+      - ShockMelee
+      - SwarmFodder
+      - FastVehicle
+      - MainBattleVehicle
+      - HeavySiege
+      - Artillery
+      - WalkerHeavy
+      - StaticMG
+      - StaticAT
+      - StaticArtillery
+      - SupportEngineer
+      - Recon
+      - HeroCommander
+      - AirstrikeProxy
+      - ShieldedElite
+
+  faction_id:
+    type: string
+
+  tier:
+    type: integer
+    enum: [1, 2, 3]
+    description: "Tech tier (T1=cheap/early, T2=mid, T3=late/expensive)"
+
+  stats:
+    type: object
+    required: [hp, damage, range, speed, cost]
+    properties:
+      hp:
+        type: number
+        minimum: 1
+      damage:
+        type: number
+        minimum: 0
+      armor:
+        type: number
+        default: 0
+      range:
+        type: number
+        minimum: 0
+      speed:
+        type: number
+        minimum: 0
+      cost:
+        type: object
+        properties:
+          resource_1:
+            type: number
+            default: 0
+          resource_2:
+            type: number
+            default: 0
+          resource_3:
+            type: number
+            default: 0
+          resource_4:
+            type: number
+            default: 0
+          population:
+            type: number
+            default: 1
+      accuracy:
+        type: number
+        minimum: 0
+        maximum: 1
+        default: 0.7
+      fire_rate:
+        type: number
+        minimum: 0
+        default: 1.0
+      morale:
+        type: number
+        default: 100
+
+  weapon:
+    type: string
+    description: "Weapon class ID from weapon registry"
+
+  defense_tags:
+    type: array
+    items:
+      type: string
+      enum:
+        - Unarmored
+        - InfantryArmor
+        - HeavyArmor
+        - Fortified
+        - Shielded
+        - Mechanical
+        - Biological
+        - Heroic
+
+  behavior_tags:
+    type: array
+    items:
+      type: string
+      enum:
+        - HoldLine
+        - AdvanceFire
+        - Charge
+        - Kite
+        - Swarm
+        - SiegePriority
+        - AntiStructure
+        - AntiMass
+        - AntiArmor
+        - MoralePressure
+
+  visuals:
+    type: object
+    properties:
+      icon:
+        type: string
+      portrait:
+        type: string
+      model_override:
+        type: string
+      projectile_vfx:
+        type: string
+      muzzle_vfx:
+        type: string
+
+  audio:
+    type: object
+    properties:
+      attack_sound:
+        type: string
+      death_sound:
+        type: string
+      select_sound:
+        type: string
+      move_sound:
+        type: string
+
+  vanilla_mapping:
+    type: string
+    description: "The vanilla DINO unit ID this replaces/maps to"
+
+  tech_requirement:
+    type: string
+    description: "Tech node ID required to unlock this unit"

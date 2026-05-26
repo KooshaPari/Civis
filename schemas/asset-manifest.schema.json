@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/asset-manifest.schema.json",
+  "title": "DINOForge Asset Manifest",
+  "description": "Machine-readable manifest used by the asset intake pre-implementation pipeline.",
+  "type": "object",
+  "required": [
+    "asset_id",
+    "canonical_name",
+    "franchise_tag",
+    "source_platform",
+    "source_url",
+    "license_label",
+    "acquisition_mode",
+    "acquired_at_utc",
+    "technical_status",
+    "ip_status"
+  ],
+  "properties": {
+    "asset_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9_\\-]*(?:-[a-z0-9][a-z0-9_\\-]*)*$",
+      "description": "Stable asset identifier, usually prefixed with source."
+    },
+    "canonical_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human name used in registry and tooling."
+    },
+    "franchise_tag": {
+      "type": "string",
+      "enum": ["star_wars", "original", "generic", "mixed"],
+      "description": "Top-level provenance family."
+    },
+    "faction": {
+      "type": "string",
+      "enum": ["republic", "cis", "empire", "rebel", "jedi", "sith", "neutral", "scum", "unknown"]
+    },
+    "category": {
+      "type": "string",
+      "enum": ["unit_character", "vehicle", "structure", "vfx", "prop", "ui", "audio", "misc"]
+    },
+    "subtype": {
+      "type": "string"
+    },
+    "source_platform": {
+      "type": "string",
+      "enum": ["sketchfab", "blendswap", "moddb", "playwright_fallback", "manual"],
+      "description": "Where the asset was discovered and pulled from."
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Primary source URL used as proof point."
+    },
+    "external_id": {
+      "type": "string",
+      "description": "Source-specific identifier."
+    },
+    "author_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license_label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "License text or short label, e.g. CC-BY-4.0."
+    },
+    "license_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "acquisition_mode": {
+      "type": "string",
+      "enum": ["api", "direct_download", "scrape", "browser_automation", "manual_copy", "unknown"]
+    },
+    "acquired_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "original_format": {
+      "type": "string",
+      "description": "Input format, e.g. glb, fbx, blend, obj."
+    },
+    "download_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "local_path": {
+      "type": "string",
+      "description": "Path under raw/working/export in asset pipeline."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "polycount_estimate": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "texture_sets": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rigged": {
+      "type": "boolean"
+    },
+    "animated": {
+      "type": "boolean"
+    },
+    "technical_status": {
+      "type": "string",
+      "enum": [
+        "discovered",
+        "metadata_fetched",
+        "downloadable",
+        "downloaded",
+        "normalized",
+        "validated",
+        "ready_for_prototype",
+        "rejected_technical"
+      ]
+    },
+    "ip_status": {
+      "type": "string",
+      "enum": [
+        "generic_safe",
+        "fan_star_wars_private_only",
+        "official_game_mod_tool_reference_only",
+        "unknown_provenance",
+        "high_risk_do_not_ship"
+      ]
+    },
+    "release_allowed": {
+      "type": "boolean",
+      "description": "Computed guard for release pipelines."
+    },
+    "provenance_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gameplay and taxonomy tags."
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "references": {
+      "type": "array",
+      "description": "Supplemental reference links captured at intake time.",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    }
+  },
+  "additionalProperties": false
+}

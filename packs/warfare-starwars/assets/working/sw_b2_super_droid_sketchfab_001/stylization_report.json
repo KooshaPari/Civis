@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "faction": "cis",
+  "material_count": 3,
+  "output_files": [
+    "stylized.glb",
+    "stylized.blend",
+    "preview.png"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\sw_b2_super_droid_sketchfab_001"
+}

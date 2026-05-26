@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/faction.schema.json",
+  "title": "DINOForge Faction Definition",
+  "description": "Schema for DINOForge faction definition files (factions/*.yaml).",
+  "type": "object",
+  "required": ["faction"],
+  "properties": {
+    "faction": {
+      "type": "object",
+      "required": ["id", "display_name", "theme", "archetype"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "theme": {
+          "type": "string",
+          "enum": ["starwars", "modern", "futuristic", "fantasy", "custom"]
+        },
+        "archetype": {
+          "type": "string",
+          "enum": ["order", "industrial_swarm", "asymmetric", "custom"]
+        },
+        "doctrine": { "type": "string" },
+        "icon": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "economy": {
+      "type": "object",
+      "properties": {
+        "gather_bonus": { "type": "number" },
+        "upkeep_modifier": { "type": "number" },
+        "research_speed": { "type": "number" },
+        "build_speed": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "army": {
+      "type": "object",
+      "properties": {
+        "morale_style": {
+          "type": "string",
+          "enum": ["disciplined", "mechanical", "fanatical", "irregular", "custom"]
+        },
+        "unit_cap_modifier": { "type": "number" },
+        "elite_cost_modifier": { "type": "number" },
+        "spawn_rate_modifier": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "roster": {
+      "type": "object",
+      "properties": {
+        "cheap_infantry": { "type": "string" },
+        "line_infantry": { "type": "string" },
+        "elite_infantry": { "type": "string" },
+        "anti_armor": { "type": "string" },
+        "support_weapon": { "type": "string" },
+        "recon": { "type": "string" },
+        "light_vehicle": { "type": "string" },
+        "heavy_vehicle": { "type": "string" },
+        "artillery": { "type": "string" },
+        "hero_commander": { "type": "string" },
+        "spike_unit": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "buildings": {
+      "type": "object",
+      "properties": {
+        "barracks": { "type": "string" },
+        "workshop": { "type": "string" },
+        "artillery_foundry": { "type": "string" },
+        "tower_mg": { "type": "string" },
+        "heavy_defense": { "type": "string" },
+        "command_center": { "type": "string" },
+        "economy_primary": { "type": "string" },
+        "economy_secondary": { "type": "string" },
+        "research_facility": { "type": "string" },
+        "wall_segment": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "visuals": {
+      "type": "object",
+      "properties": {
+        "primary_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accent_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "projectile_pack": { "type": "string" },
+        "ui_skin": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "audio": {
+      "type": "object",
+      "properties": {
+        "weapon_pack": { "type": "string" },
+        "structure_pack": { "type": "string" },
+        "ambient_pack": { "type": "string" },
+        "music_pack": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

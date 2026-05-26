@@ -1,0 +1,15 @@
+# Pattern #840 — Harmony Runtime Patches (intentional, load-bearing)
+# These are runtime guard-patches against Unity destroy/unload paths to prevent
+# crash-on-shutdown (gray-freeze + iter-144 #547 wedge prevention).
+# Each is by-design HIGH, allowlisted because removing it reintroduces the documented hang.
+#
+# Audit reference: a9e5db96dcff5dd7f (8 files, 14 guard-patch sites)
+
+src/Runtime/Bridge/AssetBundleLoadGuardPatch.cs       # safe-harmony: bundle-load guard for iter-144 wedge
+src/Runtime/Bridge/AssetBundleUnloadGuardPatch.cs     # safe-harmony: bundle-unload guard
+src/Runtime/Bridge/DestroyGuardPatch.cs               # safe-harmony: 4 Destroy* patches (gray-freeze)
+src/Runtime/Bridge/ResourcesUnloadGuardPatch.cs       # safe-harmony: Resources.UnloadUnusedAssets guard
+src/Runtime/Bridge/SceneUnloadGuardPatch.cs           # safe-harmony: SceneManager unload guard
+src/Runtime/Bridge/WorldDisposeGuardPatch.cs          # safe-harmony: World dispose guard
+src/Runtime/UI/UiGridHarmonyPatch.cs                  # safe-harmony: UI grid layout (ModsButton + ugui)
+src/Runtime/UI/Adapters/NativeLabelGuardAdapter.cs    # safe-harmony: native label guard (wraps UiGrid)

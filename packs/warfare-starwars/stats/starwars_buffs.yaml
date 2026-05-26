@@ -1,0 +1,25 @@
+# Star Wars Stat Overrides
+# Buffs to make Star Wars pack noticeable in-game
+
+overrides:
+  # Clone Trooper Elite - Republic gets better troops
+  - target: unit.stats.hp
+    value: 1.5
+    mode: multiply
+    filter: Components.MeleeUnit
+
+  - target: unit.stats.damage
+    value: 1.25
+    mode: multiply
+    filter: Components.MeleeUnit
+
+  # Battle Droids - CIS gets swarms but weaker
+  - target: unit.stats.hp
+    value: 0.8
+    mode: multiply
+    filter: Components.RangedUnit
+
+  - target: unit.stats.speed
+    value: 1.2
+    mode: multiply
+    filter: Components.RangedUnit

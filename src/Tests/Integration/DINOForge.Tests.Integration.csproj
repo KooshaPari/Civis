@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>DINOForge.Tests.Integration</RootNamespace>
+    <!-- #550: Inherits transitive Microsoft.CodeAnalysis.* 1.0.1 from DINOForge.Tests. Same rationale. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <GameInstalled Condition="'$(CI)' == 'true'">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and !Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.*" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\DINOForge.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <Compile Remove="UIWireupIntegrationTests.cs" />
+  </ItemGroup>
+
+  <!-- DINOBox pool scripts are Windows/PowerShell-only; skip on Linux CI -->
+  <ItemGroup Condition="'$(CI)' == 'true'">
+    <Compile Remove="Tests\SandboxIsolationTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\PingTests.cs" />
+    <Compile Remove="Tests\CatalogTests.cs" />
+    <Compile Remove="Tests\ComponentMapTests.cs" />
+    <Compile Remove="Tests\PackLoadingTests.cs" />
+    <Compile Remove="Tests\ResourceTests.cs" />
+    <Compile Remove="Tests\StatTests.cs" />
+    <None Update="TestData\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

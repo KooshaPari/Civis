@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 35689,
+  "lod0_polycount": 35689,
+  "lod1_polycount": 17843,
+  "lod2_polycount": 8919,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\sw_clone_trooper_phase2_sketchfab_001"
+}

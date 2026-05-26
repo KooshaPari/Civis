@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 44348,
+  "lod0_polycount": 44348,
+  "lod1_polycount": 22173,
+  "lod2_polycount": 11086,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_arf_trooper_sketchfab_001"
+}

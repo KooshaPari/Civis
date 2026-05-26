@@ -1,0 +1,20 @@
+# framework_version gate allowlist (Pattern #94 / task #260)
+#
+# One POSIX-relative path per line. Listed manifests are exempt from the
+# bounded-range requirement enforced by
+# scripts/ci/check_framework_version.py. Comments start with #.
+#
+# Test fixtures with intentionally minimal manifests live here so the gate
+# stays green on PR / push while still catching real violations in active
+# packs.
+
+# Test fixture: deliberately bad version string for schema validation tests.
+packs/test-bad-version/pack.yaml
+
+# Test fixtures: minimal manifests with no framework_version (handled as
+# "missing" by the gate, but listed for explicitness).
+packs/test-valid/pack.yaml
+packs/test-invalid-schema/pack.yaml
+packs/test-invalid-schema-2/pack.yaml
+packs/test-invalid-schema-3/pack.yaml
+packs/test-invalid-schema-4/pack.yaml

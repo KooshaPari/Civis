@@ -1,0 +1,141 @@
+# Vanilla DINO - All Doctrines
+
+# Lord's Troops Doctrines
+- id: doctrine_combined_arms
+  display_name: Combined Arms
+  description: Balance between infantry, cavalry, and ranged units for flexible tactics.
+  faction_id: lords_troops
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Combined_Arms"
+  doctrinal_effects:
+    unit_diversity_bonus: 0.1
+    formation_flexibility: 0.15
+    morale_recovery: 0.05
+
+- id: doctrine_heavy_cavalry
+  display_name: Heavy Cavalry
+  description: Emphasis on elite mounted knights and shock tactics.
+  faction_id: lords_troops
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Heavy_Cavalry"
+  doctrinal_effects:
+    cavalry_damage: 0.2
+    cavalry_morale: 0.15
+    cavalry_cost: -0.1
+
+- id: doctrine_siege_mastery
+  display_name: Siege Mastery
+  description: Advanced siege engineering and fortification expertise.
+  faction_id: lords_troops
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Siege_Mastery"
+  doctrinal_effects:
+    siege_damage: 0.2
+    siege_range: 0.1
+    fortification_defense: 0.25
+
+# Rebels Doctrines
+- id: doctrine_mass_assault
+  display_name: Mass Assault
+  description: Overwhelming numbers and morale-driven tactics.
+  faction_id: rebels
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Mass_Assault"
+  doctrinal_effects:
+    unit_cap: 0.15
+    spawn_rate: 0.2
+    morale_volatility: 0.3
+    unit_cost: -0.15
+
+- id: doctrine_guerrilla_tactics
+  display_name: Guerrilla Tactics
+  description: Fast strikes, evasion, and environmental advantage exploitation.
+  faction_id: rebels
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Guerrilla_Tactics"
+  doctrinal_effects:
+    unit_speed: 0.1
+    ambush_damage: 0.2
+    morale_variance: 0.25
+
+# Royal Army Doctrines
+- id: doctrine_defensive_formations
+  display_name: Defensive Formations
+  description: Rigid formations and defensive positioning for maximum survivability.
+  faction_id: royal_army
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Defensive_Formations"
+  doctrinal_effects:
+    unit_armor: 0.15
+    formation_defense: 0.2
+    retreat_damage_reduction: 0.25
+    morale_stability: 0.2
+
+- id: doctrine_discipline
+  display_name: Discipline
+  description: Professional training and strict command hierarchy.
+  faction_id: royal_army
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Discipline"
+  doctrinal_effects:
+    morale_recovery: 0.3
+    unit_accuracy: 0.1
+    friendly_fire_reduction: 0.2
+
+# Sarranga Doctrines
+- id: doctrine_elemental_mastery
+  display_name: Elemental Mastery
+  description: Command over elemental forces and magical specialization.
+  faction_id: sarranga
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Elemental_Mastery"
+  doctrinal_effects:
+    magic_damage: 0.3
+    spell_range: 0.15
+    research_speed: 0.2
+
+- id: doctrine_mystical_binding
+  display_name: Mystical Binding
+  description: Magical contracts binding units to eternal service.
+  faction_id: sarranga
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Mystical_Binding"
+  doctrinal_effects:
+    unit_loyalty: 0.3
+    morale_immunity: 0.2
+    spell_effectiveness: 0.15
+
+# Undead Doctrines
+- id: doctrine_corpse_mastery
+  display_name: Corpse Mastery
+  description: Control over the dead and necromantic magic.
+  faction_id: undead
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Corpse_Mastery"
+  doctrinal_effects:
+    undead_production: 0.3
+    undead_upkeep: -0.3
+    unit_cap: 0.2
+    morale_irrelevance: 1.0
+
+- id: doctrine_plague_spreading
+  display_name: Plague Spreading
+  description: Dissemination of plague and decay throughout the land.
+  faction_id: undead
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Plague_Spreading"
+  doctrinal_effects:
+    poison_damage: 0.3
+    disease_spread: 0.25
+    enemy_morale_reduction: 0.2
+
+# Bugs Doctrines
+- id: doctrine_hive_coordination
+  display_name: Hive Coordination
+  description: Unified instinctive coordination throughout the swarm.
+  faction_id: bugs
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Hive_Coordination"
+  doctrinal_effects:
+    unit_cap: 0.25
+    spawn_rate: 0.3
+    unit_cost: -0.2
+    coordination_bonus: 0.2
+
+- id: doctrine_reproductive_surge
+  display_name: Reproductive Surge
+  description: Accelerated breeding and population growth.
+  faction_id: bugs
+  wiki_reference: "https://dino.fandom.com/wiki/Doctrines#Reproductive_Surge"
+  doctrinal_effects:
+    unit_spawn_rate: 0.4
+    unit_cost: -0.1
+    population_growth: 0.3

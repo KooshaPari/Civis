@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DINOForge.Installer.ViewModels"
+             x:Class="DINOForge.Installer.Views.ProgressPage"
+             x:DataType="vm:ProgressPageViewModel"
+             Background="#1a1a2e">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="40,30,40,20">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+
+            <!-- Progress bar -->
+            <ProgressBar IsIndeterminate="{Binding IsIndeterminate}"
+                         Value="{Binding ProgressValue}"
+                         Minimum="0"
+                         Maximum="100"
+                         Height="6"
+                         Background="#2a2a4a"
+                         Foreground="#4a90d9"/>
+
+            <!-- Error message -->
+            <TextBlock Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}"
+                       Foreground="#cc4444"
+                       FontSize="13"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Scrollable log output -->
+        <Border Grid.Row="1"
+                Background="#0d0d1a"
+                BorderBrush="#2a2a4a"
+                BorderThickness="1"
+                CornerRadius="4">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding LogLines}"
+                              Margin="12,10">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       FontFamily="Consolas,Courier New,monospace"
+                                       FontSize="11"
+                                       Foreground="#99ccaa"
+                                       TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Completion action buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    IsVisible="{Binding ShowCompletionButtons}"
+                    Spacing="10"
+                    Margin="0,16,0,0">
+
+            <Button Content="Launch Game"
+                    Command="{Binding LaunchGameCommand}"
+                    Background="#4a90d9"
+                    Foreground="White"
+                    Padding="16,8"
+                    CornerRadius="4"
+                    FontWeight="SemiBold"/>
+
+            <Button Content="Open Install Folder"
+                    Command="{Binding OpenInstallFolderCommand}"
+                    Background="#2d2d44"
+                    Foreground="#aaaacc"
+                    Padding="16,8"
+                    CornerRadius="4"/>
+
+        </StackPanel>
+
+    </Grid>
+</UserControl>

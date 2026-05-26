@@ -1,0 +1,31 @@
+# Western Alliance Doctrines
+
+- id: combined_arms
+  display_name: Combined Arms
+  description: Balanced doctrine emphasizing coordination between infantry, vehicles, and artillery for maximum effectiveness.
+  faction_archetype: order
+  modifiers:
+    accuracy: 1.1
+    fire_rate: 1.05
+    morale: 1.1
+    damage: 1.05
+
+- id: blitzkrieg
+  display_name: Blitzkrieg
+  description: Aggressive rapid-advance doctrine prioritizing speed and shock over sustained defense.
+  faction_archetype: order
+  modifiers:
+    speed: 1.25
+    damage: 1.15
+    armor: 0.9
+    morale: 1.1
+
+- id: fortified_defense
+  display_name: Fortified Defense
+  description: Defensive doctrine maximizing fortification strength and garrison effectiveness.
+  faction_archetype: order
+  modifiers:
+    armor: 1.2
+    hp: 1.15
+    speed: 0.85
+    range: 1.1

@@ -1,0 +1,14 @@
+id: example-ui-counter
+name: Example UI Counter
+version: 0.1.0
+framework_version: ">=0.24.0 <0.26.0"
+author: DINOForge Agents
+description: Simple UI-only example demonstrating HudElement registration with a custom wave counter overlay.
+type: content
+
+depends_on: []
+conflicts_with: []
+
+loads:
+  hud_elements:
+    - hud_elements/wave-counter.yaml

@@ -1,0 +1,18 @@
+# Pattern #111 Silent Catch Allowlist
+# Files where bare catch { } is acceptable (pure disposable cleanup)
+# Format: one filename pattern per line (substring matching)
+
+# SAFE: Pure disposable cleanup (Dispose/Close only, no error handling needed)
+Bridge/Client/GameClient.cs
+Runtime/Bridge/GameBridgeServer.cs
+Runtime/Bridge/SessionHmac.cs
+
+# TEST_OK: Test files where best-effort cleanup is acceptable
+Tests/
+
+# SAFE: Roslyn analyzer source files — the `catch { ... }` text appears in XML
+# doc comments / inline comments describing the patterns they detect, not in
+# actual executable catch blocks. Self-test reference patterns are intentional.
+# safe-swallow: analyzer-self-test, intentional reference pattern
+Analyzers/EmptyCatchBlockAnalyzer.cs
+Analyzers/SilentCatchAnalyzer.cs

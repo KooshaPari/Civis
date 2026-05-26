@@ -1,0 +1,54 @@
+# Rebels - Vanilla DINO Buildings
+
+- id: vanilla_rebel_barracks
+  display_name: Rebel Barracks
+  description: Improvised militia training ground. Produces cheap infantry.
+  faction_id: rebels
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Rebel_Barracks"
+  cost:
+    wood: 60
+    stone: 30
+    gold: 15
+  upkeep_per_turn: 1
+  production_slots: 2
+  units_produced:
+    - vanilla_rebel_pitchfork
+    - vanilla_rebel_flag_carrier
+    - vanilla_rebel_shield
+    - vanilla_rebel_scythe
+
+- id: vanilla_rebel_smithy
+  display_name: Rebel Smithy
+  description: Blacksmith's workshop for weapons and armor crafting.
+  faction_id: rebels
+  building_type: production
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Rebel_Smithy"
+  cost:
+    wood: 80
+    stone: 60
+    gold: 20
+  upkeep_per_turn: 2
+  production_slots: 1
+  units_produced:
+    - vanilla_rebel_halberd
+    - vanilla_rebel_wildling
+    - vanilla_rebel_spitter
+
+- id: vanilla_rebel_meeting_hall
+  display_name: Rebel Meeting Hall
+  description: Headquarters for the rebellion. Spawns leaders and provides morale.
+  faction_id: rebels
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Rebel_Meeting_Hall"
+  cost:
+    wood: 120
+    stone: 80
+    gold: 60
+  upkeep_per_turn: 3
+  production_slots: 1
+  units_produced:
+    - vanilla_rebel_hulk
+    - vanilla_rebel_leader
+    - vanilla_rebel_catapult_makeshift
+    - vanilla_rebel_firebomb_launcher

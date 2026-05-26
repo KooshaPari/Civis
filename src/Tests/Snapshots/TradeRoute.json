@@ -1,0 +1,10 @@
+{
+  "Id": "wood-to-gold",
+  "DisplayName": "Wood to Gold Trade",
+  "SourceResource": "wood",
+  "TargetResource": "gold",
+  "ExchangeRate": 10.0,
+  "CooldownTicks": 60,
+  "MaxPerTransaction": 1000,
+  "Enabled": true
+}

@@ -1,0 +1,366 @@
+# Classic Enemy Units - Industrial Swarm Archetype
+# Lower stats, lower cost, faster production, higher numbers
+
+# 1. Militia - Conscript
+- id: ce_conscript
+  display_name: Conscript
+  description: Poorly trained but numerous cannon fodder. Overwhelm through sheer weight of numbers.
+  unit_class: MilitiaLight
+  faction_id: classic_enemy
+  tier: 1
+  weapon: old_rifle
+  vanilla_mapping: militia
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Swarm]
+  stats:
+    hp: 55.0
+    damage: 10.0
+    armor: 1.0
+    range: 16.0
+    speed: 5.0
+    accuracy: 0.45
+    fire_rate: 1.0
+    morale: 50.0
+    cost:
+      food: 15
+      wood: 0
+      stone: 0
+      iron: 5
+      gold: 2
+      population: 1
+
+# 2. Line Infantry - Regulars
+- id: ce_regulars
+  display_name: Regulars
+  description: Standard enemy infantry with basic training and equipment.
+  unit_class: CoreLineInfantry
+  faction_id: classic_enemy
+  tier: 1
+  weapon: assault_rifle
+  vanilla_mapping: line_infantry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [Swarm, AdvanceFire]
+  stats:
+    hp: 85.0
+    damage: 11.0
+    armor: 3.0
+    range: 17.0
+    speed: 4.5
+    accuracy: 0.55
+    fire_rate: 2.5
+    morale: 65.0
+    cost:
+      food: 25
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 5
+      population: 1
+
+# 3. Heavy Infantry - MG Crew
+- id: ce_mg_crew
+  display_name: MG Crew
+  description: Machine gun crew providing suppressive fire from fixed positions.
+  unit_class: HeavyInfantry
+  faction_id: classic_enemy
+  tier: 2
+  weapon: machine_gun
+  vanilla_mapping: heavy_infantry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [HoldLine, AntiMass]
+  stats:
+    hp: 100.0
+    damage: 9.0
+    armor: 4.0
+    range: 18.0
+    speed: 3.0
+    accuracy: 0.5
+    fire_rate: 7.0
+    morale: 60.0
+    cost:
+      food: 30
+      wood: 5
+      stone: 0
+      iron: 20
+      gold: 10
+      population: 2
+
+# 4. Ranged Infantry - RPG Gunner
+- id: ce_rpg_gunner
+  display_name: RPG Gunner
+  description: Anti-armor specialist armed with rocket-propelled grenades.
+  unit_class: AntiArmor
+  faction_id: classic_enemy
+  tier: 2
+  weapon: rpg
+  vanilla_mapping: ranged_infantry
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [AntiArmor, AdvanceFire]
+  stats:
+    hp: 70.0
+    damage: 60.0
+    armor: 2.0
+    range: 20.0
+    speed: 4.0
+    accuracy: 0.5
+    fire_rate: 0.3
+    morale: 60.0
+    cost:
+      food: 25
+      wood: 0
+      stone: 0
+      iron: 25
+      gold: 10
+      population: 1
+
+# 5. Cavalry - Technical
+- id: ce_technical
+  display_name: Technical
+  description: Improvised fighting vehicle - a pickup truck with a mounted machine gun.
+  unit_class: FastVehicle
+  faction_id: classic_enemy
+  tier: 1
+  weapon: mounted_mg
+  vanilla_mapping: cavalry
+  defense_tags: [Unarmored, Mechanical]
+  behavior_tags: [Charge, AdvanceFire]
+  stats:
+    hp: 150.0
+    damage: 12.0
+    armor: 5.0
+    range: 20.0
+    speed: 9.0
+    accuracy: 0.4
+    fire_rate: 7.0
+    morale: 55.0
+    cost:
+      food: 15
+      wood: 10
+      stone: 0
+      iron: 25
+      gold: 10
+      population: 2
+
+# 6. Siege - Field Artillery
+- id: ce_field_artillery
+  display_name: Field Artillery
+  description: Crude but effective artillery providing long-range bombardment.
+  unit_class: Artillery
+  faction_id: classic_enemy
+  tier: 2
+  weapon: field_artillery_gun
+  vanilla_mapping: siege
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [SiegePriority, AntiStructure]
+  stats:
+    hp: 55.0
+    damage: 70.0
+    armor: 1.0
+    range: 45.0
+    speed: 2.0
+    accuracy: 0.35
+    fire_rate: 0.15
+    morale: 50.0
+    cost:
+      food: 30
+      wood: 15
+      stone: 0
+      iron: 30
+      gold: 15
+      population: 2
+
+# 7. Support - Field Medic
+- id: ce_field_medic
+  display_name: Field Medic
+  description: Basic medical support with limited supplies but fast response.
+  unit_class: SupportEngineer
+  faction_id: classic_enemy
+  tier: 1
+  weapon: pistol
+  vanilla_mapping: support
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine]
+  stats:
+    hp: 60.0
+    damage: 6.0
+    armor: 1.0
+    range: 10.0
+    speed: 5.5
+    accuracy: 0.5
+    fire_rate: 2.0
+    morale: 60.0
+    cost:
+      food: 20
+      wood: 0
+      stone: 0
+      iron: 5
+      gold: 10
+      population: 1
+
+# 8. Scout - Outrider
+- id: ce_outrider
+  display_name: Outrider
+  description: Fast-moving scout on a motorcycle, lightly armed but very quick.
+  unit_class: Recon
+  faction_id: classic_enemy
+  tier: 1
+  weapon: smg
+  vanilla_mapping: scout
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 45.0
+    damage: 7.0
+    armor: 0.0
+    range: 11.0
+    speed: 9.0
+    accuracy: 0.4
+    fire_rate: 5.0
+    morale: 45.0
+    cost:
+      food: 15
+      wood: 0
+      stone: 0
+      iron: 8
+      gold: 5
+      population: 1
+
+# 9. Elite - Shock Troops
+- id: ce_shock_troops
+  display_name: Shock Troops
+  description: Hardened veterans equipped with better gear and fanatical devotion.
+  unit_class: EliteLineInfantry
+  faction_id: classic_enemy
+  tier: 3
+  weapon: battle_rifle
+  vanilla_mapping: elite
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [Charge, Swarm]
+  stats:
+    hp: 140.0
+    damage: 18.0
+    armor: 7.0
+    range: 20.0
+    speed: 5.0
+    accuracy: 0.7
+    fire_rate: 2.0
+    morale: 110.0
+    cost:
+      food: 40
+      wood: 0
+      stone: 0
+      iron: 30
+      gold: 25
+      population: 2
+
+# 10. Hero - Warlord
+- id: ce_warlord
+  display_name: Warlord
+  description: Brutal commander inspiring fear and fanatical loyalty through sheer force of personality.
+  unit_class: HeroCommander
+  faction_id: classic_enemy
+  tier: 3
+  weapon: assault_rifle
+  vanilla_mapping: hero
+  defense_tags: [HeavyArmor, Biological, Heroic]
+  behavior_tags: [Charge, MoralePressure]
+  stats:
+    hp: 200.0
+    damage: 15.0
+    armor: 8.0
+    range: 18.0
+    speed: 5.0
+    accuracy: 0.65
+    fire_rate: 3.0
+    morale: 130.0
+    cost:
+      food: 50
+      wood: 0
+      stone: 0
+      iron: 25
+      gold: 50
+      population: 2
+
+# 11. Wall Defender - Pillbox Crew
+- id: ce_pillbox_crew
+  display_name: Pillbox Crew
+  description: Fortified machine gun nest crew dug into defensive positions.
+  unit_class: StaticMG
+  faction_id: classic_enemy
+  tier: 2
+  weapon: machine_gun
+  vanilla_mapping: wall_defender
+  defense_tags: [Fortified, Biological]
+  behavior_tags: [HoldLine, AntiMass]
+  stats:
+    hp: 90.0
+    damage: 9.0
+    armor: 8.0
+    range: 20.0
+    speed: 1.5
+    accuracy: 0.5
+    fire_rate: 7.0
+    morale: 70.0
+    cost:
+      food: 25
+      wood: 5
+      stone: 10
+      iron: 20
+      gold: 8
+      population: 2
+
+# 12. Skirmisher - Designated Marksman
+- id: ce_designated_marksman
+  display_name: Designated Marksman
+  description: Self-taught sharpshooter providing ranged harassment from concealed positions.
+  unit_class: Skirmisher
+  faction_id: classic_enemy
+  tier: 2
+  weapon: marksman_rifle
+  vanilla_mapping: skirmisher
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 50.0
+    damage: 25.0
+    armor: 1.0
+    range: 28.0
+    speed: 4.5
+    accuracy: 0.7
+    fire_rate: 0.8
+    morale: 55.0
+    cost:
+      food: 20
+      wood: 0
+      stone: 0
+      iron: 15
+      gold: 10
+      population: 1
+
+# 13. Special - Suicide Bomber
+- id: ce_suicide_bomber
+  display_name: Suicide Bomber
+  description: Expendable fanatic carrying improvised explosives for devastating one-time attacks.
+  unit_class: ShockMelee
+  faction_id: classic_enemy
+  tier: 1
+  weapon: improvised_explosive
+  vanilla_mapping: special
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Charge, AntiStructure]
+  stats:
+    hp: 30.0
+    damage: 120.0
+    armor: 0.0
+    range: 2.0
+    speed: 6.5
+    accuracy: 1.0
+    fire_rate: 0.0
+    morale: 200.0
+    cost:
+      food: 10
+      wood: 0
+      stone: 0
+      iron: 15
+      gold: 5
+      population: 1

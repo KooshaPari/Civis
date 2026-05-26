@@ -1,0 +1,106 @@
+entries:
+  militia_spearman:
+    vanilla_id: militia_spearman
+    themed_id: conscript_rifleman
+    themed_name: Conscript Rifleman
+    themed_description: Hastily trained militia with basic assault rifles.
+    stat_modifiers:
+      accuracy: 0.9
+  line_swordsman:
+    vanilla_id: line_swordsman
+    themed_id: infantry_rifleman
+    themed_name: Infantry Rifleman
+    themed_description: Standard infantry soldier equipped with modern assault rifle and body armor.
+    stat_modifiers:
+      hp: 1.1
+      accuracy: 1.2
+  elite_swordsman:
+    vanilla_id: elite_swordsman
+    themed_id: special_forces
+    themed_name: Special Forces Operator
+    themed_description: Elite tier-1 operator with advanced equipment and training.
+    stat_modifiers:
+      hp: 1.3
+      damage: 1.4
+      accuracy: 1.3
+  archer:
+    vanilla_id: archer
+    themed_id: designated_marksman
+    themed_name: Designated Marksman
+    themed_description: Squad-level precision shooter with semi-auto marksman rifle.
+    stat_modifiers:
+      range: 1.5
+      accuracy: 1.4
+  cavalry:
+    vanilla_id: cavalry
+    themed_id: humvee
+    themed_name: HMMWV (Humvee)
+    themed_description: Light armored utility vehicle for rapid transport and recon.
+    stat_modifiers:
+      speed: 1.6
+      armor: 0.8
+  catapult:
+    vanilla_id: catapult
+    themed_id: mbt_abrams
+    themed_name: M1 Abrams MBT
+    themed_description: Main battle tank with 120mm smoothbore cannon and composite armor.
+    stat_modifiers:
+      hp: 2.0
+      damage: 1.8
+      armor: 2.0
+      speed: 0.6
+  ballista:
+    vanilla_id: ballista
+    themed_id: m777_howitzer
+    themed_name: M777 Howitzer
+    themed_description: Towed 155mm artillery piece providing devastating fire support.
+    stat_modifiers:
+      range: 1.5
+      damage: 1.6
+  enemy_militia:
+    vanilla_id: enemy_militia
+    themed_id: insurgent_fighter
+    themed_name: Insurgent Fighter
+    themed_description: Irregular combatant with AK-pattern rifle and improvised equipment.
+    stat_modifiers:
+      hp: 0.8
+      speed: 1.1
+  enemy_swordsman:
+    vanilla_id: enemy_swordsman
+    themed_id: enemy_regular
+    themed_name: Enemy Regular Infantry
+    themed_description: Standard enemy infantry with body armor and modern weapons.
+    stat_modifiers:
+      hp: 1.0
+      damage: 1.1
+  enemy_archer:
+    vanilla_id: enemy_archer
+    themed_id: enemy_rpg
+    themed_name: Enemy RPG Team
+    themed_description: Anti-vehicle team equipped with rocket-propelled grenades.
+    stat_modifiers:
+      damage: 1.6
+      range: 0.9
+  enemy_cavalry:
+    vanilla_id: enemy_cavalry
+    themed_id: enemy_technical
+    themed_name: Enemy Technical
+    themed_description: Armed pickup truck with mounted heavy machine gun.
+    stat_modifiers:
+      speed: 1.4
+      armor: 0.5
+  tower_arrow:
+    vanilla_id: tower_arrow
+    themed_id: guard_tower_mg
+    themed_name: Guard Tower (MG)
+    themed_description: Fortified guard tower with mounted M240 machine gun.
+  tower_ballista:
+    vanilla_id: tower_ballista
+    themed_id: atgm_emplacement
+    themed_name: ATGM Emplacement
+    themed_description: Fortified anti-tank guided missile position.
+
+patterns:
+  - vanilla_pattern: "building_*"
+    themed_pattern: "base_facility_*"
+    themed_name_pattern: "Base *"

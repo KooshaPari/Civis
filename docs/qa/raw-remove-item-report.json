@@ -1,0 +1,110 @@
+{
+  "files_scanned": 128,
+  "violation_count": 16,
+  "counts": {
+    "HIGH": 0,
+    "MED": 0,
+    "LOW": 16
+  },
+  "threshold_high": 0,
+  "violations": [
+    {
+      "file": "scripts/game_isolation_diagnostic.ps1",
+      "line": 185,
+      "severity": "LOW",
+      "text": "Remove-Item $targetLink -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/start-mcp.ps1",
+      "line": 61,
+      "severity": "LOW",
+      "text": "Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/start-mcp.ps1",
+      "line": 156,
+      "severity": "LOW",
+      "text": "Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/diag/probe-menu-click.ps1",
+      "line": 96,
+      "severity": "LOW",
+      "text": "if ($tmp) { Remove-Item -Path $tmp.FullName -Force -ErrorAction SilentlyContinue }"
+    },
+    {
+      "file": "scripts/game/capture_proof_screenshots.ps1",
+      "line": 85,
+      "severity": "LOW",
+      "text": "Remove-Item $tmp -Force -EA SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/capture_proof_v6.ps1",
+      "line": 203,
+      "severity": "LOW",
+      "text": "Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/capture_proof_v6.ps1",
+      "line": 204,
+      "severity": "LOW",
+      "text": "Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/capture_proof_v6.ps1",
+      "line": 212,
+      "severity": "LOW",
+      "text": "Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/capture_proof_v6.ps1",
+      "line": 238,
+      "severity": "LOW",
+      "text": "Remove-Item $ReqFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/capture_proof_v6.ps1",
+      "line": 239,
+      "severity": "LOW",
+      "text": "Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/Launch-DINOBoxInstance.ps1",
+      "line": 143,
+      "severity": "LOW",
+      "text": "Remove-Item $exeName -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/Launch-DINOBoxInstance.ps1",
+      "line": 145,
+      "severity": "LOW",
+      "text": "Remove-Item $csharpFile -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/game/New-DINOBoxPool.ps1",
+      "line": 98,
+      "severity": "LOW",
+      "text": "Remove-Item $linkPath -Force -ErrorAction SilentlyContinue"
+    },
+    {
+      "file": "scripts/services/mcp-service.ps1",
+      "line": 85,
+      "severity": "LOW",
+      "text": "if (Test-Path $serviceFile) { Remove-Item $serviceFile -Force }"
+    },
+    {
+      "file": "scripts/services/mcp-service.ps1",
+      "line": 124,
+      "severity": "LOW",
+      "text": "if (Test-Path $agentDir) { Remove-Item $plistFile -Force -ErrorAction SilentlyContinue }"
+    },
+    {
+      "file": "scripts/unity/build_bundles.ps1",
+      "line": 78,
+      "severity": "LOW",
+      "text": "Remove-Item $LogFile -Force"
+    }
+  ],
+  "allowlist_path": "docs/qa/raw-remove-item-allowlist.txt",
+  "helper_path": "scripts/shared/Remove-ToRecycleBin.ps1"
+}

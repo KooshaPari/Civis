@@ -1,0 +1,821 @@
+file,line,literal,context,category
+C:\Users\koosh\Dino\src\Analyzers\EventLifecycleAsymmetryAnalyzer.cs,147,100,n.ToString().Length < 100),comparison
+C:\Users\koosh\Dino\src\Analyzers\UnboundedWhenAllAnalyzer.cs,21,10,"arallelism` cap for >10 expected items."";",comparison
+C:\Users\koosh\Dino\src\Analyzers\UnboundedWhenAllAnalyzer.cs,24,10,"ool exhaustion. For >10 expected items, use `Parallel",comparison
+C:\Users\koosh\Dino\src\Analyzers\WeakEventHandlerAnalyzer.cs,178,100,n.ToString().Length < 100),comparison
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs,260,32,if (keyBytes.Length != 32),comparison
+C:\Users\koosh\Dino\src\Bridge\Client\GameClientOptions.cs,14,5000,outMs { get; set; } = 5000;,comparison
+C:\Users\koosh\Dino\src\Bridge\Client\GameClientOptions.cs,17,5000,outMs { get; set; } = 5000;,comparison
+C:\Users\koosh\Dino\src\Bridge\Client\GameClientOptions.cs,20,30000,outMs { get; set; } = 30000;,comparison
+C:\Users\koosh\Dino\src\Bridge\Client\GameClientOptions.cs,29,1000,layMs { get; set; } = 1000;,comparison
+C:\Users\koosh\Dino\src\Bridge\Client\SessionKeyCache.cs,41,32,if (key.Length != 32) throw new ArgumentException(,comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Models\ResourceDefinition.cs,57,1000,StorageCapacity = 1000.0f;,comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Models\TradeRoute.cs,42,60,Ticks { get; set; } = 60;,comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Models\TradeRouteDefinition.cs,64,60,CooldownTicks = 60;,comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Models\TradeRouteDefinition.cs,65,1000,MaxPerTransaction = 1000.0f;,comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Validation\EconomyValidator.cs,229,100,(route.ExchangeRate > 100),comparison
+C:\Users\koosh\Dino\src\Domains\Economy\Validation\EconomyValidator.cs,302,10,rget) && path.Count < 10) // depth limit to prevent co,comparison
+C:\Users\koosh\Dino\src\Domains\UI\Models\HudElementDefinition.cs,69,200,Width = 200;,comparison
+C:\Users\koosh\Dino\src\Domains\UI\Models\HudElementDefinition.cs,70,50,Height = 50;,comparison
+C:\Users\koosh\Dino\src\Domains\UI\Models\MenuDefinition.cs,42,16,tSize { get; set; } = 16;,comparison
+C:\Users\koosh\Dino\src\Domains\UI\ThemeColorPalette.cs,195,255,yte A { get; set; } = 255;,comparison
+C:\Users\koosh\Dino\src\Domains\UI\ThemeColorPalette.cs,215,255,byte a = 255;,comparison
+C:\Users\koosh\Dino\src\Runtime\Bridge\AssetBundleCache.cs,41,10,"leCache(int maxSize = 10, TimeProvider? timeProvider =",comparison
+C:\Users\koosh\Dino\src\Runtime\Bridge\EcsTypeDiscovery.cs,37,100,192);  // Capacity ~= 100+ assemblies × 100+ types × 60,comparison
+C:\Users\koosh\Dino\src\Runtime\Bridge\EcsTypeDiscovery.cs,197,100,048);  // Capacity ~= 100+ type names × 20 chars,comparison
+C:\Users\koosh\Dino\src\Runtime\Bridge\GameBridgeServer.cs,114,2000,Thread.Sleep(2000);,sleep
+C:\Users\koosh\Dino\src\Runtime\Bridge\GameBridgeServer.cs,369,1000,Thread.Sleep(1000);,sleep
+C:\Users\koosh\Dino\src\Runtime\Bridge\GameBridgeServer.cs,797,100,Thread.Sleep(100);,sleep
+C:\Users\koosh\Dino\src\Runtime\Bridge\MainThreadDispatcher.cs,42,100,if (processed > 100),comparison
+C:\Users\koosh\Dino\src\Runtime\Bridge\ResourceReader.cs,316,20,ourceTypeList.Count > 20),comparison
+C:\Users\koosh\Dino\src\Runtime\DebugOverlay.cs,318,100,"play = error.Length > 100 ? error.Substring(0, 97) + "".",comparison
+C:\Users\koosh\Dino\src\Runtime\DebugOverlay.cs,322,10,if (errors.Count > 10),comparison
+C:\Users\koosh\Dino\src\Runtime\DumpSystem.cs,43,1800,eted && _frameCount >= 1800),comparison
+C:\Users\koosh\Dino\src\Runtime\EntityDumper.cs,207,50,0 && archetypeIndex < 50),comparison
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs,647,2000,tem.Threading.Thread.Sleep(2000);,sleep
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs,722,200,= heartbeatCounter <= 200; // ~10 seconds at 50ms inter,comparison
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs,757,50,tem.Threading.Thread.Sleep(50); // Debounce,sleep
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs,778,50,tem.Threading.Thread.Sleep(50);,sleep
+C:\Users\koosh\Dino\src\Runtime\Plugin.cs,848,1000,if (entityCount > 1000),comparison
+C:\Users\koosh\Dino\src\Runtime\RustAssetPipelineInterop.cs,154,100,rget <= 0 || target > 100),comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DFCanvas.cs,123,100,canvas.sortingOrder = 100;,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DebugPanel.cs,486,80,= errors[i].Length > 80,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DebugPanel.cs,492,10,if (errors.Count > 10),comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,96,13,"fontSize = 13,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,115,10,"fontSize = 10,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,134,12,"fontSize = 12,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,154,12,"fontSize = 12,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,191,11,n.label) { fontSize = 11 };,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,205,11,n.label) { fontSize = 11 };,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,219,11,n.label) { fontSize = 11 };,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,235,11,"fontSize = 11,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,253,11,"fontSize = 11,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,274,12,indowStyle.fontSize = 12;,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\DinoForgeStyle.cs,303,11,"fontSize = 11,",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\ModSettingsPanel.cs,201,1000,int max = 1000;,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\NativeMenuInjector.cs,142,20,reenshotCheckFrames >= 20),comparison
+C:\Users\koosh\Dino\src\Runtime\UI\NativeMenuInjector.cs,192,1000,Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _scr,comparison
+C:\Users\koosh\Dino\src\Runtime\UI\NativeMenuInjector.cs,941,120,"me, int delayFrames = 120)",comparison
+C:\Users\koosh\Dino\src\Runtime\UI\UiDiagnostics.cs,50,13,512);  // Capacity ~= 13 appends × 40 chars,comparison
+C:\Users\koosh\Dino\src\Runtime\VFX\VFXPrefabDescriptor.cs,93,10,ic float StartSpeed = 10.0f;,comparison
+C:\Users\koosh\Dino\src\Runtime\VFX\VFXPrefabDescriptor.cs,96,80,ic int MaxParticles = 80;,comparison
+C:\Users\koosh\Dino\src\Runtime\VFX\VFXPrefabDescriptor.cs,162,3000,lic int RenderQueue = 3000;,comparison
+C:\Users\koosh\Dino\src\SDK\Assets\AddressablesCatalog.cs,140,28,int entrySize = 28; // 7 ints * 4 bytes,comparison
+C:\Users\koosh\Dino\src\SDK\HotReload\PackFileWatcher.cs,57,500,int debounceMs = 500),comparison
+C:\Users\koosh\Dino\src\SDK\Models\SquadDefinition.cs,43,20,xSize { get; set; } = 20;,comparison
+C:\Users\koosh\Dino\src\SDK\PackManifest.cs,71,100,Order { get; set; } = 100;,comparison
+C:\Users\koosh\Dino\src\SDK\Registry\IRegistry.cs,20,100,"ckId, int loadOrder = 100);",comparison
+C:\Users\koosh\Dino\src\SDK\Registry\IRegistry.cs,49,100,"ckId, int loadOrder = 100);",comparison
+C:\Users\koosh\Dino\src\SDK\Registry\Registry.cs,18,100,"ckId, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\SDK\Registry\Registry.cs,62,100,"ckId, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\SDK\Registry\RegistryEntry.cs,38,100,"ckId, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\SDK\UI\Models\UiDefinitionsStub.cs,26,200,Width { get; set; } = 200;,comparison
+C:\Users\koosh\Dino\src\SDK\UI\Models\UiDefinitionsStub.cs,28,50,eight { get; set; } = 50;,comparison
+C:\Users\koosh\Dino\src\Tests\AssetSwapLatencyTests.cs,27,100,for (int i = 0; i < 100; i++),comparison
+C:\Users\koosh\Dino\src\Tests\BddSpecs.cs,41,50,"t Building"", Health = 50 };",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,41,100,"t = ""Health"", limit = 100 })",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,56,100,"ew { id = 1, health = 100, armor = 5 },",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,57,80,"ew { id = 2, health = 80, armor = 8 },",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,58,150,"ew { id = 3, health = 150, armor = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,58,10,"health = 150, armor = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,60,12,"new { query_time_ms = 12, frame = 4521 }",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,60,4521,"time_ms = 12, frame = 4521 }",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\BridgeProtocolBenchmarks.cs,70,4521,"WorldFrame = 4521,",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\PackLoadBenchmarks.cs,101,1000,for (int i = 0; i < 1000; i++),comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\StringBuilderAllocationBenchmarks.cs,32,114,"b.AppendLine(""--- !u!114 &11400000"");",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\StringBuilderAllocationBenchmarks.cs,50,10,for (int i = 0; i < 10; i++),comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\StringBuilderAllocationBenchmarks.cs,74,114,"b.AppendLine(""--- !u!114 &11400000"");",comparison
+C:\Users\koosh\Dino\src\Tests\Benchmarks\StringBuilderAllocationBenchmarks.cs,92,10,for (int i = 0; i < 10; i++),comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs,96,10,"RetryDelayMs = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs,97,1000,"ReadTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs,124,50,"= 0, ReadTimeoutMs = 50 };",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs,148,1000,"= 0, ReadTimeoutMs = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs,196,1000,"= 0, ReadTimeoutMs = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientRobustnessTests.cs,202,5000,{ ConnectTimeoutMs = 5000 };,comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,49,1000,""", ConnectTimeoutMs = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,84,123,"1.0"", UptimeSeconds = 123.45 };",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,103,42,"EntityCount = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,153,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,154,200,"Wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,155,50,"Stone = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,156,30,"Iron = 30,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,157,500,"Money = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,158,10,"Souls = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,235,15,"ComponentCount = 15,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,236,42,"EntityCount = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,259,17,"ModifiedCount = 17,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,320,1920,"Width = 1920,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,321,1080,"Height = 1080,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,340,500,"Value = 500.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs,365,42,EntityCount = 42,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeHmacTests.cs,180,45776,"(new { entity_count = 45776, world_name = ""Default World""",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeHmacTests.cs,222,100,(new { entity_count = 100 });,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeHmacTests.cs,228,999,"(new { entity_count = 999 }), // attacker mutated the r",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptUnitTests.cs,54,12345,WorldFrame = 12345,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptUnitTests.cs,160,100,"WorldFrame = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs,78,45776,"(new { entity_count = 45776, world_ready = true });",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs,82,50,long lastFrame = 50;,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs,99,100,(new { entity_count = 100 });,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs,229,100,long lastFrame = 100; // we've already seen frame,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs,292,42,long frame = 42;,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierUnitTests.cs,19,42,essionKey(byte seed = 42),comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierUnitTests.cs,22,32,for (int i = 0; i < 32; i++) key[i] = (byte)((seed +,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierUnitTests.cs,216,20,long lastFrame = 20;,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierUnitTests.cs,294,64,(64); // SHA256 hex = 64 chars,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs,38,2000,"ConnectTimeoutMs = 2000,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs,39,3000,"SendTimeoutMs = 3000,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs,40,10000,"ReadTimeoutMs = 10000,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs,57,3000,{ ConnectTimeoutMs = 3000 };,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs,76,10000,{ ConnectTimeoutMs = 10000 };,comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,74,123,ect(new { entity_id = 123 }),comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,145,42,"mObject(new { value = 42 }),",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,150,100,"WorldFrame = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,209,42,"y = ""value"", number = 42 })",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,238,500,"WorldFrame = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs,290,5000,"WorldFrame = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\SessionKeyCacheUnitTests.cs,16,42,CreateKey(byte seed = 42),comparison
+C:\Users\koosh\Dino\src\Tests\Bridge\SessionKeyCacheUnitTests.cs,19,32,for (int i = 0; i < 32; i++) key[i] = (byte)((seed +,comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,37,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,56,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,77,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,97,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,177,100,"Health = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,196,150,"Health = 150,",comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,215,250,"Health = 250,",comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,234,80,"Health = 80,",comparison
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs,254,999999,Health = 999999,comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,19,500,"int entityCount = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,82,42,"int modifiedCount = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,98,100,"int food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,99,200,"int wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,100,150,"int stone = 150,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,101,75,"int iron = 75,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\CliTestFixtures.cs,102,50,"int money = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\OverrideCommandTests.cs,93,10000,rrideResult(modifiedCount: 10000);,size
+C:\Users\koosh\Dino\src\Tests\CliToolTests\OverrideCommandTests.cs,117,99,esult.ModifiedCount = 99;,comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolIntegrationTests.cs,23,5000,"entityCount: 5000,",size
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolIntegrationTests.cs,137,42,"Index = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolIntegrationTests.cs,151,50000,ateGameStatus(entityCount: 50000);,size
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolTypeTests.cs,24,100,"EntityCount = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolTypeTests.cs,78,42,"Index = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolTypeTests.cs,96,10,"ModifiedCount = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\QueryCommandTests.cs,116,10,"new() { Index = 10, Components = [""ComponentA""]",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\QueryCommandTests.cs,117,20,"new() { Index = 20, Components = [""ComponentB""]",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,116,500,resourceData.Food = 500;,comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,117,1000,resourceData.Wood = 1000;,comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,130,250,"Food = 250,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,131,300,"Wood = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,132,200,"Stone = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,133,100,"Iron = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,134,75,"Money = 75,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs,136,10,"Bones = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\CliToolTests\StatusCommandTests.cs,17,1000,"unning: true, entityCount: 1000);",size
+C:\Users\koosh\Dino\src\Tests\CliToolTests\StatusCommandTests.cs,87,5000,"entityCount: 5000,",size
+C:\Users\koosh\Dino\src\Tests\CliToolTests\StatusCommandTests.cs,119,2000,status.EntityCount = 2000;,comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,186,2021,"Range(""2021.3.45"", "">=2021.3.0"").Should().BeTrue();",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,187,2022,"Range(""2021.3.45"", ""<2022.0.0"").Should().BeTrue();",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,220,99,"FrameworkVersion = "">=99.0.0"",  // No real version sat",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,292,2022,"UnityVersion = "">=2022.0.0"",  // Current is 2021.3.4",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,315,2022,"UnityVersion = "">=2022.0.0"",",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs,339,99,"FrameworkVersion = "">=99.0.0"",  // Error (no real vers",comparison
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerUnitTests.cs,256,2021,"nge(""2021.3.45f2"", "">=2021.3.0"");",comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,214,100,new UnitStats { Hp = 100 },comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,232,100,"new UnitStats { Hp = 100, Accuracy = 1.5f }",comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,249,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,287,100,"Hp = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,288,15,"Damage = 15,",comparison
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs,307,200,Health = 200,comparison
+C:\Users\koosh\Dino\src\Tests\DependencyResolverTests.cs,25,100,"null, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\ECS\MockEntityManagerTests.cs,91,42,stComponent { Value = 42 };,comparison
+C:\Users\koosh\Dino\src\Tests\ECS\MockEntityManagerTests.cs,151,10,stComponent { Value = 10 });,comparison
+C:\Users\koosh\Dino\src\Tests\ECS\MockEntityManagerTests.cs,154,20,stComponent { Value = 20 });,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,313,10,"ResourceCost { Food = 10, Wood = 5, Stone = 2, Iron =",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,344,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,371,100,"ExchangeRate = 100.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,400,50,"MaxPerTransaction = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,439,20,"ExchangeRate = 20.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,504,1000,"te = 1f, Multiplier = 1000.0f };",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,547,10,oute { ExchangeRate = 10.0f };,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs,586,1000,"ExchangeRate = 1000.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs,288,100,MaxPerTransaction = 100,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs,311,100,MaxPerTransaction = 100,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs,334,100,MaxPerTransaction = 100,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs,357,100,MaxPerTransaction = 100,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs,498,100,angeRate = 150f  // > 100,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageTests.cs,138,100,"ResourceCost { Food = 100, Wood = -50, Stone = 20, Iron",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageTests.cs,138,20,", Wood = -50, Stone = 20, Iron = -10, Gold = 0 };",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyContentLoaderValidationTests.cs,80,1000,storage_capacity: 1000,size
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,555,60,"1.5f, CooldownTicks = 60, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,624,60,"1.5f, CooldownTicks = 60, Enabled = true },",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,625,60,"2.0f, CooldownTicks = 60, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,642,60,"1.5f, CooldownTicks = 60, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,659,60,"1.5f, CooldownTicks = 60, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,676,60,"= 0, CooldownTicks = 60, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,710,60,"1.5f, CooldownTicks = 60, Enabled = false }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,760,100,rtingResources.Food = 100;,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,761,200,rtingResources.Wood = 200;,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,794,120,"CooldownTicks = 120,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,795,500,"MaxPerTransaction = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,828,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,829,200,"Wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,830,300,"Stone = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,831,400,"Iron = 400,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs,832,500,Gold = 500,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyDomainExpandedTests.cs,162,60,"duced - 40 consumed = 60 net"");",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyDomainExpandedTests.cs,230,60,CooldownTicks = 60,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,82,10,oute { ExchangeRate = 10.0f };,comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,97,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,124,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,152,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,178,10,"gold"", ExchangeRate = 10.0f, Enabled = true }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,422,100,"ResourceCost { Food = 100, Wood = 50, Stone = 50, Iron",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,422,50,"{ Food = 100, Wood = 50, Stone = 50, Iron = 20, Gold",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,422,20,"0, Stone = 50, Iron = 20, Gold = 0 }",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,430,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,493,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs,525,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyUiCoverageTests.cs,163,255,"ThemeThemeColor { R = 255, G = 255, B = 255 },",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyUiCoverageTests.cs,165,32,"ThemeThemeColor { R = 32, G = 32, B = 32 },",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyUiCoverageTests.cs,166,48,"ThemeThemeColor { R = 48, G = 48, B = 48 },",comparison
+C:\Users\koosh\Dino\src\Tests\EconomyUiCoverageTests.cs,167,16,"ThemeThemeColor { R = 16, G = 16, B = 16 }",comparison
+C:\Users\koosh\Dino\src\Tests\EndToEndUserJourneysTests.cs,247,28,for (int i = 1; i <= 28; i++),comparison
+C:\Users\koosh\Dino\src\Tests\EndToEndUserJourneysTests.cs,252,14,"faction: {(i <= 14 ? ""republic"" : ""cis"")}",comparison
+C:\Users\koosh\Dino\src\Tests\FactionSystemTests.cs,60,42,"EntityCount = 42,",comparison
+C:\Users\koosh\Dino\src\Tests\FuzzTargets\SemverFuzzTarget.cs,20,99,""">=0.0.0"", ""<99.0.0"", "">=0.1.0 <1.0.0""",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,97,20,"ReadTimeoutMs = 20, // Very short timeout",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,123,10,"RetryDelayMs = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,124,50,"ReadTimeoutMs = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,148,10000,"ConnectTimeoutMs = 10000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,149,60000,"ReadTimeoutMs = 60000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,151,2000,RetryDelayMs = 2000,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,199,5000,"ConnectTimeoutMs = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,375,100,bject(new { timeout = 100 }),comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,422,42,"esult = new { count = 42, items = new[] { ""a"", ""b"" } }",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,495,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,519,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,547,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,570,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,593,100,"= 0, ReadTimeoutMs = 100, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,613,10,"t = 1, RetryDelayMs = 10, ReadTimeoutMs = 1000, UseMes",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,613,1000,"= 10, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,635,10000,"t = 1, RetryDelayMs = 10000, ReadTimeoutMs = 1000, UseMes",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,635,1000,"0000, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,657,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,682,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,725,100,"ConnectTimeoutMs = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,910,50,"ReadTimeoutMs = 50, // Very short timeout",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,938,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,960,1000,"ReadTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1274,1000,"ons { ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1290,1000,ons { ReadTimeoutMs = 1000 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1301,1000,ons { ReadTimeoutMs = 1000 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1313,1000,ons { ReadTimeoutMs = 1000 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1322,1000,ons { ReadTimeoutMs = 1000 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1334,5000,"ReadTimeoutMs = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1335,5000,"ConnectTimeoutMs = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1336,500,RetryDelayMs = 500,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1461,100,"{ ConnectTimeoutMs = 100, PipeName = ""nonexistent-pipe",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1485,100,ons { ReadTimeoutMs = 100 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1497,100,ons { ReadTimeoutMs = 100 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1515,50,"= 0, ReadTimeoutMs = 50, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1535,100,"ConnectTimeoutMs = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1566,1000,"ConnectTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1567,5000,"ReadTimeoutMs = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1569,500,RetryDelayMs = 500,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1609,42,"p = ""value"", number = 42 },",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1769,100,"= 1, ReadTimeoutMs = 100, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1792,30,"ReadTimeoutMs = 30,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1812,1000,ons { ReadTimeoutMs = 1000 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1837,1000,"ons { ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1861,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1879,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1897,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1915,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1933,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,1951,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2010,10,"RetryDelayMs = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2011,1000,"ReadTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2036,1000,"ReadTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2071,1000,"ConnectTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2072,5000,"ReadTimeoutMs = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2074,500,RetryDelayMs = 500,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2089,50,{ ConnectTimeoutMs = 50 });,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2193,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2214,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2236,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2297,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2480,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2499,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2520,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2545,50,"ReadTimeoutMs = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2573,50,"ReadTimeoutMs = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2574,10,"ConnectTimeoutMs = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2676,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2695,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2720,1000,"= 0, ReadTimeoutMs = 1000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs,2735,5000,"{ ConnectTimeoutMs = 5000, UseMessageFraming = false })",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientOptionsUnitTests.cs,54,10000,ns.ConnectTimeoutMs = 10000;,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientOptionsUnitTests.cs,68,2000,ptions.RetryDelayMs = 2000;,comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,25,12,"0.0"", UptimeSeconds = 12.5 });",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,72,42,"Value = 42.5f,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,131,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,132,200,"Wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,133,50,"Stone = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,134,25,"Iron = 25,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,135,300,"Money = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,145,1920,"es/shot.png"", Width = 1920, Height = 1080, Success = tru",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,145,1080,"idth = 1920, Height = 1080, Success = true });",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs,415,1000,"ReadTimeoutMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs,44,10000,"ConnectTimeoutMs = 10000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs,99,15000,"ConnectTimeoutMs = 15000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs,100,8000,"SendTimeoutMs = 8000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs,101,60000,"ReadTimeoutMs = 60000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs,104,2000,"RetryDelayMs = 2000,",comparison
+C:\Users\koosh\Dino\src\Tests\GameTestDiagnostics.cs,205,100,"Path, int lineCount = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\GameTestDiagnostics.cs,219,1024,if (fileInfo.Length < 1024 * 1024) // < 1 MB,comparison
+C:\Users\koosh\Dino\src\Tests\HotReloadTests.cs,133,50,Thread.Sleep(50);,sleep
+C:\Users\koosh\Dino\src\Tests\HotReloadTests.cs,212,10,for (int i = 0; i < 10; i++),comparison
+C:\Users\koosh\Dino\src\Tests\HotReloadTests.cs,219,20,for (int j = 0; j < 20; j++),comparison
+C:\Users\koosh\Dino\src\Tests\InstallManifestValidationTests.cs,72,1234,"Size = 1234,",comparison
+C:\Users\koosh\Dino\src\Tests\InstallManifestValidationTests.cs,148,4096,"Size = 4096,",comparison
+C:\Users\koosh\Dino\src\Tests\InstallerCoverageTests.cs,490,100,"= ""test.dll"", Size = 100, Sha256 = ""e3b0c44298fc1c149a",comparison
+C:\Users\koosh\Dino\src\Tests\InstallerCoverageTests.cs,775,100,"= ""test.dll"", Size = 100, Sha256 = ""abc"" }",comparison
+C:\Users\koosh\Dino\src\Tests\InstallerCoverageTests.cs,802,12345,"Size = 12345,",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestContainerHarness.cs,89,30,int timeoutSeconds = 30),comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestContainerHarness.cs,143,60,int timeoutSeconds = 60),comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestRunner.cs,55,60000,int LaunchTimeoutMs => 60000;,comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestRunner.cs,60,60000,int WorldTimeoutMs => 60000;,comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestRunner.cs,156,30000,"ConnectTimeoutMs = 30000,",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestRunner.cs,157,10000,"ReadTimeoutMs = 10000,",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\GameTestRunner.cs,162,30,for (int i = 0; i < 30; i++),comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\BridgeRoundTripTests.cs,174,999,"""the override set hp=999 and no other operation change",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,30,10,"""unit"", EntityCount = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,77,100,"ctile"", EntityCount = 100 },",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,78,50,"ctile"", EntityCount = 50 }",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,144,25,EntityCount = 25,comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,167,10,"""unit"", EntityCount = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,168,10,"""unit"", EntityCount = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,198,10,"""unit"", EntityCount = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs,199,20,"""unit"", EntityCount = 20 }",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,90,2000,"e, ConnectTimeoutMs = 2000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,116,5000,"e, ConnectTimeoutMs = 5000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,117,5000,"e, ConnectTimeoutMs = 5000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,118,1000,"e, ConnectTimeoutMs = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,119,1000,"e, ConnectTimeoutMs = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs,166,5000,"!, ConnectTimeoutMs = 5000 };",comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\GameSandboxIntegrationTests.cs,98,500,tem.Threading.Thread.Sleep(500);,sleep
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\GameWorkflowTests.cs,285,17,te int _entityCount = 17;,comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ParallelGameE2ETests.cs,124,5000,Thread.Sleep(5000); // Wait for Unity to initial,sleep
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ParallelGameE2ETests.cs,146,1000,Thread.Sleep(1000);,sleep
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ParallelGameE2ETests.cs,294,60,(int timeoutSeconds = 60),comparison
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ParallelGameE2ETests.cs,382,60,(int timeoutSeconds = 60),comparison
+C:\Users\koosh\Dino\src\Tests\Integration\UIWireupIntegrationTests.cs,211,12,for (int i = 0; i < 12; i++),comparison
+C:\Users\koosh\Dino\src\Tests\JsonGuardUnitTests.cs,78,42,table = new { Value = 42 };,comparison
+C:\Users\koosh\Dino\src\Tests\JsonGuardUnitTests.cs,115,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\JsonGuardUnitTests.cs,251,200,"Health = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,110,14,"ModifiedCount = 14, // rep_clone_trooper appears",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,141,400,"Food = 400,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,142,300,"Wood = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,143,200,"Stone = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,144,100,"Iron = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\FakeGameBridge.cs,166,42,"UptimeSeconds = 42.0,",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\MockRegistry.cs,58,100,"ckId, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\Mocks\MockRegistry.cs,103,100,"ckId, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,43,50,"ResourceCost { Food = 50, Wood = 30, Iron = 10, Stone",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,43,30,"t { Food = 50, Wood = 30, Iron = 10, Stone = 5, Gold =",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,43,10,"50, Wood = 30, Iron = 10, Stone = 5, Gold = 2, Populat",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,217,50,"ResourceCost { Wood = 50, Stone = 30 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,217,30,"{ Wood = 50, Stone = 30 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,218,500,"Health = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,274,100,"= ""skeleton"", Count = 100, SpawnDelay = 0.1f, SpawnPoin",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs,309,30,"MaxSize = 30,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,306,50,"ResourceCost { Food = 50, Wood = 30, Iron = 10, Stone",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,306,30,"t { Food = 50, Wood = 30, Iron = 10, Stone = 5, Gold =",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,306,10,"50, Wood = 30, Iron = 10, Stone = 5, Gold = 2, Populat",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,323,50,"ResourceCost { Wood = 50, Stone = 30 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,323,30,"{ Wood = 50, Stone = 30 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,324,500,"Health = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,380,100,"LoadOrder = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,399,100,"= ""skeleton"", Count = 100, SpawnDelay = 0.1f, SpawnPoin",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,436,10,"ExchangeRate = 10.0f,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,437,60,"CooldownTicks = 60,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,438,1000,"MaxPerTransaction = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,450,500,"ResourceCost { Food = 500, Wood = 500, Stone = 200, Iro",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,450,200,", Wood = 500, Stone = 200, Iron = 100, Gold = 50 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,450,100,", Stone = 200, Iron = 100, Gold = 50 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,450,50,"0, Iron = 100, Gold = 50 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,480,1800,"MaxDuration = 1800,",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,481,1000,"ResourceCost { Food = 1000, Wood = 1000, Stone = 500, Ir",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,481,500,"Wood = 1000, Stone = 500, Iron = 200, Gold = 100 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,481,200,", Stone = 500, Iron = 200, Gold = 100 },",comparison
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs,481,100,"0, Iron = 200, Gold = 100 },",comparison
+C:\Users\koosh\Dino\src\Tests\NativeInteropTests.cs,384,12345,etadata { PolyCount = 12345 };,comparison
+C:\Users\koosh\Dino\src\Tests\NativeInteropTests.cs,437,5000,etadata { PolyCount = 5000 },comparison
+C:\Users\koosh\Dino\src\Tests\PackDependencyResolverUnitTests.cs,226,200,LoadOrder = 200,comparison
+C:\Users\koosh\Dino\src\Tests\PackDependencyResolverUnitTests.cs,232,100,LoadOrder = 100,comparison
+C:\Users\koosh\Dino\src\Tests\PackManifestUnitTests.cs,71,200,LoadOrder = 200,comparison
+C:\Users\koosh\Dino\src\Tests\PackStatInjectorTests.cs,143,200,"""a unit with Hp=200 must emit 'unit.stats.hp' = 2",comparison
+C:\Users\koosh\Dino\src\Tests\PackSubmoduleTests.cs,42,12,(parts[1].Length == 12 || parts[1].Length == 40).Sho,comparison
+C:\Users\koosh\Dino\src\Tests\PackSubmoduleTests.cs,42,40,"|| parts[1].Length == 40).Should().BeTrue(""SHA should",comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,43,42,"ey = ""value"", count = 42 })",comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,77,123,"tatus = ""ok"", frame = 123 })",comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,162,32,for (int i = 0; i < 32; i++) sessionKey[i] = (byte)(,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,210,32,for (int i = 0; i < 32; i++) sessionKey[i] = (byte)(,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,248,32,&& cachedKey.Length == 32,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\BridgeFsCheckProperties.cs,270,32,for (int i = 0; i < 32; i++) key[i] = (byte)(i % 256,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\DomainFsCheckProperties.cs,206,100,"Width = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\DomainFsCheckProperties.cs,207,20,Height = 20,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\FsCheckPrototype.cs,169,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\FsCheckPrototype.cs,181,100,Health = 100,comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,93,100,for (int i = 0; i < 100; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,106,1000,for (int i = 0; i < 1000; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,129,50,for (int i = 0; i < 50; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,137,500,for (int i = 0; i < 500; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,158,50,for (int i = 0; i < 50; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,226,10,for (int i = 0; i < 10; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,275,1000,for (int i = 0; i < 1000; i++),comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,308,2021,""">=2021.3.0 <2021.4.0""  // Unity-styl",comparison
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs,314,250,for (int i = 0; i < 250; i++),comparison
+C:\Users\koosh\Dino\src\Tests\Phase7VisualAssetIntegrationTests.cs,77,50,key count has known >= 50 bound per test design (file-b,comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.Extended.cs,374,100,"null, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.Extended.cs,473,99,"onInRange(""0.1.0"", "">=99.0.0"");",comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.Extended.cs,605,50,ResourceCost { Food = 50 },comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.cs,264,100,"null, int loadOrder = 100)",comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.cs,312,50,ResourceCost { Food = 50 },comparison
+C:\Users\koosh\Dino\src\Tests\PropertyTests.cs,346,50,ResourceCost { Food = 50 },comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,37,123,"9.0"", UptimeSeconds = 123.4 });",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,63,45776,"EntityCount = 45776,",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,108,10,"EntityCount = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,172,12,"nt = 8, EntityCount = 12, Category = ""unit"" }",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,200,100,"{ Food = 100, Wood = 200, Stone = 50, Iron",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,200,200,"{ Food = 100, Wood = 200, Stone = 50, Iron = 25, Money",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,200,50,", Wood = 200, Stone = 50, Iron = 25, Money = 10, Souls",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,200,25,"0, Stone = 50, Iron = 25, Money = 10, Souls = 5, Bones",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,200,10,"0, Iron = 25, Money = 10, Souls = 5, Bones = 3, Spirit",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,212,1920,"mp/shot.png"", Width = 1920, Height = 1080, Success = tru",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,212,1080,"idth = 1920, Height = 1080, Success = true });",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,249,28,"EntityCount = 28,",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,347,1920,"X = 0, Y = 0, Width = 1920, Height = 1080 },",comparison
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs,347,1080,"idth = 1920, Height = 1080 },",comparison
+C:\Users\koosh\Dino\src\Tests\RegistryErrorTests.cs,73,100,"= ""unit-1"", health = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\RegistryErrorTests.cs,86,999,var health = 999;,comparison
+C:\Users\koosh\Dino\src\Tests\RegistryErrorTests.cs,87,500,var maxHealth = 500;,comparison
+C:\Users\koosh\Dino\src\Tests\RegistryStressTests.cs,17,1000,for (int i = 0; i < 1000; i++),comparison
+C:\Users\koosh\Dino\src\Tests\RegistryStressTests.cs,23,1000,for (int i = 0; i < 1000; i++),comparison
+C:\Users\koosh\Dino\src\Tests\RegistryStressTests.cs,104,100,for (int i = 0; i < 100; i++),comparison
+C:\Users\koosh\Dino\src\Tests\RegistryStressTests.cs,156,500,for (int i = 0; i < 500; i++),comparison
+C:\Users\koosh\Dino\src\Tests\ResourceDefinitionUnitTests.cs,333,600,rce.StorageCapacity = 600.0f;,comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,55,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,56,200,"Wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,57,300,"Stone = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,58,400,"Iron = 400,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,59,500,"Money = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,60,600,"Souls = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,61,700,"Bones = 700,",comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,62,800,Spirit = 800,comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,154,42,esourceStub { value = 42 };,comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,162,73,sourceStub { amount = 73.9f };,comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,172,999,edValueStub { value = 999 },comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,301,77,edValueStub { value = 77 },comparison
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs,303,88,esourceStub { value = 88 };,comparison
+C:\Users\koosh\Dino\src\Tests\RustInteropTests.cs,66,1000,"ssetId, VertexCount = 1000 };",comparison
+C:\Users\koosh\Dino\src\Tests\RustInteropTests.cs,77,5000,"VertexCount = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\RustInteropTests.cs,78,2500,"TriangleCount = 2500,",comparison
+C:\Users\koosh\Dino\src\Tests\SDKCoverageTests.cs,721,42,"ame = ""Test"", Value = 42 };",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderTests.cs,96,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderTests.cs,183,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderTests.cs,235,300,max_duration: 300,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderTests.cs,282,1800,max_duration: 1800,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderValidationTests.cs,74,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderValidationTests.cs,111,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderValidationTests.cs,142,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderValidationTests.cs,204,600,max_duration: 600,timeout
+C:\Users\koosh\Dino\src\Tests\ScenarioDefinitionUnitTests.cs,40,600,"MaxDuration = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,487,10,"TriggerValue = 10 // Outside valid range [1, 5]",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,576,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,577,50,Wood = 50,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,582,50,e(50); // 100 * 0.5 = 50,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,583,25,Be(25); // 50 * 0.5 = 25,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,592,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,593,50,Wood = 50,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,598,150,(150); // 100 * 1.5 = 150,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs,599,75,Be(75); // 50 * 1.5 = 75,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioPluginUnitTests.cs,189,100,"rvival, TargetValue = 100 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioPluginUnitTests.cs,210,600,"MaxDuration = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioPluginUnitTests.cs,229,600,"MaxDuration = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,103,100,"lation, TargetValue = 100 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,105,100,eState { Population = 100 }).Should().BeTrue();,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,113,500,"source, TargetValue = 500, TargetId = ""gold"" }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,116,600,"s.Resources[""gold""] = 600;",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,125,500,"source, TargetValue = 500, TargetId = ""gold"" }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,128,100,"s.Resources[""gold""] = 100;",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,137,300,"rvival, TargetValue = 300 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,139,300,te { ElapsedSeconds = 300 }).Should().BeTrue();,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,148,50,"lation, TargetValue = 50 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,153,10,"ave = 5, Population = 10 }).Should().BeFalse();",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,156,50,"ave = 5, Population = 50 }).Should().BeTrue();",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,210,600,"xpired, TargetValue = 600 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,212,601,te { ElapsedSeconds = 601 }).Should().BeTrue();,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,224,10,"eState { Population = 10, CommandCenterAlive = false }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,260,60,"nTime, TriggerValue = 60 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,264,59,te { ElapsedSeconds = 59 }).Should().BeEmpty();,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,265,60,te { ElapsedSeconds = 60 }).Should().ContainSingle();,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs,301,10,"WaveCount = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,38,100,"Food = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,39,200,"Wood = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,40,50,"Stone = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,41,30,"Iron = 30,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,42,10,Gold = 10,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,129,10,"eWaves, TargetValue = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,137,10,State { CurrentWave = 10 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,150,100,"lation, TargetValue = 100 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,155,100,eState { Population = 100 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,171,5000,"TargetValue = 5000,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,379,300,TargetValue = 300,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,386,200,te { ElapsedSeconds = 200 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,390,300,te { ElapsedSeconds = 300 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,394,400,te { ElapsedSeconds = 400 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,431,600,TargetValue = 600,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,438,500,te { ElapsedSeconds = 500 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,442,600,te { ElapsedSeconds = 600 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,446,1000,te { ElapsedSeconds = 1000 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,526,120,"TriggerValue = 120,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,534,100,te { ElapsedSeconds = 100 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,538,120,te { ElapsedSeconds = 120 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,557,50,"TriggerValue = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,565,30,eState { Population = 30 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,569,50,eState { Population = 50 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,588,1000,"TriggerValue = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,657,25,"TriggerValue = 25,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,665,10,State { UnitsKilled = 10 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,669,25,State { UnitsKilled = 25 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,687,10,"WaveCount = 10,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,688,100,"ResourceCost { Food = 100, Wood = 50, Stone = 30, Iron",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,688,50,"{ Food = 100, Wood = 50, Stone = 30, Iron = 20, Gold",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,688,30,"0, Wood = 50, Stone = 30, Iron = 20, Gold = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,688,20,"0, Stone = 30, Iron = 20, Gold = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,688,10,"30, Iron = 20, Gold = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,692,10,"eWaves, TargetValue = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,781,600,"MaxDuration = 600, // duration set, but no time",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,810,600,"MaxDuration = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,813,600,"rvival, TargetValue = 600 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,839,600,"MaxDuration = 600,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,846,600,"xpired, TargetValue = 600 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,903,99,TriggerValue = 99 // beyond WaveCount=5,comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,946,100,"ource, TriggerValue = 100, TriggerTarget = null }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,988,50,"ation, TriggerValue = 50 },",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,989,100,"illed, TriggerValue = 100 }",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,1014,100,"TriggerValue = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs,1045,50,"TriggerValue = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\ScriptedEventUnitTests.cs,72,10,vent { TriggerValue = 10 };,comparison
+C:\Users\koosh\Dino\src\Tests\ScriptedEventUnitTests.cs,183,120,"TriggerValue = 120,",comparison
+C:\Users\koosh\Dino\src\Tests\ScriptedEventUnitTests.cs,198,500,"TriggerValue = 500,",comparison
+C:\Users\koosh\Dino\src\Tests\ScriptedEventUnitTests.cs,213,1000,"TriggerValue = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\SdkAssetEdgeCaseTests.cs,179,100,for (int i = 0; i < 100; i++),comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,118,100,LoadOrder = 100,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,130,200,LoadOrder = 200,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,142,300,LoadOrder = 300,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,185,100,LoadOrder = 100,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,216,100,LoadOrder = 100,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,228,200,LoadOrder = 200,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,334,100,LoadOrder = 100,comparison
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs,346,200,LoadOrder = 200,comparison
+C:\Users\koosh\Dino\src\Tests\SkillWaveSquadTests.cs,80,50,"= ""skeleton"", Count = 50, SpawnDelay = 0.1f }",comparison
+C:\Users\koosh\Dino\src\Tests\SkillWaveSquadTests.cs,136,30,"MaxSize = 30,",comparison
+C:\Users\koosh\Dino\src\Tests\SkillWaveSquadTests.cs,158,20,"""Infantry"", MaxSize = 20 };",comparison
+C:\Users\koosh\Dino\src\Tests\SkillWaveSquadTests.cs,159,40,"Infantry"", MaxSize = 40 };",comparison
+C:\Users\koosh\Dino\src\Tests\Support\TestWait.cs,20,50,"int pollMs = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\Support\TestWait.cs,41,50,"int pollMs = 50,",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,69,100,", float> { [""food""] = 100, [""gold""] = 0 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,70,10,", float> { [""food""] = 10, [""gold""] = -5 }; // surplus",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,84,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,85,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,98,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,110,100,", float> { [""food""] = 100, [""gold""] = 50 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,110,50,"d""] = 100, [""gold""] = 50 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,111,10,", float> { [""food""] = 10, [""gold""] = 5 }; // no defici",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,123,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,136,100,", float> { [""food""] = 100, [""gold""] = 0 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,137,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,141,25,".Be(25f); // 50 / 2 = 25, capped by MaxPerTransaction",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,149,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,150,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,227,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,240,100,", float> { [""wood""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,253,100,", float> { [""food""] = 100, [""gold""] = 0 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,254,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,269,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,270,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,283,100,", float> { [""food""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,284,10,", float> { [""food""] = 10, [""gold""] = -5 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,300,100,", float> { [""food""] = 100, [""wood""] = 100 };",comparison
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs,301,10,", float> { [""food""] = 10, [""wood""] = 10, [""gold""] = -5",comparison
+C:\Users\koosh\Dino\src\Tests\TradeRouteDefinitionUnitTests.cs,261,10000,ExchangeRate = 10000.0f,comparison
+C:\Users\koosh\Dino\src\Tests\UIPluginUnitTests.cs,145,50,Height = 50,comparison
+C:\Users\koosh\Dino\src\Tests\UIPluginUnitTests.cs,164,100,"Width = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\UIPluginUnitTests.cs,244,100,"Width = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\UIPluginUnitTests.cs,245,50,Height = 50,comparison
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDashboardTests.cs,90,1500,Thread.Sleep(1500);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDebugPanelTests.cs,55,800,Thread.Sleep(800);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDebugPanelTests.cs,71,800,Thread.Sleep(800);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDebugPanelTests.cs,91,800,Thread.Sleep(800);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionFixture.cs,66,600,Thread.Sleep(600);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionFixture.cs,116,3000,"onId, int timeoutMs = 3000)",comparison
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionFixture.cs,129,100,Thread.Sleep(100);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionPackListTests.cs,60,600,Thread.Sleep(600);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionPackToggleTests.cs,33,300,Thread.Sleep(300);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionSettingsTests.cs,113,600,Thread.Sleep(600); // Allow SaveAsync to comple,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionShortcutTests.cs,30,100,Thread.Sleep(100);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionShortcutTests.cs,51,100,Thread.Sleep(100);,sleep
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionStatusBarTests.cs,60,500,Thread.Sleep(500);,sleep
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,225,255,"ThemeThemeColor { R = 255, G = 255, B = 255, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,226,255,"0, G = 0, B = 0, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,236,255,"ThemeThemeColor { R = 255, G = 255, B = 255, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,237,255,"0, G = 0, B = 0, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,247,128,"ThemeThemeColor { R = 128, G = 128, B = 128, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,247,255,"G = 128, B = 128, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,257,200,"ThemeThemeColor { R = 200, G = 200, B = 200, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,257,255,"G = 200, B = 200, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,258,50,"ThemeThemeColor { R = 50, G = 50, B = 50, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,258,255,", G = 50, B = 50, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,271,255,"ThemeThemeColor { R = 255, G = 0, B = 0, A = 255 }",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,296,255,"emeColor { R = 0, G = 255, B = 0, A = 255 }",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,310,255,"ThemeThemeColor { R = 255, G = 255, B = 255, A = 255 },",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,311,255,"0, G = 0, B = 0, A = 255 },  // Black background",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,312,255,"0, G = 0, B = 0, A = 255 }  // Black hover = high cont",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,325,128,"ThemeThemeColor { R = 128, G = 128, B = 128, A = 255 },",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,325,255,"G = 128, B = 128, A = 255 },",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,326,200,"ThemeThemeColor { R = 200, G = 200, B = 200, A = 255 }",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,326,255,"G = 200, B = 200, A = 255 }",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,386,255,"ThemeThemeColor { R = 255, G = 0, B = 0, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,397,100,"ThemeThemeColor { R = 100, G = 100, B = 100, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,397,255,"G = 100, B = 100, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,409,250,"ThemeThemeColor { R = 250, G = 250, B = 250, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,409,255,"G = 250, B = 250, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,421,200,"ThemeThemeColor { R = 200, G = 200, B = 200, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,421,255,"G = 200, B = 200, A = 255 };",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,452,300,"Width = 300,",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,453,100,"Height = 100,",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,610,200,"Width = 200,",comparison
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs,611,50,Height = 50,comparison
+C:\Users\koosh\Dino\src\Tests\VFXPoolLogicTests.cs,178,50,if (distance <= 50),comparison
+C:\Users\koosh\Dino\src\Tests\VFXPoolLogicTests.cs,180,500,if (distance >= 500),comparison
+C:\Users\koosh\Dino\src\Tests\VanillaCatalogErrorTests.cs,90,100,"tity = new { health = 100, armor = 10 };",comparison
+C:\Users\koosh\Dino\src\Tests\VanillaCatalogErrorTests.cs,90,10,"health = 100, armor = 10 };",comparison
+C:\Users\koosh\Dino\src\Tests\VanillaCatalogErrorTests.cs,100,100,tity = new { health = 100 };,comparison
+C:\Users\koosh\Dino\src\Tests\VictoryConditionUnitTests.cs,71,500,ition { TargetValue = 500 };,comparison
+C:\Users\koosh\Dino\src\Tests\VictoryConditionUnitTests.cs,130,1000,"TargetValue = 1000,",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,63,50,"ResourceCost { Food = 50, Wood = 30, Iron = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,63,30,"t { Food = 50, Wood = 30, Iron = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,63,10,"50, Wood = 30, Iron = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,210,100,"ResourceCost { Food = 100, Wood = 50, Stone = 30, Iron",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,210,50,"{ Food = 100, Wood = 50, Stone = 30, Iron = 20, Gold",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,210,30,"0, Wood = 50, Stone = 30, Iron = 20, Gold = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,210,20,"0, Stone = 30, Iron = 20, Gold = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,210,10,"30, Iron = 20, Gold = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,326,50,ResourceCost { Food = 50 },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,427,100,"UnitId = ""a"", Count = 100 },",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,428,50,"UnitId = ""b"", Count = 50 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs,453,10,"UnitId = ""a"", Count = 10, SpawnPoint = ""north"" }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,98,50,"ResourceCost { Food = 50, Wood = 30 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,98,30,"t { Food = 50, Wood = 30 }",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,148,100,ResourceCost { Food = 100 },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,414,10,"d = ""unit_a"", Count = 10 },",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,485,50,ResourceCost { Food = 50 },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,503,50,ResourceCost { Food = 50 } },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,509,50,ResourceCost { Food = 50 } },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,526,100,"new UnitStats { Hp = 100, Damage = 10, Speed = 5, Cost",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,526,10,"{ Hp = 100, Damage = 10, Speed = 5, Cost = new Resour",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,526,30,ResourceCost { Food = 30 } },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,533,150,"new UnitStats { Hp = 150, Damage = 15, Speed = 4, Cost",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,533,15,"{ Hp = 150, Damage = 15, Speed = 4, Cost = new Resour",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,533,40,ResourceCost { Food = 40 } },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,541,200,"new UnitStats { Hp = 200, Damage = 20, Speed = 3, Cost",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,541,20,"{ Hp = 200, Damage = 20, Speed = 3, Cost = new Resour",comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,541,60,ResourceCost { Food = 60 } },comparison
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs,637,10,"= ""militia"", Count = 10 }",comparison
+C:\Users\koosh\Dino\src\Tests\WaveInjectorTests.cs,39,10,request.SpawnX = 10.5f;,comparison
+C:\Users\koosh\Dino\src\Tests\WaveInjectorTests.cs,40,20,request.SpawnZ = 20.3f;,comparison
+C:\Users\koosh\Dino\src\Tests\WinConditionDefinitionUnitTests.cs,113,500,"eters[""population""] = 500;",comparison
+C:\Users\koosh\Dino\src\Tests\WinConditionDefinitionUnitTests.cs,122,75,"meters[""threshold""] = 75.5;",comparison
+C:\Users\koosh\Dino\src\Tests\WinConditionDefinitionUnitTests.cs,132,100,"eters[""percentage""] = 100;",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,32,10,"st { Food = 0, Wood = 10, Stone = 20, Iron = 30, Gold",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,32,20,"0, Wood = 10, Stone = 20, Iron = 30, Gold = 40, Popula",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,32,30,"0, Stone = 20, Iron = 30, Gold = 40, Population = 5 };",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,32,40,"20, Iron = 30, Gold = 40, Population = 5 };",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,62,20,"est Squad"", MinSize = 20, MaxSize = 10 };",comparison
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs,62,10,"nSize = 20, MaxSize = 10 };",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetLibraryCommand.cs,76,50,"ultValueFactory = _ => 50,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetLibraryCommand.cs,193,20,"ultValueFactory = _ => 20,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlCommand.cs,59,10,"ultValueFactory = _ => 10,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlCommand.cs,279,3000,"ultValueFactory = _ => 3000,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlCommand.cs,622,10,"ultValueFactory = _ => 10,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,174,3000,int targetPolycount = 3000),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1079,3200,"PolycountEstimate = 3200,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1100,2900,"PolycountEstimate = 2900,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1121,1600,"PolycountEstimate = 1600,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1142,1400,"PolycountEstimate = 1400,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1163,7200,"PolycountEstimate = 7200,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1184,200,"PolycountEstimate = 200,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\AssetctlPipeline.cs,1205,5000,"PolycountEstimate = 5000,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Commands\SearchCommand.cs,25,10,"ultValueFactory = _ => 10,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\SketchfabConfiguration.cs,18,2000,layMs { get; set; } = 2000;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\SketchfabConfiguration.cs,33,30,conds { get; set; } = 30;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\AssetDownloader.cs,203,20,"int pageSize = 20,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\AssetDownloader.cs,789,365,var yearAgo = 365;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\AssetDownloader.cs,867,100,fest.AssetId.Length > 100),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\AssetDownloader.cs,892,5000,fault { get; set; } = 5000;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\AssetDownloader.cs,935,20,dates { get; set; } = 20;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\ISketchfabAdapter.cs,34,10,"int limit = 10,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabAdapter.cs,39,10,"int limit = 10,",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,196,60,t retryAfterSeconds = 60;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,211,500,response.StatusCode >= 500),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,304,60,t retryAfterSeconds = 60;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,319,500,response.StatusCode >= 500),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,590,500,">= 500 => ""Pro"",",comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,703,30,conds { get; set; } = 30;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Assetctl\Sketchfab\SketchfabClient.cs,842,20,Limit { get; set; } = 20;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Commands\RecordCommand.cs,255,4096,(outputPath).Length < 4096),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Commands\RecordCommand.cs,297,1024,while (size >= 1024 && order < sizes.Length - 1),comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Commands\RecordCommand.cs,300,1024,size /= 1024;,comparison
+C:\Users\koosh\Dino\src\Tools\Cli\Commands\UiWaitCommand.cs,33,5000,meout == 0) timeout = 5000;,comparison
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\Data\AppConfig.cs,16,2000,valMs { get; set; } = 2000;,comparison
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\Data\AppConfigService.cs,59,2000,ReloadIntervalMs = 2000,comparison
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\Data\PackViewModel.cs,61,100,rder { get; init; } = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\ViewModels\SettingsViewModel.cs,23,2000,valMs { get; set; } = 2000;,comparison
+C:\Users\koosh\Dino\src\Tools\DumpTools\GameLaunchAnalyzer.cs,259,14,512);  // Capacity ~= 14 appends × 36 chars,comparison
+C:\Users\koosh\Dino\src\Tools\GameControlCli\Program.cs,106,30000,s(int readTimeoutMs = 30000),comparison
+C:\Users\koosh\Dino\src\Tools\GameControlCli\Program.cs,778,30000,while (waited < 30000),comparison
+C:\Users\koosh\Dino\src\Tools\GameControlCli\Program.cs,781,1500,waited += 1500;,comparison
+C:\Users\koosh\Dino\src\Tools\GameControlCli\Program.cs,785,50000,dStatus.EntityCount > 50000),comparison
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\ViewModels\ProgressPageViewModel.cs,133,100,ProgressValue = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\ViewModels\ProgressPageViewModel.cs,208,100,ProgressValue = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\ViewModels\ProgressPageViewModel.cs,274,100,ProgressValue = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\GameProcessManager.cs,130,10,for (int i = 0; i < 10; i++),comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,91,1000,(outputPath).Length > 1000;,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,123,1000,(outputPath).Length > 1000;,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,203,1000,(outputPath).Length > 1000;,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,254,10,if (raw[p] > 10 || raw[p + 1] > 10 || raw[p +,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,256,10,if (nonBlack < 10) continue; // Skip black fram,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameCaptureHelper.cs,263,1000,(outputPath).Length > 1000),comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputHelper.cs,233,50,tem.Threading.Thread.Sleep(50); // Let focus settle,sleep
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputHelper.cs,244,50,tem.Threading.Thread.Sleep(50); // Let input register,sleep
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputTool.cs,107,100,"y (key=F9), click (x=100,y=200,button=left), move (x=1",comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputTool.cs,107,200,"=F9), click (x=100,y=200,button=left), move (x=100,y=2",comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputTool.cs,457,50,tem.Threading.Thread.Sleep(50); // Let focus settle,sleep
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameInputTool.cs,468,50,tem.Threading.Thread.Sleep(50); // Let input register,sleep
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameLaunchTool.cs,59,12,ttempt = 0; attempt < 12; attempt++),comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameNavigateTool.cs,27,1000,"000)"")] int delayMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,126,24,if (read < 24 || buffer[0] != 137 || buffer,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,126,137,d < 24 || buffer[0] != 137 || buffer[1] != 80 || buffer[,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,126,80,!= 137 || buffer[1] != 80 || buffer[2] != 78 || buffer[,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,126,78,!= 80 || buffer[2] != 78 || buffer[3] != 71),comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,126,71,!= 78 || buffer[3] != 71),comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,132,24,width = (buffer[16] << 24) | (buffer[17] << 16) | (buff,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,132,16,< 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,134,24,eight = (buffer[20] << 24) | (buffer[21] << 16) | (buff,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameScreenshotTool.cs,134,16,< 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer,comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameWaitAndScreenshotTool.cs,26,30,"int timeoutSeconds = 30,",comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameWaitAndScreenshotTool.cs,27,1000,"int pollIntervalMs = 1000,",comparison
+C:\Users\koosh\Dino\src\Tools\McpServer\Tools\GameWaitAndScreenshotTool.cs,153,10,th.Abs(a[i] - b[i]) > 10),comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\AssetConfig.cs,194,10,onds { get; init; } = 10;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\AssetConfig.cs,200,120,onds { get; init; } = 120;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\OptimizedAsset.cs,45,100,D0Max { get; set; } = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\OptimizedAsset.cs,48,50,D0Min { get; set; } = 50;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\OptimizedAsset.cs,51,50,D1Min { get; set; } = 50;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\OptimizedAsset.cs,52,20,D1Max { get; set; } = 20;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Models\OptimizedAsset.cs,55,20,D2Min { get; set; } = 20;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Program.cs,464,250,(description.Length > 250),comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Program.cs,556,1024,while (size >= 1024 && order < suffixes.Length -,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Program.cs,559,1024,size /= 1024;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AddressablesService.cs,56,114,"b.AppendLine(""--- !u!114 &11400000"");",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AddressablesService.cs,107,22,512);  // Capacity ~= 22 appends × 24 chars (YAML line,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AddressablesService.cs,110,114,"b.AppendLine(""--- !u!114 &11400000"");",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,366,100,"LOD0Max = 100,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,377,100,"LOD0Max = 100,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,378,50,"LOD0Min = 50,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,379,50,"LOD1Min = 50,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,380,20,"LOD1Max = 20,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetOptimizationService.cs,381,20,LOD2Min = 20,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\AssetValidationService.cs,206,60,mizationTimeSeconds > 60),comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,38,17,512);  // Capacity ~= 17 appends × 30 chars (prefab YA,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,92,33,"b.AppendLine(""--- !u!33 &"" + GenerateGUID());",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,101,23,"b.AppendLine(""--- !u!23 &"" + GenerateGUID());",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,152,198,"b.AppendLine(""--- !u!198 &"" + GenerateGUID());",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,191,95,"b.AppendLine(""--- !u!95 &"" + GenerateGUID());",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,213,1027,"b.AppendLine(""--- !u!1027 &"" + GenerateGUID());",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Services\PrefabGenerationService.cs,225,100000,long _fileIdCounter = 100000;,comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,69,5000,"PolyCountTarget = 5000,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,114,5000,"PolyCountTarget = 5000,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,161,1000,"PolyCountTarget = 1000,  // Matches actual polycount",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,212,1000,"PolyCountTarget = 1000,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,263,5000,"PolyCountTarget = 5000,",comparison
+C:\Users\koosh\Dino\src\Tools\PackCompiler\Tests\AssetPipelineTests.cs,321,5000,"PolyCountTarget = 5000,",comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,155,20,main.startSpeed = 20.0f;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,166,80,main.maxParticles = 80;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,184,100,main.maxParticles = 100;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,203,50,main.maxParticles = 50;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,222,120,main.maxParticles = 120;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,241,150,main.maxParticles = 150;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,260,200,main.maxParticles = 200;,comparison
+C:\Users\koosh\Dino\src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.cs,292,3000,mat.renderQueue = 3000; // Transparent queue for add,comparison

@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 2827393888
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 5bed1bc2acb9bc8b203fef7f3083c8f5
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: a3954d9da6324b836c32a89fa85d00a9
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 5bed1bc2acb9bc8b203fef7f3083c8f5
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/Republic/sw-rep-research-lab.mat
+- Assets/Materials/Republic/sw-rep-research-lab-primary.mat
+- Assets/Prefabs/Republic/sw-rep-research-lab.prefab
+Dependencies: []

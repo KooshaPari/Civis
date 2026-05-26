@@ -1,0 +1,310 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset Pipeline Configuration",
+  "description": "Schema for asset_pipeline.yaml defining 3D model imports, LOD generation, and artifact creation",
+  "type": "object",
+  "required": [
+    "version",
+    "pack_id",
+    "target_unity_version",
+    "asset_settings",
+    "materials",
+    "phases",
+    "build"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version (e.g., 1.0)"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Pack identifier (must match pack.yaml id)"
+    },
+    "target_unity_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "Target Unity version (e.g., 2021.3.45f2)"
+    },
+    "asset_settings": {
+      "type": "object",
+      "required": [
+        "base_path",
+        "output_path",
+        "lod_strategy"
+      ],
+      "properties": {
+        "base_path": {
+          "type": "string",
+          "description": "Relative path to assets directory"
+        },
+        "output_path": {
+          "type": "string",
+          "description": "Relative path to Unity Assets/ directory output"
+        },
+        "materials_path": {
+          "type": "string",
+          "description": "Relative path to materials subdirectory"
+        },
+        "texture_quality": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Texture compression quality"
+        },
+        "lod_strategy": {
+          "type": "string",
+          "enum": ["aggressive", "balanced", "conservative"],
+          "description": "LOD reduction strategy (aggressive: 100/60/30, balanced: 100/70/40, conservative: 100/80/60)"
+        }
+      }
+    },
+    "materials": {
+      "type": "object",
+      "description": "Material definitions (faction colors, etc.)",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "faction",
+          "base_color",
+          "emission_color",
+          "emission_intensity"
+        ],
+        "properties": {
+          "faction": {
+            "type": "string",
+            "description": "Faction this material applies to"
+          },
+          "base_color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "description": "Base color in hex format"
+          },
+          "emission_color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "description": "Emission color in hex format"
+          },
+          "emission_intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Emission intensity multiplier"
+          },
+          "roughness": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Material roughness (optional)"
+          },
+          "metallic": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Material metallic amount (optional)"
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "object",
+      "description": "Asset import phases (v0.7.0, v0.8.0, etc.)",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "description",
+          "models"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Phase description"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/AssetDefinition"
+            }
+          }
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "required": [
+        "output_directory",
+        "addressables_output"
+      ],
+      "properties": {
+        "output_directory": {
+          "type": "string",
+          "description": "Base output directory for generated artifacts"
+        },
+        "addressables_output": {
+          "type": "string",
+          "description": "Output file for Addressables catalog YAML"
+        },
+        "log_file": {
+          "type": "string",
+          "description": "Build log output file"
+        },
+        "generate_html_report": {
+          "type": "boolean",
+          "description": "Generate HTML build report"
+        },
+        "performance_targets": {
+          "type": "object",
+          "properties": {
+            "import_time_sec": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Max time per model import"
+            },
+            "lod_generation_sec": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Max time for LOD generation"
+            },
+            "prefab_generation_sec": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Max time for prefab generation"
+            },
+            "total_pipeline_sec": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Max time for full pipeline"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AssetDefinition": {
+      "type": "object",
+      "required": [
+        "id",
+        "file",
+        "type",
+        "faction",
+        "polycount_target",
+        "addressable_key",
+        "output_prefab"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Asset identifier"
+        },
+        "file": {
+          "type": "string",
+          "description": "Path to GLB/FBX file (relative to base_path)"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "infantry",
+            "hero",
+            "heavy",
+            "elite",
+            "specialized",
+            "vehicle",
+            "building",
+            "projectile",
+            "effect"
+          ],
+          "description": "Asset type"
+        },
+        "faction": {
+          "type": "string",
+          "description": "Faction this asset belongs to"
+        },
+        "polycount_target": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 500000,
+          "description": "Target polycount for LOD0"
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10,
+          "default": 1.0,
+          "description": "Scale multiplier on import"
+        },
+        "lod": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable LOD generation"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "minItems": 1,
+              "maxItems": 5,
+              "description": "LOD polycount percentages (e.g., [100, 60, 30])"
+            },
+            "screen_sizes": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "description": "Screen percentage thresholds for LOD transitions"
+            }
+          }
+        },
+        "material": {
+          "type": "string",
+          "description": "Material template to apply (from materials section)"
+        },
+        "addressable_key": {
+          "type": "string",
+          "pattern": "^sw-[a-z0-9-]+$",
+          "description": "Addressables key for runtime loading"
+        },
+        "output_prefab": {
+          "type": "string",
+          "description": "Output path for generated prefab"
+        },
+        "update_definition": {
+          "type": "object",
+          "description": "Optionally update game definition with visual_asset",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "file": {
+              "type": "string",
+              "description": "Path to YAML definition file"
+            },
+            "id": {
+              "type": "string",
+              "description": "Definition ID to update"
+            },
+            "field": {
+              "type": "string",
+              "description": "YAML field to inject (e.g., visual_asset)"
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Custom metadata (author, source URL, etc.)"
+        }
+      }
+    }
+  }
+}

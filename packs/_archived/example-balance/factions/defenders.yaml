@@ -1,0 +1,30 @@
+# Defenders - a simple defensive faction
+faction:
+  id: defenders
+  display_name: The Defenders
+  description: A stalwart faction focused on holding the line against overwhelming odds.
+  theme: fantasy
+  archetype: order
+  doctrine: elite_discipline
+
+economy:
+  gather_bonus: 1.0
+  upkeep_modifier: 0.9
+  research_speed: 1.0
+  build_speed: 1.1
+
+army:
+  morale_style: disciplined
+  unit_cap_modifier: 1.0
+  elite_cost_modifier: 1.0
+  spawn_rate_modifier: 1.0
+
+roster:
+  cheap_infantry: militia
+
+buildings:
+  barracks: barracks
+
+visuals:
+  primary_color: "#336699"
+  accent_color: "#FFCC00"

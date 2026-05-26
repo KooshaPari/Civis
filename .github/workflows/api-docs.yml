@@ -1,0 +1,31 @@
+name: API Reference
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/SDK/**'
+      - 'src/Bridge/Client/**'
+      - 'docfx.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-api-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+      - name: Install DocFX
+        run: dotnet tool install -g docfx
+      - name: Generate API metadata
+        run: docfx metadata docfx.json
+      - name: Upload API docs artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: api-docs
+          path: docs/api/

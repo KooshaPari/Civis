@@ -1,0 +1,59 @@
+# Pattern #109 — inline-json-options allowlist (task #326).
+#
+# This file lists ``new JsonSerializerOptions { ... }`` sites that the
+# gate (scripts/ci/detect_inline_json_options.py) flagged but that have
+# been audited and accepted as legitimate exceptions, OR that are
+# grandfathered debt being fixed by task #325 (Top-8 consolidation).
+#
+# Three suppression mechanisms are accepted:
+#
+#   1. ``severity|file|line`` — line-locked allowlist key. Pull these
+#      directly from the ``allowlist_key`` field of
+#      ``docs/qa/inline-json-options-report.json``. Moving the line
+#      forces a fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every site in that file.
+#      Use sparingly; only when the file is a designated exception
+#      with options DELIBERATELY divergent from the canonical default.
+#
+#   3. Trailing ``// pattern-109-allowed:<reason>`` comment on the
+#      same source line as the ``new JsonSerializerOptions`` token.
+#      This is the PREFERRED form — the audit trail lives in the code,
+#      not a sidecar list. The detector recognizes the marker and skips
+#      the site without producing a hit at all.
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_inline_json_options.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_inline_json_options.py --self-test
+# CI workflow: .github/workflows/inline-json-options.yml
+#
+# Pairs with src/SDK/Json/JsonOptions.cs (the canonical default) plus
+# any project-specific holder under src/<Project>/Json/ (e.g.
+# GoFfiJsonOptions.cs). Tracking task: #326.
+# Active mop-up task: #325 (Top-8 site sweep).
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# (none yet — populate after the initial sweep in #325 lands and a
+# baseline of true positives is established.)
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — line-locked keys.
+# ----------------------------------------------------------------------------
+
+# Test fixtures with deliberately-divergent options (one entry per
+# fixture; prefer the inline ``// pattern-109-allowed:<reason>``
+# annotation over an entry here so the audit trail lives in the
+# source). Examples of legitimate test-side divergence:
+#
+#   - A writer-formatting test that asserts WriteIndented=true output
+#   - A round-trip test that exercises a SnakeCaseLower policy on
+#     purpose to prove the policy survives serialization
+#   - A regression test pinning a specific historical option set
+#
+# (none yet — populate as the seed sweep in #325 surfaces real cases.)

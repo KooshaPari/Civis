@@ -1,0 +1,38 @@
+# Standard Economy Profile
+# Default balanced economy with no special bonuses or penalties.
+# Suitable for most factions and standard difficulty gameplay.
+
+id: economy-standard
+display_name: Standard Economy
+description: >
+  A balanced economy profile with moderate starting resources and no special
+  modifiers. Workers operate at baseline efficiency, trade rates are unmodified,
+  and all production operates at standard capacity. Ideal for factions that
+  rely on strategic building placement rather than economic bonuses.
+
+starting_resources:
+  food: 200
+  wood: 150
+  stone: 100
+  iron: 50
+  gold: 0
+
+production_multipliers:
+  food: 1.0
+  wood: 1.0
+  stone: 1.0
+  iron: 1.0
+  gold: 1.0
+
+consumption_multipliers:
+  food: 1.0
+  wood: 1.0
+  stone: 1.0
+  iron: 1.0
+  gold: 1.0
+
+trade_rate_modifier: 1.0
+trade_cooldown_modifier: 1.0
+storage_multiplier: 1.0
+building_cost_modifier: 1.0
+worker_efficiency: 1.0

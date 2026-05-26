@@ -1,0 +1,8 @@
+{
+  "live_game_required": false,
+  "timestamp": "2026-05-24T22:13:54.6679662Z",
+  "mode": "validate-only",
+  "game_path_available": true,
+  "status": "PASSED",
+  "reason": "Offline SPEC-007 regression checks passed"
+}

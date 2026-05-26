@@ -1,0 +1,24 @@
+# CancellationToken Threading Allowlist
+# Format: relative path from src/, optionally :line
+# Examples:
+#   Tools/Cli/Commands/SyncCommand.cs  # entire file exempt
+#   Tools/SomeFile.cs:42  # specific line
+#
+# Entries below are grandfathered from iter-79 pre-audit or intentional design decisions.
+# New violations MUST be fixed in-code, not allowlisted.
+#
+# NOTE: Token-aliasing false positives (iter-81 #365) eliminated via detector refinement.
+# Entries like "linkedCts.Token" and "timeoutCts.Token" now recognized as valid derived CTs.
+
+# Iter-144 #548: Detector still misses (a) named-arg syntax `ct: ct`, (b) some 2-arg
+# overloads, (c) derived `linkedCts.Token`. Audit a420d567ccec2abe1 confirmed all 9
+# cited sites DO thread ct. Allowlisted pending detector refinement.
+Bridge/Client/GameProcessManager.cs:167  # threads ct as 2nd arg to WaitForProcessExitAsync
+Bridge/Client/GameProcessManager.cs:178  # Task.Delay(500, ct)
+Bridge/Client/GameProcessManager.cs:233  # Task.Delay(pollIntervalMs, ct)
+Bridge/Client/GameClient.cs:172          # linkedCts.Token derived CT
+Bridge/Client/GameClient.cs:190          # PerformHandshakeAsync(ct)
+Bridge/Client/GameClient.cs:236          # named-arg ct: ct
+Bridge/Client/GameClient.cs:455          # Task.Delay(retryDelay, ct)
+Bridge/Client/GameClient.cs:462          # SendRequestCoreAsync(method, parameters, ct)
+Bridge/Client/GameClient.cs:478          # ConnectAsync(ct)

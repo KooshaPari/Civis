@@ -1,0 +1,8 @@
+threads
+clrthreads
+clrstack -all
+pstacks
+eestack
+syncblk
+dumpheap -stat
+exit

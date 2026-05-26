@@ -1,0 +1,142 @@
+# DINOForge Faction Definition Schema
+# Used by the Warfare domain plugin
+
+type: object
+required:
+  - faction
+  - economy
+  - army
+  - roster
+  - buildings
+  - visuals
+  - audio
+
+properties:
+  faction:
+    type: object
+    required: [id, theme, archetype, display_name]
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-z0-9_]*$"
+      theme:
+        type: string
+        enum: [starwars, modern, futuristic, fantasy, custom]
+      archetype:
+        type: string
+        enum: [order, industrial_swarm, asymmetric, custom]
+      doctrine:
+        type: string
+        description: "Doctrine identifier (e.g. elite_discipline, mechanized_attrition)"
+      display_name:
+        type: string
+
+  economy:
+    type: object
+    properties:
+      gather_bonus:
+        type: number
+        default: 1.0
+      upkeep_modifier:
+        type: number
+        default: 1.0
+      research_speed:
+        type: number
+        default: 1.0
+      build_speed:
+        type: number
+        default: 1.0
+
+  army:
+    type: object
+    properties:
+      morale_style:
+        type: string
+        enum: [disciplined, mechanical, fanatical, irregular, custom]
+      unit_cap_modifier:
+        type: number
+        default: 1.0
+      elite_cost_modifier:
+        type: number
+        default: 1.0
+      spawn_rate_modifier:
+        type: number
+        default: 1.0
+
+  roster:
+    type: object
+    description: "Maps abstract role slots to concrete unit IDs"
+    properties:
+      cheap_infantry:
+        type: string
+      line_infantry:
+        type: string
+      elite_infantry:
+        type: string
+      anti_armor:
+        type: string
+      support_weapon:
+        type: string
+      recon:
+        type: string
+      light_vehicle:
+        type: string
+      heavy_vehicle:
+        type: string
+      artillery:
+        type: string
+      hero_commander:
+        type: string
+      spike_unit:
+        type: string
+
+  buildings:
+    type: object
+    description: "Maps abstract building roles to concrete building IDs"
+    properties:
+      barracks:
+        type: string
+      workshop:
+        type: string
+      artillery_foundry:
+        type: string
+      tower_mg:
+        type: string
+      heavy_defense:
+        type: string
+      command_center:
+        type: string
+      economy_primary:
+        type: string
+      economy_secondary:
+        type: string
+      research_facility:
+        type: string
+      wall_segment:
+        type: string
+
+  visuals:
+    type: object
+    properties:
+      primary_color:
+        type: string
+        pattern: "^#[0-9a-fA-F]{6}$"
+      accent_color:
+        type: string
+        pattern: "^#[0-9a-fA-F]{6}$"
+      projectile_pack:
+        type: string
+      ui_skin:
+        type: string
+
+  audio:
+    type: object
+    properties:
+      weapon_pack:
+        type: string
+      structure_pack:
+        type: string
+      ambient_pack:
+        type: string
+      music_pack:
+        type: string

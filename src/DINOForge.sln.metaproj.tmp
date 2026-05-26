@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" InitialTargets="ValidateSolutionConfiguration;ValidateToolsVersions;ValidateProjects">
+  <Target Name="GetSolutionConfigurationContents" />
+  <Target Name="ValidateToolsVersions" />
+  <Target Name="Rebuild" />
+  <Target Name="Build" />
+  <Target Name="Clean" />
+  <Target Name="ValidateProjects" />
+  <Target Name="Publish" />
+  <Target Name="ValidateSolutionConfiguration" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\SolutionFile\ImportBefore\*" Condition="'$(ImportByWildcardBeforeSolution)' != 'false' and exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\SolutionFile\ImportBefore')" />
+  <PropertyGroup Condition="'$(ImportDirectorySolutionProps)' != 'false' and '$(DirectorySolutionPropsPath)' == ''">
+    <_DirectorySolutionPropsFile Condition="'$(_DirectorySolutionPropsFile)' == ''">Directory.Solution.props</_DirectorySolutionPropsFile>
+    <_DirectorySolutionPropsBasePath Condition="'$(_DirectorySolutionPropsBasePath)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), '$(_DirectorySolutionPropsFile)'))</_DirectorySolutionPropsBasePath>
+    <DirectorySolutionPropsPath Condition="'$(_DirectorySolutionPropsBasePath)' != '' and '$(_DirectorySolutionPropsFile)' != ''">$([System.IO.Path]::Combine('$(_DirectorySolutionPropsBasePath)', '$(_DirectorySolutionPropsFile)'))</DirectorySolutionPropsPath>
+  </PropertyGroup>
+  <Import Project="$(DirectorySolutionPropsPath)" Condition="'$(ImportDirectorySolutionProps)' != 'false' and exists('$(DirectorySolutionPropsPath)')" />
+  <Import Project="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\before.DINOForge.sln.targets" Condition="exists('C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\before.DINOForge.sln.targets')" />
+  <PropertyGroup Condition=" '$(Configuration)' == '' ">
+    <Configuration>Debug</Configuration>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == '' ">
+    <Platform>Any CPU</Platform>
+  </PropertyGroup>
+  <PropertyGroup Condition=" ('$(AspNetConfiguration)' == '') ">
+    <AspNetConfiguration>$(Configuration)</AspNetConfiguration>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SolutionDir>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\</SolutionDir>
+    <SolutionExt>.sln</SolutionExt>
+    <SolutionFileName>DINOForge.sln</SolutionFileName>
+    <SolutionName>DINOForge</SolutionName>
+    <SolutionPath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\DINOForge.sln</SolutionPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworkVersion Condition="'$(TargetFrameworkVersion)' == '' and '$(MSBuildToolsVersion)' == '2.0'">v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition="'$(TargetFrameworkVersion)' == '' and ('$(MSBuildToolsVersion)' == '3.5' or '$(MSBuildToolsVersion)' == '3.0')">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition="'$(TargetFrameworkVersion)' == '' and !('$(MSBuildToolsVersion)' == '3.5' or '$(MSBuildToolsVersion)' == '3.0' or '$(MSBuildToolsVersion)' == '2.0')">v4.0</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" ('$(Configuration)' == 'Debug') and ('$(Platform)' == 'Any CPU') ">
+    <CurrentSolutionConfigurationContents>
+      <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+    </CurrentSolutionConfigurationContents>
+  </PropertyGroup>
+  <ItemGroup>
+    <SolutionConfiguration Include="Debug|Any CPU">
+      <Configuration>Debug</Configuration>
+      <Platform>Any CPU</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Release|Any CPU">
+      <Configuration>Release</Configuration>
+      <Platform>Any CPU</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+  </ItemGroup>
+  <PropertyGroup Condition=" ('$(Configuration)' == 'Release') and ('$(Platform)' == 'Any CPU') ">
+    <CurrentSolutionConfigurationContents>
+      <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+    </CurrentSolutionConfigurationContents>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\SolutionFile\ImportAfter\*" Condition="'$(ImportByWildcardBeforeSolution)' != 'false' and exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\SolutionFile\ImportAfter')" />
+  <PropertyGroup Condition="'$(ImportDirectorySolutionTargets)' != 'false' and '$(DirectorySolutionTargetsPath)' == ''">
+    <_DirectorySolutionTargetsFile Condition="'$(_DirectorySolutionTargetsFile)' == ''">Directory.Solution.targets</_DirectorySolutionTargetsFile>
+    <_DirectorySolutionTargetsBasePath Condition="'$(_DirectorySolutionTargetsBasePath)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), '$(_DirectorySolutionTargetsFile)'))</_DirectorySolutionTargetsBasePath>
+    <DirectorySolutionTargetsPath Condition="'$(_DirectorySolutionTargetsBasePath)' != '' and '$(_DirectorySolutionTargetsFile)' != ''">$([System.IO.Path]::Combine('$(_DirectorySolutionTargetsBasePath)', '$(_DirectorySolutionTargetsFile)'))</DirectorySolutionTargetsPath>
+  </PropertyGroup>
+  <Import Project="$(DirectorySolutionTargetsPath)" Condition="'$(ImportDirectorySolutionTargets)' != 'false' and exists('$(DirectorySolutionTargetsPath)')" />
+  <Import Project="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\after.DINOForge.sln.targets" Condition="exists('C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\after.DINOForge.sln.targets')" />
+</Project>

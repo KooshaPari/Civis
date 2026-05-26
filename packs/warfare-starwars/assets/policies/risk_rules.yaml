@@ -1,0 +1,194 @@
+# IP Risk Assessment Rules
+# Framework for evaluating intellectual property status of assets
+
+# Risk classification matrix
+risk_matrix:
+  # Generic, non-franchise assets with clear licensing
+  generic_safe:
+    indicators:
+      - original_creation_claim_by_author
+      - permissive_license: ["CC BY 4.0", "CC BY-SA 4.0", "MIT", "CC0"]
+      - no_trademark_claims
+      - no_brand_references
+      - no_character_likenesses
+    confidence_multiplier: 1.0
+    release_policy: "Approved for public release with attribution"
+    example_assets:
+      - generic_sci_fi_trooper
+      - procedural_robot_rig
+      - abstract_vehicle_parts
+
+  # Fan-created Star Wars content - private development only
+  fan_star_wars_private_only:
+    indicators:
+      - explicit_star_wars_reference
+      - character_likeness_of_star_wars_character
+      - franchise_brand_in_name_or_description
+      - fan_art_license_restrictions
+    confidence_multiplier: 0.95
+    release_policy: "Private/dev-only. Cannot ship in public release."
+    legal_rationale: "Star Wars is owned by Lucasfilm/Disney. Fan content is non-transferable."
+    example_assets:
+      - clone_trooper_based_model
+      - stormtrooper_likeness
+      - vader_inspired_character
+
+  # Official game or mod tool assets - reference architecture only
+  official_game_mod_tool_reference_only:
+    indicators:
+      - official_game_asset_claim
+      - official_mod_tool_asset
+      - eula_prohibits_redistribution
+      - eula_restricts_modification
+    confidence_multiplier: 0.98
+    release_policy: "Reference only. Do not ship. Create original derivative."
+    legal_rationale: "Official assets are not distributable per game EULA."
+    example_assets:
+      - game_engine_sample_meshes
+      - official_modding_kit_templates
+
+  # Unclear source, insufficient documentation
+  unknown_provenance:
+    indicators:
+      - source_no_longer_available
+      - author_information_missing
+      - license_unspecified_or_missing
+      - derivative_work_status_unclear
+      - download_link_dead
+    confidence_multiplier: 0.30
+    release_policy: "Quarantine. Obtain explicit author permission or reject."
+    legal_rationale: "Insufficient rights verification."
+    example_assets:
+      - unlicensed_archived_model
+      - social_media_screenshot_asset
+
+  # Known IP violation or licensing conflict
+  high_risk_do_not_ship:
+    indicators:
+      - copyright_claim_on_file
+      - dmca_takedown_history
+      - eula_violation_documented
+      - unlicensed_branded_content
+      - commercial_license_required
+      - exclusive_agreement_conflict
+    confidence_multiplier: 0.0
+    release_policy: "REJECT. Do not acquire, do not use, do not distribute."
+    legal_rationale: "Known legal/licensing conflict."
+    example_assets:
+      - copyrighted_commercial_model
+      - pirated_paid_asset
+      - exclusive_agreement_breach
+
+# Confidence scoring rules
+confidence_scoring:
+  base_score: 0.5
+  adjustments:
+    explicit_license_documented: +0.20
+    author_verifiable: +0.15
+    original_creation_claim: +0.15
+    community_reputation: +0.10
+    long_availability_without_takedown: +0.10
+    clear_attribution_available: +0.05
+    source_url_persistent: +0.05
+    eula_explicitly_permits_derivative: +0.10
+    eula_prohibits_redistribution: -0.30
+    commercial_license_required: -0.35
+    dmca_history: -0.40
+    copyright_claim_found: -0.50
+    takedown_notice_documented: -0.50
+
+# Source authority evaluation
+source_authority:
+  high_trust:
+    - "sketchfab.com/assets/creative-commons"
+    - "blendswap.com"
+    - "creativecommons.org"
+  medium_trust:
+    - "sketchfab.com/assets/personal"
+    - "moddb.com"
+    - "github.com"
+  low_trust:
+    - "generic_file_hosting"
+    - "social_media_archives"
+    - "dead_links"
+
+# License compatibility matrix
+license_compatibility:
+  # Licenses compatible with public open-source/mod distribution
+  compatible_for_public_use:
+    - "CC0"
+    - "CC BY 4.0"
+    - "CC BY-SA 4.0"
+    - "CC BY-ND 4.0"
+    - "MIT"
+    - "Apache 2.0"
+    - "GPL v3"
+    - "Open Source (generic)"
+
+  # Licenses requiring attribution but allowing use
+  compatible_with_attribution:
+    - "CC BY 4.0"
+    - "CC BY-SA 4.0"
+    - "CC BY-ND 4.0"
+
+  # Licenses incompatible with redistribution
+  incompatible_for_public_distribution:
+    - "All Rights Reserved"
+    - "Commercial License Only"
+    - "Personal Use Only"
+    - "Request Permission"
+    - "Custom EULA"
+
+# Assessment workflow
+workflow:
+  step_1_intake:
+    - verify_source_url_exists
+    - verify_author_information
+    - verify_license_label_present
+    - categorize_initial_risk
+
+  step_2_verification:
+    - access_source_page
+    - read_full_license
+    - check_eula_if_applicable
+    - verify_copyright_notices
+    - assess_derivative_work_status
+
+  step_3_scoring:
+    - apply_confidence_adjustments
+    - evaluate_source_authority
+    - cross_reference_ip_claims
+    - determine_final_risk_category
+
+  step_4_decision:
+    - apply_release_policy
+    - document_rationale
+    - flag_if_quarantine_needed
+    - notify_stakeholders_if_high_risk
+
+# Documentation requirements by risk level
+documentation_requirements:
+  generic_safe:
+    - license_document
+    - author_attribution
+    - sha256_checksum
+    - provenance_link
+
+  fan_star_wars_private_only:
+    - license_document
+    - author_attribution
+    - ip_assessment_report
+    - private_only_flag
+    - archive_date
+
+  unknown_provenance:
+    - attempted_contact_log
+    - provenance_investigation_report
+    - rights_uncertainty_statement
+    - quarantine_justification
+
+  high_risk_do_not_ship:
+    - ip_conflict_documentation
+    - legal_rationale
+    - rejection_log
+    - date_reviewed

@@ -1,0 +1,22 @@
+# Pattern #226 allowlist: public mutable fields in NuGet-published types
+#
+# DRIFT GATE — Pattern #226 was RETIRED at iter-133 (#494) after the
+# JsonRpcMessage public-field -> property migration cleared 34 HIGH
+# violations to zero. Threshold is 0: any new HIGH violation re-opens
+# the pattern. This file should remain empty under normal circumstances.
+#
+# Scanned surface (NuGet-published assemblies):
+#   * src/SDK/
+#   * src/Bridge/Protocol/
+#   * src/Bridge/Client/
+#   * src/Domains/
+#
+# Format (one entry per line; # for comments):
+#   HIGH|relative/path.cs|line   # line-locked allowlist key
+#   relative/path.cs             # suppress every site in the file
+#
+# Inline suppression (preferred for self-documenting cases):
+#   public string Legacy; // pattern-226-ok: <reason>
+#
+# Keep this file empty until a site is explicitly approved with a
+# documented rationale (binary compatibility, codegen output, etc.).

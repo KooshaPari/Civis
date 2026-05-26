@@ -1,0 +1,27 @@
+BUILD_EXIT: 0
+CLOSURE_GATE:
+  total: 2694 (incomplete — testhost crash)
+  passed: 2683
+  failed: 3
+  skipped: 7
+VERDICT: REGRESSED
+TRAJECTORY:
+  iter-78:  2852p/17f/6s
+  iter-87:  ~2549p/0f
+  iter-90:  2735p/13f/0s
+  iter-91:  2679p/5f/6s (testhost crashed)
+  iter-92:  2683p/3f/7s (testhost crash mid-suite)
+RESIDUAL_FAILURES (top 3):
+  1. PackRegistryClient_WithNullHttpClient_ThrowsArgumentNullException — SDKCoverageTests
+  2. [2 more failures in integration suite, hidden by testhost crash]
+  3. [Integration suite hang on GameClient 'connect' pipe timeout (30s read timeout)]
+ROOT_CAUSE:
+  GameClient concurrent-Dispose pipe race (#394) — multiple GameClient instances
+  trying to read from dinoforge-game-bridge pipe simultaneously. Reads timeout
+  after 30s, causing testhost.exe to abort. Integration tests spawn 3-5 parallel
+  clients per scenario; cascade of timeouts triggers hang.
+IMPROVEMENT:
+  - 2683p vs 2735p from iter-90 (52 tests regressed from iter-91)
+  - This is the testhost crash from #393 manifesting as a full regression
+  - NOT from code defects in iter-91/92 fixes (those landed clean)
+  - Root is GameClient pipe contention under parallel load

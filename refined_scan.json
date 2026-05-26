@@ -1,0 +1,642 @@
+{
+  "high": 0,
+  "med": 106,
+  "issues": [
+    {
+      "file": "src\\Domains\\Economy\\Balance\\EconomyBalanceCalculator.cs",
+      "line": 53,
+      "text": "Dictionary<string, FactionEconomySummary> summaries = new Dictionary<string, FactionEconomySummary>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Balance\\EconomyBalanceCalculator.cs",
+      "line": 153,
+      "text": "Dictionary<string, float> consumption = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Models\\EconomyProfile.cs",
+      "line": 39,
+      "text": "public Dictionary<string, float> ProductionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Models\\EconomyProfile.cs",
+      "line": 45,
+      "text": "public Dictionary<string, float> ConsumptionMultipliers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Models\\MarketDefinition.cs",
+      "line": 50,
+      "text": "PriceModifiers = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Models\\MarketDefinition.cs",
+      "line": 69,
+      "text": "PriceModifiers = priceModifiers ?? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Rates\\ProductionCalculator.cs",
+      "line": 39,
+      "text": "Dictionary<string, float> totalProduction = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Rates\\ProductionCalculator.cs",
+      "line": 86,
+      "text": "Dictionary<string, float> output = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Rates\\ProductionCalculator.cs",
+      "line": 122,
+      "text": "Dictionary<string, float> balance = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Rates\\ProductionCalculator.cs",
+      "line": 163,
+      "text": "Dictionary<string, float> totalConsumption = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Registries\\EconomyProfileRegistry.cs",
+      "line": 14,
+      "text": "new Dictionary<string, EconomyProfile>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Registries\\ResourceRegistry.cs",
+      "line": 15,
+      "text": "new Dictionary<string, ResourceDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Registries\\TradeRouteRegistry.cs",
+      "line": 14,
+      "text": "new Dictionary<string, TradeRouteDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Economy\\Validation\\EconomyValidator.cs",
+      "line": 252,
+      "text": "new Dictionary<string, List<(string, float, string)>>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\EventAction.cs",
+      "line": 54,
+      "text": "public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\ScenarioEventDefinition.cs",
+      "line": 63,
+      "text": "TriggerParameters = new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\ScenarioEventDefinition.cs",
+      "line": 65,
+      "text": "EffectParameters = new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\ScenarioEventDefinition.cs",
+      "line": 83,
+      "text": "TriggerParameters = triggerParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\ScenarioEventDefinition.cs",
+      "line": 85,
+      "text": "EffectParameters = effectParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\StartingConditions.cs",
+      "line": 37,
+      "text": "StartingResources = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\StartingConditions.cs",
+      "line": 52,
+      "text": "StartingResources = startingResources ?? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\WinConditionDefinition.cs",
+      "line": 45,
+      "text": "Parameters = new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Models\\WinConditionDefinition.cs",
+      "line": 60,
+      "text": "Parameters = parameters ?? new Dictionary<string, object>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Registries\\ScenarioRegistry.cs",
+      "line": 14,
+      "text": "new Dictionary<string, ScenarioDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Scenario\\Scripting\\GameState.cs",
+      "line": 31,
+      "text": "public Dictionary<string, int> Resources { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\MenuManager.cs",
+      "line": 14,
+      "text": "new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\MenuManager.cs",
+      "line": 110,
+      "text": "return new Dictionary<string, bool>(_panelStates, StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\Models\\HudElementDefinition.cs",
+      "line": 49,
+      "text": "public Dictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\Registries\\HudElementRegistry.cs",
+      "line": 15,
+      "text": "new Dictionary<string, HudElementDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\Registries\\MenuRegistry.cs",
+      "line": 15,
+      "text": "new Dictionary<string, MenuDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\UI\\Registries\\ThemeRegistry.cs",
+      "line": 15,
+      "text": "new Dictionary<string, ThemeDefinition>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Archetypes\\ArchetypeRegistry.cs",
+      "line": 14,
+      "text": "new Dictionary<string, FactionArchetype>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Archetypes\\ArchetypeRegistry.cs",
+      "line": 70,
+      "text": "new Dictionary<string, float>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Archetypes\\ArchetypeRegistry.cs",
+      "line": 81,
+      "text": "new Dictionary<string, float>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Archetypes\\ArchetypeRegistry.cs",
+      "line": 93,
+      "text": "new Dictionary<string, float>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Archetypes\\FactionArchetype.cs",
+      "line": 45,
+      "text": "BaseModifiers = new Dictionary<string, float>(baseModifiers, StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Balance\\BalanceCalculator.cs",
+      "line": 65,
+      "text": "var unitPowerRatings = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Roles\\UnitRoleValidator.cs",
+      "line": 36,
+      "text": "new Dictionary<string, Func<FactionRoster, string?>>(StringComparer.OrdinalIgnoreCase)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\Roles\\UnitRoleValidator.cs",
+      "line": 65,
+      "text": "var roleMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Domains\\Warfare\\WarfarePlugin.cs",
+      "line": 79,
+      "text": "var rosterResults = new Dictionary<string, RosterValidationResult>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Assets\\AssetService.cs",
+      "line": 139,
+      "text": "return new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\AssetBundleCache.cs",
+      "line": 48,
+      "text": "_cache = new Dictionary<string, CacheEntry>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\AssetSwapSystem.cs",
+      "line": 451,
+      "text": "new Dictionary<string, Type?>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\ComponentMap.cs",
+      "line": 348,
+      "text": "_all = new Dictionary<string, ComponentMapping>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\EntityQueries.cs",
+      "line": 23,
+      "text": "new Dictionary<string, ComponentType?>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\FactionSystem.cs",
+      "line": 62,
+      "text": "new Dictionary<string, FactionRuntime>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\FactionSystem.cs",
+      "line": 320,
+      "text": "new Dictionary<string, FactionRuntime>(_factions, StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\PackStatMappings.cs",
+      "line": 23,
+      "text": "new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\ProjectileVFXSystem.cs",
+      "line": 125,
+      "text": "new Dictionary<string, Queue<GameObject>>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\VanillaArchetypeMapper.cs",
+      "line": 30,
+      "text": "new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\VanillaCatalog.cs",
+      "line": 109,
+      "text": "new Dictionary<string, ArchetypeGroup>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\VFXPoolManager.cs",
+      "line": 39,
+      "text": "new Dictionary<string, Queue<ParticleSystem>>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\Bridge\\VFXPoolManager.cs",
+      "line": 45,
+      "text": "new Dictionary<string, int>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\DebugOverlay.cs",
+      "line": 265,
+      "text": "Dictionary<string, int> archetypeCounts = new Dictionary<string, int>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\EntityDumper.cs",
+      "line": 122,
+      "text": "Dictionary<string, List<Entity>> archetypeGroups = new Dictionary<string, List<Entity>>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\EntityDumper.cs",
+      "line": 123,
+      "text": "Dictionary<string, ComponentType[]> archetypeComponents = new Dictionary<string, ComponentType[]>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\EntityDumper.cs",
+      "line": 377,
+      "text": "Dictionary<string, List<string>> namespaceTypes = new Dictionary<string, List<string>>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\HudElementRendererAdapter.cs",
+      "line": 52,
+      "text": "new Dictionary<string, ExtendedPanelHandle>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\ModCanvasAdapter.cs",
+      "line": 52,
+      "text": "new Dictionary<string, ExtendedHandle>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\ModCanvasAdapter.cs",
+      "line": 141,
+      "text": "return new Dictionary<string, ExtendedHandle>(_handles, StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\ModSettingsHostAdapter.cs",
+      "line": 47,
+      "text": "new Dictionary<string, IModSettingsPanel>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\ModSettingsHostAdapter.cs",
+      "line": 104,
+      "text": "return new Dictionary<string, IModSettingsPanel>(_panels, StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\Adapters\\NativeMenuHostAdapter.cs",
+      "line": 45,
+      "text": "new Dictionary<string, INativeMenuScreen>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Runtime\\UI\\ModSettingsPanel.cs",
+      "line": 24,
+      "text": "new Dictionary<string, PluginSettingsInfo>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Assets\\AddressablesCatalog.cs",
+      "line": 85,
+      "text": "var keyToBundleMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Assets\\AssetService.cs",
+      "line": 137,
+      "text": "return new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Assets\\AssetSwapRegistry.cs",
+      "line": 76,
+      "text": "new Dictionary<string, AssetSwapRequest>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\ContentLoadResult.cs",
+      "line": 32,
+      "text": "ErrorsByPack = errorsByPack ?? (IReadOnlyDictionary<string, IReadOnlyList<string>>)new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\ContentSchemaRegistry.cs",
+      "line": 13,
+      "text": "new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Dependencies\\PackSubmoduleManager.cs",
+      "line": 97,
+      "text": "var pathToUrl = new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Dependencies\\PackSubmoduleManager.cs",
+      "line": 193,
+      "text": "return new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Dependencies\\PackSubmoduleManager.cs",
+      "line": 195,
+      "text": "var entries = new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\HotReload\\PackFileWatcher.cs",
+      "line": 28,
+      "text": "new ConcurrentDictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Models\\BuildingDefinition.cs",
+      "line": 47,
+      "text": "public Dictionary<string, int> Production { get; set; } = new Dictionary<string, int>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Models\\DoctrineDefinition.cs",
+      "line": 37,
+      "text": "public Dictionary<string, float> Modifiers { get; set; } = new Dictionary<string, float>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Models\\FactionPatchDefinition.cs",
+      "line": 35,
+      "text": "public Dictionary<string, string> RoleOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Registry\\Registry.cs",
+      "line": 15,
+      "text": "new Dictionary<string, List<RegistryEntry<T>>>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Registry\\Registry.cs",
+      "line": 51,
+      "text": "Dictionary<string, RegistryEntry<T>> result = new Dictionary<string, RegistryEntry<T>>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\UI\\Models\\UiDefinitionsStub.cs",
+      "line": 32,
+      "text": "public IReadOnlyDictionary<string, string> ColorOverrides { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\CrosswalkDictionary.cs",
+      "line": 20,
+      "text": "public Dictionary<string, CrosswalkEntry> Entries { get; set; } = new Dictionary<string, CrosswalkEntry>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\NamingGuide.cs",
+      "line": 19,
+      "text": "public Dictionary<string, FactionNamingRules> FactionRules { get; set; } = new Dictionary<string, FactionNamingRules>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\NamingGuide.cs",
+      "line": 91,
+      "text": "public Dictionary<string, NamingRuleSet> Rules { get; set; } = new Dictionary<string, NamingRuleSet>(StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\PackGenerator.cs",
+      "line": 124,
+      "text": "Dictionary<string, object> factionDef = new Dictionary<string, object>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\PackGenerator.cs",
+      "line": 126,
+      "text": "[\"faction\"] = new Dictionary<string, object?>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\PackGenerator.cs",
+      "line": 138,
+      "text": "factionDef[\"visuals\"] = new Dictionary<string, object?>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\PackGenerator.cs",
+      "line": 168,
+      "text": "Dictionary<string, object?> unitDef = new Dictionary<string, object?>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\PackGenerator.cs",
+      "line": 184,
+      "text": "unitDef[\"visuals\"] = new Dictionary<string, string?>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Universe\\StyleGuide.cs",
+      "line": 17,
+      "text": "public Dictionary<string, FactionStyle> FactionStyles { get; set; } = new Dictionary<string, FactionStyle>(System.StringComparer.OrdinalIgnoreCase);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Validation\\NJsonSchemaValidator.cs",
+      "line": 32,
+      "text": "_cachedSchemas = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\SDK\\Validation\\YamlSchemaConverter.cs",
+      "line": 56,
+      "text": "Dictionary<string, object?> result = new Dictionary<string, object?>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 50,
+      "text": "_schemaValidator = new NJsonSchemaValidator(new Dictionary<string, string>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 663,
+      "text": "return new Dictionary<string, double>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 936,
+      "text": "rules.RiskRules = new Dictionary<string, RiskRule>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 941,
+      "text": "rules.StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 992,
+      "text": "RiskRules = new Dictionary<string, RiskRule>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 1002,
+      "text": "Weights = new Dictionary<string, double>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 1013,
+      "text": "StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\AssetctlPipeline.cs",
+      "line": 1021,
+      "text": "StatusPenalty = new Dictionary<string, double>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\SourceRulesModels.cs",
+      "line": 41,
+      "text": "public Dictionary<string, RiskRule> RiskRules { get; set; } = new Dictionary<string, RiskRule>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\SourceRulesModels.cs",
+      "line": 47,
+      "text": "public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\SourceRulesModels.cs",
+      "line": 56,
+      "text": "public Dictionary<string, double> Weights { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\Cli\\Assetctl\\SourceRulesModels.cs",
+      "line": 59,
+      "text": "public Dictionary<string, double> StatusPenalty { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\DumpTools\\GameLaunchAnalyzer.cs",
+      "line": 98,
+      "text": "var errorPatterns = new Dictionary<string, string>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\DumpTools\\GameLaunchAnalyzer.cs",
+      "line": 110,
+      "text": "var systemPatterns = new Dictionary<string, string>(StringComparer.Ordinal)",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\PackCompiler\\Services\\GoResolverService.cs",
+      "line": 171,
+      "text": "var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);",
+      "severity": "MED"
+    },
+    {
+      "file": "src\\Tools\\PackCompiler\\Services\\GoResolverService.cs",
+      "line": 172,
+      "text": "var dependents = new Dictionary<string, List<string>>(StringComparer.Ordinal);",
+      "severity": "MED"
+    }
+  ]
+}

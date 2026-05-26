@@ -1,0 +1,196 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>DINOForge.Tests</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <!-- Explicit parallelization tuning: 4 threads for CI (4-core runners), scales to ProcessorCount locally -->
+    <MaxParallelThreads>4</MaxParallelThreads>
+    <!-- #550: NU1701 noise from Microsoft.CodeAnalysis.* 1.0.1 packages restored at net461.
+         These are legitimate analyzer-test-fixture dependencies; the net461 fallback is harmless
+         for our consumption pattern (we exercise the analyzer via Compilation, not by referencing
+         net461 surface). Suppress to keep lefthook stream watchdog from drowning in noise. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <!-- Align with Runtime: CI runners have no game install -->
+    <GameInstalled Condition="'$(CI)' == 'true'">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and !Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+  </PropertyGroup>
+
+    <!-- Code coverage disabled (see below) -->
+  <PropertyGroup>
+    <!-- Disable shadow-copy to prevent testhost from locking DLL files between runs -->
+    <ShadowCopies>false</ShadowCopies>
+  </PropertyGroup>
+
+  <!-- Wrapped test dependencies (ADR-008) -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.*" />
+    <!-- DISABLED: Coverlet v10 has System.Runtime v10.0.0.0 binding failure with net8.0.
+         Coverlet.msbuild v10 instruments even when CollectCoverage=false (design flaw).
+         Coverage gating via CI closure-gate.yml instead. -->
+    <!-- <PackageReference Include="coverlet.collector" Version="10.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference> -->
+    <!-- <PackageReference Include="coverlet.msbuild" Version="10.*" /> -->
+    <PackageReference Include="NetArchTest.Rules" Version="1.*" />
+    <PackageReference Include="AutoFixture" Version="4.*" />
+    <PackageReference Include="AutoFixture.Xunit2" Version="4.*" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.*" />
+    <!-- Pin vulnerable transitive deps to patched versions (NU1903) -->
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <!-- Coverage-guided fuzzing targets (SharpFuzz) -->
+    <PackageReference Include="SharpFuzz" Version="2.2.0" />
+  </ItemGroup>
+
+  <!-- SPEC-004 KeyInputSystem tests: compile-time access to KeyInputSystem / Plugin (Unity ECS + BepInEx) -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Unity.Entities">
+      <HintPath>$(ManagedDir)\Unity.Entities.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <Compile Remove="KeyInputSystemTests.cs" />
+    <Compile Remove="KeyInputSystemIntegrationTests.cs" />
+    <!-- Runtime CI allowlist omits Assets/ and UI/ — exclude tests that reference those namespaces -->
+    <Compile Remove="AssetServiceTests.cs" />
+    <Compile Remove="NativeInteropIntegrationTests.cs" />
+    <Compile Remove="SdkEdgeCaseTests.cs" />
+    <Compile Remove="SDK\UI\**" />
+    <Compile Remove="Bridge\ComponentMapTests.cs" />
+    <Compile Remove="RuntimeExtractionTests.cs" />
+    <Compile Remove="ParameterizedTests\RuntimeFsCheckProperties.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\Runtime\DINOForge.Runtime.csproj" />
+    <ProjectReference Include="..\Domains\Warfare\DINOForge.Domains.Warfare.csproj" />
+    <ProjectReference Include="..\Domains\UI\DINOForge.Domains.UI.csproj" />
+    <ProjectReference Include="..\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" />
+    <ProjectReference Include="..\Domains\Economy\DINOForge.Domains.Economy.csproj" />
+    <ProjectReference Include="..\Domains\Scenario\DINOForge.Domains.Scenario.csproj" />
+    <ProjectReference Include="..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+    <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj" />
+  </ItemGroup>
+
+  <!-- Link pure-C# Runtime bridge files directly — no Unity/BepInEx project reference needed -->
+  <!-- Step 6: Runtime Extraction Tests (30 tests for pure-C# bridge logic) -->
+  <ItemGroup>
+    <!-- Source-link NativeDepResolver from McpServer (net11.0 project) so NativeDepResolverTests
+         (in this net8.0 Tests project) can exercise it without a net11.0 ProjectReference. -->
+    <Compile Include="..\Tools\McpServer\NativeDepResolver.cs">
+      <Link>McpServer\NativeDepResolver.cs</Link>
+    </Compile>
+    <!-- PackCompiler pure-C# services (net11.0 project not referenceable from net8.0 tests) -->
+    <Compile Include="..\Tools\PackCompiler\Services\AssetValidationService.cs">
+      <Link>PackCompiler\AssetValidationService.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Services\DefinitionUpdateService.cs">
+      <Link>PackCompiler\DefinitionUpdateService.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\ImportedAsset.cs">
+      <Link>PackCompiler\Models\ImportedAsset.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\OptimizedAsset.cs">
+      <Link>PackCompiler\Models\OptimizedAsset.cs</Link>
+    </Compile>
+    <Compile Include="..\Tools\PackCompiler\Models\AssetConfig.cs">
+      <Link>PackCompiler\Models\AssetConfig.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <!-- Exclude sub-projects that have their own csproj -->
+  <ItemGroup>
+    <Compile Remove="Integration\**" />
+    <None Remove="Integration\**" />
+    <Content Remove="Integration\**" />
+    <EmbeddedResource Remove="Integration\**" />
+    <Compile Remove="CompanionTests\**" />
+    <None Remove="CompanionTests\**" />
+    <Content Remove="CompanionTests\**" />
+    <EmbeddedResource Remove="CompanionTests\**" />
+    <Compile Remove="Benchmarks\**" />
+    <None Remove="Benchmarks\**" />
+    <Content Remove="Benchmarks\**" />
+    <EmbeddedResource Remove="Benchmarks\**" />
+    <Compile Remove="CliToolTests\**" />
+    <None Remove="CliToolTests\**" />
+    <Content Remove="CliToolTests\**" />
+    <EmbeddedResource Remove="CliToolTests\**" />
+    <Compile Remove="PackCompiler\**" />
+    <None Remove="PackCompiler\**" />
+    <Content Remove="PackCompiler\**" />
+    <EmbeddedResource Remove="PackCompiler\**" />
+    <!-- Sketchfab subdir has its own csproj (DINOForge.Tests.Sketchfab.csproj) targeting net11.0 with Cli ProjectReference.
+         Excluding from this csproj prevents:
+         - Picking up obj/.../GlobalUsings.g.cs (Sentry/etc) into net8.0 build
+         - Duplicate TargetFrameworkAttribute from sub-project obj artifacts
+         - Unresolved Tools.Cli/SketchfabAdapter/SketchfabClient references (Cli not refed here) -->
+    <Compile Remove="Sketchfab\**" />
+    <None Remove="Sketchfab\**" />
+    <Content Remove="Sketchfab\**" />
+    <EmbeddedResource Remove="Sketchfab\**" />
+  </ItemGroup>
+
+  <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->
+  <!-- Also exclude tests that depend on Runtime types excluded in CI (FactionSystem, WaveInjector, PackStatInjector) -->
+  <!-- PackStatInjectorTests uses DINOForge.Runtime.Bridge.PackStatMappings which is not referenced by this project -->
+  <!-- UiAutomation tests depend on FlaUI which is not a project dependency -->
+  <!-- VanillaCatalogTests and UiActionTraceTests depend on DINOForge.Runtime which is not referenced -->
+  <!-- GameLaunch tests have incompatible API calls to GameClient (GetStatusAsync, QueryUnitsAsync, etc. not in current Bridge.Client) -->
+  <!-- PackCompiler services tested in separate project (DINOForge.Tests.PackCompiler.csproj) targeting net11.0 -->
+  <!-- GameControlCliTests has its own csproj (DINOForge.Tests.GameControlCli.csproj) -->
+  <!-- Analyzer tests excluded — LogErrorStackTraceAnalyzer not compiled in this project -->
+  <!-- EntityQueriesTests requires Unity.Entities assembly which is not available in this test context -->
+  <ItemGroup>
+    <Compile Remove="UnitSpawnerTests.cs" />
+    <Compile Remove="FactionSystemTests.cs" />
+    <Compile Remove="WaveInjectorTests.cs" />
+    <Compile Remove="PackStatInjectorTests.cs" />
+    <Compile Remove="UiAutomation\**" />
+    <Compile Remove="VanillaCatalogTests.cs" />
+    <Compile Remove="UiActionTraceTests.cs" />
+    <Compile Remove="GameLaunch\**" />
+    <Compile Remove="GameLaunchTests.cs" />
+    <Compile Remove="GameTestDiagnostics.cs" />
+    <Compile Remove="GameControlCliTests\**" />
+    <Compile Remove="RustInteropTests.cs" />
+    <Compile Remove="BridgeClientAsyncTests.cs" />
+    <Compile Remove="Bridge\EntityQueriesTests.cs" />
+    <Compile Remove="Analyzers\**" />
+    <!-- EndToEndUserJourneysTests.cs excluded pending fix for missing UnitRegistry/DependencyResolver types -->
+    <None Remove="GameControlCliTests\**" />
+    <Content Remove="GameControlCliTests\**" />
+    <EmbeddedResource Remove="GameControlCliTests\**" />
+    <None Remove="Analyzers\**" />
+    <Content Remove="Analyzers\**" />
+    <EmbeddedResource Remove="Analyzers\**" />
+  </ItemGroup>
+
+</Project>

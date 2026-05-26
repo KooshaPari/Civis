@@ -1,0 +1,57 @@
+================================================================================
+SKETCHFAB DOWNLOADER - QUICK START GUIDE
+================================================================================
+
+WHAT WAS FIXED:
+✓ API endpoint corrected (/v3/models/{id}/download instead of /models/{id}/)
+✓ JSON parsing fixed (Python instead of regex)
+✓ Rate limiting implemented (0.5-2s delays)
+✓ Asset manifests created with metadata
+
+FILES YOU NEED:
+1. simple_downloader.py - The main downloader to use
+2. SKETCHFAB_DOWNLOADER_REPORT.md - Full technical documentation
+3. This file (SKETCHFAB_QUICK_START.txt) - Quick reference
+
+DOWNLOADED ASSET:
+✓ sw_star_wars_building_cf2f3b9d (38 MB GLB)
+  - Verified as valid glTF binary format v2
+  - Location: packs/warfare-starwars/assets/raw/sw_star_wars_building_cf2f3b9d/
+  - Manifest: packs/warfare-starwars/assets/SKETCHFAB_DOWNLOADS_COMPLETE.json
+
+HOW TO USE:
+1. Set your API token:
+   export SKETCHFAB_API_TOKEN="<your_sketchfab_api_token_here>"
+
+2. Run the downloader:
+   python3 packs/warfare-starwars/simple_downloader.py
+
+3. Check the manifest:
+   cat packs/warfare-starwars/assets/SKETCHFAB_DOWNLOADS_COMPLETE.json
+
+HOW TO ADD MORE MODELS:
+1. Edit packs/warfare-starwars/simple_downloader.py
+2. Update the models_to_download list with new (model_id, asset_name) pairs
+3. Run python3 packs/warfare-starwars/simple_downloader.py
+4. Manifests update automatically
+
+API ENDPOINTS:
+- GET /v3/models/{uid}/ → Get model metadata
+- GET /v3/models/{uid}/download → Get download URLs (must use immediately)
+- GET /v3/search?q=query → Search for models
+
+IMPORTANT NOTES:
+- S3 signed URLs expire in 5 minutes - download starts immediately
+- Free API tier: 100-200 calls/day (each model needs 2 calls)
+- Some models restricted by creator (403 Forbidden) - unavoidable
+- Rate limiting: 1-2 requests/second recommended
+- Script automatically retries on 429 (Too Many Requests)
+
+TROUBLESHOOTING:
+- 403 Forbidden: Creator restricted, find alternative model
+- 429 Too Many Requests: Rate limited, wait or get personal token
+- 404 Not Found: Invalid model ID, verify with API
+
+For detailed API documentation, see: SKETCHFAB_DOWNLOADER_REPORT.md
+
+================================================================================

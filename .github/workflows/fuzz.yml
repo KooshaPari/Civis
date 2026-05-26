@@ -1,0 +1,137 @@
+name: Nightly Fuzz
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2am UTC nightly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  property-tests:
+    name: FsCheck Property Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+          global-json-file: global.json
+          include-prerelease: true
+
+      - name: Restore dependencies
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
+
+      - name: Build dependencies (ordered)
+        run: |
+          for p in \
+            src/SDK/DINOForge.SDK.csproj \
+            src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj \
+            src/Bridge/Client/DINOForge.Bridge.Client.csproj \
+            src/Domains/Warfare/DINOForge.Domains.Warfare.csproj \
+            src/Domains/Economy/DINOForge.Domains.Economy.csproj \
+            src/Domains/Scenario/DINOForge.Domains.Scenario.csproj \
+            src/Domains/UI/DINOForge.Domains.UI.csproj \
+            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj; do
+            dotnet build "$p" -c Release --no-restore --verbosity minimal || exit 1
+          done
+          dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore /p:BuildInParallel=false
+
+      - name: Run property tests
+        run: |
+          dotnet test src/Tests/DINOForge.Tests.csproj \
+            --no-build \
+            --filter "Category=Property" \
+            --configuration Release \
+            --logger "trx;LogFileName=property-results.trx" \
+            --results-directory TestResults/Property \
+            2>&1
+
+      - name: Upload property test results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: property-test-results
+          path: TestResults/Property/
+
+  fuzz-smoke:
+    name: Fuzz Target Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+          global-json-file: global.json
+          include-prerelease: true
+
+      - name: Restore dependencies
+        run: dotnet restore src/DINOForge.CI.NoRuntime.sln /p:RestoreLockedMode=true
+
+      - name: Build dependencies (ordered)
+        run: |
+          for p in \
+            src/SDK/DINOForge.SDK.csproj \
+            src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj \
+            src/Bridge/Client/DINOForge.Bridge.Client.csproj \
+            src/Domains/Warfare/DINOForge.Domains.Warfare.csproj \
+            src/Domains/Economy/DINOForge.Domains.Economy.csproj \
+            src/Domains/Scenario/DINOForge.Domains.Scenario.csproj \
+            src/Domains/UI/DINOForge.Domains.UI.csproj \
+            src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj; do
+            dotnet build "$p" -c Release --no-restore --verbosity minimal || exit 1
+          done
+          dotnet build src/DINOForge.CI.NoRuntime.sln -c Release --no-restore /p:BuildInParallel=false
+
+      - name: Run fuzz smoke tests
+        run: |
+          dotnet test src/Tests/DINOForge.Tests.csproj \
+            --no-build \
+            --filter "Category=Fuzz" \
+            --configuration Release \
+            --logger "trx;LogFileName=fuzz-smoke-results.trx" \
+            --results-directory TestResults/FuzzSmoke \
+            2>&1
+
+      - name: Upload fuzz smoke test results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: fuzz-smoke-results
+          path: TestResults/FuzzSmoke/
+
+  corpus-validation:
+    name: Validate Fuzz Corpus Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check corpus files exist
+        run: |
+          set -e
+          echo "Validating fuzz corpus structure..."
+          test -f src/Tests/FuzzCorpus/yaml/valid-minimal.yaml && echo "OK: valid-minimal.yaml"
+          test -f src/Tests/FuzzCorpus/yaml/valid-full.yaml    && echo "OK: valid-full.yaml"
+          test -f src/Tests/FuzzCorpus/yaml/malformed-indent.yaml && echo "OK: malformed-indent.yaml"
+          test -f src/Tests/FuzzCorpus/yaml/unicode.yaml       && echo "OK: unicode.yaml"
+          test -f src/Tests/FuzzCorpus/semver/boundary.txt     && echo "OK: semver/boundary.txt"
+          test -f src/Tests/FuzzCorpus/json/valid-manifest.json && echo "OK: json/valid-manifest.json"
+          echo "All corpus seed files present."
+
+      - name: Count corpus seeds
+        run: |
+          YAML_COUNT=$(find src/Tests/FuzzCorpus/yaml -type f | wc -l)
+          JSON_COUNT=$(find src/Tests/FuzzCorpus/json -type f | wc -l)
+          SEMVER_COUNT=$(find src/Tests/FuzzCorpus/semver -type f | wc -l)
+          TOTAL=$((YAML_COUNT + JSON_COUNT + SEMVER_COUNT))
+          echo "Corpus seed counts: yaml=$YAML_COUNT json=$JSON_COUNT semver=$SEMVER_COUNT total=$TOTAL"
+          if [ "$TOTAL" -lt 6 ]; then
+            echo "ERROR: Corpus must have at least 6 seed files (found $TOTAL)"
+            exit 1
+          fi
+          echo "Corpus validation passed: $TOTAL seed files."

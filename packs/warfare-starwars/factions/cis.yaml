@@ -1,0 +1,54 @@
+# Confederacy of Independent Systems - Industrial Swarm Archetype
+# Mass-produced droid army, cheap and expendable
+
+faction:
+  id: cis
+  display_name: Confederacy of Independent Systems
+  description: The Separatist droid army, mass-produced in vast factories. Individually weak but produced in overwhelming numbers with mechanical discipline.
+  theme: starwars
+  archetype: industrial_swarm
+  doctrine: mechanized_attrition
+
+economy:
+  gather_bonus: 0.9
+  upkeep_modifier: 0.6
+  research_speed: 0.9
+  build_speed: 1.4
+
+army:
+  morale_style: mechanical
+  unit_cap_modifier: 1.6
+  elite_cost_modifier: 1.3
+  spawn_rate_modifier: 1.5
+
+roster:
+  cheap_infantry: cis_b1_battle_droid
+  line_infantry: cis_b1_squad
+  elite_infantry: cis_bx_commando_droid
+  anti_armor: cis_b2_super_battle_droid
+  support_weapon: cis_aat_crew
+  recon: cis_probe_droid
+  light_vehicle: cis_stap_pilot
+  heavy_vehicle: cis_droideka
+  artillery: cis_aat_crew
+  hero_commander: cis_general_grievous
+  spike_unit: cis_magnaguard
+
+buildings:
+  barracks: cis_droid_factory
+  workshop: cis_assembly_line
+  artillery_foundry: cis_heavy_foundry
+  tower_mg: cis_sentry_turret
+  heavy_defense: cis_ray_shield
+  command_center: cis_tactical_center
+  economy_primary: cis_mining_facility
+  economy_secondary: cis_processing_plant
+  research_facility: cis_tech_union_lab
+  wall_segment: cis_durasteel_barrier
+
+visuals:
+  primary_color: "#4A5568"
+  accent_color: "#3182CE"
+
+audio:
+  weapon_pack: starwars_weapons

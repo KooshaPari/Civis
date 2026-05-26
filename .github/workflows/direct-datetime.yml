@@ -1,0 +1,63 @@
+name: direct-datetime
+
+# Pattern #100 detection gate — fails CI when production C# code uses
+# ``DateTime.UtcNow`` / ``DateTime.Now`` directly instead of going
+# through an injected ``TimeProvider``. The wall-clock singleton is
+# untestable (no fake clock) and is a deadline-loop bug magnet
+# (NTP step / DST drift / VM resume can spin a ``while (DateTime.UtcNow
+# < deadline)`` loop forever).
+#
+# Companion: scripts/ci/detect_direct_datetime.py (run with
+# --self-test for spec). Allowlist:
+# docs/qa/direct-datetime-allowlist.txt.
+# Cross-reference: tasks #285 (TimeProvider migration sweep) /
+# #286 (this gate) / future Roslyn analyzer for compile-time
+# enforcement.
+
+on:
+  pull_request:
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_direct_datetime.py"
+      - "docs/qa/direct-datetime-allowlist.txt"
+      - ".github/workflows/direct-datetime.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_direct_datetime.py"
+      - "docs/qa/direct-datetime-allowlist.txt"
+      - ".github/workflows/direct-datetime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direct-datetime-check:
+    name: Pattern #100 direct-datetime
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_direct_datetime.py --self-test
+
+      - name: Run direct-datetime gate
+        run: python scripts/ci/detect_direct_datetime.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: direct-datetime-report
+          path: docs/qa/direct-datetime-report.json
+          if-no-files-found: warn
+          retention-days: 14

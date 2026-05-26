@@ -1,0 +1,112 @@
+# Survival Challenge Scenario
+# A hard survival mode testing endurance against 20 waves
+
+id: survival-challenge
+display_name: "Endurance: Survival Challenge"
+description: >
+  How long can you hold out? Face 20 relentless waves of enemies with limited
+  starting resources. Every wave grows stronger, and there are no reinforcements.
+  Only the most skilled commanders will survive to the end.
+
+difficulty: Hard
+objective_type: Survive
+wave_count: 20
+max_duration: 3600
+
+starting_resources:
+  food: 200
+  wood: 200
+  stone: 150
+  iron: 50
+  gold: 0
+
+allowed_factions: []
+
+victory_conditions:
+  - condition_type: SurviveWaves
+    target_value: 20
+    description: "Survive all 20 waves to prove your worth."
+  - condition_type: TimeSurvival
+    target_value: 3600
+    description: "Alternatively, survive for 60 minutes."
+
+defeat_conditions:
+  - condition_type: CommandCenterDestroyed
+    description: "Your command center is your lifeline. Protect it at all costs."
+  - condition_type: PopulationZero
+    description: "If all your people fall, the settlement is lost."
+  - condition_type: TimeExpired
+    target_value: 3600
+    description: "The scenario ends after 60 minutes."
+
+scripted_events:
+  - id: survival-start
+    trigger_type: OnWave
+    trigger_value: 1
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Survival Mode"
+          text: "Resources are scarce. Build efficiently and prioritize defenses. There will be no resupply."
+
+  - id: survival-wave5-escalation
+    trigger_type: OnWave
+    trigger_value: 5
+    actions:
+      - action_type: ChangeWaveComposition
+        parameters:
+          unit_id: "heavy_infantry"
+          count_delta: "5"
+      - action_type: ShowMessage
+        parameters:
+          title: "They Grow Stronger"
+          text: "Heavy infantry has joined the enemy ranks. Adjust your tactics accordingly."
+
+  - id: survival-wave10-siege
+    trigger_type: OnWave
+    trigger_value: 10
+    actions:
+      - action_type: ChangeWaveComposition
+        parameters:
+          unit_id: "siege_ram"
+          count_delta: "2"
+      - action_type: ShowMessage
+        parameters:
+          title: "Siege Weapons Spotted"
+          text: "The enemy has brought siege rams! Your walls alone may not hold. Prepare counter-attacks."
+
+  - id: survival-kills-bonus
+    trigger_type: OnUnitKilled
+    trigger_value: 500
+    actions:
+      - action_type: GrantResources
+        parameters:
+          iron: "50"
+          gold: "25"
+      - action_type: ShowMessage
+        parameters:
+          title: "Salvage Recovered"
+          text: "Your soldiers have recovered iron and gold from 500 fallen enemies."
+
+  - id: survival-wave15-elite
+    trigger_type: OnWave
+    trigger_value: 15
+    actions:
+      - action_type: SpawnUnits
+        parameters:
+          unit_id: "elite_champion"
+          count: "3"
+          spawn_point: "north"
+      - action_type: ShowMessage
+        parameters:
+          title: "Elite Champions"
+          text: "Three elite champions lead the assault from the north!"
+
+  - id: survival-wave20-finale
+    trigger_type: OnWave
+    trigger_value: 20
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "The Final Onslaught"
+          text: "This is it. The largest horde approaches. Every soldier counts."

@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 72827,
+  "lod0_polycount": 72827,
+  "lod1_polycount": 36412,
+  "lod2_polycount": 18205,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\cis_sniper_droid_sketchfab_001"
+}

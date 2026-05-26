@@ -1,0 +1,415 @@
+# Vanilla DINO - All Weapons
+
+# Melee Weapons
+- id: melee_sword
+  display_name: Sword
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Sword"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.0
+    knockback: 0.3
+    attack_range: 1.5
+
+- id: melee_sword_shield
+  display_name: Sword and Shield
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Sword_Shield"
+  stats:
+    base_damage: 0.9
+    armor_penetration: 0.0
+    knockback: 0.2
+    attack_range: 1.5
+    defense_bonus: 0.3
+
+- id: melee_axe
+  display_name: Axe
+  weapon_type: melee
+  damage_type: cleaving
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Axe"
+  stats:
+    base_damage: 1.3
+    armor_penetration: 0.2
+    knockback: 0.5
+    attack_range: 1.8
+
+- id: melee_pike
+  display_name: Pike
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Pike"
+  stats:
+    base_damage: 1.1
+    armor_penetration: 0.4
+    knockback: 0.1
+    attack_range: 2.5
+    cavalry_penalty: -0.2
+
+- id: melee_hammer
+  display_name: Hammer
+  weapon_type: melee
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Hammer"
+  stats:
+    base_damage: 1.2
+    armor_penetration: 0.3
+    knockback: 0.6
+    attack_range: 1.8
+
+- id: melee_lance
+  display_name: Lance
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Lance"
+  stats:
+    base_damage: 1.4
+    armor_penetration: 0.5
+    knockback: 0.4
+    attack_range: 2.2
+    mounted_bonus: 0.3
+
+- id: melee_club
+  display_name: Club
+  weapon_type: melee
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Club"
+  stats:
+    base_damage: 0.8
+    armor_penetration: 0.1
+    knockback: 0.4
+    attack_range: 1.5
+
+- id: melee_pitchfork
+  display_name: Pitchfork
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Pitchfork"
+  stats:
+    base_damage: 0.7
+    armor_penetration: 0.2
+    knockback: 0.2
+    attack_range: 2.0
+
+- id: melee_scythe
+  display_name: Scythe
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Scythe"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.1
+    knockback: 0.3
+    attack_range: 2.0
+    area_damage: 0.3
+
+- id: melee_dagger
+  display_name: Dagger
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Dagger"
+  stats:
+    base_damage: 0.6
+    armor_penetration: 0.3
+    knockback: 0.0
+    attack_range: 1.0
+    attack_speed: 1.3
+
+- id: melee_claws
+  display_name: Claws
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Claws"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.2
+    knockback: 0.2
+    attack_range: 1.5
+    attack_speed: 1.2
+
+- id: melee_sword_enchanted
+  display_name: Enchanted Sword
+  weapon_type: melee
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Enchanted_Sword"
+  stats:
+    base_damage: 1.1
+    armor_penetration: 0.3
+    knockback: 0.3
+    attack_range: 1.5
+    magic_damage: 0.3
+
+- id: melee_dagger_enchanted
+  display_name: Enchanted Dagger
+  weapon_type: melee
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Enchanted_Dagger"
+  stats:
+    base_damage: 0.8
+    armor_penetration: 0.3
+    knockback: 0.1
+    attack_range: 1.0
+    magic_damage: 0.4
+    attack_speed: 1.3
+
+- id: melee_staff_mage
+  display_name: Mage Staff
+  weapon_type: melee
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Mage_Staff"
+  stats:
+    base_damage: 0.7
+    armor_penetration: 0.1
+    knockback: 0.2
+    attack_range: 2.0
+    magic_damage: 0.6
+
+- id: melee_poison_stinger
+  display_name: Poison Stinger
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Poison_Stinger"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.4
+    knockback: 0.2
+    attack_range: 1.8
+    poison_damage: 0.3
+
+- id: melee_poison_claw
+  display_name: Poison Claw
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Poison_Claw"
+  stats:
+    base_damage: 0.9
+    armor_penetration: 0.2
+    knockback: 0.1
+    attack_range: 1.5
+    poison_damage: 0.4
+
+- id: melee_acid
+  display_name: Acid Spray
+  weapon_type: melee
+  damage_type: acid
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Acid_Spray"
+  stats:
+    base_damage: 1.1
+    armor_penetration: 0.5
+    knockback: 0.3
+    attack_range: 1.5
+    armor_reduction: 0.2
+
+- id: melee_claw
+  display_name: Claw
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Claw"
+  stats:
+    base_damage: 0.8
+    armor_penetration: 0.1
+    knockback: 0.2
+    attack_range: 1.2
+    attack_speed: 1.1
+
+- id: melee_spectral_blade
+  display_name: Spectral Blade
+  weapon_type: melee
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Spectral_Blade"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.3
+    knockback: 0.3
+    attack_range: 1.8
+    magic_damage: 0.4
+
+- id: melee_engulf
+  display_name: Engulf Attack
+  weapon_type: melee
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Engulf_Attack"
+  stats:
+    base_damage: 1.1
+    armor_penetration: 0.2
+    knockback: 0.5
+    attack_range: 1.2
+    area_damage: 0.4
+
+- id: melee_mandibles
+  display_name: Mandibles
+  weapon_type: melee
+  damage_type: slashing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Mandibles"
+  stats:
+    base_damage: 1.2
+    armor_penetration: 0.2
+    knockback: 0.2
+    attack_range: 1.5
+    attack_speed: 1.1
+
+- id: melee_ram
+  display_name: Siege Ram
+  weapon_type: melee
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Siege_Ram"
+  stats:
+    base_damage: 1.5
+    armor_penetration: 0.3
+    knockback: 0.8
+    attack_range: 1.8
+    structure_bonus: 0.5
+
+- id: melee_bite
+  display_name: Bite
+  weapon_type: melee
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Bite"
+  stats:
+    base_damage: 0.7
+    armor_penetration: 0.2
+    knockback: 0.1
+    attack_range: 1.0
+    attack_speed: 1.2
+
+# Ranged Weapons
+- id: ranged_bow
+  display_name: Bow
+  weapon_type: ranged
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Bow"
+  stats:
+    base_damage: 0.9
+    armor_penetration: 0.1
+    attack_range: 20.0
+    projectile_speed: 25.0
+    accuracy: 0.8
+
+- id: ranged_crossbow
+  display_name: Crossbow
+  weapon_type: ranged
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Crossbow"
+  stats:
+    base_damage: 1.1
+    armor_penetration: 0.3
+    attack_range: 22.0
+    projectile_speed: 30.0
+    accuracy: 0.85
+    attack_speed: 0.8
+
+- id: ranged_bow_mounted
+  display_name: Mounted Bow
+  weapon_type: ranged
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Mounted_Bow"
+  stats:
+    base_damage: 0.85
+    armor_penetration: 0.1
+    attack_range: 18.0
+    projectile_speed: 25.0
+    accuracy: 0.75
+    mounted_bonus: 0.2
+
+- id: ranged_bow_enchanted
+  display_name: Enchanted Bow
+  weapon_type: ranged
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Enchanted_Bow"
+  stats:
+    base_damage: 1.0
+    armor_penetration: 0.2
+    attack_range: 24.0
+    projectile_speed: 28.0
+    accuracy: 0.92
+    magic_damage: 0.3
+
+- id: ranged_catapult
+  display_name: Catapult
+  weapon_type: siege
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Catapult"
+  stats:
+    base_damage: 2.0
+    armor_penetration: 0.2
+    attack_range: 25.0
+    projectile_speed: 15.0
+    accuracy: 0.6
+    area_damage: 0.8
+    structure_bonus: 0.6
+
+- id: ranged_ballista
+  display_name: Ballista
+  weapon_type: siege
+  damage_type: piercing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Ballista"
+  stats:
+    base_damage: 1.8
+    armor_penetration: 0.6
+    attack_range: 30.0
+    projectile_speed: 35.0
+    accuracy: 0.82
+    structure_bonus: 0.5
+
+- id: ranged_trebuchet
+  display_name: Trebuchet
+  weapon_type: siege
+  damage_type: crushing
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Trebuchet"
+  stats:
+    base_damage: 2.5
+    armor_penetration: 0.2
+    attack_range: 32.0
+    projectile_speed: 12.0
+    accuracy: 0.7
+    area_damage: 1.0
+    structure_bonus: 0.8
+
+- id: ranged_magic_projectile
+  display_name: Magic Projectile
+  weapon_type: ranged
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Magic_Projectile"
+  stats:
+    base_damage: 1.2
+    armor_penetration: 0.2
+    attack_range: 22.0
+    projectile_speed: 20.0
+    accuracy: 0.7
+    magic_damage: 0.6
+    area_damage: 0.2
+
+- id: ranged_firebomb
+  display_name: Firebomb
+  weapon_type: ranged
+  damage_type: fire
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Firebomb"
+  stats:
+    base_damage: 1.3
+    armor_penetration: 0.1
+    attack_range: 18.0
+    projectile_speed: 20.0
+    accuracy: 0.5
+    area_damage: 0.6
+    morale_damage: 0.3
+
+# Support Weapons
+- id: magic_staff
+  display_name: Magic Staff
+  weapon_type: support
+  damage_type: magical
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#Magic_Staff"
+  stats:
+    base_damage: 0.0
+    support_range: 18.0
+    support_strength: 0.8
+    heal_amount: 1.0
+
+- id: none
+  display_name: None
+  weapon_type: none
+  damage_type: none
+  wiki_reference: "https://dino.fandom.com/wiki/Weapons#None"
+  stats:
+    base_damage: 0.0

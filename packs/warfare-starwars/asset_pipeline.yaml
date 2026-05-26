@@ -1,0 +1,1283 @@
+version: 1.0
+pack_id: warfare-starwars
+target_unity_version: 2021.3.45f2
+
+asset_settings:
+  base_path: assets
+  output_path: ../../Assets/warfare-starwars
+  materials_path: materials
+  texture_quality: high
+  lod_strategy: aggressive
+
+materials:
+  republic:
+    faction: republic
+    base_color: "#4488FF"
+    emission_color: "#2244FF"
+    emission_intensity: 1.5
+    roughness: 0.4
+    metallic: 0.2
+  cis:
+    faction: cis
+    base_color: "#FF4400"
+    emission_color: "#FF2200"
+    emission_intensity: 1.5
+    roughness: 0.5
+    metallic: 0.3
+
+phases:
+  v0_7_0_critical:
+    description: "Core units, heroes, vehicles, and first building (5 models, ~35% coverage)"
+    models:
+      - id: clone_trooper_phase2
+        file: raw/sw_clone_trooper_phase2_sketchfab_001/model.glb
+        type: infantry
+        faction: republic
+        polycount_target: 35600
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-trooper-republic
+        output_prefab: prefabs/Clone_Trooper_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_trooper
+          field: visual_asset
+        metadata:
+          sketchfab_id: ece97956b8134ca0b3fad3612573161d
+          priority: critical
+          note: "Replaces helmet-only placeholder, core Republic unit"
+
+      - id: general_grievous
+        file: raw/sw_general_grievous_sketchfab_001/model.glb
+        type: hero
+        faction: cis
+        polycount_target: 4500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-general-grievous
+        output_prefab: prefabs/General_Grievous_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: general_grievous
+          field: visual_asset
+        metadata:
+          sketchfab_id: 5d162177a1df4f56abb615182007d5c4
+          priority: critical
+          note: "CIS hero, balances Republic Jedi Knight hero"
+
+      - id: b2_super_droid
+        file: raw/sw_b2_super_droid_sketchfab_001/model.glb
+        type: heavy
+        faction: cis
+        polycount_target: 49000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-b2-super-droid
+        output_prefab: prefabs/B2_Super_Droid_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: b2_super_battle_droid
+          field: visual_asset
+        metadata:
+          sketchfab_id: 927b3ec911cc45c3ad15c458b3de4d50
+          priority: critical
+          note: "CIS heavy unit, elite droid"
+
+  v0_7_1_vehicles:
+    description: "Phase 3C: Vehicle units with higher LOD detail (6 vehicles, 30% coverage)"
+    models:
+      - id: barc_speeder
+        file: raw/rep_barc_speeder_sketchfab_001/Barc Speeder Exported2.fbx
+        type: vehicle
+        faction: republic
+        polycount_target: 28000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: republic
+        addressable_key: sw-barc-speeder
+        output_prefab: prefabs/BARC_Speeder_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: barc_speeder
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Fast reconnaissance speeder vehicle for Republic"
+
+      - id: atte_walker
+        file: raw/rep_atte_walker_sketchfab_001/Sketchfab_2023_07_16_01_18_15.blend
+        type: vehicle
+        faction: republic
+        polycount_target: 85000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: republic
+        addressable_key: sw-atte-walker
+        output_prefab: prefabs/AT_TE_Walker_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: at_te_crew
+          field: visual_asset
+        metadata:
+          priority: critical
+          note: "Heavy assault walker, 4-legged transport vehicle"
+
+      - id: v19_torrent
+        file: raw/rep_v19_torrent_sketchfab_001/V-19 Torrent.fbx
+        type: vehicle
+        faction: republic
+        polycount_target: 52000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: republic
+        addressable_key: sw-v19-torrent
+        output_prefab: prefabs/V19_Torrent_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: v19_torrent
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Starfighter aircraft for Republic"
+
+      - id: aat_walker
+        file: raw/sw_aat_walker_lego_sketchfab_001/model.glb
+        type: vehicle
+        faction: cis
+        polycount_target: 1346
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: cis
+        addressable_key: sw-aat-walker
+        output_prefab: prefabs/AAT_Walker_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: aat
+          field: visual_asset
+        metadata:
+          sketchfab_id: 0122d0c9554646a1bce5d60041c418b7
+          priority: critical
+          note: "CIS vehicle, armored assault tank. Using Lego variant for consistent art style."
+
+      - id: stap_speeder
+        file: raw/cis_stap_speeder_sketchfab_001/Unity2Skfb.gltf
+        type: vehicle
+        faction: cis
+        polycount_target: 18500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: cis
+        addressable_key: sw-stap-speeder
+        output_prefab: prefabs/STAP_Speeder_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: stap
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Fast CIS hover speeder for reconnaissance"
+
+      - id: dwarf_spider_droid
+        file: raw/cis_dwarf_spider_droid_sketchfab_001/Unity2Skfb.gltf
+        type: vehicle
+        faction: cis
+        polycount_target: 42000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 70, 40]
+          screen_sizes: [150, 75, 30]
+        material: cis
+        addressable_key: sw-dwarf-spider-droid
+        output_prefab: prefabs/Dwarf_Spider_Droid_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: dwarf_spider_droid
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Walking tank vehicle for CIS"
+
+  v0_8_0_elite:
+    description: "Elite units (1 valid model: arc_trooper, 36% coverage)"
+    models:
+      - id: arc_trooper
+        file: raw/sw_arc_trooper_sketchfab_001/model.glb
+        type: elite
+        faction: republic
+        polycount_target: 29600
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-arc-trooper
+        output_prefab: prefabs/ARC_Trooper_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: arc_trooper
+          field: visual_asset
+        metadata:
+          sketchfab_id: 8ac7323517e04efb91abb5edcafc1871
+          priority: high
+          note: "Elite clone armor, shows unit progression"
+
+  v0_8_1_infantry:
+    description: "Clone infantry variants (6 specialist units, 45% coverage)"
+    models:
+      - id: rep_clone_sharpshooter
+        file: raw/rep_clone_sharpshooter_sketchfab_001/model.glb
+        type: infantry_ranged
+        faction: republic
+        polycount_target: 13500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-sharpshooter
+        output_prefab: prefabs/Clone_Sharpshooter_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_sharpshooter
+          field: visual_asset
+        metadata:
+          sketchfab_id: a7fd12dc578d4c729e3930b79666c4ea
+          artist: imveryokay
+          source_url: "https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea"
+          license: CC-BY
+          priority: high
+          note: "Clone infantry ranged specialist"
+
+      - id: rep_clone_heavy
+        file: raw/rep_clone_heavy_sketchfab_001/model.glb
+        type: infantry_heavy
+        faction: republic
+        polycount_target: 9000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-heavy
+        output_prefab: prefabs/Clone_Heavy_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_heavy_trooper
+          field: visual_asset
+        metadata:
+          sketchfab_id: f92a5b62741f4f8abe3537353eb36b18
+          artist: alanh1213
+          source_url: "https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18"
+          license: CC-BY
+          priority: high
+          note: "Clone infantry heavy anti-armor specialist"
+
+      - id: rep_clone_medic
+        file: raw/rep_clone_medic_sketchfab_001/model.glb
+        type: infantry_support
+        faction: republic
+        polycount_target: 20000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-medic
+        output_prefab: prefabs/Clone_Medic_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_medic
+          field: visual_asset
+        metadata:
+          sketchfab_id: e7f2a1fbfdcd41f59ba03fe48ae39004
+          artist: Marr Velz
+          source_url: "https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004"
+          license: CC-BY
+          priority: high
+          note: "Clone infantry support/medical specialist"
+
+      - id: rep_arf_trooper
+        file: raw/rep_arf_trooper_sketchfab_001/model.glb
+        type: infantry_scout
+        faction: republic
+        polycount_target: 17500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-arf-trooper
+        output_prefab: prefabs/ARF_Trooper_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: arf_trooper
+          field: visual_asset
+        metadata:
+          sketchfab_id: 631b759ce00a4496a1960ae0ff49cde0
+          artist: thomas_125
+          source_url: "https://sketchfab.com/3d-models/clone-scout-trooper-631b759ce00a4496a1960ae0ff49cde0"
+          license: CC-BY
+          priority: high
+          note: "Advanced Recon Force scout specialist"
+
+      - id: rep_clone_militia
+        file: raw/rep_clone_militia_sketchfab_001/model.glb
+        type: infantry_basic
+        faction: republic
+        polycount_target: 12000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-militia
+        output_prefab: prefabs/Clone_Militia_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_militia
+          field: visual_asset
+        metadata:
+          sketchfab_id: dcc28349c49b40c8be0fd1618fc65e00
+          artist: Just Ryk
+          source_url: "https://sketchfab.com/3d-models/clone-cadet-var-dcc28349c49b40c8be0fd1618fc65e00"
+          license: CC-BY
+          priority: high
+          note: "Clone cadet/militia tier-1 basic unit"
+
+      - id: rep_clone_engineer
+        file: raw/rep_clone_engineer_sketchfab_001/model.glb
+        type: infantry_tech
+        faction: republic
+        polycount_target: 22500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-engineer
+        output_prefab: prefabs/Clone_Engineer_Republic.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: clone_engineer
+          field: visual_asset
+        metadata:
+          sketchfab_id: 1fd3c5dfd9864394b1cbaf780e1779bd
+          artist: Outworld Studios
+          source_url: "https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd"
+          license: CC-BY
+          priority: high
+          note: "Clone infantry technician/engineer specialist"
+
+  v0_9_0_cis_droids:
+    description: "Phase 2B: CIS droid units (6 models, elite/specialized roles)"
+    models:
+      - id: cis_b1_battle_droid
+        file: raw/cis_b1_battle_droid_sketchfab_001/model.glb
+        type: infantry
+        faction: cis
+        polycount_target: 4500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-b1-battle-droid
+        output_prefab: prefabs/B1_Battle_Droid_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: b1_battle_droid
+          field: visual_asset
+        metadata:
+          sketchfab_id: 5e098a79422b476388f59b189c5bbd4e
+          artist: SmeagolGollum
+          source_url: "https://sketchfab.com/3d-models/b1-battle-droid-5e098a79422b476388f59b189c5bbd4e"
+          license: "CC Attribution-ShareAlike"
+          priority: high
+          note: "CIS basic infantry droid unit"
+
+      - id: cis_sniper_droid
+        file: raw/cis_sniper_droid_sketchfab_001/model.glb
+        type: infantry_ranged
+        faction: cis
+        polycount_target: 6800
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-cis-sniper-droid
+        output_prefab: prefabs/CIS_Sniper_Droid.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: cis_sniper_droid
+          field: visual_asset
+        metadata:
+          sketchfab_id: f6b41f2f3efe4143a51a2dfe901d7bb9
+          artist: urizel
+          source_url: "https://sketchfab.com/3d-models/eyegee-droid-f6b41f2f3efe4143a51a2dfe901d7bb9"
+          license: "CC Attribution"
+          priority: high
+          note: "CIS infantry ranged specialist (marksman)"
+
+      - id: cis_bx_commando_droid
+        file: raw/cis_bx_commando_droid_sketchfab_001/model.glb
+        type: elite
+        faction: cis
+        polycount_target: 8200
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-bx-commando-droid
+        output_prefab: prefabs/BX_Commando_Droid_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: bx_commando_droid
+          field: visual_asset
+        metadata:
+          sketchfab_id: a81e788ebf864caa87a678cb49f97744
+          artist: TheGuayeah
+          source_url: "https://sketchfab.com/3d-models/commando-droid-bx-series-a81e788ebf864caa87a678cb49f97744"
+          license: "CC Attribution"
+          priority: high
+          note: "CIS elite commando droid, specialized combat unit"
+
+      - id: cis_droideka
+        file: raw/cis_droideka_sketchfab_001/model.glb
+        type: heavy
+        faction: cis
+        polycount_target: 9500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-droideka
+        output_prefab: prefabs/Droideka_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: droideka
+          field: visual_asset
+        metadata:
+          sketchfab_id: 6383e06620c1493f9202d3b1c8112c6e
+          artist: Unknown
+          source_url: "https://sketchfab.com/3d-models/droideka-6383e06620c1493f9202d3b1c8112c6e"
+          license: "CC Attribution"
+          priority: high
+          note: "CIS elite guard droid, rolling shield variant (replaces Magnaguard)"
+
+      - id: cis_probe_droid
+        file: raw/cis_probe_droid_sketchfab_001/model.glb
+        type: utility
+        faction: cis
+        polycount_target: 3200
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-probe-droid
+        output_prefab: prefabs/Probe_Droid_CIS.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: probe_droid
+          field: visual_asset
+        metadata:
+          sketchfab_id: 495f6c8ded324807b37a9783faa7ec02
+          artist: kennysergoff
+          source_url: "https://sketchfab.com/3d-models/arakyd-viper-probe-droid-495f6c8ded324807b37a9783faa7ec02"
+          license: "CC Attribution"
+          priority: high
+          note: "CIS reconnaissance/probe droid unit"
+
+  v1_2_0_units_phase5:
+    description: "Phase 5: Remaining unit models completing 100% unit coverage (9 units)"
+    models:
+
+      - id: rep_v19_torrent_unit
+        file: raw/rep_v19_torrent_sketchfab_001/V-19 Torrent.fbx
+        type: aerial
+        faction: republic
+        polycount_target: 16000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-v19-torrent-unit
+        output_prefab: prefabs/sw-rep-v19-torrent.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: rep_v19_torrent
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "V-19 Torrent starfighter - Republic aerial combat unit (unit definition link)"
+
+      - id: rep_jedi_knight
+        file: raw/rep_jedi_knight_sketchfab_001/model.glb
+        type: hero
+        faction: republic
+        polycount_target: 16000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-jedi-knight
+        output_prefab: prefabs/sw-rep-jedi-knight.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: rep_jedi_knight
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Republic Jedi Knight hero unit - lightsaber-wielding general"
+
+      - id: rep_clone_wall_guard
+        file: raw/rep_clone_wall_guard_sketchfab_001/model.glb
+        type: infantry
+        faction: republic
+        polycount_target: 10000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-wall-guard
+        output_prefab: prefabs/sw-rep-clone-wall-guard.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: rep_clone_wall_guard
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Clone wall/garrison guard - fortification defense infantry"
+
+      - id: rep_clone_sniper
+        file: raw/rep_clone_sniper_sketchfab_001/model.glb
+        type: infantry
+        faction: republic
+        polycount_target: 11000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-sniper
+        output_prefab: prefabs/sw-rep-clone-sniper.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: rep_clone_sniper
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Clone sniper specialist - long-range dedicated marksman"
+
+      - id: rep_clone_commando
+        file: raw/rep_clone_commando_sketchfab_001/model.glb
+        type: elite
+        faction: republic
+        polycount_target: 15000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: republic
+        addressable_key: sw-clone-commando
+        output_prefab: prefabs/sw-rep-clone-commando.prefab
+        update_definition:
+          enabled: true
+          file: units/republic_units.yaml
+          id: rep_clone_commando
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Clone Commando - Delta Squad elite spec-ops soldier"
+
+      - id: cis_b1_squad
+        file: raw/cis_b1_squad_sketchfab_001/model.glb
+        type: infantry
+        faction: cis
+        polycount_target: 9000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-b1-squad
+        output_prefab: prefabs/sw-cis-b1-squad.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: cis_b1_squad
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "B1 Battle Droid Squad formation - mass infantry wave unit"
+
+      - id: cis_medical_droid
+        file: raw/cis_medical_droid_sketchfab_001/model.glb
+        type: infantry
+        faction: cis
+        polycount_target: 8500
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-medical-droid
+        output_prefab: prefabs/sw-cis-medical-droid.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: cis_medical_droid
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "CIS Medical/FX-series droid - repair and support unit"
+
+      - id: cis_magnaguard
+        file: raw/cis_magnaguard_sketchfab_001/model.glb
+        type: elite
+        faction: cis
+        polycount_target: 14000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-magnaguard
+        output_prefab: prefabs/sw-cis-magnaguard.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: cis_magnaguard
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "IG-100 MagnaGuard - Grievous's elite electro-staff bodyguard"
+
+      - id: cis_tri_fighter
+        file: raw/cis_tri_fighter_sketchfab_001/model.glb
+        type: aerial
+        faction: cis
+        polycount_target: 16000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 60, 30]
+          screen_sizes: [100, 50, 20]
+        material: cis
+        addressable_key: sw-tri-fighter
+        output_prefab: prefabs/sw-cis-tri-fighter.prefab
+        update_definition:
+          enabled: true
+          file: units/cis_units.yaml
+          id: cis_tri_fighter
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Tri-Fighter droid starfighter - CIS aerial combat unit"
+
+  v1_0_0_buildings:
+    description: "Phase 4: Building structures LOD optimization (10 buildings, 50% coverage)"
+    models:
+      - id: rep_clone_barracks
+        file: raw/rep_clone_barracks_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: production
+        polycount_target: 45000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-clone-barracks
+        output_prefab: prefabs/Clone_Barracks_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_clone_facility
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Clone Training Facility - barracks for militia and standard clone troopers"
+
+      - id: rep_weapons_factory
+        file: raw/rep_weapons_factory_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: production
+        polycount_target: 38000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-weapons-factory
+        output_prefab: prefabs/Weapons_Factory_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_weapons_factory
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Weapons Factory - produces heavy troopers and ARC troopers"
+
+      - id: rep_vehicle_bay
+        file: raw/rep_vehicle_bay_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: production
+        polycount_target: 52000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-vehicle-bay
+        output_prefab: prefabs/Vehicle_Bay_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_vehicle_bay
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Vehicle Bay - motor pool for AT-TE walkers and BARC speeders"
+
+      - id: rep_guard_tower
+        file: raw/rep_guard_tower_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: defense
+        polycount_target: 28000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-guard-tower
+        output_prefab: prefabs/Guard_Tower_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_guard_tower
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Guard Tower - elevated defensive position with blaster turret"
+
+      - id: rep_shield_generator
+        file: raw/rep_shield_generator_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: defense
+        polycount_target: 35000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-shield-generator
+        output_prefab: prefabs/Shield_Generator_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_shield_generator
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Shield Generator - deflector shield protecting wide area"
+
+      - id: cis_droid_factory
+        file: raw/cis_droid_factory_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: production
+        polycount_target: 42000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-droid-factory
+        output_prefab: prefabs/Droid_Factory_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_droid_factory
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Droid Factory - automated mass production of B1 battle droids"
+
+      - id: cis_assembly_line
+        file: raw/cis_assembly_line_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: production
+        polycount_target: 36000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-assembly-line
+        output_prefab: prefabs/Assembly_Line_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_assembly_line
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Advanced Assembly Line - heavy manufacturing for B2 and commando droids"
+
+      - id: cis_heavy_foundry
+        file: raw/cis_heavy_foundry_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: production
+        polycount_target: 48000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-heavy-foundry
+        output_prefab: prefabs/Heavy_Foundry_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_heavy_foundry
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Heavy Foundry - vehicle and heavy weapons production (AATs, droidekas)"
+
+      - id: cis_sentry_turret
+        file: raw/cis_sentry_turret_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: defense
+        polycount_target: 22000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-sentry-turret
+        output_prefab: prefabs/Sentry_Turret_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_sentry_turret
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Sentry Turret - automated blaster turret for perimeter defense"
+
+      - id: cis_ray_shield
+        file: raw/cis_ray_shield_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: defense
+        polycount_target: 32000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-ray-shield
+        output_prefab: prefabs/Ray_Shield_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_ray_shield
+          field: visual_asset
+        metadata:
+          priority: high
+          note: "Ray Shield - droid-operated shield projector blocking incoming fire"
+
+  v1_1_0_buildings_expansion:
+    description: "Phase 5: Remaining 12 buildings (6 Republic + 6 CIS) completing 100% building coverage"
+    models:
+
+      - id: rep_command_center
+        file: raw/rep_command_center_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: command
+        polycount_target: 55000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-command-center
+        output_prefab: prefabs/Command_Center_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_command_center
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Republic Command Center - central HQ coordinating all forces"
+
+      - id: rep_supply_station
+        file: raw/rep_supply_station_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: economy
+        polycount_target: 30000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-supply-station
+        output_prefab: prefabs/Supply_Station_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_supply_station
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Republic Supply Station - logistics hub providing resource income"
+
+      - id: rep_tibanna_refinery
+        file: raw/rep_tibanna_refinery_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: economy
+        polycount_target: 40000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-tibanna-refinery
+        output_prefab: prefabs/Tibanna_Refinery_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_tibanna_refinery
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Tibanna Gas Refinery - processes gas for blaster ammo and trade"
+
+      - id: rep_research_lab
+        file: raw/rep_research_lab_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: research
+        polycount_target: 42000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-research-lab
+        output_prefab: prefabs/Research_Lab_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_research_lab
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Research Laboratory - R&D facility for clone and vehicle upgrades"
+
+      - id: rep_blast_wall
+        file: raw/rep_blast_wall_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: defense
+        polycount_target: 18000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-blast-wall
+        output_prefab: prefabs/Blast_Wall_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_blast_wall
+          field: visual_asset
+        metadata:
+          priority: low
+          note: "Blast Wall - reinforced durasteel perimeter wall segment"
+
+      - id: rep_skyshield_generator
+        file: raw/rep_skyshield_generator_sketchfab_001/model.glb
+        type: building
+        faction: republic
+        building_type: defense
+        polycount_target: 35000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: republic
+        addressable_key: sw-skyshield-generator
+        output_prefab: prefabs/Skyshield_Generator_Republic.prefab
+        update_definition:
+          enabled: true
+          file: buildings/republic_buildings.yaml
+          id: rep_skyshield_generator
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Skyshield Generator - orbital air defense against starfighters"
+
+      - id: cis_tactical_center
+        file: raw/cis_tactical_center_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: command
+        polycount_target: 55000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-tactical-center
+        output_prefab: prefabs/Tactical_Center_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_tactical_center
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "CIS Tactical Center - droid army command and battle management hub"
+
+      - id: cis_mining_facility
+        file: raw/cis_mining_facility_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: economy
+        polycount_target: 40000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-mining-facility
+        output_prefab: prefabs/Mining_Facility_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_mining_facility
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "CIS Mining Facility - automated ore extraction for droid production"
+
+      - id: cis_processing_plant
+        file: raw/cis_processing_plant_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: economy
+        polycount_target: 38000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-processing-plant
+        output_prefab: prefabs/Processing_Plant_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_processing_plant
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "CIS Processing Plant - refines raw materials into droid components"
+
+      - id: cis_tech_union_lab
+        file: raw/cis_tech_union_lab_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: research
+        polycount_target: 45000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-tech-union-lab
+        output_prefab: prefabs/Tech_Union_Lab_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_tech_union_lab
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Techno Union Lab - R&D facility for advanced droid and weapon upgrades"
+
+      - id: cis_durasteel_barrier
+        file: raw/cis_durasteel_barrier_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: defense
+        polycount_target: 18000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-durasteel-barrier
+        output_prefab: prefabs/Durasteel_Barrier_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_durasteel_barrier
+          field: visual_asset
+        metadata:
+          priority: low
+          note: "Durasteel Barrier - CIS perimeter wall with integrated sensor arrays"
+
+      - id: cis_vulture_nest
+        file: raw/cis_vulture_nest_sketchfab_001/model.glb
+        type: building
+        faction: cis
+        building_type: defense
+        polycount_target: 32000
+        scale: 1.0
+        lod:
+          enabled: true
+          levels: [100, 80, 50]
+          screen_sizes: [200, 100, 50]
+        material: cis
+        addressable_key: sw-vulture-nest
+        output_prefab: prefabs/Vulture_Nest_CIS.prefab
+        update_definition:
+          enabled: true
+          file: buildings/cis_buildings.yaml
+          id: cis_vulture_nest
+          field: visual_asset
+        metadata:
+          priority: medium
+          note: "Vulture Nest - launch pad and hangar for Vulture Droid starfighters"
+
+  v0_9_0_future:
+    description: "Phase 6+: Reserved for future expansion"
+    models: []
+
+build:
+  output_directory: ../../Assets/warfare-starwars
+  addressables_output: ../../Assets/warfare-starwars/addressables.yaml
+  log_file: build_report.json
+  generate_html_report: true
+  performance_targets:
+    import_time_sec: 5
+    lod_generation_sec: 10
+    prefab_generation_sec: 2
+    total_pipeline_sec: 120

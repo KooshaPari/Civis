@@ -1,0 +1,85 @@
+# Tutorial Defense Scenario
+# A beginner-friendly defense mission that teaches basic building and combat
+
+id: tutorial-defense
+display_name: "First Stand: Defense Tutorial"
+description: >
+  Learn the basics of defense in Diplomacy is Not an Option. Build walls, train soldiers,
+  and survive 5 waves of increasingly difficult enemies. Generous starting resources
+  ensure you can focus on learning rather than gathering.
+
+difficulty: Easy
+objective_type: Defend
+wave_count: 5
+max_duration: 0
+
+starting_resources:
+  food: 500
+  wood: 400
+  stone: 300
+  iron: 100
+  gold: 50
+
+allowed_factions: []
+
+victory_conditions:
+  - condition_type: SurviveWaves
+    target_value: 5
+    description: "Survive all 5 enemy waves to claim victory."
+
+defeat_conditions:
+  - condition_type: CommandCenterDestroyed
+    description: "Your command center must not fall."
+  - condition_type: PopulationZero
+    description: "You lose if all your people perish."
+
+scripted_events:
+  - id: tutorial-welcome
+    trigger_type: OnWave
+    trigger_value: 1
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Welcome, Commander!"
+          text: "Build walls around your settlement and train soldiers before the first wave arrives. Use wood for palisades and stone for stronger walls."
+
+  - id: tutorial-wave2-bonus
+    trigger_type: OnWave
+    trigger_value: 2
+    actions:
+      - action_type: GrantResources
+        parameters:
+          food: "200"
+          wood: "150"
+          stone: "100"
+      - action_type: ShowMessage
+        parameters:
+          title: "Reinforcements Incoming"
+          text: "Supply wagons have arrived! Use these resources to strengthen your defenses before the next wave."
+
+  - id: tutorial-midgame-hint
+    trigger_type: OnWave
+    trigger_value: 3
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Upgrade Your Defenses"
+          text: "Enemies are getting stronger. Consider building towers and training archers for ranged defense."
+
+  - id: tutorial-barracks-built
+    trigger_type: OnBuildingBuilt
+    trigger_target: barracks
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Barracks Constructed"
+          text: "Well done! Your barracks can now train melee soldiers. Build more to increase training speed."
+
+  - id: tutorial-final-wave-warning
+    trigger_type: OnWave
+    trigger_value: 5
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Final Wave!"
+          text: "The enemy is throwing everything they have at you. Hold the line!"

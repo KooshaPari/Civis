@@ -1,42 +1,146 @@
-# Build artifacts
-target/
-dist/
+# Build outputs
+bin/
+obj/
+out/
 build/
-*.o
-*.so
-*.dylib
-*.rlib
-*.rmeta
+*.dll
+*.exe
+*.pdb
 
-# Dependencies
-node_modules/
-vendor/
-.venv/
-venv/
-.env
-.env.local
+# Memory dumps (forensic artifacts — never commit; archive locally)
+*.dmp
 
 # IDE
-.vscode/
+.vs/
 .idea/
-*.swp
-*.swo
-*~
+*.user
+*.suo
+*.csproj.user
 
 # OS
-.DS_Store
 Thumbs.db
+.DS_Store
 
-# Logs
-*.log
-npm-debug.log*
+# Secrets
+.env
+.env.local
+.env.*
+credentials.json
+*.key
+*.pem
 
-# Test
+# NuGet
+packages/
+*.nupkg
+
+# Unity
+Library/
+Temp/
+Logs/
+UserSettings/
+
+# BepInEx working files
+BepInEx/cache/
+
+# Debug dumps
+dumps/
+*.dump
+
+# Pack build artifacts
+packs/**/build/
+packs/**/dist/
+
+node_modules/
+
+src/Tests/TestResults/
+docs/.vitepress/dist/
+docs/api/
+release-staging/
+local-packages/
+*.sha256
+.claude/worktrees/
+
+# Large binary source asset archives (extract locally, don't ship in repo)
+packs/**/assets/source/**/*.zip
+packs/**/assets/source/opengameart/sci-fi-soldier/
+docs/.vitepress/cache/
+
+# Asset downloads and cache
+# Note: Downloaded model.glb files in packs/*/assets/raw/*/model.glb ARE committed for asset pipeline
+# Build-generated assets in other locations are not tracked
+*.glb
+*.gltf
+*.blend
+*.fbx
+*.obj
+*.usdz
+packs/*/assets/raw/**/source_download.*
+!packs/*/assets/raw/*/model.glb
+.cache/
+.cache/sketchfab/
+.fixtures/
+.env.local
+
+# Pipeline/debug artifacts
+import_output.log
+phase3a_runner.csx
+tmp_*.png
+.factory/
+
+# Local build & publish outputs
+packcompiler-out/
+publish/
+.claire/
+
+# Artifact directories
+nupkg/
+docs/sessions/WgcCapture/
+docs/sessions/DINOForgeCompanion/
+docs/screenshots/desktop/
+# interim local capture - not promoted
+docs/qa/evidence/
+scripts/game/desktop/
+
+# Test coverage output
 coverage/
-*.lcov
-.nyc_output/
 
-# Misc
-*.tmp
-*.bak
-*.orig
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Session audit docs (auto-generated)
+docs/sessions/test-suite-*.md
+docs/sessions/virtual_display*.md
+
+# Remotion render logs
+scripts/video/render_*.log
+
+# Game screenshot artifacts (from game automation)
+game_screenshot*.png
+
+# Build diagnostics
+*.diag.log
+dotnet-build*.log
+solution-build*.log
+cli-build*.log
+cli-msbuild.log
+cli-compile.log
+solution-restore.log
+ui_test_run.log
+scripts/asset_download_web.log
+installer-gui.pp.xml
+src/Runtime/DINOForge.Runtime.pp.xml
+
+# #557/#558: API smoke-test receipts — ephemeral, may contain redacted-but-leakable keys.
+# Never commit; regenerate locally via scripts/proof/test-*.ps1
+docs/proof/fireworks-kimi-smoke-receipt.md
+docs/proof/*-smoke-receipt.md
+
+# #560: Push-attempt log scaffolding from iter-144 wave-1 thrash — ephemeral session debris,
+# polluted repo root. Pattern matches all push-wave*.log files (12 currently present).
+push-wave*.log
+# #560: Stray empty log file from MyEasy mod or installer fixture.
+myeasylog.log
+# #560: Generated PR body templates — drafted before push, not commit content.
+.git-pr-body-*.md

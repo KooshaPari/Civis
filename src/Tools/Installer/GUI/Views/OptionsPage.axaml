@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DINOForge.Installer.ViewModels"
+             x:Class="DINOForge.Installer.Views.OptionsPage"
+             x:DataType="vm:OptionsPageViewModel"
+             Background="#1a1a2e">
+
+    <StackPanel Margin="40,40,40,20" Spacing="24">
+
+        <!-- Title -->
+        <StackPanel Spacing="4">
+            <TextBlock Text="Installation Options"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+            <TextBlock Foreground="#8888aa" FontSize="13">
+                <Run Text="Mode: "/>
+                <Run Text="{Binding IsDevMode, Converter={x:Static vm:DevModeTextConverter.Instance}}"
+                     Foreground="#4a90d9"
+                     FontWeight="SemiBold"/>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- BepInEx info -->
+        <Border Background="#12122a"
+                BorderBrush="#2a2a4a"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="BepInEx Version" Foreground="#ccccee" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding BepInExVersion}"
+                           Foreground="#4a90d9"
+                           FontFamily="Consolas,Courier New,monospace"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Player options (always visible) -->
+        <StackPanel Spacing="10">
+            <TextBlock Text="Player Options"
+                       Foreground="#aaaacc"
+                       FontWeight="SemiBold"
+                       FontSize="13"/>
+
+            <CheckBox IsChecked="{Binding InstallExamplePacks}"
+                      Foreground="#ccccee">
+                Install example mod packs
+            </CheckBox>
+
+            <CheckBox IsChecked="{Binding CreateDesktopShortcut}"
+                      Foreground="#ccccee">
+                Create desktop shortcut
+            </CheckBox>
+        </StackPanel>
+
+        <!-- Developer options (dev mode only) -->
+        <StackPanel Spacing="10"
+                    IsVisible="{Binding IsDevMode}">
+            <TextBlock Text="Developer Options"
+                       Foreground="#aaaacc"
+                       FontWeight="SemiBold"
+                       FontSize="13"/>
+
+            <CheckBox IsChecked="{Binding InstallSdkHeaders}"
+                      Foreground="#ccccee">
+                Install SDK headers
+            </CheckBox>
+
+            <CheckBox IsChecked="{Binding InstallPackCompiler}"
+                      Foreground="#ccccee">
+                Install PackCompiler CLI
+            </CheckBox>
+
+            <CheckBox IsChecked="{Binding InstallSchemas}"
+                      Foreground="#ccccee">
+                Install JSON schemas
+            </CheckBox>
+
+            <CheckBox IsChecked="{Binding InstallDebugTools}"
+                      Foreground="#ccccee">
+                Install debug tools (in-game overlay, Inspector)
+            </CheckBox>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>

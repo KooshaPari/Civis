@@ -1,0 +1,19 @@
+# Pattern #125: Orphan Interface Mocks Allowlist
+# Interfaces with 3+ production implementations but 0 test doubles
+# are flagged as HIGH violations unless explicitly allowlisted below.
+#
+# Format: <InterfaceName> | <Reason>
+# Single-line comments with #
+#
+# Allowlist Criteria:
+# - Interface is documented as not requiring mocks (DSL, config-only)
+# - Interface design intentionally avoids testing via seams (observation-only)
+# - Test doubles would add complexity without coverage benefit
+# - Bridge pattern actively discourages mocking via sealed impl
+
+# UI domain interfaces — designed to be observed, not mocked
+IModMenuHost | UI seam (observation-only, no behavior testing)
+IModSettingsHost | UI seam (observation-only, no behavior testing)
+IModSettingsPanel | UI seam (observation-only, no behavior testing)
+INativeMenuScreen | Native host observation only — never mocked
+ISchemaValidator | Validator chain — test via concrete JsonSchemaValidator impl

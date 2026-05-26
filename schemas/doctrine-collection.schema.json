@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/doctrine-collection.schema.json",
+  "title": "Doctrine collection (list of doctrine definitions)",
+  "type": "array",
+  "items": { "$ref": "doctrine.schema.json" },
+  "minItems": 1
+}

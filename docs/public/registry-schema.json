@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kooshapari.github.io/Dino/registry-schema.json",
+  "title": "DINOForge Pack Registry",
+  "description": "Schema for the DINOForge community pack registry served at https://kooshapari.github.io/Dino/registry.json",
+  "type": "object",
+  "required": ["version", "updated", "packs"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URI reference."
+    },
+    "version": {
+      "type": "string",
+      "description": "Registry format version (semver major or simple integer string).",
+      "pattern": "^[0-9]+(\\.[0-9]+)*$"
+    },
+    "updated": {
+      "type": "string",
+      "description": "ISO-8601 date of the last registry update.",
+      "format": "date"
+    },
+    "packs": {
+      "type": "array",
+      "description": "List of available mod packs.",
+      "items": {
+        "$ref": "#/definitions/PackEntry"
+      }
+    }
+  },
+  "definitions": {
+    "PackEntry": {
+      "type": "object",
+      "title": "Pack Entry",
+      "description": "Metadata for a single mod pack listed in the registry.",
+      "required": [
+        "id",
+        "name",
+        "author",
+        "version",
+        "type",
+        "description",
+        "tags",
+        "repo",
+        "download_url",
+        "pack_path",
+        "framework_version",
+        "verified",
+        "featured"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique kebab-case identifier for the pack (e.g. 'warfare-modern').",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "author": {
+          "type": "string",
+          "description": "Author or organisation name.",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version of the pack (e.g. '0.3.0').",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Pack category.",
+          "enum": ["content", "balance", "ruleset", "total_conversion", "utility"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description shown in the installer UI.",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "tags": {
+          "type": "array",
+          "description": "Searchable tag list.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "uniqueItems": true
+        },
+        "repo": {
+          "type": "string",
+          "description": "URL of the pack's source repository.",
+          "format": "uri"
+        },
+        "download_url": {
+          "type": "string",
+          "description": "Direct download URL for the pack artifact (.zip).",
+          "format": "uri"
+        },
+        "pack_path": {
+          "type": "string",
+          "description": "Relative path within the repository where the pack manifest lives.",
+          "pattern": "^[^\\\\]+$"
+        },
+        "framework_version": {
+          "type": "string",
+          "description": "SemVer range expressing required DINOForge framework version (e.g. '>=0.3.0').",
+          "minLength": 1
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "True if the pack has been reviewed and verified by the DINOForge team."
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "True if the pack should appear in the featured section of the installer."
+        },
+        "conflicts_with": {
+          "type": "array",
+          "description": "List of pack IDs that are mutually exclusive with this pack.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "uniqueItems": true
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of pack IDs that must be installed before this pack.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

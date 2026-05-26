@@ -1,0 +1,19 @@
+name: Release Drafter
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-drafter:
+    # SHA-pinned per #805; flat workflows path (subdirs not supported for reusable workflows)
+    uses: KooshaPari/phenoShared/.github/workflows/reusable-release-drafter.yml@136def14b63e59da150eae1dc525677746098dd0
+    with:
+      config-name: release-drafter.yml
+    secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write

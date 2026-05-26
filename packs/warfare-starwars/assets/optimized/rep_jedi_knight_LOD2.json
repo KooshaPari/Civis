@@ -1,0 +1,12 @@
+{
+  "assetId": "rep_jedi_knight",
+  "lod": "LOD2",
+  "targetQuality": 0.3,
+  "triangleCount": 720,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 70
+  }
+}

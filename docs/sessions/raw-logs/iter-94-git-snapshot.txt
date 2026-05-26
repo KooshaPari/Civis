@@ -1,0 +1,437 @@
+ M CHANGELOG.md
+ M CLAUDE.md
+ M src/Bridge/Client/DINOForge.Bridge.Client.csproj
+ M src/Bridge/Client/GameClient.cs
+ M src/Bridge/Client/GameClientOptions.cs
+ M src/Bridge/Client/GameProcessManager.cs
+ M src/Bridge/Client/packages.lock.json
+ M src/Bridge/Protocol/CatalogSnapshot.cs
+ M src/Bridge/Protocol/ComponentMapResult.cs
+ M src/Bridge/Protocol/GameStatus.cs
+ M src/Bridge/Protocol/JsonRpcMessage.cs
+ M src/Bridge/Protocol/QueryResult.cs
+ M src/Bridge/Protocol/ReloadResult.cs
+ M src/Bridge/Protocol/StatResult.cs
+ M src/Bridge/Protocol/UiTreeResult.cs
+ M src/Bridge/Protocol/VerifyResult.cs
+ M src/Domains/Economy/Balance/EconomyBalanceCalculator.cs
+ M src/Domains/Economy/Balance/EconomyBalanceReport.cs
+ M src/Domains/Economy/EconomyContentLoader.cs
+ M src/Domains/Economy/EconomyPlugin.cs
+ M src/Domains/Economy/Models/EconomyProfile.cs
+ M src/Domains/Economy/Models/MarketDefinition.cs
+ M src/Domains/Economy/Models/ResourceDefinition.cs
+ M src/Domains/Economy/Models/ResourceRate.cs
+ M src/Domains/Economy/Models/TradeRoute.cs
+ M src/Domains/Economy/Models/TradeRouteDefinition.cs
+ M src/Domains/Economy/Rates/ProductionCalculator.cs
+ M src/Domains/Economy/Registries/EconomyProfileRegistry.cs
+ M src/Domains/Economy/Registries/ResourceRegistry.cs
+ M src/Domains/Economy/Registries/TradeRouteRegistry.cs
+ M src/Domains/Economy/Trade/TradeEngine.cs
+ M src/Domains/Economy/Validation/EconomyValidator.cs
+ M src/Domains/Economy/packages.lock.json
+ M src/Domains/Scenario/Balance/DifficultyScaler.cs
+ M src/Domains/Scenario/Models/DefeatCondition.cs
+ M src/Domains/Scenario/Models/EventAction.cs
+ M src/Domains/Scenario/Models/ScenarioDefinition.cs
+ M src/Domains/Scenario/Models/ScenarioEventDefinition.cs
+ M src/Domains/Scenario/Models/ScriptedEvent.cs
+ M src/Domains/Scenario/Models/StartingConditions.cs
+ M src/Domains/Scenario/Models/VictoryCondition.cs
+ M src/Domains/Scenario/Models/WinConditionDefinition.cs
+ M src/Domains/Scenario/Registries/ScenarioRegistry.cs
+ M src/Domains/Scenario/ScenarioContentLoader.cs
+ M src/Domains/Scenario/ScenarioPlugin.cs
+ M src/Domains/Scenario/Scripting/GameState.cs
+ M src/Domains/Scenario/Scripting/ScenarioRunner.cs
+ M src/Domains/Scenario/Validation/ScenarioValidator.cs
+ M src/Domains/Scenario/packages.lock.json
+ M src/Domains/UI/HUDInjectionSystem.cs
+ M src/Domains/UI/MenuManager.cs
+ M src/Domains/UI/Models/HudElementDefinition.cs
+ M src/Domains/UI/Models/MenuDefinition.cs
+ M src/Domains/UI/Models/MenuItemDefinition.cs
+ M src/Domains/UI/Models/ThemeDefinition.cs
+ M src/Domains/UI/Registries/HudElementRegistry.cs
+ M src/Domains/UI/Registries/MenuRegistry.cs
+ M src/Domains/UI/Registries/ThemeRegistry.cs
+ M src/Domains/UI/ThemeColorPalette.cs
+ M src/Domains/UI/UIContentLoader.cs
+ M src/Domains/UI/UIPlugin.cs
+ M src/Domains/UI/packages.lock.json
+ M src/Domains/Warfare/Archetypes/ArchetypeRegistry.cs
+ M src/Domains/Warfare/Balance/BalanceCalculator.cs
+ M src/Domains/Warfare/Doctrines/DoctrineEngine.cs
+ M src/Domains/Warfare/Roles/UnitRoleValidator.cs
+ M src/Domains/Warfare/WarfarePlugin.cs
+ M src/Domains/Warfare/Waves/WaveComposer.cs
+ M src/Domains/Warfare/packages.lock.json
+ M src/Runtime/Assets/AssetService.cs
+ M src/Runtime/Aviation/AerialBuildingMapper.cs
+ M src/Runtime/Aviation/AerialMovementSystem.cs
+ M src/Runtime/Aviation/AerialSpawnSystem.cs
+ M src/Runtime/Aviation/AerialTargetingSystem.cs
+ M src/Runtime/Aviation/AerialUnitMapper.cs
+ M src/Runtime/Aviation/AviationPlugin.cs
+ M src/Runtime/Bridge/AssetBundleCache.cs
+ M src/Runtime/Bridge/AssetSwapSystem.cs
+ M src/Runtime/Bridge/BuildingDestructionVFXSystem.cs
+ M src/Runtime/Bridge/EcsTypeDiscovery.cs
+ M src/Runtime/Bridge/EntityQueries.cs
+ M src/Runtime/Bridge/FactionSystem.cs
+ M src/Runtime/Bridge/GameBridgeServer.cs
+ M src/Runtime/Bridge/KeyInputSystem.cs
+ M src/Runtime/Bridge/LODManager.cs
+ M src/Runtime/Bridge/OverrideApplicator.cs
+ M src/Runtime/Bridge/PackUnitSpawner.cs
+ M src/Runtime/Bridge/ProjectileVFXSystem.cs
+ M src/Runtime/Bridge/ResourceReader.cs
+ M src/Runtime/Bridge/StatModifierSystem.cs
+ M src/Runtime/Bridge/UnitDeathVFXSystem.cs
+ M src/Runtime/Bridge/VFXPoolManager.cs
+ M src/Runtime/Bridge/VanillaCatalog.cs
+ M src/Runtime/Bridge/WaveInjector.cs
+ M src/Runtime/DINOForge.Runtime.csproj
+ M src/Runtime/DebugOverlay.cs
+ M src/Runtime/DumpSystem.cs
+ M src/Runtime/EntityDumper.cs
+ M src/Runtime/ModPlatform.cs
+ M src/Runtime/Plugin.cs
+ M src/Runtime/UI/DebugPanel.cs
+ M src/Runtime/UI/NativeMenuInjector.cs
+ M src/Runtime/UI/NativeUiHelper.cs
+ M src/Runtime/UI/UiActionTrace.cs
+ M src/Runtime/UI/UiDiagnostics.cs
+ M src/Runtime/packages.lock.json
+ M src/SDK/AssetReplacementEngine.cs
+ M src/SDK/Assets/AddressablesCatalog.cs
+ M src/SDK/Assets/AssetService.cs
+ M src/SDK/CompatibilityChecker.cs
+ M src/SDK/ContentLoadResult.cs
+ M src/SDK/ContentRegistrationService.cs
+ M src/SDK/DINOForge.SDK.csproj
+ M src/SDK/Dependencies/PackDependencyResolver.cs
+ M src/SDK/Dependencies/PackSubmoduleManager.cs
+ M src/SDK/Models/BuildingDefinition.cs
+ M src/SDK/Models/DoctrineDefinition.cs
+ M src/SDK/Models/FactionDefinition.cs
+ M src/SDK/Models/FactionPatchDefinition.cs
+ M src/SDK/Models/ProjectileDefinition.cs
+ M src/SDK/Models/ResourceCost.cs
+ M src/SDK/Models/SkillDefinition.cs
+ M src/SDK/Models/SquadDefinition.cs
+ M src/SDK/Models/StatOverrideDefinition.cs
+ M src/SDK/Models/TotalConversionManifest.cs
+ M src/SDK/Models/UnitDefinition.cs
+ M src/SDK/Models/WaveDefinition.cs
+ M src/SDK/Models/WeaponDefinition.cs
+ M src/SDK/NativeInterop/GoDependencyResolver.cs
+ M src/SDK/NativeInterop/RustAssetPipeline.cs
+ M src/SDK/PackLoader.cs
+ M src/SDK/PackManifest.cs
+ M src/SDK/Registry/PackRegistry.cs
+ M src/SDK/Registry/Registry.cs
+ M src/SDK/Registry/RegistryManager.cs
+ M src/SDK/Universe/CrosswalkDictionary.cs
+ M src/SDK/Universe/FactionTaxonomy.cs
+ M src/SDK/Universe/NamingGuide.cs
+ M src/SDK/Universe/PackGenerator.cs
+ M src/SDK/Universe/StyleGuide.cs
+ M src/SDK/Universe/UniverseBible.cs
+ M src/SDK/Universe/UniverseLoader.cs
+ M src/SDK/Validation/NJsonSchemaValidator.cs
+ M src/SDK/Validation/TotalConversionValidator.cs
+ M src/SDK/Validation/ValidationResult.cs
+ M src/SDK/Validation/YamlSchemaConverter.cs
+ M src/SDK/YamlLoader.cs
+ M src/SDK/packages.lock.json
+ M src/Tests/AviationStarWarsTests.cs
+ M src/Tests/BddSpecs.cs
+ D src/Tests/Benchmarks/ContentLoaderBenchmarks.cs
+ D src/Tests/Benchmarks/RegistryBenchmarks.cs
+ M src/Tests/Benchmarks/packages.lock.json
+ M src/Tests/Bridge/GameClientFramingTests.cs
+ M src/Tests/CliToolTests/CliTestFixtures.cs
+ M src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj
+ M src/Tests/CliToolTests/OverrideCommandTests.cs
+ M src/Tests/CliToolTests/ProtocolIntegrationTests.cs
+ M src/Tests/CliToolTests/ProtocolTypeTests.cs
+ M src/Tests/CliToolTests/ReloadCommandTests.cs
+ M src/Tests/CliToolTests/packages.lock.json
+ M src/Tests/ContentLoaderEdgeCaseTests.cs
+ M src/Tests/ContentLoaderIntegrationTests.cs
+ M src/Tests/DINOForge.Tests.csproj
+ M src/Tests/EnvironmentMatrixTests.cs
+ M src/Tests/GameClientCoverageTests.cs
+ M src/Tests/GameClientPipelineTests.cs
+ M src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj
+ M src/Tests/GameLaunch/GameLaunchAssetSwapTests.cs
+ M src/Tests/GameLaunch/GameLaunchEconomyTests.cs
+ M src/Tests/GameLaunch/GameLaunchHotReloadTests.cs
+ M src/Tests/GameLaunch/GameLaunchNativeMenuTests.cs
+ M src/Tests/GameLaunch/GameLaunchOverlayTests.cs
+ M src/Tests/GameLaunch/GameLaunchPackTests.cs
+ M src/Tests/GameLaunch/GameLaunchSmokeTests.cs
+ M src/Tests/GameLaunch/GameLaunchStatTests.cs
+ M src/Tests/GameLaunch/GameLaunchUiTests.cs
+ M src/Tests/GameLaunch/packages.lock.json
+ M src/Tests/GameTestDiagnostics.cs
+ M src/Tests/InstallerCoverageTests.cs
+ M src/Tests/Integration/GameTestRunner.cs
+ M src/Tests/Integration/ParallelGameTestsWithHarness.cs
+ M src/Tests/Integration/Tests/BridgeCoverageTests.cs
+ M src/Tests/Integration/Tests/CatalogTests.cs
+ M src/Tests/Integration/Tests/ComponentMapTests.cs
+ M src/Tests/Integration/Tests/InGameAutomationTests.cs
+ M src/Tests/Integration/Tests/MockBridgeIntegrationTests.cs
+ M src/Tests/Integration/Tests/MockGameServerTests.cs
+ M src/Tests/Integration/Tests/PackLoadingTests.cs
+ M src/Tests/Integration/Tests/ParallelGameE2ETests.cs
+ M src/Tests/Integration/Tests/WorkflowE2ETests.cs
+ M src/Tests/Integration/packages.lock.json
+ M src/Tests/Mocks/MockGameBridgeServer.cs
+ M src/Tests/ModelSerializationTests.cs
+ M src/Tests/NativeInteropIntegrationTests.cs
+ M src/Tests/NativeInteropTests.cs
+ M src/Tests/OverrideApplicatorTests.cs
+ M src/Tests/Phase3ACloneInfantryLODTests.cs
+ M src/Tests/Phase3BDroidLODTests.cs
+ M src/Tests/Phase7VisualAssetIntegrationTests.cs
+ M src/Tests/PropertyTests.cs
+ M src/Tests/SDKCoverageTests.cs
+ M src/Tests/SdkCompatibilityEdgeCaseTests.cs
+ M src/Tests/SdkPolyglotIntegrationTests.cs
+ M src/Tests/UIDomainTests.cs
+ M src/Tests/UiAutomation/CompanionLaunchTests.cs
+ M src/Tests/UiAutomation/CompanionPackListTests.cs
+ M src/Tests/UiDomainCoverageTests.cs
+ M src/Tests/UniverseBibleTests.cs
+ M src/Tests/WarfareTests.cs
+ M src/Tests/packages.lock.json
+ M src/Tools/Cli/Assetctl/AssetCatalogStore.cs
+ M src/Tools/Cli/Assetctl/AssetLibraryCommand.cs
+ M src/Tools/Cli/Assetctl/AssetctlCommand.cs
+ M src/Tools/Cli/Assetctl/AssetctlPipeline.cs
+ M src/Tools/Cli/Assetctl/Sketchfab/AssetDownloader.cs
+ M src/Tools/Cli/Assetctl/Sketchfab/SketchfabAdapter.cs
+ M src/Tools/Cli/Assetctl/Sketchfab/SketchfabClient.cs
+ M src/Tools/Cli/Assetctl/SourceRulesModels.cs
+ M src/Tools/Cli/Commands/InstallCommand.cs
+ M src/Tools/Cli/DINOForge.Tools.Cli.csproj
+ M src/Tools/Cli/Program.cs
+ M src/Tools/Cli/packages.lock.json
+ M src/Tools/DesktopCompanion/App.xaml.cs
+ M src/Tools/DesktopCompanion/Data/ModCatalogService.cs
+ M src/Tools/DesktopCompanion/ViewModels/AssetBrowserViewModel.cs
+ M src/Tools/DumpTools/GameLaunchAnalyzer.cs
+ M src/Tools/DumpTools/Program.cs
+ M src/Tools/DumpTools/packages.lock.json
+ M src/Tools/GameControlCli/Program.cs
+ M src/Tools/Installer/GUI/ViewModels/MainWindowViewModel.cs
+ M src/Tools/Installer/GUI/ViewModels/ProgressPageViewModel.cs
+ M src/Tools/Installer/GUI/ViewModels/WelcomePageViewModel.cs
+ M src/Tools/Installer/GUI/Views/GamePathPage.axaml.cs
+ M src/Tools/Installer/GUI/packages.lock.json
+ M src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj
+ M src/Tools/Installer/InstallerLib/InstallLifecycle.cs
+ M src/Tools/Installer/InstallerLib/SteamLocator.cs
+ M src/Tools/Installer/InstallerLib/packages.lock.json
+ M src/Tools/McpServer/Tools/GameAnalyzeScreenTool.cs
+ M src/Tools/McpServer/Tools/GameCaptureHelper.cs
+ M src/Tools/McpServer/Tools/GameInputHelper.cs
+ M src/Tools/McpServer/Tools/GameInputTool.cs
+ M src/Tools/McpServer/Tools/GameUIAutomationTool.cs
+ M src/Tools/McpServer/packages.lock.json
+ M src/Tools/PackCompiler/DirectAssetPipeline.cs
+ M src/Tools/PackCompiler/Program.cs
+ M src/Tools/PackCompiler/Services/AddressablesService.cs
+ M src/Tools/PackCompiler/Services/DefinitionUpdateService.cs
+ M src/Tools/PackCompiler/Services/GoResolverService.cs
+ M src/Tools/PackCompiler/Services/PrefabGenerationService.cs
+?? .claude/scheduled_tasks.lock
+?? .github/workflows/blocking-poll-gate.yml
+?? .github/workflows/catch-swallow-default-gate.yml
+?? .github/workflows/changelog-lint.yml
+?? .github/workflows/configureawait.yml
+?? .github/workflows/ct-threading-gate.yml
+?? .github/workflows/di-validation-gate.yml
+?? .github/workflows/direct-datetime.yml
+?? .github/workflows/event-lifecycle-gate.yml
+?? .github/workflows/framework-version.yml
+?? .github/workflows/httpclient-gate.yml
+?? .github/workflows/implicit-encoding-gate.yml
+?? .github/workflows/inline-json-options.yml
+?? .github/workflows/json-deserialize-gate.yml
+?? .github/workflows/logerror-no-stack.yml
+?? .github/workflows/open-ended-count-gate.yml
+?? .github/workflows/orphan-interface-mocks-gate.yml
+?? .github/workflows/orphan-process-start.yml
+?? .github/workflows/proof-gate.yml
+?? .github/workflows/public-mutable-collections-gate.yml
+?? .github/workflows/schema-drift.yml
+?? .github/workflows/silent-catch-gate.yml
+?? .github/workflows/string-dict-gate.yml
+?? .github/workflows/stringbuilder-capacity-gate.yml
+?? .github/workflows/stringly-enums.yml
+?? .github/workflows/tautological-test.yml
+?? .github/workflows/tcs-sync-continuation.yml
+?? .github/workflows/test-isolation.yml
+?? .github/workflows/test-sleep-sync-gate.yml
+?? .github/workflows/unbounded-constraints.yml
+?? .github/workflows/unguarded-deserialize.yml
+?? .github/workflows/unnecessary-allocation-gate.yml
+?? .github/workflows/unsealed-public-classes-gate.yml
+?? .runsettings
+?? "C\357\200\272UserskooshDino.githubworkflowssync-over-async-gate.yml"
+?? "C\357\200\272UserskooshDinoPATTERN_114_SUBAGENT_TASKS.md"
+?? "C\357\200\272UserskooshDinodocsqact-threading-allowlist.txt.tmp"
+?? build.log
+?? build_output.log
+?? closure_summary.txt
+?? datetime_detect.json
+?? datetime_fixed.json
+?? docs/TRUTH_TABLE.md
+?? docs/design/
+?? docs/proof-of-features/gate_result.json
+?? docs/proof/bundles/
+?? docs/proof/isolation/
+?? docs/proof/keys/
+?? docs/proof/orphan-classes-20260426-suppressed.json
+?? docs/proof/orphan-classes-20260426.json
+?? docs/proof/orphan-classes-20260427.json
+?? docs/qa/
+?? docs/sessions/2026-04-24-asset-swap-truth-audit.md
+?? docs/sessions/2026-04-24-hidden-desktop-ground-truth.md
+?? docs/sessions/2026-04-24-kimi-judge-completion.md
+?? docs/sessions/2026-04-24-playcua-smoke-test.md
+?? docs/sessions/2026-04-24-session-summary.md
+?? docs/sessions/2026-04-24-test-suite-honest-audit.md
+?? docs/sessions/2026-04-25-audit-rotation-session-summary.md
+?? docs/sessions/2026-04-25-bridge-bypass-audit.md
+?? docs/sessions/2026-04-25-ci-manifest-gate-audit.md
+?? docs/sessions/2026-04-25-infra-pivot-plan.md
+?? docs/sessions/2026-04-25-sandbox-isolation-audit.md
+?? docs/sessions/2026-04-25-steamless-multi-instance-audit.md
+?? docs/sessions/2026-04-25-ui-sdk-audit.md
+?? docs/sessions/2026-04-26-phase-4a-retrospective.md
+?? docs/sessions/steamworks-goldberg-investigation.md
+?? docs/sessions/v0.24.0-execution-status.md
+?? docs/setup/
+?? docs/test-results/2026-04-24-honest-decomposition.json
+?? docs/test-results/mock-theater-strict-enumeration.json
+?? iter70-build.log
+?? packs/test-bad-version/
+?? packs/test-invalid-schema-2/
+?? packs/test-invalid-schema-3/
+?? packs/test-invalid-schema-4/
+?? packs/test-invalid-schema/
+?? packs/test-valid/
+?? packs/ui-hud-minimal/hud_elements/
+?? policies/
+?? refined_scan.json
+?? schemas/building-collection.schema.json
+?? schemas/doctrine-collection.schema.json
+?? schemas/faction-patch-collection.schema.json
+?? schemas/provenance_index.schema.json
+?? schemas/technology-collection.schema.json
+?? schemas/unit-collection.schema.json
+?? schemas/wave-collection.schema.json
+?? schemas/weapon-collection.schema.json
+?? scripts/analysis/
+?? scripts/audit_yaml_schema_drift.py
+?? scripts/ci/
+?? scripts/dev/
+?? scripts/proof/
+?? scripts/start-playcua.ps1
+?? src/Bridge/Client/BridgeReceiptVerifier.cs
+?? src/Bridge/Client/CanonicalJson.cs
+?? src/Bridge/Client/SessionKeyCache.cs
+?? src/Bridge/Protocol/BridgeReceipt.cs
+?? src/Bridge/Protocol/CanonicalJson.cs
+?? src/Runtime/Bridge/BridgeReceiptBuilder.cs
+?? src/Runtime/Bridge/SessionHmac.cs
+?? src/Runtime/UI/Adapters/
+?? src/SDK/Concurrency/
+?? src/SDK/IO/
+?? src/SDK/Json/
+?? src/SDK/Models/SpawnGroup.cs
+?? src/SDK/UI/
+?? src/SDK/Validation/IValidatable.cs
+?? src/SDK/Validation/JsonGuard.cs
+?? src/Tests/Benchmarks/BenchmarkDotNet.Artifacts/
+?? src/Tests/Benchmarks/StringBuilderAllocationBenchmarks.cs
+?? src/Tests/Bridge/BridgeHmacTests.cs
+?? src/Tests/Bridge/BridgeReceiptVerifierTests.cs
+?? src/Tests/Bridge/CanonicalJsonGoldensTests.cs
+?? src/Tests/CliToolTests/AssetctlPipelineTests.cs
+?? src/Tests/Collections.cs
+?? src/Tests/ContentRegistrationServiceTests.cs
+?? src/Tests/DumpToolsTests.cs
+?? src/Tests/EconomyContentLoaderValidationTests.cs
+?? src/Tests/EnvVarMutationCollection.cs
+?? src/Tests/Fixtures/
+?? src/Tests/GoDependencyResolverValidationTests.cs
+?? src/Tests/InstallManifestValidationTests.cs
+?? src/Tests/Integration/TestResults/2ec4133f-3e23-4af7-bf0b-91a00a6433c2/
+?? src/Tests/Integration/TestResults/3c4d6375-ade8-4aa9-9072-b8a96e70220c/
+?? src/Tests/Integration/TestResults/41136f11-6151-49b5-bd4b-dd9f2ff13bc1/
+?? src/Tests/Integration/TestResults/51aa92d0-0949-4aa1-ac27-d4f9b5f59055/
+?? src/Tests/Integration/TestResults/69722d13-8193-4c00-a8cd-dfa870fd87fb/
+?? src/Tests/Integration/TestResults/e1c973c5-0fee-468d-8d7f-bae8b07467a6/
+?? src/Tests/Integration/UIWireupIntegrationTests.cs
+?? src/Tests/MockGameBridgeServerTests.cs
+?? src/Tests/Mocks/MockFileDiscoveryService.cs
+?? src/Tests/Mocks/MockFileDiscoveryServiceTests.cs
+?? src/Tests/Mocks/MockRegistry.cs
+?? src/Tests/Mocks/MockRegistryTests.cs
+?? src/Tests/Mocks/MockThemeProvider.cs
+?? src/Tests/Mocks/MockThemeProviderTests.cs
+?? src/Tests/Mocks/MockUnitFactory.cs
+?? src/Tests/Mocks/MockUnitFactoryTests.cs
+?? src/Tests/Mocks/MockValidatable.cs
+?? src/Tests/Mocks/MockValidatableTests.cs
+?? src/Tests/NativeDepResolverTests.cs
+?? src/Tests/ParameterizedTests/
+?? src/Tests/Pattern101EnumDiscriminatorTests.cs
+?? src/Tests/PollingHelperTests.cs
+?? src/Tests/RustAssetPipelineValidationTests.cs
+?? src/Tests/SDK/
+?? src/Tests/ScenarioContentLoaderValidationTests.cs
+?? src/Tests/Sketchfab/
+?? src/Tests/Support/
+?? src/Tests/UIContentLoaderValidationTests.cs
+?? src/Tests/UniverseLoaderValidationTests.cs
+?? src/Tests/UpdateCheckerTests.cs
+?? src/Tests/_validate_draft/
+?? src/Tests/app.config
+?? src/Tools/Cli/Json/
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/bridge_receipt_aggregator.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/external_judge.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/merkle.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/native_dep_resolver.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/proof_policy.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/proof_policy_cli.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/proof_signing.py
+?? src/Tools/DinoforgeMcp/tests/test_bridge_receipt_aggregator.py
+?? src/Tools/DinoforgeMcp/tests/test_external_judge.py
+?? src/Tools/DinoforgeMcp/tests/test_merkle.py
+?? src/Tools/DinoforgeMcp/tests/test_native_dep_resolver.py
+?? src/Tools/DinoforgeMcp/tests/test_proof_cli_shims.py
+?? src/Tools/DinoforgeMcp/tests/test_proof_policy.py
+?? src/Tools/DinoforgeMcp/tests/test_proof_signing.py
+?? src/Tools/Installer/InstallerLib/Json/
+?? src/Tools/Installer/InstallerLib/UpdateChecker.cs
+?? src/Tools/McpServer/NativeDepResolver.cs
+?? src/Tools/PackCompiler/Json/
+?? src/Tools/PackCompiler/Services/SafePathResolver.cs
+?? src/Tools/PackCompiler/Tests/DirectAssetPipelineValidationTests.cs
+?? src/Tools/PackCompiler/Tests/SafePathResolverTests.cs
+?? temp_err.txt
+?? temp_out.txt
+?? test-results.log
+?? test_closure.log
+?? test_output.log
+?? test_run_iter94.log
+?? tmp_err.txt
+?? tmp_out.txt

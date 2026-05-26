@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 5982,
+  "lod0_polycount": 5982,
+  "lod1_polycount": 2988,
+  "lod2_polycount": 1489,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_clone_militia_sketchfab_001"
+}

@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 1931220353
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: ccf0604d62eeb76d2cf1882e4c78aaa1
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: e2a11be68d6287ac10b047eee7e3b6d6
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: ccf0604d62eeb76d2cf1882e4c78aaa1
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 136
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/CIS/sw-cis-rocket-droid.mat
+- Assets/Prefabs/CIS/sw-cis-rocket-droid.prefab
+- Assets/Materials/CIS/sw-cis-rocket-droid-primary.mat
+Dependencies: []

@@ -1,0 +1,85 @@
+# Air Force Expansion — Aerial Weapons
+
+# Western Coalition Weapons
+
+- id: wc_air_to_air_missiles
+  display_name: AIM-120 AMRAAM
+  description: Beyond-visual-range air-to-air missile. High probability of kill against maneuvering targets.
+  damage: 22.0
+  range: 30.0
+  projectile_speed: 20.0
+  fire_rate: 2.5
+  accuracy: 0.85
+  armor_penetration: 5.0
+
+- id: wc_hellfire_missiles
+  display_name: AGM-114 Hellfire
+  description: Laser-guided anti-armor missile. Pinpoint accuracy against armored vehicles and fortifications.
+  damage: 28.0
+  range: 22.0
+  projectile_speed: 15.0
+  fire_rate: 2.0
+  accuracy: 0.9
+  armor_penetration: 40.0
+
+- id: wc_guided_bombs
+  display_name: GBU-31 JDAM
+  description: GPS-guided 2000lb bomb. Devastating against static targets regardless of weather.
+  damage: 45.0
+  range: 40.0
+  projectile_speed: 10.0
+  fire_rate: 0.5
+  accuracy: 0.95
+  armor_penetration: 30.0
+
+- id: wc_drone_missiles
+  display_name: AGM-176 Griffin
+  description: Small precision munition optimized for drone platforms. Low collateral damage, high accuracy.
+  damage: 14.0
+  range: 28.0
+  projectile_speed: 12.0
+  fire_rate: 1.5
+  accuracy: 0.92
+  armor_penetration: 15.0
+
+# Eastern Bloc Weapons
+
+- id: eb_air_to_air_missiles
+  display_name: R-77 Adder
+  description: Active-radar-homing medium-range air-to-air missile. Highly agile seeker head.
+  damage: 20.0
+  range: 26.0
+  projectile_speed: 18.0
+  fire_rate: 2.8
+  accuracy: 0.80
+  armor_penetration: 5.0
+
+- id: eb_rocket_pods
+  display_name: B-8V20 Rocket Pods
+  description: 80mm unguided rocket pods. High volume of fire saturates a target area.
+  damage: 24.0
+  range: 18.0
+  projectile_speed: 14.0
+  fire_rate: 2.2
+  accuracy: 0.78
+  armor_penetration: 20.0
+
+- id: eb_unguided_rockets
+  display_name: S-24 Heavy Rockets
+  description: Large unguided air-to-ground rockets delivering massive blast effect against infantry and light vehicles.
+  damage: 32.0
+  range: 20.0
+  projectile_speed: 13.0
+  fire_rate: 1.8
+  accuracy: 0.72
+  armor_penetration: 12.0
+
+- id: eb_jamming_systems
+  display_name: Khibiny ECM Suite
+  description: Electronic countermeasures jamming enemy targeting systems. Reduces enemy accuracy in the surrounding area.
+  damage: 8.0
+  range: 35.0
+  projectile_speed: 0.0
+  fire_rate: 1.0
+  accuracy: 0.65
+  armor_penetration: 0.0

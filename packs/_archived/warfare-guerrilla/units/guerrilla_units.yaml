@@ -1,0 +1,366 @@
+# Guerrilla Units - Asymmetric Archetype
+# Higher stats, higher cost, smaller squads, strong individuals
+
+# 1. Militia - Partisan
+- id: guer_partisan
+  display_name: Partisan
+  description: Lightly armed villager taking up arms. Cheap by guerrilla standards but still a capable fighter.
+  unit_class: MilitiaLight
+  faction_id: guerrilla
+  tier: 1
+  weapon: sling
+  vanilla_mapping: militia
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 100.0
+    damage: 10.0
+    armor: 2.0
+    range: 16.0
+    speed: 5.5
+    accuracy: 0.6
+    fire_rate: 2.0
+    morale: 80.0
+    cost:
+      food: 40
+      wood: 10
+      stone: 0
+      iron: 5
+      gold: 5
+      population: 1
+
+# 2. Line Infantry - Fighter
+- id: guer_fighter
+  display_name: Fighter
+  description: Seasoned guerrilla warrior armed with spear and shield. Strong in close quarters.
+  unit_class: CoreLineInfantry
+  faction_id: guerrilla
+  tier: 1
+  weapon: spear
+  vanilla_mapping: line_infantry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [AdvanceFire, Charge]
+  stats:
+    hp: 150.0
+    damage: 18.0
+    armor: 6.0
+    range: 2.5
+    speed: 5.0
+    accuracy: 0.8
+    fire_rate: 1.8
+    morale: 100.0
+    cost:
+      food: 50
+      wood: 15
+      stone: 0
+      iron: 15
+      gold: 10
+      population: 1
+
+# 3. Heavy Infantry - Brute
+- id: guer_brute
+  display_name: Brute
+  description: Massive warrior wielding a great axe, capable of smashing through armored targets.
+  unit_class: HeavyInfantry
+  faction_id: guerrilla
+  tier: 2
+  weapon: great_axe
+  vanilla_mapping: heavy_infantry
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [Charge, AntiArmor]
+  stats:
+    hp: 220.0
+    damage: 40.0
+    armor: 10.0
+    range: 2.0
+    speed: 3.5
+    accuracy: 0.75
+    fire_rate: 1.0
+    morale: 110.0
+    cost:
+      food: 70
+      wood: 10
+      stone: 0
+      iron: 30
+      gold: 25
+      population: 2
+
+# 4. Ranged Infantry - Hunter
+- id: guer_hunter
+  display_name: Hunter
+  description: Expert hunter turned warrior, deadly accurate with a longbow at extreme range.
+  unit_class: Skirmisher
+  faction_id: guerrilla
+  tier: 2
+  weapon: longbow
+  vanilla_mapping: ranged_infantry
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite, AdvanceFire]
+  stats:
+    hp: 95.0
+    damage: 22.0
+    armor: 2.0
+    range: 30.0
+    speed: 5.5
+    accuracy: 0.85
+    fire_rate: 0.8
+    morale: 90.0
+    cost:
+      food: 45
+      wood: 20
+      stone: 0
+      iron: 10
+      gold: 15
+      population: 1
+
+# 5. Cavalry - Horseback Raider
+- id: guer_horseback_raider
+  display_name: Horseback Raider
+  description: Swift mounted raider striking from unexpected angles and retreating before retaliation.
+  unit_class: FastVehicle
+  faction_id: guerrilla
+  tier: 2
+  weapon: javelin
+  vanilla_mapping: cavalry
+  defense_tags: [InfantryArmor, Biological]
+  behavior_tags: [Charge, Kite]
+  stats:
+    hp: 200.0
+    damage: 28.0
+    armor: 6.0
+    range: 18.0
+    speed: 10.0
+    accuracy: 0.6
+    fire_rate: 0.6
+    morale: 95.0
+    cost:
+      food: 60
+      wood: 10
+      stone: 0
+      iron: 20
+      gold: 30
+      population: 2
+
+# 6. Siege - Sapper
+- id: guer_sapper
+  display_name: Sapper
+  description: Demolitions expert hurling fire pots to destroy structures and break enemy formations.
+  unit_class: Artillery
+  faction_id: guerrilla
+  tier: 2
+  weapon: fire_pot
+  vanilla_mapping: siege
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [SiegePriority, AntiStructure]
+  stats:
+    hp: 80.0
+    damage: 45.0
+    armor: 2.0
+    range: 15.0
+    speed: 4.5
+    accuracy: 0.55
+    fire_rate: 0.3
+    morale: 85.0
+    cost:
+      food: 40
+      wood: 20
+      stone: 0
+      iron: 25
+      gold: 20
+      population: 1
+
+# 7. Support - Herbalist
+- id: guer_herbalist
+  display_name: Herbalist
+  description: Tribal healer using herbal remedies and poultices to restore wounded fighters to battle.
+  unit_class: SupportEngineer
+  faction_id: guerrilla
+  tier: 1
+  weapon: herb_poultice
+  vanilla_mapping: support
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine]
+  stats:
+    hp: 90.0
+    damage: 2.0
+    armor: 1.0
+    range: 5.0
+    speed: 5.5
+    accuracy: 0.9
+    fire_rate: 0.5
+    morale: 100.0
+    cost:
+      food: 40
+      wood: 10
+      stone: 0
+      iron: 5
+      gold: 20
+      population: 1
+
+# 8. Scout - Tracker
+- id: guer_tracker
+  display_name: Tracker
+  description: Master woodsman and tracker with unmatched speed and awareness in any terrain.
+  unit_class: Recon
+  faction_id: guerrilla
+  tier: 1
+  weapon: hunting_bow
+  vanilla_mapping: scout
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 80.0
+    damage: 15.0
+    armor: 1.0
+    range: 22.0
+    speed: 8.0
+    accuracy: 0.75
+    fire_rate: 1.5
+    morale: 85.0
+    cost:
+      food: 35
+      wood: 15
+      stone: 0
+      iron: 5
+      gold: 10
+      population: 1
+
+# 9. Elite - Veteran Fighter
+- id: guer_veteran_fighter
+  display_name: Veteran Fighter
+  description: Battle-hardened elite warrior with decades of combat experience and superior equipment.
+  unit_class: EliteLineInfantry
+  faction_id: guerrilla
+  tier: 3
+  weapon: war_axe
+  vanilla_mapping: elite
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [Charge, AdvanceFire]
+  stats:
+    hp: 250.0
+    damage: 25.0
+    armor: 12.0
+    range: 1.5
+    speed: 5.5
+    accuracy: 0.9
+    fire_rate: 1.5
+    morale: 130.0
+    cost:
+      food: 80
+      wood: 15
+      stone: 0
+      iron: 40
+      gold: 45
+      population: 2
+
+# 10. Hero - Warchief
+- id: guer_warchief
+  display_name: Warchief
+  description: Legendary guerrilla leader wielding the chieftain's blade. Inspires fanatical devotion and fights with unmatched ferocity.
+  unit_class: HeroCommander
+  faction_id: guerrilla
+  tier: 3
+  weapon: chieftain_blade
+  vanilla_mapping: hero
+  defense_tags: [HeavyArmor, Biological, Heroic]
+  behavior_tags: [Charge, MoralePressure]
+  stats:
+    hp: 350.0
+    damage: 45.0
+    armor: 15.0
+    range: 2.0
+    speed: 6.0
+    accuracy: 0.95
+    fire_rate: 2.0
+    morale: 180.0
+    cost:
+      food: 100
+      wood: 20
+      stone: 0
+      iron: 40
+      gold: 80
+      population: 3
+
+# 11. Wall Defender - Snare Layer
+- id: guer_snare_layer
+  display_name: Snare Layer
+  description: Trap specialist who sets deadly snares and spike traps to defend positions.
+  unit_class: StaticMG
+  faction_id: guerrilla
+  tier: 2
+  weapon: trap_mechanism
+  vanilla_mapping: wall_defender
+  defense_tags: [Fortified, Biological]
+  behavior_tags: [HoldLine, AntiMass]
+  stats:
+    hp: 110.0
+    damage: 50.0
+    armor: 5.0
+    range: 3.0
+    speed: 3.0
+    accuracy: 0.8
+    fire_rate: 0.2
+    morale: 100.0
+    cost:
+      food: 35
+      wood: 25
+      stone: 10
+      iron: 20
+      gold: 15
+      population: 1
+
+# 12. Skirmisher - Bowman
+- id: guer_bowman
+  display_name: Bowman
+  description: Skilled archer providing ranged harassment and kiting support from forested positions.
+  unit_class: Skirmisher
+  faction_id: guerrilla
+  tier: 1
+  weapon: hunting_bow
+  vanilla_mapping: skirmisher
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Kite]
+  stats:
+    hp: 75.0
+    damage: 15.0
+    armor: 1.0
+    range: 22.0
+    speed: 6.0
+    accuracy: 0.75
+    fire_rate: 1.5
+    morale: 80.0
+    cost:
+      food: 30
+      wood: 15
+      stone: 0
+      iron: 5
+      gold: 10
+      population: 1
+
+# 13. Special - Berserker
+- id: guer_berserker
+  display_name: Berserker
+  description: Frenzied warrior entering a battle rage, dual-wielding axes with devastating speed and power. Fragile but terrifying.
+  unit_class: ShockMelee
+  faction_id: guerrilla
+  tier: 3
+  weapon: berserker_dual_axes
+  vanilla_mapping: special
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Charge, MoralePressure]
+  stats:
+    hp: 160.0
+    damage: 35.0
+    armor: 3.0
+    range: 1.5
+    speed: 7.0
+    accuracy: 0.8
+    fire_rate: 3.0
+    morale: 200.0
+    cost:
+      food: 60
+      wood: 10
+      stone: 0
+      iron: 30
+      gold: 40
+      population: 2

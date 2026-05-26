@@ -1,0 +1,180 @@
+# CIS Buildings - Cheap, fast mass production
+
+- id: cis_tactical_center
+  display_name: Tactical Droid Center
+  description: Separatist command center housing the tactical droid coordinator.
+  building_type: command
+  health: 1400
+  cost:
+    food: 0
+    wood: 40
+    stone: 60
+    iron: 50
+    gold: 30
+    population: 0
+  production: {}
+
+  visual_asset: sw-cis-command-center
+- id: cis_droid_factory
+  display_name: Droid Factory
+  description: Automated assembly line mass-producing B1 battle droids at extreme rates.
+  building_type: barracks
+  health: 1000
+  cost:
+    food: 0
+    wood: 30
+    stone: 40
+    iron: 40
+    gold: 15
+    population: 0
+  production:
+    cis_b1_battle_droid: 6
+    cis_b1_squad: 3
+  visual_asset: sw-cis-droid-factory
+
+- id: cis_assembly_line
+  display_name: Advanced Assembly Line
+  description: Heavy manufacturing facility producing B2 droids and commando droids.
+  building_type: barracks
+  health: 800
+  cost:
+    food: 0
+    wood: 20
+    stone: 50
+    iron: 60
+    gold: 25
+    population: 0
+  production:
+    cis_b2_super_battle_droid: 2
+    cis_bx_commando_droid: 1
+  visual_asset: sw-assembly-line
+
+- id: cis_heavy_foundry
+  display_name: Heavy Foundry
+  description: Vehicle and heavy weapons production facility for AATs and droidekas.
+  building_type: barracks
+  health: 900
+  cost:
+    food: 0
+    wood: 20
+    stone: 60
+    iron: 80
+    gold: 30
+    population: 0
+  production:
+    cis_aat_crew: 1
+    cis_droideka: 1
+  visual_asset: sw-heavy-foundry
+
+- id: cis_sentry_turret
+  display_name: Sentry Turret
+  description: Automated blaster turret for perimeter defense.
+  building_type: defense
+  health: 500
+  cost:
+    food: 0
+    wood: 15
+    stone: 25
+    iron: 25
+    gold: 5
+    population: 0
+  production: {}
+  visual_asset: sw-cis-aa-tower
+
+- id: cis_ray_shield
+  display_name: Ray Shield Generator
+  description: Droid-operated ray shield projector blocking incoming fire.
+  building_type: defense
+  health: 1200
+  cost:
+    food: 0
+    wood: 10
+    stone: 60
+    iron: 80
+    gold: 40
+    population: 0
+  production: {}
+  visual_asset: sw-cis-shield-generator
+
+- id: cis_mining_facility
+  display_name: Mining Facility
+  description: Automated mineral extraction operation providing raw materials.
+  building_type: economy
+  health: 600
+  cost:
+    food: 0
+    wood: 20
+    stone: 30
+    iron: 20
+    gold: 8
+    population: 0
+  production:
+    iron: 4
+    stone: 2
+
+  visual_asset: sw-mining-facility
+- id: cis_processing_plant
+  display_name: Processing Plant
+  description: Refinery converting raw materials into trade goods.
+  building_type: economy
+  health: 500
+  cost:
+    food: 0
+    wood: 15
+    stone: 25
+    iron: 30
+    gold: 10
+    population: 0
+  production:
+    gold: 3
+
+  visual_asset: sw-processing-plant
+- id: cis_tech_union_lab
+  display_name: Techno Union Lab
+  description: Techno Union research facility developing advanced droid designs.
+  building_type: research
+  health: 700
+  cost:
+    food: 0
+    wood: 20
+    stone: 40
+    iron: 50
+    gold: 35
+    population: 0
+  production: {}
+
+  visual_asset: sw-tech-union-lab
+- id: cis_durasteel_barrier
+  display_name: Durasteel Barrier
+  description: Prefabricated wall segment for rapid base fortification.
+  building_type: defense
+  health: 900
+  cost:
+    food: 0
+    wood: 0
+    stone: 40
+    iron: 25
+    gold: 0
+    population: 0
+  production: {}
+
+  visual_asset: sw-durasteel-barrier
+- id: cis_vulture_nest
+  display_name: Vulture Droid Nest
+  description: Automated droid starfighter launch platform providing air superiority through coordinated swarms.
+  building_type: defense
+  health: 900
+  cost:
+    food: 0
+    wood: 0
+    stone: 50
+    iron: 70
+    gold: 40
+    population: 0
+  production: {}
+  defense_tags: [AntiAir]
+  anti_air:
+    range: 38.0
+    damage_bonus: 1.5
+
+  visual_asset: sw-vulture-nest

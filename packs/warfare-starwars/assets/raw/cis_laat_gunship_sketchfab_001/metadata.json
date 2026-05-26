@@ -1,0 +1,16 @@
+{
+  "id": "cis_laat_gunship",
+  "type": "Transport",
+  "name": "LAAT - Low Altitude Assault Transport",
+  "model_id": "cf7f6043210a418abdd818d5e8dd0fd8",
+  "source_url": "https://sketchfab.com/models/cf7f6043210a418abdd818d5e8dd0fd8",
+  "artist": "Mind Mulch for The Masses",
+  "license": "CC Attribution",
+  "extracted_files": [
+    "Unity2Skfb.gltf"
+  ],
+  "extracted_textures": 4,
+  "downloadedAt": "2026-03-13T23:20:00Z",
+  "phase": "2B",
+  "note": "Downloaded in raw format. Will be converted to GLB in Phase 3C."
+}

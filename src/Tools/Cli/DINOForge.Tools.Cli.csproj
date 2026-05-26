@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BuildInParallel>false</BuildInParallel>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+    <RootNamespace>DINOForge.Tools.Cli</RootNamespace>
+    <AssemblyName>DINOForge.Tools.Cli</AssemblyName>
+    <Description>DINOForge CLI - command-line interface for the DINO mod platform</Description>
+    <!-- Pattern #98 / Task #276: CA2007 (ConfigureAwait) NOT enforced on CLI app.
+         CLI is OutputType=Exe with no Unity/UI sync context — ConfigureAwait is
+         stylistic, not a deadlock-prevention measure. Enforcing here would
+         require ~126 source edits in commands, gated behind #274 follow-up.
+         If a future audit promotes this, set EnforceConfigureAwait=true. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- #775 P0: expose internal PathSafety helper and AssetctlPipeline to the CliTools test project. -->
+    <InternalsVisibleTo Include="DINOForge.Tests.CliTools" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.*" />
+    <PackageReference Include="Spectre.Console" Version="0.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.*" />
+
+    <!-- Sketchfab API integration -->
+    <PackageReference Include="SketchFabApi.Net" Version="1.0.4" />
+
+    <!-- ScreenRecorderLib for window video recording -->
+    <PackageReference Include="ScreenRecorderLib" Version="6.6.0" />
+
+    <!-- SQLite for asset catalog store -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.*" />
+
+    <!-- Error tracking -->
+    <PackageReference Include="Sentry" Version="4.11.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- ScreenRecorderLib requires x64 explicitly (not AnyCPU) - RuntimeIdentifier forces platform at build time -->
+    <Platform>x64</Platform>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- CA1416: ScreenRecorderLib is Windows-only; code already annotated with [SupportedOSPlatform("windows")] -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+    <ProjectReference Include="..\..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" />
+  </ItemGroup>
+
+</Project>

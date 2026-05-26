@@ -1,0 +1,19 @@
+# Aerial Warfare Stat Overrides
+# Makes aerial units more effective
+
+# Aerial units get bonuses
+overrides:
+  - target: unit.stats.hp
+    value: 1.3
+    mode: multiply
+    filter: Components.Aerial
+
+  - target: unit.stats.damage
+    value: 1.25
+    mode: multiply
+    filter: Components.Aerial
+
+  - target: unit.stats.speed
+    value: 1.15
+    mode: multiply
+    filter: Components.Aerial

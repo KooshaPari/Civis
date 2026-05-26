@@ -1,0 +1,144 @@
+{
+  "schema_version": "2",
+  "updated": "2026-03-11",
+  "status_ladder": {
+    "optimal": {
+      "label": "Optimal",
+      "color": "#22c55e",
+      "description": "Fully tested and verified. All features work. Recommended configuration.",
+      "installer_action": "proceed"
+    },
+    "stable": {
+      "label": "Stable",
+      "color": "#84cc16",
+      "description": "Works reliably. Minor edge cases possible. Community tested.",
+      "installer_action": "proceed"
+    },
+    "maintenance": {
+      "label": "Maintenance",
+      "color": "#eab308",
+      "description": "Functional but receiving security fixes only. Upgrade recommended.",
+      "installer_action": "warn"
+    },
+    "unstable": {
+      "label": "Unstable",
+      "color": "#f97316",
+      "description": "Known issues. Partial functionality. Use at own risk.",
+      "installer_action": "warn_strongly"
+    },
+    "broken": {
+      "label": "Broken",
+      "color": "#ef4444",
+      "description": "Known incompatible. Will not function correctly.",
+      "installer_action": "block"
+    },
+    "unknown": {
+      "label": "Unknown",
+      "color": "#6b7280",
+      "description": "Untested combination. No compatibility data available.",
+      "installer_action": "warn"
+    }
+  },
+  "matrix": [
+    {
+      "dinoforge": "0.5.x",
+      "dino_game": ">=1.0.0",
+      "bepinex": ">=5.4.21 <6.0.0",
+      "unity": "2021.3.*",
+      "status": "optimal",
+      "notes": "Current stable release. Fully tested."
+    },
+    {
+      "dinoforge": "0.4.x",
+      "dino_game": ">=1.0.0",
+      "bepinex": ">=5.4.21 <6.0.0",
+      "unity": "2021.3.*",
+      "status": "maintenance",
+      "notes": "Security fixes only. Upgrade to 0.5.x recommended."
+    },
+    {
+      "dinoforge": "0.3.x",
+      "dino_game": ">=1.0.0",
+      "bepinex": ">=5.4.21 <6.0.0",
+      "unity": "2021.3.*",
+      "status": "broken",
+      "notes": "No longer supported. Upgrade to 0.5.x required."
+    },
+    {
+      "dinoforge": "0.5.x",
+      "dino_game": ">=1.0.0",
+      "bepinex": ">=6.0.0",
+      "unity": "2021.3.*",
+      "status": "unknown",
+      "notes": "BepInEx 6.x (Mono) support planned for DINOForge 1.0. Not yet tested."
+    },
+    {
+      "dinoforge": "0.5.x",
+      "dino_game": ">=2.0.0",
+      "bepinex": ">=5.4.21 <6.0.0",
+      "unity": "2022.*",
+      "status": "unknown",
+      "notes": "Future DINO game version. No compatibility data available yet."
+    }
+  ],
+  "component_compatibility": [
+    {
+      "component": "Components.Health",
+      "field": "currentHealth",
+      "dino_versions": ">=1.0",
+      "status": "optimal",
+      "notes": "Confirmed via entity dump. Core health tracking for units and buildings."
+    },
+    {
+      "component": "Components.HealthBase",
+      "field": "_maxHealthMultiplier",
+      "dino_versions": ">=1.0",
+      "status": "stable",
+      "notes": "Private field, may change in patches. Max health multiplier mutable value."
+    },
+    {
+      "component": "Components.Unit",
+      "field": null,
+      "dino_versions": ">=1.0",
+      "status": "optimal",
+      "notes": "Zero-sized tag marking entities as units. Verified present on all units."
+    },
+    {
+      "component": "Components.ArmorData",
+      "field": "type",
+      "dino_versions": ">=1.0",
+      "status": "optimal",
+      "notes": "ArmorType enum. Confirmed layout stable across patches."
+    },
+    {
+      "component": "Components.AttackCooldown",
+      "field": "value",
+      "dino_versions": ">=1.0",
+      "status": "stable",
+      "notes": "Cooldown timer. Also carries fixedProjectileSpeed field."
+    },
+    {
+      "component": "Components.ProjectileDataBase",
+      "field": null,
+      "dino_versions": ">=1.0",
+      "status": "optimal",
+      "notes": "BlobAssetReference<ProjectileData>. Immutable, verified on projectile entities."
+    },
+    {
+      "component": "Components.BuildingBase",
+      "field": null,
+      "dino_versions": ">=1.0",
+      "status": "optimal",
+      "notes": "Present on all buildings. Core building data container."
+    },
+    {
+      "component": "Components.Enemy",
+      "field": null,
+      "dino_versions": ">=1.0",
+      "status": "stable",
+      "notes": "Enemy faction marker (BlobAssetReference<EnemyBaseData>). Player units lack this tag."
+    }
+  ],
+  "bepinex_note": "BepInEx 6.x (Mono) support planned for DINOForge 1.0",
+  "game_note": "DINO uses Unity 2021.3.45f2. Game updates may change ECS component layouts."
+}

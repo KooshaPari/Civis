@@ -1,0 +1,12 @@
+{
+  "assetId": "rep_clone_sniper",
+  "lod": "LOD1",
+  "targetQuality": 0.6,
+  "triangleCount": 990,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 40
+  }
+}

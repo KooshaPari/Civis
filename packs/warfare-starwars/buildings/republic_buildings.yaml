@@ -1,0 +1,180 @@
+# Galactic Republic Buildings
+
+- id: rep_command_center
+  display_name: Republic Command Center
+  description: Central operations hub coordinating all Republic forces in the sector.
+  building_type: command
+  health: 2200
+  cost:
+    food: 0
+    wood: 80
+    stone: 150
+    iron: 100
+    gold: 60
+    population: 0
+  production: {}
+
+  visual_asset: sw-rep-command-center
+- id: rep_clone_facility
+  display_name: Clone Training Facility
+  description: Clone trooper deployment center producing militia and standard clone troopers.
+  building_type: barracks
+  health: 1300
+  cost:
+    food: 0
+    wood: 60
+    stone: 80
+    iron: 50
+    gold: 25
+    population: 0
+  production:
+    rep_clone_militia: 2
+    rep_clone_trooper: 1
+  visual_asset: sw-clone-barracks
+
+- id: rep_weapons_factory
+  display_name: Weapons Factory
+  description: Advanced weapons manufacturing facility producing heavy troopers and ARC troopers.
+  building_type: barracks
+  health: 1100
+  cost:
+    food: 0
+    wood: 50
+    stone: 80
+    iron: 80
+    gold: 40
+    population: 0
+  production:
+    rep_clone_heavy: 1
+    rep_arc_trooper: 1
+  visual_asset: sw-weapons-factory
+
+- id: rep_vehicle_bay
+  display_name: Vehicle Bay
+  description: Republic motor pool for AT-TE walkers and BARC speeders.
+  building_type: barracks
+  health: 1000
+  cost:
+    food: 0
+    wood: 40
+    stone: 60
+    iron: 120
+    gold: 50
+    population: 0
+  production:
+    rep_atte_crew: 1
+    rep_barc_speeder: 1
+  visual_asset: sw-rep-vehicle-bay
+
+- id: rep_guard_tower
+  display_name: Guard Tower
+  description: Elevated defensive position with mounted blaster turret.
+  building_type: defense
+  health: 700
+  cost:
+    food: 0
+    wood: 40
+    stone: 50
+    iron: 35
+    gold: 10
+    population: 0
+  production: {}
+  visual_asset: sw-guard-tower
+
+- id: rep_shield_generator
+  display_name: Shield Generator
+  description: Deflector shield generator protecting a wide area from ranged fire.
+  building_type: defense
+  health: 1500
+  cost:
+    food: 0
+    wood: 20
+    stone: 100
+    iron: 120
+    gold: 60
+    population: 0
+  production: {}
+  visual_asset: sw-rep-shield-generator
+
+- id: rep_supply_station
+  display_name: Supply Station
+  description: Republic logistics hub providing steady resource income.
+  building_type: economy
+  health: 800
+  cost:
+    food: 0
+    wood: 50
+    stone: 40
+    iron: 25
+    gold: 10
+    population: 0
+  production:
+    food: 5
+    iron: 2
+
+  visual_asset: sw-rep-supply-depot
+- id: rep_tibanna_refinery
+  display_name: Tibanna Gas Refinery
+  description: Processes tibanna gas for blaster ammunition and trade.
+  building_type: economy
+  health: 700
+  cost:
+    food: 0
+    wood: 30
+    stone: 50
+    iron: 40
+    gold: 20
+    population: 0
+  production:
+    gold: 4
+
+  visual_asset: sw-tibanna-refinery
+- id: rep_research_lab
+  display_name: Research Laboratory
+  description: Republic R&D facility unlocking advanced clone and vehicle upgrades.
+  building_type: research
+  health: 900
+  cost:
+    food: 0
+    wood: 40
+    stone: 70
+    iron: 60
+    gold: 50
+    population: 0
+  production: {}
+
+  visual_asset: sw-rep-research-lab
+- id: rep_blast_wall
+  display_name: Blast Wall
+  description: Reinforced durasteel wall segment for perimeter defense.
+  building_type: defense
+  health: 1600
+  cost:
+    food: 0
+    wood: 5
+    stone: 70
+    iron: 30
+    gold: 0
+    population: 0
+  production: {}
+
+  visual_asset: sw-blast-wall
+- id: rep_skyshield_generator
+  display_name: Skyshield Generator
+  description: Orbital shield platform providing air defense against starfighters and aerial bombardment.
+  building_type: defense
+  health: 1200
+  cost:
+    food: 0
+    wood: 10
+    stone: 80
+    iron: 90
+    gold: 70
+    population: 0
+  production: {}
+  defense_tags: [AntiAir]
+  anti_air:
+    range: 40.0
+    damage_bonus: 1.4
+
+  visual_asset: sw-skyshield-generator

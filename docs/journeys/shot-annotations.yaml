@@ -1,0 +1,43 @@
+# Shot Annotations Registry for DINOForge Journeys
+# Maps journey_id + frame_index → UI annotations (bbox, label, color)
+
+journeys:
+  us-f1-1-game-launch:
+    title: "US-F1.1: Game Launch & Mod Verification"
+    frames:
+      0:
+        - bbox: [50, 50, 300, 40]
+          label: "Game Title Bar"
+          color: "#89b4fa"
+      1:
+        - bbox: [100, 150, 400, 60]
+          label: "DINOForge Mod Loaded"
+          color: "#a6e3a1"
+
+  us-f2-1-unit-spawn:
+    title: "US-F2.1: Unit Spawn & Asset Swap"
+    frames:
+      0:
+        - bbox: [200, 300, 200, 100]
+          label: "Clone Trooper Unit"
+          color: "#f38ba8"
+      1:
+        - bbox: [150, 500, 300, 30]
+          label: "Health: 100 HP"
+          color: "#a6e3a1"
+
+  us-f3-1-debug-overlay:
+    title: "US-F3.1: Debug Overlay Toggle"
+    frames:
+      0:
+        - bbox: [10, 10, 400, 60]
+          label: "F9/F10 Overlay Active"
+          color: "#f9e2af"
+
+  us-f4-1-menu-nav:
+    title: "US-F4.1: Menu Navigation"
+    frames:
+      0:
+        - bbox: [400, 200, 300, 400]
+          label: "Main Menu"
+          color: "#cba6f7"

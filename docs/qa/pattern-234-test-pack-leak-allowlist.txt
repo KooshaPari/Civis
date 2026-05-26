@@ -1,0 +1,11 @@
+# Pattern #234: Test Fixture IDs Leaking Into Deployed Packs
+#
+# Allowlist for exceptions where test pack IDs may appear in production directories.
+# Use sparingly — all test fixtures SHOULD live in src/Tests/Fixtures/, NOT packs/.
+#
+# Format: <file-path>:<pack-id>:<reason>
+# Example:
+#   src/Runtime/DINOForge.Runtime.csproj:test-valid:temporary testing during v0.24.0
+#
+# Current baseline: 0 violations (clean)
+#

@@ -1,0 +1,18 @@
+# cosign keyless / Sigstore certificate identity anchor
+#
+# This file is INTENTIONALLY not a raw PEM public key. cosign keyless mode
+# uses GitHub OIDC identity rather than long-lived signer keys; verification
+# is anchored on the workflow identity URI + OIDC issuer below.
+#
+# Per docs/design/2026-04-25-smart-contract-proof-system.md section 3.1.
+#
+# expected_identity: https://github.com/KooshaPari/Dino/.github/workflows/proof-gate.yml@refs/heads/main
+# expected_oidc_issuer: https://token.actions.githubusercontent.com
+#
+# Verification command (production tier 1):
+#   cosign verify-blob \
+#     --certificate-identity "https://github.com/KooshaPari/Dino/.github/workflows/proof-gate.yml@refs/heads/main" \
+#     --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+#     --signature <bundle>/manifest.json.sig <bundle>/manifest.json
+#
+# Fallback tier (offline / local): see ed25519-fallback.pub.

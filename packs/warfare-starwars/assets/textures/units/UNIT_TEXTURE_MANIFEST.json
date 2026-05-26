@@ -1,0 +1,304 @@
+{
+  "version": "1.0",
+  "pack_id": "warfare-starwars",
+  "unit_textures": [
+    {
+      "unit_id": "rep_clone_militia",
+      "display_name": "Clone Militia",
+      "faction": "republic",
+      "unit_class": "MilitiaLight",
+      "tier": 1,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_militia_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_trooper",
+      "display_name": "Clone Trooper",
+      "faction": "republic",
+      "unit_class": "CoreLineInfantry",
+      "tier": 1,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_trooper_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_heavy",
+      "display_name": "Clone Heavy Trooper",
+      "faction": "republic",
+      "unit_class": "HeavyInfantry",
+      "tier": 2,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_heavy_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_sharpshooter",
+      "display_name": "Clone Sharpshooter",
+      "faction": "republic",
+      "unit_class": "Skirmisher",
+      "tier": 2,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_sharpshooter_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_barc_speeder",
+      "display_name": "BARC Speeder",
+      "faction": "republic",
+      "unit_class": "FastVehicle",
+      "tier": 2,
+      "is_vehicle": true,
+      "albedo_file": "republic_rep_barc_speeder_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_atte_crew",
+      "display_name": "AT-TE Crew",
+      "faction": "republic",
+      "unit_class": "MainBattleVehicle",
+      "tier": 3,
+      "is_vehicle": true,
+      "albedo_file": "republic_rep_atte_crew_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_medic",
+      "display_name": "Clone Medic",
+      "faction": "republic",
+      "unit_class": "SupportEngineer",
+      "tier": 2,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_medic_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_arf_trooper",
+      "display_name": "ARF Trooper",
+      "faction": "republic",
+      "unit_class": "Recon",
+      "tier": 1,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_arf_trooper_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_arc_trooper",
+      "display_name": "ARC Trooper",
+      "faction": "republic",
+      "unit_class": "EliteLineInfantry",
+      "tier": 3,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_arc_trooper_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_jedi_knight",
+      "display_name": "Jedi Knight",
+      "faction": "republic",
+      "unit_class": "HeroCommander",
+      "tier": 3,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_jedi_knight_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_wall_guard",
+      "display_name": "Clone Wall Guard",
+      "faction": "republic",
+      "unit_class": "StaticMG",
+      "tier": 2,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_wall_guard_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_sniper",
+      "display_name": "Clone Sniper",
+      "faction": "republic",
+      "unit_class": "Skirmisher",
+      "tier": 3,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_sniper_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "rep_clone_commando",
+      "display_name": "Clone Commando",
+      "faction": "republic",
+      "unit_class": "ShieldedElite",
+      "tier": 3,
+      "is_vehicle": false,
+      "albedo_file": "republic_rep_clone_commando_albedo.png",
+      "color_palette": "republic",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_b1_battle_droid",
+      "display_name": "B1 Battle Droid",
+      "faction": "cis",
+      "unit_class": "MilitiaLight",
+      "tier": 1,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_b1_battle_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_b1_squad",
+      "display_name": "B1 Squad",
+      "faction": "cis",
+      "unit_class": "CoreLineInfantry",
+      "tier": 1,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_b1_squad_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_b2_super_battle_droid",
+      "display_name": "B2 Super Battle Droid",
+      "faction": "cis",
+      "unit_class": "HeavyInfantry",
+      "tier": 2,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_b2_super_battle_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_sniper_droid",
+      "display_name": "Sniper Droid",
+      "faction": "cis",
+      "unit_class": "Skirmisher",
+      "tier": 2,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_sniper_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_stap_pilot",
+      "display_name": "STAP Pilot",
+      "faction": "cis",
+      "unit_class": "FastVehicle",
+      "tier": 1,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_stap_pilot_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_aat_crew",
+      "display_name": "AAT Crew",
+      "faction": "cis",
+      "unit_class": "MainBattleVehicle",
+      "tier": 2,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_aat_crew_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_medical_droid",
+      "display_name": "Medical Droid",
+      "faction": "cis",
+      "unit_class": "SupportEngineer",
+      "tier": 1,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_medical_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_probe_droid",
+      "display_name": "Probe Droid",
+      "faction": "cis",
+      "unit_class": "Recon",
+      "tier": 1,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_probe_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_bx_commando_droid",
+      "display_name": "BX Commando Droid",
+      "faction": "cis",
+      "unit_class": "EliteLineInfantry",
+      "tier": 3,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_bx_commando_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_general_grievous",
+      "display_name": "General Grievous",
+      "faction": "cis",
+      "unit_class": "HeroCommander",
+      "tier": 3,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_general_grievous_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_droideka",
+      "display_name": "Droideka",
+      "faction": "cis",
+      "unit_class": "StaticMG",
+      "tier": 3,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_droideka_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_dwarf_spider_droid",
+      "display_name": "DSD1 Dwarf Spider Droid",
+      "faction": "cis",
+      "unit_class": "StaticAT",
+      "tier": 2,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_dwarf_spider_droid_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    },
+    {
+      "unit_id": "cis_magnaguard",
+      "display_name": "IG-100 MagnaGuard",
+      "faction": "cis",
+      "unit_class": "ShieldedElite",
+      "tier": 3,
+      "is_vehicle": true,
+      "albedo_file": "cis_cis_magnaguard_albedo.png",
+      "color_palette": "cis",
+      "generated_at": "2026-03-12"
+    }
+  ],
+  "statistics": {
+    "total_units": 26,
+    "republic_count": 13,
+    "cis_count": 13,
+    "vehicle_count": 15,
+    "infantry_count": 11,
+    "tier_distribution": {
+      "tier_1": 8,
+      "tier_2": 9,
+      "tier_3": 9
+    }
+  }
+}

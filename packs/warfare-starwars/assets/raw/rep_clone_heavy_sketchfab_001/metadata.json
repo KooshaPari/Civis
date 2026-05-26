@@ -1,0 +1,20 @@
+{
+  "id": "rep_clone_heavy",
+  "name": "Clone Heavy Trooper",
+  "type": "infantry_heavy",
+  "faction": "republic",
+  "source": {
+    "sketchfab_id": "f92a5b62741f4f8abe3537353eb36b18",
+    "artist": "alanh1213",
+    "url": "https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18",
+    "license": "CC-BY"
+  },
+  "polycount_estimated": 9000,
+  "lod_targets": [100, 60, 30],
+  "material_config": {
+    "faction": "republic",
+    "color_primary": "#4488FF",
+    "color_secondary": "#FFFFFF"
+  },
+  "status": "pending_download"
+}

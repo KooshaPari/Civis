@@ -1,0 +1,48 @@
+# stringly-enums allowlist — Pattern #101 detection gate
+#
+# Format: one entry per line. Two forms accepted:
+#
+#   1. Line-locked key:
+#        <SEVERITY>|<file>|<line>
+#      Example:
+#        HIGH|src/SDK/Models/SkillDefinition.cs|37
+#
+#   2. Bare relative path (suppresses every hit in the file):
+#        src/SDK/Models/SkillDefinition.cs
+#
+# Lines starting with `#` and blank lines are ignored.
+#
+# Severities:
+#   HIGH — public string <Name>(Type|Mode|Status|Phase|Kind|Category|State)
+#          on a class with no KnownXxx HashSet and no IValidatable.Validate().
+#          Silent typo risk; CI fails.
+#   MED  — same shape, but the surrounding class constrains the value at
+#          runtime (KnownXxx set or IValidatable.Validate()). Migration
+#          to a real enum + JsonConverter is recommended; not gating
+#          unless --strict is passed.
+#
+# Allowlisted entries should carry a comment explaining WHY the site
+# can't migrate yet (schema-frozen, downstream consumer pinned, etc).
+# Plain entries with no rationale should be removed in the next sweep.
+#
+# See scripts/ci/detect_stringly_enums.py for the full detection spec
+# (run with --self-test to verify the gate).
+#
+# Companion task: #289 (HIGH-site sweep) / #290 (PackManifest.Type +
+# WinCondition.Type schema-published migration) / #291 (this gate) /
+# #292 (CLAUDE.md doctrine + Pattern Catalog entry).
+
+# Bridge protocol DTOs — values are game-defined JSON strings, not closed enums (iter-145/146)
+src/Bridge/Protocol/CatalogSnapshot.cs
+src/Bridge/Protocol/ComponentMapResult.cs
+src/Bridge/Protocol/StatResult.cs
+src/Bridge/Protocol/UiTreeResult.cs
+src/Bridge/Protocol/UiWaitResult.cs
+
+# Pack/schema models — migration tracked in #290; allowlist until enum publish
+src/Domains/Scenario/Models/WinConditionDefinition.cs
+src/SDK/Models/SkillDefinition.cs
+src/Tools/PackCompiler/Models/AssetConfig.cs
+src/Tools/PackCompiler/Models/ProcessingReport.cs
+src/Domains/UI/Models/HudElementDefinition.cs
+src/SDK/Models/TotalConversionManifest.cs

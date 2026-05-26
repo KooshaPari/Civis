@@ -1,0 +1,759 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="ValidateSolutionConfiguration;ValidateToolsVersions;ValidateProjects" DefaultTargets="Build">
+  <PropertyGroup>
+    <MSBuildFileVersion>17.11.48.46605</MSBuildFileVersion>
+    <MSBuildSemanticVersion>17.11.48+02bf66295</MSBuildSemanticVersion>
+    <RoslynTargetsPath>C:\Program Files\dotnet\sdk\8.0.419\Roslyn</RoslynTargetsPath>
+    <VisualStudioVersion>17.0</VisualStudioVersion>
+    <_DirectorySolutionPropsFile>Directory.Solution.props</_DirectorySolutionPropsFile>
+    <_DirectorySolutionPropsBasePath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src</_DirectorySolutionPropsBasePath>
+    <DirectorySolutionPropsPath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Directory.Solution.props</DirectorySolutionPropsPath>
+    <BuildInParallel>false</BuildInParallel>
+    <RestoreBuildInParallel>false</RestoreBuildInParallel>
+    <Configuration>Debug</Configuration>
+    <Platform>Any CPU</Platform>
+    <AspNetConfiguration>Debug</AspNetConfiguration>
+    <SolutionDir>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\</SolutionDir>
+    <SolutionExt>.sln</SolutionExt>
+    <SolutionFileName>DINOForge.sln</SolutionFileName>
+    <SolutionName>DINOForge</SolutionName>
+    <SolutionPath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\DINOForge.sln</SolutionPath>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <CurrentSolutionConfigurationContents>
+      <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+    </CurrentSolutionConfigurationContents>
+    <MicrosoftNETBuildTasksDirectoryRoot>C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\..\tools\</MicrosoftNETBuildTasksDirectoryRoot>
+    <MicrosoftNETBuildTasksTFM>net8.0</MicrosoftNETBuildTasksTFM>
+    <MicrosoftNETBuildTasksDirectory>C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\..\tools\net8.0\</MicrosoftNETBuildTasksDirectory>
+    <MicrosoftNETBuildTasksAssembly>C:\Program Files\dotnet\sdk\8.0.419\Sdks\Microsoft.NET.Sdk\targets\..\tools\net8.0\Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+    <DefaultImplicitPackages>Microsoft.NETCore.App;NETStandard.Library</DefaultImplicitPackages>
+    <DotnetCliToolTargetFramework>netcoreapp2.2</DotnetCliToolTargetFramework>
+    <NuGetRestoreTargets>C:\Program Files\dotnet\sdk\8.0.419\\NuGet.targets</NuGetRestoreTargets>
+    <IsRestoreTargetsFileLoaded>true</IsRestoreTargetsFileLoaded>
+    <RestoreTaskAssemblyFile>NuGet.Build.Tasks.dll</RestoreTaskAssemblyFile>
+    <HideWarningsAndErrors>false</HideWarningsAndErrors>
+    <RestoreRecursive>true</RestoreRecursive>
+    <RestoreUseSkipNonexistentTargets>true</RestoreUseSkipNonexistentTargets>
+    <ValidateRuntimeIdentifierCompatibility>false</ValidateRuntimeIdentifierCompatibility>
+    <RestoreContinueOnError>WarnAndContinue</RestoreContinueOnError>
+    <_RestoreSolutionFileUsed>true</_RestoreSolutionFileUsed>
+    <NuGetInteractive />
+    <PackageDownloadSupported>true</PackageDownloadSupported>
+    <GetReferenceNearestTargetFrameworkTaskSupportsTargetPlatformParameter>true</GetReferenceNearestTargetFrameworkTaskSupportsTargetPlatformParameter>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <NuGetAuditMode>direct</NuGetAuditMode>
+    <_GenerateRestoreGraphProjectEntryInputProperties>
+      ExcludeRestorePackageImports=true;
+      _RestoreSolutionFileUsed=true;
+      SolutionDir=C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\;
+      SolutionName=DINOForge;
+      SolutionFileName=DINOForge.sln;
+      SolutionPath=C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\DINOForge.sln;
+      SolutionExt=.sln;
+    </_GenerateRestoreGraphProjectEntryInputProperties>
+    <_DirectorySolutionTargetsFile>Directory.Solution.targets</_DirectorySolutionTargetsFile>
+    <_DirectorySolutionTargetsBasePath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src</_DirectorySolutionTargetsBasePath>
+    <DirectorySolutionTargetsPath>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Directory.Solution.targets</DirectorySolutionTargetsPath>
+    <MSBuildAllProjects>C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\DINOForge.sln.metaproj</MSBuildAllProjects>
+  </PropertyGroup>
+  <ItemDefinitionGroup />
+  <ItemGroup>
+    <SolutionConfiguration Include="Debug|Any CPU">
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+      <Platform>Any CPU</Platform>
+      <Configuration>Debug</Configuration>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Release|Any CPU">
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B2C3D4E5-F6A7-8901-BCDE-F12345678901}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C3D4E5F6-A7B8-9012-CDEF-123456789012}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{D4E5F6A7-B8C9-0123-DEFA-234567890123}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A1A2A3A4-B5B6-C7C8-D9D0-E1E2E3E4E5E6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B1B2B3B4-C5C6-D7D8-E9E0-F1F2F3F4F5F6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{AB762478-FE63-49D6-90D0-9DE803ED2CA9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-FABC-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{F6A7B8C9-D0E1-2345-ABCD-456789012345}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C4E8B715-041E-4AF3-942E-5C7C6B6CA6AE}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2A3B4C5D-6E7F-8901-SCEN-000000000001}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DADEC29C-7C31-44A1-84AC-4CCA3F14B432}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A4BBF396-90A7-4EDC-9565-34641567B1C9}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{10BDBC6D-8475-49D8-AF47-33416E27DA78}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{4141EF9A-BE42-418B-82CF-EDD6114FADBB}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{63576563-21F1-4665-BD85-B44E85C443A6}" AbsolutePath="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+      <Platform>Any CPU</Platform>
+      <Configuration>Release</Configuration>
+    </SolutionConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj">
+      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU</AdditionalProperties>
+      <Platform>AnyCPU</Platform>
+      <Configuration>Debug</Configuration>
+      <ToolsVersion>
+      </ToolsVersion>
+      <SkipNonexistentProjects>False</SkipNonexistentProjects>
+    </ProjectReference>
+  </ItemGroup>
+  <Target Name="ValidateSolutionConfiguration">
+    <Error Condition="('$(CurrentSolutionConfigurationContents)' == '') and ('$(SkipInvalidConfigurations)' != 'true')" Text="The specified solution configuration &quot;$(Configuration)|$(Platform)&quot; is invalid. Please specify a valid solution configuration using the Configuration and Platform properties (e.g. MSBuild.exe Solution.sln /p:Configuration=Debug /p:Platform=&quot;Any CPU&quot;) or leave those properties blank to use the default solution configuration." HelpKeyword="MSBuild.SolutionInvalidSolutionConfiguration" Code="MSB4126" />
+    <Warning Condition="('$(CurrentSolutionConfigurationContents)' == '') and ('$(SkipInvalidConfigurations)' == 'true')" Text="The specified solution configuration &quot;$(Configuration)|$(Platform)&quot; is invalid. Please specify a valid solution configuration using the Configuration and Platform properties (e.g. MSBuild.exe Solution.sln /p:Configuration=Debug /p:Platform=&quot;Any CPU&quot;) or leave those properties blank to use the default solution configuration." HelpKeyword="MSBuild.SolutionInvalidSolutionConfiguration" Code="MSB4126" />
+    <Message Condition="'$(CurrentSolutionConfigurationContents)' != ''" Text="Building solution configuration &quot;$(Configuration)|$(Platform)&quot;." />
+  </Target>
+  <Target Name="ValidateToolsVersions">
+    <Error Condition="'$(MSBuildToolsVersion)' == '2.0' and ('$(ProjectToolsVersion)' != '2.0' and '$(ProjectToolsVersion)' != '')" Text="The tools version &quot;$(MSBuildToolsVersion)&quot; of the solution does not support building projects with a different tools version." HelpKeyword="MSBuild.SolutionToolsVersionDoesNotSupportProjectToolsVersion" Code="MSB4149" />
+  </Target>
+  <Target Name="Rebuild" Outputs="@(CollectedBuildOutput)">
+    <MSBuild BuildInParallel="True" Targets="Rebuild" Projects="@(ProjectReference)" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Build" Outputs="@(CollectedBuildOutput)">
+    <MSBuild BuildInParallel="True" Projects="@(ProjectReference)" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Clean">
+    <MSBuild BuildInParallel="True" Targets="Clean" Projects="@(ProjectReference-&gt;Reverse())" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="ValidateProjects" />
+  <Target Name="Publish">
+    <MSBuild BuildInParallel="True" Targets="Publish" Projects="@(ProjectReference)" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="GetSolutionConfigurationContents" Outputs="$(SolutionConfigurationContents)" />
+  <Target Name="_CheckForSolutionLevelRuntimeIdentifier" Condition="'$(RuntimeIdentifier)' != ''">
+    <NETSdkError ResourceName="CannotHaveSolutionLevelRuntimeIdentifier" />
+  </Target>
+  <Target Name="_CheckForSolutionLevelOutputPath" Condition="'$(_CommandLineDefinedOutputPath)' == 'true'">
+    <NetSdkWarning ResourceName="CannotHaveSolutionLevelOutputPath" />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="_GenerateRestoreGraph">
+    <RemoveDuplicates Inputs="@(_RestoreGraphEntry)">
+      <Output TaskParameter="Filtered" ItemName="_RestoreGraphEntryFiltered" />
+    </RemoveDuplicates>
+    <RestoreTask RestoreIgnoreFailedSources="$(RestoreIgnoreFailedSources)" Interactive="$(NuGetInteractive)" RestoreDisableParallel="$(RestoreDisableParallel)" RestoreNoHttpCache="$(RestoreNoHttpCache)" RestoreRecursive="$(RestoreRecursive)" RestorePackagesConfig="$(RestorePackagesConfig)" RestoreForce="$(RestoreForce)" EmbedFilesInBinlog="$(RestoreEmbedFilesInBinlog)" HideWarningsAndErrors="$(HideWarningsAndErrors)" RestoreGraphItems="@(_RestoreGraphEntryFiltered)" RestoreForceEvaluate="$(RestoreForceEvaluate)" RestoreNoCache="$(RestoreNoCache)">
+      <Output TaskParameter="EmbedInBinlog" ItemName="EmbedInBinlog" />
+    </RestoreTask>
+  </Target>
+  <Target Name="GenerateRestoreGraphFile" DependsOnTargets="_GenerateRestoreGraph">
+    <Error Condition="$(RestoreGraphOutputPath) == ''" Text="Missing RestoreGraphOutputPath property!" />
+    <RemoveDuplicates Inputs="@(_RestoreGraphEntry)">
+      <Output TaskParameter="Filtered" ItemName="_RestoreGraphEntryFiltered" />
+    </RemoveDuplicates>
+    <WriteRestoreGraphTask RestoreRecursive="$(RestoreRecursive)" RestoreGraphOutputPath="$(RestoreGraphOutputPath)" RestoreGraphItems="@(_RestoreGraphEntryFiltered)" />
+  </Target>
+  <Target Name="CollectPackageReferences" Returns="@(PackageReference)">
+    <CheckForDuplicateNuGetItemsTask Condition="'$(DisableCheckingDuplicateNuGetItems)' != 'true' " ContinueOnError="$(CollectPackageReferencesContinueOnError)" TreatWarningsAsErrors="$(TreatWarningsAsErrors)" WarningsAsErrors="$(WarningsAsErrors)" ItemName="PackageReference" Items="@(PackageReference)" LogCode="NU1504" WarningsNotAsErrors="$(WarningsNotAsErrors)" NoWarn="$(NoWarn)" MSBuildProjectFullPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedPackageReferences" />
+    </CheckForDuplicateNuGetItemsTask>
+  </Target>
+  <Target Name="CollectCentralPackageVersions" Returns="@(PackageVersion)">
+    <CheckForDuplicateNuGetItemsTask Condition="'$(DisableCheckingDuplicateNuGetItems)' != 'true' " ContinueOnError="$(CollectCentralPackageVersionsContinueOnError)" TreatWarningsAsErrors="$(TreatWarningsAsErrors)" WarningsAsErrors="$(WarningsAsErrors)" ItemName="PackageVersion" Items="@(PackageVersion)" LogCode="NU1506" WarningsNotAsErrors="$(WarningsNotAsErrors)" NoWarn="$(NoWarn)" MSBuildProjectFullPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedPackageVersions" />
+    </CheckForDuplicateNuGetItemsTask>
+  </Target>
+  <Target Name="CollectPackageDownloads" Returns="@(PackageDownload)">
+    <CheckForDuplicateNuGetItemsTask Condition="'$(DisableCheckingDuplicateNuGetItems)' != 'true' " ContinueOnError="$(CollectPackageDownloadsContinueOnError)" TreatWarningsAsErrors="$(TreatWarningsAsErrors)" WarningsAsErrors="$(WarningsAsErrors)" ItemName="PackageDownload" Items="@(PackageDownload)" LogCode="NU1505" WarningsNotAsErrors="$(WarningsNotAsErrors)" NoWarn="$(NoWarn)" MSBuildProjectFullPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedPackageDownloads" />
+    </CheckForDuplicateNuGetItemsTask>
+  </Target>
+  <Target Name="CollectFrameworkReferences" Returns="@(_FrameworkReferenceForRestore)" />
+  <Target Name="CollectNuGetAuditSuppressions" Returns="@(NuGetAuditSuppress)">
+    <CheckForDuplicateNuGetItemsTask ContinueOnError="$(CollectNuGetAuditSuppressionsContinueOnError)" TreatWarningsAsErrors="$(TreatWarningsAsErrors)" WarningsAsErrors="$(WarningsAsErrors)" ItemName="NuGetAuditSuppress" Items="@(NuGetAuditSuppress)" LogCode="NU1505" WarningsNotAsErrors="$(WarningsNotAsErrors)" NoWarn="$(NoWarn)" MSBuildProjectFullPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedNuGetAuditSuppressions" />
+    </CheckForDuplicateNuGetItemsTask>
+  </Target>
+  <Target Name="_CollectRestoreInputs" DependsOnTargets="CollectPackageReferences;CollectPackageDownloads;CollectFrameworkReferences;CollectCentralPackageVersions;CollectNuGetAuditSuppressions" />
+  <Target Name="_LoadRestoreGraphEntryPoints" Returns="@(RestoreGraphProjectInputItems)">
+    <GetRestoreSolutionProjectsTask Condition=" $(MSBuildProjectFullPath.EndsWith('.metaproj')) == 'true' AND @(RestoreGraphProjectInputItems) == '' " ProjectReferences="@(ProjectReference)" SolutionFilePath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="OutputProjectReferences" ItemName="RestoreGraphProjectInputItems" />
+    </GetRestoreSolutionProjectsTask>
+  </Target>
+  <Target Name="_FilterRestoreGraphProjectInputItems" DependsOnTargets="_LoadRestoreGraphEntryPoints" Returns="@(FilteredRestoreGraphProjectInputItems)">
+    <RemoveDuplicates Inputs="@(_FilteredRestoreGraphProjectInputItemsTmp)">
+      <Output TaskParameter="Filtered" ItemName="FilteredRestoreGraphProjectInputItemsWithoutDuplicates" />
+    </RemoveDuplicates>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' == 'true' " BuildInParallel="$(RestoreBuildInParallel)" Targets="_IsProjectRestoreSupported" Projects="@(FilteredRestoreGraphProjectInputItemsWithoutDuplicates)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)" SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="FilteredRestoreGraphProjectInputItems" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' != 'true' " ContinueOnError="$(RestoreContinueOnError)" Targets="_IsProjectRestoreSupported" Projects="@(FilteredRestoreGraphProjectInputItemsWithoutDuplicates)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="FilteredRestoreGraphProjectInputItems" />
+    </MSBuild>
+    <WarnForInvalidProjectsTask Condition=" '$(DisableWarnForInvalidRestoreProjects)' != 'true' AND '$(HideWarningsAndErrors)' != 'true' " ValidProjects="@(FilteredRestoreGraphProjectInputItems)" AllProjects="@(FilteredRestoreGraphProjectInputItemsWithoutDuplicates)" />
+  </Target>
+  <Target Name="_GenerateRestoreGraph" DependsOnTargets="_FilterRestoreGraphProjectInputItems;_GetAllRestoreProjectPathItems" Returns="@(_RestoreGraphEntry)">
+    <Message Text="Generating dg file" Importance="low" />
+    <Message Text="%(_RestoreProjectPathItems.Identity)" Importance="low" />
+    <MSBuild BuildInParallel="$(RestoreBuildInParallel)" Targets="_GenerateRestoreGraphProjectEntry" Projects="@(_GenerateRestoreGraphProjectEntryInput)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreGraphEntry" />
+    </MSBuild>
+    <MSBuild BuildInParallel="$(RestoreBuildInParallel)" Targets="_GenerateProjectRestoreGraph" Projects="@(_RestoreProjectPathItems)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreGraphEntry" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GenerateRestoreGraphProjectEntry" DependsOnTargets="_GenerateRestoreSpecs;_GenerateDotnetCliToolReferenceSpecs" Returns="@(_RestoreGraphEntry)" />
+  <Target Name="_GenerateRestoreSpecs" DependsOnTargets="_GetRestoreProjectStyle" Returns="@(_RestoreGraphEntry)">
+    <Message Text="Restore entry point $(MSBuildProjectFullPath)" Importance="low" />
+  </Target>
+  <Target Name="_GenerateDotnetCliToolReferenceSpecs" DependsOnTargets="_GetRestoreSettings" Returns="@(_RestoreGraphEntry)">
+    <GetRestoreDotnetCliToolsTask Condition=" '$(RestoreDotnetCliToolReferences)' == '' OR '$(RestoreDotnetCliToolReferences)' == 'true' " RestorePackagesPath="$(_OutputPackagesPath)" ToolFramework="$(DotnetCliToolTargetFramework)" RestoreFallbackFolders="$(_OutputFallbackFolders)" DotnetCliToolReferences="@(DotnetCliToolReference)" RestoreConfigFilePaths="$(_OutputConfigFilePaths)" RestoreSources="$(_OutputSources)" ProjectPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestoreDotnetCliToolsTask>
+  </Target>
+  <Target Name="_GetProjectJsonPath" Returns="$(_CurrentProjectJsonPath)">
+    <GetRestoreProjectJsonPathTask Condition=" '$(RestoreProjectStyle)' == 'ProjectJson' OR '$(RestoreProjectStyle)' == '' " ProjectPath="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="ProjectJsonPath" ItemName="_CurrentProjectJsonPath" />
+    </GetRestoreProjectJsonPathTask>
+  </Target>
+  <Target Name="_GetRestoreProjectStyle" DependsOnTargets="_GetProjectJsonPath;CollectPackageReferences" Returns="$(RestoreProjectStyle);$(PackageReferenceCompatibleProjectStyle)">
+    <GetRestoreProjectStyleTask MSBuildProjectDirectory="$(MSBuildProjectDirectory)" MSBuildProjectName="$(MSBuildProjectName)" ProjectJsonPath="$(_CurrentProjectJsonPath)" RestoreProjectStyle="$(RestoreProjectStyle)" HasPackageReferenceItems="$(_HasPackageReferenceItems)">
+      <Output TaskParameter="ProjectStyle" ItemName="RestoreProjectStyle" />
+      <Output TaskParameter="IsPackageReferenceCompatibleProjectStyle" ItemName="PackageReferenceCompatibleProjectStyle" />
+    </GetRestoreProjectStyleTask>
+  </Target>
+  <Target Name="EnableIntermediateOutputPathMismatchWarning" Condition="'$(RestoreProjectStyle)' == 'PackageReference'" DependsOnTargets="_GetRestoreProjectStyle" />
+  <Target Name="_GetRestoreTargetFrameworksOutput" DependsOnTargets="_GetRestoreProjectStyle;_GetRestoreTargetFrameworkOverride" Returns="@(_RestoreTargetFrameworksOutputFiltered)">
+    <GetProjectTargetFrameworksTask Condition=" '$(RestoreProjectStyle)' != 'ProjectJson'" TargetPlatformIdentifier="$(TargetPlatformIdentifier)" TargetPlatformVersion="$(TargetPlatformVersion)" TargetFrameworkMoniker="$(TargetFrameworkMoniker)" TargetFrameworks="$(_TargetFrameworkToBeUsed)" ProjectPath="$(MSBuildProjectFullPath)" TargetPlatformMinVersion="$(TargetPlatformMinVersion)" TargetFramework="$(TargetFramework)">
+      <Output TaskParameter="ProjectTargetFrameworks" ItemName="_RestoreProjectFramework" />
+    </GetProjectTargetFrameworksTask>
+  </Target>
+  <Target Name="_GetRestoreTargetFrameworksAsItems" DependsOnTargets="_GetRestoreProjectStyle;_GetRestoreTargetFrameworkOverride" Returns="@(_RestoreTargetFrameworkItems)" />
+  <Target Name="_GetRestoreSettings" Condition=" '$(RestoreProjectStyle)' == 'PackageReference' OR '$(RestoreProjectStyle)' == 'ProjectJson' OR '$(RestoreProjectStyle)' == 'DotnetToolReference' OR '$(RestoreProjectStyle)' == 'PackagesConfig'" DependsOnTargets="_GetRestoreSettingsOverrides;_GetRestoreSettingsCurrentProject;_GetRestoreSettingsAllFrameworks" Returns="$(_OutputSources);$(_OutputPackagesPath);$(_OutputRepositoryPath);$(_OutputFallbackFolders);$(_OutputConfigFilePaths)">
+    <GetRestoreSettingsTask RestoreRepositoryPath="$(RestoreRepositoryPath)" RestorePackagesPath="$(RestorePackagesPath)" RestorePackagesPathOverride="$(_RestorePackagesPathOverride)" RestoreSettingsPerFramework="@(_RestoreSettingsPerFramework)" RestoreFallbackFolders="$(RestoreFallbackFolders)" RestoreSolutionDirectory="$(RestoreSolutionDirectory)" MSBuildStartupDirectory="$(MSBuildStartupDirectory)" RestoreSources="$(RestoreSources)" RestoreFallbackFoldersOverride="$(_RestoreFallbackFoldersOverride)" RestoreRepositoryPathOverride="$(_RestoreRepositoryPathOverride)" RestoreProjectStyle="$(RestoreProjectStyle)" RestoreConfigFile="$(RestoreConfigFile)" RestoreRootConfigDirectory="$(RestoreRootConfigDirectory)" ProjectUniqueName="$(MSBuildProjectFullPath)" RestoreSourcesOverride="$(_RestoreSourcesOverride)">
+      <Output TaskParameter="OutputSources" ItemName="_OutputSources" />
+      <Output TaskParameter="OutputPackagesPath" ItemName="_OutputPackagesPath" />
+      <Output TaskParameter="OutputRepositoryPath" ItemName="_OutputRepositoryPath" />
+      <Output TaskParameter="OutputFallbackFolders" ItemName="_OutputFallbackFolders" />
+      <Output TaskParameter="OutputConfigFilePaths" ItemName="_OutputConfigFilePaths" />
+    </GetRestoreSettingsTask>
+  </Target>
+  <Target Name="_GetRestoreSettingsCurrentProject" Condition=" '$(TargetFrameworks)' == '' AND '$(PackageReferenceCompatibleProjectStyle)' == 'true' " DependsOnTargets="_GetRestoreSettingsPerFramework" Returns="@(_RestoreSettingsPerFramework)" />
+  <Target Name="_GetRestoreSettingsAllFrameworks" Condition=" '$(TargetFrameworks)' != '' AND '$(PackageReferenceCompatibleProjectStyle)' == 'true' " DependsOnTargets="_GetRestoreTargetFrameworksAsItems;_GetRestoreProjectStyle" Returns="@(_RestoreSettingsPerFramework)">
+    <MSBuild BuildInParallel="$(RestoreBuildInParallel)" Targets="_GetRestoreSettingsPerFramework" Projects="$(MSBuildProjectFullPath)" Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);&#xD;&#xA;                  $(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreSettingsPerFramework" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GetRestoreSettingsPerFramework" Returns="@(_RestoreSettingsPerFramework)" />
+  <Target Name="_GenerateRestoreProjectSpec" DependsOnTargets="_GetRestoreProjectStyle;_GetRestoreTargetFrameworksOutput;_GetRestoreSettings" Returns="@(_RestoreGraphEntry)">
+    <ConvertToAbsolutePath Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' OR '$(RestoreProjectStyle)' == 'ProjectJson'" Paths="$(RestoreOutputPath)">
+      <Output TaskParameter="AbsolutePaths" ItemName="RestoreOutputAbsolutePath" />
+    </ConvertToAbsolutePath>
+  </Target>
+  <Target Name="_GenerateProjectRestoreGraph" DependsOnTargets="&#xD;&#xA;      _GetRestoreProjectStyle;&#xD;&#xA;      _GenerateRestoreProjectSpec;&#xD;&#xA;      _GenerateRestoreDependencies" Returns="@(_RestoreGraphEntry)" />
+  <Target Name="_GenerateRestoreDependencies" DependsOnTargets="_GenerateProjectRestoreGraphAllFrameworks;_GenerateProjectRestoreGraphCurrentProject" Returns="@(_RestoreGraphEntry)" />
+  <Target Name="_GenerateProjectRestoreGraphAllFrameworks" Condition=" '$(TargetFrameworks)' != '' " DependsOnTargets="_GetRestoreTargetFrameworksAsItems" Returns="@(_RestoreGraphEntry)">
+    <MSBuild BuildInParallel="$(RestoreBuildInParallel)" Targets="_GenerateProjectRestoreGraphPerFramework" Projects="$(MSBuildProjectFullPath)" Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);&#xD;&#xA;                  $(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreGraphEntry" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GenerateProjectRestoreGraphCurrentProject" Condition=" '$(TargetFrameworks)' == '' " DependsOnTargets="_GenerateProjectRestoreGraphPerFramework" Returns="@(_RestoreGraphEntry)" />
+  <Target Name="_GenerateProjectRestoreGraphPerFramework" DependsOnTargets="_GetRestoreProjectStyle;_CollectRestoreInputs" Returns="@(_RestoreGraphEntry)">
+    <GetRestoreProjectReferencesTask ProjectReferences="@(ProjectReference)" ParentProjectPath="$(MSBuildProjectFullPath)" TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestoreProjectReferencesTask>
+    <GetRestorePackageReferencesTask Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' " PackageReferences="@(PackageReference)" TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestorePackageReferencesTask>
+    <GetCentralPackageVersionsTask Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' AND '$(_CentralPackageVersionsEnabled)' == 'true' " CentralPackageVersions="@(PackageVersion)" TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetCentralPackageVersionsTask>
+    <GetRestorePackageDownloadsTask Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' " TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)" PackageDownloads="@(PackageDownload)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestorePackageDownloadsTask>
+    <GetRestoreFrameworkReferencesTask Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' " TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)" FrameworkReferences="@(FrameworkReference)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestoreFrameworkReferencesTask>
+    <GetRestoreNuGetAuditSuppressionsTask Condition=" '$(PackageReferenceCompatibleProjectStyle)' == 'true' " NuGetAuditSuppressions="@(NuGetAuditSuppress)" TargetFrameworks="$(TargetFramework)" ProjectUniqueName="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="RestoreGraphItems" ItemName="_RestoreGraphEntry" />
+    </GetRestoreNuGetAuditSuppressionsTask>
+  </Target>
+  <Target Name="_GenerateRestoreProjectPathItemsCurrentProject" Condition=" '$(TargetFrameworks)' == '' " DependsOnTargets="_GenerateRestoreProjectPathItemsPerFramework" Returns="@(_RestoreProjectPathItems)" />
+  <Target Name="_GenerateRestoreProjectPathItemsPerFramework" Returns="@(_RestoreProjectPathItems)">
+    <ConvertToAbsolutePath Paths="@(ProjectReference)">
+      <Output TaskParameter="AbsolutePaths" ItemName="_RestoreGraphAbsoluteProjectPaths" />
+    </ConvertToAbsolutePath>
+  </Target>
+  <Target Name="_GenerateRestoreProjectPathItems" DependsOnTargets="_GenerateRestoreProjectPathItemsAllFrameworks;_GenerateRestoreProjectPathItemsCurrentProject" Returns="@(_CurrentRestoreProjectPathItems)">
+    <RemoveDuplicates Inputs="@(_RestoreProjectPathItems)">
+      <Output TaskParameter="Filtered" ItemName="_CurrentRestoreProjectPathItems" />
+    </RemoveDuplicates>
+  </Target>
+  <Target Name="_GenerateRestoreProjectPathItemsAllFrameworks" Condition=" '$(TargetFrameworks)' != '' " DependsOnTargets="_GetRestoreTargetFrameworksAsItems" Returns="@(_RestoreProjectPathItems)">
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' == 'true' " BuildInParallel="$(RestoreBuildInParallel)" SkipNonexistentProjects="true" Targets="_GenerateRestoreProjectPathItemsPerFramework" Projects="$(MSBuildProjectFullPath)" Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);&#xD;&#xA;                  $(_GenerateRestoreGraphProjectEntryInputProperties)" SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItems" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' != 'true' " ContinueOnError="$(RestoreContinueOnError)" Targets="_GenerateRestoreProjectPathItemsPerFramework" Projects="$(MSBuildProjectFullPath)" Properties="TargetFramework=%(_RestoreTargetFrameworkItems.Identity);&#xD;&#xA;                  $(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItems" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GenerateRestoreProjectPathWalk" DependsOnTargets="_GenerateRestoreProjectPathItems" Returns="@(_RestoreProjectPathItems)">
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' == 'true' " BuildInParallel="$(RestoreBuildInParallel)" SkipNonexistentProjects="true" Targets="_GenerateRestoreProjectPathWalk" Projects="@(_CurrentRestoreProjectPathItems)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)" SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_GenerateRestoreProjectPathWalkOutputs" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' != 'true' " ContinueOnError="$(RestoreContinueOnError)" Targets="_GenerateRestoreProjectPathWalk" Projects="@(_CurrentRestoreProjectPathItems)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_GenerateRestoreProjectPathWalkOutputs" />
+    </MSBuild>
+    <RemoveDuplicates Inputs="@(_GenerateRestoreProjectPathWalkOutputs)">
+      <Output TaskParameter="Filtered" ItemName="_RestoreProjectPathItems" />
+    </RemoveDuplicates>
+  </Target>
+  <Target Name="_GetAllRestoreProjectPathItems" DependsOnTargets="_FilterRestoreGraphProjectInputItems" Returns="@(_RestoreProjectPathItems)">
+    <NuGetMessageTask Name="DeterminingProjectsToRestore" Importance="High" />
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' == 'true' " BuildInParallel="$(RestoreBuildInParallel)" SkipNonexistentProjects="true" Targets="_GenerateRestoreProjectPathWalk" Projects="@(FilteredRestoreGraphProjectInputItems)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)" SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItemsOutputs" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' != 'true' " ContinueOnError="$(RestoreContinueOnError)" Targets="_GenerateRestoreProjectPathWalk" Projects="@(FilteredRestoreGraphProjectInputItems)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItemsOutputs" />
+    </MSBuild>
+    <RemoveDuplicates Inputs="@(_RestoreProjectPathItemsOutputs)">
+      <Output TaskParameter="Filtered" ItemName="_RestoreProjectPathItemsWithoutDupes" />
+    </RemoveDuplicates>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' == 'true' " BuildInParallel="$(RestoreBuildInParallel)" SkipNonexistentProjects="true" Targets="_IsProjectRestoreSupported" Projects="@(_RestoreProjectPathItemsWithoutDupes)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)" SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItems" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreUseSkipNonexistentTargets)' != 'true' " ContinueOnError="$(RestoreContinueOnError)" Targets="_IsProjectRestoreSupported" Projects="@(_RestoreProjectPathItemsWithoutDupes)" Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreProjectPathItems" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GetRestoreSettingsOverrides" Returns="$(_RestorePackagesPathOverride);$(_RestoreRepositoryPathOverride);$(_RestoreSourcesOverride);$(_RestoreFallbackFoldersOverride)">
+    <MSBuild Condition=" '$(RestorePackagesPath)' != '' " BuildInParallel="$(RestoreBuildInParallel)" Targets="_GetRestorePackagesPathOverride" Projects="$(MSBuildThisFileFullPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestorePackagesPathOverride" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreRepositoryPathOverride)' != '' " BuildInParallel="$(RestoreBuildInParallel)" Targets="_GetRestoreRepositoryPathOverride" Projects="$(MSBuildThisFileFullPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreRepositoryPathOverride" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreSources)' != '' " BuildInParallel="$(RestoreBuildInParallel)" Targets="_GetRestoreSourcesOverride" Projects="$(MSBuildThisFileFullPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreSourcesOverride" />
+    </MSBuild>
+    <MSBuild Condition=" '$(RestoreFallbackFolders)' != '' " BuildInParallel="$(RestoreBuildInParallel)" Targets="_GetRestoreFallbackFoldersOverride" Projects="$(MSBuildThisFileFullPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoreFallbackFoldersOverride" />
+    </MSBuild>
+  </Target>
+  <Target Name="_GetRestorePackagesPathOverride" Returns="$(_RestorePackagesPathOverride)" />
+  <Target Name="_GetRestoreRepositoryPathOverride" Returns="$(_RestoreRepositoryPathOverride)" />
+  <Target Name="_GetRestoreSourcesOverride" Returns="$(_RestoreSourcesOverride)" />
+  <Target Name="_GetRestoreFallbackFoldersOverride" Returns="$(_RestoreFallbackFoldersOverride)" />
+  <Target Name="_GetRestoreTargetFrameworkOverride" Condition=" '$(_DisableNuGetRestoreTargetFrameworksOverride)' != 'true' " Returns="$(_TargetFrameworkOverride)">
+    <GetGlobalPropertyValueTask Condition=" '$(TargetFrameworks)' != '' " PropertyName="TargetFramework">
+      <Output TaskParameter="GlobalPropertyValue" ItemName="_TargetFrameworkOverride" />
+    </GetGlobalPropertyValueTask>
+  </Target>
+  <Target Name="_GetTargetFrameworkOverrides" Returns="$(_TargetFrameworkOverride)" />
+  <Target Name="_IsProjectRestoreSupported" Returns="@(_ValidProjectsForRestore)" />
+  <Target Name="DINOForge_Runtime" Outputs="@(DINOForge_RuntimeBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_RuntimeBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Runtime:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Runtime:Rebuild" Outputs="@(DINOForge_RuntimeBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_RuntimeBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Runtime:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Runtime\DINOForge.Runtime.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_SDK" Outputs="@(DINOForge_SDKBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_SDKBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_SDK:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_SDK:Rebuild" Outputs="@(DINOForge_SDKBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_SDKBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_SDK:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\SDK\DINOForge.SDK.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tools_DumpTools" Outputs="@(DINOForge_Tools_DumpToolsBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_Tools_DumpToolsBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tools_DumpTools:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tools_DumpTools:Rebuild" Outputs="@(DINOForge_Tools_DumpToolsBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_Tools_DumpToolsBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tools_DumpTools:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tests" Outputs="@(DINOForge_TestsBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_TestsBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tests:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tests:Rebuild" Outputs="@(DINOForge_TestsBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_TestsBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tests:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\DINOForge.Tests.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Protocol" Outputs="@(Bridge_DINOForge_Bridge_ProtocolBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Bridge_DINOForge_Bridge_ProtocolBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Protocol:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Protocol:Rebuild" Outputs="@(Bridge_DINOForge_Bridge_ProtocolBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Bridge_DINOForge_Bridge_ProtocolBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Protocol:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Client" Outputs="@(Bridge_DINOForge_Bridge_ClientBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Bridge_DINOForge_Bridge_ClientBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Client:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Client:Rebuild" Outputs="@(Bridge_DINOForge_Bridge_ClientBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Bridge_DINOForge_Bridge_ClientBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Bridge\DINOForge_Bridge_Client:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Bridge\Client\DINOForge.Bridge.Client.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Warfare" Outputs="@(Domains_DINOForge_Domains_WarfareBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_WarfareBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Warfare:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Warfare:Rebuild" Outputs="@(Domains_DINOForge_Domains_WarfareBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_WarfareBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Warfare:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tools_Installer" Outputs="@(DINOForge_Tools_InstallerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_Tools_InstallerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tools_Installer:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Tools_Installer:Rebuild" Outputs="@(DINOForge_Tools_InstallerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_Tools_InstallerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Tools_Installer:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_UI" Outputs="@(Domains_DINOForge_Domains_UIBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_UIBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_UI:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_UI:Rebuild" Outputs="@(Domains_DINOForge_Domains_UIBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_UIBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_UI:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\UI\DINOForge.Domains.UI.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Economy" Outputs="@(Domains_DINOForge_Domains_EconomyBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_EconomyBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Economy:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Economy:Rebuild" Outputs="@(Domains_DINOForge_Domains_EconomyBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_EconomyBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Economy:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Economy\DINOForge.Domains.Economy.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Scenario" Outputs="@(Domains_DINOForge_Domains_ScenarioBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_ScenarioBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Scenario:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Scenario:Rebuild" Outputs="@(Domains_DINOForge_Domains_ScenarioBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Domains_DINOForge_Domains_ScenarioBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Domains\DINOForge_Domains_Scenario:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_Cli" Outputs="@(Tools_DINOForge_Tools_CliBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_DINOForge_Tools_CliBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_Cli:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_Cli:Rebuild" Outputs="@(Tools_DINOForge_Tools_CliBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_DINOForge_Tools_CliBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_Cli:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Cli\DINOForge.Tools.Cli.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tests\DINOForge_Tests_Integration" Outputs="@(Tests_DINOForge_Tests_IntegrationBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tests_DINOForge_Tests_IntegrationBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tests\DINOForge_Tests_Integration:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tests\DINOForge_Tests_Integration:Rebuild" Outputs="@(Tests_DINOForge_Tests_IntegrationBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tests_DINOForge_Tests_IntegrationBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tests\DINOForge_Tests_Integration:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tests\Integration\DINOForge.Tests.Integration.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_McpServer" Outputs="@(Tools_DINOForge_Tools_McpServerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_DINOForge_Tools_McpServerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_McpServer:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_McpServer:Rebuild" Outputs="@(Tools_DINOForge_Tools_McpServerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_DINOForge_Tools_McpServerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\DINOForge_Tools_McpServer:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Templates" Outputs="@(DINOForge_TemplatesBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_TemplatesBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Templates:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="DINOForge_Templates:Rebuild" Outputs="@(DINOForge_TemplatesBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="DINOForge_TemplatesBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="DINOForge_Templates:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Templates\DINOForge.Templates.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\Installer\DINOForge_Installer" Outputs="@(Tools_Installer_DINOForge_InstallerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj'" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_Installer_DINOForge_InstallerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\Installer\DINOForge_Installer:Clean">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj'" BuildInParallel="True" Targets="Clean" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+  <Target Name="Tools\Installer\DINOForge_Installer:Rebuild" Outputs="@(Tools_Installer_DINOForge_InstallerBuildOutput)">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj'" BuildInParallel="True" Targets="Rebuild" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="Tools_Installer_DINOForge_InstallerBuildOutput" />
+    </MSBuild>
+  </Target>
+  <Target Name="Tools\Installer\DINOForge_Installer:Publish">
+    <MSBuild Condition="'%(ProjectReference.Identity)' == 'C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\44fdc0f33017caad\src\Tools\Installer\GUI\DINOForge.Installer.csproj'" BuildInParallel="True" Targets="Publish" ToolsVersion="$(ProjectToolsVersion)" Projects="@(ProjectReference)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
+  </Target>
+</Project>

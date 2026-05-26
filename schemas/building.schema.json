@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/building.schema.json",
+  "title": "DINOForge Building Definition",
+  "description": "Schema for DINOForge building definition files (buildings/*.yaml).",
+  "type": "object",
+  "required": ["id", "display_name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique building identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable building name."
+    },
+    "description": {
+      "type": "string"
+    },
+    "building_type": {
+      "type": "string",
+      "description": "Functional category (e.g. barracks, economy, defense, research, command)."
+    },
+    "cost": {
+      "type": "object",
+      "properties": {
+        "food": { "type": "integer", "minimum": 0 },
+        "wood": { "type": "integer", "minimum": 0 },
+        "stone": { "type": "integer", "minimum": 0 },
+        "iron": { "type": "integer", "minimum": 0 },
+        "gold": { "type": "integer", "minimum": 0 },
+        "population": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "health": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total hit points."
+    },
+    "production": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" },
+      "description": "Production rates per tick."
+    }
+  },
+  "additionalProperties": false
+}

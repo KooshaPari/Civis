@@ -1,0 +1,8 @@
+id: self-conflict
+name: Conflicting Pack
+version: 1.0.0
+type: content
+# Self-referential conflict (should be caught by validators)
+conflicts_with:
+  - self-conflict
+  - self-conflict@1.0.0

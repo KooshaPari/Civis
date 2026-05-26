@@ -1,0 +1,225 @@
+{
+  "$schema": "provenance_index.schema.json",
+  "registry_version": "0.1.0",
+  "registry_format": "DINOForge Provenance Index",
+  "last_updated": "2026-03-13T15:20:00Z",
+  "pack_id": "warfare-starwars",
+  "description": "Detailed provenance tracking and intellectual property assessment records for all assets",
+  "provenance_records": [
+    {
+      "asset_id": "sw_clone_trooper_sketchfab_001",
+      "assessment_date": "2026-03-11T20:15:00Z",
+      "assessment_status": "pending_verification",
+      "ip_classification": "fan_star_wars_private_only",
+      "ip_confidence": 0.85,
+      "ip_confidence_justification": "Explicit Star Wars reference in asset naming and thematic content. Requires private-only usage.",
+      "source_authority": "medium_trust",
+      "source_authority_rationale": "Sketchfab is a trusted platform with community license enforcement, but individual creator policies vary.",
+      "license_assessment": {
+        "declared_license": "[PLACEHOLDER_LICENSE_LABEL]",
+        "license_url": "[PLACEHOLDER_LICENSE_URL]",
+        "license_verified": false,
+        "license_compatible_with_public_release": null,
+        "license_compatible_with_internal_use": true,
+        "notes": "License information pending user acquisition"
+      },
+      "author_assessment": {
+        "author_name": "[PLACEHOLDER_AUTHOR_NAME]",
+        "author_reputation": "unknown",
+        "author_sketchfab_profile": "[PLACEHOLDER_SKETCHFAB_PROFILE_URL]",
+        "author_verified": false,
+        "author_contact_attempted": false,
+        "notes": "Author information pending user acquisition"
+      },
+      "derivative_work_assessment": {
+        "is_original_work_claim": false,
+        "is_fan_derivative": true,
+        "is_licensed_derivative": false,
+        "franchise_references": [
+          "Star Wars",
+          "Clone Trooper",
+          "Republic"
+        ],
+        "intellectual_property_owners": [
+          "Lucasfilm Ltd.",
+          "Disney"
+        ],
+        "license_holder_permission_obtained": false
+      },
+      "risk_factors": [
+        "explicit_star_wars_reference",
+        "character_likeness_of_star_wars_character",
+        "franchise_brand_in_description"
+      ],
+      "release_policy": "Private development and prototyping only. Do not ship in public releases.",
+      "required_actions_before_release": [
+        "Replace with generic sci-fi trooper model",
+        "Obtain explicit licensing from Lucasfilm/Disney",
+        "Create original derivative with different IP context"
+      ],
+      "assessment_notes": [
+        "Asset discovered at TBD Sketchfab URL",
+        "Status: awaiting manual download and detailed metadata verification",
+        "User should verify source URL, author information, and exact license terms"
+      ]
+    },
+    {
+      "asset_id": "sw_stormtrooper_sketchfab_001",
+      "assessment_date": "2026-03-11T20:15:00Z",
+      "assessment_status": "metadata_verified",
+      "ip_classification": "fan_star_wars_private_only",
+      "ip_confidence": 0.90,
+      "ip_confidence_justification": "Explicit 'Star Wars' in title, 'Stormtrooper' character reference, CC-BY license allows reuse with attribution but does not grant IP rights to underlying Star Wars content.",
+      "source_authority": "medium_trust",
+      "source_authority_rationale": "Sketchfab is a trusted platform. This specific creator (Oscar RP @oscarrep) has established presence with multiple published models.",
+      "license_assessment": {
+        "declared_license": "CC-BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "license_verified": true,
+        "license_text_summary": "Creative Commons Attribution 4.0 International. Allows reuse with attribution but does not grant IP rights to underlying franchise.",
+        "license_compatible_with_public_release": false,
+        "license_compatible_with_internal_use": true,
+        "attribution_requirement": "Oscar RP must be credited in any usage",
+        "notes": "CC-BY covers the 3D model work but NOT the Star Wars character design, which is owned by Lucasfilm/Disney"
+      },
+      "author_assessment": {
+        "author_name": "Oscar RP",
+        "author_username": "@oscarrep",
+        "author_reputation": "established_community_contributor",
+        "author_sketchfab_profile": "https://sketchfab.com/oscarrep",
+        "author_verified": true,
+        "author_contact_attempted": false,
+        "models_published": 15,
+        "community_followers": "moderate",
+        "notes": "Established Sketchfab creator with consistent community presence"
+      },
+      "derivative_work_assessment": {
+        "is_original_work_claim": false,
+        "is_fan_derivative": true,
+        "is_licensed_derivative": false,
+        "franchise_references": [
+          "Star Wars",
+          "Stormtrooper",
+          "Empire"
+        ],
+        "intellectual_property_owners": [
+          "Lucasfilm Ltd.",
+          "Disney"
+        ],
+        "license_holder_permission_obtained": false,
+        "creator_permission_to_use": true
+      },
+      "risk_factors": [
+        "explicit_star_wars_reference",
+        "character_likeness_of_star_wars_character",
+        "franchise_brand_in_name_or_description",
+        "fan_art_license_restrictions"
+      ],
+      "release_policy": "Private development and prototyping only. Do not ship in public releases.",
+      "required_actions_before_release": [
+        "Replace with generic sci-fi soldier model",
+        "Obtain explicit licensing from Lucasfilm/Disney",
+        "Create original derivative with different aesthetic"
+      ],
+      "acquisition_metadata": {
+        "source_url": "https://sketchfab.com/3d-models/star-wars-low-poly-stormtrooper-7d55b6ca7935440aa59961197ea742ff",
+        "source_model_id": "7d55b6ca7935440aa59961197ea742ff",
+        "download_format": "glb",
+        "polycount": 3222,
+        "download_size_mb": "estimated_1_2_mb",
+        "download_method": "manual_sketchfab_download_button",
+        "acquired_at": "2026-03-11T20:15:00Z"
+      },
+      "assessment_notes": [
+        "Model is game-ready, low-poly (3,222 tris), suitable for unit-scale representation",
+        "White and black color scheme matches Imperial aesthetic",
+        "No skeleton rig - suitable for static placement or custom rigging",
+        "Texture included in GLB export",
+        "Asset confirmed operational and downloadable as of assessment date"
+      ]
+    },
+    {
+      "asset_id": "sw_vader_hero_sketchfab_001",
+      "assessment_date": "2026-03-11T20:15:00Z",
+      "assessment_status": "pending_verification",
+      "ip_classification": "fan_star_wars_private_only",
+      "ip_confidence": 0.85,
+      "ip_confidence_justification": "Vader is an iconic Star Wars character. Requires private-only usage.",
+      "source_authority": "medium_trust",
+      "source_authority_rationale": "Sketchfab is a trusted platform, but specific creator profile pending verification.",
+      "license_assessment": {
+        "declared_license": "[PLACEHOLDER_LICENSE_LABEL]",
+        "license_url": "[PLACEHOLDER_LICENSE_URL]",
+        "license_verified": false,
+        "license_compatible_with_public_release": null,
+        "license_compatible_with_internal_use": true,
+        "notes": "License information pending user acquisition and verification"
+      },
+      "author_assessment": {
+        "author_name": "[PLACEHOLDER_AUTHOR_NAME]",
+        "author_reputation": "unknown",
+        "author_sketchfab_profile": "[PLACEHOLDER_SKETCHFAB_PROFILE_URL]",
+        "author_verified": false,
+        "author_contact_attempted": false,
+        "notes": "Author information pending user acquisition"
+      },
+      "derivative_work_assessment": {
+        "is_original_work_claim": false,
+        "is_fan_derivative": true,
+        "is_licensed_derivative": false,
+        "franchise_references": [
+          "Star Wars",
+          "Darth Vader",
+          "Sith"
+        ],
+        "intellectual_property_owners": [
+          "Lucasfilm Ltd.",
+          "Disney"
+        ],
+        "license_holder_permission_obtained": false
+      },
+      "risk_factors": [
+        "explicit_star_wars_reference",
+        "iconic_character_likeness",
+        "franchise_brand_in_name_or_description"
+      ],
+      "release_policy": "Private development and prototyping only. Do not ship in public releases.",
+      "required_actions_before_release": [
+        "Replace with generic dark lord/warlord character model",
+        "Obtain explicit licensing from Lucasfilm/Disney",
+        "Create original derivative with completely different context"
+      ],
+      "assessment_notes": [
+        "Asset discovered at TBD Sketchfab URL",
+        "Status: awaiting manual download and detailed metadata verification",
+        "Hero unit asset - likely higher polygon budget than infantry units",
+        "User should verify source URL, author information, and exact license terms"
+      ]
+    }
+  ],
+  "summary_statistics": {
+    "total_assets_assessed": 3,
+    "private_only_assets": 3,
+    "public_release_approved": 0,
+    "average_ip_confidence": 0.867,
+    "assets_needing_replacement_for_release": 3,
+    "assets_ready_for_prototyping": 3
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Complete metadata acquisition for Clone Trooper and Vader assets",
+      "Verify author information and licenses for all three assets",
+      "Document acquisition method and verification dates"
+    ],
+    "development_phase": [
+      "Use all three assets for internal prototyping and design validation",
+      "Identify similar generic sci-fi models as replacement candidates",
+      "Plan IP-safe alternatives for public release"
+    ],
+    "release_phase": [
+      "Replace all three Star Wars fan models with original or generic sci-fi equivalents",
+      "Do not include these assets in any public or distributed version of the mod",
+      "Maintain private development branch with Star Wars themed prototypes"
+    ]
+  }
+}

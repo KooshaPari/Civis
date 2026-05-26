@@ -1,0 +1,16 @@
+{
+  "asset_id": "sw_droideka_sketchfab_001",
+  "name": "Droideka",
+  "model_id": "42b2a42130f94d73a29eda6ecfdce98f",
+  "phase": "v0.8.0",
+  "status": "success",
+  "downloaded": "2026-03-12T23:39:14.127843",
+  "license": "CC-BY-4.0",
+  "attribution": "See SKETCHFAB_MODELS.json for author info",
+  "source": "https://sketchfab.com/3d-models/droideka-42b2a42130f94d73a29eda6ecfdce98f",
+  "notes": [
+    "[2026-03-14] Placeholder GLB created (minimal unit cube). Original model not available for API download (Free plan / author-disabled download). Replace with real asset when obtained manually."
+  ],
+  "technical_status": "discovered",
+  "local_path": "raw/sw_droideka_sketchfab_001/source_download.glb"
+}

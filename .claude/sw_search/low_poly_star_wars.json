@@ -1,0 +1,3416 @@
+{
+  "cursors": {
+    "next": "20",
+    "previous": null
+  },
+  "next": "https://api.sketchfab.com/v3/search?count=20&cursor=20&q=low+poly+star+wars&sort_by=-relevance&type=models",
+  "previous": null,
+  "results": [
+    {
+      "uri": "https://api.sketchfab.com/v3/models/32962e67d052475c9f764ff729aab4ef",
+      "uid": "32962e67d052475c9f764ff729aab4ef",
+      "name": "Vulture droid starfighter",
+      "staffpickedAt": null,
+      "viewCount": 4,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-32962e67d052475c9f764ff729aab4ef",
+      "embedUrl": "https://sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-11T13:28:33.651581",
+      "tags": [
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "073302f5dd7f4725ad766368c995f5fc",
+            "size": 55249,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/thumbnails/2a64ceb90e4341baa1ed47357f806dd7/eebec704ba384a3dae4c7da521384408.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "c402fcaf82594cb7abd7c42cfdc74944",
+            "size": 18944,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/thumbnails/2a64ceb90e4341baa1ed47357f806dd7/188a65d3e508406db7abc93d00834166.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "fe8a9584718e4e7c9c4bff056fd49ad3",
+            "size": 11215,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/thumbnails/2a64ceb90e4341baa1ed47357f806dd7/5c91200321f94f72854fb355670604df.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "36c84bf970c4496ab965310c2f2d7a5e",
+            "size": 2776,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/thumbnails/2a64ceb90e4341baa1ed47357f806dd7/370df19645c04ea69697de0929151337.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "45008a367e0f4e9ba1e62bc64494bb32",
+            "size": 989,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/32962e67d052475c9f764ff729aab4ef/thumbnails/2a64ceb90e4341baa1ed47357f806dd7/9c579e5db5a1452082c56036781474ab.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Vulture droid fighter from Star Wars Episode III made by Majin Revan and Hatrus.",
+      "faceCount": 2664,
+      "createdAt": "2026-03-11T13:27:39.615113",
+      "vertexCount": 1422,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 3,
+          "size": 324752,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 2664,
+          "vertexCount": 4818
+        },
+        "gltf": {
+          "textureCount": 3,
+          "size": 211026,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 2664,
+          "vertexCount": 4818
+        },
+        "source": {
+          "textureCount": null,
+          "size": 498727,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 298542,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/50b98b99511f4012bbc430cd10d7b38f",
+      "uid": "50b98b99511f4012bbc430cd10d7b38f",
+      "name": "Speeder Bike",
+      "staffpickedAt": null,
+      "viewCount": 3,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-50b98b99511f4012bbc430cd10d7b38f",
+      "embedUrl": "https://sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-11T12:52:23.089318",
+      "tags": [
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "abcde1df10604ce38d248145de32f495",
+            "size": 47479,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/thumbnails/5573071c9c654f958a02e6374a8c881c/597f7a5361124d02896046bdedf62859.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "1797124fb3de45bbb5d8df8c9c4a66fc",
+            "size": 15434,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/thumbnails/5573071c9c654f958a02e6374a8c881c/e2bc7c25158540819dc4c3ccbf112ccf.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "5b14f408413b49c9ad934e5be6d0af09",
+            "size": 8791,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/thumbnails/5573071c9c654f958a02e6374a8c881c/b58bc70fdb1345c3aa9128a0ce259f87.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "f64355fa56464dddbf6e6fd142663f27",
+            "size": 2021,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/thumbnails/5573071c9c654f958a02e6374a8c881c/19f5798401054b75a2aba64688998bf4.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "b7446a85fdee414ead97cc3e135767cd",
+            "size": 836,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/50b98b99511f4012bbc430cd10d7b38f/thumbnails/5573071c9c654f958a02e6374a8c881c/148bf66feccc48eebe496c79f11f18e1.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Speederbike from Star Wars Episode VI made originally by Monsoontide with some remastering by myself recently.",
+      "faceCount": 1740,
+      "createdAt": "2026-03-11T12:51:30.133254",
+      "vertexCount": 1162,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 3,
+          "size": 1904236,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 1740,
+          "vertexCount": 2489
+        },
+        "gltf": {
+          "textureCount": 3,
+          "size": 1761090,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 1740,
+          "vertexCount": 2489
+        },
+        "source": {
+          "textureCount": null,
+          "size": 3847445,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 1880961,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/447bdce24189479f923d4490f62271ed",
+      "uid": "447bdce24189479f923d4490f62271ed",
+      "name": "T-47 Airspeeder (snowspeeder)",
+      "staffpickedAt": null,
+      "viewCount": 8,
+      "likeCount": 2,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-447bdce24189479f923d4490f62271ed",
+      "embedUrl": "https://sketchfab.com/models/447bdce24189479f923d4490f62271ed/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-10T18:04:13.952951",
+      "tags": [
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "97e823a590614dd09ace5695daed5934",
+            "size": 69788,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/447bdce24189479f923d4490f62271ed/thumbnails/91c8ef3afe2d4211b46f4ff2f0ed792c/c8a45db2f0be42f896649f07525020cc.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "864f5c01f8934eaab71d99916535083c",
+            "size": 21952,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/447bdce24189479f923d4490f62271ed/thumbnails/91c8ef3afe2d4211b46f4ff2f0ed792c/7fbd71a2f91c45ad865b438aac078e2a.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "51064927add141a9bfb8b31ff44cad0f",
+            "size": 12396,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/447bdce24189479f923d4490f62271ed/thumbnails/91c8ef3afe2d4211b46f4ff2f0ed792c/2ff6b6e1e81d4581b74d7efcbb621ce6.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "d1cb79e0814b4f6194e2ab23e4adb6f1",
+            "size": 2529,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/447bdce24189479f923d4490f62271ed/thumbnails/91c8ef3afe2d4211b46f4ff2f0ed792c/d38cf7269d704fd88d18912a37d0e7bf.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "f92fb06c556b45c8bea4e4bddfc04c9b",
+            "size": 854,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/447bdce24189479f923d4490f62271ed/thumbnails/91c8ef3afe2d4211b46f4ff2f0ed792c/e8c00a938e094c4fa06e2ad98f525373.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of T-47 Airspeeder (snowspeeder) from Star Wars Episode V. This model was originally created by tFighterPilot and Mars Marshall, with some remastering by myself recently.",
+      "faceCount": 1856,
+      "createdAt": "2026-03-10T18:03:13.690322",
+      "vertexCount": 964,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 5,
+          "size": 1659676,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 1814,
+          "vertexCount": 3187
+        },
+        "gltf": {
+          "textureCount": 5,
+          "size": 1555970,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 1814,
+          "vertexCount": 3187
+        },
+        "source": {
+          "textureCount": null,
+          "size": 3367938,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 1642230,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/a477c5b5bca44c4eade16f5bc094d39b",
+      "uid": "a477c5b5bca44c4eade16f5bc094d39b",
+      "name": "Nubian N1 Naboo starfighter (black)",
+      "staffpickedAt": null,
+      "viewCount": 11,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-a477c5b5bca44c4eade16f5bc094d39b",
+      "embedUrl": "https://sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-10T15:27:59.858217",
+      "tags": [
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "3c1548856e15491cb80502206d2d42f0",
+            "size": 46301,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/b502d38103a94cbebc7964c7eeff9109.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "c0ab7554110740f39b942a19f3f0b2e0",
+            "size": 15090,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/9b5ab987478b43f0a5a88d685be20f15.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "b9828fbac9774d7e9e4ce5922f472c80",
+            "size": 8803,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/f0e5c1bdf9d34ac5af62509c5bda0a58.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "9c8b6f264aa5429b9f4c028d7180d366",
+            "size": 2187,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/504ea7468b2c4c8792f7763f83bafdf7.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "b7dcf6ce605248d186e922affaf7aeea",
+            "size": 917,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/e1ebb0ee1c7841b680e8cc182f2c3265.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Nubian N1 space superiority fighter from Star Wars (black paintjob). This model was originally created by Monsoontide, with small adjustments by myself recently",
+      "faceCount": 1293,
+      "createdAt": "2026-03-10T15:26:43.850879",
+      "vertexCount": 931,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 3,
+          "size": 640456,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 1293,
+          "vertexCount": 2123
+        },
+        "gltf": {
+          "textureCount": 3,
+          "size": 570361,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 1293,
+          "vertexCount": 2123
+        },
+        "source": {
+          "textureCount": null,
+          "size": 1469515,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 524499,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/b89c83d5b23941378fbc2d64781bcc21",
+      "uid": "b89c83d5b23941378fbc2d64781bcc21",
+      "name": "Nubian N1 Naboo starfighter (classic)",
+      "staffpickedAt": null,
+      "viewCount": 10,
+      "likeCount": 2,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-b89c83d5b23941378fbc2d64781bcc21",
+      "embedUrl": "https://sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-10T07:35:03.436565",
+      "tags": [
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "ad1c44c0f1854e948bcbe5b5c91fea66",
+            "size": 46412,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/82a733d2aea94416b91c476f17977489.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "a36323c434f0426a9e3d512f396e3906",
+            "size": 15098,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/b0903e3cfe694b1aad0e168a3fead558.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "7d63774917254538a9bbb3c042219bee",
+            "size": 8543,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/76b16ed342c742e8b335f43718db152a.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "26bfebb9c4ab490281d1d6acc8ed30ba",
+            "size": 2003,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/4e3b61bfc2864dd3aa2b75a1e488f350.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "08bf1761ff1e4cd99582994652aaba34",
+            "size": 829,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/b89c83d5b23941378fbc2d64781bcc21/thumbnails/05d2aedb027349e58c3b2490eab07af2/0b341a2b9a594c86a7e2066f1eb82572.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Nubian N1 space superiority fighter from Star Wars (classic paintjob). This model was originally created by Monsoontide, with small adjustments by myself recently",
+      "faceCount": 1274,
+      "createdAt": "2026-03-10T07:33:03.577071",
+      "vertexCount": 902,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 3,
+          "size": 744716,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 1274,
+          "vertexCount": 2062
+        },
+        "gltf": {
+          "textureCount": 3,
+          "size": 679854,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 1274,
+          "vertexCount": 2062
+        },
+        "source": {
+          "textureCount": null,
+          "size": 1729381,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 547374,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/fae2f21216134f59bf41df173e5b0544",
+      "uid": "fae2f21216134f59bf41df173e5b0544",
+      "name": "Kylo Ren's lightsaber from Star Wars",
+      "staffpickedAt": null,
+      "viewCount": 15,
+      "likeCount": 3,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-fae2f21216134f59bf41df173e5b0544",
+      "embedUrl": "https://sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-03-03T22:39:52.303103",
+      "tags": [
+        {
+          "name": "lightsaber",
+          "slug": "lightsaber",
+          "uri": "https://api.sketchfab.com/v3/tags/lightsaber"
+        },
+        {
+          "name": "weapon",
+          "slug": "weapon",
+          "uri": "https://api.sketchfab.com/v3/tags/weapon"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "22a0a215a9814677b812804420434d6d",
+            "size": 45601,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/thumbnails/328f8111d0b64d30a8bb95b3406d744c/6296c3bc30ab4373abe38bb83b8ef3e9.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "abc31182daed46d48132e4f772340274",
+            "size": 15912,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/thumbnails/328f8111d0b64d30a8bb95b3406d744c/4873a133bb3f4c668ad100b53b77c554.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "74cb44e15aed4625bcb4547f98cf0544",
+            "size": 9202,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/thumbnails/328f8111d0b64d30a8bb95b3406d744c/b2be0ff9add24de1a306604d2d57a8ee.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "104709af9a174d4eac4a6a662e3acba8",
+            "size": 2333,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/thumbnails/328f8111d0b64d30a8bb95b3406d744c/33fa8dec583b4802af67873fad8e7659.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "a57cee0cf1f84c31a90cb1bec7ce7b75",
+            "size": 879,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/fae2f21216134f59bf41df173e5b0544/thumbnails/328f8111d0b64d30a8bb95b3406d744c/7457a08f86a544c19aa3f803005cea56.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "87f1e20a9231464f90d7a33f48f85fd6",
+        "username": "Gleb_StRAh",
+        "displayName": "Gleb_StRAh",
+        "profileUrl": "https://sketchfab.com/Gleb_StRAh",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/aa5a243803e347778e529c57379fd0e0",
+          "images": [
+            {
+              "size": 1116,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/aa5a243803e347778e529c57379fd0e0/7045862c83b346f1b371e9148b898a26.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1438,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/aa5a243803e347778e529c57379fd0e0/adb65b609f3b444a8243be47acef960a.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2547,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/aa5a243803e347778e529c57379fd0e0/f6d96d97995542d8b245748565bc2a5d.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2857,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/aa5a243803e347778e529c57379fd0e0/fd422df908e44eaaa8db8c978eae1aaa.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/87f1e20a9231464f90d7a33f48f85fd6"
+      },
+      "description": "High-quality 3D model of Kylo Ren's iconic lightsaber. This model features a unique \"unstable\" look created with high-poly sculpting, giving the blade its signature aggressive energy.\n\n**Main Features:**\nReady for Render: Pre-configured materials for Eevee and Cycles (Bloom effect included).\nClean Geometry: One single mesh with applied Scale (1.000).\nSculpted Details: Hand-sculpted blade for a realistic \"crackling energy\" effect.\nGame Ready: Low-poly handle combined with a high-impact blade look.\n\n**Technical Specs:**\nFormats: .blend (native), .fbx, .obj.\nScale: 1:1 real-world scale.\nCompatibility: Works perfectly with Blender, Unity, and Unreal Engine.",
+      "faceCount": 469764,
+      "createdAt": "2026-03-03T22:19:37.907941",
+      "vertexCount": 234928,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 41310180,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 469748,
+          "vertexCount": 890593
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 7575200,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 469748,
+          "vertexCount": 890593
+        },
+        "source": {
+          "textureCount": null,
+          "size": 10460840,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 21450006,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/0669c762951248ad801609bf9f272f95",
+      "uid": "0669c762951248ad801609bf9f272f95",
+      "name": "ARC-170 fighter",
+      "staffpickedAt": null,
+      "viewCount": 23,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-0669c762951248ad801609bf9f272f95",
+      "embedUrl": "https://sketchfab.com/models/0669c762951248ad801609bf9f272f95/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-02-27T13:58:21.997790",
+      "tags": [
+        {
+          "name": "clonewars",
+          "slug": "clonewars",
+          "uri": "https://api.sketchfab.com/v3/tags/clonewars"
+        },
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "715abf6008564696a81a9b45003b8d33",
+            "size": 58613,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/0669c762951248ad801609bf9f272f95/thumbnails/2b5a6b60a33244f28a088d07c507c04c/7dd62080b6a64886a168e8e93b734213.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "c66c449cd8b440f5a41b96e464e210df",
+            "size": 19652,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/0669c762951248ad801609bf9f272f95/thumbnails/2b5a6b60a33244f28a088d07c507c04c/fe65217b63bb4e6d915a16feee7e1a4f.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "0da28abc7db44ea88411d399393e3151",
+            "size": 11395,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/0669c762951248ad801609bf9f272f95/thumbnails/2b5a6b60a33244f28a088d07c507c04c/8f621efa74384118a362865b7cd67fc7.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "cc853d92fd284f7e9f5d6ec57293fe7a",
+            "size": 2535,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/0669c762951248ad801609bf9f272f95/thumbnails/2b5a6b60a33244f28a088d07c507c04c/182f783808694ae0bec949a3c84a0e4b.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "40c5ded573d34975bdd8ac24eb25df12",
+            "size": 903,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/0669c762951248ad801609bf9f272f95/thumbnails/2b5a6b60a33244f28a088d07c507c04c/f51a8cc2cb694cf881f592431d101bef.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Aggressive Reconnaissance-170 (ARC-170) space superiority fighter from Star Wars Episode III. This model was originally created by minilogoguy18 and Dark_Cuillere with some remastering done by myself recently",
+      "faceCount": 3279,
+      "createdAt": "2026-02-27T13:57:12.451174",
+      "vertexCount": 1804,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 11,
+          "size": 4305408,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 3277,
+          "vertexCount": 5181
+        },
+        "gltf": {
+          "textureCount": 11,
+          "size": 4141619,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 3277,
+          "vertexCount": 5181
+        },
+        "source": {
+          "textureCount": null,
+          "size": 9571736,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 4270645,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/5f2597299445465cb6a246224a53b8d5",
+      "uid": "5f2597299445465cb6a246224a53b8d5",
+      "name": "Sands of Journey",
+      "staffpickedAt": null,
+      "viewCount": 3,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-5f2597299445465cb6a246224a53b8d5",
+      "embedUrl": "https://sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-02-27T12:27:35.085935",
+      "tags": [
+        {
+          "name": "blender-3d",
+          "slug": "blender-3d",
+          "uri": "https://api.sketchfab.com/v3/tags/blender-3d"
+        },
+        {
+          "name": "low-poly-art",
+          "slug": "low-poly-art",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly-art"
+        },
+        {
+          "name": "low-poly-game-assets",
+          "slug": "low-poly-game-assets",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly-game-assets"
+        },
+        {
+          "name": "low-poly-blender",
+          "slug": "low-poly-blender",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly-blender"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "blender",
+          "slug": "blender",
+          "uri": "https://api.sketchfab.com/v3/tags/blender"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "blender3d",
+          "slug": "blender3d",
+          "uri": "https://api.sketchfab.com/v3/tags/blender3d"
+        }
+      ],
+      "categories": [
+        {
+          "name": "art-abstract"
+        },
+        {
+          "name": "characters-creatures"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "708d03f7022d491cb8c6f23ab8e93400",
+            "size": 141440,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/thumbnails/7e7186f070d349cf90d9c4ca5eaea2f5/82f4a60159314d5fb15d32bdbc9eff95.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "9efbd6c6933148c29b7e1605a7df03f9",
+            "size": 42391,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/thumbnails/7e7186f070d349cf90d9c4ca5eaea2f5/0773f87f665d4a89aadb1721e0bc293a.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "79e730249f7246d0aa858429a6086569",
+            "size": 26688,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/thumbnails/7e7186f070d349cf90d9c4ca5eaea2f5/85508e3cfd004b27936a6140d061bc4c.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "3e66fd1b34624b8096e20814ddb352ae",
+            "size": 6735,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/thumbnails/7e7186f070d349cf90d9c4ca5eaea2f5/3722a0b57d0346208906b9f9dc723e2a.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "f5ca6032779847918f073d186f5aba5e",
+            "size": 1362,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/5f2597299445465cb6a246224a53b8d5/thumbnails/7e7186f070d349cf90d9c4ca5eaea2f5/f5d22c1eedce41c397fea67c184b9454.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "b93353a18b60426aaad47f9da13aec3a",
+        "username": "rafalusofona",
+        "displayName": "Rafael Costa",
+        "profileUrl": "https://sketchfab.com/rafalusofona",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/026acbe5b25d401ab5180520c0f81225",
+          "images": [
+            {
+              "size": 633,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/026acbe5b25d401ab5180520c0f81225/892c5b801b324a609b4ce70d805215d2.png",
+              "height": 32
+            },
+            {
+              "size": 1014,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/026acbe5b25d401ab5180520c0f81225/8d7d2c6db78b4e6ab48af3851f9f7c65.png",
+              "height": 48
+            },
+            {
+              "size": 2262,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/026acbe5b25d401ab5180520c0f81225/401e14985339409da6a77497f063ccd0.png",
+              "height": 90
+            },
+            {
+              "size": 2663,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/026acbe5b25d401ab5180520c0f81225/bb17cc6205af4823bd29eb0bbf9ed93b.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/b93353a18b60426aaad47f9da13aec3a"
+      },
+      "description": "In this little world inspired by Journey, Sable the game and Star Wars, the small orange beings were left behind with the hope of a purpose greater than all the riches and technologies of the earth.\n\nThrough low-poly modeling and simplistic textures, I wanted to communicate the richness of the earth and the great architectural achievements in contrast to the simple clothes of the orange beings and mounds of unpolished stones on the ground.\n\nBy looking at inspirations from other works on the internet and seeing topologies here and there, I'm trying to improve my understanding of topology and how it can relate to bone structures for animation using blender 3D software",
+      "faceCount": 5574,
+      "createdAt": "2026-02-27T12:16:07.193226",
+      "vertexCount": 3311,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/9e03b6134dd549d7b390009a2421bc8d",
+      "uid": "9e03b6134dd549d7b390009a2421bc8d",
+      "name": "AT-AT Walker",
+      "staffpickedAt": null,
+      "viewCount": 12,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-9e03b6134dd549d7b390009a2421bc8d",
+      "embedUrl": "https://sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-02-26T15:01:32.043352",
+      "tags": [
+        {
+          "name": "clonewars",
+          "slug": "clonewars",
+          "uri": "https://api.sketchfab.com/v3/tags/clonewars"
+        },
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "vehicle",
+          "slug": "vehicle",
+          "uri": "https://api.sketchfab.com/v3/tags/vehicle"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "61687a04db134db6989d5891b6328a88",
+            "size": 60136,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/thumbnails/f3132f19ca61475cb66e62e5d753b8f8/841214b08e544328bb9c97ab86189890.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "e352abe7c83a4b8f9026b8bdc227458f",
+            "size": 19747,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/thumbnails/f3132f19ca61475cb66e62e5d753b8f8/d0da16d7ec374089b86b1d979fd96629.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "3d74c20460f846aa9d3f7a9e53ba544d",
+            "size": 11435,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/thumbnails/f3132f19ca61475cb66e62e5d753b8f8/3c79dde5c9a34b61bfc355661a1e765e.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "980729d07ca04a13a74ac8c4f613f6bc",
+            "size": 2524,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/thumbnails/f3132f19ca61475cb66e62e5d753b8f8/acddf3af202c45d5898056a3fb3db82c.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "9787e63ae0ee4114a63d3956c3023c39",
+            "size": 882,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/9e03b6134dd549d7b390009a2421bc8d/thumbnails/f3132f19ca61475cb66e62e5d753b8f8/f5f706e103f14038a37060317df3b797.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of AT-AT (All Terrain Armored Transport) walker from Star Wars. This model was originally created by Duncan_10158 with some remastering done by myself recently.",
+      "faceCount": 3356,
+      "createdAt": "2026-02-26T15:00:41.619028",
+      "vertexCount": 1918,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 2,
+          "size": 1590060,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 3356,
+          "vertexCount": 5709
+        },
+        "gltf": {
+          "textureCount": 2,
+          "size": 1363170,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 3356,
+          "vertexCount": 5709
+        },
+        "source": {
+          "textureCount": null,
+          "size": 3019384,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 1552333,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/2135fc2003ec42ffbfb99e0f6b5bf46f",
+      "uid": "2135fc2003ec42ffbfb99e0f6b5bf46f",
+      "name": "AT-PT Walker",
+      "staffpickedAt": null,
+      "viewCount": 19,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-2135fc2003ec42ffbfb99e0f6b5bf46f",
+      "embedUrl": "https://sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-02-26T14:48:16.553386",
+      "tags": [
+        {
+          "name": "clonewars",
+          "slug": "clonewars",
+          "uri": "https://api.sketchfab.com/v3/tags/clonewars"
+        },
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "vehicle",
+          "slug": "vehicle",
+          "uri": "https://api.sketchfab.com/v3/tags/vehicle"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "125a0434677a4f9f9feb4436f4383991",
+            "size": 61092,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/thumbnails/843f94f9c37544b2a4d80d85474b2bc4/7f4140ab5261438ab81483a4f6a92ff3.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "850c8c801c4f4eb091c28137ed573e6c",
+            "size": 19387,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/thumbnails/843f94f9c37544b2a4d80d85474b2bc4/84f8ac02589c41bc88f6a6f13e9d7ba0.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "83db42ef34d84adead18f9d021a7d27a",
+            "size": 11174,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/thumbnails/843f94f9c37544b2a4d80d85474b2bc4/bdfcc4878c864304a381c3e2d66550c3.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "bb7a4384d4d34b9cb58233423bf540fe",
+            "size": 2600,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/thumbnails/843f94f9c37544b2a4d80d85474b2bc4/5e5a59b7419f4067af4189612ff232e2.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "3d99dc8ad57f438eb42d1320f7d52b42",
+            "size": 872,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/2135fc2003ec42ffbfb99e0f6b5bf46f/thumbnails/843f94f9c37544b2a4d80d85474b2bc4/4643b1fcc7244d3ea47c525f007bad44.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of AT-PT (All Terrain Personal Transport) walker from Star Wars. This model was originally created by LightNinja and Mars Marshall \"NeoMarz1\" with some remastering done by myself recently.",
+      "faceCount": 2762,
+      "createdAt": "2026-02-26T14:46:36.690033",
+      "vertexCount": 1502,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 8,
+          "size": 4194216,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 2762,
+          "vertexCount": 4635
+        },
+        "gltf": {
+          "textureCount": 8,
+          "size": 3797903,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 2762,
+          "vertexCount": 4635
+        },
+        "source": {
+          "textureCount": null,
+          "size": 8827384,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 4157880,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/c55d3e304cd94b47be06a0f28a32dfc3",
+      "uid": "c55d3e304cd94b47be06a0f28a32dfc3",
+      "name": "Republic Gunship (LAAT)",
+      "staffpickedAt": null,
+      "viewCount": 16,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-c55d3e304cd94b47be06a0f28a32dfc3",
+      "embedUrl": "https://sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-02-26T14:26:28.398983",
+      "tags": [
+        {
+          "name": "clonewars",
+          "slug": "clonewars",
+          "uri": "https://api.sketchfab.com/v3/tags/clonewars"
+        },
+        {
+          "name": "spaceship-sci-fi",
+          "slug": "spaceship-sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship-sci-fi"
+        },
+        {
+          "name": "lucasfilm",
+          "slug": "lucasfilm",
+          "uri": "https://api.sketchfab.com/v3/tags/lucasfilm"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "spaceship",
+          "slug": "spaceship",
+          "uri": "https://api.sketchfab.com/v3/tags/spaceship"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "7c40f3651b874ab289075e8405896d6e",
+            "size": 58749,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/thumbnails/25d2d447ed4647629798a69473c2a017/b39531b2f07a4c3a8b46c0dbb44f9193.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "28afe1830834490db121983388a1b610",
+            "size": 19154,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/thumbnails/25d2d447ed4647629798a69473c2a017/48606bd5b7fd45719a476a02007f31d6.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "a3106e662c404623a517b697d158b44c",
+            "size": 11174,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/thumbnails/25d2d447ed4647629798a69473c2a017/40acb262d74b4371bd92fea45ca1fa4e.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "aa6bae9c205942bb9450026a1ddfe1b0",
+            "size": 2604,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/thumbnails/25d2d447ed4647629798a69473c2a017/aefb51101dcb42f182b7b5b446abe669.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "1e95d1b531f34575a0c89621d666ce67",
+            "size": 898,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/c55d3e304cd94b47be06a0f28a32dfc3/thumbnails/25d2d447ed4647629798a69473c2a017/bb27c49848f74d6e85c4ed21543ef16f.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "8efc954f51884c0ab532f359c9555bba",
+        "username": "richardas.rac",
+        "displayName": "richardas.rac",
+        "profileUrl": "https://sketchfab.com/richardas.rac",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/8efc954f51884c0ab532f359c9555bba"
+      },
+      "description": "This is low-poly model of Republic Gunship (LAAT - Low Altitude Assault Transport) used by the Republic during the clone wars. This model was originally created by Mars Marshall (NeoMarz1) for a Star Wars game with some remastering done by myself later on.",
+      "faceCount": 2134,
+      "createdAt": "2026-02-26T14:24:22.968924",
+      "vertexCount": 1169,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 7,
+          "size": 4138024,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 2134,
+          "vertexCount": 3289
+        },
+        "gltf": {
+          "textureCount": 7,
+          "size": 3914185,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 2134,
+          "vertexCount": 3289
+        },
+        "source": {
+          "textureCount": null,
+          "size": 8581914,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 4115427,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/db9e1cc7a6724c55861b62fb59598349",
+      "uid": "db9e1cc7a6724c55861b62fb59598349",
+      "name": "At-at  Star wars",
+      "staffpickedAt": null,
+      "viewCount": 15,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-db9e1cc7a6724c55861b62fb59598349",
+      "embedUrl": "https://sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-02-13T20:17:09.750761",
+      "tags": [
+        {
+          "name": "at-at",
+          "slug": "at-at",
+          "uri": "https://api.sketchfab.com/v3/tags/at-at"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "pixel-art",
+          "slug": "pixel-art",
+          "uri": "https://api.sketchfab.com/v3/tags/pixel-art"
+        },
+        {
+          "name": "blockbench",
+          "slug": "blockbench",
+          "uri": "https://api.sketchfab.com/v3/tags/blockbench"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "minecraft",
+          "slug": "minecraft",
+          "uri": "https://api.sketchfab.com/v3/tags/minecraft"
+        },
+        {
+          "name": "voxel",
+          "slug": "voxel",
+          "uri": "https://api.sketchfab.com/v3/tags/voxel"
+        },
+        {
+          "name": "noai",
+          "slug": "noai",
+          "uri": "https://api.sketchfab.com/v3/tags/noai"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "6d248ab87a2a4651bf1a86485e78a270",
+            "size": 508478,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/f48e0d9fafbd403795e174821e6f852b.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "4b645c00f36644469ddec6fb62ab7c1a",
+            "size": 66244,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/69830faae8bf48e39498f248c2c59cac.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "e5b42a5530194d618ad33c17311b1b25",
+            "size": 31301,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/39c910e5bc7641ff887da2ba6809840c.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "7886b070426e4816a9fecfbcedac599b",
+            "size": 5468,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/19b6e5c529c343b997279c1eac5be393.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "5da43efcad1f4300bc670f7e4c000eb0",
+            "size": 1180,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/db9e1cc7a6724c55861b62fb59598349/thumbnails/a9ca5810dd6140d3b1a6cb05eab48b14/894cb27a3d0347b58c3f82625c74b016.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "d179a6fd20de4b7ab1141dd2e05353f7",
+        "username": "insanis_art",
+        "displayName": "Insanis",
+        "profileUrl": "https://sketchfab.com/insanis_art",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/300c37ec3aa640e885c47fe2a4c3f593",
+          "images": [
+            {
+              "size": 923,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/300c37ec3aa640e885c47fe2a4c3f593/280b3592753c46c8950908f1b42ea3af.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1165,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/300c37ec3aa640e885c47fe2a4c3f593/573a4a016e224e64b88ca477c8a0a8e7.jpeg",
+              "height": 48
+            },
+            {
+              "size": 1858,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/300c37ec3aa640e885c47fe2a4c3f593/be9d3a842e484d389ae1db3a09fcc012.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2199,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/300c37ec3aa640e885c47fe2a4c3f593/4daaff91061f4b5095cd93e8c27835d6.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/d179a6fd20de4b7ab1141dd2e05353f7"
+      },
+      "description": "the low poly model of AT-AT (All Terrain Armored Transport) — The Galactic Empire's iconic 22.5-meter-long, four-legged walker from Star Wars",
+      "faceCount": 752,
+      "createdAt": "2026-02-13T20:12:23.848090",
+      "vertexCount": 512,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/243706f6849c40a196c68cb9b8849b16",
+      "uid": "243706f6849c40a196c68cb9b8849b16",
+      "name": "Dark saber V1 low poly",
+      "staffpickedAt": null,
+      "viewCount": 6,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-243706f6849c40a196c68cb9b8849b16",
+      "embedUrl": "https://sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-02-08T22:35:58.313271",
+      "tags": [
+        {
+          "name": "lightsaber",
+          "slug": "lightsaber",
+          "uri": "https://api.sketchfab.com/v3/tags/lightsaber"
+        },
+        {
+          "name": "darksaber",
+          "slug": "darksaber",
+          "uri": "https://api.sketchfab.com/v3/tags/darksaber"
+        },
+        {
+          "name": "beginner-model",
+          "slug": "beginner-model",
+          "uri": "https://api.sketchfab.com/v3/tags/beginner-model"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "ac1e42d637d94c3d81665ef305445fc9",
+            "size": 35471,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/af6f813326764ce087c739d33d897df5.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "0bbb84f518b04835b5c1b2480d51d8f2",
+            "size": 11055,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/7f359f91b8774faba9b1f29f64e3c069.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "51c6617aee34450488d84bc5bae78e17",
+            "size": 6193,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/314bb43e18714a24a431ba163875364a.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "b8874fd1f7894b17be25df511a5cd614",
+            "size": 1510,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/ab7ef53e853b40f6b269c7205405579e.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "7d8a6142611e41608b6d86b2b6d1fec7",
+            "size": 717,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/243706f6849c40a196c68cb9b8849b16/thumbnails/57fde54ce4c94c0d8f5ad252918b0e86/36555504c2f64986aef8a26a69a7a280.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "88fb600ec54044a5ad7211d8853eabd8",
+        "username": "coolguyelimarano",
+        "displayName": "coolguyelimarano",
+        "profileUrl": "https://sketchfab.com/coolguyelimarano",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/73bae24b430e4aa6bbada44bb7de0d1f",
+          "images": [
+            {
+              "size": 2645,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/73bae24b430e4aa6bbada44bb7de0d1f/4e6a059f623d4a2bb3eb70abf9a2faab.png",
+              "height": 32
+            },
+            {
+              "size": 5704,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/73bae24b430e4aa6bbada44bb7de0d1f/9790800e1ba340439ebd4be3de15db26.png",
+              "height": 48
+            },
+            {
+              "size": 19296,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/73bae24b430e4aa6bbada44bb7de0d1f/073910d22cef43d9ac8411dd721a8025.png",
+              "height": 90
+            },
+            {
+              "size": 23689,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/73bae24b430e4aa6bbada44bb7de0d1f/d54863d8d631493393f49f6717bc4266.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/88fb600ec54044a5ad7211d8853eabd8"
+      },
+      "description": "The Dark saber from star wars. This is my first time creating and publishing somthing using blender 5.0, but i hope to improve the modle in the future. If you go into blender and import this file, you can make it glow by creating a material as emmission. then go to geomatry nodes and add a new one at the top. then when the lines split to group output and viewer, put a glare node and set it to bloom. then go back to layout and next to the renders viewport shading at the top left, click the drop down and select alwayss on compositer. you can also adjust the stranght of the glow in the material settings by sliding strength. If you have any ideas on how i could improve this, plz let me know in the comments!",
+      "faceCount": 216,
+      "createdAt": "2026-02-08T22:15:19.755446",
+      "vertexCount": 130,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 20532,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 196,
+          "vertexCount": 323
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 5508,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 196,
+          "vertexCount": 323
+        },
+        "source": {
+          "textureCount": null,
+          "size": 41976,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 13074,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/80ae05c5e00c4f9b832ea01e93507193",
+      "uid": "80ae05c5e00c4f9b832ea01e93507193",
+      "name": "Star Wars Monster",
+      "staffpickedAt": null,
+      "viewCount": 48,
+      "likeCount": 2,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-80ae05c5e00c4f9b832ea01e93507193",
+      "embedUrl": "https://sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/embed",
+      "commentCount": 2,
+      "isDownloadable": false,
+      "publishedAt": "2026-02-04T12:53:12.590931",
+      "tags": [
+        {
+          "name": "reek",
+          "slug": "reek",
+          "uri": "https://api.sketchfab.com/v3/tags/reek"
+        },
+        {
+          "name": "rancor",
+          "slug": "rancor",
+          "uri": "https://api.sketchfab.com/v3/tags/rancor"
+        },
+        {
+          "name": "acklay",
+          "slug": "acklay",
+          "uri": "https://api.sketchfab.com/v3/tags/acklay"
+        },
+        {
+          "name": "blockbench",
+          "slug": "blockbench",
+          "uri": "https://api.sketchfab.com/v3/tags/blockbench"
+        },
+        {
+          "name": "nexu",
+          "slug": "nexu",
+          "uri": "https://api.sketchfab.com/v3/tags/nexu"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "minecraft",
+          "slug": "minecraft",
+          "uri": "https://api.sketchfab.com/v3/tags/minecraft"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "animals-pets"
+        },
+        {
+          "name": "characters-creatures"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "39a2b3cb47d64f8cb71a3d2dfeb41f46",
+            "size": 124534,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/thumbnails/00af100e2e87493eb995cbc3b8c23fe5/bbfa50927f804ad0af380538ef4e6da4.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "d4e9baa5e7694ccdb954d1f5231763e4",
+            "size": 44145,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/thumbnails/00af100e2e87493eb995cbc3b8c23fe5/45c06c6ddb3a40e1800b21eb3051042b.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "714e38f80bf846a5870615af1e36cb7b",
+            "size": 26102,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/thumbnails/00af100e2e87493eb995cbc3b8c23fe5/3f655f5ea6a1426aabaf98ddc2dcfd4c.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "013a2e70fa704c48be7e89d59d4a35ac",
+            "size": 5553,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/thumbnails/00af100e2e87493eb995cbc3b8c23fe5/a56e256b87d64eb7a36491b637c5a8bb.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "04975fbbca92463b84dee835b10a434c",
+            "size": 1200,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/80ae05c5e00c4f9b832ea01e93507193/thumbnails/00af100e2e87493eb995cbc3b8c23fe5/3ea61dbc74ca40e4bada273e189ddecd.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "856a4fae3e3e4f47a87b16d704ce7973",
+        "username": "oanpan",
+        "displayName": "Panpan",
+        "profileUrl": "https://sketchfab.com/oanpan",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/40f7d079af2d40df83bf87f2364053a0",
+          "images": [
+            {
+              "size": 1019,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/40f7d079af2d40df83bf87f2364053a0/49f99827f8ce47929397dcd22e54f650.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1410,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/40f7d079af2d40df83bf87f2364053a0/1b4db0a97f9540539f7be7c4019da577.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3274,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/40f7d079af2d40df83bf87f2364053a0/6fd50b65d1224ed0aed0b51f84eb29f7.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3572,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/40f7d079af2d40df83bf87f2364053a0/845dd85c4cbb49388436cfdf3e6eefc2.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/856a4fae3e3e4f47a87b16d704ce7973"
+      },
+      "description": "Created as a commissioned project for a studio producing Minecraft mod content for YouTube.",
+      "faceCount": 5052,
+      "createdAt": "2026-02-04T12:47:46.374670",
+      "vertexCount": 3368,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/85da5fd3e8fa4719a583ccfb8c03ea4e",
+      "uid": "85da5fd3e8fa4719a583ccfb8c03ea4e",
+      "name": "e5_Blaster",
+      "staffpickedAt": null,
+      "viewCount": 21,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-85da5fd3e8fa4719a583ccfb8c03ea4e",
+      "embedUrl": "https://sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-01-27T22:01:37.558862",
+      "tags": [
+        {
+          "name": "republiccommando",
+          "slug": "republiccommando",
+          "uri": "https://api.sketchfab.com/v3/tags/republiccommando"
+        },
+        {
+          "name": "omniverse",
+          "slug": "omniverse",
+          "uri": "https://api.sketchfab.com/v3/tags/omniverse"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "noai",
+          "slug": "noai",
+          "uri": "https://api.sketchfab.com/v3/tags/noai"
+        },
+        {
+          "name": "noaiused",
+          "slug": "noaiused",
+          "uri": "https://api.sketchfab.com/v3/tags/noaiused"
+        },
+        {
+          "name": "rtxremix",
+          "slug": "rtxremix",
+          "uri": "https://api.sketchfab.com/v3/tags/rtxremix"
+        }
+      ],
+      "categories": [
+        {
+          "name": "art-abstract"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "e0f299a57659448d9e9c9619deed960b",
+            "size": 328032,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/thumbnails/e0f787217e0d4e0fa8f4e3e722d34ef8/bd23948a954b4e18ad80b8a094eb36b2.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "e562919843c14d92a16a06c082b5ccac",
+            "size": 36100,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/thumbnails/e0f787217e0d4e0fa8f4e3e722d34ef8/2146cfa8cf844224967f972b1af311cf.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "e96941ca96cb4f8ca3d0ec7cb91099b8",
+            "size": 19926,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/thumbnails/e0f787217e0d4e0fa8f4e3e722d34ef8/b8587f9d8fae4cd088de0814d0606db1.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "1bfe6387899d48418a2c89f9c2931e12",
+            "size": 4261,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/thumbnails/e0f787217e0d4e0fa8f4e3e722d34ef8/4b651e3afdc44089a3aa76385b34a514.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "f0584d427feb44f68faa8f588146ceae",
+            "size": 1147,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/85da5fd3e8fa4719a583ccfb8c03ea4e/thumbnails/e0f787217e0d4e0fa8f4e3e722d34ef8/e5a259d36f67450b8b040b624b5afb5f.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "38ae348e6aa84051afe6e0af5b8a3408",
+        "username": "khaotik-syn3rgy",
+        "displayName": "khaotik-syn3rgy",
+        "profileUrl": "https://sketchfab.com/khaotik-syn3rgy",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/07583dc50b8c46a2b46d6587ccc9e11e",
+          "images": [
+            {
+              "size": 1076,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/07583dc50b8c46a2b46d6587ccc9e11e/43b3013e62f84b3088f2fa6d6d235278.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1486,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/07583dc50b8c46a2b46d6587ccc9e11e/70134d2947f146c6a00e958882394917.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3175,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/07583dc50b8c46a2b46d6587ccc9e11e/9ad96e8db3644e94b34c6e9efc8c09e1.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3643,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/07583dc50b8c46a2b46d6587ccc9e11e/d908a14d71564fcda383c7fa1ca4cecf.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/38ae348e6aa84051afe6e0af5b8a3408"
+      },
+      "description": "This is the E5 Blaster rifle used by the B1 Battle Droids in star wars. This asset is used in the Republic Commando RTX Remix mod.\n\nModel was made in blender for the Low-polym (and some high poly) and the Majority of the High-Poly was created in Plasticity.\nThe model contains 4 Texture maps at 4096X4096 dimensions (Albedo, Roughness, Metalness, Normal).\n~24.3K Tris.\n\nThe RTX Remix mod can be viewed here. Stay put for updates where this model will be added to the mod as well as some others by me soon.\nhttps://www.moddb.com/mods/star-wars-republic-commando-rtx1",
+      "faceCount": 24330,
+      "createdAt": "2026-01-27T21:28:43.028668",
+      "vertexCount": 12466,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/0e5c86f3ebf94b90b0f95b6b31007e29",
+      "uid": "0e5c86f3ebf94b90b0f95b6b31007e29",
+      "name": "Stylized 3D Printable Industrial Chemical Plant",
+      "staffpickedAt": null,
+      "viewCount": 177,
+      "likeCount": 5,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-0e5c86f3ebf94b90b0f95b6b31007e29",
+      "embedUrl": "https://sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-01-13T17:55:22.422705",
+      "tags": [
+        {
+          "name": "plant",
+          "slug": "plant",
+          "uri": "https://api.sketchfab.com/v3/tags/plant"
+        },
+        {
+          "name": "base",
+          "slug": "base",
+          "uri": "https://api.sketchfab.com/v3/tags/base"
+        },
+        {
+          "name": "pipe",
+          "slug": "pipe",
+          "uri": "https://api.sketchfab.com/v3/tags/pipe"
+        },
+        {
+          "name": "rpg",
+          "slug": "rpg",
+          "uri": "https://api.sketchfab.com/v3/tags/rpg"
+        },
+        {
+          "name": "terrain",
+          "slug": "terrain",
+          "uri": "https://api.sketchfab.com/v3/tags/terrain"
+        },
+        {
+          "name": "nuclear",
+          "slug": "nuclear",
+          "uri": "https://api.sketchfab.com/v3/tags/nuclear"
+        },
+        {
+          "name": "tabletop",
+          "slug": "tabletop",
+          "uri": "https://api.sketchfab.com/v3/tags/tabletop"
+        },
+        {
+          "name": "scenery",
+          "slug": "scenery",
+          "uri": "https://api.sketchfab.com/v3/tags/scenery"
+        },
+        {
+          "name": "post-apocalyptic",
+          "slug": "post-apocalyptic",
+          "uri": "https://api.sketchfab.com/v3/tags/post-apocalyptic"
+        },
+        {
+          "name": "urban",
+          "slug": "urban",
+          "uri": "https://api.sketchfab.com/v3/tags/urban"
+        },
+        {
+          "name": "silo",
+          "slug": "silo",
+          "uri": "https://api.sketchfab.com/v3/tags/silo"
+        },
+        {
+          "name": "laboratory",
+          "slug": "laboratory",
+          "uri": "https://api.sketchfab.com/v3/tags/laboratory"
+        },
+        {
+          "name": "miniature",
+          "slug": "miniature",
+          "uri": "https://api.sketchfab.com/v3/tags/miniature"
+        },
+        {
+          "name": "cyberpunk",
+          "slug": "cyberpunk",
+          "uri": "https://api.sketchfab.com/v3/tags/cyberpunk"
+        },
+        {
+          "name": "wasteland",
+          "slug": "wasteland",
+          "uri": "https://api.sketchfab.com/v3/tags/wasteland"
+        },
+        {
+          "name": "waste",
+          "slug": "waste",
+          "uri": "https://api.sketchfab.com/v3/tags/waste"
+        },
+        {
+          "name": "dnd",
+          "slug": "dnd",
+          "uri": "https://api.sketchfab.com/v3/tags/dnd"
+        },
+        {
+          "name": "diorama",
+          "slug": "diorama",
+          "uri": "https://api.sketchfab.com/v3/tags/diorama"
+        },
+        {
+          "name": "toxic",
+          "slug": "toxic",
+          "uri": "https://api.sketchfab.com/v3/tags/toxic"
+        },
+        {
+          "name": "vat",
+          "slug": "vat",
+          "uri": "https://api.sketchfab.com/v3/tags/vat"
+        },
+        {
+          "name": "game-ready",
+          "slug": "game-ready",
+          "uri": "https://api.sketchfab.com/v3/tags/game-ready"
+        },
+        {
+          "name": "refinery",
+          "slug": "refinery",
+          "uri": "https://api.sketchfab.com/v3/tags/refinery"
+        },
+        {
+          "name": "3d-printing",
+          "slug": "3d-printing",
+          "uri": "https://api.sketchfab.com/v3/tags/3d-printing"
+        },
+        {
+          "name": "wargaming",
+          "slug": "wargaming",
+          "uri": "https://api.sketchfab.com/v3/tags/wargaming"
+        },
+        {
+          "name": "smokestack",
+          "slug": "smokestack",
+          "uri": "https://api.sketchfab.com/v3/tags/smokestack"
+        },
+        {
+          "name": "facility",
+          "slug": "facility",
+          "uri": "https://api.sketchfab.com/v3/tags/facility"
+        },
+        {
+          "name": "architecture",
+          "slug": "architecture",
+          "uri": "https://api.sketchfab.com/v3/tags/architecture"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        },
+        {
+          "name": "city",
+          "slug": "city",
+          "uri": "https://api.sketchfab.com/v3/tags/city"
+        },
+        {
+          "name": "structure",
+          "slug": "structure",
+          "uri": "https://api.sketchfab.com/v3/tags/structure"
+        },
+        {
+          "name": "stylized",
+          "slug": "stylized",
+          "uri": "https://api.sketchfab.com/v3/tags/stylized"
+        },
+        {
+          "name": "building",
+          "slug": "building",
+          "uri": "https://api.sketchfab.com/v3/tags/building"
+        },
+        {
+          "name": "factory",
+          "slug": "factory",
+          "uri": "https://api.sketchfab.com/v3/tags/factory"
+        },
+        {
+          "name": "fallout",
+          "slug": "fallout",
+          "uri": "https://api.sketchfab.com/v3/tags/fallout"
+        },
+        {
+          "name": "industrial",
+          "slug": "industrial",
+          "uri": "https://api.sketchfab.com/v3/tags/industrial"
+        },
+        {
+          "name": "environment",
+          "slug": "environment",
+          "uri": "https://api.sketchfab.com/v3/tags/environment"
+        },
+        {
+          "name": "power-station",
+          "slug": "power-station",
+          "uri": "https://api.sketchfab.com/v3/tags/power-station"
+        },
+        {
+          "name": "chemical-plant",
+          "slug": "chemical-plant",
+          "uri": "https://api.sketchfab.com/v3/tags/chemical-plant"
+        },
+        {
+          "name": "resin-print",
+          "slug": "resin-print",
+          "uri": "https://api.sketchfab.com/v3/tags/resin-print"
+        },
+        {
+          "name": "tabletop-games",
+          "slug": "tabletop-games",
+          "uri": "https://api.sketchfab.com/v3/tags/tabletop-games"
+        },
+        {
+          "name": "wargame-terrain",
+          "slug": "wargame-terrain",
+          "uri": "https://api.sketchfab.com/v3/tags/wargame-terrain"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "art-abstract"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "de13253929ce4da0947f8b75fad401da",
+            "size": 65922,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/cb36ce7fefe8495ba0fad6e95c5a3527.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "d2bd4ac7c0744e9eb74eae4f8ef1ad56",
+            "size": 22847,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/ac0149e04cb44d028b4f4bc1a39d31e4.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "168009089444440cb577e1361b6f30df",
+            "size": 13637,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/0c3f1f2a0cd941a8b5f214af763a9032.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "501484c9fab641d5a3b6cdb8612ef5da",
+            "size": 3368,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/eefbfac1d4be4afcb67137ffee579def.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "4052c7bf55bd4745827737d5c7f2fa7a",
+            "size": 983,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/5ab0ea77a5174d559fc34f105a7fb2e9.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "f83459ef68554352bd36c5026bf4f3d7",
+        "username": "INGSOC1984",
+        "displayName": "INGSOC1984",
+        "profileUrl": "https://sketchfab.com/INGSOC1984",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/8efa415087b84b2da0458e1b2eac17a0",
+          "images": [
+            {
+              "size": 2585,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/8219d3d4518c4463a0038b2c9a21e6d2.png",
+              "height": 32
+            },
+            {
+              "size": 4400,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/caf778bf252f4ca4b596350e80b8fee6.png",
+              "height": 48
+            },
+            {
+              "size": 9107,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/604a713e06e34352ac69890346583b66.png",
+              "height": 90
+            },
+            {
+              "size": 10052,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/995b0735370947549339ccd8850e21ee.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/f83459ef68554352bd36c5026bf4f3d7"
+      },
+      "description": "Description: A versatile, low-poly stylized Chemical Plant model featuring industrial smokestacks, reinforced silos, and glowing green vats. This asset is specifically designed for multi-purpose use, ranging from 3D printing for tabletop gaming to digital environment dioramas.\n\nThe structure is built on a solid foundation base, making it ideal for physical printing without needing complex supports for the main body. Its distinct silhouette and \"toxic\" green accents make it a perfect fit for sci-fi, post-apocalyptic, or modern industrial settings.\n\nOptimized for 3D Printing: Sturdy geometry suitable for resin or FDM printing.\n\nDesign: Stylized industrial aesthetic with glowing windows and chemical containers.\n\nApplications: Perfect for Warhammer 40k terrain, Star Wars Legion, D&D dioramas, or game engine background assets.\n\nFeatures: Multiple levels, rooftop pipes, and a integrated baseplate for easy placement in scenes.",
+      "faceCount": 17954,
+      "createdAt": "2026-01-13T17:50:19.822496",
+      "vertexCount": 8938,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 1,
+          "size": 1755896,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 17954,
+          "vertexCount": 14205
+        },
+        "gltf": {
+          "textureCount": 1,
+          "size": 1538109,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 17954,
+          "vertexCount": 14205
+        },
+        "source": {
+          "textureCount": null,
+          "size": 2731880,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 676961,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/34483f9576d34148be1038c238a8ed55",
+      "uid": "34483f9576d34148be1038c238a8ed55",
+      "name": "Clone Wars Christophsis Debris",
+      "staffpickedAt": null,
+      "viewCount": 9,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-34483f9576d34148be1038c238a8ed55",
+      "embedUrl": "https://sketchfab.com/models/34483f9576d34148be1038c238a8ed55/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-01-12T13:05:10.538805",
+      "tags": [
+        {
+          "name": "wars",
+          "slug": "wars",
+          "uri": "https://api.sketchfab.com/v3/tags/wars"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "low",
+          "slug": "low",
+          "uri": "https://api.sketchfab.com/v3/tags/low"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "419862dfaa5e476ca186c558fea323c8",
+            "size": 144004,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/34483f9576d34148be1038c238a8ed55/thumbnails/04f273a76546457fb41f10da1fc98aa1/07f4143a607148b488bbf886be0c6f5a.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "ebe1a8323f444d5182c2e01e759f6221",
+            "size": 45458,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/34483f9576d34148be1038c238a8ed55/thumbnails/04f273a76546457fb41f10da1fc98aa1/616c9c18c93c440696fdc3fb03c42684.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "89cebecb420442e4abfb92fc29ee0b21",
+            "size": 26059,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/34483f9576d34148be1038c238a8ed55/thumbnails/04f273a76546457fb41f10da1fc98aa1/5d3fb04d17404481bc1a6babbb5176d4.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "6dc859382127411fab5121fcc36a877a",
+            "size": 5647,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/34483f9576d34148be1038c238a8ed55/thumbnails/04f273a76546457fb41f10da1fc98aa1/c63713c3e1ce4ade9467bb1824550630.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "0f6006c78a984df888e19e6b5f34e66a",
+            "size": 1268,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/34483f9576d34148be1038c238a8ed55/thumbnails/04f273a76546457fb41f10da1fc98aa1/4cd50d2a7e274b848d9991b9a697f917.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "d46b2e9ed2754f7680c19ad4f96bf048",
+        "username": "Mistory09",
+        "displayName": "Mistory09",
+        "profileUrl": "https://sketchfab.com/Mistory09",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/4e740e28506942c7af11ce702802159f",
+          "images": [
+            {
+              "size": 1010,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/94300194f93a456b8f8cc2725525932b.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1473,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/6ff2404ff07047a99717a2321fa4d955.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3954,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7485cfd285bf4bed8a5b4300ef00759b.jpeg",
+              "height": 90
+            },
+            {
+              "size": 4662,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7f8d49f0fd7340159770daa823073eb9.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/d46b2e9ed2754f7680c19ad4f96bf048"
+      },
+      "description": "Clone Wars Christophsis Debris",
+      "faceCount": 190,
+      "createdAt": "2026-01-12T13:01:11.970383",
+      "vertexCount": 128,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/a7a4ef70d758481bbf446e8b592e4d63",
+      "uid": "a7a4ef70d758481bbf446e8b592e4d63",
+      "name": "Clone Wars Shield",
+      "staffpickedAt": null,
+      "viewCount": 105,
+      "likeCount": 3,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-a7a4ef70d758481bbf446e8b592e4d63",
+      "embedUrl": "https://sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-01-12T09:47:12.217405",
+      "tags": [
+        {
+          "name": "wars",
+          "slug": "wars",
+          "uri": "https://api.sketchfab.com/v3/tags/wars"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "low",
+          "slug": "low",
+          "uri": "https://api.sketchfab.com/v3/tags/low"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        },
+        {
+          "name": "shield",
+          "slug": "shield",
+          "uri": "https://api.sketchfab.com/v3/tags/shield"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "30e723cae3ee4cd5af6a9c9a57d12db3",
+            "size": 66424,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/e1b1f083750149d3a03f9cbed0604e61.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "b578ffcd5a2045aea605e740960cefbe",
+            "size": 22285,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/e5ae788fe01444769f1143bb1f03ec74.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "40fe7277c035408da6a5c439357d7e15",
+            "size": 13167,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/d2aa41a1636b43199f763aac87210e5e.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "a6bda41973854addb7489711dacdda0a",
+            "size": 3140,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/271e6e21923848bdb8c0e42a614e24fb.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "0fa18d8a00a14535b11376ece5481702",
+            "size": 988,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/a7a4ef70d758481bbf446e8b592e4d63/thumbnails/98c3f662817b4b6bbadfc74b658c7e6a/eb7974318c48471db82b625a5335e641.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "d46b2e9ed2754f7680c19ad4f96bf048",
+        "username": "Mistory09",
+        "displayName": "Mistory09",
+        "profileUrl": "https://sketchfab.com/Mistory09",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/4e740e28506942c7af11ce702802159f",
+          "images": [
+            {
+              "size": 1010,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/94300194f93a456b8f8cc2725525932b.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1473,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/6ff2404ff07047a99717a2321fa4d955.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3954,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7485cfd285bf4bed8a5b4300ef00759b.jpeg",
+              "height": 90
+            },
+            {
+              "size": 4662,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7f8d49f0fd7340159770daa823073eb9.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/d46b2e9ed2754f7680c19ad4f96bf048"
+      },
+      "description": "Clone Wars Shield",
+      "faceCount": 494,
+      "createdAt": "2026-01-12T09:44:33.404943",
+      "vertexCount": 337,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/67c6d40786eb496b870fa7a4205be2e8",
+      "uid": "67c6d40786eb496b870fa7a4205be2e8",
+      "name": "Clone Wars DC-17",
+      "staffpickedAt": null,
+      "viewCount": 8,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-67c6d40786eb496b870fa7a4205be2e8",
+      "embedUrl": "https://sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-01-11T17:06:20.250622",
+      "tags": [
+        {
+          "name": "blaster",
+          "slug": "blaster",
+          "uri": "https://api.sketchfab.com/v3/tags/blaster"
+        },
+        {
+          "name": "wars",
+          "slug": "wars",
+          "uri": "https://api.sketchfab.com/v3/tags/wars"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "weapon",
+          "slug": "weapon",
+          "uri": "https://api.sketchfab.com/v3/tags/weapon"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "low",
+          "slug": "low",
+          "uri": "https://api.sketchfab.com/v3/tags/low"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "9ce949386c3b4586b646f5c58abf30bf",
+            "size": 81835,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/e999dd676ab64fa3add5a6c57af12aae.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "5f5145ad97344fb39ef83c0e5c60196f",
+            "size": 26832,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/9b131b6a4bc641feb96bf6a17ac92fea.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "c46f2b546c7d4e828604df3a3f4443a2",
+            "size": 15579,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/fef95673c19c4d7aaff61844cdf1964e.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "6892d4c6eb904c7eab009c060f917a71",
+            "size": 3633,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/0e6d92b88f594680b2d3999c92c4890a.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "1db6b58b23d34b7dba3996807063214c",
+            "size": 1105,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/67c6d40786eb496b870fa7a4205be2e8/thumbnails/f079fedbce2344f4a27152c7e85d1302/561b890fec3d4963a5f8030263a2a0c4.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "d46b2e9ed2754f7680c19ad4f96bf048",
+        "username": "Mistory09",
+        "displayName": "Mistory09",
+        "profileUrl": "https://sketchfab.com/Mistory09",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/4e740e28506942c7af11ce702802159f",
+          "images": [
+            {
+              "size": 1010,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/94300194f93a456b8f8cc2725525932b.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1473,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/6ff2404ff07047a99717a2321fa4d955.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3954,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7485cfd285bf4bed8a5b4300ef00759b.jpeg",
+              "height": 90
+            },
+            {
+              "size": 4662,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7f8d49f0fd7340159770daa823073eb9.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/d46b2e9ed2754f7680c19ad4f96bf048"
+      },
+      "description": "Clone Wars DC-17",
+      "faceCount": 1044,
+      "createdAt": "2026-01-11T16:58:02.399320",
+      "vertexCount": 588,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/34b1c6affe9c472096b0470f79b3e02a",
+      "uid": "34b1c6affe9c472096b0470f79b3e02a",
+      "name": "Clone Wars Crate",
+      "staffpickedAt": null,
+      "viewCount": 10,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-34b1c6affe9c472096b0470f79b3e02a",
+      "embedUrl": "https://sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2026-01-11T14:19:25.082749",
+      "tags": [
+        {
+          "name": "crate",
+          "slug": "crate",
+          "uri": "https://api.sketchfab.com/v3/tags/crate"
+        },
+        {
+          "name": "wars",
+          "slug": "wars",
+          "uri": "https://api.sketchfab.com/v3/tags/wars"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "low",
+          "slug": "low",
+          "uri": "https://api.sketchfab.com/v3/tags/low"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "6364f8f1e6984a239416978d0ade3fd9",
+            "size": 87015,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/27bcc20fd662468caa20ff42f83525a0.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "c34d14a5af2a49c8a499f75597200d3a",
+            "size": 24572,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/84d97cc9f29345b3bb98ad583a8c2dc6.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "8fc5571717b946d297d41f3abaadcb73",
+            "size": 13687,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/928e7774098e481fa9cc674c50b39688.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "bcf7fdf73c8645818c3b698f4be26ddf",
+            "size": 3030,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/0007a777c5714bc8b2bbe3f439c23475.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "4b5c2bf929c94e40adca1f6167fc7764",
+            "size": 1007,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/34b1c6affe9c472096b0470f79b3e02a/thumbnails/4c801a46389949818c8e4d5ce8a294a6/65a62e988dd84128b79a7db594eba50f.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "d46b2e9ed2754f7680c19ad4f96bf048",
+        "username": "Mistory09",
+        "displayName": "Mistory09",
+        "profileUrl": "https://sketchfab.com/Mistory09",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/4e740e28506942c7af11ce702802159f",
+          "images": [
+            {
+              "size": 1010,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/94300194f93a456b8f8cc2725525932b.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1473,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/6ff2404ff07047a99717a2321fa4d955.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3954,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7485cfd285bf4bed8a5b4300ef00759b.jpeg",
+              "height": 90
+            },
+            {
+              "size": 4662,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/4e740e28506942c7af11ce702802159f/7f8d49f0fd7340159770daa823073eb9.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/d46b2e9ed2754f7680c19ad4f96bf048"
+      },
+      "description": "Low poly Clone Wars republic crate",
+      "faceCount": 1044,
+      "createdAt": "2026-01-11T14:12:09.421474",
+      "vertexCount": 524,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    }
+  ]
+}

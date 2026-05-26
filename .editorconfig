@@ -1,0 +1,39 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{cs,csproj,sln,props}]
+indent_size = 4
+
+[*.{yaml,yml}]
+indent_size = 2
+
+[*.{json}]
+indent_size = 2
+
+[*.{md}]
+trim_trailing_whitespace = false
+
+[*.{mts,ts,js}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+# FuzzTarget files: suppress xUnit1013 (public methods are fuzzing entry points, not test methods)
+[src/Tests/FuzzTargets/*.cs]
+dotnet_diagnostic.xUnit1013.severity = none
+
+# CA2007: ConfigureAwait enforcement for library code (Pattern #98, task #822)
+# Elevate to warning severity (default is suggestion/none in some SDKs).
+# Library-project PropertyGroup in Directory.Build.props already enables NET analyzers
+# and EnforceCodeStyleInBuild for SDK/Bridge.*/Domains/*; this rule ensures CA2007
+# surfaces as a build-time warning for ConfigureAwait omissions on library await sites.
+[*.cs]
+dotnet_diagnostic.CA2007.severity = warning

@@ -1,0 +1,95 @@
+version: "1.0"
+generated_at_utc: "2026-03-11T00:00:00Z"
+
+policy:
+  decision_goal: "private_prototype_only_default"
+  allow_release_safe_mark:
+    - generic_safe
+  forbid_release_if_ip_status_not:
+    - generic_safe
+  prefer_acquisition_order:
+    - api
+    - direct_download
+    - scrape
+    - browser_automation
+    - manual_copy
+
+source_tiers:
+  - name: sketchfab
+    rank: 1
+    role: primary
+    capabilities:
+      search: true
+      metadata: true
+      api_download: true
+      formats: ["glb", "gltf", "usdz"]
+    risk_default: fan_star_wars_private_only
+    acquisition_mode: api
+  - name: blendswap
+    rank: 2
+    role: secondary
+    capabilities:
+      search: true
+      metadata: true
+      api_download: false
+      formats: ["blend", "fbx", "obj"]
+    risk_default: fan_star_wars_private_only
+    acquisition_mode: scrape
+  - name: moddb
+    rank: 3
+    role: reference
+    capabilities:
+      search: true
+      metadata: true
+      api_download: false
+      formats: ["rar", "zip", "7z"]
+    risk_default: official_game_mod_tool_reference_only
+    acquisition_mode: scrape
+  - name: playwright_fallback
+    rank: 4
+    role: emergency
+    capabilities:
+      search: true
+      metadata: false
+      api_download: false
+      formats: ["unknown"]
+    risk_default: unknown_provenance
+    acquisition_mode: browser_automation
+
+risk_rules:
+  generic_safe:
+    legal_profile: "generic_safe"
+    release_allowed: true
+    note: "non-franchise or clearly original work; standard IP policy still applies."
+  fan_star_wars_private_only:
+    legal_profile: "fan_work"
+    release_allowed: false
+    note: "fan re-creation or IP-aligned reference; allow private experiments with explicit flags."
+  official_game_mod_tool_reference_only:
+    legal_profile: "reference_only"
+    release_allowed: false
+    note: "use only for legacy toolchain reference unless legal clearance is explicitly added."
+  unknown_provenance:
+    legal_profile: "highly_uncertain"
+    release_allowed: false
+    note: "blocked until provenance is resolved and license captured."
+  high_risk_do_not_ship:
+    legal_profile: "blocked"
+    release_allowed: false
+    note: "never promote beyond local prototype."
+
+scoring:
+  weights:
+    style_fit: 0.30
+    faction_fit: 0.20
+    automation_ease: 0.15
+    topology_quality: 0.10
+    low_poly_fit: 0.10
+    provenance_confidence: 0.10
+    ip_risk_penalty: 0.15
+    cleanup_cost: 0.10
+  status_penalty:
+    fan_star_wars_private_only: 0.40
+    official_game_mod_tool_reference_only: 0.70
+    unknown_provenance: 0.95
+    high_risk_do_not_ship: 1.20

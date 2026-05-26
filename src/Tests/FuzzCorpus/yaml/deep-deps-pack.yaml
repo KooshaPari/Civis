@@ -1,0 +1,67 @@
+id: deep-pack-0
+name: Deep Dependency Chain Root
+version: 1.0.0
+type: content
+depends_on:
+  - pack-1@1.0.0
+---
+id: deep-pack-1
+name: Dep Level 1
+version: 1.0.0
+type: content
+depends_on:
+  - pack-2@1.0.0
+---
+id: deep-pack-2
+name: Dep Level 2
+version: 1.0.0
+type: content
+depends_on:
+  - pack-3@1.0.0
+---
+id: deep-pack-3
+name: Dep Level 3
+version: 1.0.0
+type: content
+depends_on:
+  - pack-4@1.0.0
+---
+id: deep-pack-4
+name: Dep Level 4
+version: 1.0.0
+type: content
+depends_on:
+  - pack-5@1.0.0
+---
+id: deep-pack-5
+name: Dep Level 5
+version: 1.0.0
+type: content
+depends_on:
+  - pack-6@1.0.0
+---
+id: deep-pack-6
+name: Dep Level 6
+version: 1.0.0
+type: content
+depends_on:
+  - pack-7@1.0.0
+---
+id: deep-pack-7
+name: Dep Level 7
+version: 1.0.0
+type: content
+depends_on:
+  - pack-8@1.0.0
+---
+id: deep-pack-8
+name: Dep Level 8
+version: 1.0.0
+type: content
+depends_on:
+  - pack-9@1.0.0
+---
+id: deep-pack-9
+name: Dep Level 9
+version: 1.0.0
+type: content

@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DINOForge.Installer.ViewModels"
+             x:Class="DINOForge.Installer.Views.GamePathPage"
+             x:DataType="vm:GamePathPageViewModel"
+             Background="#1a1a2e">
+
+    <StackPanel Margin="40,40,40,20" Spacing="24">
+
+        <!-- Title -->
+        <StackPanel Spacing="4">
+            <TextBlock Text="Game Directory"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+            <TextBlock Text="Select your Diplomacy is Not an Option installation folder."
+                       Foreground="#8888aa"
+                       FontSize="13"/>
+        </StackPanel>
+
+        <!-- Path input row -->
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                       Text="Game Path"
+                       Foreground="#aaaacc"
+                       FontSize="12"
+                       Margin="0,0,0,4"/>
+            <TextBox Grid.Row="1" Grid.Column="0"
+                     Text="{Binding GamePath}"
+                     Watermark="e.g. C:\Program Files (x86)\Steam\steamapps\common\Diplomacy is Not an Option"
+                     Background="#12122a"
+                     Foreground="White"
+                     BorderBrush="#3a3a6a"
+                     Padding="10,8"
+                     FontFamily="Consolas,Courier New,monospace"
+                     FontSize="12"
+                     Margin="0,0,8,0"/>
+            <Button Grid.Row="1" Grid.Column="1"
+                    Content="Browse..."
+                    Command="{Binding BrowseCommand}"
+                    Background="#2d2d44"
+                    Foreground="#aaaacc"
+                    Padding="14,8"/>
+        </Grid>
+
+        <!-- Auto-detect badge -->
+        <TextBlock IsVisible="{Binding IsAutoDetected}"
+                   Text="Auto-detected via Steam"
+                   Foreground="#4a90d9"
+                   FontSize="12"/>
+
+        <!-- Validation grid -->
+        <Border Background="#12122a"
+                BorderBrush="#2a2a4a"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="16">
+            <StackPanel Spacing="10">
+
+                <TextBlock Text="Component Status"
+                           Foreground="#aaaacc"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Margin="0,0,0,4"/>
+
+                <!-- Game executable -->
+                <Grid ColumnDefinitions="24,*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding GameExeOk, Converter={x:Static vm:StatusIconConverter.Instance}}"
+                               FontSize="16"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1"
+                               Text="Game Executable"
+                               Foreground="#ccccee"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding GameExeStatus}"
+                               Foreground="#888899"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- BepInEx -->
+                <Grid ColumnDefinitions="24,*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding BepInExOk, Converter={x:Static vm:StatusIconConverter.Instance}}"
+                               FontSize="16"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1"
+                               Text="BepInEx"
+                               Foreground="#ccccee"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding BepInExStatus}"
+                               Foreground="#888899"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                </Grid>
+
+            </StackPanel>
+        </Border>
+
+        <!-- Warning if path invalid -->
+        <TextBlock IsVisible="{Binding !IsPathValid}"
+                   Text="Please enter or browse to a valid game directory."
+                   Foreground="#cc6644"
+                   FontSize="12"/>
+
+    </StackPanel>
+</UserControl>

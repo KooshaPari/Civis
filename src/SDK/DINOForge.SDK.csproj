@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DINOForge.SDK</AssemblyName>
+    <RootNamespace>DINOForge.SDK</RootNamespace>
+    <Description>DINOForge mod platform SDK for Diplomacy is Not an Option. Provides registries, content models, pack loading, and schema validation for mod authors.</Description>
+    <PackageId>DINOForge.SDK</PackageId>
+    <Authors>KooshaPari</Authors>
+    <PackageTags>dinoforge;gamemod;diplomacy-is-not-an-option;bepinex;unity-ecs</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1701;1702</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DINOForge.Tests" />
+    <!-- Phase 2 of #193 SDK split — Runtime adapters construct internal handle types
+         (NativeButtonHandle / NativeCanvasHandle / NativeElementHandle / Extended*Handle)
+         and inspect their Inner refs. Documented in the adapter source files. -->
+    <InternalsVisibleTo Include="DINOForge.Runtime" />
+  </ItemGroup>
+
+  <!-- Exclude duplicate Loading folder -->
+  <ItemGroup>
+    <Compile Remove="Loading\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" Condition="Exists('README.md')" />
+  </ItemGroup>
+
+  <!-- Roslyn analyzer for Pattern #96 (LogError stack trace) -->
+  <ItemGroup>
+    <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Wrapped dependencies (ADR-008: wrap, don't handroll) -->
+  <!-- NOTE: AssetsTools.NET has been moved to Runtime where it is actually used (AssetService is now in Runtime.Assets) -->
+  <ItemGroup>
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+    <PackageReference Include="QuikGraph" Version="2.5.0" />
+    <PackageReference Include="YamlDotNet" Version="16.*" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+    <PackageReference Include="NJsonSchema" Version="10.*" />
+    <PackageReference Include="System.Text.Json" Version="10.*" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

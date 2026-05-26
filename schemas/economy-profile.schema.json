@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/economy-profile.schema.json",
+  "title": "DINOForge Economy Profile Definition",
+  "description": "Schema for DINOForge economy profile files that define per-faction economic parameters including starting resources, production bonuses, trade modifiers, and worker efficiency.",
+  "type": "object",
+  "required": ["id", "display_name", "starting_resources"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for this economy profile."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name for this economy profile."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of this economy profile's play style."
+    },
+    "starting_resources": {
+      "type": "object",
+      "description": "Initial resource stockpiles when a faction begins with this profile.",
+      "properties": {
+        "food": { "type": "integer", "minimum": 0, "default": 0 },
+        "wood": { "type": "integer", "minimum": 0, "default": 0 },
+        "stone": { "type": "integer", "minimum": 0, "default": 0 },
+        "iron": { "type": "integer", "minimum": 0, "default": 0 },
+        "gold": { "type": "integer", "minimum": 0, "default": 0 }
+      },
+      "additionalProperties": false
+    },
+    "production_multipliers": {
+      "type": "object",
+      "description": "Per-resource production rate multipliers. Default 1.0 for unlisted resources.",
+      "properties": {
+        "food": { "type": "number", "minimum": 0 },
+        "wood": { "type": "number", "minimum": 0 },
+        "stone": { "type": "number", "minimum": 0 },
+        "iron": { "type": "number", "minimum": 0 },
+        "gold": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "consumption_multipliers": {
+      "type": "object",
+      "description": "Per-resource consumption rate multipliers. Values < 1.0 reduce consumption.",
+      "properties": {
+        "food": { "type": "number", "minimum": 0 },
+        "wood": { "type": "number", "minimum": 0 },
+        "stone": { "type": "number", "minimum": 0 },
+        "iron": { "type": "number", "minimum": 0 },
+        "gold": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "trade_rate_modifier": {
+      "type": "number",
+      "minimum": 0.01,
+      "default": 1.0,
+      "description": "Global trade exchange rate modifier. < 1.0 gives better rates; > 1.0 gives worse rates."
+    },
+    "trade_cooldown_modifier": {
+      "type": "number",
+      "minimum": 0.01,
+      "default": 1.0,
+      "description": "Trade cooldown duration modifier. < 1.0 reduces cooldown between trades."
+    },
+    "storage_multiplier": {
+      "type": "number",
+      "minimum": 0.01,
+      "default": 1.0,
+      "description": "Storage capacity multiplier for all resource types."
+    },
+    "building_cost_modifier": {
+      "type": "number",
+      "minimum": 0.01,
+      "default": 1.0,
+      "description": "Construction cost multiplier for economy buildings."
+    },
+    "worker_efficiency": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1.0,
+      "description": "Worker productivity multiplier in production buildings."
+    }
+  },
+  "additionalProperties": false
+}

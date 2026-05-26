@@ -1,0 +1,48 @@
+{
+  "asset_id": "cis_tech_union_lab_sketchfab_001",
+  "canonical_name": "Techno Union Lab",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "",
+  "external_id": "pending",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_tech_union_lab_sketchfab_001\\normalized.glb",
+  "sha256": null,
+  "polycount_estimate": 45000,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "building",
+  "subtype": "research",
+  "technical_status": "planned",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis",
+    "research",
+    "building",
+    "tech",
+    "techno-union"
+  ],
+  "notes": [
+    "Pending Sketchfab sourcing and verification",
+    "Target polycount: 45000 (research building)",
+    "R&D facility for advanced droid and weapon upgrades",
+    "Needs verification on actual Sketchfab model ID"
+  ],
+  "references": null,
+  "validation_report": null,
+  "needs_verification": true,
+  "sketchfab_search_terms": [
+    "techno union laboratory",
+    "droid research facility",
+    "advanced weapons lab"
+  ]
+}

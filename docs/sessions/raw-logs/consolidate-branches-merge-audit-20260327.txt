@@ -1,0 +1,156 @@
+================================================================================
+  CONSOLIDATE-BRANCHES MERGE AUDIT (origin/merge/consolidate-branches vs main)
+================================================================================
+
+CURRENT STATE:
+  - consolidate-branches HEAD: 4e7d8e3 fix(ci): add ordered build to CodeQL
+  - main HEAD:                bec0c8a feat(dev): extract watch-reload.ps1 and test-e2e.ps1 from stash
+  - Common ancestor:          4e7d8e3 (CONSOLIDATE-BRANCHES HEAD = MERGE BASE)
+  - Commits ahead on main:    79 unique commits
+
+================================================================================
+KEY FINDING: THE MERGE ALREADY HAPPENED
+================================================================================
+
+The consolidate-branches branch WAS MERGED into main via commit:
+  27d0b08 Merge branch 'merge/consolidate-branches' into main (resolve CHANGELOG conflict - keep HEAD)
+
+All commits from consolidate-branches are now IN main. The consolidate-branches
+branch is effectively OBSOLETE—it is 79 commits behind main.
+
+================================================================================
+WHAT WAS IN CONSOLIDATE-BRANCHES (20 commits total)
+================================================================================
+
+Core features merged:
+  a4136eb feat(cli): add --format json output to all CLI commands (#92)
+  c120931 feat(runtime): capture proof-of-features screenshots; fix BitBlt screen capture
+  34b3088 feat: complete bare-cua integration, hidden desktop prototype, session docs
+  f094a46 feat(mcp): wire bare-cua-native.exe into GameCaptureHelper as primary screenshot path
+
+CI/Build chain fixes (13 commits):
+  4e7d8e3 fix(ci): add ordered build to CodeQL                 [CURRENT HEAD]
+  aefb91f fix(ci): remove CodeQL config, use NoRuntime solution directly
+  bd46533 fix(ci): let CodeQL handle build automatically
+  8b857e1 fix(ci): fix CodeQL build order
+  ad18043 fix(ci): add restore step to CodeQL workflow
+  9c6a56e fix(ci): fix CodeQL action version
+  c5be30c fix(ci): add CodeQL workflow using NoRuntime solution
+  4368497 fix(ci): update CodeQL config to explicitly include only non-Runtime paths
+  c2f38e0 fix(ci): add CodeQL config to exclude Runtime from analysis
+  b3622bf fix(ci): exclude Tests project (depends on Runtime)
+  05defe5 fix(ci): skip unit tests in CI (require Unity)
+  4555998 fix(ci): use NoRuntime solution to skip Unity-dependent builds
+  3fc2a22 fix(ci): add GameInstalled=false for Runtime builds in CI
+
+Merge resolution:
+  a00bf70 fix: resolve merge conflict in CLAUDE.md (keep 17 tools, keep /game-test-task)
+  87703f3 docs(changelog): add merge consolidation entry
+
+Logging fix:
+  9528cdb fix(mcp): redirect logs to stderr so stdout is clean for JSON-RPC
+
+================================================================================
+WHAT CAME AFTER IN MAIN (79 commits, now unreachable from consolidate-branches)
+================================================================================
+
+CRITICAL FIXES (mod functionality restored):
+  e3edb12 fix(runtime): restore mod functionality — IncludePrefab + background thread polling
+  ccd12d4 fix(ui): resolve Mods button and F9/F10 toggle regressions
+  a5e6a85 fix(runtime-ui): populate F9/F10 panels and wire contextual mod menu host
+
+MAJOR FEATURES:
+  Phase 7 visual_asset completion (1222/1222 tests):
+    7f18c3d feat(assets): complete Phase 7 visual_asset coverage — 1222/1222 tests, 0 skipped
+
+  Prove-features v2 (Remotion + VLM validation):
+    38c327c feat(prove-features): implement SPEC-006 video pipeline (edge-tts + gdigrab + ffmpeg annotations)
+    b5d0e44 feat(video): prove-features v2 pipeline — Remotion + edge-tts + VLM validation
+    0944be4 feat(prove-features): complete v2 pipeline — Remotion renders + evidence bundle 20260327_213851
+
+  MCP HTTP/SSE transport:
+    8ac0bf7 feat(mcp): HTTP/SSE transport mode + /hmr HMR endpoint + start-mcp.ps1 script
+    70b95c1 feat(mcp): add /health endpoint + Windows Task Scheduler auto-start service + Claude Code hooks
+    9ed2dec feat(harness): add cross-platform MCP service manager
+    f758166 feat(harness): make MCP startup service-friendly and auto-start via CC hooks
+
+  CLI --format json output:
+    8638adf feat(cli): add --format json output + wire UI automation commands
+    587cc26 feat(cli): add --format json to ui-expect command (#91)
+
+  E2E + VLM judge tests:
+    6bdaf31 feat(tests): add complete E2E + VLM judge test suite for game automation
+
+  Hidden desktop prototype:
+    afaa70d feat(mcp): add hidden=True desktop launch via Win32 CreateDesktop to game_launch
+
+ASSET SWAP & BRIDGE FIXES:
+  541e50b fix(asset-swap): extract mesh from prefab bundles + CodeRabbit fixes (#86)
+  fc09650 fix(runtime): extract mesh from prefab bundles in AssetSwapSystem
+  39c7e1e fix(runtime): debounce repeated asset swap failure logs to reduce noise
+  37609b8 fix(runtime): HMR watcher must invoke reload directly from background thread
+  bddbe1d fix(runtime): reduce asset swap failure spam, improve HMR watcher thread handling
+
+TEST HARNESS FIXES:
+  271f41d fix(tests): restore net8.0 TFM and exclude FlaUI/Runtime-dependent tests — 1222 tests passing
+  47cfb28 fix(tests): add missing sw-cis-* addressables catalog keys for 4 CIS units
+
+FUZZING (M10):
+  8af3f2c test(fuzzing): M10 — FsCheck expansion + SharpFuzz targets + corpus + CI
+
+RELEASE ARTIFACTS:
+  d8eb7cc feat(release): companion release artifact + irm|iex + curl|bash install scripts
+  ce1ef19 feat(release): add workflow_dispatch for retroactive artifact builds
+
+================================================================================
+CONFLICT ANALYSIS
+================================================================================
+
+Result: NO CONFLICTS
+  (git merge-tree analysis returned 0 conflict markers)
+
+Reason: consolidate-branches is a strict ancestor of main. All its changes
+have been incorporated. The branch is "clean" but obsolete.
+
+================================================================================
+FILE IMPACT SUMMARY
+================================================================================
+
+Total files affected across the 79-commit delta:
+  202 files changed, 7299 insertions(+), 1301 deletions(-)
+
+Critical modules modified:
+  src/Runtime/          (Bridge, AssetSwapSystem, KeyInputSystem, UI, Plugin.cs)
+  src/SDK/              (multiple packages.lock.json updates)
+  src/Tests/            (E2E Python tests, fuzzing targets, asset swap tests)
+  src/Tools/            (MCP server, PackCompiler, DumpTools, DinoforgeMcp)
+  schemas/              (pack schemas)
+  scripts/              (watch-reload.ps1, test-e2e.ps1)
+
+================================================================================
+RECOMMENDATION: DO NOT MERGE
+================================================================================
+
+ACTION: consolidate-branches is already merged into main.
+
+CONSEQUENCE OF ATTEMPTING MERGE:
+  - A forward-merge would create a no-op commit (all changes already present)
+  - A reverse-merge would revert 79 critical commits (BAD)
+  - A rebase would be pointless
+
+NEXT STEPS:
+  1. Do nothing — main has all consolidate-branches work + 79 improvements
+  2. Delete the consolidate-branches remote branch (cleanup)
+  3. Continue development on main or feature branches from main HEAD
+
+BRANCH HEALTH:
+  consolidate-branches: OBSOLETE, 79 commits behind
+  main:                 UP-TO-DATE, contains all consolidate-branches work
+
+COMMIT LINEAGE:
+  consolidate-branches @ 4e7d8e3 (fix(ci): add ordered build to CodeQL)
+                       ↓ [merged as commit 27d0b08]
+  main @ bec0c8a       ← HEAD (feat(dev): extract watch-reload.ps1)
+        with 79 new commits since the merge commit
+
+================================================================================

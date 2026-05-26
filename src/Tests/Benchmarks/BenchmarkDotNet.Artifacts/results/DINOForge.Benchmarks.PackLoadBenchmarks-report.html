@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>DINOForge.Benchmarks.PackLoadBenchmarks-20260518-064455</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.28020.2075)
+Unknown processor
+.NET SDK 11.0.100-preview.2.26159.112
+  [Host]     : .NET 8.0.25 (8.0.2526.11203), X64 RyuJIT AVX2
+  Job-OPIYDZ : .NET 8.0.25 (8.0.2526.11203), X64 RyuJIT AVX2
+  ShortRun   : .NET 8.0.25 (8.0.2526.11203), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>Method                    </th><th>Job </th><th>IterationCount</th><th>LaunchCount</th><th>Mean  </th><th>Error  </th><th>StdDev</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>PackLoad_FullCycle</td><td>Job-OPIYDZ</td><td>5</td><td>Default</td><td>38.14 &mu;s</td><td>7.043 &mu;s</td><td>1.090 &mu;s</td><td>1</td><td>1.6479</td><td>0.0610</td><td>27.7 KB</td>
+</tr><tr><td>PackYaml_Parse_SinglePack</td><td>ShortRun</td><td>3</td><td>1</td><td>39.42 &mu;s</td><td>21.573 &mu;s</td><td>1.183 &mu;s</td><td>2</td><td>1.4648</td><td>-</td><td>27.7 KB</td>
+</tr><tr><td>PackYaml_Parse_SinglePack</td><td>Job-OPIYDZ</td><td>5</td><td>Default</td><td>39.89 &mu;s</td><td>2.804 &mu;s</td><td>0.728 &mu;s</td><td>2</td><td>1.4648</td><td>-</td><td>27.7 KB</td>
+</tr><tr><td>PackLoad_FullCycle</td><td>ShortRun</td><td>3</td><td>1</td><td>44.77 &mu;s</td><td>70.634 &mu;s</td><td>3.872 &mu;s</td><td>2</td><td>1.4648</td><td>-</td><td>27.7 KB</td>
+</tr><tr><td>PackManifest_Validate_BulkPasses</td><td>Job-OPIYDZ</td><td>5</td><td>Default</td><td>42,715.52 &mu;s</td><td>8,122.755 &mu;s</td><td>2,109.454 &mu;s</td><td>3</td><td>1500.0000</td><td>-</td><td>27699.16 KB</td>
+</tr><tr><td>PackManifest_Validate_BulkPasses</td><td>ShortRun</td><td>3</td><td>1</td><td>46,544.28 &mu;s</td><td>37,190.943 &mu;s</td><td>2,038.561 &mu;s</td><td>4</td><td>1500.0000</td><td>-</td><td>27699.16 KB</td>
+</tr></tbody></table>
+</body>
+</html>

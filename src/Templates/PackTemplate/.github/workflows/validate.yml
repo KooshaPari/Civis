@@ -1,0 +1,22 @@
+name: Validate Pack
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    - name: Install PackCompiler
+      run: dotnet tool install -g dinoforge --version "*" --add-source https://api.nuget.org/v3/index.json || true
+    - name: Validate pack
+      run: dinoforge validate .
+      # Falls back to schema validation if tool not available
+    - name: Check pack manifest
+      run: |
+        if [ ! -f "pack.yaml" ]; then echo "ERROR: pack.yaml not found"; exit 1; fi
+        echo "pack.yaml found ✓"

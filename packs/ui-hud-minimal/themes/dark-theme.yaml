@@ -1,0 +1,45 @@
+# Dark theme for DINOForge UI
+themes:
+  - id: dark-theme
+    name: Dark Theme
+    primary_color: "#FFFFFF"
+    secondary_color: "#999999"
+    accent_color: "#FF6B00"
+    font_family: "Arial"
+    border_radius: 4
+    background_color: "#0D0D0D"
+    text_color: "#FFFFFF"
+    description: "Default dark theme with white text and orange accents."
+
+  - id: light-theme
+    name: Light Theme
+    primary_color: "#333333"
+    secondary_color: "#666666"
+    accent_color: "#0066CC"
+    font_family: "Arial"
+    border_radius: 4
+    background_color: "#F5F5F5"
+    text_color: "#333333"
+    description: "Light theme with dark text and blue accents."
+
+  - id: faction-red-theme
+    name: Faction Red Theme
+    primary_color: "#FF0000"
+    secondary_color: "#990000"
+    accent_color: "#FFAA00"
+    font_family: "Arial"
+    border_radius: 2
+    background_color: "#1A0000"
+    text_color: "#FFFFFF"
+    description: "Faction-themed red color scheme for military flair."
+
+  - id: faction-blue-theme
+    name: Faction Blue Theme
+    primary_color: "#0066FF"
+    secondary_color: "#003399"
+    accent_color: "#00CCFF"
+    font_family: "Arial"
+    border_radius: 2
+    background_color: "#000033"
+    text_color: "#CCFFFF"
+    description: "Faction-themed blue color scheme for cool atmosphere."

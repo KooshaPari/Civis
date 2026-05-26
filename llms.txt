@@ -1,0 +1,159 @@
+# DINOForge
+
+> A general-purpose mod platform and agent-driven development scaffold for Diplomacy is Not an Option.
+
+DINOForge is a **mod operating system**, not a single mod. It provides a framework, registries, schemas, and tooling for building any type of mod — from simple balance tweaks to full total conversion packs.
+
+Built on **BepInEx 5.4.x** with direct integration to DINO's **Unity ECS (DOTS)** runtime. Uses **YAML-first declarative pack system** with dependency resolution, conflict detection, and comprehensive schema validation (14+ JSON schemas).
+
+The platform layers from Runtime → SDK → Domain Plugins → Content Packs. Agents contribute through pack definitions (YAML), registry extensions (type-safe), schema additions, and test fixtures — not by patching core engine code.
+
+## Key Concepts
+
+- **Packs**: YAML manifests + content files. Self-describing, versioned, with explicit dependencies and conflict rules.
+- **Registries**: Type-safe collections (Units, Buildings, Factions, Weapons, Doctrines, etc.) with layered priority and conflict detection.
+- **ECS Bridge**: Maps mod content to DINO's actual Unity components at runtime (30+ component mappings, stat modifiers, entity queries).
+- **Wrap, Don't Handroll**: Always prefer existing libraries/tools with thin wrappers. No custom implementations when proven packages exist.
+- **Pack Types**: `content`, `balance`, `ruleset`, `total_conversion`, `utility`.
+
+## Getting Started
+
+### Build & Test
+
+```bash
+# Build all
+dotnet build src/DINOForge.sln
+
+# Run tests
+dotnet test src/DINOForge.sln
+
+# Validate packs
+dotnet run --project src/Tools/PackCompiler -- validate packs/
+
+# Build a pack
+dotnet run --project src/Tools/PackCompiler -- build packs/example-balance
+```
+
+### Create a Pack
+
+1. Create a directory: `packs/my-pack/`
+2. Add `pack.yaml` manifest:
+   ```yaml
+   id: my-pack
+   name: My Pack
+   version: 0.1.0
+   author: YourName
+   type: balance
+   framework_version: ">=0.1.0"
+   depends_on: []
+   conflicts_with: []
+   loads:
+     units:
+       - units/
+     buildings:
+       - buildings/
+   ```
+3. Add YAML content files in referenced directories.
+4. Run: `dotnet run --project src/Tools/PackCompiler -- validate packs/my-pack`
+
+## Docs
+
+- [README.md](https://github.com/KooshaPari/Dino/blob/main/README.md): Feature overview, architecture diagrams, quick start
+- [CLAUDE.md](https://github.com/KooshaPari/Dino/blob/main/CLAUDE.md): Agent governance, legal move classes, design principles, build/wrap rules
+- [CONTRIBUTING.md](https://github.com/KooshaPari/Dino/blob/main/CONTRIBUTING.md): Development workflow, PR guidelines, code style
+- [AGENTS.md](https://github.com/KooshaPari/Dino/blob/main/AGENTS.md): Subagent capabilities and delegation patterns
+- [docs/ROADMAP.md](https://github.com/KooshaPari/Dino/blob/main/docs/ROADMAP.md): v0.6.0+ milestone plan (unit spawner, registry discovery, YAML-only mods)
+- [Full Docs](https://kooshapari.github.io/Dino): VitePress site with API reference, pack author guides, tutorial scenarios
+
+## SDK
+
+- **SDK/Registries**: Type-safe registries for Units, Buildings, Factions, Weapons, Projectiles, Doctrines, Skills, Waves, Squads
+- **SDK/Validation**: Schema validation via NJsonSchema against 14+ JSON schema definitions
+- **SDK/ContentLoader**: Pack discovery, dependency resolution, topological load ordering
+- **SDK/Assets**: AssetsTools.NET integration for reading/writing Unity Addressables bundles
+- **SDK/Models**: Data models (UnitDefinition, BuildingDefinition, FactionArchetype, etc.)
+- **SDK/Dependencies**: Semver-aware dependency resolver with cycle detection
+- **SDK/HotReload**: FileSystemWatcher-based pack live reload
+
+## Source
+
+- **src/Runtime**: BepInEx bootstrap plugin, ECS bridge (component mappings, stat modifiers, entity queries), debug overlay, hot reload
+- **src/Domains/Warfare**: Faction archetypes (Order, Industrial Swarm, Asymmetric), doctrines, unit roles, wave composition, balance calculation
+- **src/Domains/Economy** (planned): Trade, resources, balance
+- **src/Domains/Scenario** (planned): Scripting, conditions, objectives
+- **src/Tools/PackCompiler**: CLI for pack validation, building, asset packaging
+- **src/Tools/DumpTools**: Entity/component dump analysis (Spectre.Console)
+- **src/Tools/Cli**: dinoforge CLI (status, query, reload, watch, spawn commands)
+- **src/Tools/McpServer**: MCP server for Claude Code integration (13 game tools)
+- **schemas/**: 14 JSON schema definitions (unit, building, faction, weapon, etc.)
+- **packs/**: Example packs — example-balance, warfare-modern, warfare-starwars, warfare-guerrilla
+
+## Agent Rules
+
+**MUST DO**:
+- Work through manifests and registries
+- Update CHANGELOG.md, README.md when adding features
+- Add tests for public APIs (target: 130+ tests passing)
+- Run `dotnet test` before completing work
+- Use generators/templates for new content
+- Validate all packs before commit
+
+**MUST NOT**:
+- Handroll what a library already solves — always wrap existing packages
+- Patch runtime internals (unless assigned runtime-layer work)
+- Invent new registry patterns casually
+- Duplicate schemas
+- Hardcode content IDs in engine glue
+- Skip tests or merge without compatibility checks
+
+**Legal move classes**: create schema, extend registry, add content pack, patch mapping, write validator, add test fixture, add debug view, add migration, add compatibility rule.
+
+## Testing
+
+BDD-first (behavior specs before code), Schema-Driven Development (SDD), TDD (unit tests), property-based tests for balance models, pack validation tests, integration tests vs. mock ECS.
+
+Current: 80+ tests passing (target: 130+).
+
+## Architecture
+
+```
+Content Packs (YAML manifests)
+     ↓
+Domain Layer (Warfare plugin)
+     ↓
+SDK Layer (Registries, Validation, ContentLoader, Assets, Dependencies)
+     ↓
+Runtime (BepInEx plugin, ECS Bridge, Debug Overlay)
+     ↓
+DINO Game (Unity ECS / DOTS)
+```
+
+**Priority layers** (higher wins, same priority = conflict):
+- Pack content (3000+)
+- Domain plugins (2000+)
+- Framework defaults (1000+)
+- Vanilla DINO (0+)
+
+## Directory Structure
+
+```
+src/
+  Runtime/          BepInEx plugin + ECS Bridge
+  SDK/              Public mod API (registries, schemas, loaders)
+  Domains/Warfare/  Warfare domain plugin
+  Tools/            CLI tools (PackCompiler, DumpTools)
+  Tests/            xUnit + FluentAssertions (net8.0)
+
+packs/              Content packs (example-balance, warfare-*)
+schemas/            JSON schema definitions (14 files)
+docs/               VitePress documentation
+.claude/commands/   Custom CLI commands (build-all, deploy, test, validate, etc.)
+```
+
+## Links
+
+- **GitHub**: https://github.com/KooshaPari/Dino
+- **Steam Game**: https://store.steampowered.com/app/1272320/Diplomacy_is_Not_an_Option/
+- **Full Docs**: https://kooshapari.github.io/Dino
+- **BepInEx**: https://github.com/BepInEx/BepInEx
+- **AssetsTools.NET**: https://github.com/nesrak1/AssetsTools.NET

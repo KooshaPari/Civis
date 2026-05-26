@@ -1,0 +1,13 @@
+# Pattern #108: Sleep-Based Test Sync Allowlist
+#
+# Format: <file-path>:<line-num> <reason>
+# Example: src/Tests/Integration/GameLaunchTests.cs:89 test-sync-waived: external process timing
+#
+# Use this file to allowlist Thread.Sleep/Task.Delay calls in tests where:
+# - Waiting for external process (game launch, unmanaged resource)
+# - Polling external state with no alternative (Win32 API, native interop)
+# - Test helper/fixture (not [Fact] method) that cannot use async
+# - Deliberate stress-delay for concurrency testing
+#
+# Prefer: Use IAsyncLifetime, WaitFor<T>, or TestHelper.PollingAsync instead.
+

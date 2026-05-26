@@ -1,0 +1,46 @@
+# Raw Remove-Item Allowlist
+#
+# One entry per line: relative path from repo root (forward slashes).
+# Optional trailing `# <reason>` comment.
+#
+# Governance:
+#   - Use scripts/shared/Remove-ToRecycleBin.ps1 instead of Remove-Item where possible.
+#   - Allowlist a Remove-Item callsite ONLY when:
+#       (a) target is in $env:TEMP / build artifact (obj/, bin/) where Recycle Bin
+#           is undesirable, OR
+#       (b) script runs on Linux/macOS CI runners where VisualBasic.FileIO is
+#           unavailable, OR
+#       (c) explicit pattern enforced by tooling (e.g. obj/ cache clean per
+#           Pattern #233 stale-cache rule).
+#
+# Detector: scripts/ci/detect_raw_remove_item.py
+# Governance: CLAUDE.md > "File Deletion Protocol (MANDATORY)"
+#
+# Format examples:
+#   scripts/build/clean-obj.ps1  # Pattern #233: obj/ cache must hard-delete
+#   scripts/ci/teardown.sh       # Linux runner, $env:TEMP cleanup
+
+# --- Legitimate temp-build / staging cleanup sites (Pattern #862) ---
+scripts/automation/Launch-ParallelGames.ps1  # game-instance temp dir teardown
+scripts/game/Launch-ConcurrentInstances.ps1  # temp instance root teardown
+scripts/game/New-TempGameInstance.ps1        # explicit temp instance teardown
+scripts/install-companion.ps1                # installer overwrite/staging path
+scripts/install/install-dumptools.ps1        # installer staging cleanup ($env:TEMP)
+scripts/install/install-packcompiler.ps1     # installer staging cleanup ($env:TEMP)
+scripts/mutation-test.ps1                    # mutation-testing artifact cleanup
+scripts/nuget-dry-run.ps1                    # nuget packtemp / output dir cleanup
+
+# --- TEST_OK sites confirmed by audit afe7b180617ce4e87 (P3 follow-up) ---
+# Per-line annotations (detector matches by file path; lines listed for traceability):
+#   scripts/tests/SandboxValidationTests.ps1:87  # safe-remove: test-owned $env:TEMP scratch dir (sandbox_test_*)
+#   scripts/tests/SandboxValidationTests.ps1:123 # safe-remove: test-owned $env:TEMP scratch dir (steam_test_*)
+#   scripts/tests/SandboxValidationTests.ps1:152 # safe-remove: test-owned $env:TEMP scratch dir (isolation_test_*)
+#   scripts/tests/SandboxValidationTests.ps1:177 # safe-remove: test-owned $env:TEMP scratch dir (cleanup_test_*)
+#   scripts/tests/SandboxValidationTests.ps1:187 # safe-remove: test-owned $env:TEMP scratch dir (cleanup_test_* finally fallback)
+#   scripts/tests/SandboxValidationTests.ps1:207 # safe-remove: test-owned $env:TEMP scratch dir (sandbox_*)
+#   scripts/tests/SandboxValidationTests.ps1:218 # safe-remove: test-owned $env:TEMP scratch dir (main_game_*)
+#   scripts/tests/SandboxValidationTests.ps1:221 # safe-remove: test-owned $env:TEMP scratch dir (sandbox_*)
+#   scripts/tests/SandboxValidationTests.ps1:263 # safe-remove: test-owned $env:TEMP scratch dir (full_instance_test_*)
+scripts/tests/SandboxValidationTests.ps1     # safe-remove: test-owned $env:TEMP scratch dirs (9 sites, all TEST_OK per audit afe7b180617ce4e87)
+#   scripts/tier3-libification.ps1:254 # safe-remove: emitted installer self-cleanup of its own download temp
+scripts/tier3-libification.ps1               # safe-remove: emitted installer self-cleanup of its own download temp (audit afe7b180617ce4e87)

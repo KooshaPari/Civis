@@ -1,0 +1,63 @@
+name: tcs-sync-continuation
+
+# Pattern #97 detection gate — fails CI when a C# call site constructs
+# a ``TaskCompletionSource`` or ``TaskCompletionSource<T>`` without
+# passing ``TaskCreationOptions.RunContinuationsAsynchronously``. The
+# default behavior runs await continuations inline on the producer
+# thread, which causes main-thread starvation and cross-thread
+# deadlocks at the Runtime / Bridge boundaries.
+#
+# Companion: scripts/ci/detect_tcs_sync_continuations.py (run with
+# --self-test for spec). Allowlist:
+# docs/qa/tcs-sync-continuation-allowlist.txt.
+# Cross-reference: tasks #271 (3 known TCS sites being fixed) /
+# #272 (this gate) / future Roslyn analyzer for compile-time
+# enforcement.
+
+on:
+  pull_request:
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_tcs_sync_continuations.py"
+      - "docs/qa/tcs-sync-continuation-allowlist.txt"
+      - ".github/workflows/tcs-sync-continuation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_tcs_sync_continuations.py"
+      - "docs/qa/tcs-sync-continuation-allowlist.txt"
+      - ".github/workflows/tcs-sync-continuation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tcs-sync-continuation-check:
+    name: Pattern #97 tcs-sync-continuation
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_tcs_sync_continuations.py --self-test
+
+      - name: Run tcs-sync-continuation gate
+        run: python scripts/ci/detect_tcs_sync_continuations.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: tcs-sync-continuation-report
+          path: docs/qa/tcs-sync-continuation-report.json
+          if-no-files-found: warn
+          retention-days: 14

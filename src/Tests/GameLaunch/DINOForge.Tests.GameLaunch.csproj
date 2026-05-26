@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- In DINOForge.CI.NoRuntime.sln for compile gate; test execution requires DINO_GAME_PATH on self-hosted -->
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.*" />
+    <!-- DISABLED: Coverage gating via CI closure-gate.yml instead (consistent with net8.0 projects). -->
+    <!-- <PackageReference Include="coverlet.collector" Version="6.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference> -->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Share TestWait helper from sibling Tests project (Pattern #108 polling). -->
+    <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
+  </ItemGroup>
+</Project>

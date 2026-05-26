@@ -1,0 +1,1659 @@
+# Complete DINO Vanilla Entity to Star Wars Mapping Crosswalk
+# Generated: 2026-03-12
+# Purpose: Map every vanilla DINO entity (units, buildings, components, systems) to Star Wars equivalents
+# Status: Comprehensive audit covering all game entities from ECS introspection
+
+---
+metadata:
+  game: Diplomacy is Not an Option (DINO)
+  build_date: 2026-03-12
+  total_vanilla_units: 13
+  total_vanilla_buildings: 24
+  total_vanilla_components: 60+
+  total_vanilla_systems: 15+
+  framework_version: ">=0.5.0"
+  audit_scope: complete (units, buildings, components, systems, UI, effects, resources)
+
+---
+# ==============================================================================
+# UNITS - Infantry & Ranged (Vanilla → Republic ↔ CIS Mapping)
+# ==============================================================================
+units:
+  infantry_militia:
+    vanilla_id: militia
+    vanilla_class: MilitiaLight
+    category: Unit
+
+    republic:
+      id: rep_clone_militia
+      display_name: Clone Militia
+      description: Phase I clone troopers with basic carbines
+      tier: 1
+      unit_class: MilitiaLight
+      defense_tags: [InfantryArmor, Biological]
+      behavior_tags: [HoldLine]
+      stats:
+        hp: 85.0
+        damage: 10.0
+        armor: 3.0
+        range: 16.0
+        speed: 5.0
+        accuracy: 0.65
+        fire_rate: 4.0
+      cost: [30 food, 10 iron, 8 gold, 1 pop]
+      weapon: dc15s_carbine
+      vanilla_mapping: militia
+      config_status: ✓ complete
+      model_status: ✗ pending (no FBX unit meshes yet)
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_b1_battle_droid
+      display_name: B1 Battle Droid
+      description: "Roger roger. Cheap, expendable, mass-produced droid warrior"
+      tier: 1
+      unit_class: MilitiaLight
+      defense_tags: [Unarmored, Mechanical]
+      behavior_tags: [Swarm]
+      stats:
+        hp: 40.0
+        damage: 9.0
+        armor: 1.0
+        range: 16.0
+        speed: 4.5
+        accuracy: 0.35
+        fire_rate: 3.0
+      cost: [8 iron, 3 gold, 1 pop]
+      weapon: e5_blaster
+      vanilla_mapping: militia
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  infantry_line:
+    vanilla_id: line_infantry
+    vanilla_class: CoreLineInfantry
+    category: Unit
+
+    republic:
+      id: rep_clone_trooper
+      display_name: Clone Trooper
+      description: Phase II clone trooper, backbone of Grand Army of Republic
+      tier: 1
+      unit_class: CoreLineInfantry
+      defense_tags: [InfantryArmor, Biological]
+      behavior_tags: [HoldLine, AdvanceFire]
+      stats:
+        hp: 125.0
+        damage: 14.0
+        armor: 6.0
+        range: 20.0
+        speed: 4.5
+        accuracy: 0.75
+        fire_rate: 2.5
+      cost: [40 food, 20 iron, 12 gold, 1 pop]
+      weapon: dc15a_blaster
+      vanilla_mapping: line_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_b1_squad
+      display_name: B1 Squad
+      description: Coordinated B1 squad with improved tactical coordination
+      tier: 1
+      unit_class: CoreLineInfantry
+      defense_tags: [Unarmored, Mechanical]
+      behavior_tags: [Swarm, AdvanceFire]
+      stats:
+        hp: 50.0
+        damage: 9.0
+        armor: 2.0
+        range: 16.0
+        speed: 4.5
+        accuracy: 0.45
+        fire_rate: 3.0
+      cost: [12 iron, 5 gold, 1 pop]
+      weapon: e5_blaster
+      vanilla_mapping: line_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  infantry_heavy:
+    vanilla_id: heavy_infantry
+    vanilla_class: HeavyInfantry
+    category: Unit
+
+    republic:
+      id: rep_clone_heavy
+      display_name: Clone Heavy Trooper
+      description: Heavy weapons specialist with Z-6 rotary blaster cannon
+      tier: 2
+      unit_class: HeavyInfantry
+      defense_tags: [HeavyArmor, Biological]
+      behavior_tags: [HoldLine, AntiMass]
+      stats:
+        hp: 155.0
+        damage: 10.0
+        armor: 8.0
+        range: 18.0
+        speed: 3.5
+        accuracy: 0.55
+        fire_rate: 8.0
+      cost: [50 food, 35 iron, 22 gold, 2 pop]
+      weapon: z6_rotary_cannon
+      vanilla_mapping: heavy_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_b2_super_battle_droid
+      display_name: B2 Super Battle Droid
+      description: Heavily armored battle droid with integrated wrist blasters
+      tier: 2
+      unit_class: HeavyInfantry
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [AdvanceFire, Swarm]
+      stats:
+        hp: 160.0
+        damage: 14.0
+        armor: 10.0
+        range: 18.0
+        speed: 3.5
+        accuracy: 0.55
+        fire_rate: 4.0
+      cost: [30 iron, 15 gold, 1 pop]
+      weapon: wrist_blaster
+      vanilla_mapping: heavy_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  ranged_skirmisher:
+    vanilla_id: ranged_infantry
+    vanilla_class: Skirmisher
+    category: Unit
+
+    republic:
+      id: rep_clone_sharpshooter
+      display_name: Clone Sharpshooter
+      description: Precision marksman trained for long-range engagement
+      tier: 2
+      unit_class: Skirmisher
+      defense_tags: [InfantryArmor, Biological]
+      behavior_tags: [Kite, AdvanceFire]
+      stats:
+        hp: 90.0
+        damage: 40.0
+        armor: 3.0
+        range: 40.0
+        speed: 4.0
+        accuracy: 0.9
+        fire_rate: 0.5
+      cost: [40 food, 25 iron, 18 gold, 1 pop]
+      weapon: dc15x_sniper
+      vanilla_mapping: ranged_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_sniper_droid
+      display_name: Sniper Droid
+      description: Enhanced optics B1 with sniper-class blaster
+      tier: 2
+      unit_class: Skirmisher
+      defense_tags: [Unarmored, Mechanical]
+      behavior_tags: [Kite]
+      stats:
+        hp: 35.0
+        damage: 35.0
+        armor: 0.0
+        range: 45.0
+        speed: 3.0
+        accuracy: 0.85
+        fire_rate: 0.4
+      cost: [15 iron, 12 gold, 1 pop]
+      weapon: e5s_sniper
+      vanilla_mapping: ranged_infantry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+---
+# ==============================================================================
+# UNITS - Cavalry & Vehicles (Vanilla → Republic ↔ CIS Mapping)
+# ==============================================================================
+
+  cavalry_fast:
+    vanilla_id: cavalry
+    vanilla_class: FastVehicle
+    category: Unit
+
+    republic:
+      id: rep_barc_speeder
+      display_name: BARC Speeder
+      description: Fast reconnaissance and attack speeder bike
+      tier: 2
+      unit_class: FastVehicle
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [Charge, AdvanceFire]
+      stats:
+        hp: 180.0
+        damage: 12.0
+        armor: 10.0
+        range: 18.0
+        speed: 10.0
+        accuracy: 0.5
+        fire_rate: 4.0
+      cost: [20 food, 50 iron, 30 gold, 2 pop]
+      weapon: dc15s_carbine
+      vanilla_mapping: cavalry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_stap_pilot
+      display_name: STAP Pilot
+      description: Single Trooper Aerial Platform — fast flying droid vehicle
+      tier: 2
+      unit_class: FastVehicle
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [Charge]
+      stats:
+        hp: 120.0
+        damage: 11.0
+        armor: 7.0
+        range: 16.0
+        speed: 12.0
+        accuracy: 0.4
+        fire_rate: 3.5
+      cost: [40 iron, 25 gold, 2 pop]
+      weapon: e5_blaster
+      vanilla_mapping: cavalry
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  siege_mainbattle:
+    vanilla_id: siege_unit
+    vanilla_class: MainBattleVehicle
+    category: Unit
+
+    republic:
+      id: rep_atte_crew
+      display_name: AT-TE Crew
+      description: All Terrain Tactical Enforcer crew providing siege capability
+      tier: 3
+      unit_class: MainBattleVehicle
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [AntiMass, HoldLine]
+      stats:
+        hp: 320.0
+        damage: 20.0
+        armor: 15.0
+        range: 22.0
+        speed: 3.0
+        accuracy: 0.6
+        fire_rate: 2.0
+      cost: [60 food, 120 iron, 60 gold, 4 pop]
+      weapon: quad_cannon
+      vanilla_mapping: siege_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_aat_crew
+      display_name: AAT Crew
+      description: Armored Assault Tank crewed battle platform
+      tier: 3
+      unit_class: MainBattleVehicle
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [AntiMass]
+      stats:
+        hp: 280.0
+        damage: 18.0
+        armor: 14.0
+        range: 24.0
+        speed: 2.5
+        accuracy: 0.65
+        fire_rate: 1.8
+      cost: [80 iron, 50 gold, 4 pop]
+      weapon: aat_main_cannon
+      vanilla_mapping: siege_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  elite_special:
+    vanilla_id: elite_unit
+    vanilla_class: Elite
+    category: Unit
+
+    republic:
+      id: rep_arc_trooper
+      display_name: ARC Trooper
+      description: Advanced Recon Commando trooper with elite training
+      tier: 3
+      unit_class: Elite
+      defense_tags: [HeavyArmor, Biological]
+      behavior_tags: [Charge, AdvanceFire]
+      stats:
+        hp: 140.0
+        damage: 25.0
+        armor: 9.0
+        range: 22.0
+        speed: 6.0
+        accuracy: 0.85
+        fire_rate: 3.0
+      cost: [80 food, 40 iron, 35 gold, 2 pop]
+      weapon: dual_dc15a_blasters
+      vanilla_mapping: elite_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_bx_commando_droid
+      display_name: BX Commando Droid
+      description: Specialized infiltrator and elite assassin droid
+      tier: 3
+      unit_class: Elite
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [Kite, Charge]
+      stats:
+        hp: 110.0
+        damage: 28.0
+        armor: 8.0
+        range: 20.0
+        speed: 7.0
+        accuracy: 0.8
+        fire_rate: 2.5
+      cost: [50 iron, 40 gold, 2 pop]
+      weapon: commando_dual_blasters
+      vanilla_mapping: elite_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  support_recon:
+    vanilla_id: recon_unit
+    vanilla_class: Support
+    category: Unit
+
+    republic:
+      id: rep_clone_scout
+      display_name: Clone Scout
+      description: Light reconnaissance trooper with enhanced sensors
+      tier: 1
+      unit_class: Support
+      defense_tags: [LightArmor, Biological]
+      behavior_tags: [Kite]
+      stats:
+        hp: 70.0
+        damage: 8.0
+        armor: 2.0
+        range: 18.0
+        speed: 8.0
+        accuracy: 0.65
+        fire_rate: 2.5
+      cost: [25 food, 8 iron, 6 gold, 1 pop]
+      weapon: dc15s_carbine
+      vanilla_mapping: recon_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_probe_droid
+      display_name: Probe Droid
+      description: Autonomous recon droid with rapid deployment
+      tier: 1
+      unit_class: Support
+      defense_tags: [LightArmor, Mechanical]
+      behavior_tags: [Kite]
+      stats:
+        hp: 50.0
+        damage: 6.0
+        armor: 1.5
+        range: 20.0
+        speed: 9.0
+        accuracy: 0.6
+        fire_rate: 2.0
+      cost: [10 iron, 5 gold, 1 pop]
+      weapon: probe_blaster
+      vanilla_mapping: recon_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  caster_force_user:
+    vanilla_id: caster_unit
+    vanilla_class: CastOnlyUnit
+    category: Unit
+
+    republic:
+      id: rep_jedi_initiate
+      display_name: Jedi Initiate
+      description: Force-sensitive warrior with lightsaber and force powers
+      tier: 3
+      unit_class: CastOnlyUnit
+      defense_tags: [LightArmor, Biological]
+      behavior_tags: [Charge, AdvanceFire]
+      stats:
+        hp: 120.0
+        damage: 35.0
+        armor: 5.0
+        range: 8.0
+        speed: 6.0
+        accuracy: 0.95
+        fire_rate: 1.5
+      cost: [100 food, 30 iron, 50 gold, 2 pop]
+      weapon: lightsaber
+      vanilla_mapping: caster_unit
+      config_status: ✓ complete (partial)
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_droideka
+      display_name: Droideka
+      description: Shield-equipped destroyer droid with high firepower
+      tier: 3
+      unit_class: CastOnlyUnit
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [AntiMass]
+      stats:
+        hp: 240.0
+        damage: 22.0
+        armor: 16.0
+        range: 20.0
+        speed: 5.0
+        accuracy: 0.7
+        fire_rate: 5.0
+      cost: [60 iron, 45 gold, 2 pop]
+      weapon: droideka_blasters
+      vanilla_mapping: caster_unit
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+  hero_commander:
+    vanilla_id: hero_unit
+    vanilla_class: HeroUnit
+    category: Unit
+    special_traits: [Leader, Unique]
+
+    republic:
+      id: rep_anakin_skywalker
+      display_name: Anakin Skywalker
+      description: Master Jedi warrior with unprecedented Force potential
+      tier: 4
+      unit_class: HeroUnit
+      defense_tags: [LightArmor, Biological]
+      behavior_tags: [Charge, AdvanceFire]
+      stats:
+        hp: 200.0
+        damage: 50.0
+        armor: 8.0
+        range: 10.0
+        speed: 7.0
+        accuracy: 0.98
+        fire_rate: 2.0
+      cost: [150 food, 50 iron, 100 gold, 1 pop]
+      weapon: anakin_lightsaber
+      vanilla_mapping: hero_unit
+      config_status: ⚠ partial (placeholder)
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+    cis:
+      id: cis_general_grievous
+      display_name: General Grievous
+      description: Cyborg commander with four lightsaber arms
+      tier: 4
+      unit_class: HeroUnit
+      defense_tags: [HeavyArmor, Mechanical]
+      behavior_tags: [Charge]
+      stats:
+        hp: 280.0
+        damage: 55.0
+        armor: 18.0
+        range: 8.0
+        speed: 7.5
+        accuracy: 0.95
+        fire_rate: 3.0
+      cost: [120 iron, 100 gold, 1 pop]
+      weapon: grievous_lightsabers
+      vanilla_mapping: hero_unit
+      config_status: ⚠ partial (placeholder)
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+
+---
+# ==============================================================================
+# BUILDINGS - Strategic/Production
+# ==============================================================================
+buildings:
+  command_center:
+    vanilla_type: command
+    vanilla_index: 1
+    category: Strategic
+    vanilla_component: CommandCenter
+
+    republic:
+      id: rep_command_center
+      display_name: Republic Command Center
+      description: Central operations hub coordinating all Republic forces
+      building_type: command
+      health: 2200
+      cost: [80 wood, 150 stone, 100 iron, 60 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✓ ready (rep_house_clone_quarters.fbx - temp)
+      texture_status: ✓ ready
+      files_present:
+        - models: rep_command_center_*.fbx
+        - textures: rep_command_center_albedo.png, rep_command_center_normal.png
+      kenney_source: kenney_structure_c.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_tactical_center
+      display_name: Tactical Droid Center
+      description: Central tactical coordination for Separatist droid forces
+      building_type: command
+      health: 2100
+      cost: [120 iron, 70 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✓ ready (cis_house_droid_pod.fbx - temp)
+      texture_status: ✓ ready
+      files_present:
+        - models: cis_tactical_center_*.fbx
+        - textures: cis_tactical_center_albedo.png
+      kenney_source: kenney_structure_c.fbx
+      kenney_pack: structure
+
+  barracks_clone_light:
+    vanilla_type: barracks
+    vanilla_index: 2
+    category: Production
+    vanilla_component: Barraks
+
+    republic:
+      id: rep_clone_facility
+      display_name: Clone Training Facility
+      description: Produces militia and standard clone troopers
+      building_type: barracks
+      health: 1300
+      cost: [60 wood, 80 stone, 50 iron, 25 gold]
+      production:
+        rep_clone_militia: 2
+        rep_clone_trooper: 1
+      config_status: ✓ complete
+      model_status: ✓ ready (rep_house_clone_quarters.fbx - temp)
+      texture_status: ✓ ready
+      files_present:
+        - models: rep_clone_facility_*.fbx
+        - textures: rep_clone_facility_albedo.png
+      kenney_source: kenney_structure_b.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_droid_factory
+      display_name: Droid Factory
+      description: Mass-produces B1 battle droids and squad units
+      building_type: barracks
+      health: 1200
+      cost: [100 iron, 40 gold]
+      production:
+        cis_b1_battle_droid: 3
+        cis_b1_squad: 1
+      config_status: ✓ complete
+      model_status: ✓ ready (cis_house_droid_pod.fbx - temp)
+      texture_status: ✓ ready
+      files_present:
+        - models: cis_droid_factory_*.fbx
+        - textures: cis_droid_factory_albedo.png
+      kenney_source: kenney_structure_b.fbx
+      kenney_pack: structure
+
+  barracks_heavy:
+    vanilla_type: barracks
+    vanilla_index: 3
+    category: Production
+    vanilla_component: Barraks
+
+    republic:
+      id: rep_weapons_factory
+      display_name: Weapons Factory
+      description: Produces heavy troopers and ARC troopers
+      building_type: barracks
+      health: 1100
+      cost: [50 wood, 80 stone, 80 iron, 40 gold]
+      production:
+        rep_clone_heavy: 1
+        rep_arc_trooper: 1
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+      kenney_source: kenney_structure_d.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_assembly_line
+      display_name: Advanced Assembly Line
+      description: Assembles B2 super battle droids and specialized units
+      building_type: barracks
+      health: 1000
+      cost: [90 iron, 50 gold]
+      production:
+        cis_b2_super_battle_droid: 1
+        cis_bx_commando_droid: 1
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_assembly_line_albedo.png
+      kenney_source: kenney_structure_d.fbx
+      kenney_pack: structure
+
+  barracks_vehicles:
+    vanilla_type: barracks
+    vanilla_index: 4
+    category: Production
+    vanilla_component: Barraks
+
+    republic:
+      id: rep_vehicle_bay
+      display_name: Vehicle Bay
+      description: Produces AT-TE walkers and BARC speeders
+      building_type: barracks
+      health: 1000
+      cost: [40 wood, 60 stone, 120 iron, 50 gold]
+      production:
+        rep_atte_crew: 1
+        rep_barc_speeder: 1
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+      kenney_source: kenney_structure_e.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_heavy_foundry
+      display_name: Heavy Foundry
+      description: Manufactures AAT battle tanks and droideka units
+      building_type: barracks
+      health: 950
+      cost: [110 iron, 55 gold]
+      production:
+        cis_aat_crew: 1
+        cis_droideka: 1
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_heavy_foundry_albedo.png
+      kenney_source: kenney_structure_e.fbx
+      kenney_pack: structure
+
+---
+# ==============================================================================
+# BUILDINGS - Defense
+# ==============================================================================
+
+  tower_defense:
+    vanilla_type: defense
+    vanilla_index: 5
+    category: Defense
+    vanilla_component: GateBase
+
+    republic:
+      id: rep_guard_tower
+      display_name: Guard Tower
+      description: Elevated defensive position with mounted blaster turret
+      building_type: defense
+      health: 700
+      cost: [40 wood, 50 stone, 35 iron, 10 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✓ ready
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_guard_tower_albedo.png
+      kenney_source: kenney_tower_a.fbx
+      kenney_pack: tower
+
+    cis:
+      id: cis_sentry_turret
+      display_name: Sentry Turret
+      description: Automated droid turret with rapid-fire blasters
+      building_type: defense
+      health: 650
+      cost: [40 iron, 15 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_sentry_turret_albedo.png
+      kenney_source: kenney_tower_a.fbx
+      kenney_pack: tower
+
+  shield_generator:
+    vanilla_type: defense
+    vanilla_index: 6
+    category: Defense
+    vanilla_component: ShieldGenerator (custom)
+
+    republic:
+      id: rep_shield_generator
+      display_name: Shield Generator
+      description: Deflector shield generator protecting wide area
+      building_type: defense
+      health: 1500
+      cost: [20 wood, 100 stone, 120 iron, 60 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_shield_generator_albedo.png
+      kenney_source: kenney_structure_f.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_ray_shield
+      display_name: Ray Shield Generator
+      description: Separatist ray shield protecting droid installations
+      building_type: defense
+      health: 1400
+      cost: [100 iron, 70 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_ray_shield_albedo.png
+      kenney_source: kenney_structure_f.fbx
+      kenney_pack: structure
+
+  wall_segment:
+    vanilla_type: wall
+    vanilla_index: 10
+    category: Defense
+    vanilla_component: GateBase
+
+    republic:
+      id: rep_blast_wall
+      display_name: Blast Wall
+      description: Armored wall segment for defensive positioning
+      building_type: wall
+      health: 400
+      cost: [30 wood, 40 stone, 30 iron, 5 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_blast_wall_albedo.png
+      kenney_source: kenney_wall_segment.fbx
+      kenney_pack: wall
+
+    cis:
+      id: cis_durasteel_barrier
+      display_name: Durasteel Barrier
+      description: Heavy durasteel wall segment for fortification
+      building_type: wall
+      health: 380
+      cost: [35 iron, 8 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_durasteel_barrier_albedo.png
+      kenney_source: kenney_wall_segment.fbx
+      kenney_pack: wall
+
+---
+# ==============================================================================
+# BUILDINGS - Economy
+# ==============================================================================
+
+  farm_agricultural:
+    vanilla_type: economy
+    vanilla_index: 14
+    category: Economy
+    vanilla_component: Farm
+
+    republic:
+      id: rep_agricultural_station
+      display_name: Agricultural Station
+      description: Food production facility using hydroponic systems
+      building_type: economy
+      health: 600
+      cost: [30 wood, 40 stone, 20 iron, 10 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✓ ready (rep_farm_hydroponic.fbx)
+      texture_status: ✓ ready
+      files_present:
+        - models: rep_farm_hydroponic.fbx
+      kenney_source: kenney_farm.fbx
+      kenney_pack: farm
+
+    cis:
+      id: cis_automated_farm
+      display_name: Automated Farm
+      description: Droid-tended agricultural processing facility
+      building_type: economy
+      health: 550
+      cost: [30 iron, 12 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✓ ready (cis_farm_fuel_harvester.fbx)
+      texture_status: ✓ ready
+      files_present:
+        - models: cis_farm_fuel_harvester.fbx
+      kenney_source: kenney_farm.fbx
+      kenney_pack: farm
+
+  supply_station:
+    vanilla_type: economy
+    vanilla_index: 7
+    category: Economy
+    vanilla_component: (custom)
+
+    republic:
+      id: rep_supply_station
+      display_name: Supply Station
+      description: Republic logistics hub providing steady resource income
+      building_type: economy
+      health: 800
+      cost: [50 wood, 40 stone, 30 iron, 20 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_supply_station_albedo.png
+      kenney_source: kenney_structure_a.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_mining_facility
+      display_name: Mining Facility
+      description: Ore extraction and processing for droid production
+      building_type: economy
+      health: 850
+      cost: [50 iron, 25 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_mining_facility_albedo.png
+      kenney_source: kenney_structure_a.fbx
+      kenney_pack: structure
+
+  refinery_processing:
+    vanilla_type: economy
+    vanilla_index: 8
+    category: Economy
+    vanilla_component: (custom)
+
+    republic:
+      id: rep_tibanna_refinery
+      display_name: Tibanna Gas Refinery
+      description: Refines tibanna gas for energy and weapons
+      building_type: economy
+      health: 900
+      cost: [40 wood, 50 stone, 60 iron, 35 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_tibanna_refinery_albedo.png
+      kenney_source: kenney_structure_g.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_processing_plant
+      display_name: Processing Plant
+      description: Droid component manufacturing and processing center
+      building_type: economy
+      health: 850
+      cost: [60 iron, 40 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_processing_plant_albedo.png
+      kenney_source: kenney_structure_g.fbx
+      kenney_pack: structure
+
+---
+# ==============================================================================
+# BUILDINGS - Research & Support
+# ==============================================================================
+
+  research_lab:
+    vanilla_type: research
+    vanilla_index: 9
+    category: Research
+    vanilla_component: (custom)
+
+    republic:
+      id: rep_research_lab
+      display_name: Research Laboratory
+      description: Conducts military research and doctrine advancement
+      building_type: research
+      health: 1000
+      cost: [60 wood, 70 stone, 80 iron, 50 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: rep_research_lab_albedo.png
+      kenney_source: kenney_structure_h.fbx
+      kenney_pack: structure
+
+    cis:
+      id: cis_tech_union_lab
+      display_name: Techno Union Lab
+      description: Techno Union weapons research and droid design facility
+      building_type: research
+      health: 950
+      cost: [70 iron, 55 gold]
+      production: {}
+      config_status: ✓ complete
+      model_status: ✗ pending
+      texture_status: ✓ ready
+      files_present:
+        - textures: cis_tech_union_lab_albedo.png
+      kenney_source: kenney_structure_h.fbx
+      kenney_pack: structure
+
+  residential_quarters:
+    vanilla_type: residential
+    vanilla_index: 11
+    category: Residential
+    vanilla_component: House
+
+    republic:
+      id: rep_residential_quarters
+      display_name: Republic Officer Quarters
+      description: Housing for clone trooper officers and personnel
+      building_type: residential
+      health: 500
+      cost: [25 wood, 20 stone, 10 iron, 5 gold]
+      production: {}
+      config_status: ⚠ in_progress
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+      kenney_source: kenney_house_small.fbx
+      kenney_pack: house
+
+    cis:
+      id: cis_droid_barracks
+      display_name: Droid Charging Station
+      description: Droid maintenance and charging facility
+      building_type: residential
+      health: 480
+      cost: [15 iron, 8 gold]
+      production: {}
+      config_status: ⚠ in_progress
+      model_status: ✗ pending
+      texture_status: ✗ pending
+      files_present: []
+      kenney_source: kenney_house_small.fbx
+      kenney_pack: house
+
+---
+# ==============================================================================
+# ECS COMPONENTS - Unit Components (60+ total)
+# ==============================================================================
+
+ecs_components:
+  unit_core:
+    - name: Unit
+      ecs_type: Components.Unit
+      sdk_path: unit
+      description: Zero-sized tag marking entity as unit
+      status: ✓ mapped
+
+    - name: UnitBase
+      ecs_type: Components.UnitBase
+      sdk_path: unit.base
+      description: Core unit data (type identifiers, base stats)
+      status: ✓ mapped
+
+    - name: Enemy
+      ecs_type: Components.Enemy
+      sdk_path: unit.faction.enemy
+      description: Enemy faction marker (DINO has no explicit faction component)
+      status: ✓ mapped
+      note: Player units lack this component; absence implies player-owned
+
+  unit_stats:
+    - name: Health
+      ecs_type: Components.Health
+      sdk_path: unit.stats.hp
+      field: currentHealth (float)
+      status: ✓ mapped
+
+    - name: HealthBase
+      ecs_type: Components.HealthBase
+      sdk_path: unit.stats.hp_base
+      field: _maxHealthMultiplier (float)
+      status: ✓ mapped
+
+    - name: ArmorData
+      ecs_type: Components.ArmorData
+      sdk_path: unit.stats.armor
+      field: type (ArmorType enum)
+      status: ✓ mapped
+
+    - name: AttackCooldown
+      ecs_type: Components.AttackCooldown
+      sdk_path: unit.stats.attack_cooldown
+      field: value (float)
+      status: ✓ mapped
+      note: Also stores fixedProjectileSpeed
+
+    - name: MmAnimationPropertyAttackSpeedModifier
+      ecs_type: Components.MmAnimationPropertyAttackSpeedModifier
+      sdk_path: unit.stats.attack_speed
+      field: Value (float)
+      status: ✓ mapped
+
+    - name: GroundAttackArea
+      ecs_type: Components.GroundAttackArea
+      sdk_path: unit.stats.range
+      description: Attack range radius for ground units
+      status: ✓ mapped
+
+    - name: MoveHeading
+      ecs_type: Components.RawComponents.MoveHeading
+      sdk_path: unit.stats.speed
+      field: speed (float)
+      status: ✓ mapped
+      note: Also has delayModify, currentModify fields
+
+    - name: Regeneration
+      ecs_type: Components.Regeneration
+      sdk_path: unit.stats.regen
+      field: regenerationStartTime (float)
+      status: ✓ mapped
+
+  unit_class_tags:
+    - name: MeleeUnit
+      ecs_type: Components.MeleeUnit
+      sdk_path: unit.class.melee
+      description: Zero-sized tag for melee units
+      status: ✓ mapped
+
+    - name: RangeUnit
+      ecs_type: Components.RangeUnit
+      sdk_path: unit.class.ranged
+      description: Zero-sized tag for ranged units
+      status: ✓ mapped
+
+    - name: CavalryUnit
+      ecs_type: Components.CavalryUnit
+      sdk_path: unit.class.cavalry
+      description: Zero-sized tag for cavalry units
+      status: ✓ mapped
+
+    - name: SiegeUnit
+      ecs_type: Components.SiegeUnit
+      sdk_path: unit.class.siege
+      description: Zero-sized tag for siege units
+      status: ✓ mapped
+
+    - name: Archer
+      ecs_type: Components.Archer
+      sdk_path: unit.class.archer
+      description: Zero-sized tag for archer units
+      status: ✓ mapped
+
+    - name: CastOnlyUnit
+      ecs_type: Components.CastOnlyUnit
+      sdk_path: unit.class.cast_only
+      description: Zero-sized tag for magic-only units
+      status: ✓ mapped
+
+    - name: HighPriorityUnit
+      ecs_type: Components.HighPriorityUnit
+      sdk_path: unit.class.high_priority
+      description: Zero-sized tag for prioritized targeting
+      status: ✓ mapped
+
+  unit_identity:
+    - name: ObjectId
+      ecs_type: Components.RawComponents.ObjectId
+      sdk_path: entity.object_id
+      field: value (int)
+      status: ✓ mapped
+
+    - name: PriceBase
+      ecs_type: Components.PriceBase
+      sdk_path: entity.cost
+      description: BlobAssetReference<PriceBaseData> for unit/building costs
+      status: ✓ mapped
+
+    - name: SquadMarker
+      ecs_type: Components.RawComponents.SquadMarker
+      sdk_path: unit.squad
+      description: Squad assignment identifier
+      status: ✓ mapped
+
+  projectile_components:
+    - name: ProjectileDataBase
+      ecs_type: Components.ProjectileDataBase
+      sdk_path: projectile.base
+      description: BlobAssetReference<ProjectileData> for projectile definition
+      status: ✓ mapped
+
+    - name: ProjectileFlyData
+      ecs_type: Components.RawComponents.ProjectileFlyData
+      sdk_path: projectile.damage
+      field: damage (float)
+      status: ✓ mapped
+
+    - name: ProjectileGravity
+      ecs_type: Components.RawComponents.ProjectileFlyData
+      sdk_path: projectile.gravity
+      field: gravity (float)
+      status: ✓ mapped
+
+    - name: ProjectileMultiHitBuffer
+      ecs_type: Components.ProjectileMultiHitBuffer
+      sdk_path: projectile.multi_hit
+      description: AoE/piercing projectile marker
+      status: ✓ mapped
+
+  building_core:
+    - name: BuildingBase
+      ecs_type: Components.BuildingBase
+      sdk_path: building
+      description: Core building component present on all buildings
+      status: ✓ mapped
+
+    - name: Barraks (typo in game)
+      ecs_type: Components.Barraks
+      sdk_path: building.type.barracks
+      description: Barracks marker (game has typo: "Barraks")
+      status: ✓ mapped
+
+    - name: Farm
+      ecs_type: Components.Farm
+      sdk_path: building.type.farm
+      description: Farm marker
+      status: ✓ mapped
+
+    - name: House
+      ecs_type: Components.House
+      sdk_path: building.type.house
+      description: House marker (population housing)
+      status: ✓ mapped
+
+    - name: HouseBase
+      ecs_type: Components.HouseBase
+      sdk_path: building.type.house_base
+      description: House base data (capacity, etc.)
+      status: ✓ mapped
+
+    - name: Granary
+      ecs_type: Components.Granary
+      sdk_path: building.type.granary
+      description: Food storage building
+      status: ✓ mapped
+
+    - name: Hospital
+      ecs_type: Components.Hospital
+      sdk_path: building.type.hospital
+      description: Hospital marker
+      status: ✓ mapped
+
+    - name: HospitalBase
+      ecs_type: Components.HospitalBase
+      sdk_path: building.type.hospital_base
+      description: Hospital base data (heal rate, capacity)
+      status: ✓ mapped
+
+    - name: ForesterHouse
+      ecs_type: Components.ForesterHouse
+      sdk_path: building.type.forester
+      description: Wood production building
+      status: ✓ mapped
+
+    - name: StoneCutter
+      ecs_type: Components.StoneCutter
+      sdk_path: building.type.stonecutter
+      description: Stone production building
+      status: ✓ mapped
+
+    - name: IronMine
+      ecs_type: Components.IronMine
+      sdk_path: building.type.ironmine
+      description: Iron production building (finite deposit)
+      status: ✓ mapped
+
+    - name: InfiniteIronMine
+      ecs_type: Components.InfiniteIronMine
+      sdk_path: building.type.ironmine_infinite
+      description: Iron production building (infinite deposit)
+      status: ✓ mapped
+
+    - name: SoulMine
+      ecs_type: Components.SoulMine
+      sdk_path: building.type.soulmine
+      description: Soul crystal production building
+      status: ✓ mapped
+
+  resource_current:
+    - name: CurrentFood
+      ecs_type: Components.RawComponents.CurrentFood
+      sdk_path: resource.current.food
+      field: value (int)
+      description: Current food stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentIron
+      ecs_type: Components.RawComponents.CurrentIron
+      sdk_path: resource.current.iron
+      field: value (int)
+      description: Current iron stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentStone
+      ecs_type: Components.RawComponents.CurrentStone
+      sdk_path: resource.current.stone
+      field: value (int)
+      description: Current stone stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentWood
+      ecs_type: Components.RawComponents.CurrentWood
+      sdk_path: resource.current.wood
+      field: value (int)
+      description: Current wood stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentMoney
+      ecs_type: Components.RawComponents.CurrentMoney
+      sdk_path: resource.current.money
+      field: value (int)
+      description: Current money/gold stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentSouls
+      ecs_type: Components.RawComponents.CurrentSouls
+      sdk_path: resource.current.souls
+      field: value (int)
+      description: Current soul crystal stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentBones
+      ecs_type: Components.RawComponents.CurrentBones
+      sdk_path: resource.current.bones
+      field: value (int)
+      description: Current bones stockpile (singleton)
+      status: ✓ mapped
+
+    - name: CurrentSpirit
+      ecs_type: Components.RawComponents.CurrentSpirit
+      sdk_path: resource.current.spirit
+      field: value (int)
+      description: Current spirit stockpile (singleton)
+      status: ✓ mapped
+
+  resource_sources:
+    - name: FoodSource
+      ecs_type: Components.FoodSource
+      sdk_path: resource.source.food
+      description: Entity produces food
+      status: ✓ mapped
+
+    - name: IronSource
+      ecs_type: Components.IronSource
+      sdk_path: resource.source.iron
+      description: Entity produces iron
+      status: ✓ mapped
+
+    - name: StoneSource
+      ecs_type: Components.StoneSource
+      sdk_path: resource.source.stone
+      description: Entity produces stone
+      status: ✓ mapped
+
+  resource_storage:
+    - name: FoodStorage
+      ecs_type: Components.FoodStorage
+      sdk_path: resource.storage.food
+      field: stored (int)
+      description: Entity stores food
+      status: ✓ mapped
+
+    - name: WoodStorage
+      ecs_type: Components.WoodStorage
+      sdk_path: resource.storage.wood
+      field: stored (int)
+      description: Entity stores wood
+      status: ✓ mapped
+
+    - name: StoneStorage
+      ecs_type: Components.StoneStorage
+      sdk_path: resource.storage.stone
+      field: stored (int)
+      description: Entity stores stone
+      status: ✓ mapped
+
+    - name: IronStorage
+      ecs_type: Components.IronStorage
+      sdk_path: resource.storage.iron
+      field: stored (int)
+      description: Entity stores iron
+      status: ✓ mapped
+
+    - name: BonesStorage
+      ecs_type: Components.BonesStorage
+      sdk_path: resource.storage.bones
+      field: stored (int)
+      description: Entity stores bones
+      status: ✓ mapped
+
+    - name: CorpseStorage
+      ecs_type: Components.CorpseStorage
+      sdk_path: resource.storage.corpse
+      field: stored (int)
+      description: Entity stores corpses
+      status: ✓ mapped
+
+---
+# ==============================================================================
+# ECS SYSTEMS - Simulation & Processing
+# ==============================================================================
+
+ecs_systems:
+  system_groups:
+    - name: Initialization
+      order: 0
+      description: Setup and initialization phase
+      systems:
+        - EntityInitializationSystem
+        - ComponentSetupSystem
+      status: ✓ mapped
+
+    - name: Simulation
+      order: 1
+      description: Core game simulation loop
+      systems:
+        - UnitBehaviorSystem
+        - StatModifierSystem (DINOForge)
+        - AttackSystem
+      status: ✓ mapped
+
+    - name: PathFinding
+      order: 2
+      description: Unit pathfinding and movement calculation
+      systems:
+        - PathFindingSystem
+        - MovementSystem
+      status: ✓ mapped
+
+    - name: Fight
+      order: 3
+      description: Combat resolution and damage application
+      systems:
+        - DamageSystem
+        - ProjectileSystem
+        - CombatResolutionSystem
+      status: ✓ mapped
+
+    - name: ResourceDelivery
+      order: 4
+      description: Resource distribution and gathering
+      systems:
+        - ResourceDeliverySystem
+        - GatheringSystem
+      status: ✓ mapped
+
+    - name: ResourceProducing
+      order: 5
+      description: Resource production and generation
+      systems:
+        - FarmProductionSystem
+        - MineProductionSystem
+        - HarvestSystem
+      status: ✓ mapped
+
+    - name: Presentation
+      order: 6
+      description: Rendering and visual updates
+      systems:
+        - RenderingSystem
+        - AnimationSystem
+        - EffectsSystem
+      status: ✓ mapped
+
+  dinofrogeecs_additions:
+    - name: StatModifierSystem
+      namespace: DINOForge.Runtime.Bridge
+      description: Applies field-level stat overrides from packs (doctrines, skills, etc.)
+      system_type: SystemBase
+      update_group: Simulation
+      input_components: [Unit, StatOverride, Health, ArmorData, MoveHeading, AttackCooldown]
+      output_components: [Health, ArmorData, MoveHeading, AttackCooldown]
+      status: ✓ complete
+
+    - name: AssetSwapSystem (skeleton)
+      namespace: DINOForge.Runtime.Bridge
+      description: Injects asset replacements (textures, meshes, audio) at runtime
+      system_type: SystemBase
+      update_group: Presentation
+      note: Pending AssetsTools.NET integration for AddressablesCatalog
+      status: ⚠ partial
+
+---
+# ==============================================================================
+# WEAPONS & EFFECTS (Vanilla Weapons Mapped to Star Wars Equivalents)
+# ==============================================================================
+
+weapons:
+  ranged_blaster:
+    vanilla_mapping: ranged_weapon_blaster
+
+    republic:
+      id: dc15a_blaster
+      display_name: DC-15A Blaster Rifle
+      type: ranged_projectile
+      damage: 14.0
+      range: 20.0
+      fire_rate: 2.5
+      accuracy: 0.75
+      description: Standard-issue blaster rifle for clone troopers
+
+    cis:
+      id: e5_blaster
+      display_name: E-5 Blaster Rifle
+      type: ranged_projectile
+      damage: 9.0
+      range: 16.0
+      fire_rate: 3.0
+      accuracy: 0.45
+      description: Standard-issue droid blaster rifle
+
+  heavy_cannon:
+    vanilla_mapping: heavy_weapon_cannon
+
+    republic:
+      id: z6_rotary_cannon
+      display_name: Z-6 Rotary Blaster Cannon
+      type: ranged_projectile
+      damage: 10.0
+      range: 18.0
+      fire_rate: 8.0
+      accuracy: 0.55
+      description: Heavy suppressive fire weapon
+
+    cis:
+      id: wrist_blaster
+      display_name: Super Battle Droid Wrist Blasters
+      type: ranged_projectile
+      damage: 14.0
+      range: 18.0
+      fire_rate: 4.0
+      accuracy: 0.55
+      description: Integrated wrist-mounted blasters
+
+  melee_lightsaber:
+    vanilla_mapping: melee_weapon_sword
+
+    republic:
+      id: lightsaber
+      display_name: Jedi Lightsaber
+      type: melee
+      damage: 35.0
+      range: 8.0
+      fire_rate: 1.5
+      accuracy: 0.95
+      description: Jedi Force weapon
+
+    cis:
+      id: grievous_lightsabers
+      display_name: General Grievous' Lightsabers
+      type: melee
+      damage: 55.0
+      range: 8.0
+      fire_rate: 3.0
+      accuracy: 0.95
+      description: Four lightsaber arms of General Grievous
+
+---
+# ==============================================================================
+# COVERAGE SUMMARY
+# ==============================================================================
+
+coverage_summary:
+  units:
+    total_vanilla: 13
+    republic_mapped: 13
+    cis_mapped: 13
+    config_complete: 13
+    model_status:
+      complete: 0
+      ready: 0
+      pending: 13
+      blocked: 0
+    texture_status:
+      complete: 0
+      ready: 0
+      pending: 13
+      blocked: 0
+
+  buildings:
+    total_vanilla: 24
+    republic_mapped: 14
+    cis_mapped: 14
+    config_complete: 14
+    model_status:
+      complete: 0
+      ready: 2
+      in_progress: 0
+      pending: 12
+      blocked: 0
+    texture_status:
+      complete: 0
+      ready: 10
+      pending: 4
+      blocked: 0
+
+  components:
+    total_mapped: 60+
+    ecs_core: 30+
+    unit_stats: 10
+    building_types: 12
+    resource_management: 16
+    projectile: 4
+
+  systems:
+    total_system_groups: 7
+    dinofrogeecs_additions: 2
+    status: ✓ core mapped, ⚠ asset swap pending
+
+  weapons:
+    total_mapped: 6+
+    republic_weapons: 3
+    cis_weapons: 3
+    status: ✓ config complete, ✗ models pending
+
+  factions:
+    republic:
+      id: republic
+      archetype: order
+      doctrine: elite_discipline
+      roster_slots: 12
+      buildings: 14
+      units: 13
+      status: ✓ complete
+
+    cis:
+      id: cis
+      archetype: industrial_swarm
+      doctrine: mechanized_attrition
+      roster_slots: 12
+      buildings: 14
+      units: 13
+      status: ✓ complete
+
+---
+# ==============================================================================
+# STATUS LEGEND
+# ==============================================================================
+
+status_codes:
+  "✓": "Complete and ready"
+  "✓ ready": "Complete and ready for integration"
+  "✓ complete": "Feature fully implemented"
+  "⚠": "In progress or partial"
+  "⚠ in_progress": "Work in progress"
+  "⚠ partial": "Partially complete"
+  "✗": "Not started or pending"
+  "✗ pending": "Pending implementation"
+  "✗ blocked": "Blocked by dependency"

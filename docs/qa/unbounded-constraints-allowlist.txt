@@ -1,0 +1,92 @@
+# unbounded-constraints-allowlist.txt — Pattern #94 generalization (#261)
+#
+# One entry per line. Two formats accepted:
+#   1) bare POSIX file path  — suppresses all hits in that file
+#   2) rule|file|line key    — suppresses one specific hit
+#
+# Comments start with #. Blank lines ignored.
+#
+# Initial seed (2026-04-27): the rule_nuget_floating and gitignore_overbroad
+# entries below are the existing-baseline grandfathered set. New floats added
+# after this seed must either pin the version or update the allowlist with a
+# rationale comment immediately above the entry.
+#
+# Tracking: #261 (this gate), #260 (narrow framework_version gate),
+#           Pattern #94 (Unbounded Range Theatre).
+
+dependabot_unrationalized|.github/dependabot.yml|27
+gitignore_overbroad|.pytest_cache/.gitignore|2
+gitignore_overbroad|htmlcov/.gitignore|2
+gitignore_overbroad|scripts/hooks/.pytest_cache/.gitignore|2
+gitignore_overbroad|src/Tests/e2e/.pytest_cache/.gitignore|2
+gitignore_overbroad|src/Tools/DinoforgeMcp/htmlcov/.gitignore|2
+gitignore_overbroad|src/Tools/DinoforgeMcp/tests/.pytest_cache/.gitignore|2
+nuget_floating|Directory.Build.props|58
+nuget_floating|src/Bridge/Client/DINOForge.Bridge.Client.csproj|29
+nuget_floating|src/Bridge/Client/DINOForge.Bridge.Client.csproj|30
+nuget_floating|src/Bridge/Client/DINOForge.Bridge.Client.csproj|31
+nuget_floating|src/Bridge/Client/DINOForge.Bridge.Client.csproj|32
+nuget_floating|src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj|28
+nuget_floating|src/SDK/DINOForge.SDK.csproj|50
+nuget_floating|src/SDK/DINOForge.SDK.csproj|51
+nuget_floating|src/SDK/DINOForge.SDK.csproj|52
+nuget_floating|src/SDK/DINOForge.SDK.csproj|53
+nuget_floating|src/Tests/Benchmarks/DINOForge.Benchmarks.csproj|14
+nuget_floating|src/Tests/Benchmarks/DINOForge.Benchmarks.csproj|15
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|25
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|26
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|27
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|31
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|32
+nuget_floating|src/Tests/CliToolTests/DINOForge.Tests.CliTools.csproj|33
+nuget_floating|src/Tests/DINOForge.Tests.csproj|33
+nuget_floating|src/Tests/DINOForge.Tests.csproj|34
+nuget_floating|src/Tests/DINOForge.Tests.csproj|35
+nuget_floating|src/Tests/DINOForge.Tests.csproj|39
+nuget_floating|src/Tests/DINOForge.Tests.csproj|40
+nuget_floating|src/Tests/DINOForge.Tests.csproj|45
+nuget_floating|src/Tests/DINOForge.Tests.csproj|46
+nuget_floating|src/Tests/DINOForge.Tests.csproj|47
+nuget_floating|src/Tests/DINOForge.Tests.csproj|48
+nuget_floating|src/Tests/DINOForge.Tests.csproj|49
+nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|11
+nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|12
+nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|13
+nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|17
+nuget_floating|src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj|18
+nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|13
+nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|14
+nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|15
+nuget_floating|src/Tests/Integration/DINOForge.Tests.Integration.csproj|19
+nuget_floating|src/Tests/Sketchfab/DINOForge.Tests.Sketchfab.csproj|21
+nuget_floating|src/Tests/Sketchfab/DINOForge.Tests.Sketchfab.csproj|22
+nuget_floating|src/Tests/Sketchfab/DINOForge.Tests.Sketchfab.csproj|23
+nuget_floating|src/Tests/Sketchfab/DINOForge.Tests.Sketchfab.csproj|27
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|12
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|13
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|14
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|18
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|20
+nuget_floating|src/Tests/UiAutomation/DINOForge.Tests.UiAutomation.csproj|21
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|16
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|17
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|18
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|19
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|20
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|21
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|22
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|23
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|24
+nuget_floating|src/Tools/Cli/DINOForge.Tools.Cli.csproj|33
+nuget_floating|src/Tools/DumpTools/DINOForge.Tools.DumpTools.csproj|17
+nuget_floating|src/Tools/DumpTools/DINOForge.Tools.DumpTools.csproj|18
+nuget_floating|src/Tools/GameControlCli/GameControlCli.csproj|15
+nuget_floating|src/Tools/GameControlCli/GameControlCli.csproj|16
+nuget_floating|src/Tools/Installer/GUI/DINOForge.Installer.csproj|18
+nuget_floating|src/Tools/Installer/GUI/DINOForge.Installer.csproj|19
+nuget_floating|src/Tools/Installer/GUI/DINOForge.Installer.csproj|20
+nuget_floating|src/Tools/Installer/GUI/DINOForge.Installer.csproj|21
+nuget_floating|src/Tools/Installer/GUI/DINOForge.Installer.csproj|22
+nuget_floating|src/Tools/Installer/InstallerLib/DINOForge.Tools.Installer.csproj|27
+nuget_floating|src/Tools/McpServer/DINOForge.Tools.McpServer.csproj|16
+nuget_floating|src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj|21

@@ -1,0 +1,745 @@
+# DINOForge — Comprehensive LLM Reference
+
+> A general-purpose mod platform and agent-driven development scaffold for Diplomacy is Not an Option.
+
+DINOForge is a **mod operating system**, not a single mod. It provides a framework, registries, schemas, and tooling for building any type of mod — from simple balance tweaks to full total conversion packs.
+
+**Tech Stack**: C# 12+ (.NET 8.0 / netstandard2.0), YAML/JSON, BepInEx 5.4.x, Unity ECS (DOTS), Addressables v1.21.18
+
+**Design Philosophy**: Wrap proven libraries, never handroll. Declarative-first (YAML), agent-driven, contract-driven (schemas), observable (logs, overlays, validators).
+
+**Status**: v0.5.0 (GUI installer, NuGet, stat modifiers, domain plugins, HMR). Next: v0.6.0 (Unit Spawner + ECS integration).
+
+---
+
+## Project Structure
+
+### Root Level Files
+
+```
+C:\Users\koosh\Dino\
+  README.md                 # Feature overview, quick start, architecture diagrams
+  CLAUDE.md                 # Agent governance, design rules, legal move classes
+  AGENTS.md                 # Subagent capabilities and delegation patterns
+  CONTRIBUTING.md           # PR workflow, code style, testing guidelines
+  CHANGELOG.md              # Semantic changelog (Keep a Changelog format)
+  VERSION                   # Current version (0.5.0)
+  llms.txt                  # This file (concise LLM context)
+  llms-full.txt             # This file (comprehensive LLM context)
+```
+
+### Source Code
+
+```
+src/
+  DINOForge.sln             # Main solution file
+
+  Runtime/
+    DINOForge.Runtime.csproj
+    Program.cs              # BepInEx entry point
+    Manifest.xml            # BepInEx plugin manifest
+    PluginInfo.cs           # Plugin metadata
+    Bootstrap.cs            # ECS system injection, world detection
+    Debug/
+      DebugOverlay.cs       # F10 in-game overlay (Spectre.Console)
+      OverlayRenderer.cs    # Render loop integration
+    Bridge/
+      ComponentMap.cs       # 30+ vanilla-to-mod component mappings
+      EntityQueries.cs      # ECS entity query helpers
+      StatModifierSystem.cs # Apply mod stat overrides
+      VanillaCatalog.cs     # Vanilla component/system registry
+      EcsExtensions.cs      # Reflection/introspection utilities
+    HotReload/
+      PackFileWatcher.cs    # FileSystemWatcher for live reload
+      ReloadBridge.cs       # Runtime pack reload triggers
+    UI/
+      SettingsPanel.cs      # Mod menu UI (netcode/Harmony hooks)
+      ModMenuOverlay.cs     # HUD injection
+
+  SDK/
+    DINOForge.SDK.csproj
+    ContentLoader.cs        # Pack discovery, topological load ordering
+    Registry/
+      IRegistry.cs          # Generic registry interface
+      Registry[T].cs        # Type-safe registry implementation
+      RegistryConflict.cs   # Conflict detection & reporting
+      PriorityLayering.cs   # Priority (0+, 1000+, 2000+, 3000+)
+    Models/
+      UnitDefinition.cs     # Unit data model
+      BuildingDefinition.cs # Building data model
+      FactionArchetype.cs   # Faction (Order, Swarm, Asymmetric)
+      WeaponDefinition.cs   # Weapon/attack definitions
+      ProjectileDefinition.cs
+      DoctrineDefinition.cs # Battle doctrine (focus, tactics, bonuses)
+      SkillDefinition.cs    # Unit special abilities
+      WaveDefinition.cs     # Wave composition
+      SquadDefinition.cs    # Squad archetype
+    Validation/
+      SchemaValidator.cs    # NJsonSchema integration
+      ValidationRule.cs     # Custom validation rules
+      ValidatorRegistry.cs  # Rule registry
+    Dependencies/
+      DependencyResolver.cs # Semver-aware resolution
+      ConflictDetector.cs   # Cycle detection, conflict rules
+      VersionRange.cs       # Semver parsing/comparison
+    Assets/
+      AssetsService.cs      # AssetsTools.NET wrapper
+      AddressablesCatalog.cs # Addressables catalog reading/writing
+      BundleInfo.cs         # Bundle metadata
+    HotReload/
+      PackWatcher.cs        # FileSystemWatcher implementation
+    Universe/
+      UniverseBible.cs      # Total conversion system (namespace isolation)
+      NamespaceMap.cs       # ID remapping for mods
+
+  Bridge/
+    DINOForge.Bridge.csproj
+    Protocol/
+      GameBridgeMessage.cs  # JSON-RPC message types
+      IGameBridge.cs        # Bridge interface
+      BridgeRequest.cs      # Request/response types
+    Client/
+      GameClient.cs         # Out-of-process bridge client
+      BridgeConnection.cs   # TCP/IPC connection
+
+  Domains/
+    DINOForge.Domains.csproj
+    Warfare/
+      FactionArchetypeProvider.cs  # Order, Swarm, Asymmetric
+      DoctrineLookup.cs            # Doctrine registry + rules
+      UnitRoleValidator.cs         # Unit archetype validation
+      WaveComposer.cs              # Wave assembly from definitions
+      BalanceCalculator.cs         # Stat scaling, progression
+      CombatSimulator.cs           # Combat math (experimental)
+    Economy/ (planned)
+    Scenario/ (planned)
+    UI/ (planned)
+
+  Tools/
+    Cli/
+      DINOForge.Cli.csproj
+      Program.cs            # System.CommandLine CLI entry
+      Commands/
+        StatusCommand.cs    # Status reporting
+        QueryCommand.cs     # Registry query
+        OverrideCommand.cs  # Live stat override
+        ReloadCommand.cs    # Hot reload pack
+        WatchCommand.cs     # File watch mode
+        SpawnCommand.cs     # Unit spawn (M9)
+
+    PackCompiler/
+      DINOForge.PackCompiler.csproj
+      Program.cs            # Main CLI
+      Commands/
+        ValidateCommand.cs  # Pack validation vs schemas
+        BuildCommand.cs     # Pack compilation
+        AssetCommand.cs     # Asset bundling
+      PackBuilder.cs        # Pack assembly logic
+      ManifestParser.cs     # pack.yaml parsing
+
+    DumpTools/
+      DINOForge.DumpTools.csproj
+      Program.cs
+      EntityDumper.cs       # Serialize ECS entities → JSON
+      ComponentAnalyzer.cs  # Component graph analysis
+      ReportGenerator.cs    # Spectre.Console reports
+
+    Installer/
+      DINOForge.Installer.csproj
+      InstallerService.cs   # BepInEx + DINOForge auto-install
+      RegistryUpdater.cs    # NuGet package detection
+
+    McpServer/
+      DINOForge.McpServer.csproj
+      Program.cs            # MCP server entry
+      GameTools/
+        UnitQueryTool.cs    # Query units by ID/type
+        FactionTool.cs      # List factions, archetypes
+        WeaponTool.cs       # Weapon stats, falloff
+        BuildingTool.cs     # Building definitions
+        StatModifierTool.cs # Stat override queries
+        (13 tools total)
+
+  Tests/
+    DINOForge.Tests.csproj  # net8.0
+    Unit/
+      RegistryTests.cs      # Registry conflict, priority, queries
+      ContentLoaderTests.cs # Pack loading, ordering, validation
+      SchemaValidationTests.cs
+      DependencyResolverTests.cs
+      AssetServiceTests.cs
+      (40+ test files)
+
+    Integration/
+      BridgeIntegrationTests.cs
+      EndToEndPackLoadTests.cs
+      EcsComponentMapTests.cs
+      StatModifierTests.cs
+      (15+ integration tests)
+```
+
+### Content Packs
+
+```
+packs/
+  example-balance/
+    pack.yaml               # Manifest: id, version, type, loads
+    units/
+      starter-unit.yaml
+      elite-unit.yaml
+    buildings/
+      barracks.yaml
+
+  warfare-modern/
+    pack.yaml               # Modern warfare (West vs Enemy)
+    factions/
+      west-faction.yaml
+    units/
+      infantry.yaml
+      tank.yaml
+    doctrines/
+      blitzkrieg.yaml
+
+  warfare-starwars/
+    pack.yaml               # Clone Wars (Republic vs CIS)
+    factions/
+      republic.yaml
+    units/
+      clone-trooper.yaml
+
+  warfare-guerrilla/
+    pack.yaml               # Asymmetric warfare
+    factions/
+      guerrilla.yaml
+
+  economy-balanced/ (planned)
+  scenario-tutorial/ (planned)
+```
+
+### Schemas (14 JSON files)
+
+```
+schemas/
+  unit.schema.json          # UnitDefinition shape
+  building.schema.json      # BuildingDefinition shape
+  faction.schema.json       # FactionArchetype shape
+  weapon.schema.json        # WeaponDefinition shape
+  projectile.schema.json    # ProjectileDefinition shape
+  doctrine.schema.json      # DoctrineDefinition shape
+  skill.schema.json         # SkillDefinition shape
+  wave.schema.json          # WaveDefinition shape
+  squad.schema.json         # SquadDefinition shape
+  pack.schema.json          # pack.yaml manifest shape
+  stat-modifier.schema.json # Stat override rules
+  component-map.schema.json # ECS component mappings
+  registry.schema.json      # Generic registry shape
+  config.schema.json        # Runtime configuration
+```
+
+### Docs & Manifests
+
+```
+docs/
+  index.md                  # VitePress homepage
+  getting-started.md        # Quick start guide
+  pack-author-guide.md      # How to write packs
+  api-reference.md          # SDK API docs
+  architecture.md           # System design deep-dive
+  testing-guide.md          # Test writing guide
+  tutorial-scenarios.md     # Example scenario packs
+  .vitepress/
+    config.ts               # VitePress config
+    theme.ts                # Custom theme
+
+manifests/
+  contracts.yaml            # Public API contracts
+  ownership.yaml            # Code ownership map
+  extension-points.yaml     # Where agents can extend
+
+.claude/
+  commands/
+    build-all.sh            # Build + test all
+    deploy.sh               # Deploy docs to GitHub Pages
+    test.sh                 # Run all tests
+    validate.sh             # Validate packs
+    dump-analyze.sh         # Run dump analyzer
+  memory/
+    MEMORY.md               # Agent memory (persists across conversations)
+```
+
+---
+
+## Pack System (pack.yaml Schema)
+
+Every mod is a pack with explicit manifest:
+
+```yaml
+id: my-pack                          # Unique ID (slug format)
+name: My Pack                        # Display name
+version: 0.1.0                       # Semver
+author: YourName
+type: content                        # content | balance | ruleset | total_conversion | utility
+framework_version: ">=0.1.0 <1.0.0" # Semver range
+depends_on:
+  - example-pack@>=0.1.0
+conflicts_with:
+  - incompatible-pack@*
+loads:
+  units:
+    - units/
+    - units/special/
+  buildings:
+    - buildings/
+  factions:
+    - factions/
+  weapons:
+    - weapons/
+  doctrines:
+    - doctrines/
+  skills:
+    - skills/
+  waves:
+    - waves/
+  squads:
+    - squads/
+metadata:
+  description: "Pack description"
+  tags: ["balance", "modern"]
+  min_game_version: "1.0.0"
+```
+
+**Load Order**:
+1. Discover all `pack.yaml` files
+2. Resolve dependencies (topological sort)
+3. Detect conflicts (same ID + same type)
+4. For each pack in order:
+   - Load + validate YAML content against schemas
+   - Register entries in type-safe registries
+   - Apply stat modifiers
+   - Hot-reload if watch mode enabled
+
+---
+
+## CLI Commands
+
+All commands use System.CommandLine and Spectre.Console for rich output.
+
+### PackCompiler
+
+```bash
+# Validate pack structure and content against schemas
+dotnet run --project src/Tools/PackCompiler -- validate packs/example-balance
+
+# Validate all packs in directory
+dotnet run --project src/Tools/PackCompiler -- validate packs/
+
+# Build (compile) a pack into deployable format
+dotnet run --project src/Tools/PackCompiler -- build packs/example-balance
+
+# Package assets (bundles, addressables)
+dotnet run --project src/Tools/PackCompiler -- asset packs/warfare-modern --output build/
+```
+
+### CLI (dinoforge)
+
+Compiled to `src/Tools/Cli/bin/Debug/dinoforge.exe` or installed globally via NuGet.
+
+```bash
+# Show mod status
+dinoforge status
+
+# Query registry
+dinoforge query units --faction west
+dinoforge query buildings --type barracks
+
+# Live override (requires game running)
+dinoforge override unit cavalry --stat health +50
+
+# Reload packs (hot-reload)
+dinoforge reload
+
+# Watch mode (auto-reload on file change)
+dinoforge watch packs/
+
+# Spawn unit (M9 feature)
+dinoforge spawn cavalry --faction west --tier 2
+dinoforge spawn-wave wave-1
+```
+
+### DumpTools
+
+```bash
+# Dump entities to JSON
+dotnet run --project src/Tools/DumpTools -- dump --output entities.json
+
+# Analyze component graph
+dotnet run --project src/Tools/DumpTools -- analyze --output report.md
+
+# Filter by component type
+dotnet run --project src/Tools/DumpTools -- dump --filter "Health,ArmorData" --output combat-units.json
+```
+
+### Custom Commands (.claude/commands/)
+
+```bash
+# Build, test, validate all
+.claude/commands/build-all.sh
+
+# Run all tests
+.claude/commands/test.sh
+
+# Validate all packs
+.claude/commands/validate.sh
+
+# Deploy docs
+.claude/commands/deploy.sh
+
+# Run analyzer
+.claude/commands/dump-analyze.sh
+```
+
+---
+
+## ECS Bridge Architecture
+
+### Component Mapping (src/Runtime/Bridge/ComponentMap.cs)
+
+30+ mappings from vanilla DINO components to mod definitions:
+
+| Vanilla Component | Mod Model | Mapping |
+|---|---|---|
+| Health | UnitDefinition.Health | `health.amount ← definition.maxHealth` |
+| ArmorData | UnitDefinition.Armor | `armor.value ← stat_modifiers[armor]` |
+| AttackCooldown | WeaponDefinition.Cooldown | `cooldown ← weapon.cooldownFrames` |
+| Position3D | UnitDefinition.StartPosition | Position initialization |
+| Movement | UnitDefinition.Speed | `speed ← base_speed * (1 + stat_mods)` |
+| (27+ more) | | |
+
+**Application**: StatModifierSystem reads registry overrides and applies to entities each frame.
+
+### Entity Queries (src/Runtime/Bridge/EntityQueries.cs)
+
+Helpers for agent introspection:
+
+```csharp
+// Get all units of a faction
+public static NativeArray<Entity> GetUnitsByFaction(World world, string factionId)
+
+// Get buildings with health < X
+public static NativeArray<Entity> GetDamagedBuildings(World world, float threshold)
+
+// Count entities by component type
+public static int CountEntitiesWithComponent<T>(World world) where T : unmanaged, IComponentData
+```
+
+### Stat Modifier System (src/Runtime/Bridge/StatModifierSystem.cs)
+
+SystemBase that runs each frame:
+
+1. Enumerate all entities with Health, ArmorData, etc.
+2. For each entity, query StatModifier registry
+3. Apply deltas: `final_stat = base_stat * (1 + additive%) + additive_flat`
+4. Clamp to bounds (defined in schema)
+5. Log applied modifiers (debug level)
+
+**No monkeypatch — uses ECS ComponentData mutations only.**
+
+### Vanilla Catalog (src/Runtime/Bridge/VanillaCatalog.cs)
+
+Read-only registry of vanilla DINO systems and components:
+
+- System discovery via reflection on `World.Systems` (NoAllocReadOnlyCollection)
+- Component introspection via typeof + generic FieldInfo
+- **Critical invariant**: World is read during Initialization group, locked during Simulation
+
+---
+
+## Testing Approach
+
+### Test Structure
+
+**Unit Tests** (xUnit + FluentAssertions):
+- Registry operations (add, query, conflict detection)
+- Schema validation (valid + invalid cases)
+- Dependency resolution (cycles, missing deps, version ranges)
+- Content loader (pack discovery, ordering, validation)
+- Balance calculations (stat scaling formulas)
+
+**Integration Tests**:
+- Pack loading end-to-end (file → registry → runtime)
+- ECS bridge (component mapping, stat application)
+- Asset pipeline (bundle reading/writing)
+- CLI commands (validate, build, query, spawn)
+
+**Property-Based Tests** (planned, using Hedgehog or FsCheck):
+- Stat calculations remain within bounds over 1000 random inputs
+- Dependency resolver always produces acyclic ordering
+- Pack load order is deterministic
+
+### Test Run Commands
+
+```bash
+# Run all tests
+dotnet test src/DINOForge.sln
+
+# Run specific test class
+dotnet test src/Tests/DINOForge.Tests.csproj -c TestFixture=RegistryTests
+
+# Run with coverage
+dotnet test src/DINOForge.sln /p:CollectCoverage=true /p:CoverageFormat=opencover
+
+# Run in verbose mode
+dotnet test src/DINOForge.sln --verbosity detailed
+```
+
+### Target Metrics
+
+- **Unit test count**: 130+ (currently 80+)
+- **Integration test count**: 25+ (currently 15+)
+- **Code coverage**: 75%+ on SDK + Domains
+- **Pre-commit gate**: All tests pass + no lint warnings
+
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions (.github/workflows/)
+
+**ci.yml** (on push to main, PR):
+- Restore NuGet packages
+- Build solution (`dotnet build`)
+- Run tests (`dotnet test` with coverage)
+- Upload coverage to Codecov
+- Lint check (`dotnet format --verify-no-changes`)
+
+**docs.yml** (on release tag):
+- Build VitePress site
+- Deploy to GitHub Pages
+
+**release.yml** (manual trigger):
+- Pack NuGet package (`dotnet pack`)
+- Push to nuget.org
+- Create GitHub Release with changelog
+- Deploy docs
+
+### Release Process
+
+1. Update VERSION file (e.g., `0.6.0`)
+2. Update CHANGELOG.md (Keep a Changelog format)
+3. Commit + tag: `git tag v0.6.0`
+4. Push: `git push origin main --tags`
+5. GitHub Actions auto-builds, tests, packages, deploys
+
+---
+
+## Key Design Principles
+
+1. **Wrap, Don't Handroll** — Always prefer existing libraries with thin wrappers over custom implementations
+2. **Declarative Before Imperative** — YAML/JSON manifests over C# patches
+3. **Framework Before Content** — Invest in platform, not individual mods
+4. **Stable Abstraction Over Unstable Internals** — Isolate ECS glue behind bridge
+5. **Agent-First Repo Design** — Optimize for autonomous agent development
+6. **Observability First-Class** — Logs, overlays, reports, validators built-in
+7. **Compatibility-Aware Packaging** — Explicit deps, conflicts, versions
+8. **Graceful Degradation** — Fail loudly with clear fallbacks
+
+---
+
+## Agent Governance
+
+### MUST DO
+
+- Work through manifests (pack.yaml) and registries (SDK/Registry)
+- Use generators/templates for new content packs
+- Update CHANGELOG.md when adding features/fixes
+- Update README.md if adding new commands or major features
+- Add tests for all public APIs
+- Run `dotnet test` before completing work
+- Validate all packs: `dotnet run --project src/Tools/PackCompiler -- validate packs/`
+
+### MUST NOT
+
+- **Handroll what a library already solves** — always search for existing packages first
+- Patch runtime internals unless assigned runtime-layer work
+- Invent new registry patterns casually
+- Duplicate schemas (consolidate into schemas/ directory)
+- Bypass validators (always use SchemaValidator)
+- Hardcode content IDs in engine code (always use registries)
+- Add undocumented extension points (document in manifests/)
+- Skip tests or merge without compatibility checks
+
+### Legal Move Classes (Agent Operations)
+
+Reduce all work to one of these:
+
+- `create schema` — New JSON schema definition (add to schemas/)
+- `extend registry` — Add entries to existing registry (modify SDK/Registry)
+- `add content pack` — New YAML pack with manifest (add to packs/)
+- `patch mapping` — Update vanilla-to-mod mapping (modify Bridge/ComponentMap)
+- `write validator` — New validation rule (extend SDK/Validation)
+- `add test fixture` — New test case (add to Tests/)
+- `add debug view` — New diagnostic surface (extend Runtime/Debug/DebugOverlay)
+- `add migration` — Version compatibility migration (add to SDK/Migrations)
+- `add compatibility rule` — Cross-pack conflict rule (extend DependencyResolver)
+- `add documentation manifest` — Update docs/contracts (manifest-driven)
+
+---
+
+## Code Style
+
+- **C# 12+** with nullable reference types enabled (`#nullable enable`)
+- **async/await** preferred over raw Tasks
+- **XML doc comments** on all public APIs (methods, classes, interfaces)
+- **Immutable data models** preferred (record, init-only properties)
+- **Registry pattern** for all extensible domains
+- **No `var`** for non-obvious types (explicit typing for clarity)
+- **Meaningful names** over comments (self-documenting code)
+
+---
+
+## Build vs Wrap Decision Tree
+
+**ALWAYS prefer** (in order):
+
+1. **Direct use** of existing library as-is (e.g., use NJsonSchema directly)
+2. **Thin wrapper/adapter** around existing library (e.g., wrap AssetsTools.NET)
+3. **Composition** of multiple existing libraries (e.g., FileSystemWatcher + YamlDotNet)
+4. **Modified fork** of existing library (last resort)
+
+**ONLY handroll when**:
+- No existing solution covers the need (e.g., DINO-specific ECS glue)
+- Wrapping would be more complex than simple implementation
+- Scope is tiny and self-contained (< 50 lines)
+
+### Library Preferences
+
+| Need | Use | Wrap/Adapt | Don't Build |
+|------|-----|------------|-------------|
+| Schema validation | NJsonSchema | Create `SchemaValidator` wrapper | Custom validator |
+| Dependency resolution | Semver.NET | Create `DependencyResolver` | Custom semver logic |
+| Logging | Serilog + BepInEx | Thin facade in Runtime | Custom logger |
+| CLI tooling | System.CommandLine, Spectre.Console | Create command classes | Custom arg parser |
+| Config management | BepInEx ConfigurationManager | Wrap in Config service | Custom system |
+| ECS introspection | Unity.Entities reflection | Wrap in EntityQueries | Custom reflection |
+| File watching | FileSystemWatcher | Use directly | Custom polling |
+| YAML/JSON parsing | YamlDotNet, System.Text.Json | Direct use | Custom parsers |
+| Asset bundles | AssetsTools.NET | Create `AssetsService` wrapper | Custom unpacker |
+| Testing | xUnit, FluentAssertions, Moq | Direct use | Custom framework |
+
+---
+
+## Current Milestone (v0.5.0)
+
+✅ **Complete**:
+- Reverse-engineering harness (45K entity dumps)
+- Runtime scaffold (BepInEx, ECS systems)
+- Generic SDK (registries, schemas, ContentLoader, 46 tests)
+- Dev tooling (PackCompiler, DumpTools, debug overlay)
+- Warfare domain (archetypes, doctrines, roles, waves, balance, 31 tests)
+- ECS bridge (ComponentMap, EntityQueries, StatModifier)
+- Asset pipeline (AssetsTools.NET, Addressables)
+- GUI installer + NuGet packaging
+
+### Next Milestone (v0.6.0 — M9)
+
+🔄 **In Progress**:
+- Unit Spawner System (ECS archetype factory, spawn queue, lifecycle)
+- ECS Initialization Pipeline (ordering, stat application, collision-free placement)
+- Live Spawn Commands (`dinoforge spawn <unit-id>`)
+- Spawner Schema Validation
+- Target: 30+ spawner tests, zero frame drops on spawn
+
+---
+
+## DINO Game Details (Reference)
+
+These details inform ECS bridge design. Agents typically don't modify game code directly.
+
+- **Engine**: Unity 2021.3.45f2, full ECS (DOTS), Burst enabled
+- **Asset system**: Unity Addressables v1.21.18 (NOT classic AssetBundles)
+- **Streaming assets**: `StreamingAssets/aa/StandaloneWindows64/` (4.2GB + 2.1GB catalogs)
+- **Mod loader**: BepInEx 5.4.23.5 (standard GitHub build compatible)
+- **Runtime**: **Mono** (not IL2CPP) — .NET reflection works
+- **MonoBehaviour**: Never runs (destroyed at frame 0) — use ECS SystemBase only
+- **World access**: `World.Systems` is `NoAllocReadOnlyCollection` — index access only, NO IEnumerable cast
+- **Entity count**: ~45K in Default World, 6 worlds total
+- **Faction system**: No explicit Faction component — implicit via Enemy tag + unit type markers
+- **Namespaces**: Game code in `Components.*`, `Systems.*` from DNO.Main.dll
+- **Key components**: Health, ArmorData, AttackCooldown, BuildingBase, ProjectileDataBase
+- **System groups**: Initialization → Simulation → PathFinding → Fight → ResourceDelivery → ResourceProducing → Presentation
+
+---
+
+## Useful Links
+
+- **GitHub Repo**: https://github.com/KooshaPari/Dino
+- **Full Documentation**: https://kooshapari.github.io/Dino
+- **Steam Game**: https://store.steampowered.com/app/1272320/Diplomacy_is_Not_an_Option/
+- **BepInEx Docs**: https://bepinex.github.io/
+- **Unity DOTS**: https://unity.com/dots
+- **AssetsTools.NET**: https://github.com/nesrak1/AssetsTools.NET
+- **NJsonSchema**: https://github.com/RicoSuter/NJsonSchema
+- **Keep a Changelog**: https://keepachangelog.com/
+- **Semantic Versioning**: https://semver.org/
+- **llmstxt.org**: https://llmstxt.org/
+
+---
+
+## Quick Reference: Common Tasks
+
+### Add a new pack type
+
+1. Define schema in `schemas/my-type.schema.json`
+2. Create model class in `SDK/Models/MyTypeDefinition.cs`
+3. Create registry in `SDK/Registry/MyTypeRegistry.cs` (extends IRegistry[T])
+4. Add validator in `SDK/Validation/MyTypeValidator.cs`
+5. Update `ContentLoader.cs` to load new pack type
+6. Add 3+ unit tests in `Tests/Unit/`
+7. Add integration test in `Tests/Integration/`
+8. Update CHANGELOG.md, README.md
+9. Run `dotnet test` (must pass 100%)
+
+### Fix a bug
+
+1. Create minimal failing test in `Tests/`
+2. Fix code until test passes
+3. Run full test suite: `dotnet test`
+4. Update CHANGELOG.md (under `## [Unreleased] - Fixes`)
+5. Commit with message: `fix: <description>`
+
+### Add a CLI command
+
+1. Create command class in `src/Tools/Cli/Commands/MyCommand.cs`
+2. Register in `Program.cs` (System.CommandLine)
+3. Add 2+ unit tests in `Tests/Unit/CliTests/`
+4. Add integration test (if interacts with game)
+5. Update docs/cli-reference.md
+6. Run `dotnet test && dinoforge <command> --help`
+
+### Deploy docs
+
+```bash
+.claude/commands/deploy.sh
+# Builds VitePress, pushes to gh-pages branch, triggers GitHub Pages rebuild
+```
+
+---
+
+## Glossary
+
+- **Pack**: A mod, consisting of pack.yaml manifest + content files
+- **Registry**: Type-safe collection of game objects (units, buildings, etc.)
+- **ECS Bridge**: Maps mod definitions to vanilla DINO ECS components at runtime
+- **StatModifier**: Runtime override of entity stats (health, armor, speed, etc.)
+- **ComponentMap**: 30+ mappings from vanilla components to mod data models
+- **Hot Reload**: Live reloading of pack files during gameplay (via FileSystemWatcher)
+- **Addressables**: Unity's runtime asset loading system (used for bundles)
+- **AssetsTools.NET**: Community tool for reading/writing .assets and .bundle files
+- **BepInEx**: Mod loader framework, injects into game at startup
+- **DOTS**: Unity Data-Oriented Tech Stack (ECS architecture)
+- **SDD**: Spec-Driven Development (specs/schemas first, implementation second)
+- **BDD**: Behavior-Driven Development (user stories/acceptance criteria first)
+- **TDD**: Test-Driven Development (tests first, code second)
+- **DDD**: Domain-Driven Design (bounded contexts, ubiquitous language)
+- **ADD**: Agent-Driven Development (autonomous agent code generation)
+- **CDD**: Contract-Driven Development (schemas as contracts)

@@ -1,0 +1,75 @@
+[2026-03-12T23:39:08.474070] [INFO] ============================================================
+[2026-03-12T23:39:08.475581] [INFO] DINOForge Asset Downloader (v0.7.0 + v0.8.0 Web Method)
+[2026-03-12T23:39:08.476592] [INFO] ============================================================
+[2026-03-12T23:39:08.476592] [INFO] Total models: 9
+[2026-03-12T23:39:08.478593] [INFO] 
+[v0.7.0] General Grievous (sw_general_grievous_sketchfab_001)
+[2026-03-12T23:39:08.480113] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/general-grievous-5d162177a1df4f56abb615182007d5c4
+[2026-03-12T23:39:08.867227] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:09.392669] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:09.395731] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:09.396744] [INFO] [SUCCESS]
+[2026-03-12T23:39:09.398780] [INFO] 
+[v0.7.0] Clone Trooper Phase II (sw_clone_trooper_phase2_sketchfab_001)
+[2026-03-12T23:39:09.399800] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d
+[2026-03-12T23:39:09.795771] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:10.287000] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:10.288999] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:10.289998] [INFO] [SUCCESS]
+[2026-03-12T23:39:10.291997] [INFO] 
+[v0.7.0] AT-TE Walker (sw_at_te_walker_sketchfab_001)
+[2026-03-12T23:39:10.293998] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/at-te-walker-animated-81ef81cf6c554055b741b43a1a08d69f
+[2026-03-12T23:39:10.659463] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:10.851179] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:10.853178] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:10.854179] [INFO] [SUCCESS]
+[2026-03-12T23:39:10.855176] [INFO] 
+[v0.7.0] Jedi Temple (sw_jedi_temple_sketchfab_001)
+[2026-03-12T23:39:10.857249] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/jedi-temple-317dedec15a845cbb1abc8c90804b840
+[2026-03-12T23:39:11.275891] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:11.469216] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:11.471217] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:11.473217] [INFO] [SUCCESS]
+[2026-03-12T23:39:11.475218] [INFO] 
+[v0.7.0] B2 Super Battle Droid (sw_b2_super_droid_sketchfab_001)
+[2026-03-12T23:39:11.476467] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/b2-super-battle-droid-927b3ec911cc45c3ad15c458b3de4d50
+[2026-03-12T23:39:11.862103] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:12.059095] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:12.060096] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:12.062096] [INFO] [SUCCESS]
+[2026-03-12T23:39:12.064096] [INFO] 
+[v0.8.0] Phase 2 Clone Trooper (Alt) (sw_clone_trooper_phase2_alt_sketchfab_001)
+[2026-03-12T23:39:12.065606] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/phase-2-clone-trooper-0f022ffbbf2342f992f413f7935e221c
+[2026-03-12T23:39:12.450037] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:12.646079] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:12.648089] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:12.649088] [INFO] [SUCCESS]
+[2026-03-12T23:39:12.651086] [INFO] 
+[v0.8.0] Clone ARC Trooper (sw_arc_trooper_sketchfab_001)
+[2026-03-12T23:39:12.652088] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/clone-arc-trooper-8ac7323517e04efb91abb5edcafc1871
+[2026-03-12T23:39:13.024931] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:13.228041] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:13.230044] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:13.231045] [INFO] [SUCCESS]
+[2026-03-12T23:39:13.233044] [INFO] 
+[v0.8.0] Droideka (sw_droideka_sketchfab_001)
+[2026-03-12T23:39:13.235044] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/droideka-42b2a42130f94d73a29eda6ecfdce98f
+[2026-03-12T23:39:13.642245] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:14.123325] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:14.124834] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:14.126844] [INFO] [SUCCESS]
+[2026-03-12T23:39:14.128845] [INFO] 
+[v0.8.0] AAT Tank (sw_aat_walker_sketchfab_001)
+[2026-03-12T23:39:14.129845] [INFO] Fetching Sketchfab page: https://sketchfab.com/3d-models/aat-armored-assault-tank-7bdce26cbd3440fa8cbcfc135c698b1d
+[2026-03-12T23:39:14.539741] [INFO] Attempting download from: https://sketchfab.com/3d-models?date=week&amp;features=downloadable&amp;sort_by=...
+[2026-03-12T23:39:14.730117] [INFO] Downloaded 0.3MB
+[2026-03-12T23:39:14.732115] [INFO] Saved as GLB (inferred)
+[2026-03-12T23:39:14.733114] [INFO] [SUCCESS]
+[2026-03-12T23:39:14.735116] [INFO] 
+============================================================
+[2026-03-12T23:39:14.735116] [INFO] SUMMARY
+[2026-03-12T23:39:14.736175] [INFO] ============================================================
+[2026-03-12T23:39:14.737186] [INFO] v0.7.0: 5 success, 0 failed, 0 already
+[2026-03-12T23:39:14.738186] [INFO] v0.8.0: 4 success, 0 failed, 0 already
+[2026-03-12T23:39:14.740186] [INFO] Results: packs\warfare-starwars\assets\raw\download_results.json
+[2026-03-12T23:39:14.740186] [INFO] ============================================================

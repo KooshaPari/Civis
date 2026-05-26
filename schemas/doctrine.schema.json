@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/doctrine.schema.json",
+  "title": "DINOForge Doctrine Definition",
+  "description": "Schema for DINOForge doctrine definition files (doctrines/*.yaml).",
+  "type": "object",
+  "required": ["id", "display_name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique doctrine identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable doctrine name."
+    },
+    "description": {
+      "type": "string"
+    },
+    "faction_archetype": {
+      "type": "string",
+      "enum": ["order", "industrial_swarm", "asymmetric", "custom"],
+      "description": "Faction archetype this doctrine is designed for."
+    },
+    "modifiers": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Key/value modifiers applied by this doctrine."
+    }
+  },
+  "additionalProperties": false
+}

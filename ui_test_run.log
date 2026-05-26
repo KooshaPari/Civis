@@ -1,0 +1,45 @@
+Traceback (most recent call last):
+  File "C:\Users\koosh\Dino\test_ui_automation.py", line 181, in main
+    test_native_mods_button(game_window)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\koosh\Dino\test_ui_automation.py", line 157, in test_native_mods_button
+    print(f"  {line}")
+    ~~~~~^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 51: character maps to <undefined>
+[START] DINOForge UI Automation Test
+Log file: G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\LogOutput.log
+Screenshot dir: C:\Users\koosh\Dino\ui_test_screenshots
+[INIT] Looking for game window...
+[FOUND] Game window: Diplomacy is Not an Option
+[SKIP] Game already running
+
+[TEST 1] F10 Pack List Sidebar
+==================================================
+[SCREENSHOT] Saved: C:\Users\koosh\Dino\ui_test_screenshots\01_before_f10_1773315415.png
+[ACTION] Pressing F10...
+[SCREENSHOT] Saved: C:\Users\koosh\Dino\ui_test_screenshots\02_after_f10_menu_1773315416.png
+[LOG CHECK] Checking for ModMenuPanel logs...
+[FAIL] No ModMenuPanel logs found
+[WARN] No pack loading logs found
+
+[TEST 2] F9 Debug Panel
+==================================================
+[SCREENSHOT] Saved: C:\Users\koosh\Dino\ui_test_screenshots\03_before_f9_1773315418.png
+[ACTION] Pressing F9...
+[SCREENSHOT] Saved: C:\Users\koosh\Dino\ui_test_screenshots\04_after_f9_debug_1773315420.png
+[LOG CHECK] Checking for DebugPanel logs...
+[FAIL] No DebugPanel logs found
+
+[TEST 3] Native Mods Button
+==================================================
+[LOG CHECK] Checking for NativeMenuInjector logs...
+[PASS] NativeMenuInjector logs found
+  [Info   :DINOForge Runtime] [NativeMenuInjector] SUCCESS: Found Settings button 'Options' in canvas 'MainMenu'. Injecting Mods button...
+  [Info   :DINOForge Runtime] [NativeMenuInjector] Clone successful: 'DINOForge_ModsButton'. Positioning...
+[ERROR] Test failed with exception: 'charmap' codec can't encode character '\u2713' in position 51: character maps to <undefined>
+
+[COMPLETE] Tests finished
+[ARTIFACTS] Check screenshots and log analysis above

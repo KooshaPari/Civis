@@ -1,0 +1,105 @@
+entries:
+  militia_spearman:
+    vanilla_id: militia_spearman
+    themed_id: clone_trooper_recruit
+    themed_name: Clone Trooper Recruit
+    themed_description: Fresh from Kamino, basic clone trooper with standard DC-15A blaster.
+    stat_modifiers:
+      accuracy: 1.1
+  line_swordsman:
+    vanilla_id: line_swordsman
+    themed_id: clone_trooper
+    themed_name: Clone Trooper
+    themed_description: Standard Phase II clone trooper, backbone of the Republic army.
+    stat_modifiers:
+      hp: 1.1
+      accuracy: 1.15
+  elite_swordsman:
+    vanilla_id: elite_swordsman
+    themed_id: arc_trooper
+    themed_name: ARC Trooper
+    themed_description: Advanced Recon Commando, elite special forces of the Republic.
+    stat_modifiers:
+      hp: 1.2
+      damage: 1.3
+      accuracy: 1.25
+  archer:
+    vanilla_id: archer
+    themed_id: clone_sniper
+    themed_name: Clone Sharpshooter
+    themed_description: Specialized clone trained in long-range precision fire with DC-15x.
+    stat_modifiers:
+      range: 1.4
+      accuracy: 1.3
+  cavalry:
+    vanilla_id: cavalry
+    themed_id: barc_speeder
+    themed_name: BARC Speeder
+    themed_description: Fast reconnaissance vehicle used by clone troopers.
+    stat_modifiers:
+      speed: 1.5
+  catapult:
+    vanilla_id: catapult
+    themed_id: at_te
+    themed_name: AT-TE Walker
+    themed_description: All Terrain Tactical Enforcer, heavy assault walker.
+    stat_modifiers:
+      hp: 1.5
+      damage: 1.4
+      speed: 0.7
+  ballista:
+    vanilla_id: ballista
+    themed_id: republic_artillery
+    themed_name: Republic Artillery
+    themed_description: Self-propelled heavy cannon providing long-range fire support.
+    stat_modifiers:
+      range: 1.3
+      damage: 1.2
+  enemy_militia:
+    vanilla_id: enemy_militia
+    themed_id: b1_battle_droid
+    themed_name: B1 Battle Droid
+    themed_description: "Standard CIS battle droid. Cheap, expendable, comes in massive numbers."
+    stat_modifiers:
+      hp: 0.7
+      speed: 1.1
+  enemy_swordsman:
+    vanilla_id: enemy_swordsman
+    themed_id: b2_super_battle_droid
+    themed_name: B2 Super Battle Droid
+    themed_description: Heavy battle droid with integrated wrist blasters and reinforced armor.
+    stat_modifiers:
+      hp: 1.3
+      armor: 1.4
+  enemy_archer:
+    vanilla_id: enemy_archer
+    themed_id: droideka
+    themed_name: Droideka (Destroyer Droid)
+    themed_description: Rolling shield-equipped droid with rapid-fire twin blasters.
+    stat_modifiers:
+      hp: 1.4
+      damage: 1.5
+      armor: 1.6
+  enemy_cavalry:
+    vanilla_id: enemy_cavalry
+    themed_id: dwarf_spider_droid
+    themed_name: DSD1 Dwarf Spider Droid
+    themed_description: Light armored walker used for rapid flanking attacks.
+    stat_modifiers:
+      speed: 1.2
+      damage: 1.1
+  tower_arrow:
+    vanilla_id: tower_arrow
+    themed_id: republic_turret
+    themed_name: Republic Laser Turret
+    themed_description: Automated defensive turret with rapid-fire laser cannons.
+  tower_ballista:
+    vanilla_id: tower_ballista
+    themed_id: republic_heavy_turret
+    themed_name: Republic Heavy Turret
+    themed_description: Heavy anti-vehicle turret with proton torpedo launcher.
+
+patterns:
+  - vanilla_pattern: "building_*"
+    themed_pattern: "republic_facility_*"
+    themed_name_pattern: "Republic *"

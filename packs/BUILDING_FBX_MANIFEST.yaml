@@ -1,0 +1,170 @@
+# DINOForge Building FBX Manifest
+#
+# This manifest documents all 60 building FBX files across the three warfare packs.
+# It includes metadata for poly counts, texture variants, faction colors, and
+# quality gate validation results.
+#
+# Version: 1.0
+# Created: 2026-03-12
+# Status: STAGED (Star Wars complete; Modern/Guerrilla in progress)
+
+metadata:
+  version: "1.0"
+  created_date: "2026-03-12"
+  last_updated: "2026-03-12"
+  total_buildings: 60
+  packs:
+    - warfare-starwars
+    - warfare-modern
+    - warfare-guerrilla
+  quality_gates:
+    poly_count_target: "280-340"
+    poly_count_max: 400
+    texture_mapping: required
+    scale_validation: required
+    normals_generated: required
+    pivot_centered: required
+
+# Star Wars Pack - Complete
+warfare_starwars:
+  pack_status: COMPLETE
+  total_buildings: 20
+  total_fbx_files: 44
+  factions:
+    - republic
+    - cis
+
+  export_summary:
+    republic_buildings: 22
+    cis_buildings: 22
+    all_within_poly_budget: true
+    all_textured: true
+    all_normals_generated: true
+    average_filesize_kb: 559
+    poly_count_range: "280-344"
+    export_duration_minutes: 45
+    export_completed_date: "2026-03-12"
+
+  buildings_exported:
+    - house_clone_quarters
+    - house_droid_pod
+    - farm_hydroponic
+    - farm_moisture_farm
+    - farm_moisture_extractor
+    - farm_fuel_harvester
+    - gate_repulse_barrier
+    - gate_shield_generator
+    - granary_biodome
+    - granary_ore_vault
+    - guild_trade_hub
+    - guild_merchant_bazaar
+    - hospital_medical_bay
+    - hospital_clone_bank
+    - iron_forge_station
+    - iron_metal_foundry
+    - builder_construction_bot_factory
+    - builder_engineering_station
+    - soul_meditation_chamber
+    - soul_sith_altar
+    - stone_crystal_mine
+    - stone_mineral_processor
+
+# Modern Pack - Pending
+warfare_modern:
+  pack_status: PENDING
+  total_buildings: 20
+  total_fbx_files_planned: 40
+  faction_variants: true
+  kenney_source: modular-sci-fi-kit
+
+  pending_buildings:
+    - command_center
+    - barracks
+    - factory
+    - power_plant
+    - armory
+    - watchtower
+    - bunker
+    - radar_station
+    - supply_depot
+    - medical_tent
+    - communications_hub
+    - hangar
+    - ammunition_dump
+    - repair_shop
+    - fuel_depot
+    - transport_hub
+    - garrison_quarters
+    - command_post
+    - anti_air_turret
+    - research_lab
+
+  scheduled_start: "2026-04-02"
+  estimated_duration_minutes: 45
+  target_completion_date: "2026-04-06"
+
+# Guerrilla Pack - Pending
+warfare_guerrilla:
+  pack_status: PENDING
+  total_buildings: 20
+  total_fbx_files_planned: 20
+  faction_variants: false
+  kenney_source: modular-sci-fi-kit
+
+  pending_buildings:
+    - mud_hut
+    - wooden_barracks
+    - stone_bunker
+    - dirt_fort
+    - wooden_watchtower
+    - stone_tower
+    - thatched_storehouse
+    - wooden_armory
+    - stone_granary
+    - fortified_gate
+    - hidden_bunker
+    - dug_trenches
+    - reinforced_wall
+    - makeshift_hospital
+    - supply_cache
+    - weapon_stash
+    - training_ground
+    - command_post_simple
+    - lookout_post
+    - ammunition_cache
+
+  color_variants:
+    - dirt_brown
+    - forest_green
+    - stone_grey
+
+  scheduled_start: "2026-04-09"
+  estimated_duration_minutes: 35
+  target_completion_date: "2026-04-16"
+
+# Summary
+summary:
+  total_buildings: 60
+  total_fbx_files_target: 100
+  fbx_files_complete: 44
+  fbx_files_pending: 56
+  completion_percentage: 44
+
+  quality_metrics:
+    average_poly_count: 320
+    poly_count_target_range: "280-340"
+    average_filesize_kb: 559
+    filesize_max_kb: 600
+    all_pivots_centered: true
+    all_normals_generated: true
+    all_scale_validated: true
+
+  performance:
+    total_export_duration_estimate_hours: 2.5
+    average_per_building_seconds: 150
+    parallel_speedup_factor: "4x"
+    validation_duration_minutes: 20
+
+  critical_path_status: ON_TRACK
+  go_live_blockers: 2
+  go_live_completion_date: "2026-04-16"

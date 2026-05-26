@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DINOForge.Domains.UI</AssemblyName>
+    <RootNamespace>DINOForge.Domains.UI</RootNamespace>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <Description>HUD elements, menu management, themes for UI customization</Description>
+    <PackageId>DINOForge.Domains.UI</PackageId>
+    <Authors>DINOForge Agents</Authors>
+    <PackageTags>game-modding;ui;hud;dinoforge</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

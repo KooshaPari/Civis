@@ -1,0 +1,11 @@
+HANDLE_FINAL_ANALYSIS 03/25/2026 00:05:23
+=== LAUNCHING GAME ===
+Launched PID=39492
+Game alive, title='Fatal error', handles=319
+=== ALL MUTEX HANDLES ON SYSTEM ===
+=== HANDLES FOR PID 39492 ===
+   54: File          G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option
+  47C: File          C:\Windows\Fonts\StaticCache.dat
+  4A4: File          C:\Windows\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.28000.1743_none_cc819fbe23a2e3dd
+  4B4: File          C:\Windows\SystemResources\imageres.dll.mun
+DONE 03/25/2026 00:06:37

@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/scenario.schema.json",
+  "title": "DINOForge Scenario Definition",
+  "description": "Schema for DINOForge scenario definition files (scenarios/*.yaml). Defines playable scenarios with objectives, conditions, difficulty, and scripted events.",
+  "type": "object",
+  "required": ["id", "display_name", "objective_type", "wave_count"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique scenario identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable scenario name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the scenario."
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["Easy", "Normal", "Hard", "Nightmare"],
+      "default": "Normal",
+      "description": "Base difficulty level."
+    },
+    "objective_type": {
+      "type": "string",
+      "enum": ["Survive", "Defend", "Attack", "Prosper", "Custom"],
+      "description": "Primary objective type for this scenario."
+    },
+    "wave_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total number of enemy waves."
+    },
+    "max_duration": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Maximum scenario duration in seconds. Zero means unlimited."
+    },
+    "starting_resources": {
+      "$ref": "#/definitions/ResourceCost",
+      "description": "Resources granted at scenario start."
+    },
+    "allowed_factions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Faction IDs allowed in this scenario. Empty means all factions."
+    },
+    "victory_conditions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VictoryCondition" },
+      "description": "Conditions that trigger victory."
+    },
+    "defeat_conditions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/DefeatCondition" },
+      "description": "Conditions that trigger defeat."
+    },
+    "scripted_events": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ScriptedEvent" },
+      "description": "Scripted events that fire during the scenario."
+    }
+  },
+  "definitions": {
+    "ResourceCost": {
+      "type": "object",
+      "properties": {
+        "food": { "type": "integer", "minimum": 0, "default": 0 },
+        "wood": { "type": "integer", "minimum": 0, "default": 0 },
+        "stone": { "type": "integer", "minimum": 0, "default": 0 },
+        "iron": { "type": "integer", "minimum": 0, "default": 0 },
+        "gold": { "type": "integer", "minimum": 0, "default": 0 }
+      },
+      "additionalProperties": false
+    },
+    "VictoryCondition": {
+      "type": "object",
+      "required": ["condition_type", "target_value"],
+      "properties": {
+        "condition_type": {
+          "type": "string",
+          "enum": ["SurviveWaves", "DestroyTarget", "ReachPopulation", "AccumulateResource", "TimeSurvival", "Custom"],
+          "description": "Type of victory condition."
+        },
+        "target_value": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numeric target value for the condition."
+        },
+        "target_id": {
+          "type": "string",
+          "description": "Optional target identifier (entity, resource, structure)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable condition description."
+        }
+      },
+      "additionalProperties": false
+    },
+    "DefeatCondition": {
+      "type": "object",
+      "required": ["condition_type"],
+      "properties": {
+        "condition_type": {
+          "type": "string",
+          "enum": ["CommandCenterDestroyed", "PopulationZero", "TimeExpired", "ResourceDepleted", "Custom"],
+          "description": "Type of defeat condition."
+        },
+        "target_value": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional numeric target value."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable condition description."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScriptedEvent": {
+      "type": "object",
+      "required": ["id", "trigger_type", "trigger_value"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique event identifier."
+        },
+        "trigger_type": {
+          "type": "string",
+          "enum": ["OnWave", "OnTime", "OnPopulation", "OnResource", "OnBuildingBuilt", "OnUnitKilled"],
+          "description": "What triggers this event."
+        },
+        "trigger_value": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numeric trigger threshold."
+        },
+        "trigger_target": {
+          "type": "string",
+          "description": "Optional target for resource or building triggers."
+        },
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/EventAction" },
+          "description": "Actions to execute when triggered."
+        }
+      },
+      "additionalProperties": false
+    },
+    "EventAction": {
+      "type": "object",
+      "required": ["action_type"],
+      "properties": {
+        "action_type": {
+          "type": "string",
+          "enum": ["SpawnUnits", "GrantResources", "ShowMessage", "EnableBuilding", "DisableBuilding", "ChangeWaveComposition", "TriggerVictory", "TriggerDefeat"],
+          "description": "Type of action to execute."
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Key-value parameters for the action."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

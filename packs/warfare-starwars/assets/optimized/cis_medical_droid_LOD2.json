@@ -1,0 +1,12 @@
+{
+  "assetId": "cis_medical_droid",
+  "lod": "LOD2",
+  "targetQuality": 0.3,
+  "triangleCount": 382,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 70
+  }
+}

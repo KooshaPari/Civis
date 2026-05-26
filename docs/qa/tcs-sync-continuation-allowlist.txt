@@ -1,0 +1,53 @@
+# Pattern #97 — tcs-sync-continuation allowlist (task #272).
+#
+# This file lists TaskCompletionSource construction sites that the gate
+# (scripts/ci/detect_tcs_sync_continuations.py) flagged but that have
+# been audited and accepted as legitimate exceptions, OR that are
+# grandfathered debt being fixed by task #271.
+#
+# The healthy pattern is to pass
+# ``TaskCreationOptions.RunContinuationsAsynchronously`` to the
+# constructor so the await continuation is queued back to the
+# threadpool instead of running inline on the producer's thread.
+# Sync-continuation TCS instances cause main-thread starvation when
+# the producer is the Win32 input thread or the Unity main thread,
+# and can cause cross-thread deadlocks when the consumer re-enters
+# the bridge. Prefer fixing the call site over allowlisting.
+#
+# Two entry forms are accepted:
+#
+#   1. ``severity|file|line|generic`` — line-locked allowlist key. Pull
+#      these directly from the ``allowlist_key`` field of
+#      ``docs/qa/tcs-sync-continuation-report.json``. The ``generic``
+#      component is ``<T>`` literally (e.g. ``<int>``) or ``<>`` for the
+#      non-generic ``TaskCompletionSource`` ctor. Moving the line
+#      forces a fresh entry (intentional — re-review on movement).
+#
+#   2. Bare ``relative/path.cs`` — suppress every site in that file.
+#      Use sparingly, only for files where the inlining risk has been
+#      fully addressed by an alternative mechanism (e.g. the consumer
+#      is documented as runtime-controlled and never re-enters the
+#      producer thread).
+#
+# Lines starting with ``#`` and blank lines are ignored.
+#
+# Run the gate locally with:
+#   python scripts/ci/detect_tcs_sync_continuations.py --quiet
+# Self-test it with:
+#   python scripts/ci/detect_tcs_sync_continuations.py --self-test
+# CI workflow: .github/workflows/tcs-sync-continuation.yml
+#
+# Pairs with ongoing #271 (3 known sync-continuation TCS sites being
+# fixed in src/) and a future Roslyn analyzer for compile-time
+# enforcement. Tracking task: #272.
+
+# ----------------------------------------------------------------------------
+# Audited exceptions — bare file paths.
+# ----------------------------------------------------------------------------
+
+# MainThreadDispatcher.cs — intentional sync-continuation by-design.
+# The dispatcher queues work to the main thread; continuations must run
+# synchronously on the main thread for thread-safety and ordering guarantees.
+# See iter-106 #435 discussion for rationale.
+HIGH|src/Runtime/Bridge/MainThreadDispatcher.cs|88|<T>
+HIGH|src/Runtime/Bridge/MainThreadDispatcher.cs|101|<bool>

@@ -1,0 +1,35 @@
+faction_styles:
+  west:
+    colors:
+      primary: "#4B5320"
+      secondary: "#D2B48C"
+      tertiary: "#2F4F4F"
+      ui_highlight: "#00FF00"
+    audio:
+      march: military_cadence
+      ambient: base_ambient
+      combat: modern_firefight
+      victory: coalition_victory
+      defeat: coalition_defeat
+    architecture: modern_military
+    visual_theme: olive_drab_tactical
+
+  enemy:
+    colors:
+      primary: "#8B4513"
+      secondary: "#2F2F2F"
+      tertiary: "#556B2F"
+      ui_highlight: "#FF4500"
+    audio:
+      march: enemy_movement
+      ambient: desert_ambient
+      combat: guerrilla_combat
+      victory: enemy_victory
+      defeat: enemy_defeat
+    architecture: improvised_fortified
+    visual_theme: desert_insurgent
+
+global:
+  tone: gritty
+  ui_theme: military_hud
+  font_style: stencil

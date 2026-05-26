@@ -1,0 +1,21 @@
+# Pattern #105 Event-Subscription Lifecycle Asymmetry Allowlist
+# Format: file:line  # reason
+
+# Test fixtures with using-based lifecycle management
+# These are short-lived test objects that subscribe to events for test assertions.
+# The `using` statement ensures cleanup via Dispose(), but the events are never
+# explicitly unregistered. This is acceptable because:
+# 1. Test objects are garbage collected immediately after the test method completes
+# 2. The event source (watcher) is also disposed in the same using block
+# 3. Unregistering event handlers in test fixtures adds unnecessary complexity
+# 4. Pattern #105 PRIMARY concern is production code leaks, not test artifact leaks
+
+src\Tests\HotReloadTests.cs:106  # test-cleanup-ok: OnPackContentChanged handler unneeded in test fixture with using-based Dispose
+src\Tests\HotReloadTests.cs:126  # test-cleanup-ok: OnPackReloaded handler unneeded in test fixture with using-based Dispose
+src\Tests\HotReloadTests.cs:127  # test-cleanup-ok: OnPackReloadFailed handler unneeded in test fixture with using-based Dispose
+src\Tests\PackFileWatcherTests.cs:140  # test-cleanup-ok: OnPackContentChanged handler unneeded in test fixture with using-based Dispose
+src\Tests\PackFileWatcherTests.cs:169  # test-cleanup-ok: OnPackReloaded handler unneeded in test fixture with using-based Dispose
+src\Tests\PackFileWatcherTests.cs:170  # test-cleanup-ok: OnPackReloadFailed handler unneeded in test fixture with using-based Dispose
+src\Tests\EndToEndUserJourneysTests.cs:249  # test-cleanup-ok: short-lived test collection event subscription
+src\Tests\PackCompilerCliTests.cs:656  # false-positive: local variable assignment, not event subscription
+src\Runtime\DebugOverlay.cs:276  # false-positive: local variable assignment named "key", not event subscription

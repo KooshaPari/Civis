@@ -1,0 +1,128 @@
+# Asset Intake Rules and Policies
+# Controls how assets are acquired, validated, and classified
+
+allowed_sources:
+  - sketchfab
+  - blendswap
+  - moddb
+
+preferred_acquisition_order:
+  - api
+  - direct_download
+  - scrape
+  - browser_automation
+
+# Conditions that trigger automatic rejection
+reject_conditions:
+  - missing_source_url
+  - missing_author_name
+  - missing_license_label
+  - corrupted_archive
+  - unsupported_format
+  - missing_original_format
+
+# Technical validation requirements
+validation_requirements:
+  - valid_json_manifest
+  - checksum_verification
+  - supported_model_format
+  - non_zero_polycount
+  - readable_mesh_structure
+
+# IP risk classification and release policies
+risk_labels:
+  generic_safe:
+    description: "Generic, non-branded 3D models with clear licensing"
+    release_allowed: true
+    requires_attribution: true
+    requires_license_documentation: true
+
+  fan_star_wars_private_only:
+    description: "Star Wars fan content - private/internal development only"
+    release_allowed: false
+    rationale: "Contains Star Wars IP - not distributable in public releases"
+
+  official_game_mod_tool_reference_only:
+    description: "Official game content or official mod tools - reference only"
+    release_allowed: false
+    rationale: "Cannot ship official game assets - reference architecture only"
+
+  unknown_provenance:
+    description: "Unknown source, creator, or licensing"
+    release_allowed: false
+    rationale: "Insufficient rights verification"
+
+  high_risk_do_not_ship:
+    description: "Known IP violations or licensing conflicts"
+    release_allowed: false
+    rationale: "Legal/licensing risk - do not ship"
+
+# Processing pipeline configuration
+processing_pipeline:
+  stages:
+    - discovery
+    - metadata_fetch
+    - download
+    - integrity_check
+    - format_analysis
+    - ip_assessment
+    - technical_validation
+    - prototype_integration
+    - release_approval
+
+# Provenance assessment guidelines
+provenance_assessment:
+  confidence_thresholds:
+    high: 0.85
+    medium: 0.60
+    low: 0.40
+
+  factors_assessed:
+    - source_authority
+    - author_reputation
+    - license_clarity
+    - usage_rights
+    - derivative_work_compatibility
+
+# Technical format conversion targets
+target_formats:
+  primary: "glb"
+  fallback: "gltf"
+  supported: ["glb", "gltf", "fbx"]
+
+# Asset organization by category
+category_guidelines:
+  unit_model:
+    typical_polycount_range: [5000, 100000]
+    requires_rigging: true
+    requires_animation: false
+    target_texture_sets: 1
+
+  vehicle_model:
+    typical_polycount_range: [10000, 150000]
+    requires_rigging: false
+    requires_animation: true
+    target_texture_sets: 2
+
+  building_model:
+    typical_polycount_range: [1000, 50000]
+    requires_rigging: false
+    requires_animation: false
+    target_texture_sets: 1
+
+  weapon_model:
+    typical_polycount_range: [1000, 20000]
+    requires_rigging: false
+    requires_animation: false
+    target_texture_sets: 1
+
+  vfx_asset:
+    typical_polycount_range: [100, 5000]
+    requires_rigging: false
+    requires_animation: true
+    target_texture_sets: 0
+
+  animation:
+    requires_rigging: true
+    requires_animation: true
+    requires_source_rig_compatibility: true

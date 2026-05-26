@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 16756,
+  "lod0_polycount": 16756,
+  "lod1_polycount": 8378,
+  "lod2_polycount": 4189,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_clone_barracks_sketchfab_001"
+}

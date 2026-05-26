@@ -1,0 +1,16 @@
+{
+  "id": "cis_dwarf_spider_droid",
+  "type": "Walker",
+  "name": "Dwarf Spider Droid",
+  "model_id": "4f5d54b98b744c439a14fd897b946a4e",
+  "source_url": "https://sketchfab.com/models/4f5d54b98b744c439a14fd897b946a4e",
+  "artist": "Mind Mulch for The Masses",
+  "license": "CC Attribution",
+  "extracted_files": [
+    "Unity2Skfb.gltf"
+  ],
+  "extracted_textures": 9,
+  "downloadedAt": "2026-03-13T23:19:44Z",
+  "phase": "2B",
+  "note": "Downloaded in raw format. Will be converted to GLB in Phase 3C."
+}

@@ -1,0 +1,22 @@
+title: "[Idea] "
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: Describe the feature or improvement you'd like to see
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - SDK / Pack authoring
+        - Runtime / ECS bridge
+        - Installer / tooling
+        - Documentation
+        - Community / ecosystem
+        - Other
+    validations:
+      required: true

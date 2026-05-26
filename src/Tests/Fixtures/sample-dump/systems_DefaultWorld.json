@@ -1,0 +1,32 @@
+[
+  {
+    "name": "InitializationSystem",
+    "namespace": "Systems",
+    "updateGroup": "Initialization",
+    "enabled": true
+  },
+  {
+    "name": "SimulationSystem",
+    "namespace": "Systems",
+    "updateGroup": "Simulation",
+    "enabled": true
+  },
+  {
+    "name": "PathFindingSystem",
+    "namespace": "Systems",
+    "updateGroup": "PathFinding",
+    "enabled": true
+  },
+  {
+    "name": "FightSystem",
+    "namespace": "Systems",
+    "updateGroup": "Fight",
+    "enabled": true
+  },
+  {
+    "name": "RenderSystem",
+    "namespace": "Systems",
+    "updateGroup": "Presentation",
+    "enabled": true
+  }
+]

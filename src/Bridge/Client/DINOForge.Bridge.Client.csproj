@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DINOForge.Bridge.Client</AssemblyName>
+    <RootNamespace>DINOForge.Bridge.Client</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Description>DINOForge Bridge Client - out-of-process game bridge communication for Diplomacy is Not an Option mods</Description>
+    <PackageId>DINOForge.Bridge.Client</PackageId>
+    <Authors>KooshaPari</Authors>
+    <PackageTags>dinoforge;bridge;client;json-rpc;bepinex;game-modding</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+    <PackageReference Include="Serilog" Version="4.*" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.*" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    Phase 4c sub-task A (#249): grant test-only access to internal handshake state
+    (GameClient.SessionId / SessionKeys / LastFrame / PerformHandshakeAsync). These
+    are kept internal so they don't expand the public NuGet API surface.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DINOForge.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

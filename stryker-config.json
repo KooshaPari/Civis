@@ -1,0 +1,23 @@
+{
+  "stryker-config": {
+    "project": "src/SDK/DINOForge.SDK.csproj",
+    "test-projects": ["src/Tests/DINOForge.Tests.csproj"],
+    "reporters": ["html", "json", "progress"],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 50
+    },
+    "mutation-level": "Standard",
+    "since": {
+      "enabled": false
+    },
+    "output-path": "mutation-report",
+    "excluded-mutations": ["StringLiteral", "Linq"],
+    "ignored-methods": ["ToString", "GetHashCode", "Equals"],
+    "ignored-projects": [
+      "DINOForge.Tests.csproj",
+      "DINOForge.Runtime.csproj"
+    ]
+  }
+}

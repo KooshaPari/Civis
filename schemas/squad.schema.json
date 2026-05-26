@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/squad.schema.json",
+  "title": "DINOForge Squad Definition",
+  "description": "Schema for DINOForge squad definition files (squads/*.yaml). Maps to DINO's Components.RawComponents.SquadMarker, Components.FormationViewParameters, Components.FormationArrowData, Components.FormationDrawParameters, Components.FormationViewMainColor, and Components.FormationViewBackColor ECS components.",
+  "type": "object",
+  "required": ["id", "display_name", "unit_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique squad identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable squad name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Squad description text."
+    },
+    "unit_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reference to a UnitDefinition ID that populates this squad."
+    },
+    "min_size": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Minimum number of units in the squad."
+    },
+    "max_size": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 20,
+      "description": "Maximum number of units in the squad."
+    },
+    "default_formation": {
+      "type": "string",
+      "enum": ["line", "column", "wedge", "circle", "scattered"],
+      "default": "line",
+      "description": "Default formation layout."
+    },
+    "formation_spacing": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1.0,
+      "description": "Spacing between units in formation (world units)."
+    },
+    "color_primary": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Primary color as hex string (e.g. #FF0000)."
+    },
+    "color_secondary": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Secondary/back color as hex string (e.g. #0000FF)."
+    },
+    "behavior_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["hold_position", "aggressive", "defensive", "patrol"]
+      },
+      "description": "Behavior tags for AI control."
+    }
+  },
+  "additionalProperties": false
+}

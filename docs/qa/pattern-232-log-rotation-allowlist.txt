@@ -1,0 +1,22 @@
+# Pattern #232 (Unbounded Log Append) allowlist
+#
+# Format: <relative-path>:<line-number>
+#
+# See CLAUDE.md Pattern #232 for governance.
+#
+# 2026-05-21 (iter-144, #708 audit): allowlist pruned from 28 -> 2 entries
+# after detector scope extension. 26 stale entries removed (sites
+# refactored to DebugLog.Write with built-in rotation per #644, or files
+# now shorter than the recorded line number).
+#
+# Detector now also covers: File.AppendAllLines, StreamWriter(append:true),
+# FileMode.Append, .AppendText() — previously only File.AppendAllText was
+# detected (#708).
+
+# Plugin bootstrap log — early-boot trace before DebugLog is initialized.
+src\Runtime\Plugin.cs:49
+
+# Installer GUI startup log — one-shot, short-lived process bounds size.
+src\Tools\Installer\GUI\Program.cs:66
+
+# TODO(v0.26.0): retrofit both remaining sites onto LogRotationHelper.

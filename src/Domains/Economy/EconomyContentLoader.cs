@@ -1,0 +1,264 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using DINOForge.Domains.Economy.Models;
+using DINOForge.Domains.Economy.Registries;
+using DINOForge.SDK;
+using DINOForge.SDK.IO;
+using DINOForge.SDK.Validation;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+
+namespace DINOForge.Domains.Economy
+{
+    /// <summary>
+    /// Loads economy definitions from pack directories into economy registries.
+    /// Handles resources/, trade_routes/, and economy_profiles/ subdirectories.
+    /// </summary>
+    public sealed class EconomyContentLoader
+    {
+        private readonly ResourceRegistry _resourceRegistry;
+        private readonly TradeRouteRegistry _tradeRouteRegistry;
+        private readonly EconomyProfileRegistry _profileRegistry;
+        private readonly IDeserializer _deserializer;
+
+        /// <summary>
+        /// Initializes a new economy content loader with the provided registries.
+        /// </summary>
+        public EconomyContentLoader(
+            ResourceRegistry resourceRegistry,
+            TradeRouteRegistry tradeRouteRegistry,
+            EconomyProfileRegistry profileRegistry)
+        {
+            _resourceRegistry = resourceRegistry ?? throw new ArgumentNullException(nameof(resourceRegistry));
+            _tradeRouteRegistry = tradeRouteRegistry ?? throw new ArgumentNullException(nameof(tradeRouteRegistry));
+            _profileRegistry = profileRegistry ?? throw new ArgumentNullException(nameof(profileRegistry));
+
+            _deserializer = new DeserializerBuilder()
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                .Build();
+        }
+
+        /// <summary>
+        /// Load all economy definitions from a pack directory.
+        /// </summary>
+        /// <param name="packDir">The root directory of the pack.</param>
+        /// <param name="packId">The pack identifier (for logging).</param>
+        public void LoadPack(string packDir, string packId)
+        {
+            if (!Directory.Exists(packDir))
+                throw new DirectoryNotFoundException($"Pack directory not found: {packDir}");
+
+            LoadResources(Path.Combine(packDir, "resources"), packId);
+            LoadTradeRoutes(Path.Combine(packDir, "trade_routes"), packId);
+            LoadProfiles(Path.Combine(packDir, "economy_profiles"), packId);
+        }
+
+        /// <summary>
+        /// Load all economy definitions from a pack directory asynchronously.
+        /// </summary>
+        /// <param name="packDir">The root directory of the pack.</param>
+        /// <param name="packId">The pack identifier (for logging).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task LoadPackAsync(string packDir, string packId, CancellationToken cancellationToken = default)
+        {
+            if (!Directory.Exists(packDir))
+                throw new DirectoryNotFoundException($"Pack directory not found: {packDir}");
+
+            await LoadResourcesAsync(Path.Combine(packDir, "resources"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadTradeRoutesAsync(Path.Combine(packDir, "trade_routes"), packId, cancellationToken).ConfigureAwait(false);
+            await LoadProfilesAsync(Path.Combine(packDir, "economy_profiles"), packId, cancellationToken).ConfigureAwait(false);
+        }
+
+        private void LoadResources(string resourcesDir, string packId)
+        {
+            if (!Directory.Exists(resourcesDir))
+                return;
+
+            string[] files = Directory.GetFiles(resourcesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                try
+                {
+                    string yaml = SafeFileIO.ReadText(file);
+                    ResourceDefinition resource = _deserializer.Deserialize<ResourceDefinition>(yaml);
+                    if (resource != null)
+                    {
+                        // Task #319 — IValidatable semantic check at the deserialize site.
+                        // Unwrap to ArgumentException so InnerException type matches the
+                        // contract pinned by EconomyContentLoaderValidationTests (Pattern
+                        // #95/#210): registry Register() throws ArgumentException; the
+                        // pre-register semantic guard must surface as the same type.
+                        try { JsonGuard.ValidateOrThrow(resource, file); }
+                        catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                        _resourceRegistry.Register(resource);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load resource from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadResourcesAsync(string resourcesDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(resourcesDir))
+                return;
+
+            string[] files = Directory.GetFiles(resourcesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    ResourceDefinition resource = _deserializer.Deserialize<ResourceDefinition>(yaml);
+                    if (resource != null)
+                    {
+                        try { JsonGuard.ValidateOrThrow(resource, file); }
+                        catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                        _resourceRegistry.Register(resource);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load resource from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private void LoadTradeRoutes(string routesDir, string packId)
+        {
+            if (!Directory.Exists(routesDir))
+                return;
+
+            string[] files = Directory.GetFiles(routesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                try
+                {
+                    string yaml = SafeFileIO.ReadText(file);
+                    TradeRouteWrapper wrapper = _deserializer.Deserialize<TradeRouteWrapper>(yaml);
+                    if (wrapper?.Routes != null)
+                    {
+                        foreach (TradeRouteDefinition route in wrapper.Routes)
+                        {
+                            // Task #319 — IValidatable semantic check at deserialize site.
+                            // See LoadResources for unwrap rationale (Pattern #95/#210).
+                            try { JsonGuard.ValidateOrThrow(route, file); }
+                            catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                            _tradeRouteRegistry.Register(route);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load trade routes from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadTradeRoutesAsync(string routesDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(routesDir))
+                return;
+
+            string[] files = Directory.GetFiles(routesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    TradeRouteWrapper wrapper = _deserializer.Deserialize<TradeRouteWrapper>(yaml);
+                    if (wrapper?.Routes != null)
+                    {
+                        foreach (TradeRouteDefinition route in wrapper.Routes)
+                        {
+                            try { JsonGuard.ValidateOrThrow(route, file); }
+                            catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                            _tradeRouteRegistry.Register(route);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load trade routes from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private void LoadProfiles(string profilesDir, string packId)
+        {
+            if (!Directory.Exists(profilesDir))
+                return;
+
+            string[] files = Directory.GetFiles(profilesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                try
+                {
+                    string yaml = SafeFileIO.ReadText(file);
+                    EconomyProfile profile = _deserializer.Deserialize<EconomyProfile>(yaml);
+                    if (profile != null)
+                    {
+                        // Task #319 — IValidatable semantic check at deserialize site.
+                        // See LoadResources for unwrap rationale (Pattern #95/#210).
+                        try { JsonGuard.ValidateOrThrow(profile, file); }
+                        catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                        _profileRegistry.Register(profile);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load economy profile from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        private async Task LoadProfilesAsync(string profilesDir, string packId, CancellationToken cancellationToken)
+        {
+            if (!Directory.Exists(profilesDir))
+                return;
+
+            string[] files = Directory.GetFiles(profilesDir, "*.yaml", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string yaml = await SafeFileIO.ReadTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    EconomyProfile profile = _deserializer.Deserialize<EconomyProfile>(yaml);
+                    if (profile != null)
+                    {
+                        try { JsonGuard.ValidateOrThrow(profile, file); }
+                        catch (Exception ex) when (ex is InvalidDataException vex) { throw new ArgumentException(vex.Message, vex); }
+                        _profileRegistry.Register(profile);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to load economy profile from {file} in pack '{packId}'.", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// YAML wrapper for trade routes array.
+        /// </summary>
+        private class TradeRouteWrapper
+        {
+            public List<TradeRouteDefinition> Routes { get; set; } = new List<TradeRouteDefinition>(); // public-mutable-ok: YAML deserializer requires mutable List<T> for YamlDotNet
+        }
+    }
+}

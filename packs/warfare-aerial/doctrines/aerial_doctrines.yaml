@@ -1,0 +1,50 @@
+# Aerial Doctrines for Vanilla DINO
+# Combat doctrines that enhance aerial units
+
+- id: sky_dominance
+  display_name: Sky Dominance
+  description: Aerial units gain +20% damage, +10% speed. Ground units defend better vs air.
+  faction_archetype: order
+  modifiers:
+    aerial_damage_multiplier: 1.2
+    aerial_speed_multiplier: 1.1
+    defense_tag_antiair_bonus: 1.15
+
+- id: cloud_strike
+  display_name: Cloud Strike
+  description: Aerial units gain +30% damage when attacking from altitude >20. Surprise bonus.
+  faction_archetype: order
+  modifiers:
+    aerial_damage_altitude_multiplier: 1.3
+
+- id: aerial_superiority
+  display_name: Aerial Superiority
+  description: Air-to-air combat bonus. Aerial units +25% vs other aerial units.
+  faction_archetype: order
+  modifiers:
+    aerial_vs_aerial_damage_multiplier: 1.25
+
+# Faction-specific doctrines
+
+- id: swarm_formation
+  display_name: Swarm Formation
+  description: Bug aerial units attack faster when in groups. Bee swarms become deadlier.
+  faction_archetype: industrial_swarm
+  modifiers:
+    swarm_fire_rate_multiplier: 1.5
+    swarm_damage_multiplier: 1.2
+
+- id: undead_plague
+  display_name: Undead Plague
+  description: Wraiths spread fear. Enemy units near wraiths have -20% morale.
+  faction_archetype: asymmetric
+  modifiers:
+    wraith_morale_damage_multiplier: 2.0
+
+- id: elemental_fury
+  display_name: Elemental Fury
+  description: Phoenix and cloud giants gain +30% damage and fire immunity.
+  faction_archetype: order
+  modifiers:
+    phoenix_damage_multiplier: 1.3
+    cloud_giant_damage_multiplier: 1.3

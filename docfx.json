@@ -1,0 +1,38 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": ["src/SDK/**/*.csproj", "src/Bridge/Client/**/*.csproj"],
+          "exclude": ["**/obj/**", "**/bin/**"]
+        }
+      ],
+      "dest": "docs/api",
+      "includePrivateMembers": false,
+      "disableGitFeatures": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "separatePages",
+      "allowCompilationErrors": true
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["docs/**/*.md", "docs/**/*.yml"],
+        "exclude": ["**/node_modules/**", "**/obj/**", "docs/.vitepress/**"]
+      }
+    ],
+    "resource": [{"files": ["docs/public/**"]}],
+    "output": "_site",
+    "template": ["default", "modern"],
+    "globalMetadata": {
+      "_appName": "DINOForge",
+      "_appTitle": "DINOForge API Reference",
+      "_enableSearch": true,
+      "_appFaviconPath": "docs/public/favicon.svg",
+      "_appFooter": "DINOForge - MIT License"
+    }
+  }
+}

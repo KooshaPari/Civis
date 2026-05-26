@@ -1,0 +1,56 @@
+# Sync-over-Async Blocking Pattern (#116) Allowlist
+#
+# Format: path:line  # context: reason
+#
+# CRITICAL sites (GameBridgeServer, SystemBase, MainThreadDispatcher) require dedicated refactor.
+# These are deferred pending GameBridgeServer-specific RPC redesign.
+#
+# HIGH sites are non-critical and eligible for conversion.
+#
+# MEDIUM sites are already marked with sync-over-async-unavoidable: comment inline.
+
+# ===== PHASE 2 SAFE SUBSET (Iter-82 #364) =====
+# All 32+ GameBridgeServer CRITICAL sites below are Category A (main-thread-required ECS/UI calls).
+# Marked with inline "sync-over-async-unavoidable: ECS-bound, main-thread-required" comment.
+# Justification: MainThreadDispatcher is a threading bridge; RPC handlers need synchronous responses.
+# See docs/qa/gamebridgeserver-async-refactor-plan.md for full analysis.
+
+src/Runtime/Bridge/GameBridgeServer.cs:673  # ECS-bound, main-thread-required. HandleGetUiTree
+src/Runtime/Bridge/GameBridgeServer.cs:701  # ECS-bound, main-thread-required. HandleGetUiTree
+src/Runtime/Bridge/GameBridgeServer.cs:712  # ECS-bound, main-thread-required. HandleQueryUi
+src/Runtime/Bridge/GameBridgeServer.cs:725  # ECS-bound, main-thread-required. HandleQueryUi
+src/Runtime/Bridge/GameBridgeServer.cs:736  # ECS-bound, main-thread-required. HandleClickUi
+src/Runtime/Bridge/GameBridgeServer.cs:749  # ECS-bound, main-thread-required. HandleClickUi
+src/Runtime/Bridge/GameBridgeServer.cs:767  # ECS-bound, main-thread-required. HandleWaitForUi
+src/Runtime/Bridge/GameBridgeServer.cs:781  # ECS-bound, main-thread-required. HandleWaitForUi
+src/Runtime/Bridge/GameBridgeServer.cs:808  # ECS-bound, main-thread-required. HandleExpectUi
+src/Runtime/Bridge/GameBridgeServer.cs:822  # ECS-bound, main-thread-required. HandleExpectUi
+src/Runtime/Bridge/GameBridgeServer.cs:845  # ECS-bound, main-thread-required. HandleGetStat
+src/Runtime/Bridge/GameBridgeServer.cs:898  # ECS-bound, main-thread-required. HandleApplyOverride
+src/Runtime/Bridge/GameBridgeServer.cs:911  # ECS-bound, main-thread-required. HandleQueryEntities
+src/Runtime/Bridge/GameBridgeServer.cs:935  # ECS-bound, main-thread-required. HandleReloadPacks
+src/Runtime/Bridge/GameBridgeServer.cs:968  # ECS-bound, main-thread-required. HandleGetResources
+src/Runtime/Bridge/GameBridgeServer.cs:969  # ECS-bound, main-thread-required. HandleGetResources
+src/Runtime/Bridge/GameBridgeServer.cs:1005  # ECS-bound, main-thread-required. HandleLoadScene
+src/Runtime/Bridge/GameBridgeServer.cs:1006  # ECS-bound, main-thread-required. HandleLoadScene
+src/Runtime/Bridge/GameBridgeServer.cs:1007  # ECS-bound, main-thread-required. HandleLoadScene
+src/Runtime/Bridge/GameBridgeServer.cs:1055  # ECS-bound, main-thread-required. HandleScreenshot
+src/Runtime/Bridge/GameBridgeServer.cs:1075  # ECS-bound, main-thread-required. HandleDumpState
+src/Runtime/Bridge/GameBridgeServer.cs:1137  # ECS-bound, main-thread-required. HandleWaitForWorld
+src/Runtime/Bridge/GameBridgeServer.cs:1499  # ECS-bound, main-thread-required. HandleStartGame
+src/Runtime/Bridge/GameBridgeServer.cs:1501  # ECS-bound, main-thread-required. HandleStartGame
+src/Runtime/Bridge/GameBridgeServer.cs:1569  # ECS-bound, main-thread-required. HandleDismissLoadScreen
+src/Runtime/Bridge/GameBridgeServer.cs:1571  # ECS-bound, main-thread-required. HandleDismissLoadScreen
+src/Runtime/Bridge/GameBridgeServer.cs:1615  # ECS-bound, main-thread-required. HandlePressKey
+src/Runtime/Bridge/GameBridgeServer.cs:1617  # ECS-bound, main-thread-required. HandlePressKey
+src/Runtime/Bridge/GameBridgeServer.cs:1670  # ECS-bound, main-thread-required. HandleInvokeMethod
+src/Runtime/Bridge/GameBridgeServer.cs:1672  # ECS-bound, main-thread-required. HandleInvokeMethod
+src/Runtime/Bridge/GameBridgeServer.cs:1738  # ECS-bound, main-thread-required. HandleClickButton
+src/Runtime/Bridge/GameBridgeServer.cs:1740  # ECS-bound, main-thread-required. HandleClickButton
+src/Runtime/Bridge/GameBridgeServer.cs:1811  # ECS-bound, main-thread-required. HandleToggleUi
+src/Runtime/Bridge/GameBridgeServer.cs:1813  # ECS-bound, main-thread-required. HandleToggleUi
+src/Runtime/Bridge/GameBridgeServer.cs:1891  # ECS-bound, main-thread-required. HandleListSaves
+src/Runtime/Bridge/GameBridgeServer.cs:1893  # ECS-bound, main-thread-required. HandleListSaves
+
+# ===== CLIENT SIDE =====
+src/Bridge/Client/GameClient.cs:627  # callers expect AggregateException wrap from .Result for proper GameClientException conversion

@@ -1,0 +1,20 @@
+{
+  "id": "rep_clone_medic",
+  "name": "Clone Medic",
+  "type": "infantry_support",
+  "faction": "republic",
+  "source": {
+    "sketchfab_id": "e7f2a1fbfdcd41f59ba03fe48ae39004",
+    "artist": "Marr Velz",
+    "url": "https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004",
+    "license": "CC-BY"
+  },
+  "polycount_estimated": 20000,
+  "lod_targets": [100, 60, 30],
+  "material_config": {
+    "faction": "republic",
+    "color_primary": "#4488FF",
+    "color_secondary": "#FFFFFF"
+  },
+  "status": "pending_download"
+}

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DINOForge.Bridge.Protocol</AssemblyName>
+    <RootNamespace>DINOForge.Bridge.Protocol</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Description>DINOForge Bridge Protocol - JSON-RPC 2.0 messages and interfaces for game bridge communication</Description>
+    <PackageId>DINOForge.Bridge.Protocol</PackageId>
+    <Authors>KooshaPari</Authors>
+    <PackageTags>dinoforge;bridge;protocol;json-rpc;bepinex;game-modding</PackageTags>
+    <PackageProjectUrl>https://github.com/KooshaPari/Dino</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KooshaPari/Dino</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+    <PackageReference Include="jsoncanonicalizer" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

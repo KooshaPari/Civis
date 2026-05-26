@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_droideka_sketchfab_001",
+  "canonical_name": "Droideka",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "https://sketchfab.com/3d-models/6383e06620c1493f9202d3b1c8112c6e",
+  "external_id": "6383e06620c1493f9202d3b1c8112c6e",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "manual_download",
+  "acquired_at_utc": "2026-03-13T00:00:00Z",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_droideka_sketchfab_001\\normalized.glb",
+  "sha256": "94f366b9872e4381f9788ef6166c6861b9833bc4bf7f2d9bb38b78ceaaffa8e4",
+  "polycount_estimate": 196804,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "heavy",
+  "subtype": "heavy",
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=196804 LOD1=98400 LOD2=49199 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

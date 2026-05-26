@@ -1,0 +1,162 @@
+# Star Wars Clone Wars - Model to Unit/Building Mappings
+# Maps downloaded 3D models to game definitions for v0.7.0 and v0.8.0
+# Date: 2026-03-13
+# Total models: 13 (v0.6.0: 4, v0.7.0: 5, v0.8.0: 4)
+
+# v0.6.0 (Previously downloaded - 4 models)
+v0_6_0_models:
+  - asset_id: sw_v19_torrent_sketchfab_001
+    model_path: raw/sw_v19_torrent_sketchfab_001/model.fbx
+    unit_id: v19_torrent  # NOTE: Temporary - AT-TE crew should use AT-TE model
+    faction: republic
+    type: vehicle
+    polycount: 65000
+    status: in_use
+    note: "Currently mapped to V-19 Torrent (Republic fighter)"
+
+  - asset_id: sw_droid_starfighter
+    model_path: raw/sw_droid_starfighter/model.fbx
+    unit_id: droid_starfighter
+    faction: cis
+    type: vehicle
+    polycount: 1300
+    status: in_use
+    note: "CIS air unit placeholder"
+
+  - asset_id: sw_stormtrooper_sketchfab_001
+    model_path: raw/sw_stormtrooper_sketchfab_001/model.fbx
+    unit_id: placeholder_cis_infantry
+    faction: cis
+    type: infantry
+    polycount: 3222
+    status: placeholder
+    note: "Imperial-era Stormtrooper - wrong faction/era, needs replacement"
+
+  - asset_id: sw_clone_trooper_helmet_sketchfab_001
+    model_path: raw/sw_clone_trooper_helmet_sketchfab_001/model.fbx
+    unit_id: placeholder_republic_infantry
+    faction: republic
+    type: infantry
+    polycount: 137
+    status: placeholder
+    note: "Helmet-only model - needs full body replacement in v0.7.0"
+
+# v0.7.0 CRITICAL PHASE (5 models - downloaded)
+v0_7_0_critical:
+  - asset_id: sw_general_grievous_sketchfab_001
+    model_path: raw/sw_general_grievous_sketchfab_001/model.glb
+    unit_id: general_grievous
+    faction: cis
+    type: hero
+    polycount: 4500
+    status: ready_for_import
+    priority: critical
+    note: "CIS hero - both factions now have heroes"
+
+  - asset_id: sw_clone_trooper_phase2_sketchfab_001
+    model_path: raw/sw_clone_trooper_phase2_sketchfab_001/model.glb
+    unit_id: clone_trooper
+    faction: republic
+    type: infantry
+    polycount: 35600
+    status: ready_for_import
+    priority: critical
+    note: "Core Republic unit - Phase II shiny armor, replaces helmet-only"
+
+  - asset_id: sw_at_te_walker_sketchfab_001
+    model_path: raw/sw_at_te_walker_sketchfab_001/model.glb
+    unit_id: at_te_crew
+    faction: republic
+    type: vehicle
+    polycount: 61000
+    status: ready_for_import
+    priority: critical
+    note: "Fix AT-TE mapping - replace V-19 Torrent with correct walker"
+
+  - asset_id: sw_jedi_temple_sketchfab_001
+    model_path: raw/sw_jedi_temple_sketchfab_001/model.glb
+    building_id: command_center
+    faction: republic
+    type: building
+    polycount: 106500
+    status: ready_for_import
+    priority: critical
+    note: "First building visual - Republic HQ, Coruscant Jedi Temple"
+
+  - asset_id: sw_b2_super_droid_sketchfab_001
+    model_path: raw/sw_b2_super_droid_sketchfab_001/model.glb
+    unit_id: b2_super_battle_droid
+    faction: cis
+    type: heavy_infantry
+    polycount: 49000
+    status: ready_for_import
+    priority: critical
+    note: "CIS heavy unit - elite droid"
+
+# v0.8.0 ELITE PHASE (4 models - downloaded)
+v0_8_0_elite:
+  - asset_id: sw_clone_trooper_phase2_alt_sketchfab_001
+    model_path: raw/sw_clone_trooper_phase2_alt_sketchfab_001/model.glb
+    unit_id: clone_trooper_alt
+    faction: republic
+    type: infantry
+    polycount: 41500
+    status: ready_for_import
+    priority: high
+    note: "Alternative Clone Trooper - provides visual variety"
+
+  - asset_id: sw_arc_trooper_sketchfab_001
+    model_path: raw/sw_arc_trooper_sketchfab_001/model.glb
+    unit_id: arc_trooper
+    faction: republic
+    type: elite
+    polycount: 29600
+    status: ready_for_import
+    priority: high
+    note: "Elite clone armor - v0.8.0 expansion for unit variety"
+
+  - asset_id: sw_droideka_sketchfab_001
+    model_path: raw/sw_droideka_sketchfab_001/model.glb
+    unit_id: droideka
+    faction: cis
+    type: specialized
+    polycount: 257000
+    status: ready_for_import
+    priority: high
+    note: "Rolling shield droid - distinctive CIS unit, high detail"
+
+  - asset_id: sw_aat_walker_sketchfab_001
+    model_path: raw/sw_aat_walker_sketchfab_001/model.glb
+    unit_id: aat_crew
+    faction: cis
+    type: vehicle
+    polycount: 4000
+    status: ready_for_import
+    priority: high
+    note: "CIS tank - low polygon, excellent for real-time rendering"
+
+# Coverage Summary
+coverage:
+  v0_6_0: 4 models (26% coverage)
+  v0_7_0: 5 models (+45% target coverage = 35% total)
+  v0_8_0: 4 models (+60% target coverage = 48% total)
+  total_models: 13
+  total_size_mb: 70
+  missing_buildings: 19/20 (Jedi Temple is first)
+  missing_units: 13/26 (both heroes + 11 infantry/vehicles)
+
+# Next Steps
+next_phase:
+  - v0.7.0: Import GLB/FBX files to Unity, create material variants, set up Addressables references
+  - v0.8.0: Continue importing 4 elite unit models
+  - v0.9.0: Focus on building models (19 remaining + remaining unit models)
+  - v1.0.0: Optimization, LOD variants, final polish
+
+# Import Notes
+import_instructions:
+  - Models are in GLB/FBX format from Sketchfab
+  - Use Unity 2021.3.45f2 with FBX Importer plugin
+  - Set import settings: Rig=None, Materials=Standard URP, Scale=1.0
+  - Create prefabs with LOD0 (full), LOD1 (60% verts), LOD2 (30% verts)
+  - Add to Addressables catalog: "sw-{unit_id}-model"
+  - Reference in ContentLoader for spawning

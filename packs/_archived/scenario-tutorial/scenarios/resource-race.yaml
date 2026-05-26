@@ -1,0 +1,116 @@
+# Resource Race Scenario
+# An economy-focused scenario where victory comes through prosperity
+
+id: resource-race
+display_name: "Golden Age: Resource Race"
+description: >
+  Diplomacy may not be an option, but prosperity is. Accumulate 5000 gold while
+  defending against periodic raids. Focus on building an economic engine while
+  keeping your settlement safe. Smart resource management is the key to victory.
+
+difficulty: Normal
+objective_type: Prosper
+wave_count: 10
+max_duration: 2400
+
+starting_resources:
+  food: 300
+  wood: 300
+  stone: 200
+  iron: 75
+  gold: 0
+
+allowed_factions: []
+
+victory_conditions:
+  - condition_type: AccumulateResource
+    target_value: 5000
+    target_id: gold
+    description: "Accumulate 5000 gold to achieve a golden age."
+
+defeat_conditions:
+  - condition_type: CommandCenterDestroyed
+    description: "Your command center must survive."
+  - condition_type: TimeExpired
+    target_value: 2400
+    description: "You have 40 minutes to reach 5000 gold."
+
+scripted_events:
+  - id: resource-intro
+    trigger_type: OnWave
+    trigger_value: 1
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "The Resource Race"
+          text: "Your goal is to accumulate 5000 gold. Build mines, markets, and trade routes. But don't neglect your defenses - raiders will come."
+
+  - id: resource-mine-bonus
+    trigger_type: OnBuildingBuilt
+    trigger_target: gold_mine
+    actions:
+      - action_type: GrantResources
+        parameters:
+          gold: "100"
+      - action_type: ShowMessage
+        parameters:
+          title: "Gold Mine Operational"
+          text: "Your gold mine is producing! A bonus of 100 gold has been added to your treasury."
+
+  - id: resource-market-unlock
+    trigger_type: OnPopulation
+    trigger_value: 50
+    actions:
+      - action_type: EnableBuilding
+        parameters:
+          building_id: "marketplace"
+      - action_type: ShowMessage
+        parameters:
+          title: "Marketplace Unlocked"
+          text: "Your growing population has unlocked the marketplace. Trade resources for gold!"
+
+  - id: resource-milestone-1000
+    trigger_type: OnResource
+    trigger_target: gold
+    trigger_value: 1000
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Milestone: 1000 Gold"
+          text: "You've reached 1000 gold. Keep building your economy - 4000 more to go!"
+
+  - id: resource-milestone-3000
+    trigger_type: OnResource
+    trigger_target: gold
+    trigger_value: 3000
+    actions:
+      - action_type: GrantResources
+        parameters:
+          food: "200"
+          wood: "200"
+      - action_type: ShowMessage
+        parameters:
+          title: "Milestone: 3000 Gold"
+          text: "Impressive treasury! Supply caravans have brought food and wood to support your expansion."
+
+  - id: resource-raider-warning
+    trigger_type: OnWave
+    trigger_value: 5
+    actions:
+      - action_type: ChangeWaveComposition
+        parameters:
+          unit_id: "raider_cavalry"
+          count_delta: "8"
+      - action_type: ShowMessage
+        parameters:
+          title: "Raiders Incoming"
+          text: "Word of your wealth has spread. Raider cavalry targets your resource buildings. Defend them!"
+
+  - id: resource-final-push
+    trigger_type: OnWave
+    trigger_value: 8
+    actions:
+      - action_type: ShowMessage
+        parameters:
+          title: "Time Running Short"
+          text: "Only a few waves remain. Push your economy to the limit - every gold piece counts."

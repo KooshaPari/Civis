@@ -1,0 +1,122 @@
+================================================================================
+F10 PANEL RENDERING PIPELINE - COMPLETE TRACE IMPLEMENTATION
+================================================================================
+
+## CRITICAL FINDINGS
+
+1. UiBuilder.MakeText() FIX IS PRESENT
+   ✓ Line 125: rt.sizeDelta = new Vector2(200f, fontSize + 4f);
+   ✓ Source file verified (Mar 12 03:40)
+   ✓ Compiled into DLL (Mar 12 04:06)
+
+2. ROOT CAUSE OF INVISIBILITY: UNKNOWN
+   The fix is in place, but we need to trace execution to find where rendering breaks.
+
+## LOGGING ADDED
+
+Three major code sections now have ManualLogSource logging:
+
+A. ModMenuPanel.SetPacks()
+   - Entry banner with state summary
+   - Before/after pack counts
+   - _listContent status (READY or NULL)
+   - Full pack list enumeration
+
+B. BuildListPane() / MakeScrollView()
+   - ScrollView component initialization
+   - Content container state (name, active, anchor, pivot, size)
+   - Verification of ContentSizeFitter and VerticalLayoutGroup
+
+C. RebuildPackList()
+   - Execution start with _listContent state
+   - Item destruction count
+   - Item creation loop with per-item messages
+   - Final item enumeration showing name, active, sizeDelta, childCount
+
+D. BuildPackListItem()
+   - Per-item start message
+   - Card panel creation (GameObject, RectTransform.sizeDelta)
+   - LayoutElement configuration
+   - Pack name Text component (content, fontSize, color, sizeDelta, font)
+   - Text LayoutElement configuration
+
+## HOW TO READ THE LOGS
+
+1. Game Log Location: G:/SteamLibrary/steamapps/common/Diplomacy is Not an Option/BepInEx/LogOutput.log
+
+2. Search for diagnostic markers:
+   ╔════════════════════════════════════════════════════════════════════════════════════╗
+   ║ [ModMenuPanel.SetPacks] ENTRY                                                       ║
+   ╚════════════════════════════════════════════════════════════════════════════════════╝
+
+3. Expected log flow:
+   SetPacks() called
+   → RebuildPackList() executes
+   → BuildPackListItem() called 6+ times (one per pack)
+   → Each item's Text created with sizeDelta=(200, 17)
+   → RebuildPackList() complete with childCount=6
+
+## DEPLOYMENT STEPS
+
+1. Close the game (DLL is locked while running)
+
+2. Deploy updated DLL:
+   ./deploy-debug.sh
+   
+   Or manually:
+   cp src/Runtime/bin/Debug/netstandard2.0/DINOForge.Runtime.dll \
+      "G:/SteamLibrary/steamapps/common/Diplomacy is Not an Option/BepInEx/plugins/"
+
+3. Start game and press F10
+
+4. Check LogOutput.log for [ModMenuPanel.SetPacks] entries
+
+## DIAGNOSTIC DECISION TREE
+
+IF SetPacks not in log:
+  → SetPacks() is never being called
+  → Check: ModMenuOverlayProxy and pack loading system
+  → Check: When is SetPacks called vs when is DFCanvas ready?
+
+ELSE IF _listContent: NULL in log:
+  → UI initialization incomplete when SetPacks() was called
+  → Check: DFCanvas.Start() completion timing
+  → Check: Is Build() being called?
+
+ELSE IF items created but not visible AND sizeDelta=(0, 40):
+  → Items ARE created but have zero height
+  → Problem: VerticalLayoutGroup forcing height to 0
+  → Or: ContentSizeFitter not expanding container
+  → Or: Items are created in wrong parent
+
+ELSE IF items created with correct sizeDelta=(200, 17):
+  → Items have correct size but invisible
+  → Check: Parent GameObjects are active (gameObject.activeSelf)
+  → Check: Text colors have non-zero alpha
+  → Check: Canvas rendering enabled
+  → Check: Sorting order correct (should be 100)
+  → Check: Text.font is not null
+
+## FILES MODIFIED
+
+src/Runtime/UI/ModMenuPanel.cs
+  - SetPacks(): 32 new lines of logging (L106-141)
+  - BuildListPane(): 15 new lines of logging (L312-330)
+  - RebuildPackList(): 28 new lines of logging (L451-480)
+  - BuildPackListItem(): 23 new lines of logging (L483-535)
+
+src/Runtime/UI/UiBuilder.cs
+  - Already has the fix on line 125
+  - No changes made
+
+## BUILD STATUS
+
+✓ Project builds successfully (0 errors)
+✓ Warnings only (unused field, async without await)
+✓ DLL created: C:/Users/koosh/Dino/src/Runtime/bin/Debug/netstandard2.0/DINOForge.Runtime.dll
+✓ Size: 217 KB
+✓ Timestamp: Mar 12 04:06
+
+READY FOR DEPLOYMENT
+
+================================================================================

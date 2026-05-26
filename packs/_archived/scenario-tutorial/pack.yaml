@@ -1,0 +1,30 @@
+# Scenario Tutorial Pack
+# Contains introductory scenarios for learning DINOForge mechanics
+
+id: scenario-tutorial
+name: Scenario Tutorial Pack
+version: 0.1.0
+framework_version: ">=0.1.0 <1.0.0"
+author: DINOForge Agents
+type: content
+description: |
+  A comprehensive tutorial campaign introducing new players to DINO's core mechanics through guided scenarios with scripted events and generous early resources.
+
+  Scenarios included:
+  - First Stand: Defense Tutorial (Easy, 5 waves): Learn basic building, wall placement, and soldier training with interactive hints at each stage
+  - Golden Age: Resource Race (Medium): Master resource gathering and economy management under time pressure
+  - Endurance: Survival Challenge (Hard): Test your defensive strategies against relentless enemy waves
+
+  Learning outcomes:
+  - Understanding wall and tower placement for base defense
+  - Training and managing military units effectively
+  - Resource allocation and gathering optimization
+  - Wave prediction and defensive preparation
+  - Progressive difficulty for skill development
+
+  Each scenario includes tutorial messages, resource grants at key moments, and clear victory/defeat conditions.
+
+depends_on: []
+conflicts_with: []
+
+loads: {}

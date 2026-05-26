@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "faction": "republic",
+  "material_count": 4,
+  "output_files": [
+    "stylized.glb",
+    "stylized.blend",
+    "preview.png"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\rep_clone_medic_sketchfab_001"
+}

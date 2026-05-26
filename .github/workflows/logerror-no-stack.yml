@@ -1,0 +1,61 @@
+name: logerror-no-stack
+
+# Pattern #96 detection gate — fails CI when a C# log call drops the
+# exception stack trace (e.g. ``LogError($"...{ex.Message}")`` or
+# ``LogError("..." + ex.Message)``). The healthy form passes the
+# exception as a positional argument or interpolates the full ``{ex}``
+# (which renders ``ToString()`` = type+msg+stack).
+#
+# Companion: scripts/ci/detect_logerror_no_stack.py (run with
+# --self-test for spec). Allowlist:
+# docs/qa/logerror-no-stack-allowlist.txt.
+# Cross-reference: tasks #267 (Plugin.cs + ModPlatform.cs sweep) /
+# #268 (this gate) / #269 (future Roslyn analyzer).
+
+on:
+  pull_request:
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_logerror_no_stack.py"
+      - "docs/qa/logerror-no-stack-allowlist.txt"
+      - ".github/workflows/logerror-no-stack.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_logerror_no_stack.py"
+      - "docs/qa/logerror-no-stack-allowlist.txt"
+      - ".github/workflows/logerror-no-stack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  logerror-no-stack-check:
+    name: Pattern #96 logerror-no-stack
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_logerror_no_stack.py --self-test
+
+      - name: Run logerror-no-stack gate
+        run: python scripts/ci/detect_logerror_no_stack.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: logerror-no-stack-report
+          path: docs/qa/logerror-no-stack-report.json
+          if-no-files-found: warn
+          retention-days: 14

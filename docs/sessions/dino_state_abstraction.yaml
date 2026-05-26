@@ -1,0 +1,187 @@
+version: 1
+description: DINO game state abstraction config for TITAN-style automated agent loop
+
+# State dimensions: these are observable properties abstracted from raw game state
+states:
+  wave_active:
+    description: Is a combat wave currently active?
+    source: game_status
+    field: entity_count
+    thresholds:
+      false: "< 50"
+      true: ">= 50"
+    notes: "Proxy for wave activity based on entity count"
+
+  menu_state:
+    description: What menu is the player currently in?
+    source: game_analyze_screen
+    detection: screenshot_ui_analysis
+    values: [main_menu, gameplay, pause_menu, loading]
+    notes: "Detected from screenshot text, buttons, UI layout"
+
+  resource_level:
+    description: Current player resources (aggregate)
+    source: game_get_stat
+    component: ResourceProducing
+    thresholds:
+      low: "< 100"
+      medium: "100-500"
+      high: "> 500"
+    notes: "Sum of all resource entities"
+
+  health_state:
+    description: Average health of player units
+    source: game_query_entities
+    component: Health
+    aggregate: min_ratio
+    thresholds:
+      critical: "< 0.25"
+      damaged: "0.25-0.75"
+      healthy: "> 0.75"
+    notes: "Uses minimum health ratio across all units"
+
+# Action bundles: sets of valid actions per menu state
+action_bundles:
+  main_menu:
+    description: Actions available in main menu
+    actions:
+      - name: press_enter
+        description: Start game or confirm selection
+        mcp_tool: game_input
+        keys: [Return]
+
+      - name: press_escape
+        description: Back menu or quit
+        mcp_tool: game_input
+        keys: [Escape]
+
+      - name: screenshot
+        description: Observe current menu state
+        mcp_tool: game_screenshot
+
+  gameplay:
+    description: Actions available during active gameplay
+    actions:
+      - name: press_f10
+        description: Open/toggle mod menu
+        mcp_tool: game_input
+        keys: [F10]
+
+      - name: press_f9
+        description: Toggle debug overlay
+        mcp_tool: game_input
+        keys: [F9]
+
+      - name: press_escape
+        description: Pause game
+        mcp_tool: game_input
+        keys: [Escape]
+
+      - name: screenshot
+        description: Observe current gameplay state
+        mcp_tool: game_screenshot
+
+      - name: arrow_up
+        description: Move cursor up (in menus)
+        mcp_tool: game_input
+        keys: [Up]
+
+      - name: arrow_down
+        description: Move cursor down (in menus)
+        mcp_tool: game_input
+        keys: [Down]
+
+      - name: arrow_left
+        description: Move cursor left (in menus)
+        mcp_tool: game_input
+        keys: [Left]
+
+      - name: arrow_right
+        description: Move cursor right (in menus)
+        mcp_tool: game_input
+        keys: [Right]
+
+  pause_menu:
+    description: Actions available in pause menu
+    actions:
+      - name: press_escape
+        description: Resume gameplay
+        mcp_tool: game_input
+        keys: [Escape]
+
+      - name: press_enter
+        description: Confirm menu selection
+        mcp_tool: game_input
+        keys: [Return]
+
+      - name: arrow_up
+        description: Move cursor up
+        mcp_tool: game_input
+        keys: [Up]
+
+      - name: arrow_down
+        description: Move cursor down
+        mcp_tool: game_input
+        keys: [Down]
+
+      - name: screenshot
+        description: Observe current pause menu state
+        mcp_tool: game_screenshot
+
+  loading:
+    description: Actions available during loading screen
+    actions:
+      - name: screenshot
+        description: Monitor loading progress
+        mcp_tool: game_screenshot
+
+      - name: press_escape
+        description: Skip/cancel loading (if available)
+        mcp_tool: game_input
+        keys: [Escape]
+
+# Thresholds and parameters
+stuck_detection:
+  threshold: 5
+  description: "Number of consecutive actions without state change before triggering reflection"
+
+max_actions_per_task: 50
+description: "Hard limit on actions per test task"
+
+state_hash_separator: "_"
+description: "Character used to concatenate state dimensions into a single hash token"
+
+# State transition graph (optional, for planning)
+# This is informational and helps guide the agent
+transitions:
+  main_menu:
+    - action: press_enter
+      destination: loading
+      probability: high
+
+  loading:
+    - action: "wait_for_load_complete"
+      destination: gameplay
+      probability: high
+
+  gameplay:
+    - action: press_escape
+      destination: pause_menu
+      probability: high
+
+    - action: press_f10
+      destination: gameplay  # menu overlay, same state
+      probability: high
+
+  pause_menu:
+    - action: press_escape
+      destination: gameplay
+      probability: high
+
+# Example task templates
+example_tasks:
+  - "Open the mod menu (press F10) and take a screenshot"
+  - "Start a game, wait for wave to activate, then pause"
+  - "Verify that the debug overlay (F9) toggles on and off"
+  - "Navigate through the pause menu options using arrow keys"
+  - "Check resource levels increase over time during gameplay"

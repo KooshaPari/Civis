@@ -1,0 +1,536 @@
+# Undead - Vanilla DINO Units (23+ units total)
+# Tier 1: Basic Undead
+- id: vanilla_undead_walking_corpse
+  display_name: Walking Corpse
+  description: Freshly animated corpse. Weak but extremely cheap to produce.
+  unit_class: MilitiaLight
+  faction_id: undead
+  tier: 1
+  vanilla_dino_name: Walking Corpse
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Walking_Corpse"
+  stats:
+    hp: 28.0
+    damage: 3.0
+    armor: 0.2
+    range: 0.0
+    speed: 3.5
+    accuracy: 0.4
+    fire_rate: 0.6
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 1
+      gold: 0
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [HoldLine]
+  weapon: melee_claw
+
+- id: vanilla_undead_shambler
+  display_name: Shambler
+  description: Rotting undead that lurches forward. Basic cannon fodder.
+  unit_class: CoreLineInfantry
+  faction_id: undead
+  tier: 1
+  vanilla_dino_name: Shambler
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Shambler"
+  stats:
+    hp: 32.0
+    damage: 4.0
+    armor: 0.5
+    range: 0.0
+    speed: 3.8
+    accuracy: 0.45
+    fire_rate: 0.7
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 2
+      gold: 1
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [HoldLine]
+  weapon: melee_club
+
+- id: vanilla_undead_archer_skeleton
+  display_name: Archer Skeleton
+  description: Skeletal archer with bow. Provides ranged fire for undead hordes.
+  unit_class: CoreLineInfantry
+  faction_id: undead
+  tier: 1
+  vanilla_dino_name: Archer Skeleton
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Archer_Skeleton"
+  stats:
+    hp: 30.0
+    damage: 5.0
+    armor: 0.3
+    range: 18.0
+    speed: 3.5
+    accuracy: 0.7
+    fire_rate: 1.2
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 5
+      stone: 0
+      iron: 1
+      gold: 1
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: ranged_bow
+
+# Tier 2: Specialized Undead
+- id: vanilla_undead_hulk
+  display_name: Undead Hulk
+  description: Massive reanimated corpse. Slow but powerful melee unit.
+  unit_class: HeavyInfantry
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Undead Hulk
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Hulk"
+  stats:
+    hp: 85.0
+    damage: 10.0
+    armor: 1.8
+    range: 0.0
+    speed: 2.8
+    accuracy: 0.5
+    fire_rate: 0.6
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 5
+      population: 2
+  defense_tags: [Undead, Biological]
+  behavior_tags: [Charge, AntiMass]
+  weapon: melee_club
+
+- id: vanilla_undead_ghoul
+  display_name: Ghoul
+  description: Fast undead creature with deadly claws. Anti-armor specialist.
+  unit_class: AntiArmor
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Ghoul
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Ghoul"
+  stats:
+    hp: 42.0
+    damage: 8.0
+    armor: 0.8
+    range: 0.0
+    speed: 6.5
+    accuracy: 0.65
+    fire_rate: 1.0
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 3
+      gold: 2
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [Charge, AntiArmor, Kite]
+  weapon: melee_claws
+
+- id: vanilla_undead_machine_o_flesh
+  display_name: Machine O'Flesh
+  description: Undead amalgamation of bodies and machinery. Ranged attack with area damage.
+  unit_class: Artillery
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Machine O'Flesh
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Machine_O'Flesh"
+  stats:
+    hp: 70.0
+    damage: 11.0
+    armor: 1.5
+    range: 20.0
+    speed: 2.0
+    accuracy: 0.6
+    fire_rate: 0.5
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 15
+      gold: 8
+      population: 3
+  defense_tags: [Mechanical, Undead]
+  behavior_tags: [SiegePriority, AntiMass]
+  weapon: ranged_projectile
+
+- id: vanilla_undead_thing
+  display_name: Thing
+  description: Mysterious undead blob. Engulfs enemies and spreads decay.
+  unit_class: WalkerHeavy
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Thing
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Thing"
+  stats:
+    hp: 75.0
+    damage: 9.0
+    armor: 2.0
+    range: 0.0
+    speed: 3.5
+    accuracy: 0.55
+    fire_rate: 0.7
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 8
+      gold: 6
+      population: 2
+  defense_tags: [Exotic, Undead]
+  behavior_tags: [Charge, AntiMass]
+  weapon: melee_engulf
+
+- id: vanilla_undead_shepherd
+  display_name: Shepherd
+  description: Undead mage that commands other undead. Provides buffs and necromancy.
+  unit_class: Skirmisher
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Shepherd
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Shepherd"
+  stats:
+    hp: 45.0
+    damage: 2.0
+    armor: 0.5
+    range: 18.0
+    speed: 4.0
+    accuracy: 0.0
+    fire_rate: 0.4
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 2
+      gold: 8
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [HoldLine, MoralePressure]
+  weapon: magic_staff
+
+- id: vanilla_undead_horsy
+  display_name: Horsy
+  description: Skeletal horse mounted unit. Fast reconnaissance undead.
+  unit_class: FastVehicle
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Horsy
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Horsy"
+  stats:
+    hp: 48.0
+    damage: 6.0
+    armor: 0.5
+    range: 0.0
+    speed: 9.0
+    accuracy: 0.6
+    fire_rate: 0.8
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 4
+      gold: 3
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [Charge, Kite]
+  weapon: melee_claw
+
+# Tier 3: Elite Undead
+- id: vanilla_undead_drake
+  display_name: Drake
+  description: Undead dragon. Rare and powerful flyer. Devastating melee and presence.
+  unit_class: WalkerHeavy
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Drake
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Drake"
+  stats:
+    hp: 120.0
+    damage: 15.0
+    armor: 3.0
+    range: 0.0
+    speed: 5.5
+    accuracy: 0.7
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 35
+      gold: 25
+      population: 4
+  defense_tags: [Exotic, Undead]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_claw
+
+- id: vanilla_undead_magister
+  display_name: Magister
+  description: Powerful undead mage. Casts devastating spells and raises more undead.
+  unit_class: Skirmisher
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Magister
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Magister"
+  stats:
+    hp: 55.0
+    damage: 4.0
+    armor: 1.0
+    range: 22.0
+    speed: 4.5
+    accuracy: 0.0
+    fire_rate: 0.5
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 5
+      gold: 12
+      population: 1
+  defense_tags: [Unarmored, Undead]
+  behavior_tags: [HoldLine, MoralePressure]
+  weapon: magic_staff
+
+- id: vanilla_undead_nightmare_general
+  display_name: Nightmare General
+  description: Elite undead cavalry on a nightmare steed. Combines shock impact with magic.
+  unit_class: ShockMelee
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Nightmare General
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Nightmare_General"
+  stats:
+    hp: 80.0
+    damage: 12.0
+    armor: 2.5
+    range: 0.0
+    speed: 8.5
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 12
+      population: 2
+  defense_tags: [Undead, Biological]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_lance
+
+- id: vanilla_undead_grim_pilgrim
+  display_name: Grim Pilgrim
+  description: Spectral warrior. Semi-corporeal with both melee and magical attacks.
+  unit_class: EliteLineInfantry
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Grim Pilgrim
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Grim_Pilgrim"
+  stats:
+    hp: 70.0
+    damage: 11.0
+    armor: 1.5
+    range: 0.0
+    speed: 5.0
+    accuracy: 0.75
+    fire_rate: 1.0
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 8
+      gold: 10
+      population: 1
+  defense_tags: [Undead, Magical]
+  behavior_tags: [HoldLine, SiegePriority]
+  weapon: melee_spectral_blade
+
+# Undead variants of Lord's Troops units
+- id: vanilla_undead_swordsman
+  display_name: Undead Swordsman
+  description: Reanimated professional soldier. Stronger than basic undead but costs more.
+  unit_class: MilitiaLight
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Undead Swordsman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Swordsman"
+  stats:
+    hp: 48.0
+    damage: 7.0
+    armor: 1.5
+    range: 0.0
+    speed: 4.8
+    accuracy: 0.6
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 6
+      gold: 3
+      population: 1
+  defense_tags: [InfantryArmor, Undead]
+  behavior_tags: [HoldLine]
+  weapon: melee_sword
+
+- id: vanilla_undead_axe_warrior
+  display_name: Undead Axe Warrior
+  description: Reanimated heavy warrior. Devastating but slow.
+  unit_class: HeavyInfantry
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Undead Axe Warrior
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Axe_Warrior"
+  stats:
+    hp: 62.0
+    damage: 11.0
+    armor: 2.0
+    range: 0.0
+    speed: 3.5
+    accuracy: 0.55
+    fire_rate: 0.65
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 6
+      population: 1
+  defense_tags: [InfantryArmor, Undead]
+  behavior_tags: [Charge, AntiMass]
+  weapon: melee_axe
+
+- id: vanilla_undead_spearman
+  display_name: Undead Spearman
+  description: Reanimated pike specialist. Anti-cavalry formation.
+  unit_class: AntiArmor
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Undead Spearman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Spearman"
+  stats:
+    hp: 53.0
+    damage: 8.0
+    armor: 1.5
+    range: 0.0
+    speed: 4.2
+    accuracy: 0.6
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 7
+      gold: 3
+      population: 1
+  defense_tags: [InfantryArmor, Undead]
+  behavior_tags: [HoldLine, AntiArmor]
+  weapon: melee_pike
+
+- id: vanilla_undead_crossbowman
+  description: Reanimated crossbowman. Ranged specialist from the grave.
+  display_name: Undead Crossbowman
+  unit_class: CoreLineInfantry
+  faction_id: undead
+  tier: 2
+  vanilla_dino_name: Undead Crossbowman
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Crossbowman"
+  stats:
+    hp: 42.0
+    damage: 8.0
+    armor: 0.8
+    range: 20.0
+    speed: 3.5
+    accuracy: 0.8
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 10
+      stone: 0
+      iron: 3
+      gold: 2
+      population: 1
+  defense_tags: [LightArmor, Undead]
+  behavior_tags: [AdvanceFire]
+  weapon: ranged_crossbow
+
+- id: vanilla_undead_foot_knight
+  display_name: Undead Foot Knight
+  description: Reanimated elite armored soldier. Heavily armored and slow.
+  unit_class: EliteLineInfantry
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Undead Foot Knight
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Foot_Knight"
+  stats:
+    hp: 78.0
+    damage: 9.0
+    armor: 3.5
+    range: 0.0
+    speed: 3.0
+    accuracy: 0.65
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 22
+      gold: 12
+      population: 1
+  defense_tags: [HeavyArmor, Undead]
+  behavior_tags: [HoldLine, SiegePriority]
+  weapon: melee_sword_shield
+
+- id: vanilla_undead_mounted_knight
+  display_name: Undead Mounted Knight
+  description: Reanimated elite cavalry. Skeletal horse and rider combination.
+  unit_class: ShockMelee
+  faction_id: undead
+  tier: 3
+  vanilla_dino_name: Undead Mounted Knight
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead_Mounted_Knight"
+  stats:
+    hp: 80.0
+    damage: 12.0
+    armor: 3.0
+    range: 0.0
+    speed: 7.5
+    accuracy: 0.65
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 18
+      gold: 16
+      population: 2
+  defense_tags: [HeavyArmor, Undead]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_lance

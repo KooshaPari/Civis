@@ -1,0 +1,66 @@
+name: stringly-enums
+
+# Pattern #101 detection gate — fails CI when production C# model
+# code declares ``public string <Name>(Type|Mode|Status|Phase|Kind|
+# Category|State)`` on a class with no KnownXxx HashSet and no
+# IValidatable.Validate() to constrain the value. The string-typed
+# enum discriminator is a silent-typo magnet (``"elimnate_faction"``
+# falls through to a default branch and the dispatcher silently does
+# nothing); the healthy pattern is a real ``enum`` + JsonConverter or
+# a KnownXxx constraint set + IValidatable.
+#
+# Companion: scripts/ci/detect_stringly_enums.py (run with
+# --self-test for spec). Allowlist:
+# docs/qa/stringly-enums-allowlist.txt.
+# Cross-reference: tasks #289 (HIGH-site sweep) /
+# #290 (PackManifest.Type + WinCondition.Type schema-published
+# migration) / #291 (this gate) / #292 (CLAUDE.md doctrine + Pattern
+# Catalog entry).
+
+on:
+  pull_request:
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_stringly_enums.py"
+      - "docs/qa/stringly-enums-allowlist.txt"
+      - ".github/workflows/stringly-enums.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.cs"
+      - "scripts/ci/detect_stringly_enums.py"
+      - "docs/qa/stringly-enums-allowlist.txt"
+      - ".github/workflows/stringly-enums.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stringly-enums-check:
+    name: Pattern #101 stringly-enums
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_stringly_enums.py --self-test
+
+      - name: Run stringly-enums gate
+        run: python scripts/ci/detect_stringly_enums.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: stringly-enums-report
+          path: docs/qa/stringly-enums-report.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,303 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <AssemblyName>DINOForge.Runtime</AssemblyName>
+    <RootNamespace>DINOForge.Runtime</RootNamespace>
+    <Description>DINOForge runtime plugin - BepInEx bootstrap, ECS introspection, entity dumper</Description>
+    <BuildInParallel>false</BuildInParallel>
+
+    <!-- Detect if the DINO game is installed by checking for UnityEngine.dll -->
+    <GameInstalled Condition="'$(CI)' == 'true'">false</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and Exists('$(ManagedDir)\UnityEngine.dll')">true</GameInstalled>
+    <GameInstalled Condition="'$(CI)' != 'true' and !Exists('$(ManagedDir)\UnityEngine.dll')">false</GameInstalled>
+    <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
+    <!-- Copy SDK and its dependencies alongside Runtime DLL for deployment (game install only) -->
+    <CopyLocalLockFileAssemblies Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true'">true</CopyLocalLockFileAssemblies>
+
+    <!--
+      [Pattern #530] Do NOT redirect OutputPath — that empties bin/Release/netstandard2.0/ and breaks
+      the standard verification check (Get-FileHash bin/... vs BepInEx/...).
+      Instead, the DeployDll target below explicitly copies from the standard output path to BepInEx.
+    -->
+
+    <!-- Suppress version conflict warning for System.IO.Compression — game provides 4.2.0.0 at runtime, netstandard2.0 ref resolves to 4.1.3.0, both are compatible -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <!-- Exclude UGUI-dependent UI files when the game is not installed (no UnityEngine.UIModule.dll) -->
+  <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <Compile Remove="UI\DebugPanel.cs" />
+    <Compile Remove="UI\DFCanvas.cs" />
+    <Compile Remove="UI\DinoForgeStyle.cs" />
+    <Compile Remove="UI\HudIndicator.cs" />
+    <Compile Remove="UI\HudStrip.cs" />
+    <Compile Remove="UI\ModMenuOverlay.cs" />
+    <Compile Remove="UI\ModMenuOverlayProxy.cs" />
+    <Compile Remove="UI\ModMenuPanel.cs" />
+    <Compile Remove="UI\ModSettingsPanel.cs" />
+    <Compile Remove="UI\NativeMenuInjector.cs" />
+    <Compile Remove="UI\NativeUiHelper.cs" />
+    <Compile Remove="UI\UiGridHarmonyPatch.cs" />
+    <Compile Remove="UI\UiSelectorEngine.cs" />
+    <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
+    <Compile Remove="UI\UiBuilder.cs" />
+  </ItemGroup>
+
+  <!-- BepInEx core - only when game is installed -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExDir)\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Game assemblies - only when game is installed -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <!-- Unity ECS / DOTS -->
+    <Reference Include="Unity.Entities">
+      <HintPath>$(ManagedDir)\Unity.Entities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Entities.Hybrid">
+      <HintPath>$(ManagedDir)\Unity.Entities.Hybrid.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Transforms">
+      <HintPath>$(ManagedDir)\Unity.Transforms.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>$(ManagedDir)\Unity.Collections.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>$(ManagedDir)\Unity.Mathematics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Burst">
+      <HintPath>$(ManagedDir)\Unity.Burst.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Jobs">
+      <HintPath>$(ManagedDir)\Unity.Jobs.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Scenes">
+      <HintPath>$(ManagedDir)\Unity.Scenes.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Localization">
+      <HintPath>$(ManagedDir)\Unity.Localization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Unity Engine -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Game DLLs -->
+    <Reference Include="DNO.Main">
+      <HintPath>$(ManagedDir)\DNO.Main.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Door407.Core.Runtime">
+      <HintPath>$(ManagedDir)\Door407.Core.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Door407.Integrations.Runtime">
+      <HintPath>$(ManagedDir)\Door407.Integrations.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Newtonsoft.Json (bundled with game) -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- AssetsTools.NET for asset bundle reading/writing (Runtime-specific, not SDK) -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'true'">
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+  </ItemGroup>
+
+  <!--
+    When game is not installed (CI / SDK-only builds), compile only pure-C# helpers.
+    Unity ECS, BepInEx, and game-specific sources are excluded via allowlist.
+  -->
+  <ItemGroup Condition="'$(GameInstalled)' == 'false'">
+    <Compile Remove="**\*.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="PluginInfo.cs" />
+    <Compile Include="Bridge\VanillaArchetypeMapper.cs" />
+    <Compile Include="Bridge\UnitSpawnRequest.cs" />
+    <Compile Include="Bridge\PackStatMappings.cs" />
+    <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
+    <Compile Include="Bridge\SessionHmac.cs" />
+  </ItemGroup>
+
+  <!-- SDK and Bridge Protocol project references - always use ProjectReference for proper build ordering -->
+  <ItemGroup>
+    <ProjectReference Include="..\SDK\DINOForge.SDK.csproj" />
+    <ProjectReference Include="..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    [Pattern #530 / #885] Explicit DLL deploy target.
+    Copies DINOForge.Runtime.dll from the standard netstandard2.0 bin output
+    (bin/Release/netstandard2.0/) to BepInEx/plugins/ so that:
+      (a) bin/Release/netstandard2.0/DINOForge.Runtime.dll always exists for verification
+      (b) BepInEx/plugins/DINOForge.Runtime.dll is an exact copy of the built artifact
+    This replaces the earlier OutputPath-redirect approach which emptied bin/ and broke:
+      $bHash = (Get-FileHash 'bin\Release\netstandard2.0\DINOForge.Runtime.dll').Hash
+      Write-Host "Match: $($dHash -eq $bHash)"
+  -->
+  <Target Name="DeployDll" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true"
+          Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    <Message Text="[DeployDll] Deployed $(AssemblyName).dll to $(BepInExDir)\plugins" Importance="high" />
+  </Target>
+
+  <!--
+    Deploy Kenney CC0 UI sprites to BepInEx/plugins/dinoforge-ui-assets/ alongside the DLL.
+    UiAssets.Initialize() at runtime looks for sprites in that directory.
+    If no Kenney assets have been downloaded (src/Runtime/UI/Assets/kenney/ contains only
+    .gitkeep files) the target copies nothing and the plugin falls back to flat colours.
+  -->
+  <Target Name="DeployUiAssets" AfterTargets="Build" Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup>
+      <KenneyAssetFiles Include="$(MSBuildThisFileDirectory)UI\Assets\kenney\**\*"
+                        Exclude="$(MSBuildThisFileDirectory)UI\Assets\kenney\**\.gitkeep" />
+    </ItemGroup>
+    <MakeDir Directories="$(BepInExDir)\plugins\dinoforge-ui-assets"
+             Condition="'@(KenneyAssetFiles)' != '' And !Exists('$(BepInExDir)\plugins\dinoforge-ui-assets')" />
+    <Copy SourceFiles="@(KenneyAssetFiles)"
+          DestinationFolder="$(BepInExDir)\plugins\dinoforge-ui-assets\%(RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(KenneyAssetFiles)' != ''" />
+    <Message Text="Deployed Kenney UI assets to $(BepInExDir)\plugins\dinoforge-ui-assets"
+             Importance="normal"
+             Condition="'@(KenneyAssetFiles)' != ''" />
+    <Message Text="[UiAssets] No Kenney assets found in UI/Assets/kenney/ — falling back to flat colours. See src/Runtime/UI/Assets/README.md for download instructions."
+             Importance="normal"
+             Condition="'@(KenneyAssetFiles)' == ''" />
+  </Target>
+
+  <!-- Deploy Rust asset pipeline DLL to output directory -->
+  <Target Name="DeployRustAssetPipelineDll" AfterTargets="Build">
+    <ItemGroup>
+      <!-- Search for dinoforge_asset_pipeline DLL/SO in common locations -->
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\src\Tools\AssetPipelineRust\target\release\*.dll" />
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\src\Tools\AssetPipelineRust\target\release\*.so" />
+      <RustAssetPipelineDll Include="$(MSBuildThisFileDirectory)..\..\build\rust\*\dinoforge_asset_pipeline.*" />
+    </ItemGroup>
+
+    <!-- Copy Rust DLL to output if found -->
+    <Copy SourceFiles="@(RustAssetPipelineDll)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="'@(RustAssetPipelineDll)' != ''" />
+
+    <Message Text="[RustAssetPipeline] Deployed to $(OutputPath)"
+             Importance="low"
+             Condition="'@(RustAssetPipelineDll)' != ''" />
+    <Message Text="[RustAssetPipeline] DLL not found — P/Invoke will gracefully degrade"
+             Importance="low"
+             Condition="'@(RustAssetPipelineDll)' == ''" />
+  </Target>
+
+  <!-- Deploy packs from repo to game directory -->
+  <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)') and '$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup>
+      <PackFiles Include="$(MSBuildThisFileDirectory)..\..\packs\**\*" Exclude="$(MSBuildThisFileDirectory)..\..\packs\test-*;$(MSBuildThisFileDirectory)..\..\packs\test-*\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="$(BepInExDir)\dinoforge_packs" Condition="!Exists('$(BepInExDir)\dinoforge_packs')" />
+    <Copy SourceFiles="@(PackFiles)"
+          DestinationFolder="$(BepInExDir)\dinoforge_packs\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="Deployed packs to $(BepInExDir)\dinoforge_packs" Importance="high" />
+  </Target>
+
+  <!--
+    [Pattern #530] Guardrail: warn when DeployToGame=true is used without an explicit
+    TargetFramework=netstandard2.0. The Deploy* targets above are conditioned on the
+    netstandard2.0 TFM (the only BepInEx-loadable output per Pattern #233 / iter-97).
+    Without this guardrail, a default `dotnet build -p:DeployToGame=true` invocation
+    silently builds net8.0 only and skips all deploy targets, masking deploy failures.
+
+    The warning fires only on the non-netstandard2.0 leaf so it surfaces exactly once
+    per multi-target build invocation (and not at all when -p:TargetFramework is set
+    explicitly to netstandard2.0).
+  -->
+  <Target Name="WarnDeployWrongTFM" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and '$(TargetFramework)' != 'netstandard2.0' and '$(TargetFramework)' != ''">
+    <Warning Text="[#530] DeployToGame=true was set but TargetFramework is '$(TargetFramework)', not netstandard2.0. Deploy* targets (DeployUiAssets, DeployPacks, plugin DLL copy) will NOT fire for this TFM. Add -p:TargetFramework=netstandard2.0 to your build command to deploy to the BepInEx-compatible output." Code="DF0530" />
+  </Target>
+
+</Project>

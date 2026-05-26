@@ -1,0 +1,28 @@
+# Air Force Expansion — Faction Aerial Extensions
+# Extends the faction definitions from warfare-modern with aerial arm metadata.
+# These entries augment (not replace) the parent factions defined in warfare-modern.
+
+extensions:
+  - faction_id: western-coalition
+    aerial_units:
+      - wc_fighter_jet
+      - wc_attack_helicopter
+      - wc_strategic_bomber
+      - wc_recon_drone
+    aerial_doctrine: wc_air_superiority
+    airbase_buildings:
+      - af_airstrip
+      - af_radar_tower
+      - af_aa_battery
+
+  - faction_id: eastern-bloc
+    aerial_units:
+      - eb_fighter_jet
+      - eb_attack_helicopter
+      - eb_ground_attack_jet
+      - eb_ew_jet
+    aerial_doctrine: eb_mass_aviation
+    airbase_buildings:
+      - af_airstrip
+      - af_radar_tower
+      - af_aa_battery

@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "changelog": {
+    "includeAllCommits": false,
+    "includeInvalidCommits": false,
+    "commitUrlFormat": "https://github.com/KooshaPari/Dino/commit/{{hash}}",
+    "compareUrlFormat": "https://github.com/KooshaPari/Dino/compare/{{previousTag}}...{{currentTag}}",
+    "issueUrlFormat": "https://github.com/KooshaPari/Dino/issues/{{id}}",
+    "userUrlFormat": "https://github.com/{{user}}"
+  }
+}

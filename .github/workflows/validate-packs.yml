@@ -1,0 +1,49 @@
+name: Validate Packs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packs/**"
+      - "schemas/**"
+      - "src/Tools/PackCompiler/**"
+      - "src/SDK/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packs/**"
+      - "schemas/**"
+      - "src/Tools/PackCompiler/**"
+      - "src/SDK/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Content Packs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup .NET 8.0
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj /p:RestoreLockedMode=true
+
+      - name: Build PackCompiler
+        run: dotnet build src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj --no-restore --configuration Release
+
+      - name: Validate all packs
+        run: |
+          for pack_dir in packs/*/; do
+            if [ -d "$pack_dir" ]; then
+              echo "Validating $pack_dir..."
+              dotnet run --project src/Tools/PackCompiler --no-build --configuration Release -- validate "$pack_dir"
+            fi
+          done

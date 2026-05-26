@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "original_polycount": 196804,
+  "lod0_polycount": 196804,
+  "lod1_polycount": 98400,
+  "lod2_polycount": 49199,
+  "material_count": 1,
+  "output_files": [
+    "normalized.glb",
+    "lod1.glb",
+    "lod2.glb"
+  ],
+  "output_dir": "packs/warfare-starwars/assets\\working\\cis_droideka_sketchfab_001"
+}

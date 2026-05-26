@@ -1,0 +1,14 @@
+title: "[Q&A] "
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What do you want to know about DINOForge or DINO modding?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What have you already tried or found?

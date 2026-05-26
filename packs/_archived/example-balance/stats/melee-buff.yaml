@@ -1,0 +1,9 @@
+overrides:
+  - target: unit.stats.hp
+    value: 1.5
+    mode: multiply
+    filter: Components.MeleeUnit
+  - target: unit.stats.speed
+    value: 1.2
+    mode: multiply
+    filter: Components.MeleeUnit

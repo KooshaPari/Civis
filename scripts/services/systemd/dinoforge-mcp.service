@@ -1,0 +1,17 @@
+[Unit]
+Description=DINOForge MCP HTTP/SSE service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_ROOT__/src/Tools/DinoforgeMcp
+ExecStart=/usr/bin/env bash __REPO_ROOT__/scripts/start-mcp.sh --action start --foreground
+ExecStop=/usr/bin/env bash __REPO_ROOT__/scripts/start-mcp.sh --action stop
+Restart=on-failure
+RestartSec=2
+Environment=DINOFORGE_PYTHON=/usr/bin/python3
+Environment=DINO_GAME_DIR=/path/to/Diplomacy is Not an Option
+Environment=BARE_CUA_NATIVE=/path/to/bare-cua-native
+
+[Install]
+WantedBy=default.target

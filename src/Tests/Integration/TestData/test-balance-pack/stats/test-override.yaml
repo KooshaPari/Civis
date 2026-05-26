@@ -1,0 +1,4 @@
+overrides:
+  - target: unit.stats.hp
+    value: 2.0
+    mode: multiply

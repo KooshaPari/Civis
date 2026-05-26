@@ -1,0 +1,73 @@
+{
+  "scan_utc": "2026-05-21T17:24:38.800828Z",
+  "scan_date": "2026-05-21",
+  "packs_root": "C:/Users/koosh/Dino/packs",
+  "allowlist_path": "C:/Users/koosh/Dino/docs/qa/framework-version-allowlist.txt",
+  "allowlist_size": 6,
+  "manifests_scanned": 10,
+  "violations_count": 0,
+  "violations": [],
+  "scanned": [
+    {
+      "file": "packs/economy-balanced/pack.yaml",
+      "framework_version": ">=0.6.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/example-total-conversion/pack.yaml",
+      "framework_version": ">=0.24.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/example-ui-counter/pack.yaml",
+      "framework_version": ">=0.24.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/scenario-tutorial/pack.yaml",
+      "framework_version": ">=0.7.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/ui-hud-minimal/pack.yaml",
+      "framework_version": ">=0.11.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/vanilla-dino/pack.yaml",
+      "framework_version": ">=0.23.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-aerial/pack.yaml",
+      "framework_version": ">=0.23.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-modern/pack.yaml",
+      "framework_version": ">=0.1.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-starwars/manifest.yaml",
+      "framework_version": ">=0.5.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    },
+    {
+      "file": "packs/warfare-starwars/pack.yaml",
+      "framework_version": ">=0.5.0 <0.26.0",
+      "missing": false,
+      "violations": []
+    }
+  ],
+  "exit_code": 0
+}

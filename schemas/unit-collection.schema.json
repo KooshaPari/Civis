@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/unit-collection.schema.json",
+  "title": "Unit collection (list of unit definitions)",
+  "type": "array",
+  "items": { "$ref": "unit.schema.json" },
+  "minItems": 1
+}

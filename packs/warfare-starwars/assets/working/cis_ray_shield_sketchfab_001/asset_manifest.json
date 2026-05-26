@@ -1,0 +1,36 @@
+{
+  "asset_id": "cis_ray_shield_sketchfab_001",
+  "canonical_name": "",
+  "franchise_tag": "star_wars",
+  "source_platform": "sketchfab",
+  "source_url": "",
+  "external_id": "",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "",
+  "acquired_at_utc": "",
+  "original_format": "glb",
+  "download_url": null,
+  "local_path": "working\\cis_ray_shield_sketchfab_001\\normalized.glb",
+  "sha256": "59fb46585c56b6f7fdb7dee343c54824943d09ca6a2927ae27c2813191b5ed0f",
+  "polycount_estimate": 1403,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": "building",
+  "subtype": null,
+  "technical_status": "normalized",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "ERROR: Blender exited with code 1: TBBmalloc: skip allocation functions replacement in ucrtbase.dll: unknown prologue for function _aligned_free\r\n{\u0022success\u0022: false, \u0022error\u0022: \u0022Error: Bad GLB: first chunk not JSON\\n\u0022, \u0022output_dir\u0022: \u0022C:/Users/koosh/Dino/packs/warfare-starwars/assets\\\\working\\\\cis_ray_shield_sketchfab_001\u0022}",
+    "Normalized via Blender. LOD0=1403 LOD1=706 LOD2=361 triangles"
+  ],
+  "references": null,
+  "validation_report": null
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/skill.schema.json",
+  "title": "DINOForge Skill Definition",
+  "description": "Schema for DINOForge skill definition files (skills/*.yaml). Maps to DINO's Components.Skills.* ECS components.",
+  "type": "object",
+  "required": ["id", "display_name", "skill_class", "target_type"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique skill identifier."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable skill name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Skill description text."
+    },
+    "skill_class": {
+      "type": "string",
+      "enum": ["heal", "mass_heal", "buff", "debuff", "aoe_damage", "summon", "resurrection", "passive"],
+      "description": "Skill class category."
+    },
+    "target_type": {
+      "type": "string",
+      "enum": ["self", "single_ally", "single_enemy", "aoe_allies", "aoe_enemies", "aoe_all"],
+      "description": "Targeting type for the skill."
+    },
+    "cooldown": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Cooldown in seconds between uses."
+    },
+    "duration": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Duration in seconds. 0 = instant."
+    },
+    "range": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Effective range in world units."
+    },
+    "radius": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Area-of-effect radius in world units."
+    },
+    "effects": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/SkillEffect" },
+      "description": "Stat effects applied by this skill."
+    },
+    "vanilla_mapping": {
+      "type": "string",
+      "description": "Vanilla DINO skill component name (e.g. Components.Skills.HealSkillData)."
+    }
+  },
+  "definitions": {
+    "SkillEffect": {
+      "type": "object",
+      "required": ["stat", "value"],
+      "properties": {
+        "stat": {
+          "type": "string",
+          "description": "Stat to modify (e.g. health, speed, damage, armor)."
+        },
+        "modifier_type": {
+          "type": "string",
+          "enum": ["flat", "percent"],
+          "default": "flat",
+          "description": "Modifier type: flat or percent."
+        },
+        "value": {
+          "type": "number",
+          "description": "Modifier value. Positive = buff, negative = debuff."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+id: food
+name: Food
+description: |
+  Essential sustenance for workers and military units. Produced by farms and hunting camps.
+  Critical for population growth and unit training. Decays at a slow rate if stockpiled.
+production_rate: 1.0
+storage_capacity: 2000.0
+decay_rate: 0.001
+is_tradeable_default: true

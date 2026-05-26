@@ -1,0 +1,111 @@
+{
+  "timestamp": "2026-03-12T03:04:46.688Z",
+  "search_queries": [
+    "tatooine_buildings",
+    "star_wars_buildings",
+    "low_poly_star_wars"
+  ],
+  "total_candidates_found": 29,
+  "top_3_candidates": [
+    {
+      "model_id": "dae880b4ed0d4a58858ad1e4537351dc",
+      "title": "Tatooine_Building_Textured",
+      "author": "phamill327",
+      "url": "https://sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 1338,
+        "faces": 2584,
+        "estimated_triangles": 2584
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/dae880b4ed0d4a58858ad1e4537351dc/thumbnails/7e0b8ddcbd414827b19bcb29fc15f960/0ac9545e37584d91ba57801f25332257.jpeg",
+      "description": "",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "download_formats": [
+        "glb",
+        "obj",
+        "fbx",
+        "usdz"
+      ],
+      "view_count": 95,
+      "published_at": "2024-04-23T02:46:55.845169",
+      "source_query": "tatooine_buildings"
+    },
+    {
+      "model_id": "a43085f476844b13b683d67035066a35",
+      "title": "Tatooine Building",
+      "author": "phamill327",
+      "url": "https://sketchfab.com/models/a43085f476844b13b683d67035066a35",
+      "license": "Not Specified",
+      "polycount": {
+        "vertices": 1310,
+        "faces": 2584,
+        "estimated_triangles": 2584
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/a43085f476844b13b683d67035066a35/thumbnails/17afe9f4d8f449579e01ec2200e36d93/7a4a3b2de1ad42498e27e87277f1efb1.jpeg",
+      "description": "Building from the planet, Tatooine in Star Wars.",
+      "is_downloadable": false,
+      "is_pack": false,
+      "confidence_score": 1,
+      "download_formats": [
+        "glb",
+        "obj",
+        "fbx",
+        "usdz"
+      ],
+      "view_count": 95,
+      "published_at": "2024-02-13T01:47:00.358047",
+      "source_query": "tatooine_buildings"
+    },
+    {
+      "model_id": "a477c5b5bca44c4eade16f5bc094d39b",
+      "title": "Nubian N1 Naboo starfighter (black)",
+      "author": "richardas.rac",
+      "url": "https://sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b",
+      "license": "CC Attribution",
+      "polycount": {
+        "vertices": 931,
+        "faces": 1293,
+        "estimated_triangles": 1293
+      },
+      "preview_image_url": "https://media.sketchfab.com/models/a477c5b5bca44c4eade16f5bc094d39b/thumbnails/42549d00467b4622bbc42e07ea560e11/b502d38103a94cbebc7964c7eeff9109.jpeg",
+      "description": "This is low-poly model of Nubian N1 space superiority fighter from Star Wars (black paintjob). This model was originally created by Monsoontide, with small adjustments by myself recently",
+      "is_downloadable": true,
+      "is_pack": false,
+      "confidence_score": 0.95,
+      "download_formats": [
+        "glb",
+        "obj",
+        "fbx",
+        "usdz"
+      ],
+      "view_count": 11,
+      "published_at": "2026-03-10T15:27:59.858217",
+      "source_query": "low_poly_star_wars"
+    }
+  ],
+  "scoring_criteria": {
+    "polycount_range_ideal": "200-1000 triangles",
+    "polycount_range_acceptable": "100-20000 triangles",
+    "themes_preferred": [
+      "desert",
+      "tatooine",
+      "outer-rim",
+      "scrap",
+      "settlement"
+    ],
+    "licenses_preferred": [
+      "CC-BY",
+      "CC0",
+      "Not Specified (check download)"
+    ],
+    "format_preference": [
+      "glb",
+      "fbx",
+      "obj"
+    ]
+  },
+  "notes": "NOT downloaded yet - metadata only collected for evaluation"
+}

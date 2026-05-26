@@ -1,0 +1,49 @@
+factions:
+  - id: republic
+    name: Galactic Republic
+    description: "The democratic government of the galaxy, defended by the Grand Army of the Republic - clone soldiers bred on Kamino."
+    alignment: Player
+    archetype: order
+    sub_factions:
+      - id: 501st
+        name: 501st Legion
+        description: "Anakin Skywalker's elite legion, known for aggressive tactics."
+        specialization: shock_assault
+      - id: 212th
+        name: 212th Attack Battalion
+        description: "Obi-Wan Kenobi's battalion, known for disciplined combined arms."
+        specialization: combined_arms
+      - id: coruscant_guard
+        name: Coruscant Guard
+        description: "Elite security forces protecting the capital."
+        specialization: defense
+    unit_roster:
+      cheap_infantry: clone_trooper_recruit
+      line_infantry: clone_trooper
+      elite_infantry: arc_trooper
+      anti_armor: clone_sniper
+      recon: barc_speeder
+      heavy_vehicle: at_te
+      artillery: republic_artillery
+      hero_commander: jedi_general
+
+  - id: cis
+    name: Confederacy of Independent Systems
+    description: "The Separatist Alliance, fielding massive droid armies manufactured in bulk."
+    alignment: Enemy
+    archetype: industrial_swarm
+    sub_factions:
+      - id: trade_federation
+        name: Trade Federation
+        description: "Original Separatist faction, specializing in mass-produced B1 droids."
+        specialization: mass_production
+      - id: techno_union
+        name: Techno Union
+        description: "Advanced droid manufacturing with specialized combat units."
+        specialization: advanced_droids
+    unit_roster:
+      cheap_infantry: b1_battle_droid
+      line_infantry: b2_super_battle_droid
+      elite_infantry: droideka
+      recon: dwarf_spider_droid
+      spike_unit: droideka

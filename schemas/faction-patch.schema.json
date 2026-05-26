@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "faction-patch",
+  "title": "Faction Patch",
+  "description": "Extends an existing vanilla faction with new units, buildings, and doctrines.",
+  "type": "object",
+  "required": ["target_faction", "add"],
+  "properties": {
+    "target_faction": {
+      "type": "string",
+      "description": "ID of faction to extend. Use 'player' or 'enemy' for vanilla factions."
+    },
+    "add": {
+      "type": "object",
+      "description": "Content to add to the target faction.",
+      "properties": {
+        "units": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Unit definition IDs to add to the faction."
+        },
+        "buildings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Building definition IDs to add to the faction."
+        },
+        "doctrines": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Doctrine definition IDs to add to the faction."
+        }
+      },
+      "additionalProperties": false
+    },
+    "role_overrides": {
+      "type": "object",
+      "description": "Override the role of specific unit IDs. Key=unit ID, Value=role string.",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

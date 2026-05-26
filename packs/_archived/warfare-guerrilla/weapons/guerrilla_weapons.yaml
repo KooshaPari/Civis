@@ -1,0 +1,118 @@
+# Guerrilla Weapons - Primitive but deadly
+
+- id: hunting_bow
+  display_name: Hunting Bow
+  weapon_class: rifle
+  damage_type: kinetic
+  base_damage: 15.0
+  range: 22.0
+  rate_of_fire: 1.5
+  aoe_radius: 0.0
+
+- id: longbow
+  display_name: Longbow
+  weapon_class: rifle
+  damage_type: kinetic
+  base_damage: 22.0
+  range: 30.0
+  rate_of_fire: 0.8
+  aoe_radius: 0.0
+
+- id: war_axe
+  display_name: War Axe
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 25.0
+  range: 1.5
+  rate_of_fire: 1.5
+  aoe_radius: 0.0
+
+- id: great_axe
+  display_name: Great Axe
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 40.0
+  range: 2.0
+  rate_of_fire: 1.0
+  aoe_radius: 0.0
+
+- id: spear
+  display_name: Spear
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 18.0
+  range: 2.5
+  rate_of_fire: 1.8
+  aoe_radius: 0.0
+
+- id: javelin
+  display_name: Javelin
+  weapon_class: missile
+  damage_type: kinetic
+  base_damage: 28.0
+  range: 18.0
+  rate_of_fire: 0.6
+  aoe_radius: 0.0
+
+- id: sling
+  display_name: Sling
+  weapon_class: rifle
+  damage_type: kinetic
+  base_damage: 10.0
+  range: 16.0
+  rate_of_fire: 2.0
+  aoe_radius: 0.0
+
+- id: war_hammer
+  display_name: War Hammer
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 35.0
+  range: 1.5
+  rate_of_fire: 0.8
+  aoe_radius: 1.5
+
+- id: fire_pot
+  display_name: Fire Pot
+  weapon_class: missile
+  damage_type: explosive
+  base_damage: 45.0
+  range: 15.0
+  rate_of_fire: 0.3
+  aoe_radius: 4.0
+
+- id: trap_mechanism
+  display_name: Trap Mechanism
+  weapon_class: melee
+  damage_type: kinetic
+  base_damage: 50.0
+  range: 3.0
+  rate_of_fire: 0.2
+  aoe_radius: 3.0
+
+- id: chieftain_blade
+  display_name: "Chieftain's Blade"
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 45.0
+  range: 2.0
+  rate_of_fire: 2.0
+  aoe_radius: 0.0
+
+- id: berserker_dual_axes
+  display_name: Dual Axes
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 35.0
+  range: 1.5
+  rate_of_fire: 3.0
+  aoe_radius: 0.0
+
+- id: herb_poultice
+  display_name: Healing Poultice
+  weapon_class: melee
+  damage_type: melee
+  base_damage: 2.0
+  range: 5.0
+  rate_of_fire: 0.5
+  aoe_radius: 0.0

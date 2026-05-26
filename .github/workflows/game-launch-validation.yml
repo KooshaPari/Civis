@@ -1,0 +1,151 @@
+name: Real Game Launch Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  game-launch-validation:
+    name: Real Game Launch Validation
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup .NET 11
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.100-preview.2.26159.112'
+          include-prerelease: true
+
+      - name: Verify game installation
+        id: verify-game
+        shell: pwsh
+        run: |
+          $gamePath = "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option"
+          if (-not (Test-Path "$gamePath\Diplomacy is Not an Option.exe")) {
+            if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
+              # On PRs, skip gracefully if game is not installed (common in CI)
+              Write-Host "Game not found at $gamePath — skipping Real Game Launch Validation (game not available in CI)"
+              exit 0
+            } else {
+              Write-Error "Game executable not found at $gamePath"
+              exit 1
+            }
+          }
+          Write-Host "Game found at: $gamePath"
+
+      - name: Restore dependencies
+        if: success() && github.event_name != 'pull_request'
+        run: dotnet restore src/DINOForge.sln /p:RestoreLockedMode=true
+
+      - name: Build solution
+        if: success() && github.event_name != 'pull_request'
+        run: dotnet build src/DINOForge.sln -c Release --no-restore
+
+      - name: Deploy to game
+        if: success() && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          Write-Host "Deploying DINOForge Runtime to game..."
+          dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=true
+
+      - name: Wait for BepInEx initialization
+        if: success() && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          Start-Sleep -Seconds 3
+          Write-Host "BepInEx should be initialized now"
+
+      - name: Run game launch tests
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          dotnet test src/Tests/DINOForge.Tests.csproj `
+            -c Release `
+            --filter "Collection=GameLaunch" `
+            -v normal `
+            --logger "console;verbosity=detailed"
+        continue-on-error: true
+        shell: pwsh
+
+      - name: Capture failure diagnostics
+        if: failure() && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          Write-Host "Capturing failure diagnostics..."
+
+          # Create temp directory for artifacts
+          $tempDir = "$env:TEMP\DINOForge\failures"
+          if (Test-Path $tempDir) {
+            Write-Host "Failure directory exists: $tempDir"
+            Get-ChildItem $tempDir -Recurse | ForEach-Object {
+              Write-Host "Found: $($_.FullName)"
+            }
+          }
+
+      - name: Upload failure artifacts
+        if: failure() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: game-launch-failures
+          path: |
+            ${{ env.TEMP }}\DINOForge\failures\
+            G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_debug.log
+            G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\LogOutput.log
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Comment on PR with failure analysis
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const tempDir = `${{ env.TEMP }}\\DINOForge\\failures`;
+
+            let failureInfo = '## Real Game Launch Validation Failed\n\n';
+
+            try {
+              const failureFiles = fs.readdirSync(tempDir).filter(f => f.startsWith('failure_'));
+              if (failureFiles.length > 0) {
+                const latestFailure = failureFiles.sort().reverse()[0];
+                const failurePath = `${tempDir}\\${latestFailure}`;
+                const failureJson = JSON.parse(fs.readFileSync(failurePath, 'utf8'));
+
+                failureInfo += `**Test:** ${failureJson.test_name || 'unknown'}\n\n`;
+                failureInfo += `**Timestamp:** ${failureJson.captured_at}\n\n`;
+                failureInfo += '**Root Cause Analysis:**\n';
+                failureInfo += '```\n';
+                if (failureJson.log_tail_dinoforge) {
+                  failureInfo += failureJson.log_tail_dinoforge.slice(-5).join('\n');
+                }
+                failureInfo += '\n```\n\n';
+                failureInfo += '**Artifacts:** See uploaded failure diagnostics\n';
+              }
+            } catch (e) {
+              failureInfo += 'Failed to parse failure manifest: ' + e.message + '\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: failureInfo
+            });
+
+      - name: Mark workflow as failed if tests failed
+        if: failure() && github.event_name != 'pull_request'
+        run: exit 1

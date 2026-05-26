@@ -1,0 +1,89 @@
+name: Journey Quality Gates
+
+on:
+  pull_request:
+    paths:
+      - 'docs/journeys/**'
+      - 'docs/user-journeys.md'
+      - '.github/workflows/journey-quality-gates.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-journeys:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+      
+      - name: Validate journey manifest structure
+        run: |
+          python3 << 'PYTHON_EOF'
+          import json
+          from pathlib import Path
+          
+          manifests_dir = Path('docs/journeys/manifests')
+          if not manifests_dir.exists():
+            print('Warning: no manifests directory yet')
+            exit(0)
+          
+          required_fields = ['id', 'intent', 'keyframe_count', 'passed', 'steps', 'verification']
+          step_fields = ['index', 'slug', 'intent', 'assertions']
+          
+          for manifest_file in manifests_dir.glob('*/manifest.json'):
+            print(f'Validating {manifest_file}...')
+            with open(manifest_file) as f:
+              manifest = json.load(f)
+            
+            # Check required fields
+            for field in required_fields:
+              if field not in manifest:
+                raise ValueError(f'Missing field: {field} in {manifest_file}')
+            
+            # Check steps
+            if not isinstance(manifest['steps'], list):
+              raise ValueError(f'steps must be a list in {manifest_file}')
+            
+            for step in manifest['steps']:
+              for field in step_fields:
+                if field not in step:
+                  raise ValueError(f'Missing step field: {field} in {manifest_file}')
+          
+          print('All manifests valid!')
+          PYTHON_EOF
+      
+      - name: Check VitePress builds
+        run: |
+          cd docs
+          if [ -f package.json ]; then
+            echo "VitePress config present, skipping build (already built in main workflow)"
+          else
+            echo "Warning: docs/package.json not found"
+          fi
+      
+      - name: Verify user-journeys.md exists
+        run: |
+          if [ ! -f "docs/user-journeys.md" ]; then
+            echo "Error: docs/user-journeys.md not found"
+            exit 1
+          fi
+          echo "user-journeys.md validated"
+
+  manifest-count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      
+      - name: Report manifest count
+        run: |
+          count=$(find docs/journeys/manifests -name manifest.json | wc -l)
+          echo "Total journey manifests: $count"
+          find docs/journeys/manifests -name manifest.json -exec echo "  - {}" \;
+          
+          if [ $count -eq 0 ]; then
+            echo "Warning: No journey manifests found yet"
+          fi

@@ -1,0 +1,36 @@
+{
+  "asset_id": "sw_aat_walker_lego_sketchfab_001",
+  "canonical_name": "",
+  "franchise_tag": "star_wars",
+  "source_platform": "",
+  "source_url": "",
+  "external_id": "",
+  "author_name": "unknown",
+  "license_label": "CC-BY-4.0",
+  "license_url": "",
+  "acquisition_mode": "",
+  "acquired_at_utc": "",
+  "original_format": null,
+  "download_url": null,
+  "local_path": "working\\sw_aat_walker_lego_sketchfab_001\\normalized.glb",
+  "sha256": "59fb46585c56b6f7fdb7dee343c54824943d09ca6a2927ae27c2813191b5ed0f",
+  "polycount_estimate": 1403,
+  "texture_sets": null,
+  "rigged": null,
+  "animated": null,
+  "category": null,
+  "subtype": null,
+  "technical_status": "ready_for_prototype",
+  "ip_status": "fan_star_wars_private_only",
+  "release_allowed": null,
+  "provenance_confidence": null,
+  "tags": [
+    "cis"
+  ],
+  "notes": [
+    "Normalized via Blender. LOD0=1403 LOD1=706 LOD2=361 triangles",
+    "Stylized with faction \u0027cis\u0027 palette (profile: dinosw_lowpoly_v1)"
+  ],
+  "references": null,
+  "validation_report": null
+}

@@ -1,0 +1,14 @@
+# Pattern #231 Static Init Side Effect Allowlist
+# Format: filepath:line_number | reason
+#
+# Original audit (commit a74aaa4, iter-141 #504) found 11 HIGH violations across
+# SDK / Bridge.Client / Bridge.Protocol / Domains. All 11 were refactored to
+# Lazy<T> or explicit Initialize() patterns prior to v0.25.0 / v0.26.0.
+#
+# After iter-143 detector hardening (Windows-path classification fix in
+# scripts/ci/detect_static_init_side_effect.py is_nuget_surface()), one residual
+# was surfaced and governance-allowlisted below.
+
+# --- Active exemptions ---
+
+src/SDK/NativeInterop/RustAssetPipeline.cs:33 | static-init-ok: Pattern #115 canonical HttpClient singleton — `static readonly HttpClient` is the *preferred* form per CLAUDE.md Pattern #115 governance ("Singleton: private static readonly HttpClient SharedHttp = new()... — preferred when the class has a global lifetime"). No I/O occurs at construction; only socket-pool reservation. Pattern #231 trips on `new HttpClient` lexically; the cross-pattern governance ranks this site as acceptable. Refactoring to Lazy<HttpClient> would degrade Pattern #115 compliance (lazy initialization defeats the early-warm socket-pool benefit) without changing the load-time-I/O risk profile.

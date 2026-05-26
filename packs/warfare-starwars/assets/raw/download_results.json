@@ -1,0 +1,61 @@
+{
+  "v0_7_0": {
+    "total": 5,
+    "success": 5,
+    "failed": 0,
+    "already_downloaded": 0
+  },
+  "v0_8_0": {
+    "total": 4,
+    "success": 4,
+    "failed": 0,
+    "already_downloaded": 0
+  },
+  "assets": [
+    {
+      "asset_id": "sw_general_grievous_sketchfab_001",
+      "phase": "v0.7.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_clone_trooper_phase2_sketchfab_001",
+      "phase": "v0.7.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_at_te_walker_sketchfab_001",
+      "phase": "v0.7.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_jedi_temple_sketchfab_001",
+      "phase": "v0.7.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_b2_super_droid_sketchfab_001",
+      "phase": "v0.7.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_clone_trooper_phase2_alt_sketchfab_001",
+      "phase": "v0.8.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_arc_trooper_sketchfab_001",
+      "phase": "v0.8.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_droideka_sketchfab_001",
+      "phase": "v0.8.0",
+      "status": "success"
+    },
+    {
+      "asset_id": "sw_aat_walker_sketchfab_001",
+      "phase": "v0.8.0",
+      "status": "success"
+    }
+  ]
+}

@@ -1,0 +1,4081 @@
+{
+  "cursors": {
+    "next": "20",
+    "previous": null
+  },
+  "next": "https://api.sketchfab.com/v3/search?count=20&cursor=20&q=star+wars+buildings&sort_by=-relevance&type=models",
+  "previous": null,
+  "results": [
+    {
+      "uri": "https://api.sketchfab.com/v3/models/0e5c86f3ebf94b90b0f95b6b31007e29",
+      "uid": "0e5c86f3ebf94b90b0f95b6b31007e29",
+      "name": "Stylized 3D Printable Industrial Chemical Plant",
+      "staffpickedAt": null,
+      "viewCount": 177,
+      "likeCount": 5,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-0e5c86f3ebf94b90b0f95b6b31007e29",
+      "embedUrl": "https://sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2026-01-13T17:55:22.422705",
+      "tags": [
+        {
+          "name": "plant",
+          "slug": "plant",
+          "uri": "https://api.sketchfab.com/v3/tags/plant"
+        },
+        {
+          "name": "base",
+          "slug": "base",
+          "uri": "https://api.sketchfab.com/v3/tags/base"
+        },
+        {
+          "name": "pipe",
+          "slug": "pipe",
+          "uri": "https://api.sketchfab.com/v3/tags/pipe"
+        },
+        {
+          "name": "rpg",
+          "slug": "rpg",
+          "uri": "https://api.sketchfab.com/v3/tags/rpg"
+        },
+        {
+          "name": "terrain",
+          "slug": "terrain",
+          "uri": "https://api.sketchfab.com/v3/tags/terrain"
+        },
+        {
+          "name": "nuclear",
+          "slug": "nuclear",
+          "uri": "https://api.sketchfab.com/v3/tags/nuclear"
+        },
+        {
+          "name": "tabletop",
+          "slug": "tabletop",
+          "uri": "https://api.sketchfab.com/v3/tags/tabletop"
+        },
+        {
+          "name": "scenery",
+          "slug": "scenery",
+          "uri": "https://api.sketchfab.com/v3/tags/scenery"
+        },
+        {
+          "name": "post-apocalyptic",
+          "slug": "post-apocalyptic",
+          "uri": "https://api.sketchfab.com/v3/tags/post-apocalyptic"
+        },
+        {
+          "name": "urban",
+          "slug": "urban",
+          "uri": "https://api.sketchfab.com/v3/tags/urban"
+        },
+        {
+          "name": "silo",
+          "slug": "silo",
+          "uri": "https://api.sketchfab.com/v3/tags/silo"
+        },
+        {
+          "name": "laboratory",
+          "slug": "laboratory",
+          "uri": "https://api.sketchfab.com/v3/tags/laboratory"
+        },
+        {
+          "name": "miniature",
+          "slug": "miniature",
+          "uri": "https://api.sketchfab.com/v3/tags/miniature"
+        },
+        {
+          "name": "cyberpunk",
+          "slug": "cyberpunk",
+          "uri": "https://api.sketchfab.com/v3/tags/cyberpunk"
+        },
+        {
+          "name": "wasteland",
+          "slug": "wasteland",
+          "uri": "https://api.sketchfab.com/v3/tags/wasteland"
+        },
+        {
+          "name": "waste",
+          "slug": "waste",
+          "uri": "https://api.sketchfab.com/v3/tags/waste"
+        },
+        {
+          "name": "dnd",
+          "slug": "dnd",
+          "uri": "https://api.sketchfab.com/v3/tags/dnd"
+        },
+        {
+          "name": "diorama",
+          "slug": "diorama",
+          "uri": "https://api.sketchfab.com/v3/tags/diorama"
+        },
+        {
+          "name": "toxic",
+          "slug": "toxic",
+          "uri": "https://api.sketchfab.com/v3/tags/toxic"
+        },
+        {
+          "name": "vat",
+          "slug": "vat",
+          "uri": "https://api.sketchfab.com/v3/tags/vat"
+        },
+        {
+          "name": "game-ready",
+          "slug": "game-ready",
+          "uri": "https://api.sketchfab.com/v3/tags/game-ready"
+        },
+        {
+          "name": "refinery",
+          "slug": "refinery",
+          "uri": "https://api.sketchfab.com/v3/tags/refinery"
+        },
+        {
+          "name": "3d-printing",
+          "slug": "3d-printing",
+          "uri": "https://api.sketchfab.com/v3/tags/3d-printing"
+        },
+        {
+          "name": "wargaming",
+          "slug": "wargaming",
+          "uri": "https://api.sketchfab.com/v3/tags/wargaming"
+        },
+        {
+          "name": "smokestack",
+          "slug": "smokestack",
+          "uri": "https://api.sketchfab.com/v3/tags/smokestack"
+        },
+        {
+          "name": "facility",
+          "slug": "facility",
+          "uri": "https://api.sketchfab.com/v3/tags/facility"
+        },
+        {
+          "name": "architecture",
+          "slug": "architecture",
+          "uri": "https://api.sketchfab.com/v3/tags/architecture"
+        },
+        {
+          "name": "low-poly",
+          "slug": "low-poly",
+          "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        },
+        {
+          "name": "city",
+          "slug": "city",
+          "uri": "https://api.sketchfab.com/v3/tags/city"
+        },
+        {
+          "name": "structure",
+          "slug": "structure",
+          "uri": "https://api.sketchfab.com/v3/tags/structure"
+        },
+        {
+          "name": "stylized",
+          "slug": "stylized",
+          "uri": "https://api.sketchfab.com/v3/tags/stylized"
+        },
+        {
+          "name": "building",
+          "slug": "building",
+          "uri": "https://api.sketchfab.com/v3/tags/building"
+        },
+        {
+          "name": "factory",
+          "slug": "factory",
+          "uri": "https://api.sketchfab.com/v3/tags/factory"
+        },
+        {
+          "name": "fallout",
+          "slug": "fallout",
+          "uri": "https://api.sketchfab.com/v3/tags/fallout"
+        },
+        {
+          "name": "industrial",
+          "slug": "industrial",
+          "uri": "https://api.sketchfab.com/v3/tags/industrial"
+        },
+        {
+          "name": "environment",
+          "slug": "environment",
+          "uri": "https://api.sketchfab.com/v3/tags/environment"
+        },
+        {
+          "name": "power-station",
+          "slug": "power-station",
+          "uri": "https://api.sketchfab.com/v3/tags/power-station"
+        },
+        {
+          "name": "chemical-plant",
+          "slug": "chemical-plant",
+          "uri": "https://api.sketchfab.com/v3/tags/chemical-plant"
+        },
+        {
+          "name": "resin-print",
+          "slug": "resin-print",
+          "uri": "https://api.sketchfab.com/v3/tags/resin-print"
+        },
+        {
+          "name": "tabletop-games",
+          "slug": "tabletop-games",
+          "uri": "https://api.sketchfab.com/v3/tags/tabletop-games"
+        },
+        {
+          "name": "wargame-terrain",
+          "slug": "wargame-terrain",
+          "uri": "https://api.sketchfab.com/v3/tags/wargame-terrain"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "art-abstract"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "de13253929ce4da0947f8b75fad401da",
+            "size": 65922,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/cb36ce7fefe8495ba0fad6e95c5a3527.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "d2bd4ac7c0744e9eb74eae4f8ef1ad56",
+            "size": 22847,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/ac0149e04cb44d028b4f4bc1a39d31e4.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "168009089444440cb577e1361b6f30df",
+            "size": 13637,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/0c3f1f2a0cd941a8b5f214af763a9032.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "501484c9fab641d5a3b6cdb8612ef5da",
+            "size": 3368,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/eefbfac1d4be4afcb67137ffee579def.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "4052c7bf55bd4745827737d5c7f2fa7a",
+            "size": 983,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/0e5c86f3ebf94b90b0f95b6b31007e29/thumbnails/ef599d804b124e12aea8f59a70b3ae2f/5ab0ea77a5174d559fc34f105a7fb2e9.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "f83459ef68554352bd36c5026bf4f3d7",
+        "username": "INGSOC1984",
+        "displayName": "INGSOC1984",
+        "profileUrl": "https://sketchfab.com/INGSOC1984",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/8efa415087b84b2da0458e1b2eac17a0",
+          "images": [
+            {
+              "size": 2585,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/8219d3d4518c4463a0038b2c9a21e6d2.png",
+              "height": 32
+            },
+            {
+              "size": 4400,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/caf778bf252f4ca4b596350e80b8fee6.png",
+              "height": 48
+            },
+            {
+              "size": 9107,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/604a713e06e34352ac69890346583b66.png",
+              "height": 90
+            },
+            {
+              "size": 10052,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/8efa415087b84b2da0458e1b2eac17a0/995b0735370947549339ccd8850e21ee.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/f83459ef68554352bd36c5026bf4f3d7"
+      },
+      "description": "Description: A versatile, low-poly stylized Chemical Plant model featuring industrial smokestacks, reinforced silos, and glowing green vats. This asset is specifically designed for multi-purpose use, ranging from 3D printing for tabletop gaming to digital environment dioramas.\n\nThe structure is built on a solid foundation base, making it ideal for physical printing without needing complex supports for the main body. Its distinct silhouette and \"toxic\" green accents make it a perfect fit for sci-fi, post-apocalyptic, or modern industrial settings.\n\nOptimized for 3D Printing: Sturdy geometry suitable for resin or FDM printing.\n\nDesign: Stylized industrial aesthetic with glowing windows and chemical containers.\n\nApplications: Perfect for Warhammer 40k terrain, Star Wars Legion, D&D dioramas, or game engine background assets.\n\nFeatures: Multiple levels, rooftop pipes, and a integrated baseplate for easy placement in scenes.",
+      "faceCount": 17954,
+      "createdAt": "2026-01-13T17:50:19.822496",
+      "vertexCount": 8938,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 1,
+          "size": 1755896,
+          "type": "glb",
+          "textureMaxResolution": 1024,
+          "faceCount": 17954,
+          "vertexCount": 14205
+        },
+        "gltf": {
+          "textureCount": 1,
+          "size": 1538109,
+          "type": "gltf",
+          "textureMaxResolution": 1024,
+          "faceCount": 17954,
+          "vertexCount": 14205
+        },
+        "source": {
+          "textureCount": null,
+          "size": 2731880,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 676961,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/f2769df8bdf74e63b3e52a8cf029c3d6",
+      "uid": "f2769df8bdf74e63b3e52a8cf029c3d6",
+      "name": "Hard Surface Mega Kit Volume 02",
+      "staffpickedAt": null,
+      "viewCount": 559,
+      "likeCount": 17,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-f2769df8bdf74e63b3e52a8cf029c3d6",
+      "embedUrl": "https://sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-11-01T14:17:53.768724",
+      "tags": [
+        {
+          "name": "kit",
+          "slug": "kit",
+          "uri": "https://api.sketchfab.com/v3/tags/kit"
+        },
+        {
+          "name": "warhammer",
+          "slug": "warhammer",
+          "uri": "https://api.sketchfab.com/v3/tags/warhammer"
+        },
+        {
+          "name": "mechanic",
+          "slug": "mechanic",
+          "uri": "https://api.sketchfab.com/v3/tags/mechanic"
+        },
+        {
+          "name": "armor",
+          "slug": "armor",
+          "uri": "https://api.sketchfab.com/v3/tags/armor"
+        },
+        {
+          "name": "vehicule",
+          "slug": "vehicule",
+          "uri": "https://api.sketchfab.com/v3/tags/vehicule"
+        },
+        {
+          "name": "suit",
+          "slug": "suit",
+          "uri": "https://api.sketchfab.com/v3/tags/suit"
+        },
+        {
+          "name": "exosuit",
+          "slug": "exosuit",
+          "uri": "https://api.sketchfab.com/v3/tags/exosuit"
+        },
+        {
+          "name": "plate",
+          "slug": "plate",
+          "uri": "https://api.sketchfab.com/v3/tags/plate"
+        },
+        {
+          "name": "element",
+          "slug": "element",
+          "uri": "https://api.sketchfab.com/v3/tags/element"
+        },
+        {
+          "name": "chest",
+          "slug": "chest",
+          "uri": "https://api.sketchfab.com/v3/tags/chest"
+        },
+        {
+          "name": "mechanical",
+          "slug": "mechanical",
+          "uri": "https://api.sketchfab.com/v3/tags/mechanical"
+        },
+        {
+          "name": "robotic",
+          "slug": "robotic",
+          "uri": "https://api.sketchfab.com/v3/tags/robotic"
+        },
+        {
+          "name": "accessories",
+          "slug": "accessories",
+          "uri": "https://api.sketchfab.com/v3/tags/accessories"
+        },
+        {
+          "name": "pack",
+          "slug": "pack",
+          "uri": "https://api.sketchfab.com/v3/tags/pack"
+        },
+        {
+          "name": "clothes",
+          "slug": "clothes",
+          "uri": "https://api.sketchfab.com/v3/tags/clothes"
+        },
+        {
+          "name": "cyberpunk",
+          "slug": "cyberpunk",
+          "uri": "https://api.sketchfab.com/v3/tags/cyberpunk"
+        },
+        {
+          "name": "transformers",
+          "slug": "transformers",
+          "uri": "https://api.sketchfab.com/v3/tags/transformers"
+        },
+        {
+          "name": "collection",
+          "slug": "collection",
+          "uri": "https://api.sketchfab.com/v3/tags/collection"
+        },
+        {
+          "name": "pad",
+          "slug": "pad",
+          "uri": "https://api.sketchfab.com/v3/tags/pad"
+        },
+        {
+          "name": "brush",
+          "slug": "brush",
+          "uri": "https://api.sketchfab.com/v3/tags/brush"
+        },
+        {
+          "name": "props",
+          "slug": "props",
+          "uri": "https://api.sketchfab.com/v3/tags/props"
+        },
+        {
+          "name": "mask",
+          "slug": "mask",
+          "uri": "https://api.sketchfab.com/v3/tags/mask"
+        },
+        {
+          "name": "alien",
+          "slug": "alien",
+          "uri": "https://api.sketchfab.com/v3/tags/alien"
+        },
+        {
+          "name": "mega",
+          "slug": "mega",
+          "uri": "https://api.sketchfab.com/v3/tags/mega"
+        },
+        {
+          "name": "protective",
+          "slug": "protective",
+          "uri": "https://api.sketchfab.com/v3/tags/protective"
+        },
+        {
+          "name": "kitbash",
+          "slug": "kitbash",
+          "uri": "https://api.sketchfab.com/v3/tags/kitbash"
+        },
+        {
+          "name": "science-fiction",
+          "slug": "science-fiction",
+          "uri": "https://api.sketchfab.com/v3/tags/science-fiction"
+        },
+        {
+          "name": "hardsurfacemodeling",
+          "slug": "hardsurfacemodeling",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurfacemodeling"
+        },
+        {
+          "name": "character",
+          "slug": "character",
+          "uri": "https://api.sketchfab.com/v3/tags/character"
+        },
+        {
+          "name": "modeling",
+          "slug": "modeling",
+          "uri": "https://api.sketchfab.com/v3/tags/modeling"
+        },
+        {
+          "name": "asset",
+          "slug": "asset",
+          "uri": "https://api.sketchfab.com/v3/tags/asset"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "helmet",
+          "slug": "helmet",
+          "uri": "https://api.sketchfab.com/v3/tags/helmet"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "design",
+          "slug": "design",
+          "uri": "https://api.sketchfab.com/v3/tags/design"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        },
+        {
+          "name": "hardsurface",
+          "slug": "hardsurface",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurface"
+        },
+        {
+          "name": "car",
+          "slug": "car",
+          "uri": "https://api.sketchfab.com/v3/tags/car"
+        },
+        {
+          "name": "clothing",
+          "slug": "clothing",
+          "uri": "https://api.sketchfab.com/v3/tags/clothing"
+        },
+        {
+          "name": "robot",
+          "slug": "robot",
+          "uri": "https://api.sketchfab.com/v3/tags/robot"
+        },
+        {
+          "name": "imm",
+          "slug": "imm",
+          "uri": "https://api.sketchfab.com/v3/tags/imm"
+        },
+        {
+          "name": "assets-game-3d",
+          "slug": "assets-game-3d",
+          "uri": "https://api.sketchfab.com/v3/tags/assets-game-3d"
+        }
+      ],
+      "categories": [
+        {
+          "name": "characters-creatures"
+        },
+        {
+          "name": "science-technology"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "066e5009589a4472959f18a61c6a1106",
+            "size": 208293,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/thumbnails/e298999b89fa42fe90fc95bd0036ef90/6681f1cef306479e96b3cd83648c5fd6.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "6e5c991fe0864c34bcd51235871c937a",
+            "size": 66201,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/thumbnails/e298999b89fa42fe90fc95bd0036ef90/f03e0bfd11ee4bdcab8e0352f9b1f336.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "ef6025bea5ee4d96a0bbf72859493567",
+            "size": 40215,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/thumbnails/e298999b89fa42fe90fc95bd0036ef90/abbf4492b1c04db6a26f4b7b1ff33dbf.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "b8081f3b6ce44315a87eab00e9c82269",
+            "size": 10571,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/thumbnails/e298999b89fa42fe90fc95bd0036ef90/fdfdfcce0da64bb188fae990d7716ad6.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "199915dd0566495fbc5424b2824349e0",
+            "size": 1747,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/f2769df8bdf74e63b3e52a8cf029c3d6/thumbnails/e298999b89fa42fe90fc95bd0036ef90/62862ab591ca45f2b6014e03e9ce13fe.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "34bdc50937104451b9d757fcd537ff28",
+        "username": "Yacinebrinis",
+        "displayName": "Yacine BRINIS",
+        "profileUrl": "https://sketchfab.com/Yacinebrinis",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/a3309d2cc0054fbfb30fcdbd150a62da",
+          "images": [
+            {
+              "size": 1026,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/7f33dee2ec5144169ed881ddd53684ab.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1369,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/3dc7c924b2f547889a735f52d5730826.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2760,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/6e6233c33cc94e9fa85134850de67f9a.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3156,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/2d23d1f39fe846cb81a2e536532f88ee.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/34bdc50937104451b9d757fcd537ff28"
+      },
+      "description": "I am presenting a Hard Surface Mega Kit, a comprehensive collection of elements and IMM Brushes sculpted to assist artists in hard surface modeling and design across multiple fields. This pack serves as a versatile production toolkit for building robots, vehicles, characters, and mechanical assets, as well as armors, protective suits, clothing elements, and accessories featuring hard surface aesthetics.\n\nThe collection includes a broad variety of modular components suitable for shoulder pads, elbow guards, knee protection, chest plates, and mask construction, enabling artists to develop complete designs from small details to full sci-fi exosuits. Its flexibility makes it possible to sculpt and concept characters or robots in styles inspired by Cyberpunk 2077, Star Wars, Alien, Star Trek, and Warhammer, while maintaining high visual quality and anatomical balance.",
+      "faceCount": 265608,
+      "createdAt": "2025-11-01T14:12:31.707939",
+      "vertexCount": 132900,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/c745729202044a7e97a7732017859836",
+      "uid": "c745729202044a7e97a7732017859836",
+      "name": "Floating Cabin",
+      "staffpickedAt": null,
+      "viewCount": 49,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-c745729202044a7e97a7732017859836",
+      "embedUrl": "https://sketchfab.com/models/c745729202044a7e97a7732017859836/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-10-16T01:18:43.360579",
+      "tags": [
+        {
+          "name": "cabin",
+          "slug": "cabin",
+          "uri": "https://api.sketchfab.com/v3/tags/cabin"
+        },
+        {
+          "name": "wooden-house",
+          "slug": "wooden-house",
+          "uri": "https://api.sketchfab.com/v3/tags/wooden-house"
+        },
+        {
+          "name": "futuristic",
+          "slug": "futuristic",
+          "uri": "https://api.sketchfab.com/v3/tags/futuristic"
+        },
+        {
+          "name": "fantasy",
+          "slug": "fantasy",
+          "uri": "https://api.sketchfab.com/v3/tags/fantasy"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "art-abstract"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "78f9040223774de195166709308250c1",
+            "size": 358349,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/c745729202044a7e97a7732017859836/thumbnails/8152deda899c4ad094570509447d6705/277110ce346146c3bb8a616814ec2d02.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "25497513b2f34a5ba09752bce35a86c1",
+            "size": 61438,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/c745729202044a7e97a7732017859836/thumbnails/8152deda899c4ad094570509447d6705/00b798ceb22f40de94b5769c229dc900.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "c00db5997d7149ed91ec2074aa52764d",
+            "size": 34841,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/c745729202044a7e97a7732017859836/thumbnails/8152deda899c4ad094570509447d6705/83225330d67940c18ef9aa91dcf74141.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "e27f546caafb40d6b76c94fd0afa16d5",
+            "size": 7160,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/c745729202044a7e97a7732017859836/thumbnails/8152deda899c4ad094570509447d6705/3bcfac5ba5154eec9379c80d8f583a2f.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "c23e6ffef92b4f1db256b6c8718f4fef",
+            "size": 1373,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/c745729202044a7e97a7732017859836/thumbnails/8152deda899c4ad094570509447d6705/3cd4fca7db8f4b46af40131bc65e8b05.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "85179328e46a475fb0b95866bc6228fb",
+        "username": "thecishow",
+        "displayName": "TheCiShow",
+        "profileUrl": "https://sketchfab.com/thecishow",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/c1f8afd079634fe2a9f68927eb317839",
+          "images": [
+            {
+              "size": 2068,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/c1f8afd079634fe2a9f68927eb317839/4da540a610a541c7b33d30315580e526.png",
+              "height": 32
+            },
+            {
+              "size": 4078,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/c1f8afd079634fe2a9f68927eb317839/8cfa7cbc8f6448c5a43004afc279bfaa.png",
+              "height": 48
+            },
+            {
+              "size": 11984,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/c1f8afd079634fe2a9f68927eb317839/31c5f98ed8ff4d31b921c26820a41ff9.png",
+              "height": 90
+            },
+            {
+              "size": 14223,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/c1f8afd079634fe2a9f68927eb317839/77ebe865128c49afaf0fceb401f40033.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/85179328e46a475fb0b95866bc6228fb"
+      },
+      "description": "This is a little composition based on a world I am building that is inspired by Chrono Trigger and Skies of Arcadia. \n\nThis would be a little cabin where one of the main characters would stay, I hope you like it either way!",
+      "faceCount": 38624,
+      "createdAt": "2025-10-15T23:15:02.655312",
+      "vertexCount": 21269,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/5e4a588355b8481b8cd4f463c7bb2252",
+      "uid": "5e4a588355b8481b8cd4f463c7bb2252",
+      "name": "Hard Surface Mega Kit Volume 01",
+      "staffpickedAt": null,
+      "viewCount": 419,
+      "likeCount": 11,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-5e4a588355b8481b8cd4f463c7bb2252",
+      "embedUrl": "https://sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-10-15T20:53:47.910122",
+      "tags": [
+        {
+          "name": "kit",
+          "slug": "kit",
+          "uri": "https://api.sketchfab.com/v3/tags/kit"
+        },
+        {
+          "name": "warhammer",
+          "slug": "warhammer",
+          "uri": "https://api.sketchfab.com/v3/tags/warhammer"
+        },
+        {
+          "name": "mechanic",
+          "slug": "mechanic",
+          "uri": "https://api.sketchfab.com/v3/tags/mechanic"
+        },
+        {
+          "name": "armor",
+          "slug": "armor",
+          "uri": "https://api.sketchfab.com/v3/tags/armor"
+        },
+        {
+          "name": "vehicule",
+          "slug": "vehicule",
+          "uri": "https://api.sketchfab.com/v3/tags/vehicule"
+        },
+        {
+          "name": "suit",
+          "slug": "suit",
+          "uri": "https://api.sketchfab.com/v3/tags/suit"
+        },
+        {
+          "name": "exosuit",
+          "slug": "exosuit",
+          "uri": "https://api.sketchfab.com/v3/tags/exosuit"
+        },
+        {
+          "name": "plate",
+          "slug": "plate",
+          "uri": "https://api.sketchfab.com/v3/tags/plate"
+        },
+        {
+          "name": "element",
+          "slug": "element",
+          "uri": "https://api.sketchfab.com/v3/tags/element"
+        },
+        {
+          "name": "chest",
+          "slug": "chest",
+          "uri": "https://api.sketchfab.com/v3/tags/chest"
+        },
+        {
+          "name": "mechanical",
+          "slug": "mechanical",
+          "uri": "https://api.sketchfab.com/v3/tags/mechanical"
+        },
+        {
+          "name": "robotic",
+          "slug": "robotic",
+          "uri": "https://api.sketchfab.com/v3/tags/robotic"
+        },
+        {
+          "name": "accessories",
+          "slug": "accessories",
+          "uri": "https://api.sketchfab.com/v3/tags/accessories"
+        },
+        {
+          "name": "pack",
+          "slug": "pack",
+          "uri": "https://api.sketchfab.com/v3/tags/pack"
+        },
+        {
+          "name": "clothes",
+          "slug": "clothes",
+          "uri": "https://api.sketchfab.com/v3/tags/clothes"
+        },
+        {
+          "name": "cyberpunk",
+          "slug": "cyberpunk",
+          "uri": "https://api.sketchfab.com/v3/tags/cyberpunk"
+        },
+        {
+          "name": "transformers",
+          "slug": "transformers",
+          "uri": "https://api.sketchfab.com/v3/tags/transformers"
+        },
+        {
+          "name": "collection",
+          "slug": "collection",
+          "uri": "https://api.sketchfab.com/v3/tags/collection"
+        },
+        {
+          "name": "pad",
+          "slug": "pad",
+          "uri": "https://api.sketchfab.com/v3/tags/pad"
+        },
+        {
+          "name": "brush",
+          "slug": "brush",
+          "uri": "https://api.sketchfab.com/v3/tags/brush"
+        },
+        {
+          "name": "props",
+          "slug": "props",
+          "uri": "https://api.sketchfab.com/v3/tags/props"
+        },
+        {
+          "name": "mask",
+          "slug": "mask",
+          "uri": "https://api.sketchfab.com/v3/tags/mask"
+        },
+        {
+          "name": "alien",
+          "slug": "alien",
+          "uri": "https://api.sketchfab.com/v3/tags/alien"
+        },
+        {
+          "name": "mega",
+          "slug": "mega",
+          "uri": "https://api.sketchfab.com/v3/tags/mega"
+        },
+        {
+          "name": "protective",
+          "slug": "protective",
+          "uri": "https://api.sketchfab.com/v3/tags/protective"
+        },
+        {
+          "name": "kitbash",
+          "slug": "kitbash",
+          "uri": "https://api.sketchfab.com/v3/tags/kitbash"
+        },
+        {
+          "name": "science-fiction",
+          "slug": "science-fiction",
+          "uri": "https://api.sketchfab.com/v3/tags/science-fiction"
+        },
+        {
+          "name": "hardsurfacemodeling",
+          "slug": "hardsurfacemodeling",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurfacemodeling"
+        },
+        {
+          "name": "character",
+          "slug": "character",
+          "uri": "https://api.sketchfab.com/v3/tags/character"
+        },
+        {
+          "name": "modeling",
+          "slug": "modeling",
+          "uri": "https://api.sketchfab.com/v3/tags/modeling"
+        },
+        {
+          "name": "asset",
+          "slug": "asset",
+          "uri": "https://api.sketchfab.com/v3/tags/asset"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        },
+        {
+          "name": "helmet",
+          "slug": "helmet",
+          "uri": "https://api.sketchfab.com/v3/tags/helmet"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "design",
+          "slug": "design",
+          "uri": "https://api.sketchfab.com/v3/tags/design"
+        },
+        {
+          "name": "sci-fi",
+          "slug": "sci-fi",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi"
+        },
+        {
+          "name": "hardsurface",
+          "slug": "hardsurface",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurface"
+        },
+        {
+          "name": "car",
+          "slug": "car",
+          "uri": "https://api.sketchfab.com/v3/tags/car"
+        },
+        {
+          "name": "clothing",
+          "slug": "clothing",
+          "uri": "https://api.sketchfab.com/v3/tags/clothing"
+        },
+        {
+          "name": "robot",
+          "slug": "robot",
+          "uri": "https://api.sketchfab.com/v3/tags/robot"
+        },
+        {
+          "name": "imm",
+          "slug": "imm",
+          "uri": "https://api.sketchfab.com/v3/tags/imm"
+        },
+        {
+          "name": "assets-game-3d",
+          "slug": "assets-game-3d",
+          "uri": "https://api.sketchfab.com/v3/tags/assets-game-3d"
+        }
+      ],
+      "categories": [
+        {
+          "name": "characters-creatures"
+        },
+        {
+          "name": "science-technology"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "5b5a94ae00c44084929bed2035924c55",
+            "size": 216784,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/thumbnails/18f3932fa7fa466c82881637256494a5/4c56abf81b5f46cfb9aef2c2dca9edeb.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "0189f3370ea5463e8e6d6dfdd07d57e5",
+            "size": 73658,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/thumbnails/18f3932fa7fa466c82881637256494a5/ba18fdcc95f94527b0db331a98620051.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "a29d285738324c7191524d6dda708295",
+            "size": 45777,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/thumbnails/18f3932fa7fa466c82881637256494a5/cc86aed4a1684286a9f8a2923709b34c.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "8f9acaa41fd24aeb904622a2da2126d3",
+            "size": 11891,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/thumbnails/18f3932fa7fa466c82881637256494a5/c550cde6fc124e82a3350c169ecbd3c6.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "7bfa10edce9849b29aad47ad8e15a8cc",
+            "size": 1885,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/5e4a588355b8481b8cd4f463c7bb2252/thumbnails/18f3932fa7fa466c82881637256494a5/f3b40549dd0a4cfea96d09e864c65c4d.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "34bdc50937104451b9d757fcd537ff28",
+        "username": "Yacinebrinis",
+        "displayName": "Yacine BRINIS",
+        "profileUrl": "https://sketchfab.com/Yacinebrinis",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/a3309d2cc0054fbfb30fcdbd150a62da",
+          "images": [
+            {
+              "size": 1026,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/7f33dee2ec5144169ed881ddd53684ab.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1369,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/3dc7c924b2f547889a735f52d5730826.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2760,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/6e6233c33cc94e9fa85134850de67f9a.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3156,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/a3309d2cc0054fbfb30fcdbd150a62da/2d23d1f39fe846cb81a2e536532f88ee.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/34bdc50937104451b9d757fcd537ff28"
+      },
+      "description": "I am presenting a Hard Surface Mega Kit, a comprehensive collection of elements and IMM Brushes sculpted to assist artists in hard surface modeling and design across multiple fields. This pack serves as a versatile production toolkit for building robots, vehicles, characters, and mechanical assets, as well as armors, protective suits, clothing elements, and accessories featuring hard surface aesthetics.\n\nThe collection includes a broad variety of modular components suitable for shoulder pads, elbow guards, knee protection, chest plates, and mask construction, enabling artists to develop complete designs from small details to full sci-fi exosuits. Its flexibility makes it possible to sculpt and concept characters or robots in styles inspired by Cyberpunk 2077, Star Wars, Alien, Star Trek, and Warhammer, while maintaining high visual quality and anatomical balance.\n\nShould you wish to learn more about this product, please click on the link below:\n\nhttps://www.artstation.com/a/50745054",
+      "faceCount": 445140,
+      "createdAt": "2025-10-15T20:08:44.329499",
+      "vertexCount": 222931,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/40aac2f615484a38ab908fd1e1d31701",
+      "uid": "40aac2f615484a38ab908fd1e1d31701",
+      "name": "Star wars building - made by xenoxx",
+      "staffpickedAt": null,
+      "viewCount": 27,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-40aac2f615484a38ab908fd1e1d31701",
+      "embedUrl": "https://sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-08-17T02:11:29.608071",
+      "tags": [
+        {
+          "name": "3hours",
+          "slug": "3hours",
+          "uri": "https://api.sketchfab.com/v3/tags/3hours"
+        },
+        {
+          "name": "3d",
+          "slug": "3d",
+          "uri": "https://api.sketchfab.com/v3/tags/3d"
+        },
+        {
+          "name": "model",
+          "slug": "model",
+          "uri": "https://api.sketchfab.com/v3/tags/model"
+        },
+        {
+          "name": "building",
+          "slug": "building",
+          "uri": "https://api.sketchfab.com/v3/tags/building"
+        }
+      ],
+      "categories": [
+        {
+          "name": "people"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "41600b5edbd24490bfa706fb1392c968",
+            "size": 74733,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/thumbnails/972b5e01f0fa4c22865d6f3b846be098/1d3ca36fa03445509ad4f07cc6c9b2e2.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "1bda990b02ba4df9be49ea92f5f78f79",
+            "size": 25909,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/thumbnails/972b5e01f0fa4c22865d6f3b846be098/3538bad962db473fbdac84c24e533512.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "322864f3e50c4af699eab495486a4ab6",
+            "size": 15119,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/thumbnails/972b5e01f0fa4c22865d6f3b846be098/32f044fee5354e2bb17bc389007a6ed9.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "033f2d879e294ccb8a14c2bd42e866d0",
+            "size": 3159,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/thumbnails/972b5e01f0fa4c22865d6f3b846be098/7170d3764a384350818fd508c2956504.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "3c228da3752a4a4eb9d376ee633b41bf",
+            "size": 880,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/40aac2f615484a38ab908fd1e1d31701/thumbnails/972b5e01f0fa4c22865d6f3b846be098/710390798dbb4259bf00693be4c75f8b.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "e3599899670c41cabc2090c5f12fe563",
+        "username": "Xenoxx_Modeller",
+        "displayName": "Xenoxx_sketchfab",
+        "profileUrl": "https://sketchfab.com/Xenoxx_Modeller",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/6d1b744f662f4f0d98936c5b0740b50e",
+          "images": [
+            {
+              "size": 706,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/6d1b744f662f4f0d98936c5b0740b50e/411bdaa6aff345de84008a64f7fadf4b.png",
+              "height": 32
+            },
+            {
+              "size": 1176,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/6d1b744f662f4f0d98936c5b0740b50e/5459ee3a1da74c88a56e177a49c33a58.png",
+              "height": 48
+            },
+            {
+              "size": 2575,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/6d1b744f662f4f0d98936c5b0740b50e/0b6c399aa7434bc5aa04438175d2f740.png",
+              "height": 90
+            },
+            {
+              "size": 2969,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/6d1b744f662f4f0d98936c5b0740b50e/a9e5b0837d7f42d19aa5ef5c56c14401.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/e3599899670c41cabc2090c5f12fe563"
+      },
+      "description": "Just a commision i did but the owner did not want me so i made the model free enjoy ( it doesn't have any textures )",
+      "faceCount": 65116,
+      "createdAt": "2025-08-17T02:08:57.237043",
+      "vertexCount": 33192,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/14904892fb544469a72e4ae2b33211b0",
+      "uid": "14904892fb544469a72e4ae2b33211b0",
+      "name": "Molly Yolkeree",
+      "staffpickedAt": null,
+      "viewCount": 385,
+      "likeCount": 12,
+      "animationCount": 9,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-14904892fb544469a72e4ae2b33211b0",
+      "embedUrl": "https://sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-07-24T05:43:28.946492",
+      "tags": [
+        {
+          "name": "cute",
+          "slug": "cute",
+          "uri": "https://api.sketchfab.com/v3/tags/cute"
+        },
+        {
+          "name": "lizard",
+          "slug": "lizard",
+          "uri": "https://api.sketchfab.com/v3/tags/lizard"
+        },
+        {
+          "name": "charactermodel",
+          "slug": "charactermodel",
+          "uri": "https://api.sketchfab.com/v3/tags/charactermodel"
+        },
+        {
+          "name": "artstyle",
+          "slug": "artstyle",
+          "uri": "https://api.sketchfab.com/v3/tags/artstyle"
+        },
+        {
+          "name": "gamereadyasset",
+          "slug": "gamereadyasset",
+          "uri": "https://api.sketchfab.com/v3/tags/gamereadyasset"
+        },
+        {
+          "name": "cutecharacter",
+          "slug": "cutecharacter",
+          "uri": "https://api.sketchfab.com/v3/tags/cutecharacter"
+        },
+        {
+          "name": "stylizedcharacter",
+          "slug": "stylizedcharacter",
+          "uri": "https://api.sketchfab.com/v3/tags/stylizedcharacter"
+        },
+        {
+          "name": "characteranimations",
+          "slug": "characteranimations",
+          "uri": "https://api.sketchfab.com/v3/tags/characteranimations"
+        },
+        {
+          "name": "substancepainter",
+          "slug": "substancepainter",
+          "uri": "https://api.sketchfab.com/v3/tags/substancepainter"
+        },
+        {
+          "name": "maya",
+          "slug": "maya",
+          "uri": "https://api.sketchfab.com/v3/tags/maya"
+        },
+        {
+          "name": "blender",
+          "slug": "blender",
+          "uri": "https://api.sketchfab.com/v3/tags/blender"
+        },
+        {
+          "name": "creature",
+          "slug": "creature",
+          "uri": "https://api.sketchfab.com/v3/tags/creature"
+        },
+        {
+          "name": "zbrush",
+          "slug": "zbrush",
+          "uri": "https://api.sketchfab.com/v3/tags/zbrush"
+        },
+        {
+          "name": "animation",
+          "slug": "animation",
+          "uri": "https://api.sketchfab.com/v3/tags/animation"
+        },
+        {
+          "name": "stylized",
+          "slug": "stylized",
+          "uri": "https://api.sketchfab.com/v3/tags/stylized"
+        },
+        {
+          "name": "characterdesign",
+          "slug": "characterdesign",
+          "uri": "https://api.sketchfab.com/v3/tags/characterdesign"
+        },
+        {
+          "name": "gameready",
+          "slug": "gameready",
+          "uri": "https://api.sketchfab.com/v3/tags/gameready"
+        },
+        {
+          "name": "unrealengine5",
+          "slug": "unrealengine5",
+          "uri": "https://api.sketchfab.com/v3/tags/unrealengine5"
+        },
+        {
+          "name": "noai",
+          "slug": "noai",
+          "uri": "https://api.sketchfab.com/v3/tags/noai"
+        },
+        {
+          "name": "noaiused",
+          "slug": "noaiused",
+          "uri": "https://api.sketchfab.com/v3/tags/noaiused"
+        },
+        {
+          "name": "noaimodel",
+          "slug": "noaimodel",
+          "uri": "https://api.sketchfab.com/v3/tags/noaimodel"
+        }
+      ],
+      "categories": [
+        {
+          "name": "art-abstract"
+        },
+        {
+          "name": "characters-creatures"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "151da80bd8fe4c55aecbc120654fbda9",
+            "size": 342908,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/thumbnails/e9e01b5fdfa3408b95a234bdce9a5092/c9f50b9e19c94360962c2b1ee227de97.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "48e2c92a0f9743c584f2ece237c3134c",
+            "size": 64133,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/thumbnails/e9e01b5fdfa3408b95a234bdce9a5092/2355fc8b0a8643d39ddb2a90b124fdd1.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "f6ddeb1c577147598fc6484b396e9696",
+            "size": 36311,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/thumbnails/e9e01b5fdfa3408b95a234bdce9a5092/ee21d02ec4b34a5280e11acf3f344750.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "36bfd3f6c1674a138427ad3e19e2d33d",
+            "size": 7430,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/thumbnails/e9e01b5fdfa3408b95a234bdce9a5092/0ff7cf68176a49c483cad9d3d6ecee1f.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "ab6f664e685b4507af2db566389ce47b",
+            "size": 1424,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/14904892fb544469a72e4ae2b33211b0/thumbnails/e9e01b5fdfa3408b95a234bdce9a5092/e55fe22fa6e442ada390e01085a5145b.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "c6347f97098047a78cd0f2b9fd42b29b",
+        "username": "nathannardyng",
+        "displayName": "nathannardyng",
+        "profileUrl": "https://sketchfab.com/nathannardyng",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/bab8b48e80d549218bae0267ede1f5a1",
+          "images": [
+            {
+              "size": 3134,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/bab8b48e80d549218bae0267ede1f5a1/feb746f4c05e44559897e17249fddde1.png",
+              "height": 32
+            },
+            {
+              "size": 6327,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/bab8b48e80d549218bae0267ede1f5a1/81363f36f3d347ddb4d067e3ce67c649.png",
+              "height": 48
+            },
+            {
+              "size": 18624,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/bab8b48e80d549218bae0267ede1f5a1/9cb7c70542eb4ca79f427c63081d9f0b.png",
+              "height": 90
+            },
+            {
+              "size": 22258,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/bab8b48e80d549218bae0267ede1f5a1/1be3fad8c3564f0b8859f712302a44ba.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/c6347f97098047a78cd0f2b9fd42b29b"
+      },
+      "description": "This is one of my long-term projects that I decided to extend for my own learning purposes—not just in character sculpting, topology, texturing, and concepting, but also to explore animation in Blender. What better way to learn than by bringing my own original character to life?\n\nI started animating around December 2024, but I spent time beforehand polishing the rig and building pose libraries between September and November 2024. After months of studying and self-teaching in my free time, learning 3D animation has become a valuable experience I can keep under my belt—especially when it comes to conveying stylized, expressive, and human originality in my work.\n\nThis project has given me more confidence as I move forward to my next goal: creating my own indie RPG in Unreal Engine 5. Of course, I’ll be mindful of the scope, but I’m excited to shape it into something fun and tangible—especially since I really love storytelling.",
+      "faceCount": 78844,
+      "createdAt": "2025-07-24T03:46:31.166685",
+      "vertexCount": 40443,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/b4c71da7e81344b3a0a2ec6502af1a2c",
+      "uid": "b4c71da7e81344b3a0a2ec6502af1a2c",
+      "name": "SIMPLE_CITY PACK (LOWPOLY)",
+      "staffpickedAt": null,
+      "viewCount": 1479,
+      "likeCount": 9,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-b4c71da7e81344b3a0a2ec6502af1a2c",
+      "embedUrl": "https://sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-07-05T13:23:28.363790",
+      "tags": [
+        {
+          "name": "trees",
+          "slug": "trees",
+          "uri": "https://api.sketchfab.com/v3/tags/trees"
+        },
+        {
+          "name": "office",
+          "slug": "office",
+          "uri": "https://api.sketchfab.com/v3/tags/office"
+        },
+        {
+          "name": "burger",
+          "slug": "burger",
+          "uri": "https://api.sketchfab.com/v3/tags/burger"
+        },
+        {
+          "name": "school",
+          "slug": "school",
+          "uri": "https://api.sketchfab.com/v3/tags/school"
+        },
+        {
+          "name": "coffee",
+          "slug": "coffee",
+          "uri": "https://api.sketchfab.com/v3/tags/coffee"
+        },
+        {
+          "name": "hotel",
+          "slug": "hotel",
+          "uri": "https://api.sketchfab.com/v3/tags/hotel"
+        },
+        {
+          "name": "library",
+          "slug": "library",
+          "uri": "https://api.sketchfab.com/v3/tags/library"
+        },
+        {
+          "name": "buildings",
+          "slug": "buildings",
+          "uri": "https://api.sketchfab.com/v3/tags/buildings"
+        },
+        {
+          "name": "post",
+          "slug": "post",
+          "uri": "https://api.sketchfab.com/v3/tags/post"
+        },
+        {
+          "name": "bus",
+          "slug": "bus",
+          "uri": "https://api.sketchfab.com/v3/tags/bus"
+        },
+        {
+          "name": "bank",
+          "slug": "bank",
+          "uri": "https://api.sketchfab.com/v3/tags/bank"
+        },
+        {
+          "name": "supermarket",
+          "slug": "supermarket",
+          "uri": "https://api.sketchfab.com/v3/tags/supermarket"
+        },
+        {
+          "name": "hospital",
+          "slug": "hospital",
+          "uri": "https://api.sketchfab.com/v3/tags/hospital"
+        },
+        {
+          "name": "museum",
+          "slug": "museum",
+          "uri": "https://api.sketchfab.com/v3/tags/museum"
+        },
+        {
+          "name": "pizza",
+          "slug": "pizza",
+          "uri": "https://api.sketchfab.com/v3/tags/pizza"
+        },
+        {
+          "name": "postoffice",
+          "slug": "postoffice",
+          "uri": "https://api.sketchfab.com/v3/tags/postoffice"
+        },
+        {
+          "name": "firestation",
+          "slug": "firestation",
+          "uri": "https://api.sketchfab.com/v3/tags/firestation"
+        },
+        {
+          "name": "firehydrant",
+          "slug": "firehydrant",
+          "uri": "https://api.sketchfab.com/v3/tags/firehydrant"
+        },
+        {
+          "name": "police-car",
+          "slug": "police-car",
+          "uri": "https://api.sketchfab.com/v3/tags/police-car"
+        },
+        {
+          "name": "coffeeshop",
+          "slug": "coffeeshop",
+          "uri": "https://api.sketchfab.com/v3/tags/coffeeshop"
+        },
+        {
+          "name": "policestation",
+          "slug": "policestation",
+          "uri": "https://api.sketchfab.com/v3/tags/policestation"
+        },
+        {
+          "name": "freemodel",
+          "slug": "freemodel",
+          "uri": "https://api.sketchfab.com/v3/tags/freemodel"
+        },
+        {
+          "name": "pizzashop",
+          "slug": "pizzashop",
+          "uri": "https://api.sketchfab.com/v3/tags/pizzashop"
+        },
+        {
+          "name": "unity3d",
+          "slug": "unity3d",
+          "uri": "https://api.sketchfab.com/v3/tags/unity3d"
+        },
+        {
+          "name": "cartoon",
+          "slug": "cartoon",
+          "uri": "https://api.sketchfab.com/v3/tags/cartoon"
+        },
+        {
+          "name": "game",
+          "slug": "game",
+          "uri": "https://api.sketchfab.com/v3/tags/game"
+        },
+        {
+          "name": "3d",
+          "slug": "3d",
+          "uri": "https://api.sketchfab.com/v3/tags/3d"
+        },
+        {
+          "name": "vehicle",
+          "slug": "vehicle",
+          "uri": "https://api.sketchfab.com/v3/tags/vehicle"
+        },
+        {
+          "name": "lowpoly",
+          "slug": "lowpoly",
+          "uri": "https://api.sketchfab.com/v3/tags/lowpoly"
+        },
+        {
+          "name": "gameasset",
+          "slug": "gameasset",
+          "uri": "https://api.sketchfab.com/v3/tags/gameasset"
+        },
+        {
+          "name": "car",
+          "slug": "car",
+          "uri": "https://api.sketchfab.com/v3/tags/car"
+        },
+        {
+          "name": "city",
+          "slug": "city",
+          "uri": "https://api.sketchfab.com/v3/tags/city"
+        },
+        {
+          "name": "free",
+          "slug": "free",
+          "uri": "https://api.sketchfab.com/v3/tags/free"
+        },
+        {
+          "name": "stylized",
+          "slug": "stylized",
+          "uri": "https://api.sketchfab.com/v3/tags/stylized"
+        },
+        {
+          "name": "gameready",
+          "slug": "gameready",
+          "uri": "https://api.sketchfab.com/v3/tags/gameready"
+        },
+        {
+          "name": "citypack",
+          "slug": "citypack",
+          "uri": "https://api.sketchfab.com/v3/tags/citypack"
+        },
+        {
+          "name": "burger-shop",
+          "slug": "burger-shop",
+          "uri": "https://api.sketchfab.com/v3/tags/burger-shop"
+        },
+        {
+          "name": "simplecity",
+          "slug": "simplecity",
+          "uri": "https://api.sketchfab.com/v3/tags/simplecity"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "062ef00afc4c492f8e3ffc373f1f43af",
+            "size": 207169,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/thumbnails/e3ae14a021114117a4facc2483962b34/670aad804b504b9d928f3da650548476.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "28eff0c640a74fd7b4306fcfaffb0cc8",
+            "size": 78472,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/thumbnails/e3ae14a021114117a4facc2483962b34/475882521c494fccb34e70e699219cac.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "b01d940e1472421dba8e2d87dcc4e3b2",
+            "size": 48084,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/thumbnails/e3ae14a021114117a4facc2483962b34/841f8f99720c46adb4efdd960c1a7569.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "9a26ee213661496ea99b8b8292882dad",
+            "size": 10420,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/thumbnails/e3ae14a021114117a4facc2483962b34/e7b62947e0954952849d4f89dc432226.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "99ce867e679a4f208d03e5f2eb787af3",
+            "size": 1766,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/b4c71da7e81344b3a0a2ec6502af1a2c/thumbnails/e3ae14a021114117a4facc2483962b34/3ddff8878aef4e77ac5189bf8411f903.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "222dfcb9609a432bbccbb2e57d87f55a",
+        "username": "DHIL_RUBA",
+        "displayName": "DHILRUBA",
+        "profileUrl": "https://sketchfab.com/DHIL_RUBA",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/580a7240c9a3495492ec78a618d4dbf7",
+          "images": [
+            {
+              "size": 906,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/580a7240c9a3495492ec78a618d4dbf7/b47f68a41fda41f58933d7440cc76721.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1199,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/580a7240c9a3495492ec78a618d4dbf7/ce71dc549c2c43c69df5ab6f08a474cb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2163,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/580a7240c9a3495492ec78a618d4dbf7/e18e2336b8814e6fbc66bef27bb78d76.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2446,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/580a7240c9a3495492ec78a618d4dbf7/340542db3fab4e88881dca4c6b9054e8.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/222dfcb9609a432bbccbb2e57d87f55a"
+      },
+      "description": "Simple City – Low-Poly 3D City Pack (URP Supported)\r\nSimple City is a low-poly asset pack designed to help you quickly create a vibrant urban environment. Ideal for games or animations, this pack includes everything you need to build a functional city, optimized for performance.\r\nWhat’s Included:\r\nBuildings: School, Hospital, Bank, Library, Museum, Supermarket, Police Station, Fire Station, Hotel, Office, Post Office.\r\nShops: Pizza Shop, Burger Shop, Coffee Shop.\r\nVehicles: Cars, Buses, Bus Stops.\r\nUrban Details: Street Lights, Traffic Lights.\r\nFeatures:\r\nURP Support: Fully compatible with Unity’s Universal Render Pipeline.\r\nModular Design: Easily customize and expand your city.\r\nOptimized for Performance: Low-poly models that perform well on all platforms.\r\nStart building your city today with Simple City—a fast and easy way to bring urban environments to life in Unity!\n\n\n🔗 Get this model on the Unity Asset Store Search for “SIMPLE_CITY PACK (LOWPOLY)” on Unity Asset Store by DHILRUBA",
+      "faceCount": 388666,
+      "createdAt": "2025-07-05T13:22:59.507048",
+      "vertexCount": 202898,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d",
+      "uid": "8fafb0ed6b0f4b32b9076ef6ddc28e3d",
+      "name": "Nicholas Costelloe Headstone",
+      "staffpickedAt": null,
+      "viewCount": 30,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-8fafb0ed6b0f4b32b9076ef6ddc28e3d",
+      "embedUrl": "https://sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2025-06-14T09:27:23.727688",
+      "tags": [
+        {
+          "name": "munster",
+          "slug": "munster",
+          "uri": "https://api.sketchfab.com/v3/tags/munster"
+        },
+        {
+          "name": "headstone",
+          "slug": "headstone",
+          "uri": "https://api.sketchfab.com/v3/tags/headstone"
+        },
+        {
+          "name": "omega",
+          "slug": "omega",
+          "uri": "https://api.sketchfab.com/v3/tags/omega"
+        },
+        {
+          "name": "religious-art",
+          "slug": "religious-art",
+          "uri": "https://api.sketchfab.com/v3/tags/religious-art"
+        },
+        {
+          "name": "clare",
+          "slug": "clare",
+          "uri": "https://api.sketchfab.com/v3/tags/clare"
+        },
+        {
+          "name": "funerary-art",
+          "slug": "funerary-art",
+          "uri": "https://api.sketchfab.com/v3/tags/funerary-art"
+        },
+        {
+          "name": "genealogy",
+          "slug": "genealogy",
+          "uri": "https://api.sketchfab.com/v3/tags/genealogy"
+        },
+        {
+          "name": "archaeology-3dmodel-photogrammetry",
+          "slug": "archaeology-3dmodel-photogrammetry",
+          "uri": "https://api.sketchfab.com/v3/tags/archaeology-3dmodel-photogrammetry"
+        },
+        {
+          "name": "funerary-monument",
+          "slug": "funerary-monument",
+          "uri": "https://api.sketchfab.com/v3/tags/funerary-monument"
+        },
+        {
+          "name": "hexafoil",
+          "slug": "hexafoil",
+          "uri": "https://api.sketchfab.com/v3/tags/hexafoil"
+        },
+        {
+          "name": "funerary-archaeology",
+          "slug": "funerary-archaeology",
+          "uri": "https://api.sketchfab.com/v3/tags/funerary-archaeology"
+        },
+        {
+          "name": "daisy-wheel",
+          "slug": "daisy-wheel",
+          "uri": "https://api.sketchfab.com/v3/tags/daisy-wheel"
+        },
+        {
+          "name": "killaloe-diocese",
+          "slug": "killaloe-diocese",
+          "uri": "https://api.sketchfab.com/v3/tags/killaloe-diocese"
+        },
+        {
+          "name": "christogram",
+          "slug": "christogram",
+          "uri": "https://api.sketchfab.com/v3/tags/christogram"
+        },
+        {
+          "name": "killaloe",
+          "slug": "killaloe",
+          "uri": "https://api.sketchfab.com/v3/tags/killaloe"
+        },
+        {
+          "name": "soul-effigy",
+          "slug": "soul-effigy",
+          "uri": "https://api.sketchfab.com/v3/tags/soul-effigy"
+        },
+        {
+          "name": "six-pointed-star",
+          "slug": "six-pointed-star",
+          "uri": "https://api.sketchfab.com/v3/tags/six-pointed-star"
+        },
+        {
+          "name": "six-pointed-rosette",
+          "slug": "six-pointed-rosette",
+          "uri": "https://api.sketchfab.com/v3/tags/six-pointed-rosette"
+        },
+        {
+          "name": "killaloe-graveyard",
+          "slug": "killaloe-graveyard",
+          "uri": "https://api.sketchfab.com/v3/tags/killaloe-graveyard"
+        },
+        {
+          "name": "hexfoil",
+          "slug": "hexfoil",
+          "uri": "https://api.sketchfab.com/v3/tags/hexfoil"
+        }
+      ],
+      "categories": [
+        {
+          "name": "art-abstract"
+        },
+        {
+          "name": "cultural-heritage-history"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "22b28cbde6f04224b0e743e8ecdca208",
+            "size": 216537,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/thumbnails/5199ba8bb54c4d809034e0c3517502dc/6d86ac9039904a5ebae3a52ea1c407d2.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "60a6c8d0b83b42ab9e68e817b4781fa1",
+            "size": 65964,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/thumbnails/5199ba8bb54c4d809034e0c3517502dc/97d7400d24284f78a06aa4ae22b4646b.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "2b1409d0a20340038c0e1de230516ea5",
+            "size": 35970,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/thumbnails/5199ba8bb54c4d809034e0c3517502dc/f64240073b5d4a58a7aaa4ed41ee54b2.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "76af7123c6b14eb1a3231f9240293986",
+            "size": 5813,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/thumbnails/5199ba8bb54c4d809034e0c3517502dc/8ac05a3860a7447eae8e42968aac206b.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "c3855936b9d440618b60c26615c3d1e6",
+            "size": 1093,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/8fafb0ed6b0f4b32b9076ef6ddc28e3d/thumbnails/5199ba8bb54c4d809034e0c3517502dc/c5c79dcd53254cdbbe6a0094077595aa.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "648c4f0a42194c0e92bea5134b1a4566",
+        "username": "caimin",
+        "displayName": "Archaeological Survey of Ireland",
+        "profileUrl": "https://sketchfab.com/caimin",
+        "account": "pro",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/648c4f0a42194c0e92bea5134b1a4566"
+      },
+      "description": "Slate broken headstone in St. Flannan’s Graveyard (CL045-033018-), Killaloe, Co. Clare, marking the grave of Nicholas Costelloe. Above the inscription there is an I H S Christogram with six-pointed star rising from the upturned crossbar of the H with heart beneath, all of which is contained within a beaded roundel.  Christogram is flanked on either side by soul-effigies beneath encircled six-pointed rosette also known as a hexafoil/daisy wheel. Traces of broken motif above the six-pointed rosettes. A hexafoil, also known as a daisy wheel or rosette, is a geometric symbol with six lobes, often resembling a six-petal flower. It's commonly found as an apotropaic mark (a symbol believed to ward off evil) and is frequently seen on historical buildings, gravestones, and other structures. The six-petal rosette is common in 17th to 20th century folk art throughout Europe. According to Wikipedia Tthe hexafoil design is modeled after the six petal lily, for its symbolism of purity and relation to the Trinity.",
+      "faceCount": 1057621,
+      "createdAt": "2025-06-14T08:55:17.645098",
+      "vertexCount": 614938,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 4,
+          "size": 136541300,
+          "type": "glb",
+          "textureMaxResolution": 8192,
+          "faceCount": 1057621,
+          "vertexCount": 732546
+        },
+        "gltf": {
+          "textureCount": 4,
+          "size": 123593302,
+          "type": "gltf",
+          "textureMaxResolution": 8192,
+          "faceCount": 1057621,
+          "vertexCount": 732546
+        },
+        "source": {
+          "textureCount": null,
+          "size": 194665316,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 32510709,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/05b5ab77a6464d7886b3743c89ce0da8",
+      "uid": "05b5ab77a6464d7886b3743c89ce0da8",
+      "name": "Red Band Alley Asylum Twin Morgue Body Shop",
+      "staffpickedAt": null,
+      "viewCount": 27,
+      "likeCount": 0,
+      "animationCount": 1,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-05b5ab77a6464d7886b3743c89ce0da8",
+      "embedUrl": "https://sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2025-05-22T00:12:33.433165",
+      "tags": [
+        {
+          "name": "body",
+          "slug": "body",
+          "uri": "https://api.sketchfab.com/v3/tags/body"
+        },
+        {
+          "name": "morgue",
+          "slug": "morgue",
+          "uri": "https://api.sketchfab.com/v3/tags/morgue"
+        },
+        {
+          "name": "inventory",
+          "slug": "inventory",
+          "uri": "https://api.sketchfab.com/v3/tags/inventory"
+        },
+        {
+          "name": "shop",
+          "slug": "shop",
+          "uri": "https://api.sketchfab.com/v3/tags/shop"
+        }
+      ],
+      "categories": [
+        {
+          "name": "places-travel"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "bf99e911682c4a18b2cd44ff666d65f8",
+            "size": 45819,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/thumbnails/bc920db012ff40f09c10e60c08c08459/ec6efbafd0744429b6c1f246f748d46a.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "006b60198d5a47908b7cc9fe0eb55e05",
+            "size": 15887,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/thumbnails/bc920db012ff40f09c10e60c08c08459/1a09e795c3b24c1aa26839a7bb88ef93.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "e805f66901f347888c5d3dd1bf2113d2",
+            "size": 9270,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/thumbnails/bc920db012ff40f09c10e60c08c08459/e34d11c19d61488c9e4113cf57a50c7b.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "4a8b9f45a67a47e69253d2459ec6e9f3",
+            "size": 2468,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/thumbnails/bc920db012ff40f09c10e60c08c08459/7ad03fc0a8b84b4ab8018ba47e2e6c29.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "41d16df63f45474f9500f2e3caef7cca",
+            "size": 911,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/05b5ab77a6464d7886b3743c89ce0da8/thumbnails/bc920db012ff40f09c10e60c08c08459/78251daf5b6f47de84d117ae6b9aea75.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "0c9b2de6d5cb43ccaa7eab4fc9a3e7bd",
+        "username": "A1-BubbleBox",
+        "displayName": "A1-BubbleBox",
+        "profileUrl": "https://sketchfab.com/A1-BubbleBox",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/d8b916fd10f844cfa093b74fe0bb4398",
+          "images": [
+            {
+              "size": 955,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/d8b916fd10f844cfa093b74fe0bb4398/ab896e139b494c4c9d4a2cffe58ebd52.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1202,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/d8b916fd10f844cfa093b74fe0bb4398/17cbabc35a0e416d889b8355aea618f6.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2157,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/d8b916fd10f844cfa093b74fe0bb4398/e9951807b13f4cef88d2b80bbdf40ce5.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2408,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/d8b916fd10f844cfa093b74fe0bb4398/bf899e7da6784a59bebb35a78861e6bf.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/0c9b2de6d5cb43ccaa7eab4fc9a3e7bd"
+      },
+      "description": "twin morgue body Shop\nthe last place you never see\nwelcome home\nyour character inventory\nis at the back of this building\nyou can upgrade your character\nNo way all go alone\nstart your quest\n\n\nRed band alley Asylum twin morgue body Shop\nNo body in side\n\nQuick Animation yes RGB yes",
+      "faceCount": 18493,
+      "createdAt": "2025-05-22T00:11:27.093383",
+      "vertexCount": 9366,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 765524,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 18472,
+          "vertexCount": 16152
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 270887,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 18472,
+          "vertexCount": 16152
+        },
+        "source": {
+          "textureCount": null,
+          "size": 637330,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 469654,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/7bee53ca90774b7d8a59f176d312721e",
+      "uid": "7bee53ca90774b7d8a59f176d312721e",
+      "name": "Tatooine - 3D Modeling Final Project",
+      "staffpickedAt": null,
+      "viewCount": 148,
+      "likeCount": 2,
+      "animationCount": 1,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-7bee53ca90774b7d8a59f176d312721e",
+      "embedUrl": "https://sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2025-01-13T06:38:42.486513",
+      "tags": [
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "4db68473985d4342aaeb266e14b2f400",
+            "size": 335036,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/thumbnails/8970e7fa84bd43c3a19f5f4652477e39/3cc7717bcae7457ba6f587cd1e8b8ca6.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "16176aae760d4d4c92e277dda2c8d0e9",
+            "size": 59749,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/thumbnails/8970e7fa84bd43c3a19f5f4652477e39/4a7fc3fe62504bbba11d4cd635e535b3.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "2a876912bb054c7b834cb63b5f8738db",
+            "size": 34153,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/thumbnails/8970e7fa84bd43c3a19f5f4652477e39/aa176dcdb42e40ce90a5f03c3c11e724.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "264134c31cff44c1aca45d615a8f0957",
+            "size": 7036,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/thumbnails/8970e7fa84bd43c3a19f5f4652477e39/5192668251c846acb1ec3c473913b683.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "3ac6cd1ed9f5464085c6b0e93c57dbea",
+            "size": 1346,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/7bee53ca90774b7d8a59f176d312721e/thumbnails/8970e7fa84bd43c3a19f5f4652477e39/afefda019cf842b7801e1b13441e8d3a.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "a3b8f493413c4ef2aaeddb80eb69e2f7",
+        "username": "ydunsscotus",
+        "displayName": "ydunsscotus",
+        "profileUrl": "https://sketchfab.com/ydunsscotus",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/78fa317e46024a5283765aa34df5e508",
+          "images": [
+            {
+              "size": 6421,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/aec92fe9a74e499c98d759362cd7f02f.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2518,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/17fa177ffaa344a2b2fc8e78efd40fbb.jpeg",
+              "height": 48
+            },
+            {
+              "size": 5653,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/02162695bdc840faa3bcb2d418309c5e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1350,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/78fa317e46024a5283765aa34df5e508/6fde876cbded4cd48d36a76029e3aa02.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/a3b8f493413c4ef2aaeddb80eb69e2f7"
+      },
+      "description": "This diorama is inspired by the desert planet Tatooine from the Star Wars franchise. It shows a starfighter and repair shop. The animation features a technician checking or fixing the starfighter's damaged engine.\n\nObjects\n1. Tatooine-style building (with a tent, antenna, and satellite dish)\n2. X-Wing Starfighter\n3. Moisture vaporator\n4. Crate\n5. Barrel\n6. Toolbox\n7. Ladder\n\nCharacter \nTechnician\n\nTechniques used:\n1. Modeling\n2. UV unwrapping with marked seams\n3. Texturing using textures from website e.g textures.com, manual texture painting in Blender, and Substance Painter. The maps I used include base color, normal, roughness, and metallic maps.\n4. Animating using rig, rigify and keyframe\n\n*Note: For the moisture vaporator, I created the mesh in Blender, exported it to Substance Painter for texturing, and then **export it back into Blender** for final touch.*",
+      "faceCount": 46376,
+      "createdAt": "2025-01-13T05:34:47.966652",
+      "vertexCount": 23697,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/6143007fb48b431a90823e8ce9606f3d",
+      "uid": "6143007fb48b431a90823e8ce9606f3d",
+      "name": "Star Wars The Lars Homestead",
+      "staffpickedAt": null,
+      "viewCount": 4964,
+      "likeCount": 176,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-6143007fb48b431a90823e8ce9606f3d",
+      "embedUrl": "https://sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/embed",
+      "commentCount": 3,
+      "isDownloadable": true,
+      "publishedAt": "2025-01-05T22:25:20.819522",
+      "tags": [
+        {
+          "name": "luke",
+          "slug": "luke",
+          "uri": "https://api.sketchfab.com/v3/tags/luke"
+        },
+        {
+          "name": "tatooine",
+          "slug": "tatooine",
+          "uri": "https://api.sketchfab.com/v3/tags/tatooine"
+        },
+        {
+          "name": "science-fiction",
+          "slug": "science-fiction",
+          "uri": "https://api.sketchfab.com/v3/tags/science-fiction"
+        },
+        {
+          "name": "lars",
+          "slug": "lars",
+          "uri": "https://api.sketchfab.com/v3/tags/lars"
+        },
+        {
+          "name": "homestead",
+          "slug": "homestead",
+          "uri": "https://api.sketchfab.com/v3/tags/homestead"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "places-travel"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "08aa8d51b6574429b5e9f0926658dd77",
+            "size": 343060,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/thumbnails/73c49add83e44c03a3e29cbc67e695f4/8cdf159e3f244f25b487151a0a43b021.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "33b891bd949743bb9a9fd040ff5df8dc",
+            "size": 78160,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/thumbnails/73c49add83e44c03a3e29cbc67e695f4/f449b2a5314d4802a8d2badcaa9ed3c3.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "7b84937cb824455680585c5d6ee2aaa8",
+            "size": 36894,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/thumbnails/73c49add83e44c03a3e29cbc67e695f4/13bf73a9d72d476db38f4eec59a98875.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "c7bd17fb8cb64273a9c5b198fc0a27d7",
+            "size": 5842,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/thumbnails/73c49add83e44c03a3e29cbc67e695f4/db706fb88e244b73a50aac25a9147540.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "7c088549a53a42c698a796c381be5ae0",
+            "size": 1222,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/6143007fb48b431a90823e8ce9606f3d/thumbnails/73c49add83e44c03a3e29cbc67e695f4/aef471c555d44705a70c249447c1e5ab.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "a5837506849b4fa7aedf97dd7a7a288d",
+        "username": "tegnemaskin",
+        "displayName": "tegnemaskin",
+        "profileUrl": "https://sketchfab.com/tegnemaskin",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/5a2b0b832ddb4b3992e52deed3ff25e3",
+          "images": [
+            {
+              "size": 779,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/5a2b0b832ddb4b3992e52deed3ff25e3/cda48ebe254c4ea68c89e68d0e649e95.png",
+              "height": 32
+            },
+            {
+              "size": 1203,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/5a2b0b832ddb4b3992e52deed3ff25e3/c4adeee344344fb883632fe23ab3b69e.png",
+              "height": 48
+            },
+            {
+              "size": 2207,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/5a2b0b832ddb4b3992e52deed3ff25e3/c892e317005f437a8453bfd1ce755974.png",
+              "height": 90
+            },
+            {
+              "size": 2456,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/5a2b0b832ddb4b3992e52deed3ff25e3/8e21552f165c466e87c4244024dc313c.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/a5837506849b4fa7aedf97dd7a7a288d"
+      },
+      "description": "Had to make this one. Not sure of all the details surrounding the igloo. Looked at a ton of material from the ANH, but couldn’t figure out all of it. The prequels looked a bit different, as well. The entrance is about 2m high. OK bg filler.\n\nThe sand-mesh can easily be removed, so you can sink the building into your own environment if needed.\n\nThe rest of the place (the two maintenance/garage bays) will be built at a later time if time allows.",
+      "faceCount": 80051,
+      "createdAt": "2025-01-05T22:00:15.541822",
+      "vertexCount": 42959,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 12,
+          "size": 78752704,
+          "type": "glb",
+          "textureMaxResolution": 4096,
+          "faceCount": 80005,
+          "vertexCount": 82519
+        },
+        "gltf": {
+          "textureCount": 12,
+          "size": 74807249,
+          "type": "gltf",
+          "textureMaxResolution": 4096,
+          "faceCount": 80005,
+          "vertexCount": 82519
+        },
+        "source": {
+          "textureCount": null,
+          "size": 94011829,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 9354943,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "72eb2b1960364637901eacce19283624",
+        "label": "Free Standard"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/a307cd5b172e415bb218aa2fc1e316db",
+      "uid": "a307cd5b172e415bb218aa2fc1e316db",
+      "name": "Mos Espa - StarWars Tunisia Film location",
+      "staffpickedAt": null,
+      "viewCount": 343,
+      "likeCount": 6,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-a307cd5b172e415bb218aa2fc1e316db",
+      "embedUrl": "https://sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2024-11-12T19:49:15.297663",
+      "tags": [
+        {
+          "name": "film",
+          "slug": "film",
+          "uri": "https://api.sketchfab.com/v3/tags/film"
+        },
+        {
+          "name": "dune",
+          "slug": "dune",
+          "uri": "https://api.sketchfab.com/v3/tags/dune"
+        },
+        {
+          "name": "sand",
+          "slug": "sand",
+          "uri": "https://api.sketchfab.com/v3/tags/sand"
+        },
+        {
+          "name": "references",
+          "slug": "references",
+          "uri": "https://api.sketchfab.com/v3/tags/references"
+        },
+        {
+          "name": "location",
+          "slug": "location",
+          "uri": "https://api.sketchfab.com/v3/tags/location"
+        },
+        {
+          "name": "realitycapture",
+          "slug": "realitycapture",
+          "uri": "https://api.sketchfab.com/v3/tags/realitycapture"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "home",
+          "slug": "home",
+          "uri": "https://api.sketchfab.com/v3/tags/home"
+        },
+        {
+          "name": "building",
+          "slug": "building",
+          "uri": "https://api.sketchfab.com/v3/tags/building"
+        },
+        {
+          "name": "tatouine",
+          "slug": "tatouine",
+          "uri": "https://api.sketchfab.com/v3/tags/tatouine"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cultural-heritage-history"
+        },
+        {
+          "name": "places-travel"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "74cfaa0e9da54cdc85173753718c894a",
+            "size": 472566,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/thumbnails/f571c28686cc4335a8cdf4d69a267b87/e0bac365385045fa9e3563f850d602c1.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "d4e1e79c92e049ec91b9fcdf4cec9fc1",
+            "size": 153853,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/thumbnails/f571c28686cc4335a8cdf4d69a267b87/a48aa01eecb04edb827087c8f7b898fc.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "9727add011ee4469b4956e07a601149c",
+            "size": 84422,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/thumbnails/f571c28686cc4335a8cdf4d69a267b87/462ae3b8148f4ea08eec0fa4687ee7af.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "9b0f2e12955d4cca80251848ed2a35ab",
+            "size": 11966,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/thumbnails/f571c28686cc4335a8cdf4d69a267b87/41e38140d21f4503aa92d26314cacf73.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "058d02d8da6c4946a53b214e27392d9f",
+            "size": 1497,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/a307cd5b172e415bb218aa2fc1e316db/thumbnails/f571c28686cc4335a8cdf4d69a267b87/9882a59932654bedafef6d81b6053c71.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "c4fc67769c484fff8934c60ab9ce96d0",
+        "username": "ThomasNicodeme",
+        "displayName": "ThomasNicodeme Studio design 3D",
+        "profileUrl": "https://sketchfab.com/ThomasNicodeme",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/e2fd6c91949b4ea4bd505c422194ff44",
+          "images": [
+            {
+              "size": 607,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/e2fd6c91949b4ea4bd505c422194ff44/e2e993b91354477cb62ed4a6d16b8d90.jpeg",
+              "height": 32
+            },
+            {
+              "size": 950,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/e2fd6c91949b4ea4bd505c422194ff44/bba26fcda48845e3a86d13e95c647de9.jpeg",
+              "height": 48
+            },
+            {
+              "size": 1764,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/e2fd6c91949b4ea4bd505c422194ff44/f66fa71faf8c49e695b26d4c4d75d21e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2057,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/e2fd6c91949b4ea4bd505c422194ff44/f58d94ea35254a109b3ad3b79c334078.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/c4fc67769c484fff8934c60ab9ce96d0"
+      },
+      "description": "Created in RealityCapture by Capturing Reality from 32 images in 00h:00m:23s.\n\nMos Espa Star Wars, port spatial de la planète Tatooine dans la saga de science-fiction de ”Star Wars” du réalisateur George Lucas,\n\nLe site de Mos Espa a été construit à Ong Jmel, près de Nefta, dans le sud-ouest tunisien, au début des années ’90, pour servir de décor principal au tournage de ce qui allait devenir une des sagas les plus célèbres des superproductions de l’industrie cinématographique américaine.\n\nVous voulez revivre la grandeur nature des scènes des films de Star Wars, alors ce circuit est pour vous!\n\nTataouine et les ksour environnants ont fortement inspiré George Lucas pour ses films.\n\nMême le nom de la ville, Tataouine a servi d’inspiration pour le nom de la planète désertique de Star Wars, la planète Tatooine.\n\nLe tournage des films s’est réparti sur différents lieux du sud de la Tunisie.",
+      "faceCount": 727368,
+      "createdAt": "2024-11-12T19:48:03.378589",
+      "vertexCount": 363682,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 1,
+          "size": 28733700,
+          "type": "glb",
+          "textureMaxResolution": 4096,
+          "faceCount": 727368,
+          "vertexCount": 445726
+        },
+        "gltf": {
+          "textureCount": 1,
+          "size": 20352630,
+          "type": "gltf",
+          "textureMaxResolution": 4096,
+          "faceCount": 727368,
+          "vertexCount": 445726
+        },
+        "source": {
+          "textureCount": null,
+          "size": 29412894,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 22028765,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/21e38b1d6afa4113961187a84568513b",
+      "uid": "21e38b1d6afa4113961187a84568513b",
+      "name": "First Time Bust",
+      "staffpickedAt": null,
+      "viewCount": 17,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-21e38b1d6afa4113961187a84568513b",
+      "embedUrl": "https://sketchfab.com/models/21e38b1d6afa4113961187a84568513b/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2024-10-27T15:20:54.439202",
+      "tags": [
+        {
+          "name": "woman",
+          "slug": "woman",
+          "uri": "https://api.sketchfab.com/v3/tags/woman"
+        },
+        {
+          "name": "substancepainter",
+          "slug": "substancepainter",
+          "uri": "https://api.sketchfab.com/v3/tags/substancepainter"
+        },
+        {
+          "name": "substance",
+          "slug": "substance",
+          "uri": "https://api.sketchfab.com/v3/tags/substance"
+        },
+        {
+          "name": "bust",
+          "slug": "bust",
+          "uri": "https://api.sketchfab.com/v3/tags/bust"
+        },
+        {
+          "name": "human",
+          "slug": "human",
+          "uri": "https://api.sketchfab.com/v3/tags/human"
+        },
+        {
+          "name": "lady",
+          "slug": "lady",
+          "uri": "https://api.sketchfab.com/v3/tags/lady"
+        }
+      ],
+      "categories": [],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "1777d7c10b05474690858756e56d4cf2",
+            "size": 81731,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/e09f1a0ecda6491483ceee023f531f04.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "48f48364d0674701813964b538f7d69f",
+            "size": 24524,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/67eae97dbb924061ac44515bc31ec7ab.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "980e926cbd4b45c4b6f567d7b269d008",
+            "size": 13598,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/7bfe8a8a2f574858a1e52916d04f8005.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "bd15d706aae14b599efd457b27cc2ccd",
+            "size": 2914,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/0090c4f7014d466790510fcf43442201.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "d5e36a85727f43b0939b21f09b940aef",
+            "size": 938,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/21e38b1d6afa4113961187a84568513b/thumbnails/b3402d1924394e539982da04c2cb6439/0772626943ae4bd1b9a26e18f2d22b2e.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "3e647db1ea554bdc8704a7781e90634e",
+        "username": "LaceyHollow",
+        "displayName": "Lacey Hollow",
+        "profileUrl": "https://sketchfab.com/LaceyHollow",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/62142919bfb4410b832c291e032bc4f7",
+          "images": [
+            {
+              "size": 1048,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/62142919bfb4410b832c291e032bc4f7/1237eca4c95c45dab929e210e254db4b.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1435,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/62142919bfb4410b832c291e032bc4f7/ce59e17611ab49b68e64a88129323d99.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2837,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/62142919bfb4410b832c291e032bc4f7/ae628c0cd3174e6db523a30ca11e8af1.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3230,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/62142919bfb4410b832c291e032bc4f7/a808138549424dbfbb2f885bca958be4.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/3e647db1ea554bdc8704a7781e90634e"
+      },
+      "description": "We all have to start somewhere. I had a blast maknig my first bust. I have a long way to go before I am a pro at this. There are so much tiny details to a bust I realized I forgot a few of them, as well as my eyelash UV's refusing to work for this project no matter what I did, so I had to continue into texturing. Doing this shown me that her eyelashes are going to take form of the entire texture pallet, so if you zoom in, you can see the terrifying UV layout lining her lashes. \n\nOutisde of that, doing the hair was a challenge. Next project I would like to learn how to make long hair, as well as the eyelash error not being a problem. The ears and lips were my favorite parts. Now that I have my issues out in the light, I can begin building an even better bust next time around! We all have to begin somewhere.",
+      "faceCount": 4840,
+      "createdAt": "2024-10-27T15:20:21.150791",
+      "vertexCount": 2509,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/abc64ac3c2b2449d8dfddc7acd4cc709",
+      "uid": "abc64ac3c2b2449d8dfddc7acd4cc709",
+      "name": "Sci Fi Greeble Package 1",
+      "staffpickedAt": null,
+      "viewCount": 1478,
+      "likeCount": 19,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-abc64ac3c2b2449d8dfddc7acd4cc709",
+      "embedUrl": "https://sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2024-08-22T19:08:50.882434",
+      "tags": [
+        {
+          "name": "kitbash",
+          "slug": "kitbash",
+          "uri": "https://api.sketchfab.com/v3/tags/kitbash"
+        },
+        {
+          "name": "greeble",
+          "slug": "greeble",
+          "uri": "https://api.sketchfab.com/v3/tags/greeble"
+        },
+        {
+          "name": "scifi",
+          "slug": "scifi",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "2f07f455e7d04827ad0a474485a7d4f0",
+            "size": 150507,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/thumbnails/49d2fd6bb46342d4af0e9bee65326959/6832089cc7404e14b814768eb5c1a27a.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "84aec86731f24221b79c969613017ea1",
+            "size": 36913,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/thumbnails/49d2fd6bb46342d4af0e9bee65326959/20a4077ab44b47f6b6c0ea174d874103.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "db73c5d044e44832b4b6c3aa9f488085",
+            "size": 20092,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/thumbnails/49d2fd6bb46342d4af0e9bee65326959/31f825c5c7864226869fcd335701fc97.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "0b2c9dd5d24049f3860ffdf941c61db9",
+            "size": 3808,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/thumbnails/49d2fd6bb46342d4af0e9bee65326959/6b05ad5f3538487b98de7f327462cb90.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "0a704443f93d4b83aca3ee08fe4004e3",
+            "size": 950,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/abc64ac3c2b2449d8dfddc7acd4cc709/thumbnails/49d2fd6bb46342d4af0e9bee65326959/c014321e832e41ef8d158870ca00c317.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "2da00eeb502f45c8af5b47b4a553d4d7",
+        "username": "DanielAndersson",
+        "displayName": "Daniel",
+        "profileUrl": "https://sketchfab.com/DanielAndersson",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/1f550801b0b04d588afb0214d8913864",
+          "images": [
+            {
+              "size": 3202,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/1f550801b0b04d588afb0214d8913864/e8040aa9da27481d9cb75939a1342f2c.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2841,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/1f550801b0b04d588afb0214d8913864/2b71ae9df3294b778a90a56e08b68b6e.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1271,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/1f550801b0b04d588afb0214d8913864/6f1137343a9f4e2785ea5f40274c22f4.jpeg",
+              "height": 48
+            },
+            {
+              "size": 809,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/1f550801b0b04d588afb0214d8913864/150ef19062534c35847dbf15b62492b4.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/2da00eeb502f45c8af5b47b4a553d4d7"
+      },
+      "description": "For many years I've been building models from the Star Wars universe, as well as from World War 2 and uploading them to Sketchfab.\n\nGoing back to how the ships in Star Wars were first created, they used plastic models that were kitbashed together into the familiar forms we know and love today.\n\nI reuse the parts created over and over, but I also add new parts to the collection as time goes on.\n\nHere is a package with 382 such greebles. The greebles themself are not very complex, because I wanted to retain the look and feel of the plastic models. \n\nThe greebles are not textured, because they should be part of a larger model and be textured together with it.",
+      "faceCount": 429495,
+      "createdAt": "2024-08-22T18:43:31.537806",
+      "vertexCount": 228103,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 21235336,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 429380,
+          "vertexCount": 447249
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 6679934,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 429380,
+          "vertexCount": 447249
+        },
+        "source": {
+          "textureCount": null,
+          "size": 10440680,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 11461706,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "783b685da9bf457d81e829fa283f3567",
+        "label": "Standard"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/5aba9366cbf54255bb17b7fef10d1ab1",
+      "uid": "5aba9366cbf54255bb17b7fef10d1ab1",
+      "name": "A Minimalist Airport Diorama",
+      "staffpickedAt": null,
+      "viewCount": 7132,
+      "likeCount": 95,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-5aba9366cbf54255bb17b7fef10d1ab1",
+      "embedUrl": "https://sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/embed",
+      "commentCount": 6,
+      "isDownloadable": true,
+      "publishedAt": "2024-07-21T12:59:56.435014",
+      "tags": [
+        {
+          "name": "airport",
+          "slug": "airport",
+          "uri": "https://api.sketchfab.com/v3/tags/airport"
+        },
+        {
+          "name": "diorama",
+          "slug": "diorama",
+          "uri": "https://api.sketchfab.com/v3/tags/diorama"
+        },
+        {
+          "name": "minimalist",
+          "slug": "minimalist",
+          "uri": "https://api.sketchfab.com/v3/tags/minimalist"
+        },
+        {
+          "name": "free",
+          "slug": "free",
+          "uri": "https://api.sketchfab.com/v3/tags/free"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "cars-vehicles"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "046dafa8c7be4dceb8acd4a90a047206",
+            "size": 173775,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/thumbnails/b86a6a33b1d74e728e5f76d722312c4d/9dd09fe670a0496aac066249f588d05a.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "1de46b72f77d4e1e88f7514170e1dd84",
+            "size": 62871,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/thumbnails/b86a6a33b1d74e728e5f76d722312c4d/dd23aec0ffcb49baa89a9d55e6f8e1dc.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "a54a8099c3d1455f8cf22bc4820db776",
+            "size": 37360,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/thumbnails/b86a6a33b1d74e728e5f76d722312c4d/1081bb9146304bed878e4999b4b8a228.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "68bd3225bd8c49a7aadb503a3e100b0d",
+            "size": 7634,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/thumbnails/b86a6a33b1d74e728e5f76d722312c4d/34ac9fa441ad4df39c3f3af3531c0746.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "30312cd4047c45959e1618769770583b",
+            "size": 1337,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/5aba9366cbf54255bb17b7fef10d1ab1/thumbnails/b86a6a33b1d74e728e5f76d722312c4d/20b1a681b2614ce8a3b3dcc70021f4b9.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "82002e6446b1457a9fabc3c05ba84b4e",
+        "username": "agung.ihackstuff",
+        "displayName": "AGUNG.IHACKSTUFF@GMAIL.COM",
+        "profileUrl": "https://sketchfab.com/agung.ihackstuff",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/f078567f2529423fbc840cd4690ce727",
+          "images": [
+            {
+              "size": 1148,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/f078567f2529423fbc840cd4690ce727/965b19d5b20948799cdb914a180b47c2.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1623,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/f078567f2529423fbc840cd4690ce727/1982ce9c00864a7e86c9e41210283b66.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3608,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/f078567f2529423fbc840cd4690ce727/bd7382afe51e4fe3a3ff9f69508d95cf.jpeg",
+              "height": 90
+            },
+            {
+              "size": 4061,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/f078567f2529423fbc840cd4690ce727/e2d99b4761b946e3a37cfaaaebe03545.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/82002e6446b1457a9fabc3c05ba84b4e"
+      },
+      "description": "A minimalist airport diorama designed for your game or cinematic scene.\n\nThis set includes a baked airport terminal building, three detailed aircraft models — Boeing 777 (JAL), Airbus A380 (SIA), and a smaller Airbus A318 — along with jetways and various airport vehicles.\n\nAll parts are modular, except for the main building, making it easy to customize and adapt to your project needs.\n\nCompletely free for personal and commercial use. To edit the scene, simply clear all parent objects first, then delete the empty groups — this is the easiest way to modify any of my models.\n\nDownload now and start building your own airport scene. If you like this model, please leave a like and follow my profile for more free, high-quality 3D environments and detailed dioramas.",
+      "faceCount": 1031393,
+      "createdAt": "2024-07-21T12:57:13.400847",
+      "vertexCount": 655213,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 38,
+          "size": 57160680,
+          "type": "glb",
+          "textureMaxResolution": 512,
+          "faceCount": 1022823,
+          "vertexCount": 1542146
+        },
+        "gltf": {
+          "textureCount": 38,
+          "size": 10716248,
+          "type": "gltf",
+          "textureMaxResolution": 512,
+          "faceCount": 1022823,
+          "vertexCount": 1542146
+        },
+        "source": {
+          "textureCount": null,
+          "size": 33382084,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 17087513,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/31ad12094c7f487983a9ce01570c1c5e",
+      "uid": "31ad12094c7f487983a9ce01570c1c5e",
+      "name": "Star Wars Scarif Landing Pad",
+      "staffpickedAt": null,
+      "viewCount": 1488,
+      "likeCount": 14,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-31ad12094c7f487983a9ce01570c1c5e",
+      "embedUrl": "https://sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/embed",
+      "commentCount": 4,
+      "isDownloadable": false,
+      "publishedAt": "2024-05-08T05:16:02.453931",
+      "tags": [
+        {
+          "name": "scene",
+          "slug": "scene",
+          "uri": "https://api.sketchfab.com/v3/tags/scene"
+        },
+        {
+          "name": "assets",
+          "slug": "assets",
+          "uri": "https://api.sketchfab.com/v3/tags/assets"
+        },
+        {
+          "name": "starship",
+          "slug": "starship",
+          "uri": "https://api.sketchfab.com/v3/tags/starship"
+        },
+        {
+          "name": "diorama",
+          "slug": "diorama",
+          "uri": "https://api.sketchfab.com/v3/tags/diorama"
+        },
+        {
+          "name": "scenario",
+          "slug": "scenario",
+          "uri": "https://api.sketchfab.com/v3/tags/scenario"
+        },
+        {
+          "name": "wars",
+          "slug": "wars",
+          "uri": "https://api.sketchfab.com/v3/tags/wars"
+        },
+        {
+          "name": "fortress",
+          "slug": "fortress",
+          "uri": "https://api.sketchfab.com/v3/tags/fortress"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "starwarsrebels",
+          "slug": "starwarsrebels",
+          "uri": "https://api.sketchfab.com/v3/tags/starwarsrebels"
+        },
+        {
+          "name": "rogue-one",
+          "slug": "rogue-one",
+          "uri": "https://api.sketchfab.com/v3/tags/rogue-one"
+        },
+        {
+          "name": "starwarsfanart",
+          "slug": "starwarsfanart",
+          "uri": "https://api.sketchfab.com/v3/tags/starwarsfanart"
+        },
+        {
+          "name": "rogueone",
+          "slug": "rogueone",
+          "uri": "https://api.sketchfab.com/v3/tags/rogueone"
+        },
+        {
+          "name": "asset-pack",
+          "slug": "asset-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/asset-pack"
+        },
+        {
+          "name": "star-wars-ships",
+          "slug": "star-wars-ships",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-ships"
+        },
+        {
+          "name": "assets-game",
+          "slug": "assets-game",
+          "uri": "https://api.sketchfab.com/v3/tags/assets-game"
+        },
+        {
+          "name": "star-wars-battlefront",
+          "slug": "star-wars-battlefront",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-battlefront"
+        },
+        {
+          "name": "assets-pack",
+          "slug": "assets-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/assets-pack"
+        },
+        {
+          "name": "substancepainter",
+          "slug": "substancepainter",
+          "uri": "https://api.sketchfab.com/v3/tags/substancepainter"
+        },
+        {
+          "name": "substance",
+          "slug": "substance",
+          "uri": "https://api.sketchfab.com/v3/tags/substance"
+        },
+        {
+          "name": "asset",
+          "slug": "asset",
+          "uri": "https://api.sketchfab.com/v3/tags/asset"
+        },
+        {
+          "name": "starwars",
+          "slug": "starwars",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars"
+        },
+        {
+          "name": "scarif",
+          "slug": "scarif",
+          "uri": "https://api.sketchfab.com/v3/tags/scarif"
+        },
+        {
+          "name": "assets-game-3d",
+          "slug": "assets-game-3d",
+          "uri": "https://api.sketchfab.com/v3/tags/assets-game-3d"
+        },
+        {
+          "name": "diorama3d",
+          "slug": "diorama3d",
+          "uri": "https://api.sketchfab.com/v3/tags/diorama3d"
+        },
+        {
+          "name": "star-wars-assets",
+          "slug": "star-wars-assets",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-assets"
+        },
+        {
+          "name": "scarif-ship",
+          "slug": "scarif-ship",
+          "uri": "https://api.sketchfab.com/v3/tags/scarif-ship"
+        },
+        {
+          "name": "star-wars-scene",
+          "slug": "star-wars-scene",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-scene"
+        },
+        {
+          "name": "scarif-building",
+          "slug": "scarif-building",
+          "uri": "https://api.sketchfab.com/v3/tags/scarif-building"
+        },
+        {
+          "name": "star-wars-fortress",
+          "slug": "star-wars-fortress",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-fortress"
+        },
+        {
+          "name": "star-wars-rogue-one",
+          "slug": "star-wars-rogue-one",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-rogue-one"
+        },
+        {
+          "name": "imperial-ship",
+          "slug": "imperial-ship",
+          "uri": "https://api.sketchfab.com/v3/tags/imperial-ship"
+        },
+        {
+          "name": "imperial-assets",
+          "slug": "imperial-assets",
+          "uri": "https://api.sketchfab.com/v3/tags/imperial-assets"
+        },
+        {
+          "name": "star-wars-diorama",
+          "slug": "star-wars-diorama",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-diorama"
+        },
+        {
+          "name": "star-wars-map",
+          "slug": "star-wars-map",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-map"
+        },
+        {
+          "name": "sci-fi-assets-pack",
+          "slug": "sci-fi-assets-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/sci-fi-assets-pack"
+        },
+        {
+          "name": "scifi-asset-pack",
+          "slug": "scifi-asset-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/scifi-asset-pack"
+        },
+        {
+          "name": "star-wars-asset-pack",
+          "slug": "star-wars-asset-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars-asset-pack"
+        },
+        {
+          "name": "starwars-asset-pack",
+          "slug": "starwars-asset-pack",
+          "uri": "https://api.sketchfab.com/v3/tags/starwars-asset-pack"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        },
+        {
+          "name": "places-travel"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "46798e5e3e0e42b8a803e309e0a44370",
+            "size": 352753,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/thumbnails/a56c3c0a07934b53bb549880152986fe/b0b89b8da4d2478bb72b36e06b0d07da.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "b2f102b8c200426b97c5622934a1e8e6",
+            "size": 90725,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/thumbnails/a56c3c0a07934b53bb549880152986fe/883e0a8747874920aa60a69c52a0bc38.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "ed79e389a2e44f109612d8767909488a",
+            "size": 45587,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/thumbnails/a56c3c0a07934b53bb549880152986fe/b61e18eb9874464d8dead01d7a52f66b.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "8d2d775d6e354b0384497310898feba6",
+            "size": 6949,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/thumbnails/a56c3c0a07934b53bb549880152986fe/ecd73e910ddb4674820a4c58ca17861e.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "d26063612f1542ce98e4d3c83cdffed0",
+            "size": 1310,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/31ad12094c7f487983a9ce01570c1c5e/thumbnails/a56c3c0a07934b53bb549880152986fe/71a036451cbe44e29ef5bfdc04483ed4.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "50a683a72e0246fbbd6eae45978a47a2",
+        "username": "NahuelB48",
+        "displayName": "NahuelB",
+        "profileUrl": "https://sketchfab.com/NahuelB48",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/5dc430dd8a2a4ccea649c6dbb86ef995",
+          "images": [
+            {
+              "size": 1067,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/5dc430dd8a2a4ccea649c6dbb86ef995/30ff3151e8a64004a99104d9cfa79d52.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1396,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/5dc430dd8a2a4ccea649c6dbb86ef995/1cdb8077981d4976ad2ba31019dffe62.jpeg",
+              "height": 48
+            },
+            {
+              "size": 2569,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/5dc430dd8a2a4ccea649c6dbb86ef995/6cfa6b24c0284d2eb227f47ea05c383c.jpeg",
+              "height": 90
+            },
+            {
+              "size": 2876,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/5dc430dd8a2a4ccea649c6dbb86ef995/6bcfdaeaba56463290e47294d57fffb2.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/50a683a72e0246fbbd6eae45978a47a2"
+      },
+      "description": "Scarif Low Poly Scenario from Star Wars: Rogue one.\n\nAll assets are ready to be used in any Game Engine.\n\nThe download contains a .rar compressed archive with an .fbx of the model and textures exported for Unity\n\nModeled in Maya and texturized in Substance Painter.\n\nThis model is now available for purchase an the link below:\n\n\nhttps://fab.com/s/4a4ff1f01428",
+      "faceCount": 103639,
+      "createdAt": "2024-05-08T05:13:12.208178",
+      "vertexCount": 55829,
+      "isAgeRestricted": false,
+      "archives": {
+        "extra": {
+          "textureCount": null,
+          "size": 54628826,
+          "type": "extra",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "glb": {
+          "textureCount": 17,
+          "size": 66431216,
+          "type": "glb",
+          "textureMaxResolution": 2048,
+          "faceCount": 103638,
+          "vertexCount": 150188
+        },
+        "gltf": {
+          "textureCount": 17,
+          "size": 60889242,
+          "type": "gltf",
+          "textureMaxResolution": 2048,
+          "faceCount": 103638,
+          "vertexCount": 150188
+        },
+        "source": {
+          "textureCount": null,
+          "size": 76214867,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 12777869,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "5b54cf13b1a4422ca439696eb152070d",
+        "label": "Editorial"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/99d8db6d7c564945be9d5c86ff08bf16",
+      "uid": "99d8db6d7c564945be9d5c86ff08bf16",
+      "name": "Wigancice Żytawskie (Weigsdorf) - Dom Agaty",
+      "staffpickedAt": null,
+      "viewCount": 276,
+      "likeCount": 2,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-99d8db6d7c564945be9d5c86ff08bf16",
+      "embedUrl": "https://sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/embed",
+      "commentCount": 1,
+      "isDownloadable": false,
+      "publishedAt": "2024-04-30T13:28:00.859016",
+      "tags": [
+        {
+          "name": "barn",
+          "slug": "barn",
+          "uri": "https://api.sketchfab.com/v3/tags/barn"
+        },
+        {
+          "name": "oblivion",
+          "slug": "oblivion",
+          "uri": "https://api.sketchfab.com/v3/tags/oblivion"
+        },
+        {
+          "name": "dronemapping",
+          "slug": "dronemapping",
+          "uri": "https://api.sketchfab.com/v3/tags/dronemapping"
+        },
+        {
+          "name": "wattleanddaub",
+          "slug": "wattleanddaub",
+          "uri": "https://api.sketchfab.com/v3/tags/wattleanddaub"
+        },
+        {
+          "name": "photogrammetry",
+          "slug": "photogrammetry",
+          "uri": "https://api.sketchfab.com/v3/tags/photogrammetry"
+        },
+        {
+          "name": "village",
+          "slug": "village",
+          "uri": "https://api.sketchfab.com/v3/tags/village"
+        }
+      ],
+      "categories": [
+        {
+          "name": "architecture"
+        },
+        {
+          "name": "cultural-heritage-history"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "86164e7bcfb5412eaf279b6180a84124",
+            "size": 296734,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/thumbnails/258169f7b0c24f1abf77c51c5587aa46/9b215f17296548fcb2f63aa890b1245e.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "40138e32b4f84c93b04f0ac5479e7d5a",
+            "size": 89093,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/thumbnails/258169f7b0c24f1abf77c51c5587aa46/bff43d1b5c67444bb804711bc0a6b1d7.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "c3f28a81564048af80f0daf2b8a90586",
+            "size": 48123,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/thumbnails/258169f7b0c24f1abf77c51c5587aa46/cc836137b53e41159c851701b5d4588f.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "b681a75b8e2e42c3bb625f34eb1f3579",
+            "size": 7691,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/thumbnails/258169f7b0c24f1abf77c51c5587aa46/f1023d34e09044a4b95ba6c691b6e4ae.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "d75f772e4db14a62bb353facb8520f67",
+            "size": 1288,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/99d8db6d7c564945be9d5c86ff08bf16/thumbnails/258169f7b0c24f1abf77c51c5587aa46/0a4c0b95c1b34fd5be7522e098803515.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "71368d765cf1489fbeae4e5f4817114f",
+        "username": "poiformat",
+        "displayName": "poiformat",
+        "profileUrl": "https://sketchfab.com/poiformat",
+        "account": "pro",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/7122307c883e43aa920b0a1a25efa27d",
+          "images": [
+            {
+              "size": 2820,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/7122307c883e43aa920b0a1a25efa27d/4a48c868893e4bf295fa8cdf7e795280.jpeg",
+              "height": 100
+            },
+            {
+              "size": 2412,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/7122307c883e43aa920b0a1a25efa27d/b67418477a3a431dbf12c1b7a1c3cb23.jpeg",
+              "height": 90
+            },
+            {
+              "size": 1175,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/7122307c883e43aa920b0a1a25efa27d/8863f09db27b46eab7356c91a6e38f00.jpeg",
+              "height": 48
+            },
+            {
+              "size": 796,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/7122307c883e43aa920b0a1a25efa27d/f38b582c3985467db7c3f265b7ecdd0d.jpeg",
+              "height": 32
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/71368d765cf1489fbeae4e5f4817114f"
+      },
+      "description": "Wigancice Żytawskie (germ. Weigsdorf) is a village situated in Turoszów valley, south-western Poland. It's origins date back to XIV century, when inhabitants from Prussia started to settle down in this area and unique wattle and daub houses were built all along the village. After the World War II, Turoszów valley was assigned to Poland and people from different polish regions were moved here in order to take over old german buildings. Despite being strangers to each other, polish inhabitants managed to create a close community in this remote but beautiful area. However, in 1999 the vilage was liquidated due to Turów lignite mine expansion. Currently it's slowly falling into oblivion...\n\nModel presents the last homestead preserved to modern times, called Agata's House.",
+      "faceCount": 2000000,
+      "createdAt": "2024-04-30T12:48:48.004720",
+      "vertexCount": 1000116,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/c544436b89ea465e8bfb78dbdde16179",
+      "uid": "c544436b89ea465e8bfb78dbdde16179",
+      "name": "Voxel tank constructor",
+      "staffpickedAt": null,
+      "viewCount": 149,
+      "likeCount": 1,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-c544436b89ea465e8bfb78dbdde16179",
+      "embedUrl": "https://sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2024-04-14T19:19:05.891146",
+      "tags": [
+        {
+          "name": "tanks",
+          "slug": "tanks",
+          "uri": "https://api.sketchfab.com/v3/tags/tanks"
+        },
+        {
+          "name": "tank-military",
+          "slug": "tank-military",
+          "uri": "https://api.sketchfab.com/v3/tags/tank-military"
+        },
+        {
+          "name": "voxel",
+          "slug": "voxel",
+          "uri": "https://api.sketchfab.com/v3/tags/voxel"
+        },
+        {
+          "name": "tanks-wars",
+          "slug": "tanks-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/tanks-wars"
+        }
+      ],
+      "categories": [
+        {
+          "name": "cars-vehicles"
+        },
+        {
+          "name": "weapons-military"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "26b5fc04c30842568769e103ed364201",
+            "size": 54201,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/thumbnails/120bf7c5d0fe434686f66764cd9a7dcb/a2f46f106429467b867a6fb74abca07d.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "3fbf4bde44b84abb8f71ee57252c6fed",
+            "size": 19180,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/thumbnails/120bf7c5d0fe434686f66764cd9a7dcb/2c8710077c784588a5a36c88f499044a.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "cf6186c791874e798742598bb13d8495",
+            "size": 11488,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/thumbnails/120bf7c5d0fe434686f66764cd9a7dcb/417a6633e5cb4783a6759a087792178f.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "badc11282ea841d99212608a42876674",
+            "size": 2882,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/thumbnails/120bf7c5d0fe434686f66764cd9a7dcb/5b976f38893942bd8cc52ef75f4a5bfe.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "992627ba21ff48dd932a38710f8ec5a0",
+            "size": 916,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/c544436b89ea465e8bfb78dbdde16179/thumbnails/120bf7c5d0fe434686f66764cd9a7dcb/bf53780b119943f4a3737b181da57ba4.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "9dfb73e6e7594391bf67ce79a26ba42c",
+        "username": "gow4_OFFICIAL",
+        "displayName": "GOW4",
+        "profileUrl": "https://sketchfab.com/gow4_OFFICIAL",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/09f5b2efb0f441d2942ff146573697a7",
+          "images": [
+            {
+              "size": 1712,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/09f5b2efb0f441d2942ff146573697a7/0187719eb58741bdb55e371b4e9dcebf.png",
+              "height": 32
+            },
+            {
+              "size": 2891,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/09f5b2efb0f441d2942ff146573697a7/916ee579fe5b4bd1ab2e7e99bdaf3ec0.png",
+              "height": 48
+            },
+            {
+              "size": 6673,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/09f5b2efb0f441d2942ff146573697a7/59653454b40b4d5fb4e04c4212effea8.png",
+              "height": 90
+            },
+            {
+              "size": 7704,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/09f5b2efb0f441d2942ff146573697a7/53dc24712eef446fa022b0a96057bc62.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/9dfb73e6e7594391bf67ce79a26ba42c"
+      },
+      "description": "Итак это старая версия моего конструктора воксельных танков. Он предназначен для создания ваших собственных танков. В конструкторе имееться несколько корпусов, башен, пушек(есть 1 автопушка) и катков. Для начала создания воксельной бронетехники самый отличный вариант.\nSo this is the old version of my voxel tank builder. It is designed for creating your own tanks. The designer has several buildings, turrets, cannons (there is 1 autocannon) and rollers. To start creating voxel armored vehicles, this is the best option.\n\nЕсли вы сделали модель с помощью этого конструктора и выложили её укажите меня как автора компонентов. Если вы хотите продать созданную вами модель то обратитесь ко мне: Телеграм- @Carmine_GOW4 , instagram- imask1074 , discord- danil_gow4 . \nIf you made a model using this constructor and posted it, please indicate me as the author of the components. If you want to sell the model you created, then contact me: Telegram- @Carmine_GOW4, instagram- imask1074, discord- danil_gow4 .",
+      "faceCount": 55908,
+      "createdAt": "2024-04-14T19:04:12.692221",
+      "vertexCount": 27908,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 2309860,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 55908,
+          "vertexCount": 40782
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 287606,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 55908,
+          "vertexCount": 40782
+        },
+        "source": {
+          "textureCount": null,
+          "size": 284301,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 1045832,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "322a749bcfa841b29dff1e8a1bb74b0b",
+        "label": "CC Attribution"
+      },
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/cd57c13642a94189ac59080487d5e30d",
+      "uid": "cd57c13642a94189ac59080487d5e30d",
+      "name": "Computer Module",
+      "staffpickedAt": null,
+      "viewCount": 58,
+      "likeCount": 0,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-cd57c13642a94189ac59080487d5e30d",
+      "embedUrl": "https://sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/embed",
+      "commentCount": 0,
+      "isDownloadable": false,
+      "publishedAt": "2024-04-03T07:37:13.646357",
+      "tags": [
+        {
+          "name": "computer",
+          "slug": "computer",
+          "uri": "https://api.sketchfab.com/v3/tags/computer"
+        },
+        {
+          "name": "device",
+          "slug": "device",
+          "uri": "https://api.sketchfab.com/v3/tags/device"
+        },
+        {
+          "name": "module",
+          "slug": "module",
+          "uri": "https://api.sketchfab.com/v3/tags/module"
+        },
+        {
+          "name": "hardware",
+          "slug": "hardware",
+          "uri": "https://api.sketchfab.com/v3/tags/hardware"
+        },
+        {
+          "name": "hardsurfacemodeling",
+          "slug": "hardsurfacemodeling",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurfacemodeling"
+        },
+        {
+          "name": "hardsurface",
+          "slug": "hardsurface",
+          "uri": "https://api.sketchfab.com/v3/tags/hardsurface"
+        },
+        {
+          "name": "modular",
+          "slug": "modular",
+          "uri": "https://api.sketchfab.com/v3/tags/modular"
+        }
+      ],
+      "categories": [
+        {
+          "name": "art-abstract"
+        },
+        {
+          "name": "electronics-gadgets"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "44ac3a994ac54d44b806041a6f0e0474",
+            "size": 129397,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/thumbnails/d9bbf8a4c93c49eeb6d5ae04adc9694c/8031ed50deaa4303a559460679586d9b.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "c8f49c1537c14b94984783fc2b14974f",
+            "size": 37430,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/thumbnails/d9bbf8a4c93c49eeb6d5ae04adc9694c/5aa558d3541f454791398b5fbeabf6a0.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "6ea56c7185cc43bf9a438db991837b4a",
+            "size": 21265,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/thumbnails/d9bbf8a4c93c49eeb6d5ae04adc9694c/21530c565edb4d7cb3337df723abc13f.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "ea8a8c202e8c4c9bab111723b41e3702",
+            "size": 4152,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/thumbnails/d9bbf8a4c93c49eeb6d5ae04adc9694c/e79129ddb6954fc2b43e67770086db6f.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "f267f206c0e944d9b9062d6fcfba2577",
+            "size": 1009,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/cd57c13642a94189ac59080487d5e30d/thumbnails/d9bbf8a4c93c49eeb6d5ae04adc9694c/cc7a71bbc8994df7bc2bc837951f52d4.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "096c15b2c3af4060bbaf3bbbbc33251f",
+        "username": "Gabriel.Peter.Annan",
+        "displayName": "Gabriel.Peter.Annan",
+        "profileUrl": "https://sketchfab.com/Gabriel.Peter.Annan",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/8dd95829833b4b07b1885d2d32e7cfb5",
+          "images": [
+            {
+              "size": 1071,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/8dd95829833b4b07b1885d2d32e7cfb5/df77027860c74e54bd641ade4606bedd.jpeg",
+              "height": 32
+            },
+            {
+              "size": 1500,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/8dd95829833b4b07b1885d2d32e7cfb5/17aa62878e6b4a3ab1c0dd6f58c67c09.jpeg",
+              "height": 48
+            },
+            {
+              "size": 3277,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/8dd95829833b4b07b1885d2d32e7cfb5/a6f028aceace46bf968289f307f600b5.jpeg",
+              "height": 90
+            },
+            {
+              "size": 3740,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/8dd95829833b4b07b1885d2d32e7cfb5/eb0eab8dd7944c10bb373adaea3d5d54.jpeg",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/096c15b2c3af4060bbaf3bbbbc33251f"
+      },
+      "description": "A standard modular computer unit I put together for a space station that I have been working on for a virtual production set I've been building, thought I would go ahead and post somthing here on sketchfab and start building my collection of models. I will soon be posting the space station after we get the video up yet in the mean time thought I'd tease this. Stay tuned, more is on the way!",
+      "faceCount": 13470,
+      "createdAt": "2024-04-03T06:08:05.702847",
+      "vertexCount": 7438,
+      "isAgeRestricted": false,
+      "archives": {},
+      "license": null,
+      "isFabAi": false
+    },
+    {
+      "uri": "https://api.sketchfab.com/v3/models/0b62c6357ab448289b6f4dc3b0be69db",
+      "uid": "0b62c6357ab448289b6f4dc3b0be69db",
+      "name": "LEGO Micro TIE Fighter MOC [#0236]",
+      "staffpickedAt": null,
+      "viewCount": 66,
+      "likeCount": 2,
+      "animationCount": 0,
+      "viewerUrl": "https://sketchfab.com/3d-models/none-0b62c6357ab448289b6f4dc3b0be69db",
+      "embedUrl": "https://sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/embed",
+      "commentCount": 0,
+      "isDownloadable": true,
+      "publishedAt": "2024-03-17T19:49:49.082528",
+      "tags": [
+        {
+          "name": "mini",
+          "slug": "mini",
+          "uri": "https://api.sketchfab.com/v3/tags/mini"
+        },
+        {
+          "name": "micro",
+          "slug": "micro",
+          "uri": "https://api.sketchfab.com/v3/tags/micro"
+        },
+        {
+          "name": "star",
+          "slug": "star",
+          "uri": "https://api.sketchfab.com/v3/tags/star"
+        },
+        {
+          "name": "star-wars",
+          "slug": "star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/star-wars"
+        },
+        {
+          "name": "tie-fighter",
+          "slug": "tie-fighter",
+          "uri": "https://api.sketchfab.com/v3/tags/tie-fighter"
+        },
+        {
+          "name": "lego-moc",
+          "slug": "lego-moc",
+          "uri": "https://api.sketchfab.com/v3/tags/lego-moc"
+        },
+        {
+          "name": "bricklink-studio",
+          "slug": "bricklink-studio",
+          "uri": "https://api.sketchfab.com/v3/tags/bricklink-studio"
+        },
+        {
+          "name": "lego-star-wars",
+          "slug": "lego-star-wars",
+          "uri": "https://api.sketchfab.com/v3/tags/lego-star-wars"
+        },
+        {
+          "name": "lego-model",
+          "slug": "lego-model",
+          "uri": "https://api.sketchfab.com/v3/tags/lego-model"
+        },
+        {
+          "name": "bobbybrix",
+          "slug": "bobbybrix",
+          "uri": "https://api.sketchfab.com/v3/tags/bobbybrix"
+        }
+      ],
+      "categories": [
+        {
+          "name": "science-technology"
+        }
+      ],
+      "thumbnails": {
+        "images": [
+          {
+            "uid": "6d5b4b93a130427f8880dd05e6f3eb7f",
+            "size": 53359,
+            "width": 1920,
+            "url": "https://media.sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/thumbnails/ef74ae88fcd3427c94bb4f8140ae9f99/459db6c69a004e579b2ef893d83b5df7.jpeg",
+            "height": 1080
+          },
+          {
+            "uid": "ebb1be6060d74261a4e7ab41a93ed22b",
+            "size": 18524,
+            "width": 1024,
+            "url": "https://media.sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/thumbnails/ef74ae88fcd3427c94bb4f8140ae9f99/4f5c21bc319d44faa27a9fc3ee060018.jpeg",
+            "height": 576
+          },
+          {
+            "uid": "98317d94a50e491fb75bd5aa5537cc38",
+            "size": 11115,
+            "width": 720,
+            "url": "https://media.sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/thumbnails/ef74ae88fcd3427c94bb4f8140ae9f99/583a3146bf494c0ab7ccf42198b30909.jpeg",
+            "height": 405
+          },
+          {
+            "uid": "c63bb007b7b64225b18dccb323dda00f",
+            "size": 2842,
+            "width": 256,
+            "url": "https://media.sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/thumbnails/ef74ae88fcd3427c94bb4f8140ae9f99/c23bcde294a445edad0959d9c8f74f09.jpeg",
+            "height": 144
+          },
+          {
+            "uid": "0be2d084f27d452d8d9d8a3355ab1bd2",
+            "size": 927,
+            "width": 64,
+            "url": "https://media.sketchfab.com/models/0b62c6357ab448289b6f4dc3b0be69db/thumbnails/ef74ae88fcd3427c94bb4f8140ae9f99/e4ef97b5b145422aaa212f85b1ad3c2b.jpeg",
+            "height": 36
+          }
+        ]
+      },
+      "user": {
+        "uid": "258e0eb704be40fea33a17533b0083f2",
+        "username": "bobbybrix",
+        "displayName": "The Bobby Brix Channel",
+        "profileUrl": "https://sketchfab.com/bobbybrix",
+        "account": "basic",
+        "avatar": {
+          "uri": "https://api.sketchfab.com/v3/avatars/8f67f16f4f50451f8639dc27077ae0db",
+          "images": [
+            {
+              "size": 2016,
+              "width": 32,
+              "url": "https://media.sketchfab.com/avatars/8f67f16f4f50451f8639dc27077ae0db/746d181254144cf2b33c4cc9b796726d.png",
+              "height": 32
+            },
+            {
+              "size": 3819,
+              "width": 48,
+              "url": "https://media.sketchfab.com/avatars/8f67f16f4f50451f8639dc27077ae0db/0ef89d745d864d66b8b24f5053dbb458.png",
+              "height": 48
+            },
+            {
+              "size": 9715,
+              "width": 90,
+              "url": "https://media.sketchfab.com/avatars/8f67f16f4f50451f8639dc27077ae0db/c6429da96578415a8a1645bc5db872d5.png",
+              "height": 90
+            },
+            {
+              "size": 11416,
+              "width": 100,
+              "url": "https://media.sketchfab.com/avatars/8f67f16f4f50451f8639dc27077ae0db/ed2216de544e46688c06111b8b9598e1.png",
+              "height": 100
+            }
+          ]
+        },
+        "uri": "https://api.sketchfab.com/v3/users/258e0eb704be40fea33a17533b0083f2"
+      },
+      "description": "Building Instructions: https://rebrickable.com/mocs/MOC-177286/The%20Bobby%20Brix%20Channel/micro-tie-fighter/\n\nYouTube Video: https://youtu.be/Ye_uJ8cqmgw?si=ch7mCB7a62ZNnqBp\n\nThis LEGO® MOC was designed, created and rendered by The Bobby Brix Channel in 2024 and published on Sketchfab in 2024.\n\n* This product may not be distributed publicly or commercially by a third-party without written permission from The Bobby Brix Channel. \n* This product may be reused, re-adapted or remixed by the user under the condition of proper attribution of the creator and/or original design. \n* This product is for individual and non-commercial use only unless stated otherwise. \n \nDo not distribute.",
+      "faceCount": 98225,
+      "createdAt": "2024-03-17T19:39:47.613690",
+      "vertexCount": 62507,
+      "isAgeRestricted": false,
+      "archives": {
+        "glb": {
+          "textureCount": 0,
+          "size": 2939572,
+          "type": "glb",
+          "textureMaxResolution": 0,
+          "faceCount": 98089,
+          "vertexCount": 72217
+        },
+        "gltf": {
+          "textureCount": 0,
+          "size": 1069507,
+          "type": "gltf",
+          "textureMaxResolution": 0,
+          "faceCount": 98089,
+          "vertexCount": 72217
+        },
+        "source": {
+          "textureCount": null,
+          "size": 171879,
+          "type": "source",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        },
+        "usdz": {
+          "textureCount": null,
+          "size": 376044,
+          "type": "usdz",
+          "textureMaxResolution": null,
+          "faceCount": null,
+          "vertexCount": null
+        }
+      },
+      "license": {
+        "uid": "bbfe3f7dbcdd4122b966b85b9786a989",
+        "label": "CC Attribution-NonCommercial"
+      },
+      "isFabAi": false
+    }
+  ]
+}

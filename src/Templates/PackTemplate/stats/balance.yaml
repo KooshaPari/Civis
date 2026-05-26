@@ -1,0 +1,6 @@
+overrides:
+  - target: unit.stats.hp
+    value: 1.0
+    mode: multiply
+    # filter: Components.MeleeUnit  # uncomment to target only melee units
+    # filter: Components.RangeUnit  # uncomment to target only ranged units

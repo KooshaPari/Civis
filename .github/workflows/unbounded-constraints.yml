@@ -1,0 +1,82 @@
+name: unbounded-constraints
+
+# Pattern #94 generalization gate (#261). Pairs with the narrow
+# framework-version gate (#260, scripts/ci/check_framework_version.py).
+#
+# This gate sweeps the repo for the broader anti-pattern: "if a check has
+# never returned false in production, it's not a check." Six rules:
+#
+#   A. NuGet floating versions  (Version="*", "[0.0.0,)", ">=0.0.0")
+#   B. Dependabot ignores without rationale comments
+#   C. .gitignore overbroad globs (`*`, `*/`, `**/*`, `**`)
+#   D. Tautological predicates  (if (... || true), if (true), if (x == x))
+#   E. Vacuous numeric guards   (Count >= 0, x <= int.MaxValue)
+#   F. Unbounded join consumers (string.Join into a logger w/o Take(N))
+#
+# CLI: scripts/ci/detect_unbounded_constraints.py (run --self-test for spec).
+# Allowlist: docs/qa/unbounded-constraints-allowlist.txt (one path or
+#            `rule|file|line` key per line).
+# Report: docs/qa/unbounded-constraints-report.json.
+
+on:
+  pull_request:
+    paths:
+      - "**/*.csproj"
+      - "**/*.props"
+      - "**/*.targets"
+      - "**/*.cs"
+      - ".github/dependabot.yml"
+      - ".gitignore"
+      - "**/.gitignore"
+      - "scripts/ci/detect_unbounded_constraints.py"
+      - "docs/qa/unbounded-constraints-allowlist.txt"
+      - ".github/workflows/unbounded-constraints.yml"
+  push:
+    branches: [main]
+    paths:
+      - "**/*.csproj"
+      - "**/*.props"
+      - "**/*.targets"
+      - "**/*.cs"
+      - ".github/dependabot.yml"
+      - ".gitignore"
+      - "**/.gitignore"
+      - "scripts/ci/detect_unbounded_constraints.py"
+      - "docs/qa/unbounded-constraints-allowlist.txt"
+      - ".github/workflows/unbounded-constraints.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unbounded-constraints-check:
+    name: Pattern #94 generalized unbounded-constraints
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: Self-test the gate
+        run: python scripts/ci/detect_unbounded_constraints.py --self-test
+
+      - name: Run unbounded-constraints gate
+        run: python scripts/ci/detect_unbounded_constraints.py --quiet
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: unbounded-constraints-report
+          path: docs/qa/unbounded-constraints-report.json
+          if-no-files-found: warn
+          retention-days: 14

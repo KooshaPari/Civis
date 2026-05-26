@@ -1,0 +1,79 @@
+name: Pack Submission
+description: Submit a community content pack for review
+title: "[Pack]: "
+labels: ["pack-submission", "community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submit your content pack for inclusion in the DINOForge ecosystem.
+
+  - type: input
+    id: pack-id
+    attributes:
+      label: Pack ID
+      description: The unique identifier for your pack (from pack.yaml).
+      placeholder: "my-awesome-pack"
+    validations:
+      required: true
+
+  - type: input
+    id: pack-version
+    attributes:
+      label: Pack Version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pack-type
+    attributes:
+      label: Pack Type
+      options:
+        - content
+        - balance
+        - ruleset
+        - total_conversion
+        - utility
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does your pack do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: contents
+    attributes:
+      label: Pack Contents
+      description: List what the pack includes (factions, units, buildings, etc.).
+    validations:
+      required: true
+
+  - type: input
+    id: repo-url
+    attributes:
+      label: Repository URL
+      description: Link to your pack's repository or PR branch.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission Checklist
+      options:
+        - label: Pack has a valid `pack.yaml` manifest
+          required: true
+        - label: Pack passes `PackCompiler validate`
+          required: true
+        - label: All schema files are valid
+          required: true
+        - label: Dependencies are declared in manifest
+          required: true
+        - label: Pack has been tested with the target game version
+          required: false

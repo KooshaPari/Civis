@@ -1,0 +1,10 @@
+# Pattern #106: Implicit File Encoding Allowlist
+#
+# Format: <file-path>:<line-num> <reason>
+# Example: src/Tools/PackCompiler/PackLoader.cs:125 encoding-utf8-guaranteed: JSON config always UTF-8
+#
+# Use this file to allowlist File.ReadAllText/WriteAllText calls where:
+# - Encoding is guaranteed by external contract (e.g., JSON RFC specifies UTF-8)
+# - Legacy code where encoding is implicit but safe
+# - Temporary/debug code that doesn't affect user content
+

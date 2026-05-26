@@ -1,0 +1,34 @@
+id: economy-abundance
+display_name: Abundance Economy
+description: |
+  A boosted economy profile for aggressive expansion and fast-paced gameplay.
+  Higher production rates and starting resources, reduced building costs, and
+  improved worker efficiency. Trade rates are slightly more favorable.
+  Recommended for experienced players seeking economic dominance.
+
+starting_resources:
+  food: 400
+  wood: 300
+  stone: 200
+  iron: 100
+  gold: 25
+
+production_multipliers:
+  food: 1.5
+  wood: 1.4
+  stone: 1.3
+  iron: 1.2
+  gold: 1.0
+
+consumption_multipliers:
+  food: 1.2
+  wood: 1.1
+  stone: 1.1
+  iron: 1.0
+  gold: 1.0
+
+trade_rate_modifier: 0.85
+trade_cooldown_modifier: 0.8
+storage_multiplier: 1.5
+building_cost_modifier: 0.9
+worker_efficiency: 1.2

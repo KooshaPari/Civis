@@ -1,0 +1,14 @@
+# Pattern #441: Hardcoded Pipe Name Allowlist
+#
+# Entries are: <file>:<line-number> [reason]
+# Inline marker (same-line):  // hardcoded-pipe-name-ok: <reason>
+#
+# Policy: Test isolation requires GUID-randomized pipe names. Hardcoded strings
+# can collide if tests run in parallel, violating test independence.
+#
+# Exception: Tests that deliberately test pipe-name behavior (e.g., typo validation,
+# specific error paths) may be allowed with documented reason.
+
+# Baseline policy-allowed sites for iter-108 regression prevention
+# (These tests use hardcoded names for specific reasons; conversion to GUID-based
+# names would change test semantics)

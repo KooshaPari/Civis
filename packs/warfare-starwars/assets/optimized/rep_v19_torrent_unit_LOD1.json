@@ -1,0 +1,12 @@
+{
+  "assetId": "rep_v19_torrent_unit",
+  "lod": "LOD1",
+  "targetQuality": 0.6,
+  "triangleCount": 1440,
+  "meshes": [],
+  "materials": [],
+  "metadata": {
+    "optimizationMethod": "greedy_decimation",
+    "reductionPercent": 40
+  }
+}

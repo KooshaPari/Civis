@@ -23,7 +23,7 @@
 **What does not work yet**
 
 - Full capability API: `world_read` / `action_emit` (§5–8).
-- Economic WASM phase hooks; mod signing (§14).
+- Full float data-flow scan (§3.5); mod signing is partial (§14).
 - Replay bus JSON `mod.loaded.v1` (engine has `ReplayEvent::ModLoaded` only).
 
 ## v2 — Host registry + policy stub — Done (stub)
@@ -52,7 +52,7 @@
 | `.civmod` ZIP load | Done | `ModHost::load_civmod_archive` |
 | `civlab-sdk` | Done | `crates/civlab-sdk` |
 | Example WASM build | Script | `scripts/build-example-policy-wasm.ps1` |
-| Determinism scan | Planned | §3.4 |
+| Determinism scan | Done (MVP) | `crates/mod-host/src/determinism.rs` |
 | CI packaged `.civmod` | Planned | `scripts/package-example-mod.ps1` (optional) |
 
 ## v4 — Save/load + distribution (planned)

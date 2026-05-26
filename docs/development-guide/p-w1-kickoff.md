@@ -50,6 +50,12 @@
 | FR-CIV-TACTICS-048 | implemented | `mods/example-economic` + economy WASM tick test |
 | FR-CIV-TACTICS-049 | implemented | `civlab::memory_read` / `memory_write` host imports |
 | FR-CIV-TACTICS-050 | implemented | scenario `military:` cadence/range overrides |
+| FR-CIV-TACTICS-051 | implemented | `baseline.yaml` loads `mods/example-economic` |
+| FR-CIV-TACTICS-052 | implemented | per-mod guest memory snapshots on `ModHost` |
+| FR-CIV-TACTICS-053 | implemented | `civlab::sim_tick` + `HOST_CAPABILITY_IMPORTS` |
+| FR-CIV-TACTICS-054 | implemented | mod browser on watch/server snapshot + dashboard |
+| FR-CIV-TACTICS-055 | implemented | `ModGuestStateSave` JSON export/import |
+| FR-CIV-TACTICS-056 | implemented | WASM determinism scan at mod load |
 
 ## First PR slice (recommended)
 
@@ -67,7 +73,8 @@
 12. **Scenario fog + economic WASM + capability host imports** — **done** (item 13).
 13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
 14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
-15. **Next:** Save/load guest memory blobs (CIV-1000), mod browser UX, determinism scan.
+15. **Guest memory save/load + mod browser + determinism scan** — **done** (item 16).
+16. **Next:** Full CIV-1000 save bundles, float data-flow scan, mod distribution.
 
 ## Run
 

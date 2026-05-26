@@ -246,8 +246,8 @@ mod tests {
         assert!(
             view.civ_pins
                 .iter()
-                .any(|p| p.idx == 10_003 && p.job == Some(JobLabel::Farmer)),
-            "civilian id 10003 maps to Farmer via job_type_for_civilian_id"
+                .any(|p| p.idx == 7 && p.job == Some(JobLabel::Farmer)),
+            "civilian id 7 maps to Farmer via job_type_for_civilian_id (id % 7 == 0)"
         );
     }
 

@@ -764,6 +764,9 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 .inspector-hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 12px; line-height: 1.4; }
 .inspector-section { margin-bottom: 16px; }
 .inspector-section h3 { font-size: 0.9rem; margin: 0 0 8px; color: var(--accent); }
+.mods-list { list-style: none; margin: 0; padding: 0; }
+.mods-list-item { margin-bottom: 8px; font-size: 0.85rem; }
+.mods-meta { display: block; color: var(--muted, #888); font-size: 0.75rem; }
 .event-feed {
   display: grid;
   gap: 10px;

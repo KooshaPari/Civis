@@ -220,12 +220,12 @@ fn setup_all(
     commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
     commands.insert_resource(AmbientLight {
         color: Color::srgb(0.72, 0.78, 0.9),
-        brightness: 0.8,
+        brightness: 500.0,
     });
 
     commands.spawn((
         DirectionalLight {
-            illuminance: 3.0,
+            illuminance: 15_000.0,
             shadows_enabled: true,
             ..default()
         },
@@ -235,7 +235,7 @@ fn setup_all(
 
     commands.spawn((
         DirectionalLight {
-            illuminance: 1.5,
+            illuminance: 15_000.0,
             shadows_enabled: false,
             ..default()
         },

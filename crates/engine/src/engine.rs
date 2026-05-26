@@ -1737,7 +1737,10 @@ mod tests {
     /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
     #[test]
     fn cold_tier_diffusion_only_on_cadence_boundaries() {
+        use civ_agents::spawn_many;
+
         let mut sim = Simulation::with_seed(55);
+        let _ = spawn_many(&mut sim.world, 6, 50_000, 0);
         let policy = LodPolicy::default();
 
         let cold_entities: Vec<hecs::Entity> = sim

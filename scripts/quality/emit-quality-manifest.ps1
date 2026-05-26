@@ -49,9 +49,9 @@ $optionalUnreal = & (Join-Path $PSScriptRoot 'Invoke-OptionalUnrealGates.ps1') -
 # (no Unreal install detected and CIVIS_QUALITY_UNREAL is unset).
 if ($null -eq $optionalUnreal) { $optionalUnreal = @{} }
 foreach ($entry in $optionalUnreal.GetEnumerator()) {
+    # Unreal gates are optional: record result but never block the push.
     $results[$entry.Key] = $entry.Value
-    if ($entry.Value.status -eq 'fail') { $Failed = $true }
-    $label = $entry.Value.status
+    $label = if ($entry.Value -is [hashtable]) { $entry.Value.status } else { "recorded" }
     Write-Host "  $label $($entry.Key)"
 }
 

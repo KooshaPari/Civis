@@ -40,9 +40,14 @@ def main() -> int:
                 entry: dict[str, str] = {"status": "fail", "detail": ""}
                 for pair in v:
                     if isinstance(pair, dict):
-                        pk = pair.get("Key") or pair.get("key", "")
-                        pv = pair.get("Value") or pair.get("value", "")
-                        entry[str(pk).lower()] = str(pv)
+                        pk = str(pair.get("Key") or pair.get("key") or "").lower()
+                        pv = str(
+                            pair.get("Value")
+                            if pair.get("Value") is not None
+                            else pair.get("value", "")
+                        )
+                        if pk:  # skip pairs with empty key
+                            entry[pk] = pv
                 gates[k] = entry
             else:
                 gates[k] = {"status": str(v), "detail": ""}

@@ -32,7 +32,7 @@ function Test-UeAndUbtAvailable {
 }
 
 function Invoke-GateResult {
-    param([string] $Name, [scriptblock] $Block)
+    param([scriptblock] $Block, [string] $Name = '')
     & $Block
     if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
         return @{ status = 'fail'; detail = "exit $LASTEXITCODE" }

@@ -65,7 +65,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	var x := int(local.x)
 	var z := int(local.y)
-	var y := _camera.orbit_target.y
+	var y: float = _camera.orbit_target.y
 	if not _heights.is_empty():
 		var idx := z * GRID + x
 		if idx >= 0 and idx < _heights.size():

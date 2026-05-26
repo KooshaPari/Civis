@@ -263,6 +263,8 @@ mod tests {
         assert!((scenario.scarcity_multiplier - 1.0).abs() < f64::EPSILON);
         assert_eq!(scenario.fog_vision_radius, Some(8));
         assert_eq!(scenario.fog_grid_size, 64);
+        assert_eq!(scenario.military.war_cadence_ticks, Some(16));
+        assert_eq!(scenario.military.engage_range_grid, Some(10));
         assert_eq!(scenario.mods, vec!["mods/example-policy"]);
     }
 
@@ -281,10 +283,7 @@ mod tests {
             military: ScenarioMilitary::default(),
         };
         let sim = scenario.into_simulation(1);
-        assert_eq!(
-            sim.military_phase_config().war.fog_vision_radius,
-            Some(6)
-        );
+        assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
         assert_eq!(sim.military_phase_config().war.fog_grid_size, 32);
     }
 

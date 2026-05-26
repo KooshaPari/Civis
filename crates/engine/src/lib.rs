@@ -26,9 +26,9 @@ pub mod spawn;
 pub mod spectator;
 
 pub use engine::{
-    Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType,
-    MilitaryUnit, PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
-    SimulationSnapshot, UnitType, WorldState,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
+    DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
+    Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
 };
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,

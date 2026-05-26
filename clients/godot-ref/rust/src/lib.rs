@@ -44,6 +44,22 @@ fn height_rgb(height: f32) -> [f32; 3] {
     biome_rgb(biome_from_height(height))
 }
 
+fn terrain_seed() -> u64 {
+    42
+}
+
+fn terrain_noise(x: i32, z: i32) -> f32 {
+    let mut v = terrain_seed()
+        ^ ((x as i64 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+        ^ ((z as i64 as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F));
+    v ^= v >> 33;
+    v = v.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    v ^= v >> 33;
+    v = v.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
+    v ^= v >> 33;
+    (v as f64 / u64::MAX as f64) as f32
+}
+
 fn terrain_height_at(sim: &Simulation, x: i32, z: i32) -> f32 {
     let mut top = 0.0f32;
     for y in (0..128).rev() {
@@ -60,7 +76,18 @@ fn terrain_height_at(sim: &Simulation, x: i32, z: i32) -> f32 {
             break;
         }
     }
-    top
+    if top > 0.0 {
+        return top;
+    }
+
+    let nx = x as f32 / 127.0;
+    let nz = z as f32 / 127.0;
+    let base = 0.36
+        + 0.10 * (nx * std::f32::consts::TAU * 2.0).sin()
+        + 0.08 * (nz * std::f32::consts::TAU * 1.5).cos()
+        + 0.05 * ((nx + nz) * std::f32::consts::TAU * 3.0).sin();
+    let jitter = (terrain_noise(x, z) - 0.5) * 0.08;
+    (base + jitter).clamp(0.0, 1.0)
 }
 
 fn terrain_biome_at(sim: &Simulation, x: i32, z: i32) -> u8 {

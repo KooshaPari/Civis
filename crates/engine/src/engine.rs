@@ -95,7 +95,7 @@ pub struct Citizen {
     pub job: Option<JobType>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum JobType {
     Farmer,
     Warrior,
@@ -1280,10 +1280,7 @@ impl Simulation {
     }
 
     /// Apply scenario military cadence/combat overrides (FR-CIV-TACTICS-050).
-    pub fn apply_scenario_military(
-        &mut self,
-        military: &crate::scenario::ScenarioMilitary,
-    ) {
+    pub fn apply_scenario_military(&mut self, military: &crate::scenario::ScenarioMilitary) {
         if let Some(v) = military.movement_cadence_ticks {
             self.military_phase.movement.cadence_ticks = v;
         }

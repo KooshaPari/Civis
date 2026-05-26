@@ -225,7 +225,7 @@ namespace DINOForge.SDK.Registry
         public async Task<IReadOnlyList<RegistryPackEntry>> GetAllPacksAsync(
             CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(cancellationToken);
+            await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 if (_cache != null && _timeProvider.GetUtcNow().UtcDateTime < _cacheExpiry)
@@ -233,9 +233,10 @@ namespace DINOForge.SDK.Registry
 
                 using HttpRequestMessage request = new(HttpMethod.Get, _registryUrl);
                 using HttpResponseMessage response = await _http
-                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
-                string json = await ReadAsStringWithCancellationAsync(response.Content, cancellationToken);
+                string json = await ReadAsStringWithCancellationAsync(response.Content, cancellationToken).ConfigureAwait(false);
 
                 RegistryDocument? doc = JsonSerializer.Deserialize<RegistryDocument>(json, JsonOptions.Default);
 
@@ -264,7 +265,7 @@ namespace DINOForge.SDK.Registry
             PackRegistryFilter? filter,
             CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken);
+            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken).ConfigureAwait(false);
 
             if (filter == null)
                 return all;
@@ -330,7 +331,7 @@ namespace DINOForge.SDK.Registry
             string id,
             CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken);
+            IReadOnlyList<RegistryPackEntry> all = await GetAllPacksAsync(cancellationToken).ConfigureAwait(false);
             return all.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -364,10 +365,10 @@ namespace DINOForge.SDK.Registry
             while (!readTask.IsCompleted)
             {
                 ct.ThrowIfCancellationRequested();
-                await Task.Delay(200, ct);
+                await Task.Delay(200, ct).ConfigureAwait(false);
             }
 
-            return await readTask;
+            return await readTask.ConfigureAwait(false);
         }
 
         /// <summary>

@@ -68,7 +68,7 @@ public static class PollingHelper
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;
             TimeSpan delayTime = TimeSpan.FromMilliseconds(Math.Min(currentDelay.TotalMilliseconds, remaining.TotalMilliseconds));
             if (delayTime > TimeSpan.Zero)
-                await Task.Delay(delayTime, ct);
+                await Task.Delay(delayTime, ct).ConfigureAwait(false);
 
             // Exponential backoff (capped at actualMaxDelay)
             double nextDelayMs = currentDelay.TotalMilliseconds * backoffFactor;
@@ -127,7 +127,7 @@ public static class PollingHelper
             TimeSpan remaining = deadline - timeProvider.GetUtcNow().UtcDateTime;
             TimeSpan delayTime = TimeSpan.FromMilliseconds(Math.Min(currentDelay.TotalMilliseconds, remaining.TotalMilliseconds));
             if (delayTime > TimeSpan.Zero)
-                await Task.Delay(delayTime, ct);
+                await Task.Delay(delayTime, ct).ConfigureAwait(false);
 
             // Exponential backoff (capped at actualMaxDelay)
             double nextDelayMs = currentDelay.TotalMilliseconds * backoffFactor;

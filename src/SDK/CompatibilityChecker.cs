@@ -79,9 +79,10 @@ namespace DINOForge.SDK
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // safe-swallow: best-effort version probe
+                    System.Diagnostics.Debug.WriteLine($"SDK CompatibilityChecker BepInEx version probe failed: {ex.Message}");
                 }
                 return WildcardVersionConstraint;
             }
@@ -114,9 +115,10 @@ namespace DINOForge.SDK
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // safe-swallow: best-effort version probe
+                    System.Diagnostics.Debug.WriteLine($"SDK CompatibilityChecker Unity version probe failed: {ex.Message}");
                 }
                 return WildcardVersionConstraint;
             }

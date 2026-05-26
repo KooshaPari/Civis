@@ -177,7 +177,7 @@ namespace DINOForge.SDK.Dependencies
             var packs = ListPacks();
             foreach (var pack in packs)
             {
-                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct);
+                string sha = await GetSubmoduleCommitShaAsync(pack.Path, ct).ConfigureAwait(false);
                 lockEntries.Add(string.Format("{0} {1}", pack.Path, sha));
             }
 
@@ -259,7 +259,7 @@ namespace DINOForge.SDK.Dependencies
                 CreateNoWindow = true
             };
 
-            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct);
+            return await RunGitCommandWithOutputAsync(psi, string.Format("git rev-parse for {0}", submodulePath), ct).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -272,10 +272,10 @@ namespace DINOForge.SDK.Dependencies
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
-            await WaitForProcessExitAsync(process, ct);
+            await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
 
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
+            string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            string error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
@@ -292,11 +292,11 @@ namespace DINOForge.SDK.Dependencies
             if (process == null)
                 throw new InvalidOperationException("Failed to start git process");
 
-            await WaitForProcessExitAsync(process, ct);
+            await WaitForProcessExitAsync(process, ct).ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                string error = process.StandardError.ReadToEnd();
+                string error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
                 throw new InvalidOperationException(string.Format("{0} failed: {1}", commandName, error));
             }
         }
@@ -309,7 +309,7 @@ namespace DINOForge.SDK.Dependencies
             while (!process.HasExited)
             {
                 ct.ThrowIfCancellationRequested();
-                await Task.Delay(50, ct);
+                await Task.Delay(50, ct).ConfigureAwait(false);
             }
         }
     }

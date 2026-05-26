@@ -595,9 +595,10 @@ namespace DINOForge.SDK.Assets
                         File.Move(logPath, rotatedPath);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // safe-swallow: rotation is best-effort; continue to append
+                    System.Diagnostics.Debug.WriteLine($"SDK AssetService log rotation failed: {ex.Message}");
                 }
 
                 SafeFileIO.AppendText(logPath, $"[{_timeProvider.GetUtcNow().UtcDateTime:u}] WARN {message}\n");

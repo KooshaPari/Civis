@@ -294,6 +294,16 @@ impl ModHost {
             .collect()
     }
 
+    /// Load a mod directory or `.civmod` archive (extension selects loader).
+    pub fn load_mod_path(&mut self, path: impl AsRef<Path>) -> Result<(), ManifestError> {
+        let path = path.as_ref();
+        if path.extension().and_then(|e| e.to_str()) == Some("civmod") {
+            self.load_civmod_archive(path)
+        } else {
+            self.load_manifest_dir(path)
+        }
+    }
+
     /// Load `manifest.toml` from `mod_dir` and register it.
     pub fn load_manifest_dir(&mut self, mod_dir: impl AsRef<Path>) -> Result<(), ManifestError> {
         let mod_dir = mod_dir.as_ref();

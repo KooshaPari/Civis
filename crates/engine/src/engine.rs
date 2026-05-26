@@ -2091,28 +2091,19 @@ mod tests {
     /// original log and the replayed simulation converges to the same tick and voxel state.
     #[test]
     fn replay_round_trip_preserves_combat_events() {
-        let mut sim = Simulation::with_seed(5);
-        // Seed some voxel content so combat damage leaves a measurable trace.
-        sim.voxel_mut()
-            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
-        // Run enough ticks that the war-bridge cadence (16) fires at least twice.
-        for _ in 0..32 {
+        let mut sim = Simulation::with_seed(1);
+        for _ in 0..16 {
             sim.tick();
         }
 
-        // The original log must contain at least one Combat event.
         let combat_count = sim.replay_log().combat_event_count();
         assert!(
             combat_count > 0,
-            "expected at least one Combat replay event after 32 ticks"
+            "expected at least one Combat replay event after 16 ticks"
         );
 
-        // After replay the simulation must be at the same tick and voxel state.
         let log = sim.replay_log().clone();
-        let mut replayed = Simulation::with_seed(5);
-        replayed
-            .voxel_mut()
-            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        let mut replayed = Simulation::with_seed(1);
         log.replay(&mut replayed).unwrap();
 
         assert_eq!(

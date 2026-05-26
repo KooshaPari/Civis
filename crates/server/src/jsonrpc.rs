@@ -1920,6 +1920,7 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
+                    mods: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,

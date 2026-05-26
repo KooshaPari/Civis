@@ -1,4 +1,4 @@
-//! WASM guest invocation via `wasmtime` (CIV-0700 v3 — policy tick export).
+//! WASM guest invocation via `wasmtime` (CIV-0700 v3 — policy + military tick exports).
 
 use thiserror::Error;
 
@@ -12,24 +12,38 @@ pub enum WasmGuestError {
     #[error("wasm engine: {0}")]
     Engine(#[from] wasmtime::Error),
     /// Required export missing from the guest module.
-    #[error("missing export civlab_policy_tick (or policy_tick)")]
-    MissingExport,
+    #[error("missing export {export}")]
+    MissingExport {
+        /// Export name the host expected.
+        export: String,
+    },
+}
+
+fn invoke_tick_export(wasm_bytes: &[u8], primary: &str, fallback: &str) -> Result<i32, WasmGuestError> {
+    let engine = wasmtime::Engine::default();
+    let module = wasmtime::Module::new(&engine, wasm_bytes)?;
+    let mut store = wasmtime::Store::new(&engine, ());
+    let instance = wasmtime::Instance::new(&mut store, &module, &[])?;
+
+    if let Ok(func) = instance.get_typed_func::<(), i32>(&mut store, primary) {
+        return Ok(func.call(&mut store, ())?);
+    }
+    if let Ok(func) = instance.get_typed_func::<(), i32>(&mut store, fallback) {
+        return Ok(func.call(&mut store, ())?);
+    }
+    Err(WasmGuestError::MissingExport {
+        export: primary.to_owned(),
+    })
 }
 
 /// Invoke the policy-phase export from a WASM guest (`civlab_policy_tick`, else `policy_tick`).
 ///
 /// Returns the i32 the guest exported (convention: `0` = no-op success).
 pub fn invoke_policy_tick(wasm_bytes: &[u8]) -> Result<i32, WasmGuestError> {
-    let engine = wasmtime::Engine::default();
-    let module = wasmtime::Module::new(&engine, wasm_bytes)?;
-    let mut store = wasmtime::Store::new(&engine, ());
-    let instance = wasmtime::Instance::new(&mut store, &module, &[])?;
+    invoke_tick_export(wasm_bytes, "civlab_policy_tick", "policy_tick")
+}
 
-    if let Ok(func) = instance.get_typed_func::<(), i32>(&mut store, "civlab_policy_tick") {
-        return Ok(func.call(&mut store, ())?);
-    }
-    if let Ok(func) = instance.get_typed_func::<(), i32>(&mut store, "policy_tick") {
-        return Ok(func.call(&mut store, ())?);
-    }
-    Err(WasmGuestError::MissingExport)
+/// Invoke the military-phase export (`civlab_military_tick`, else `military_tick`).
+pub fn invoke_military_tick(wasm_bytes: &[u8]) -> Result<i32, WasmGuestError> {
+    invoke_tick_export(wasm_bytes, "civlab_military_tick", "military_tick")
 }

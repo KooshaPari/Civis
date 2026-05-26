@@ -562,7 +562,12 @@ impl Simulation {
         let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
         for rel in mod_paths {
             let dir = repo_root.join(rel);
-            if let Err(err) = self.mod_host.load_manifest_dir(&dir) {
+            let named_civmod = dir.file_name().and_then(|name| {
+                let archive = dir.join(format!("{}.civmod", name.to_string_lossy()));
+                archive.is_file().then_some(archive)
+            });
+            let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
+            if let Err(err) = self.mod_host.load_mod_path(load_path) {
                 tracing::warn!(mod = %rel, error = %err, "mod manifest load skipped");
                 continue;
             }
@@ -1125,6 +1130,7 @@ impl Simulation {
             &phase_cfg.movement,
             &mut samples,
             phase_cfg.movement_pulses_per_cadence,
+            &self.voxel,
         ) {
             if let Some(sample) = samples.get_mut(grid_move.unit_index) {
                 sample.grid_x = grid_move.new_grid_x;
@@ -1896,6 +1902,81 @@ mod tests {
         assert_eq!(replayed.state.tick, 16);
     }
 
+    /// FR-CIV-TACTICS-025-int2 — replay combat events drain to the same voxel state as live ticks.
+    #[test]
+    fn replay_combat_drains_to_same_voxel_state_as_live() {
+        let seed = 12;
+        let ticks = 32u64;
+        let mut live = Simulation::with_seed(seed);
+        for _ in 0..ticks {
+            live.tick();
+        }
+        let chunk_live = live.voxel().chunk_count();
+        let combat: Vec<_> = live
+            .replay_log()
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                ReplayEvent::Combat { tick, event, .. } => Some((*tick, *event)),
+                _ => None,
+            })
+            .collect();
+        assert!(!combat.is_empty(), "expected war-bridge combat in replay log");
+
+        let mut from_replay = Simulation::with_seed(seed);
+        for (tick, event) in combat {
+            from_replay.apply_replay_combat(tick, &event);
+        }
+        let pending: Vec<DamageEvent> = from_replay.pending_damage.drain(..).collect();
+        for event in pending {
+            let _ = from_replay.apply_damage_now(&event);
+        }
+        assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
+    }
+
+    /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.
+    #[test]
+    fn replay_combat_log_deterministic_for_seed_rerun() {
+        let seed = 5;
+        let ticks = 48u64;
+        let mut a = Simulation::with_seed(seed);
+        let mut b = Simulation::with_seed(seed);
+        for _ in 0..ticks {
+            a.tick();
+            b.tick();
+        }
+        let combat_a: Vec<_> = a
+            .replay_log()
+            .events
+            .iter()
+            .filter_map(|e| match e {
+                ReplayEvent::Combat {
+                    tick,
+                    shooter_id,
+                    target_id,
+                    event,
+                } => Some((*tick, *shooter_id, *target_id, *event)),
+                _ => None,
+            })
+            .collect();
+        let combat_b: Vec<_> = b
+            .replay_log()
+            .events
+            .iter()
+            .filter_map(|e| match e {
+                ReplayEvent::Combat {
+                    tick,
+                    shooter_id,
+                    target_id,
+                    event,
+                } => Some((*tick, *shooter_id, *target_id, *event)),
+                _ => None,
+            })
+            .collect();
+        assert!(!combat_a.is_empty());
+        assert_eq!(combat_a, combat_b);
+    }
+
     /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
@@ -2014,21 +2095,16 @@ mod tests {
         // Seed some voxel content so combat damage leaves a measurable trace.
         sim.voxel_mut()
             .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
-        // Run enough ticks that the war-bridge cadence (16) fires at least once.
-        for _ in 0..16 {
+        // Run enough ticks that the war-bridge cadence (16) fires at least twice.
+        for _ in 0..32 {
             sim.tick();
         }
 
         // The original log must contain at least one Combat event.
-        let combat_count = sim
-            .replay_log()
-            .events
-            .iter()
-            .filter(|e| matches!(e, ReplayEvent::Combat { .. }))
-            .count();
+        let combat_count = sim.replay_log().combat_event_count();
         assert!(
             combat_count > 0,
-            "expected at least one Combat replay event after 16 ticks"
+            "expected at least one Combat replay event after 32 ticks"
         );
 
         // After replay the simulation must be at the same tick and voxel state.

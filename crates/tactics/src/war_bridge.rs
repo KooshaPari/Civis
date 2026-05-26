@@ -1,5 +1,13 @@
 //! Phase-4 war bridge: military grid positions → per-soldier combat + voxel damage (FR-CIV-TACTICS-022/024).
+//!
+//! [`WarBridge`] owns a reference to the voxel world and exposes two primary
+//! methods:
+//! - [`WarBridge::resolve_combat`] — runs the engagement tick with per-unit LOS
+//!   gating; a shooter never fires at a target it cannot see.
+//! - [`WarBridge::formation_move`] — returns the target grid positions for a
+//!   squad moving in formation, computed via [`formation_positions`].
 
+use crate::formation::{formation_positions, Facing, FormationKind};
 use crate::los::line_of_sight;
 use crate::DamageEvent;
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
@@ -135,4 +143,246 @@ pub fn tick_war_bridge(
     }
 
     engagements
+}
+
+// ---------------------------------------------------------------------------
+// WarBridge struct
+// ---------------------------------------------------------------------------
+
+/// Bridges the tactics system (LOS, formations) with the voxel simulation
+/// engine (FR-CIV-TACTICS-022/024).
+///
+/// `WarBridge` holds a reference to the [`VoxelWorld`] so that callers do not
+/// need to plumb the world into every call site.  Two primary methods are
+/// exposed:
+///
+/// * [`WarBridge::resolve_combat`] — runs an engagement tick; every attacker
+///   must have clear LOS to its chosen target before a [`CombatEngagement`] is
+///   produced.
+/// * [`WarBridge::formation_move`] — returns the absolute target grid positions
+///   for a squad moving into the requested formation.
+pub struct WarBridge<'world> {
+    world: &'world VoxelWorld<MaterialId>,
+    config: WarBridgeConfig,
+}
+
+impl<'world> WarBridge<'world> {
+    /// Construct a new bridge backed by `world` with the given `config`.
+    pub fn new(world: &'world VoxelWorld<MaterialId>, config: WarBridgeConfig) -> Self {
+        Self { world, config }
+    }
+
+    /// Construct a bridge with [`WarBridgeConfig::default`].
+    pub fn with_defaults(world: &'world VoxelWorld<MaterialId>) -> Self {
+        Self::new(world, WarBridgeConfig::default())
+    }
+
+    /// Resolve cross-faction engagements for `tick`.
+    ///
+    /// Delegates to [`tick_war_bridge`]; LOS is checked per shooter–target pair
+    /// using the voxel world held by this bridge.
+    ///
+    /// Returns an empty `Vec` when the tick does not fall on the configured
+    /// cadence boundary.
+    pub fn resolve_combat(
+        &self,
+        tick: u64,
+        units: &[MilitaryUnitSample],
+    ) -> Vec<CombatEngagement> {
+        tick_war_bridge(tick, &self.config, units, self.world)
+    }
+
+    /// Compute the **absolute target grid positions** for `units` when they
+    /// move into `formation` facing `facing`.
+    ///
+    /// The formation is anchored at the centroid of the current unit positions.
+    /// Each returned position corresponds to the same slot index in `units`.
+    ///
+    /// Returns an empty `Vec` for an empty squad.
+    pub fn formation_move(
+        &self,
+        units: &[MilitaryUnitSample],
+        formation: FormationKind,
+        facing: Facing,
+    ) -> Vec<(i32, i32)> {
+        if units.is_empty() {
+            return Vec::new();
+        }
+        let positions: Vec<(i32, i32)> = units.iter().map(|u| (u.grid_x, u.grid_y)).collect();
+        formation_positions(&positions, formation, facing)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_voxel::WorldCoord;
+
+    fn empty_world() -> VoxelWorld<MaterialId> {
+        VoxelWorld::new(1)
+    }
+
+    fn two_enemy_units() -> [MilitaryUnitSample; 2] {
+        [
+            MilitaryUnitSample {
+                unit_id: 1,
+                faction_id: 0,
+                grid_x: 0,
+                grid_y: 0,
+            },
+            MilitaryUnitSample {
+                unit_id: 2,
+                faction_id: 1,
+                grid_x: 4,
+                grid_y: 0,
+            },
+        ]
+    }
+
+    fn bridge_config_immediate() -> WarBridgeConfig {
+        WarBridgeConfig {
+            cadence_ticks: 1,
+            engage_range_grid: 16,
+            ..WarBridgeConfig::default()
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-TACTICS-022 — LOS-gated combat resolution
+    // -----------------------------------------------------------------------
+
+    /// Attack is blocked when solid voxels fill the entire path between shooter
+    /// and target.
+    #[test]
+    fn attack_blocked_when_no_los() {
+        let mut world = empty_world();
+        let units = two_enemy_units();
+        // Fill the grid cells between the two units with solid voxels.
+        // grid_to_world_coord maps grid steps to voxel coordinates; we place a
+        // wall directly in the world-coordinate corridor.
+        let shooter_wc = grid_to_world_coord(0, 0);
+        let target_wc = grid_to_world_coord(4, 0);
+        // Step halfway along x in world coords.
+        let mid_x = (shooter_wc.x + target_wc.x) / 2;
+        world.write(WorldCoord { x: mid_x, y: 0, z: 0 }, MaterialId(1));
+
+        let bridge = WarBridge::new(&world, bridge_config_immediate());
+        let engagements = bridge.resolve_combat(1, &units);
+        // Neither unit should be able to fire; the wall blocks both directions.
+        assert!(
+            engagements.is_empty(),
+            "expected no engagements when LOS is blocked, got {:?}",
+            engagements
+        );
+    }
+
+    /// Attack succeeds when the path between shooter and target is clear.
+    #[test]
+    fn attack_succeeds_with_clear_los() {
+        let world = empty_world(); // no obstacles
+        let units = two_enemy_units();
+
+        let bridge = WarBridge::new(&world, bridge_config_immediate());
+        let engagements = bridge.resolve_combat(1, &units);
+        assert_eq!(
+            engagements.len(),
+            2,
+            "both units should engage each other in clear space"
+        );
+        assert!(engagements
+            .iter()
+            .any(|e| e.shooter_id == 1 && e.target_id == 2));
+        assert!(engagements
+            .iter()
+            .any(|e| e.shooter_id == 2 && e.target_id == 1));
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-TACTICS-024 — formation movement produces valid positions
+    // -----------------------------------------------------------------------
+
+    /// A squad in Line formation produces distinct positions equal in count to
+    /// the number of units.
+    #[test]
+    fn formation_move_line_produces_valid_positions() {
+        let world = empty_world();
+        let units: Vec<MilitaryUnitSample> = (0..4)
+            .map(|i| MilitaryUnitSample {
+                unit_id: i as u64,
+                faction_id: 0,
+                grid_x: i,
+                grid_y: 0,
+            })
+            .collect();
+
+        let bridge = WarBridge::with_defaults(&world);
+        let positions = bridge.formation_move(&units, FormationKind::Line, Facing::East);
+
+        assert_eq!(positions.len(), units.len(), "position count matches unit count");
+
+        // No duplicates.
+        let mut sorted = positions.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), positions.len(), "positions are unique");
+    }
+
+    /// A squad in Column formation produces positions ordered along the
+    /// dominant axis.
+    #[test]
+    fn formation_move_column_produces_valid_positions() {
+        let world = empty_world();
+        let units: Vec<MilitaryUnitSample> = (0..3)
+            .map(|i| MilitaryUnitSample {
+                unit_id: i as u64,
+                faction_id: 0,
+                grid_x: i,
+                grid_y: 0,
+            })
+            .collect();
+
+        let bridge = WarBridge::with_defaults(&world);
+        let positions = bridge.formation_move(&units, FormationKind::Column, Facing::North);
+
+        assert_eq!(positions.len(), 3);
+        // Column facing North: units file along -Y.  All x should be equal
+        // (the centroid x), and y values should be distinct.
+        let xs: Vec<i32> = positions.iter().map(|p| p.0).collect();
+        let mut ys: Vec<i32> = positions.iter().map(|p| p.1).collect();
+        ys.sort_unstable();
+        ys.dedup();
+        assert_eq!(ys.len(), 3, "distinct y positions");
+        assert!(xs.iter().all(|&x| x == xs[0]), "all on same x axis");
+    }
+
+    /// An empty squad produces an empty position list.
+    #[test]
+    fn formation_move_empty_squad_returns_empty() {
+        let world = empty_world();
+        let bridge = WarBridge::with_defaults(&world);
+        let positions = bridge.formation_move(&[], FormationKind::Wedge, Facing::South);
+        assert!(positions.is_empty());
+    }
+
+    /// resolve_combat respects the cadence — no engagements on off-cadence ticks.
+    #[test]
+    fn combat_respects_cadence() {
+        let world = empty_world();
+        let units = two_enemy_units();
+        let config = WarBridgeConfig {
+            cadence_ticks: 8,
+            engage_range_grid: 16,
+            ..WarBridgeConfig::default()
+        };
+        let bridge = WarBridge::new(&world, config);
+        // Off-cadence ticks -> empty.
+        assert!(bridge.resolve_combat(1, &units).is_empty());
+        assert!(bridge.resolve_combat(7, &units).is_empty());
+        // On-cadence tick -> engagements.
+        assert!(!bridge.resolve_combat(8, &units).is_empty());
+    }
 }

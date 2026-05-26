@@ -8,7 +8,7 @@ namespace DINOForge.Tools.McpServer.Tools;
 
 /// <summary>
 /// MCP tool that sends keyboard and mouse input to the game window without requiring foreground.
-/// Uses Win32 SendInput API to inject input directly into the game.
+/// Delegates Win32 input to <see cref="GameInputHelper"/>; bare-cua path via <see cref="Cua.CuaNativeSession"/>.
 /// </summary>
 [McpServerToolType]
 public sealed class GameInputTool
@@ -91,11 +91,6 @@ public sealed class GameInputTool
 
         try
         {
-            if (GameInputHelper.GetVirtualKeyCode(keyName) == 0)
-            {
-                return GameClientHelper.ToJson(new { success = false, error = $"Unknown key: {keyName}" });
-            }
-
             if (GameInputHelper.SendKey(keyName))
             {
                 return GameClientHelper.ToJson(new
@@ -109,7 +104,9 @@ public sealed class GameInputTool
             return GameClientHelper.ToJson(new
             {
                 success = false,
-                error = "Failed to send key input"
+                error = GameInputHelper.GetVirtualKeyCode(keyName) == 0
+                    ? $"Unknown key: {keyName}"
+                    : "Failed to send key input"
             });
         }
         catch (Exception ex)

@@ -22,14 +22,19 @@ internal static class CuaNativeSession
         try
         {
             CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct).ConfigureAwait(false);
-            await using (computer.ConfigureAwait(false))
+            try
             {
-            byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: windowTitle, ct: ct).ConfigureAwait(false);
-            if (pngBytes.Length == 0)
-                return false;
+                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: windowTitle, ct: ct).ConfigureAwait(false);
+                if (pngBytes.Length == 0)
+                    return false;
 
-            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {
@@ -48,10 +53,16 @@ internal static class CuaNativeSession
 
         try
         {
-            await using CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct)
-                .ConfigureAwait(false);
-            await computer.PressKeyAsync(keyName, ct).ConfigureAwait(false);
-            return true;
+            CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct).ConfigureAwait(false);
+            try
+            {
+                await computer.PressKeyAsync(keyName, ct).ConfigureAwait(false);
+                return true;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {

@@ -23,7 +23,7 @@ description: |
   - 1 aerial doctrine per faction: air superiority vs mass aviation
 
   Units use vanilla_mapping: aerial_fighter and unit_class: AirstrikeProxy,
-  matching the DINO ECS aerial subsystem. Anti-air buildings use defense_tags: [AntiAir].
+  matching the DINO ECS aerial subsystem. Anti-air buildings use defense_tags: AntiAir.
 
 type: content
 

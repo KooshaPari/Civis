@@ -182,8 +182,7 @@ mod tests {
         let after_tick = chain_advance(&GENESIS, &tick_payload);
         let combat = combat_event_bytes(1, 10, 20, 0, 0, 0, 2, 100, 0);
         let after_combat = chain_advance(&after_tick, &combat);
-        let recomputed =
-            chain_root_from_payloads([tick_payload.to_vec(), combat]).expect("root");
+        let recomputed = chain_root_from_payloads([tick_payload.to_vec(), combat]).expect("root");
         assert_eq!(after_combat, recomputed);
         assert_ne!(after_tick, after_combat);
     }

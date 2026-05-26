@@ -8,7 +8,8 @@ use std::fmt;
 use std::path::Path;
 
 use crate::hash_chain::{
-    chain_advance, chain_root_from_payloads, combat_event_bytes, tick_event_bytes, GENESIS, HASH_LEN,
+    chain_advance, chain_root_from_payloads, combat_event_bytes, tick_event_bytes, GENESIS,
+    HASH_LEN,
 };
 use crate::io::{read_text, write_text};
 use civ_voxel::MaterialId;

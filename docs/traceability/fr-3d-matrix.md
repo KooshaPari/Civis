@@ -122,6 +122,9 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-036 | Voxel obstacle grid for operational movement. | `grid_obstacles.rs`, `movement.rs` | `operational_movement_avoids_voxel_obstacle` | implemented |
 | FR-CIV-TACTICS-037 | A* obstacle-aware pathfinding. | `pathfinding.rs` | `astar_path_with_blocked` | implemented |
 | FR-CIV-TACTICS-038 | WASM `civlab_military_tick` host invoke. | `wasm_guest.rs`, `civlab-sdk` | `wasm_military_tick_invokes_civlab_export` | implemented |
+| FR-CIV-TACTICS-039 | Occupied-cell blocking in operational pathfinding. | `grid_obstacles.rs`, `movement.rs` | `operational_movement_avoids_occupied_cell` | implemented |
+| FR-CIV-TACTICS-040 | Military WASM tick receives `sim_tick` (i64). | `wasm_guest.rs`, `mod-host`, `civlab-sdk` | `wasm_military_tick_invokes_civlab_export` | implemented |
+| FR-CIV-TACTICS-041 | Combat events extend replay hash chain. | `hash_chain.rs`, `replay.rs` | `combat_events_extend_replay_hash_chain` | implemented |
 
 ---
 

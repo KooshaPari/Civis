@@ -11,7 +11,8 @@ pub fn policy_tick() -> i32 {
 
 /// Military-phase hook (no-op until host wires full capability API).
 #[must_use]
-pub fn military_tick() -> i32 {
+pub fn military_tick(tick: u64) -> i32 {
+    let _ = tick;
     0
 }
 
@@ -23,8 +24,8 @@ pub extern "C" fn civlab_policy_tick() -> i32 {
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn civlab_military_tick() -> i32 {
-    military_tick()
+pub extern "C" fn civlab_military_tick(tick: i64) -> i32 {
+    military_tick(tick as u64)
 }
 
 #[cfg(test)]
@@ -38,6 +39,6 @@ mod tests {
 
     #[test]
     fn military_tick_is_noop() {
-        assert_eq!(military_tick(), 0);
+        assert_eq!(military_tick(0), 0);
     }
 }

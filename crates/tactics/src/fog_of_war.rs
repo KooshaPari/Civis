@@ -1,4 +1,4 @@
-//! Per-faction fog-of-war visibility grid (FR-CIV-TACTICS-040).
+//! Per-faction fog-of-war visibility grid (FR-CIV-TACTICS-042).
 //!
 //! [`FogOfWar`] maintains a per-faction visibility bitmap over a 2D grid.
 //! Visibility is recomputed each call to [`FogOfWar::update`] by sweeping
@@ -58,7 +58,11 @@ impl FogOfWar {
     /// the cell if the Euclidean distance is within the radius **and**
     /// [`line_of_sight`] is unblocked from the unit's voxel position to the
     /// tile's voxel position.
-    pub fn update(&mut self, faction_units: &[MilitaryUnitSample], voxel_world: &VoxelWorld<MaterialId>) {
+    pub fn update(
+        &mut self,
+        faction_units: &[MilitaryUnitSample],
+        voxel_world: &VoxelWorld<MaterialId>,
+    ) {
         self.visible.clear();
 
         // Pre-collect distinct factions so we can initialise their bitmaps.
@@ -72,7 +76,8 @@ impl FogOfWar {
         let cell_count = (self.grid_size as usize) * (self.grid_size as usize);
 
         for &faction_id in &factions {
-            let bitmap = self.visible
+            let bitmap = self
+                .visible
                 .entry(faction_id)
                 .or_insert_with(|| vec![false; cell_count]);
 

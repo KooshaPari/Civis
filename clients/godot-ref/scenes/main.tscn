@@ -5,21 +5,21 @@
 [ext_resource type="PackedScene" path="res://scripts/ui.tscn" id="3_ui"]
 [ext_resource type="Script" path="res://scripts/f3d0_voxel_overlay.gd" id="4_voxel_overlay"]
 
+[sub_resource type="ProceduralSkyMaterial" id="3_sky_material"]
+sky_top_color = Color(0.25, 0.38, 0.55, 1)
+sky_horizon_color = Color(0.75, 0.83, 0.9, 1)
+ground_bottom_color = Color(0.12, 0.16, 0.18, 1)
+ground_horizon_color = Color(0.28, 0.29, 0.3, 1)
+
+[sub_resource type="Sky" id="2_sky"]
+sky_material = SubResource("3_sky_material")
+
 [sub_resource type="Environment" id="1_env"]
 background_mode = 2
 fog_enabled = true
 fog_light_color = Color(0.55, 0.65, 0.78, 1)
 fog_density = 0.01
 sky = SubResource("2_sky")
-
-[sub_resource type="Sky" id="2_sky"]
-sky_material = SubResource("3_sky_material")
-
-[sub_resource type="ProceduralSkyMaterial" id="3_sky_material"]
-sky_top_color = Color(0.25, 0.38, 0.55, 1)
-sky_horizon_color = Color(0.75, 0.83, 0.9, 1)
-ground_bottom_color = Color(0.12, 0.16, 0.18, 1)
-ground_horizon_color = Color(0.28, 0.29, 0.3, 1)
 
 [sub_resource type="BoxMesh" id="4_placeholder_mesh"]
 

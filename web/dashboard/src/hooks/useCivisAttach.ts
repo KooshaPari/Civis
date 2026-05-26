@@ -141,6 +141,13 @@ function connectWatch(
   let source: EventSource | null = null;
   let reconnectTimer: number | null = null;
 
+  const clearReconnectTimer = () => {
+    if (reconnectTimer !== null) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
+
   const scheduleReconnect = () => {
     if (closed || reconnectTimer !== null) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
@@ -153,17 +160,24 @@ function connectWatch(
   const connect = () => {
     if (closed) return;
     source?.close();
+    clearReconnectTimer();
     source = new EventSource("/events");
-    source.onopen = () => dispatch({ type: "set_connection", connection: "live" });
+    source.onopen = () => {
+      clearReconnectTimer();
+      dispatch({ type: "set_connection", connection: "live" });
+    };
     source.addEventListener("snapshot", (event) => {
       const payload = (event as MessageEvent<string>).data;
       dispatch({ type: "set_snapshot", snapshot: JSON.parse(payload) });
+      clearReconnectTimer();
       dispatch({ type: "set_connection", connection: "live" });
       recordAttachFrame(attachFrameAtRef, dispatch);
     });
     source.onerror = () => {
       dispatch({ type: "set_connection", connection: "disconnected" });
-      scheduleReconnect();
+      if (source?.readyState === EventSource.CLOSED) {
+        scheduleReconnect();
+      }
     };
   };
 
@@ -185,7 +199,7 @@ function connectWatch(
   return () => {
     closed = true;
     source?.close();
-    if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+    clearReconnectTimer();
   };
 }
 

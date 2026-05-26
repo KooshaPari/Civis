@@ -39,6 +39,16 @@ try {
     & cargo test -p civ-server --quiet --test ws_smoke
     if ($LASTEXITCODE -ne 0) { exit 1 }
 
+    Write-Host '==> civis-3d quick gates (catalog, scenario, mod-host, godot rust)' -ForegroundColor Cyan
+    & just civis-3d-catalog-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just civis-3d-scenario-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just civis-3d-mod-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just godot-test
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+
     Write-Host '==> civ-watch API smoke' -ForegroundColor Cyan
     & cargo test -p civ-watch --quiet
     if ($LASTEXITCODE -ne 0) { exit 1 }

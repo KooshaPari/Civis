@@ -129,11 +129,16 @@ function Invoke-UnrealBuild([string] $UeRoot, [string] $UbtOrBuildBat) {
 
     $projectArg = "-Project=`"$Uproject`""
 
+    # UBA retries compile jobs when RAM is tight and can loop forever; -NoUBA is slower but reliable.
+    $ubtArgs = @(
+        $EditorTarget, $Platform, $Configuration, $projectArg,
+        '-WaitMutex', '-NoUBA', '-MaxParallelActions=2'
+    )
     if ($UbtOrBuildBat -like '*.exe') {
-        & $UbtOrBuildBat $EditorTarget $Platform $Configuration $projectArg '-WaitMutex'
+        & $UbtOrBuildBat @ubtArgs
     }
     else {
-        & $UbtOrBuildBat $EditorTarget $Platform $Configuration $projectArg '-WaitMutex'
+        & $UbtOrBuildBat @ubtArgs
     }
 
     if ($LASTEXITCODE -ne 0) {

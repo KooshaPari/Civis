@@ -7,16 +7,22 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod signature;
 mod wasm_guest;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use signature::verify_wasm_signature;
 use thiserror::Error;
-use wasm_guest::{invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
+use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
 
-pub use wasm_guest::{WasmGuestError, MOD_WASM_NAME as MOD_WASM_FILE};
+pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
+pub use wasm_guest::{
+    HostState, WasmGuestError, HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS,
+    HOST_GUEST_MEMORY_CAP, HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
+};
 
 /// Supported mod kinds per CIV-0700 §4.1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -55,6 +61,9 @@ pub struct ModMeta {
     /// SPDX license identifier (e.g. `MIT`).
     #[serde(default)]
     pub license: Option<String>,
+    /// Hex-encoded Ed25519 public key for `mod.wasm` signature verification.
+    #[serde(default)]
+    pub author_pubkey_hex: Option<String>,
 }
 
 /// `[dependencies]` table.
@@ -258,6 +267,8 @@ impl ModRegistry {
 pub struct ModHost {
     registry: ModRegistry,
     loaded_records: Vec<ModLoadedRecord>,
+    /// Per-mod guest scratch memory persisted across phase ticks (FR-CIV-TACTICS-052).
+    guest_memory_by_mod: std::collections::BTreeMap<String, Vec<u8>>,
 }
 
 impl ModHost {
@@ -285,6 +296,24 @@ impl ModHost {
         &self.loaded_records
     }
 
+    /// Snapshot of a mod's guest scratch memory (empty vec if the mod is unknown).
+    #[must_use]
+    pub fn guest_memory_snapshot(&self, mod_id: &str) -> Vec<u8> {
+        self.guest_memory_by_mod
+            .get(mod_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Replace guest scratch memory for a loaded mod (CIV-1000 save/load stub).
+    pub fn restore_guest_memory(&mut self, mod_id: &str, bytes: Vec<u8>) {
+        let mut trimmed = bytes;
+        if trimmed.len() > HOST_GUEST_MEMORY_CAP {
+            trimmed.truncate(HOST_GUEST_MEMORY_CAP);
+        }
+        self.guest_memory_by_mod.insert(mod_id.to_owned(), trimmed);
+    }
+
     /// `mod.loaded.v1` lifecycle strings (replay / watch consumers).
     #[must_use]
     pub fn loaded_events(&self) -> Vec<String> {
@@ -310,7 +339,9 @@ impl ModHost {
         let manifest_path = mod_dir.join(CIVMOD_MANIFEST_NAME);
         let manifest = load_manifest(&manifest_path)?;
         let wasm_bytes = read_wasm_file(mod_dir.join(MOD_WASM_NAME));
+        let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
+        self.guest_memory_by_mod.entry(mod_id).or_default();
         self.registry.register(LoadedMod {
             root: mod_dir.to_path_buf(),
             manifest,
@@ -326,7 +357,9 @@ impl ModHost {
     ) -> Result<(), ManifestError> {
         let archive_path = archive_path.as_ref().to_path_buf();
         let (manifest, wasm_bytes) = read_civmod_archive(&archive_path)?;
+        let mod_id = manifest.meta.id.clone();
         self.push_loaded(&manifest, 0);
+        self.guest_memory_by_mod.entry(mod_id).or_default();
         self.registry.register(LoadedMod {
             root: archive_path,
             manifest,
@@ -337,7 +370,7 @@ impl ModHost {
 
     /// Military-phase hook (P-W1) — manifest stubs + WASM `civlab_military_tick` when loaded.
     #[must_use]
-    pub fn military_tick(&self, sim_tick: u64) -> Vec<String> {
+    pub fn military_tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_military_phase(sim_tick);
         for entry in self.registry.mods() {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
@@ -346,7 +379,11 @@ impl ModHost {
             if !entry.manifest.permissions.read_military {
                 continue;
             }
-            match invoke_military_tick(wasm, sim_tick) {
+            let mem = self
+                .guest_memory_by_mod
+                .entry(entry.manifest.meta.id.clone())
+                .or_default();
+            match invoke_military_tick(wasm, sim_tick, mem) {
                 Ok(code) => lines.push(format!(
                     "mod:{}:wasm_military_tick:tick={sim_tick}:code={code}",
                     entry.manifest.meta.id
@@ -361,11 +398,10 @@ impl ModHost {
         lines
     }
 
-    /// Per-tick hook — phase stubs + WASM `civlab_policy_tick` when loaded.
+    /// Policy-phase hook — stubs + WASM `civlab_policy_tick` when loaded.
     #[must_use]
-    pub fn tick(&self, sim_tick: u64) -> Vec<String> {
+    pub fn tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_policy_phase(sim_tick);
-        lines.extend(self.registry.on_economy_phase(sim_tick));
         for entry in self.registry.mods() {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
@@ -375,9 +411,45 @@ impl ModHost {
             {
                 continue;
             }
-            match invoke_policy_tick(wasm) {
+            let mem = self
+                .guest_memory_by_mod
+                .entry(entry.manifest.meta.id.clone())
+                .or_default();
+            match invoke_policy_tick(wasm, sim_tick, mem) {
                 Ok(code) => lines.push(format!(
                     "mod:{}:wasm_policy_tick:tick={sim_tick}:code={code}",
+                    entry.manifest.meta.id
+                )),
+                Err(err) => lines.push(format_mod_error_event(
+                    &entry.manifest.meta.id,
+                    sim_tick,
+                    &err.to_string(),
+                )),
+            }
+        }
+        lines
+    }
+
+    /// Economic-phase hook — stubs + WASM `civlab_economy_tick` when loaded (FR-CIV-TACTICS-046).
+    #[must_use]
+    pub fn economy_tick(&mut self, sim_tick: u64) -> Vec<String> {
+        let mut lines = self.registry.on_economy_phase(sim_tick);
+        for entry in self.registry.mods() {
+            let Some(wasm) = entry.wasm_bytes.as_ref() else {
+                continue;
+            };
+            if entry.manifest.meta.mod_type != ModType::Economic
+                || !entry.manifest.permissions.read_economy
+            {
+                continue;
+            }
+            let mem = self
+                .guest_memory_by_mod
+                .entry(entry.manifest.meta.id.clone())
+                .or_default();
+            match invoke_economy_tick(wasm, sim_tick, mem) {
+                Ok(code) => lines.push(format!(
+                    "mod:{}:wasm_economy_tick:tick={sim_tick}:code={code}",
                     entry.manifest.meta.id
                 )),
                 Err(err) => lines.push(format_mod_error_event(
@@ -449,6 +521,7 @@ pub fn read_civmod_archive(
 
     let mut manifest_contents: Option<String> = None;
     let mut wasm_bytes: Option<Vec<u8>> = None;
+    let mut wasm_sig: Option<Vec<u8>> = None;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| ManifestError::Archive {
             path: archive_path.to_path_buf(),
@@ -482,6 +555,15 @@ pub fn read_civmod_archive(
                     message: e.to_string(),
                 })?;
             wasm_bytes = Some(buf);
+        } else if name == MOD_WASM_SIG_NAME {
+            let mut buf = Vec::new();
+            entry
+                .read_to_end(&mut buf)
+                .map_err(|e| ManifestError::Archive {
+                    path: archive_path.to_path_buf(),
+                    message: e.to_string(),
+                })?;
+            wasm_sig = Some(buf);
         }
     }
 
@@ -491,7 +573,44 @@ pub fn read_civmod_archive(
     })?;
 
     let manifest = parse_manifest(&contents, archive_path)?;
+    enforce_wasm_signature(
+        archive_path,
+        &manifest,
+        wasm_bytes.as_deref(),
+        wasm_sig.as_deref(),
+    )?;
     Ok((manifest, wasm_bytes))
+}
+
+fn enforce_wasm_signature(
+    path: &Path,
+    manifest: &ModManifest,
+    wasm: Option<&[u8]>,
+    sig: Option<&[u8]>,
+) -> Result<(), ManifestError> {
+    let Some(wasm) = wasm else {
+        return Ok(());
+    };
+    if cfg!(feature = "mod-dev") {
+        return Ok(());
+    }
+    match (sig, manifest.meta.author_pubkey_hex.as_deref()) {
+        (None, None) => Ok(()),
+        (Some(sig_bytes), Some(pk)) => {
+            verify_wasm_signature(wasm, sig_bytes, pk).map_err(|e| ManifestError::Validation {
+                path: path.to_path_buf(),
+                message: e.to_string(),
+            })
+        }
+        (Some(_), None) => Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "author_pubkey_hex required when mod.wasm.sig is present".to_owned(),
+        }),
+        (None, Some(_)) => Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: format!("missing {MOD_WASM_SIG_NAME} for signed mod"),
+        }),
+    }
 }
 
 fn is_unsafe_zip_entry_name(name: &str) -> bool {
@@ -586,6 +705,12 @@ pub fn example_policy_mod_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods/example-policy")
 }
 
+/// Repo-relative path to `mods/example-economic` from this crate's manifest dir.
+#[must_use]
+pub fn example_economic_mod_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods/example-economic")
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -620,6 +745,17 @@ write_policy = true
         assert_eq!(manifest.meta.mod_type, ModType::Policy);
         assert!(manifest.permissions.read_economy);
         assert!(manifest.permissions.write_policy);
+    }
+
+    #[test]
+    fn loads_example_economic_manifest() {
+        let dir = example_economic_mod_dir();
+        let manifest = load_manifest(dir.join("manifest.toml")).expect("example economic manifest");
+
+        assert_eq!(manifest.meta.id, "example-economic");
+        assert_eq!(manifest.meta.mod_type, ModType::Economic);
+        assert!(manifest.permissions.read_economy);
+        assert!(!manifest.permissions.write_policy);
     }
 
     #[test]
@@ -683,7 +819,39 @@ write_policy = false
             )
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
-        assert_eq!(invoke_policy_tick(&wasm).expect("invoke"), 42);
+        let mut mem = Vec::new();
+        assert_eq!(invoke_policy_tick(&wasm, 7, &mut mem).expect("invoke"), 42);
+    }
+
+    #[test]
+    fn wasm_economy_tick_invokes_civlab_export() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                local.get 0
+                i32.wrap_i64)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        assert_eq!(invoke_economy_tick(&wasm, 9, &mut mem).expect("invoke"), 9);
+    }
+
+    #[test]
+    fn wasm_guest_reads_capability_host_import() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "capability_api_version" (func $ver (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (call $ver))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        assert_eq!(
+            invoke_policy_tick(&wasm, 0, &mut mem).expect("invoke"),
+            wasm_guest::HOST_CAPABILITY_API_VERSION
+        );
     }
 
     #[test]
@@ -696,7 +864,58 @@ write_policy = false
             )
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
-        assert_eq!(invoke_military_tick(&wasm, 11).expect("invoke"), 11);
+        let mut mem = Vec::new();
+        assert_eq!(invoke_military_tick(&wasm, 11, &mut mem).expect("invoke"), 11);
+    }
+
+    /// When `just civis-3d-mod-wasm` has been run, repo example-policy loads WASM on tick.
+    #[test]
+    fn example_economic_dir_wasm_ticks_when_built() {
+        let dir = example_economic_mod_dir();
+        let wasm_path = dir.join(MOD_WASM_NAME);
+        if !wasm_path.is_file() {
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_manifest_dir(&dir).expect("example-economic dir");
+        let lines = host.economy_tick(3);
+        assert!(
+            lines.iter().any(|l| l.contains("wasm_economy_tick")),
+            "expected wasm_economy_tick after building mod.wasm: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn example_policy_dir_wasm_ticks_when_built() {
+        let dir = example_policy_mod_dir();
+        let wasm_path = dir.join(MOD_WASM_NAME);
+        if !wasm_path.is_file() {
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_manifest_dir(&dir).expect("example-policy dir");
+        let lines = host.tick(1);
+        assert!(
+            lines.iter().any(|l| l.contains("wasm_policy_tick")),
+            "expected wasm_policy_tick after building mod.wasm: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn example_policy_civmod_loads_when_packaged() {
+        let civmod = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../mods/example-policy/example-policy.civmod");
+        if !civmod.is_file() {
+            eprintln!(
+                "skip example_policy_civmod_loads_when_packaged: run `just civis-3d-mod-package`"
+            );
+            return;
+        }
+        let mut host = ModHost::new();
+        host.load_mod_path(&civmod)
+            .expect("packaged example-policy.civmod");
+        assert_eq!(host.mods().len(), 1);
+        assert_eq!(host.mods()[0].manifest.meta.id, "example-policy");
     }
 
     #[test]

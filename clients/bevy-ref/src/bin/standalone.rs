@@ -2,15 +2,16 @@
 
 mod terrain;
 
-use std::collections::HashMap;
-
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::log::LogPlugin;
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
-use civ_agents::{spawn_civilian_at, Civilian as AgentCivilian, Position3d, Velocity};
-use civ_bevy_ref::{agent_color_from_id, agent_scale_multiplier, CameraTarget};
+use bevy::ui::IsDefaultUiCamera;
+use civ_agents::{spawn_civilian_at, Civilian as AgentCivilian, Position3d};
+use civ_bevy_ref::{agent_scale_multiplier, CameraTarget};
+use civ_engine::JobType;
 use civ_engine::Simulation;
 use civ_voxel::FIXED_SCALE;
 use terrain::{Biome, Terrain, SIZE};
@@ -19,7 +20,7 @@ const TITLE: &str = "Civis 3D — Standalone";
 const TERRAIN_WORLD_SIZE: f32 = 256.0;
 const TERRAIN_SCALE_XZ: f32 = TERRAIN_WORLD_SIZE / (SIZE as f32 - 1.0);
 const TERRAIN_HEIGHT_SCALE: f32 = 28.0;
-const WATER_LEVEL: f32 = 0.34;
+const WATER_LEVEL: f32 = 0.38;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
 const MIN_ORBIT_ELEVATION: f32 = 0.08;
@@ -27,13 +28,6 @@ const MIN_ORBIT_DISTANCE: f32 = 20.0;
 const MAX_ORBIT_DISTANCE: f32 = 500.0;
 const CIVILIAN_POOL: usize = 256;
 const SIM_TICK_RATE_HZ: f32 = 10.0;
-
-#[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
-enum AppState {
-    #[default]
-    Loading,
-    Playing,
-}
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -93,7 +87,7 @@ struct TerrainVisuals {
 #[derive(Resource, Default)]
 struct CivilianVisuals {
     pool: Vec<Entity>,
-    materials: HashMap<u32, Handle<StandardMaterial>>,
+    materials: Vec<(JobType, Handle<StandardMaterial>)>,
 }
 
 #[derive(Resource, Default)]
@@ -118,13 +112,19 @@ struct TerrainMarker;
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: TITLE.to_string(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: TITLE.to_string(),
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(LogPlugin {
+                    filter: "bevy_ui::layout=error".to_string(),
+                    level: bevy::log::Level::INFO,
                     ..default()
                 }),
-                ..default()
-            }),
             WireframePlugin,
         ))
         .insert_resource(StandaloneSim {
@@ -136,13 +136,16 @@ fn main() {
             1.0 / SIM_TICK_RATE_HZ,
             TimerMode::Repeating,
         )))
-        .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
+        .insert_resource(OrbitCamera::from_target(CameraTarget {
+            centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
+            distance: 240.0,
+            azimuth_rad: std::f32::consts::FRAC_PI_4,
+            elevation_rad: 0.8,
+        }))
         .insert_resource(TerrainVisuals::default())
         .insert_resource(CivilianVisuals::default())
         .insert_resource(UiState::default())
-        .init_state::<AppState>()
-        .add_systems(Startup, setup_camera)
-        .add_systems(OnEnter(AppState::Loading), setup_world)
+        .add_systems(Startup, setup_all)
         .add_systems(
             Update,
             (
@@ -157,7 +160,15 @@ fn main() {
         .run();
 }
 
-fn setup_camera(mut commands: Commands) {
+fn setup_all(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut terrain_visuals: ResMut<TerrainVisuals>,
+    mut civilian_visuals: ResMut<CivilianVisuals>,
+    mut ui_state: ResMut<UiState>,
+    sim_state: Res<StandaloneSim>,
+) {
     let camera_target = CameraTarget {
         centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
         distance: 240.0,
@@ -170,27 +181,39 @@ fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
+        IsDefaultUiCamera,
     ));
-}
 
-fn setup_world(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut terrain_visuals: ResMut<TerrainVisuals>,
-    mut civilian_visuals: ResMut<CivilianVisuals>,
-    mut ui_state: ResMut<UiState>,
-    sim_state: Res<StandaloneSim>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let camera_target = CameraTarget {
-        centre: [TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5],
-        distance: 240.0,
-        azimuth_rad: std::f32::consts::FRAC_PI_4,
-        elevation_rad: 0.8,
-    };
-    let eye = camera_target.orbit_position();
-    let centre = Vec3::from_array(camera_target.centre);
+    commands.spawn((PbrBundle {
+        mesh: meshes.add(
+            Sphere::new(2.0)
+                .mesh()
+                .ico(5)
+                .expect("failed to build startup sphere"),
+        ),
+        material: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.95, 0.12, 0.12),
+            perceptual_roughness: 0.8,
+            ..default()
+        }),
+        transform: Transform::from_xyz(128.0, 20.0, 128.0),
+        ..default()
+    },));
+
+    commands.spawn((PbrBundle {
+        mesh: meshes.add(
+            Plane3d::default()
+                .mesh()
+                .size(TERRAIN_WORLD_SIZE, TERRAIN_WORLD_SIZE),
+        ),
+        material: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.18, 0.6, 0.18),
+            perceptual_roughness: 1.0,
+            ..default()
+        }),
+        transform: Transform::from_xyz(TERRAIN_WORLD_SIZE * 0.5, 0.0, TERRAIN_WORLD_SIZE * 0.5),
+        ..default()
+    },));
 
     commands.insert_resource(ClearColor(Color::srgb(0.54, 0.74, 0.92)));
     commands.insert_resource(AmbientLight {
@@ -206,11 +229,6 @@ fn setup_world(
         },
         Transform::from_xyz(eye[0] + 80.0, eye[1] + 120.0, eye[2] + 40.0)
             .looking_at(centre, Vec3::Y),
-    ));
-
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
 
     spawn_terrain(
@@ -248,8 +266,6 @@ fn setup_world(
         ))
         .id();
     ui_state.text = Some(overlay);
-
-    next_state.set(AppState::Playing);
 }
 
 fn spawn_terrain(
@@ -259,6 +275,16 @@ fn spawn_terrain(
     terrain: &Terrain,
     visuals: &mut TerrainVisuals,
 ) {
+    let h_min = terrain.heights.iter().cloned().fold(f32::MAX, f32::min);
+    let h_max = terrain.heights.iter().cloned().fold(f32::MIN, f32::max);
+    info!(
+        "[standalone] terrain height range raw={:.3}..{:.3} world_y={:.1}..{:.1}",
+        h_min,
+        h_max,
+        h_min * TERRAIN_HEIGHT_SCALE,
+        h_max * TERRAIN_HEIGHT_SCALE
+    );
+
     let mut positions = Vec::<[f32; 3]>::with_capacity(SIZE * SIZE);
     let mut normals = Vec::<[f32; 3]>::with_capacity(SIZE * SIZE);
     let mut colors = Vec::<[f32; 4]>::with_capacity(SIZE * SIZE);
@@ -267,12 +293,13 @@ fn spawn_terrain(
         for x in 0..SIZE {
             let idx = z * SIZE + x;
             let height = terrain.heights[idx];
+            let normal = terrain_vertex_normal(terrain, x, z);
             positions.push([
                 x as f32 * TERRAIN_SCALE_XZ,
                 height * TERRAIN_HEIGHT_SCALE,
                 z as f32 * TERRAIN_SCALE_XZ,
             ]);
-            normals.push([0.0, 1.0, 0.0]);
+            normals.push(normal);
             let biome = terrain.biomes[idx];
             let rgb = biome.rgb();
             colors.push([
@@ -389,18 +416,17 @@ fn seed_initial_civilians(
     sim: &Simulation,
     visuals: &mut CivilianVisuals,
 ) {
-    let mesh = meshes.add(Cuboid::new(0.8, 1.6, 0.8));
+    let mesh = meshes.add(Cuboid::new(0.5, 1.0, 0.5));
     for entity in 0..CIVILIAN_POOL {
-        let material = materials.add(StandardMaterial {
-            base_color: Color::srgb(0.95, 0.95, 0.95),
-            perceptual_roughness: 0.8,
-            ..default()
-        });
         let id = commands
             .spawn((
                 PbrBundle {
                     mesh: mesh.clone(),
-                    material: material.clone(),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.95, 0.95, 0.95),
+                        perceptual_roughness: 0.8,
+                        ..default()
+                    }),
                     visibility: Visibility::Hidden,
                     ..default()
                 },
@@ -417,19 +443,8 @@ fn seed_initial_civilians(
         .take(CIVILIAN_POOL)
         .enumerate()
     {
-        let material_key = civilian.faction;
-        let rgb = agent_color_from_id(civilian.id);
-        let handle = visuals
-            .materials
-            .entry(material_key)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                    perceptual_roughness: 0.6,
-                    ..default()
-                })
-            })
-            .clone();
+        let job = job_type_for_civilian_id(civilian.id);
+        let handle = job_material(job, materials, &mut visuals.materials);
         if let Some(entity) = visuals.pool.get(idx).copied() {
             commands.entity(entity).insert(handle);
         }
@@ -559,14 +574,10 @@ fn update_civilian_meshes(
     mut visuals: ResMut<CivilianVisuals>,
     mut transforms: Query<&mut Transform>,
     mut visibility: Query<&mut Visibility>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut binding = state
-        .sim
-        .world
-        .query::<(&AgentCivilian, &Position3d, &Velocity)>();
+    let mut binding = state.sim.world.query::<(&AgentCivilian, &Position3d)>();
     let mut civilians: Vec<_> = binding.iter().collect();
-    civilians.sort_by_key(|(_, (c, _, _))| c.id);
+    civilians.sort_by_key(|(_, (c, _))| c.id);
 
     let pool = visuals.pool.clone();
     for (slot, entity) in pool.into_iter().enumerate() {
@@ -578,7 +589,7 @@ fn update_civilian_meshes(
                 Visibility::Hidden
             };
         }
-        if let Some((_, (civilian, pos, _vel))) = visible {
+        if let Some(&(_, (civilian, pos))) = visible {
             let x = pos.coord.x as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
             let z = pos.coord.z as f32 / FIXED_SCALE as f32 * TERRAIN_WORLD_SIZE;
             let y = sample_height(
@@ -591,21 +602,50 @@ fn update_civilian_meshes(
                 transform.translation = Vec3::new(x, y, z);
                 transform.scale = Vec3::splat(agent_scale_multiplier(1.0));
             }
-            let material_key = civilian.faction;
-            let rgb = agent_color_from_id(civilian.id);
-            let handle = if let Some(handle) = visuals.materials.get(&material_key) {
-                handle.clone()
-            } else {
-                let handle = materials.add(StandardMaterial {
-                    base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                    perceptual_roughness: 0.65,
-                    ..default()
-                });
-                visuals.materials.insert(material_key, handle.clone());
-                handle
-            };
-            commands.entity(entity).insert(handle);
+            let job = job_type_for_civilian_id(civilian.id);
+            if let Some(handle) = visuals.materials.get(&job).cloned() {
+                commands.entity(entity).insert(handle);
+            }
         }
+    }
+}
+
+fn job_material(
+    job: JobType,
+    materials: &mut Assets<StandardMaterial>,
+    cache: &mut Vec<(JobType, Handle<StandardMaterial>)>,
+) -> Handle<StandardMaterial> {
+    if let Some((_, handle)) = cache.iter().find(|(cached_job, _)| *cached_job == job) {
+        return handle.clone();
+    }
+
+    let color = match job {
+        JobType::Farmer => Color::srgb(0.18, 0.72, 0.22),
+        JobType::Warrior => Color::srgb(0.86, 0.18, 0.18),
+        JobType::Scholar => Color::srgb(0.32, 0.5, 0.92),
+        JobType::Trader => Color::srgb(0.86, 0.62, 0.16),
+        JobType::Priest => Color::srgb(0.72, 0.44, 0.88),
+        JobType::Admin => Color::srgb(0.4, 0.4, 0.4),
+        JobType::Unemployed => Color::srgb(0.82, 0.82, 0.82),
+    };
+    let handle = materials.add(StandardMaterial {
+        base_color: color,
+        perceptual_roughness: 0.65,
+        ..default()
+    });
+    cache.push((job, handle.clone()));
+    handle
+}
+
+fn job_type_for_civilian_id(id: u64) -> JobType {
+    match id % 7 {
+        0 => JobType::Farmer,
+        1 => JobType::Warrior,
+        2 => JobType::Scholar,
+        3 => JobType::Trader,
+        4 => JobType::Priest,
+        5 => JobType::Admin,
+        _ => JobType::Unemployed,
     }
 }
 
@@ -640,4 +680,24 @@ fn sample_height(terrain: &Terrain, x: f32, z: f32) -> f32 {
     let ix = (x * (terrain.size as f32 - 1.0)).round() as usize;
     let iz = (z * (terrain.size as f32 - 1.0)).round() as usize;
     terrain.heights[iz * terrain.size + ix]
+}
+
+fn terrain_vertex_normal(terrain: &Terrain, x: usize, z: usize) -> [f32; 3] {
+    let height_at = |x: isize, z: isize| -> f32 {
+        let x = x.clamp(0, (terrain.size - 1) as isize) as usize;
+        let z = z.clamp(0, (terrain.size - 1) as isize) as usize;
+        terrain.heights[z * terrain.size + x] * TERRAIN_HEIGHT_SCALE
+    };
+
+    let left = height_at(x as isize - 1, z as isize);
+    let right = height_at(x as isize + 1, z as isize);
+    let down = height_at(x as isize, z as isize - 1);
+    let up = height_at(x as isize, z as isize + 1);
+
+    let scale_x = 1.0 / TERRAIN_SCALE_XZ;
+    let scale_z = 1.0 / TERRAIN_SCALE_XZ;
+    let nx = (left - right) * scale_x;
+    let ny = 2.0;
+    let nz = (down - up) * scale_z;
+    Vec3::new(nx, ny, nz).normalize().to_array()
 }

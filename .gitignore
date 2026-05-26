@@ -1,4 +1,6 @@
 /target
+mods/example-policy/mod.wasm
+mods/example-policy/example-policy.civmod
 /.process-compose/
 /node_modules
 /docs/playwright-report/

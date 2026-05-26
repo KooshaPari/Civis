@@ -125,6 +125,15 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-039 | Occupied-cell blocking in operational pathfinding. | `grid_obstacles.rs`, `movement.rs` | `operational_movement_avoids_occupied_cell` | implemented |
 | FR-CIV-TACTICS-040 | Military WASM tick receives `sim_tick` (i64). | `wasm_guest.rs`, `mod-host`, `civlab-sdk` | `wasm_military_tick_invokes_civlab_export` | implemented |
 | FR-CIV-TACTICS-041 | Combat events extend replay hash chain. | `hash_chain.rs`, `replay.rs` | `combat_events_extend_replay_hash_chain` | implemented |
+| FR-CIV-TACTICS-042 | Fog-of-war gates war-bridge engagements. | `fog_of_war.rs`, `war_bridge.rs`, `engine.rs` | `fog_blocks_engagement_beyond_vision` | implemented |
+| FR-CIV-TACTICS-043 | Ed25519 mod WASM signature verification. | `mod-host/signature.rs` | `verify_accepts_valid_signature` | implemented |
+| FR-CIV-TACTICS-044 | Policy/military WASM tick capability API. | `wasm_guest.rs`, `civlab-sdk` | `capability_version_is_non_empty` | implemented |
+| FR-CIV-TACTICS-045 | Scenario fog fields wire military phase. | `scenario.rs`, `scenarios/baseline.yaml` | `scenario_fog_wires_military_phase` | implemented |
+| FR-CIV-TACTICS-046 | Economic WASM tick host invoke. | `wasm_guest.rs`, `mod-host`, `engine.rs` | `wasm_economy_tick_invokes_civlab_export` | implemented |
+| FR-CIV-TACTICS-047 | WASM host `civlab::capability_api_version` import. | `wasm_guest.rs` | `wasm_guest_reads_capability_host_import` | implemented |
+| FR-CIV-TACTICS-048 | Example economic mod directory + WASM tick. | `mods/example-economic/`, `mod-host` | `example_economic_dir_wasm_ticks_when_built` | implemented |
+| FR-CIV-TACTICS-049 | Host guest memory read/write imports. | `wasm_guest.rs` | `host_memory_import_read_write` | implemented |
+| FR-CIV-TACTICS-050 | Scenario military cadence/range tuning. | `scenario.rs`, `baseline.yaml` | `scenario_military_wires_military_phase` | implemented |
 
 ---
 

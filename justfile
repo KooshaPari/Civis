@@ -1,5 +1,8 @@
 # Phenotype-org standard justfile
 
+# On Windows use PowerShell so cargo/.cargo/bin is on PATH without extra setup.
+set windows-shell := ["powershell", "-NoProfile", "-Command"]
+
 default:
     @just --list
 

@@ -114,7 +114,6 @@ fn main() {
         .add_plugins((
             DefaultPlugins
                 .build()
-                .disable::<bevy::ui::UiPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: TITLE.to_string(),
@@ -123,7 +122,7 @@ fn main() {
                     ..default()
                 })
                 .set(LogPlugin {
-                    filter: "bevy_ui::layout=error".to_string(),
+                    filter: "bevy_ui::layout=error,wgpu=error".to_string(),
                     level: bevy::log::Level::INFO,
                     ..default()
                 }),

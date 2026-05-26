@@ -182,7 +182,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             // Interpolate UVs if available
             var uvs = source.UVs != null ? InterpolateUVs(source, vertices, indices) : null;
 
-            var bounds = CalculateBounds(vertices.ToArray());
+            var bounds = MeshBoundsHelper.Calculate(vertices.ToArray());
 
             return new MeshData
             {
@@ -324,27 +324,6 @@ namespace DINOForge.Tools.PackCompiler.Services
         private Vector3 Cross(Vector3 a, Vector3 b) => new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
         private void AddToNormal(float[] normals, int idx, Vector3 n) { int i = idx * 3; normals[i] += n.X; normals[i + 1] += n.Y; normals[i + 2] += n.Z; }
         private float Distance(Vector3 a, Vector3 b) { float dx = a.X - b.X, dy = a.Y - b.Y, dz = a.Z - b.Z; return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz); }
-
-        private (float[] Min, float[] Max) CalculateBounds(float[] vertices)
-        {
-            if (vertices.Length < 3)
-                return (new[] { 0f, 0f, 0f }, new[] { 0f, 0f, 0f });
-
-            float minX = vertices[0], minY = vertices[1], minZ = vertices[2];
-            float maxX = minX, maxY = minY, maxZ = minZ;
-
-            for (int i = 0; i < vertices.Length; i += 3)
-            {
-                minX = Math.Min(minX, vertices[i]);
-                minY = Math.Min(minY, vertices[i + 1]);
-                minZ = Math.Min(minZ, vertices[i + 2]);
-                maxX = Math.Max(maxX, vertices[i]);
-                maxY = Math.Max(maxY, vertices[i + 1]);
-                maxZ = Math.Max(maxZ, vertices[i + 2]);
-            }
-
-            return (new[] { minX, minY, minZ }, new[] { maxX, maxY, maxZ });
-        }
 
         private struct Vector3
         {

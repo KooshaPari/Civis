@@ -35,8 +35,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                     catalogEntries.Add("");
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
-                File.WriteAllLines(outputPath, catalogEntries, Encoding.UTF8);
+                ServiceOutputHelper.WriteUtf8Lines(outputPath, catalogEntries);
             }).ConfigureAwait(false);
         }
 
@@ -51,14 +50,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             {
                 var sb = new StringBuilder(4096);  // Capacity ~= YAML header (20 lines × 60 chars) + asset loop (N × 40 chars)
 
-                sb.AppendLine("%YAML 1.1");
-                sb.AppendLine("%TAG !u! tag:unity3d.com,2011:");
-                sb.AppendLine("--- !u!114 &11400000");
-                sb.AppendLine("AddressableAssetSettings:");
-                sb.AppendLine("  m_ObjectHideFlags: 0");
-                sb.AppendLine("  m_CorrespondingSourceObject: {fileID: 0}");
-                sb.AppendLine("  m_PrefabInstance: {fileID: 0}");
-                sb.AppendLine("  m_PrefabAsset: {fileID: 0}");
+                UnityYamlHelper.AppendAddressableDocumentStart(sb, "AddressableAssetSettings");
                 sb.AppendLine("  m_Name: AddressableAssetSettings");
                 sb.AppendLine("  m_EditorClassIdentifier: ");
                 sb.AppendLine("  m_DefaultGroup: Default Local Group");
@@ -87,8 +79,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                 sb.AppendLine("  m_CopyBundlesToPlatformCache: 0");
                 sb.AppendLine("  m_DebugNames: 0");
 
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
-                File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
+                ServiceOutputHelper.WriteUtf8Text(outputPath, sb.ToString());
             }).ConfigureAwait(false);
         }
 
@@ -105,14 +96,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                 var groupFile = Path.Combine(outputDirectory, $"{asset.AssetId}_group.yaml");
 
                 var sb = new StringBuilder(512);  // Capacity ~= 22 appends × 24 chars (YAML lines)
-                sb.AppendLine("%YAML 1.1");
-                sb.AppendLine("%TAG !u! tag:unity3d.com,2011:");
-                sb.AppendLine("--- !u!114 &11400000");
-                sb.AppendLine("AddressableAssetGroup:");
-                sb.AppendLine("  m_ObjectHideFlags: 0");
-                sb.AppendLine("  m_CorrespondingSourceObject: {fileID: 0}");
-                sb.AppendLine("  m_PrefabInstance: {fileID: 0}");
-                sb.AppendLine("  m_PrefabAsset: {fileID: 0}");
+                UnityYamlHelper.AppendAddressableDocumentStart(sb, "AddressableAssetGroup");
                 sb.AppendLine("  m_Name: " + asset.AssetId);
                 sb.AppendLine("  m_Entries:");
 
@@ -137,7 +121,7 @@ namespace DINOForge.Tools.PackCompiler.Services
                 sb.AppendLine("    m_SerializedLabels: [\"lod-asset\", \"dino-forge\"]");
 
                 Directory.CreateDirectory(outputDirectory);
-                File.WriteAllText(groupFile, sb.ToString(), Encoding.UTF8);
+                ServiceOutputHelper.WriteUtf8Text(groupFile, sb.ToString());
             }).ConfigureAwait(false);
         }
 

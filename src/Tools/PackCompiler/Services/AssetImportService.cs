@@ -367,30 +367,13 @@ namespace DINOForge.Tools.PackCompiler.Services
         /// <summary>Calculate mesh bounds (min/max)</summary>
         private (float[] Min, float[] Max) CalculateBounds(MeshData meshData)
         {
-            return CalculateBounds(meshData.Vertices);
+            return MeshBoundsHelper.Calculate(meshData.Vertices);
         }
 
         /// <summary>Calculate bounds from vertex array</summary>
         private (float[] Min, float[] Max) CalculateBounds(float[] vertices)
         {
-            if (vertices.Length < 3)
-                return (new[] { 0f, 0f, 0f }, new[] { 0f, 0f, 0f });
-
-            float minX = vertices[0], minY = vertices[1], minZ = vertices[2];
-            float maxX = minX, maxY = minY, maxZ = minZ;
-
-            for (int i = 0; i < vertices.Length; i += 3)
-            {
-                minX = Math.Min(minX, vertices[i]);
-                minY = Math.Min(minY, vertices[i + 1]);
-                minZ = Math.Min(minZ, vertices[i + 2]);
-
-                maxX = Math.Max(maxX, vertices[i]);
-                maxY = Math.Max(maxY, vertices[i + 1]);
-                maxZ = Math.Max(maxZ, vertices[i + 2]);
-            }
-
-            return (new[] { minX, minY, minZ }, new[] { maxX, maxY, maxZ });
+            return MeshBoundsHelper.Calculate(vertices);
         }
 
         /// <summary>Extract quaternion from transformation matrix</summary>

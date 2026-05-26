@@ -24,8 +24,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             {
                 var prefab = BuildPrefabYaml(asset, definition);
 
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
-                File.WriteAllText(outputPath, prefab, Encoding.UTF8);
+                ServiceOutputHelper.WriteUtf8Text(outputPath, prefab);
             }).ConfigureAwait(false);
         }
 
@@ -38,8 +37,7 @@ namespace DINOForge.Tools.PackCompiler.Services
             var sb = new StringBuilder(512);  // Capacity ~= 17 appends × 30 chars (prefab YAML lines)
 
             // Prefab header
-            sb.AppendLine("%YAML 1.1");
-            sb.AppendLine("%TAG !u! tag:unity3d.com,2011:");
+            UnityYamlHelper.AppendYaml11Header(sb);
             sb.AppendLine("--- !u!1 &" + GenerateGUID());
             sb.AppendLine("GameObject:");
             sb.AppendLine("  m_ObjectHideFlags: 0");

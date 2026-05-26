@@ -1,16 +1,5 @@
+import type { ModBrowserEntry } from "./lib/civisServer";
 import { useDashboardStore } from "./store";
-
-/** Loaded mod row from civ-watch SSE or civ-server `sim.snapshot`. */
-export type ModBrowserEntry = {
-  id: string;
-  name: string;
-  version: string;
-  mod_type: string;
-  has_wasm: boolean;
-  guest_memory_len: number;
-  /** Float opcode count from determinism scan (0 when WASM absent). */
-  float_instruction_count?: number;
-};
 
 function modsFromSnapshot(snapshot: Record<string, unknown> | null): ModBrowserEntry[] {
   if (!snapshot || !Array.isArray(snapshot.mods)) {
@@ -23,7 +12,7 @@ export function ModsPanel() {
   const { state } = useDashboardStore();
   const mods =
     state.attachMode === "server"
-      ? modsFromSnapshot(state.serverMetrics as Record<string, unknown> | null)
+      ? (state.serverMetrics?.mods ?? [])
       : modsFromSnapshot(state.snapshot as Record<string, unknown> | null);
 
   return (

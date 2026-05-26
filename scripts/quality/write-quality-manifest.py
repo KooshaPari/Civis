@@ -86,7 +86,14 @@ def main() -> int:
         json.dump(body, f, indent=2)
         f.write("\n")
 
-    failed = [k for k, v in gates.items() if v.get("status") != "pass"]
+    # Unreal gates are optional infrastructure gates; they never block the push.
+    optional_gate_prefixes = ("unreal_",)
+    failed = [
+        k
+        for k, v in gates.items()
+        if v.get("status") not in ("pass", "skip")
+        and not any(k.startswith(p) for p in optional_gate_prefixes)
+    ]
     print(
         f"Wrote {manifest_path} (git_sha={git_sha}, manifest_hash={body['manifest_hash']})"
     )

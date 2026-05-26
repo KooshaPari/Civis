@@ -83,8 +83,9 @@ civis-3d-mod-package: civis-3d-mod-wasm
 # held open by the running dev stack (Windows exe-lock).
 # Used by P-V0..P-U1 phase PRs before push.
 civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-check civis-3d-mod-check
+    # cargo check avoids exe-lock issues on Windows (service binaries stay open).
+    # Targeted tests are already run by sub-recipes above.
     cargo check --workspace
-    cargo test --workspace
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check
 

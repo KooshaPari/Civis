@@ -348,8 +348,15 @@ mods:
         let mut sim = scenario.into_simulation(42);
         assert_eq!(sim.state.tick, 0);
         assert_eq!(sim.state.population, 1_000_000);
-        assert_eq!(sim.mod_host().mods().len(), 1);
-        assert_eq!(sim.mod_host().mods()[0].manifest.meta.id, "example-policy");
+        assert_eq!(sim.mod_host().mods().len(), 2);
+        let ids: Vec<_> = sim
+            .mod_host()
+            .mods()
+            .iter()
+            .map(|m| m.manifest.meta.id.as_str())
+            .collect();
+        assert!(ids.contains(&"example-policy"));
+        assert!(ids.contains(&"example-economic"));
 
         for _ in 0..10 {
             sim.tick();

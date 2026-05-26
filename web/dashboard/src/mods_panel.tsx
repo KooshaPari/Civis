@@ -38,6 +38,9 @@ export function ModsPanel() {
                 {mod.id} · v{mod.version} · {mod.mod_type}
                 {mod.has_wasm ? " · wasm" : ""}
                 {mod.guest_memory_len > 0 ? ` · mem ${mod.guest_memory_len}B` : ""}
+                {(mod.float_instruction_count ?? 0) > 0
+                  ? ` · float ops ${mod.float_instruction_count}`
+                  : ""}
               </span>
             </li>
           ))}

@@ -1805,6 +1805,24 @@ async fn load_handler(
     Ok(Json(LoadResponse { ok: true, tick }))
 }
 
+/// Recursively sum all file sizes under a directory (best-effort; errors return 0).
+fn dir_size_bytes(path: &std::path::Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    entries
+        .filter_map(|e| e.ok())
+        .map(|e| {
+            let p = e.path();
+            if p.is_dir() {
+                dir_size_bytes(&p)
+            } else {
+                e.metadata().map(|m| m.len()).unwrap_or(0)
+            }
+        })
+        .sum()
+}
+
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -1821,9 +1839,20 @@ async fn list_saves_handler(
     })?;
     for entry in read_dir.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("civreplay") {
+        let name = if CivSaveBundle::is_save_dir(&path) {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.trim_end_matches(".civsave").to_string())
+        } else if path.extension().and_then(|s| s.to_str()) == Some("civreplay") {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+        } else {
             continue;
-        }
+        };
+        let Some(name) = name else {
+            continue;
+        };
         let meta = match entry.metadata() {
             Ok(meta) => meta,
             Err(_) => continue,
@@ -1833,14 +1862,14 @@ async fn list_saves_handler(
             .ok()
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs());
-        let name = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_string();
+        let size_bytes = if path.is_dir() {
+            dir_size_bytes(&path)
+        } else {
+            meta.len()
+        };
         entries.push(SaveListEntry {
             name,
-            size_bytes: meta.len(),
+            size_bytes,
             modified,
         });
     }

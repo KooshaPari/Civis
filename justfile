@@ -76,7 +76,12 @@ civis-3d-mod-wasm:
 
 # Package example-policy as example-policy.civmod.
 civis-3d-mod-package: civis-3d-mod-wasm
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+
+# Package both example mods for distribution (FR-CIV-TACTICS-059).
+civis-3d-mod-package-all: civis-3d-mod-wasm
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
 
 # 3D verification gate: check + test + clippy --all-targets + fmt --check.
 # Uses cargo check (not build) so the gate works when service binaries are
@@ -121,7 +126,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    cd clients/godot-ref/rust && cargo test
+    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
 
 # Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
 infra-up:

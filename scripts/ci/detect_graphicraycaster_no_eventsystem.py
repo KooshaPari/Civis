@@ -32,10 +32,10 @@ def scan_file(filepath):
     # Pattern: AddComponent<GraphicRaycaster>() or new GraphicRaycaster()
     graphicraycaster_pattern = re.compile(r'(AddComponent<GraphicRaycaster>\s*\(\)|new\s+GraphicRaycaster\s*\()')
 
-    # Pattern: EventSystem guard within context
-    eventsystem_guard_pattern = re.compile(
-        r'EventSystem\.(current\s*!=\s*null|current\s*==\s*null|\w+EventSystem)|EnsureEventSystemAlive\s*\('
-    )
+    # EventSystem guards — split patterns to keep regex complexity low (Sonar python:S5843)
+    eventsystem_null_guard = re.compile(r'EventSystem\.current\s*(!=|==)\s*null')
+    eventsystem_named_guard = re.compile(r'EventSystem\.\w+EventSystem')
+    ensure_alive_guard = re.compile(r'EnsureEventSystemAlive\s*\(')
 
     for idx, line in enumerate(lines):
         if graphicraycaster_pattern.search(line):
@@ -44,7 +44,12 @@ def scan_file(filepath):
             end = min(len(lines), idx + 21)
             context = '\n'.join(lines[start:end])
 
-            if not eventsystem_guard_pattern.search(context):
+            has_guard = (
+                eventsystem_null_guard.search(context)
+                or eventsystem_named_guard.search(context)
+                or ensure_alive_guard.search(context)
+            )
+            if not has_guard:
                 high_count += 1
                 violations.append({
                     'file': str(filepath),

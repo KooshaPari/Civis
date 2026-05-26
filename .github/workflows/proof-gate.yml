@@ -30,8 +30,10 @@ jobs:
       - name: Install Python deps for proof gate
         working-directory: src/Tools/DinoforgeMcp
         run: |
-          python -m pip install --upgrade "pip==25.0.1"
-          pip install -e ".[dev]" -q
+          python -m pip install --upgrade --only-binary :all: "pip==25.0.1"
+          pip install --only-binary :all: "setuptools==75.8.2" "wheel==0.45.1"
+          pip install --only-binary :all: "fastmcp==3.2.0" "pydantic==2.10.6" "python-dotenv==1.0.1" "pytest==8.3.5" "pytest-asyncio==0.25.0" "pytest-cov==6.0.0" "pytest-timeout==2.3.1"
+          pip install -e . --no-deps -q
 
       - name: Locate latest bundle
         id: bundle

@@ -250,7 +250,6 @@ pub fn baseline_scenario_path() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_mod_host::ModGuestStateSave;
 
     #[test]
     fn baseline_yaml_parses() {
@@ -351,7 +350,7 @@ mods:
         let save = sim.export_mod_guest_state();
         let json = save.to_json().expect("json");
         let mut sim2 = scenario.into_simulation(2);
-        sim2.restore_mod_guest_state(&ModGuestStateSave::from_json(&json).expect("parse"))
+        sim2.restore_mod_guest_state(&crate::ModGuestStateSave::from_json(&json).expect("parse"))
             .expect("restore");
         assert_eq!(
             sim2.mod_host().guest_memory_snapshot("example-policy"),

@@ -346,7 +346,8 @@ mods:
         let scenario = load_scenario(baseline_scenario_path()).expect("baseline");
         let mut sim = scenario.clone().into_simulation(1);
         assert!(sim.mod_browser_entries().len() >= 2);
-        sim.mod_host_mut().restore_guest_memory("example-policy", vec![1, 2]);
+        sim.mod_host_mut()
+            .restore_guest_memory("example-policy", vec![1, 2]);
         let save = sim.export_mod_guest_state();
         let json = save.to_json().expect("json");
         let mut sim2 = scenario.into_simulation(2);

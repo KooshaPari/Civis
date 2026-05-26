@@ -8,6 +8,8 @@ export type ModBrowserEntry = {
   mod_type: string;
   has_wasm: boolean;
   guest_memory_len: number;
+  /** Float opcode count from determinism scan (0 when WASM absent). */
+  float_instruction_count?: number;
 };
 
 function modsFromSnapshot(snapshot: Record<string, unknown> | null): ModBrowserEntry[] {

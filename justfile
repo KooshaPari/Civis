@@ -78,6 +78,10 @@ civis-3d-mod-wasm:
 civis-3d-mod-package: civis-3d-mod-wasm
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
 
+# Sign example mod.wasm (prints author_pubkey_hex for manifest.toml).
+civis-3d-mod-sign MOD="example-policy":
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sign-example-mod.ps1 -ModId {{MOD}}
+
 # Package both example mods for distribution (FR-CIV-TACTICS-059).
 civis-3d-mod-package-all: civis-3d-mod-wasm
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy

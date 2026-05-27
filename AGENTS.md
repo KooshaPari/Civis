@@ -13,6 +13,7 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 | Scenario YAML | `just civis-3d-scenario-check` |
 | Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` + `mods/example-economic/mod.wasm` |
 | Example `.civmod` | `just civis-3d-mod-package` → `example-policy.civmod`; `just civis-3d-mod-package-all` → policy + economic |
+| Example mod sign | `just civis-3d-mod-sign` → `scripts/sign-example-mod.ps1` (prints `author_pubkey_hex`) |
 | Quality manifest (optional UE) | `scripts/quality/README.md`; `CIVIS_QUALITY_UNREAL=1` + `emit-quality-manifest.ps1` |
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
 | Godot GDExtension | `just godot-test` (`--manifest-path clients/godot-ref/rust/Cargo.toml`) |
@@ -50,7 +51,7 @@ Default stack:
 
 ## Do not (agents)
 
-- Do not implement full CIV-0700 (capability enforcement, mod browser UI, full signing pipeline) — `civ-mod-host` v3 **partial**: manifest + `.civmod` ZIP + `wasmtime` policy/economic ticks + Ed25519 verify when `author_pubkey_hex` + `mod.wasm.sig` present (`mod-dev` skips verify); determinism scan unless `mod-dev`.
+- Do not implement full CIV-0700 (capability enforcement, mod store/publish, hot reload) — v3 **partial–good**: manifest + `.civmod` ZIP + `wasmtime` ticks + Ed25519 verify (`just civis-3d-mod-sign`); mod browser on `sim.snapshot` + web **Mods** panel; `mod.loaded.v1` replay-bus JSON; determinism scan unless `mod-dev`.
 - Do not assume Quixel/Megascans assets are in git (`Content/Megascans/` is local-only).
 - Do not edit non-primary worktrees unless the user asked.
 - Do not skip `agent-smoke` or `civis-3d-verify` when changing JSON-RPC or snapshot shapes.
@@ -65,8 +66,8 @@ Default stack:
 
 **Mature:** determinism/replay, `civ-server` WS tests (incl. spawn palette), `civ-watch`, web L2 authoring, Godot/Bevy/Unreal server attach, JSON-RPC catalog + `just civis-3d-verify`.
 
-**Partial:** modding v3 — **25** `civ-mod-host` unit tests (`just civis-3d-mod-check`), WASM policy/economy/military ticks, `.civmod`, `civlab-sdk`, partial Ed25519 verify + `just civis-3d-mod-package-all`; `scenarios/baseline.yaml` loads **`example-policy`** + **`example-economic`**; F3D0 — Bevy full `Frame3d`, Godot/Unreal **16³ procedural mesh** when dense `voxels` (4096), else chunk markers; Unreal minimap UMG (256² capture).
+**Partial:** modding v3 — **25+** `civ-mod-host` tests, WASM ticks, `.civmod`, `civlab-sdk`, Ed25519 verify + `just civis-3d-mod-sign` + `just civis-3d-mod-package-all`; example mods on **civ-server** / **civ-watch** + `baseline.yaml`; mod browser (`mods` + `mod_lifecycle` on `sim.snapshot`, web **Mods** panel, Godot **Mods** label); `mod.loaded.v1` replay-bus JSON in replay + watch event feed; F3D0 — Bevy full `Frame3d`, Godot/Unreal **16³ mesh** when dense `voxels`; cross-client minimap click-to-focus (Bevy/Godot/web/Unreal).
 
-**Deferred (product):** Quixel L5 art, mod signing CLI/publish workflow, in-game mod browser, full `mod.loaded.v1` replay-bus JSON.
+**Product-only (not agent blockers):** Quixel/Megascans mesh import — engineering slots in `Content/Megascans/` + [fr-l5-visual-pass.md](docs/development-guide/fr-l5-visual-pass.md); artists import via Bridge.
 
 See `docs/development-guide/fr-ax-dx-ux-maturity-audit.md`.

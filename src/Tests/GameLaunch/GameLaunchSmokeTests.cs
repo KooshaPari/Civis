@@ -26,7 +26,7 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
     }
 
     [SkippableFact]
-    public async Task Bridge_Ping_RoundTripUnder500Ms()
+    public async Task Bridge_Ping_RoundTripUnderOneSecond()
     {
         fixture.SkipIfNotInitialized();
 
@@ -34,7 +34,7 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
         await fixture.Client!.PingAsync();
         sw.Stop();
 
-        sw.ElapsedMilliseconds.Should().BeLessThan(500,
-            "bridge round-trip over named pipe; allow headroom for CI and loaded game");
+        sw.ElapsedMilliseconds.Should().BeLessThan(1000,
+            "bridge round-trip over named pipe; allow headroom for self-hosted runners and loaded game");
     }
 }

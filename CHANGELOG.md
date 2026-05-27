@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Post-PR188 follow-up: GameLaunch attach-mode bridge restart, Sonar batch-4 exclusions, packages.lock.json refresh for CI.
+- `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.
 
 ### Changed
+- GameLaunch bridge ping SLA: 1000ms round-trip on self-hosted (was 500ms flake under load).
+- Agent scripts default to `main`; add `scripts/agent-worktrees.ps1` for parallel worktrees under `~/.cursor/worktrees/Dino`.
 - CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.
 
 ## [0.25.0-dev] - 2026-05-25

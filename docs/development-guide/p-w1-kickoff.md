@@ -96,7 +96,8 @@
 20. **Save/mod distribution** — **done** (item 21): slot-1..5, autosave ring, signed `.civmod` upload, mod unload.
 21. **Save/mod distribution v2** — **done** (item 22): `save.slot` / `save.load` / `save.list` on civ-server; web server slot UI; `mods/publish` + publish API; `POST /control/mods/reload`.
 22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
-23. **Next:** wire `session.saved.v1` on replay bus; web UI for remote mod catalog; full CIV-0700 PolicyMod trait surface.
+23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
+24. **Next:** replay bus for `mod.permission_violation.v1`; civ-server session DB; signed remote mod registry.
 
 ## Run
 

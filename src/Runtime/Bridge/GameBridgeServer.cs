@@ -573,6 +573,8 @@ namespace DINOForge.Runtime.Bridge
                     return HandleSimulateKey(parameters);
                 case "pressEscape":
                     return HandleSimulateKey(new JObject { ["key"] = "Escape" });
+                case "togglePauseMenu":
+                    return HandleTogglePauseMenu(parameters);
                 case "dismissLoadScreen":
                     return HandleDismissLoadScreen();
                 case "clickButton":
@@ -1839,14 +1841,82 @@ namespace DINOForge.Runtime.Bridge
         /// <summary>
         /// Injects a key press via Win32 SendInput (same path as MCP game input tools).
         /// Parameter <c>key</c> defaults to Escape for pause-menu tests.
+        /// For Escape, also runs <see cref="PauseMenuBridgeHelper"/> on the main thread when Win32 fails
+        /// or the pause UI is still hidden.
         /// </summary>
         private JToken HandleSimulateKey(JObject? parameters)
         {
             string key = parameters?.Value<string>("key") ?? "Escape";
-            bool ok = Win32KeyInput.TrySendKey(key, out string message);
-            DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleSimulateKey key='{key}' ok={ok} msg={message}");
-            return JToken.FromObject(new { success = ok, message });
+            bool win32Ok = Win32KeyInput.TrySendKey(key, out string win32Message);
+
+            if (!IsEscapeKey(key))
+            {
+                DebugLog.Write("GameBridgeServer",
+                    $"[GameBridgeServer] HandleSimulateKey key='{key}' ok={win32Ok} msg={win32Message}");
+                return JToken.FromObject(new { success = win32Ok, message = win32Message });
+            }
+
+            return HandleEscapePauseOpen(win32Ok, win32Message);
         }
+
+        private JToken HandleTogglePauseMenu(JObject? _)
+        {
+            var result = MainThreadDispatcher.RunOnMainThread(() =>
+            {
+                (bool opened, string message) = PauseMenuBridgeHelper.TryOpenPauseMenu();
+                bool visible = PauseMenuBridgeHelper.IsPauseMenuVisible();
+                return new
+                {
+                    success = visible,
+                    message,
+                    pauseVisible = visible,
+                    opened,
+                };
+            });
+
+            bool completed = result.Wait(MainThreadInputWaitTimeoutMs);
+            if (!completed)
+            {
+                return JToken.FromObject(new { success = false, message = "Timed out" });
+            }
+
+            DebugLog.Write("GameBridgeServer",
+                $"[GameBridgeServer] HandleTogglePauseMenu result={result.Result}");
+            return JToken.FromObject(result.Result);
+        }
+
+        private JToken HandleEscapePauseOpen(bool win32Ok, string win32Message)
+        {
+            var pauseResult = MainThreadDispatcher.RunOnMainThread(() =>
+            {
+                (bool _, string openMessage) = PauseMenuBridgeHelper.TryOpenPauseMenu();
+                bool visible = PauseMenuBridgeHelper.IsPauseMenuVisible();
+                return (visible, openMessage);
+            });
+
+            bool pauseCompleted = pauseResult.Wait(MainThreadInputWaitTimeoutMs);
+            bool pauseVisible = false;
+            string pauseMessage = "main-thread pause open timed out";
+            if (pauseCompleted)
+            {
+                (bool visible, string openMessage) = pauseResult.Result;
+                pauseVisible = visible;
+                pauseMessage = openMessage;
+            }
+
+            bool success = pauseVisible || win32Ok;
+            string message = pauseVisible
+                ? $"pause menu visible; win32={win32Ok} ({win32Message}); {pauseMessage}"
+                : $"win32={win32Ok} ({win32Message}); {pauseMessage}";
+
+            DebugLog.Write("GameBridgeServer",
+                $"[GameBridgeServer] HandleSimulateKey Escape success={success} pauseVisible={pauseVisible} msg={message}");
+            return JToken.FromObject(new { success, message, pauseVisible });
+        }
+
+        private static bool IsEscapeKey(string key) =>
+            string.Equals(key, "Escape", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, "Esc", StringComparison.OrdinalIgnoreCase);
 
         private JToken HandlePressKey(JObject? parameters)
         {
@@ -1916,12 +1986,26 @@ namespace DINOForge.Runtime.Bridge
                     var invoked = new List<string>();
                     foreach (var mb in allMBs)
                     {
-                        if (mb == null || !mb.gameObject.activeInHierarchy) continue;
+                        if (mb == null) continue;
                         string tName = mb.GetType().Name;
                         string goName = mb.gameObject.name;
                         bool matches = tName.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0 ||
                                        goName.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0;
                         if (!matches) continue;
+
+                        if (!mb.gameObject.activeInHierarchy)
+                        {
+                            Transform? current = mb.transform;
+                            while (current != null)
+                            {
+                                if (!current.gameObject.activeSelf)
+                                {
+                                    current.gameObject.SetActive(true);
+                                }
+
+                                current = current.parent;
+                            }
+                        }
 
                         MethodInfo? mi = mb.GetType().GetMethod(method,
                             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,

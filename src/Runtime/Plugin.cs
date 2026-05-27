@@ -215,27 +215,30 @@ namespace DINOForge.Runtime
 
             StartResurrectionWatcher();
 
-            // P0 fix: start the Win32 GetAsyncKeyState background thread so F9/F10
-            // work at the main menu. Without this, the ECS OnUpdate polling only fires
-            // when SimulationSystemGroup is ticking (during gameplay), leaving the
-            // debug overlay unreachable from the menu.
+            // SPEC-004 Path 2: PlayerLoop.Update injection (preferred F9/F10 path at main menu).
+            bool playerLoopInjected = false;
             try
             {
-                Bridge.KeyInputSystem.StartKeyPollThread();
-            }
-            catch (Exception ex)
-            {
-                Log.LogWarning($"[Plugin] StartKeyPollThread failed: {ex}");
-            }
-
-            // SPEC-004 Path 2: PlayerLoop.Update injection + SetPlayerLoop re-injection postfix.
-            try
-            {
-                InjectPlayerLoopUpdate();
+                playerLoopInjected = InjectPlayerLoopUpdate();
             }
             catch (Exception ex)
             {
                 Log.LogWarning($"[Plugin] InjectPlayerLoopUpdate failed: {ex}");
+            }
+
+            // Win32 background poll only when PlayerLoop injection failed — both paths use
+            // independent edge detection and would double-toggle F9/F10 if both run.
+            if (!playerLoopInjected)
+            {
+                try
+                {
+                    Bridge.KeyInputSystem.StartKeyPollThread();
+                    Log.LogInfo("[Plugin] PlayerLoop injection failed; using background key poll for F9/F10.");
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning($"[Plugin] StartKeyPollThread failed: {ex}");
+                }
             }
 
             DebugLog.Write("Plugin", "Awake completed");
@@ -698,7 +701,7 @@ namespace DINOForge.Runtime
         private static bool _playerLoopHarmonyPatched;
 
         /// <summary>SPEC-004 Path 2: append <see cref="Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker"/> to PlayerLoop.Update.</summary>
-        private static void InjectPlayerLoopUpdate()
+        private static bool InjectPlayerLoopUpdate()
         {
             bool injected = Bridge.PlayerLoopKeyInputInjection.InjectIntoCurrentPlayerLoop(
                 typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker),
@@ -712,6 +715,8 @@ namespace DINOForge.Runtime
             {
                 Log?.LogWarning("[Plugin] PlayerLoop DINOForgeUpdate injection failed (Update subsystem missing?).");
             }
+
+            return injected;
         }
 
         private static int _playerLoopEventSystemTick;
@@ -730,6 +735,12 @@ namespace DINOForge.Runtime
                 EnsureEventSystemAlive();
                 try { SharedBridgeServer?.EnsureServerAlive(); }
                 catch (Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] EnsureServerAlive: {ex.Message}"); }
+            }
+
+            if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                    System.Runtime.InteropServices.OSPlatform.Windows))
+            {
+                return;
             }
 
             const int VK_F9 = 0x78;
@@ -884,6 +895,7 @@ namespace DINOForge.Runtime
         private DebugOverlayBehaviour? _debugOverlay;
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
+        private MainMenuThemer? _mainMenuThemer;
 
         // _uguiReady: true once DFCanvas.Start() reports success via IsReady.
         // We check this each Update() because DFCanvas.Start() runs after Initialize().
@@ -1225,6 +1237,18 @@ namespace DINOForge.Runtime
                         _log.LogInfo($"[RuntimeDriver] MainMenu-mode pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
                         WireUguiToModPlatform();
                         PushLoadedPacksToUgui("main-menu init");
+
+                        // Apply total_conversion theme to main menu
+                        try
+                        {
+                            _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
+                            var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
+                            _mainMenuThemer.TryApplyTheme(packInfos);
+                        }
+                        catch (Exception themeEx)
+                        {
+                            _log.LogWarning($"[RuntimeDriver] MainMenuThemer failed: {themeEx.Message}");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -1247,8 +1271,25 @@ namespace DINOForge.Runtime
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
 
             // Pump deferred work on the main thread until destruction.
+            int _themeRetryCount = 0;
             while (!_destroyed)
             {
+                // Retry MainMenuThemer if canvas wasn't ready during Step 7
+                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
+                {
+                    _themeRetryCount++;
+                    if (_themeRetryCount % 5 == 0) // every ~5 frames
+                    {
+                        try
+                        {
+                            var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
+                            if (packInfos.Count > 0)
+                                _mainMenuThemer.TryApplyTheme(packInfos);
+                        }
+                        catch { /* safe-swallow: theme retry is best-effort */ }
+                    }
+                }
+
                 if (TryDequeuePendingWorldReady(out World? pendingWorld))
                 {
                     yield return ProcessWorldReadyCoroutine(pendingWorld!);

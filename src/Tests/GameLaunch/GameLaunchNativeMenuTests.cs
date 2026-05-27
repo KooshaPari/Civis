@@ -87,6 +87,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
             pauseOpened,
             "ESC/pause invokeMethod could not open pause menu — NATIVE-004 skipped (bridge key simulation unavailable)");
 
+        await fixture.Client!.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
+            .ConfigureAwait(false);
         await Task.Delay(2500);
 
         (await IsPauseMenuVisibleAsync(fixture.Client)).Should().BeTrue(
@@ -377,6 +379,23 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
     private static async Task<bool> TryOpenPauseMenuAsync(GameClient client)
     {
+        try
+        {
+            StartGameResult togglePause = await client.TogglePauseMenuAsync().ConfigureAwait(false);
+            if (togglePause.Success)
+            {
+                await Task.Delay(750).ConfigureAwait(false);
+                if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (GameClientException)
+        {
+            // Older deployed bridge builds may not expose togglePauseMenu yet.
+        }
+
         StartGameResult esc = await client.PressEscapeAsync().ConfigureAwait(false);
         if (esc.Success)
         {

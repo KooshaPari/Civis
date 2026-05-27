@@ -438,6 +438,12 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<StartGameResult>("pressEscape", null, ct);
 
     /// <summary>
+    /// Opens the native pause menu on the game main thread (<c>togglePauseMenu</c>).
+    /// </summary>
+    public Task<StartGameResult> TogglePauseMenuAsync(CancellationToken ct = default) =>
+        SendRequestAsync<StartGameResult>("togglePauseMenu", null, ct);
+
+    /// <summary>
     /// Invokes a void(0-param) method on any active MonoBehaviour matching target (type or GO name).
     /// </summary>
     public Task<StartGameResult> InvokeMethodAsync(string target, string method, CancellationToken ct = default) =>

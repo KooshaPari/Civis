@@ -162,6 +162,26 @@ impl CivSaveBundle {
         Self::load_dir(temp.path())
     }
 
+    /// Read `metadata.json` from a save folder or archive without loading the simulation.
+    pub fn read_metadata(path: impl AsRef<Path>) -> Result<CivSaveMetadata, SaveBundleError> {
+        let path = path.as_ref();
+        if Self::is_save_dir(path) {
+            let metadata_path = path.join("metadata.json");
+            let json =
+                fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
+            Ok(serde_json::from_str(&json)?)
+        } else if Self::is_save_archive(path) {
+            let compressed = fs::read(path).map_err(|e| io_err(path, e))?;
+            let tar_bytes = decode_all(compressed.as_slice()).map_err(zstd_err)?;
+            read_metadata_from_tar(&tar_bytes)
+        } else {
+            Err(SaveBundleError::MissingComponent {
+                dir: path.to_path_buf(),
+                component: "metadata.json",
+            })
+        }
+    }
+
     /// Load from either a `.civsave/` folder or a `.civsave.zst` archive.
     pub fn load(path: impl AsRef<Path>) -> Result<Simulation, SaveBundleError> {
         let path = path.as_ref();
@@ -229,6 +249,25 @@ fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
 fn extract_tar(bytes: &[u8], dest: &Path) -> Result<(), SaveBundleError> {
     let mut archive = Archive::new(bytes);
     archive.unpack(dest).map_err(|e| archive_err(e))
+}
+
+fn read_metadata_from_tar(bytes: &[u8]) -> Result<CivSaveMetadata, SaveBundleError> {
+    use std::io::Read;
+    let mut archive = Archive::new(bytes);
+    for entry in archive.entries().map_err(|e| archive_err(e))? {
+        let mut entry = entry.map_err(|e| archive_err(e))?;
+        let entry_path = entry.path().map_err(|e| archive_err(e))?;
+        if entry_path.file_name().and_then(|s| s.to_str()) != Some("metadata.json") {
+            continue;
+        }
+        let mut json = String::new();
+        entry.read_to_string(&mut json).map_err(|e| archive_err(e))?;
+        return Ok(serde_json::from_str(&json)?);
+    }
+    Err(SaveBundleError::MissingComponent {
+        dir: PathBuf::from("<archive>"),
+        component: "metadata.json",
+    })
 }
 
 #[cfg(test)]

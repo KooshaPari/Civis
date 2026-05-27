@@ -22,6 +22,7 @@ async fn main() {
             max_clients,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::from_env(),
+            ..Default::default()
         },
         Arc::new(Mutex::new(Simulation::default())),
     )

@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 pub mod jsonrpc;
+pub mod saves;
 pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
 pub mod ws_bridge;

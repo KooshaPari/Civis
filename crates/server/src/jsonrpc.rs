@@ -3,7 +3,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use thiserror::Error;
+
+use crate::saves::{list_saves, parse_slot_name_params};
 
 /// JSON-RPC 2.0 version string required on every message.
 pub const JSONRPC_VERSION: &str = "2.0";
@@ -58,6 +61,12 @@ pub enum JsonRpcMethod {
     SimPlaceVoxel,
     /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
     SimDamage,
+    /// Persist simulation to a production slot (`save.slot`, CIV-1000 §13).
+    SaveSlot,
+    /// Load simulation from a production slot (`save.load`, CIV-1000 §13).
+    LoadSlot,
+    /// List saves in the bridge `saves/` directory (`save.list`, CIV-1000 §13).
+    SaveList,
 }
 
 impl JsonRpcMethod {
@@ -78,6 +87,9 @@ impl JsonRpcMethod {
             Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
             Self::SimDamage => "sim.damage",
+            Self::SaveSlot => "save.slot",
+            Self::LoadSlot => "save.load",
+            Self::SaveList => "save.list",
         }
     }
 
@@ -98,6 +110,9 @@ impl JsonRpcMethod {
             "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
             "sim.damage" => Some(Self::SimDamage),
+            "save.slot" => Some(Self::SaveSlot),
+            "save.load" => Some(Self::LoadSlot),
+            "save.list" => Some(Self::SaveList),
             _ => None,
         }
     }
@@ -599,6 +614,8 @@ pub struct DispatchContext {
     pub speed_multiplier: u32,
     /// Role established on connect (header) or first JSON-RPC message params.
     pub connection_role: Option<String>,
+    /// Bridge save directory for `save.*` handlers.
+    pub saves_dir: Option<PathBuf>,
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.
@@ -675,6 +692,16 @@ pub enum DispatchEffect {
     ApplyDamage {
         /// Damage event applied on next tactics phase (replay-logged).
         event: civ_engine::DamageEvent,
+    },
+    /// Write a production slot archive (`save.slot`).
+    SaveSlot {
+        /// Validated slot stem (`slot-1` … `slot-5`).
+        slot_name: String,
+    },
+    /// Replace bridge simulation from a slot archive (`save.load`).
+    LoadSlot {
+        /// Validated slot stem (`slot-1` … `slot-5`).
+        slot_name: String,
     },
 }
 
@@ -1078,6 +1105,58 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+        JsonRpcMethod::SaveSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "saved": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::SaveSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::LoadSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "loaded": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::LoadSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::SaveList => match ctx.saves_dir.as_deref() {
+            Some(dir) => match list_saves(dir) {
+                Ok(entries) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::to_value(entries).unwrap_or(Value::Array(vec![])),
+                    ),
+                    effect: DispatchEffect::None,
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
+                },
+            },
+            None => DispatchPlan {
+                response: JsonRpcResponse::failure(
+                    req.id,
+                    JsonRpcError {
+                        code: error_code::INTERNAL_ERROR,
+                        message: "Save directory unavailable".to_owned(),
+                        data: None,
+                    },
+                ),
+                effect: DispatchEffect::None,
+            },
+        },
     }
 }
 
@@ -1311,6 +1390,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1344,6 +1424,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(
@@ -1377,6 +1458,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1399,6 +1481,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1422,6 +1505,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1446,6 +1530,7 @@ mod tests {
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1470,6 +1555,7 @@ mod tests {
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1490,6 +1576,7 @@ mod tests {
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1560,6 +1647,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1582,6 +1670,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -1690,6 +1779,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -1724,6 +1814,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert!(matches!(
@@ -1769,6 +1860,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert!(matches!(
@@ -1830,6 +1922,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1882,6 +1975,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(
@@ -1939,6 +2033,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(
@@ -1971,6 +2066,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(
@@ -2003,6 +2099,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(
@@ -2033,6 +2130,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2056,6 +2154,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2121,6 +2220,7 @@ mod tests {
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2184,6 +2284,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2208,6 +2309,7 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2237,12 +2339,64 @@ mod tests {
                 require_role: false,
                 speed_multiplier: 4,
                 connection_role: None,
+                saves_dir: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
         assert_eq!(
             plan.response.result,
             Some(serde_json::json!({ "multiplier": 4 }))
+        );
+    }
+
+    #[test]
+    fn dispatch_save_slot_plans_save_effect() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":30,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 1,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+            },
+        );
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::SaveSlot {
+                slot_name: "slot-2".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn dispatch_save_slot_rejects_invalid_slot() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":31,"method":"save.slot","params":{"slot_name":"slot-9"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 0,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.response.error.as_ref().map(|e| e.code),
+            Some(error_code::INVALID_PARAMS)
         );
     }
 }

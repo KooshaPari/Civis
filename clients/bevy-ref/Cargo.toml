@@ -24,6 +24,7 @@ serde = { version = "1", features = ["derive"] }
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
 bevy = { version = "0.14", optional = true }
+wgpu = { version = "0.20", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optional = true }
 tokio-tungstenite = { version = "0.24", optional = true, default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
 futures-util = { version = "0.3", optional = true }
@@ -38,6 +39,7 @@ serde_json = "1"
 default = []
 bevy = [
     "dep:bevy",
+    "dep:wgpu",
     "dep:tokio",
     "dep:tokio-tungstenite",
     "dep:futures-util",

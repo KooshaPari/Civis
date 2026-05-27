@@ -783,6 +783,21 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 .mods-upload-input {
   display: none;
 }
+.mods-fetch-form {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mods-fetch-input {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  font-size: 0.75rem;
+}
+.mods-fetch-actions {
+  display: flex;
+  gap: 6px;
+}
 .mods-loaded-actions {
   display: flex;
   gap: 6px;
@@ -794,6 +809,7 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 .mods-installed { font-size: 0.75rem; color: var(--muted, #888); }
 .mods-refresh,
 .mods-install,
+.mods-fetch,
 .mods-reload,
 .mods-unload {
   font-size: 0.75rem;

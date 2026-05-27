@@ -155,6 +155,9 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-069 | Session-scoped SQLite save metadata. | `civ-save-db`, `civ-watch` | `save_db::*`, `post_save_slot` | implemented |
 | FR-CIV-TACTICS-070 | Remote mod fetch cache. | `civ-watch`, `mods/remote/` | `post_mods_fetch`, `list_remote_mods` | implemented |
 | FR-CIV-TACTICS-071 | CIV-0700 capability enforcement (`world_read`, `action_emit`). | `mod-host/capability.rs` | `capability::*` | implemented |
+| FR-CIV-TACTICS-072 | `session.saved.v1` on replay bus + snapshot. | `engine/replay.rs`, `civ-watch` | `session_saved_*` | implemented |
+| FR-CIV-TACTICS-073 | Web remote mod fetch UI. | `web/dashboard/mods_panel.tsx` | manual / tsc | implemented |
+| FR-CIV-TACTICS-074 | PolicyMod trait surface (CIV-0700 §5). | `civlab-sdk/policy.rs` | `policy::*` | implemented |
 
 ---
 

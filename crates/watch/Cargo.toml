@@ -33,6 +33,8 @@ tower-http = { version = "0.5", features = ["cors", "fs"] }
 futures = "0.3"
 base64 = "0.22"
 uuid = { version = "1", features = ["v4"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+sha2 = "0.10"
 
 [dev-dependencies]
 http-body-util = "0.1"

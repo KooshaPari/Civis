@@ -36,8 +36,9 @@ use civ_agents::{
 };
 use civ_engine::{Citizen, CivSaveBundle, DiplomacyKind, JobType, ModBrowserEntry, ModType, Simulation, load_manifest};
 use base64::Engine as _;
-use civ_mod_host::{read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
+use civ_mod_host::{read_civmod_archive, read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
 use civ_save_db::{format_session_saved_event_json, SaveDb};
+use sha2::{Digest, Sha256};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
@@ -363,6 +364,7 @@ struct AppState {
     mods_dir: Arc<PathBuf>,
     session_id: String,
     save_db: Arc<SaveDb>,
+    http: reqwest::Client,
 }
 
 #[derive(Debug, Serialize)]
@@ -507,6 +509,41 @@ struct UploadModResponse {
     source: String,
 }
 
+const REMOTE_MOD_MAX_BYTES: usize = 50 * 1024 * 1024;
+const REMOTE_FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+const REMOTE_MOD_META_NAME: &str = "meta.json";
+const REMOTE_MOD_ARCHIVE_NAME: &str = "mod.civmod";
+
+#[derive(Debug, Deserialize)]
+struct FetchModReq {
+    url: String,
+    #[serde(default)]
+    mod_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct FetchModResponse {
+    ok: bool,
+    id: String,
+    source: String,
+    path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RemoteModMeta {
+    id: String,
+    url: String,
+    fetched_at: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RemoteModEntry {
+    id: String,
+    path: String,
+    fetched_at: u64,
+    url: String,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -538,6 +575,12 @@ async fn main() {
     std::fs::create_dir_all(&*mods_dir).ok();
     std::fs::create_dir_all(mods_dir.join("uploads")).ok();
     std::fs::create_dir_all(mods_dir.join("publish")).ok();
+    std::fs::create_dir_all(mods_dir.join("remote")).ok();
+    let http = reqwest::Client::builder()
+        .timeout(REMOTE_FETCH_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::limited(5))
+        .build()
+        .expect("reqwest client");
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -575,6 +618,7 @@ async fn main() {
         mods_dir,
         session_id,
         save_db,
+        http,
     };
 
     tokio::spawn(simulation_worker(state.clone()));
@@ -616,6 +660,8 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/mods/install", post(install_mod_handler))
         .route("/control/mods/unload", post(unload_mod_handler))
         .route("/control/mods/reload", post(reload_mod_handler))
+        .route("/control/mods/fetch", post(fetch_mod_handler))
+        .route("/control/mods/remote", get(list_remote_mods_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -2254,6 +2300,12 @@ fn scan_mod_catalog(mods_dir: &Path, installed_ids: &std::collections::HashSet<S
         installed_ids,
         &mut seen,
     ));
+    entries.extend(remote_civmod_catalog_entries(
+        &repo,
+        mods_dir,
+        installed_ids,
+        &mut seen,
+    ));
 
     for name in ["example-policy", "example-economic"] {
         let dir = mods_dir.join(name);
@@ -2382,6 +2434,253 @@ fn scan_published_mods(mods_dir: &Path) -> Vec<PublishedModEntry> {
                 source,
             });
         }
+    }
+    entries.sort_by(|a, b| a.id.cmp(&b.id));
+    entries
+}
+
+fn validate_remote_fetch_url(url: &str) -> Result<(), String> {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return Err("url cannot be empty".into());
+    }
+    let parsed = reqwest::Url::parse(trimmed).map_err(|err| format!("invalid url: {err}"))?;
+    match parsed.scheme() {
+        "http" | "https" => Ok(()),
+        scheme => Err(format!("unsupported url scheme: {scheme}")),
+    }
+}
+
+fn sanitize_remote_mod_id(mod_id: &str) -> Result<String, String> {
+    let trimmed = mod_id.trim();
+    if trimmed.is_empty() {
+        return Err("mod_id cannot be empty".into());
+    }
+    if trimmed.contains("..") || trimmed.contains('/') || trimmed.contains('\\') {
+        return Err("mod_id must not contain path separators or '..'".into());
+    }
+    let valid_id = trimmed.as_bytes().first().is_some_and(|b| b.is_ascii_lowercase())
+        && trimmed.len() <= 64
+        && trimmed
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    if !valid_id {
+        return Err(format!(
+            "mod_id `{trimmed}` must match [a-z][a-z0-9-]{{0,63}}"
+        ));
+    }
+    Ok(trimmed.to_owned())
+}
+
+fn url_hash_cache_id(url: &str) -> String {
+    let digest = Sha256::digest(url.trim().as_bytes());
+    digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+fn resolve_remote_cache_id(url: &str, mod_id: Option<&str>) -> Result<String, String> {
+    validate_remote_fetch_url(url)?;
+    if let Some(id) = mod_id {
+        return sanitize_remote_mod_id(id);
+    }
+    Ok(format!("url-{}", url_hash_cache_id(url)))
+}
+
+fn remote_mod_cache_dir(mods_dir: &Path, cache_id: &str) -> PathBuf {
+    mods_dir.join("remote").join(cache_id)
+}
+
+fn remote_mod_source_path(repo: &Path, cache_dir: &Path) -> String {
+    cache_dir
+        .join(REMOTE_MOD_ARCHIVE_NAME)
+        .strip_prefix(repo)
+        .map(|p| p.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_else(|_| {
+            format!(
+                "mods/remote/{}/{}",
+                cache_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown"),
+                REMOTE_MOD_ARCHIVE_NAME
+            )
+        })
+}
+
+fn is_zip_payload(bytes: &[u8]) -> bool {
+    bytes.len() >= 4 && bytes.starts_with(b"PK\x03\x04")
+}
+
+fn validate_remote_mod_bytes(bytes: &[u8], scratch_path: &Path) -> Result<(), String> {
+    if bytes.is_empty() {
+        return Err("downloaded payload is empty".into());
+    }
+    if bytes.len() > REMOTE_MOD_MAX_BYTES {
+        return Err(format!(
+            "downloaded payload exceeds {} byte limit",
+            REMOTE_MOD_MAX_BYTES
+        ));
+    }
+    if !is_zip_payload(bytes) {
+        return Err("downloaded payload is not a zip/civmod archive".into());
+    }
+    if let Some(parent) = scratch_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+    }
+    std::fs::write(scratch_path, bytes).map_err(|err| err.to_string())?;
+    let result = read_civmod_archive(scratch_path).map(|_| ());
+    if result.is_err() {
+        let _ = std::fs::remove_file(scratch_path);
+    }
+    result.map_err(|err| format!("invalid civmod archive: {err}"))
+}
+
+fn write_remote_mod_meta(cache_dir: &Path, meta: &RemoteModMeta) -> Result<(), String> {
+    std::fs::create_dir_all(cache_dir).map_err(|err| err.to_string())?;
+    let json = serde_json::to_string_pretty(meta).map_err(|err| err.to_string())?;
+    std::fs::write(cache_dir.join(REMOTE_MOD_META_NAME), json).map_err(|err| err.to_string())
+}
+
+fn read_remote_mod_meta(cache_dir: &Path) -> Option<RemoteModMeta> {
+    let path = cache_dir.join(REMOTE_MOD_META_NAME);
+    let contents = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&contents).ok()
+}
+
+fn unix_timestamp_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn persist_remote_mod_cache(
+    mods_dir: &Path,
+    cache_id: &str,
+    url: &str,
+    bytes: &[u8],
+) -> Result<(PathBuf, String), String> {
+    let cache_dir = remote_mod_cache_dir(mods_dir, cache_id);
+    let archive_path = cache_dir.join(REMOTE_MOD_ARCHIVE_NAME);
+    validate_remote_mod_bytes(bytes, &archive_path)?;
+    let meta = RemoteModMeta {
+        id: cache_id.to_owned(),
+        url: url.trim().to_owned(),
+        fetched_at: unix_timestamp_secs(),
+    };
+    write_remote_mod_meta(&cache_dir, &meta)?;
+    let source = remote_mod_source_path(&repo_root(), &cache_dir);
+    Ok((archive_path, source))
+}
+
+async fn download_remote_mod_payload(
+    http: &reqwest::Client,
+    url: &str,
+) -> Result<Vec<u8>, String> {
+    validate_remote_fetch_url(url)?;
+    let response = http
+        .get(url.trim())
+        .send()
+        .await
+        .map_err(|err| format!("fetch request failed: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!("fetch returned HTTP {}", response.status()));
+    }
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|err| format!("fetch read failed: {err}"))?;
+    if bytes.len() > REMOTE_MOD_MAX_BYTES {
+        return Err(format!(
+            "downloaded payload exceeds {} byte limit",
+            REMOTE_MOD_MAX_BYTES
+        ));
+    }
+    Ok(bytes.to_vec())
+}
+
+fn remote_civmod_catalog_entries(
+    repo: &Path,
+    mods_dir: &Path,
+    installed_ids: &std::collections::HashSet<String>,
+    seen: &mut std::collections::HashSet<String>,
+) -> Vec<ModCatalogEntry> {
+    let remote_root = mods_dir.join("remote");
+    let Ok(read) = std::fs::read_dir(&remote_root) else {
+        return Vec::new();
+    };
+    let mut entries = Vec::new();
+    for entry in read.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        let archive = dir.join(REMOTE_MOD_ARCHIVE_NAME);
+        if !archive.is_file() {
+            continue;
+        }
+        let source = archive
+            .strip_prefix(repo)
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_else(|_| archive.display().to_string());
+        if !seen.insert(source.clone()) {
+            continue;
+        }
+        if let Ok(manifest) = read_manifest_from_civmod(&archive) {
+            entries.push(catalog_entry_from_manifest(
+                source,
+                "civmod",
+                &manifest,
+                installed_ids,
+            ));
+        }
+    }
+    entries
+}
+
+fn scan_remote_mod_cache(mods_dir: &Path) -> Vec<RemoteModEntry> {
+    let remote_root = mods_dir.join("remote");
+    let repo = repo_root();
+    let Ok(read) = std::fs::read_dir(&remote_root) else {
+        return Vec::new();
+    };
+    let mut entries = Vec::new();
+    for entry in read.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        let archive = dir.join(REMOTE_MOD_ARCHIVE_NAME);
+        if !archive.is_file() {
+            continue;
+        }
+        let meta = read_remote_mod_meta(&dir).unwrap_or_else(|| RemoteModMeta {
+            id: dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_owned(),
+            url: String::new(),
+            fetched_at: archive
+                .metadata()
+                .ok()
+                .and_then(|meta| meta.modified().ok())
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs())
+                .unwrap_or(0),
+        });
+        let path = archive
+            .strip_prefix(&repo)
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_else(|_| archive.display().to_string());
+        entries.push(RemoteModEntry {
+            id: meta.id,
+            path,
+            fetched_at: meta.fetched_at,
+            url: meta.url,
+        });
     }
     entries.sort_by(|a, b| a.id.cmp(&b.id));
     entries
@@ -2610,6 +2909,56 @@ async fn reload_mod_handler(
     }))
 }
 
+async fn fetch_mod_handler(
+    State(state): State<AppState>,
+    Json(req): Json<FetchModReq>,
+) -> Result<Json<FetchModResponse>, (StatusCode, Json<ControlOk>)> {
+    let cache_id = resolve_remote_cache_id(&req.url, req.mod_id.as_deref()).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    let bytes = download_remote_mod_payload(&state.http, &req.url)
+        .await
+        .map_err(|message| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(ControlOk {
+                    ok: false,
+                    message: Some(message),
+                }),
+            )
+        })?;
+    let (path, source) =
+        persist_remote_mod_cache(state.mods_dir.as_ref(), &cache_id, &req.url, &bytes).map_err(
+            |message| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ControlOk {
+                        ok: false,
+                        message: Some(message),
+                    }),
+                )
+            },
+        )?;
+    Ok(Json(FetchModResponse {
+        ok: true,
+        id: cache_id,
+        source,
+        path: path.display().to_string(),
+    }))
+}
+
+async fn list_remote_mods_handler(
+    State(state): State<AppState>,
+) -> Json<Vec<RemoteModEntry>> {
+    Json(scan_remote_mod_cache(state.mods_dir.as_ref()))
+}
+
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -2775,6 +3124,11 @@ mod api_tests {
             mods_dir: Arc::new(mods_dir),
             session_id: "test-session".to_string(),
             save_db,
+            http: reqwest::Client::builder()
+                .timeout(REMOTE_FETCH_TIMEOUT)
+                .redirect(reqwest::redirect::Policy::limited(5))
+                .build()
+                .expect("reqwest client"),
         }
     }
 
@@ -3624,6 +3978,151 @@ write_policy = true
             repo_root().join(published_source.replace('/', std::path::MAIN_SEPARATOR_STR));
         let _ = std::fs::remove_file(uploaded_path);
         let _ = std::fs::remove_file(published_path);
+    }
+
+    #[test]
+    fn validate_remote_fetch_url_rejects_empty_and_non_http() {
+        assert!(validate_remote_fetch_url("").is_err());
+        assert!(validate_remote_fetch_url("   ").is_err());
+        assert!(validate_remote_fetch_url("file:///tmp/mod.civmod").is_err());
+        assert!(validate_remote_fetch_url("ftp://example.com/mod.civmod").is_err());
+        assert!(validate_remote_fetch_url("https://example.com/mod.civmod").is_ok());
+        assert!(validate_remote_fetch_url("http://127.0.0.1/mod.civmod").is_ok());
+    }
+
+    #[test]
+    fn resolve_remote_cache_id_uses_mod_id_or_url_hash() {
+        let url = "https://example.com/mods/demo.civmod";
+        assert_eq!(
+            resolve_remote_cache_id(url, Some("demo-mod")).expect("mod id"),
+            "demo-mod"
+        );
+        let hashed = resolve_remote_cache_id(url, None).expect("hash id");
+        assert!(hashed.starts_with("url-"));
+        assert_eq!(hashed.len(), "url-".len() + 16);
+        assert!(resolve_remote_cache_id(url, Some("../escape")).is_err());
+    }
+
+    #[test]
+    fn remote_mod_cache_dir_is_under_remote_root() {
+        let mods_dir = repo_root().join("mods");
+        let path = remote_mod_cache_dir(&mods_dir, "demo-mod");
+        assert!(path.ends_with("mods/remote/demo-mod") || path.ends_with("mods\\remote\\demo-mod"));
+    }
+
+    #[tokio::test]
+    async fn persist_remote_mod_cache_writes_meta_and_catalog_lists_it() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let cache_id = format!("remote-cache-test-{nanos}");
+        let mods_dir = repo_root().join("mods");
+        let cache_dir = remote_mod_cache_dir(&mods_dir, &cache_id);
+        let bytes = minimal_upload_civmod_bytes(&cache_id);
+        let url = "https://example.com/test.civmod";
+        let (archive_path, source) =
+            persist_remote_mod_cache(&mods_dir, &cache_id, url, &bytes).expect("persist");
+        assert!(archive_path.is_file());
+        assert!(source.contains("mods/remote"));
+        assert!(source.ends_with(REMOTE_MOD_ARCHIVE_NAME));
+
+        let meta = read_remote_mod_meta(&cache_dir).expect("meta");
+        assert_eq!(meta.id, cache_id);
+        assert_eq!(meta.url, url);
+
+        let remote_list = scan_remote_mod_cache(&mods_dir);
+        assert!(remote_list.iter().any(|entry| entry.id == cache_id && entry.url == url));
+
+        let catalog = scan_mod_catalog(&mods_dir, &std::collections::HashSet::new());
+        assert!(catalog.iter().any(|entry| entry.source == source && entry.id == cache_id));
+
+        let _ = std::fs::remove_dir_all(cache_dir);
+    }
+
+    #[tokio::test]
+    async fn post_mods_fetch_and_remote_list_round_trip() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let cache_id = format!("remote-fetch-{nanos}");
+        let bytes = minimal_upload_civmod_bytes(&cache_id);
+        let fixture = Router::new().route(
+            "/mod.civmod",
+            get(move || {
+                let bytes = bytes.clone();
+                async move { bytes }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind fixture");
+        let addr = listener.local_addr().expect("fixture addr");
+        tokio::spawn(async move {
+            axum::serve(listener, fixture)
+                .await
+                .expect("fixture server");
+        });
+
+        let url = format!("http://{addr}/mod.civmod");
+        let app = test_app();
+        let fetch_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/fetch")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"url":"{url}","mod_id":"{cache_id}"}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(fetch_response.status(), StatusCode::OK);
+        let fetch_json = body_json(fetch_response).await;
+        assert_eq!(fetch_json["ok"], true);
+        let source = fetch_json["source"].as_str().expect("source").to_owned();
+
+        let remote_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/control/mods/remote")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(remote_response.status(), StatusCode::OK);
+        let remote_json = body_json(remote_response).await;
+        assert!(remote_json
+            .as_array()
+            .expect("remote array")
+            .iter()
+            .any(|entry| entry["id"] == cache_id && entry["url"] == url));
+
+        let catalog_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/control/mods/catalog")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(catalog_response.status(), StatusCode::OK);
+        let catalog_json = body_json(catalog_response).await;
+        assert!(catalog_json
+            .as_array()
+            .expect("catalog array")
+            .iter()
+            .any(|entry| entry["source"] == source && entry["id"] == cache_id));
+
+        let cache_dir = remote_mod_cache_dir(&repo_root().join("mods"), &cache_id);
+        let _ = std::fs::remove_dir_all(cache_dir);
     }
 
 }

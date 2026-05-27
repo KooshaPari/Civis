@@ -62,6 +62,9 @@
 | FR-CIV-TACTICS-059 | implemented | `civis-3d-mod-package-all` for example mods |
 | FR-CIV-TACTICS-060 | implemented | `.civsave.zst` compressed archive (`save_archive` / `load_archive`; civ-watch default) |
 | FR-CIV-TACTICS-062 | implemented | mod catalog + `POST /control/mods/install` (civ-watch + dashboard) |
+| FR-CIV-TACTICS-063 | implemented | `POST /control/mods/unload` + `mod.unloaded.v1` bus JSON |
+| FR-CIV-TACTICS-064 | implemented | `POST /control/mods/upload` → `mods/uploads/*.civmod` |
+| FR-CIV-TACTICS-065 | implemented | production slots `slot-1`..`slot-5` + autosave ring (10) |
 
 ## First PR slice (recommended)
 
@@ -84,7 +87,8 @@
 17. **Compressed `.civsave.zst` save archives** — **done** (item 18a).
 18. **action_emit float data-flow trace** — **done** (item 18b).
 19. **In-game mod install** — **done** (item 18c: catalog + install API).
-20. **Production save slots** — **partial** (slot-1..5 + autosave ring MVP; signed `.civmod` upload + mod unload remain).
+20. **Save/mod distribution** — **done** (item 21): slot-1..5, autosave ring, signed `.civmod` upload, mod unload.
+21. **Next:** `save.slot` JSON-RPC on civ-server, mod publish store, hot reload.
 
 ## Run
 

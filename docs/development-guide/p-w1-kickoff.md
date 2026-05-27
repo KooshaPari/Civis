@@ -68,6 +68,9 @@
 | FR-CIV-TACTICS-066 | implemented | `save.slot` / `save.load` / `save.list` JSON-RPC (civ-server) |
 | FR-CIV-TACTICS-067 | implemented | mod publish store `mods/publish` + HTTP API |
 | FR-CIV-TACTICS-068 | implemented | mod hot reload `POST /control/mods/reload` |
+| FR-CIV-TACTICS-069 | implemented | session-scoped SQLite save metadata (`civ-save-db`) |
+| FR-CIV-TACTICS-070 | implemented | remote mod fetch cache `mods/remote` + HTTP API |
+| FR-CIV-TACTICS-071 | implemented | CIV-0700 `world_read` / `action_emit` capability enforcement |
 
 ## First PR slice (recommended)
 
@@ -92,7 +95,8 @@
 19. **In-game mod install** — **done** (item 18c: catalog + install API).
 20. **Save/mod distribution** — **done** (item 21): slot-1..5, autosave ring, signed `.civmod` upload, mod unload.
 21. **Save/mod distribution v2** — **done** (item 22): `save.slot` / `save.load` / `save.list` on civ-server; web server slot UI; `mods/publish` + publish API; `POST /control/mods/reload`.
-22. **Next:** session-scoped save DB, remote mod store, capability enforcement (CIV-0700 §5–8).
+22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
+23. **Next:** wire `session.saved.v1` on replay bus; web UI for remote mod catalog; full CIV-0700 PolicyMod trait surface.
 
 ## Run
 

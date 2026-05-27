@@ -45,7 +45,7 @@ Unreal: `UCivWsClient::SpawnEntity` / `UCivProtocolClient::SpawnEntity` — HTTP
 |--------|--------|
 | Bevy | 160×160 chunk dots; click-to-focus — [`minimap-conventions.md`](minimap-conventions.md) |
 | Godot | 128×128 terrain texture + orbit dot |
-| Web dashboard | Terrain preview canvas; no click-to-focus yet |
+| Web dashboard | 160×160 terrain canvas; **left-click** → UV → chunk grid → `set_camera_focus` — [`minimap-conventions.md`](minimap-conventions.md) |
 | **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho at ~(64,800,64), width 512) + `UCivMinimapWidget` UMG; **left-click** → UV → world XZ → `ACivShowGameMode::FocusCameraAtWorldLocation` |
 
 ## Services to start (local demo)

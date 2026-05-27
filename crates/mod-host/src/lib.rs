@@ -8,6 +8,7 @@
 #![warn(missing_docs)]
 
 mod determinism;
+mod float_data_flow;
 mod guest_state;
 mod signature;
 mod wasm_guest;
@@ -23,6 +24,7 @@ use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, 
 pub use determinism::{
     scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
 };
+pub use float_data_flow::{scan_float_action_emit_contamination, FloatContaminationSite};
 pub use guest_state::{
     GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave,
     MOD_GUEST_STATE_VERSION,
@@ -210,6 +212,8 @@ pub struct LoadedMod {
     pub wasm_bytes: Option<Vec<u8>>,
     /// Float opcode count from the last determinism scan (0 when WASM absent).
     pub float_instruction_count: u32,
+    /// Float-derived `action_emit` call sites from data-flow scan (0 when WASM absent).
+    pub float_contamination_site_count: u32,
 }
 
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
@@ -368,6 +372,7 @@ impl ModHost {
                     has_wasm: entry.wasm_bytes.is_some(),
                     guest_memory_len: self.guest_memory_by_mod.get(&id).map(Vec::len).unwrap_or(0),
                     float_instruction_count: entry.float_instruction_count,
+                    float_contamination_site_count: entry.float_contamination_site_count,
                 }
             })
             .collect()
@@ -675,19 +680,25 @@ pub fn read_civmod_archive(
 }
 
 fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<u8>>) -> LoadedMod {
-    let float_instruction_count = wasm_bytes
+    let (float_instruction_count, float_contamination_site_count) = wasm_bytes
         .as_ref()
         .map(|wasm| {
             scan_wasm_determinism_report(wasm)
-                .map(|report| report.float_instruction_count)
-                .unwrap_or(0)
+                .map(|report| {
+                    (
+                        report.float_instruction_count,
+                        report.float_contamination_sites.len() as u32,
+                    )
+                })
+                .unwrap_or((0, 0))
         })
-        .unwrap_or(0);
+        .unwrap_or((0, 0));
     LoadedMod {
         root,
         manifest,
         wasm_bytes,
         float_instruction_count,
+        float_contamination_site_count,
     }
 }
 

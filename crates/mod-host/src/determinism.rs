@@ -1,5 +1,7 @@
 //! WASM determinism scan before guest instantiation (CIV-0700 §3.5 / §14.5).
 
+use crate::float_data_flow::scan_float_action_emit_contamination;
+
 use thiserror::Error;
 use wasmparser::{Operator, Parser, Payload};
 
@@ -30,6 +32,8 @@ pub struct DeterminismScanReport {
     pub float_instruction_count: u32,
     /// Hard-rejected opcodes (atomics, sqrt, nearest, clz).
     pub hard_rejections: Vec<String>,
+    /// Float-derived values reaching `civlab::action_emit`.
+    pub float_contamination_sites: Vec<crate::FloatContaminationSite>,
 }
 
 /// Scan a WASM module and return opcode statistics.
@@ -56,6 +60,8 @@ pub fn scan_wasm_determinism_report(
             }
         }
     }
+    report.float_contamination_sites =
+        scan_float_action_emit_contamination(wasm_bytes).unwrap_or_default();
     Ok(report)
 }
 

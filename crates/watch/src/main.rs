@@ -434,6 +434,11 @@ struct InstallModReq {
 }
 
 #[derive(Debug, Deserialize)]
+struct UnloadModReq {
+    mod_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct UploadModReq {
     filename: String,
     data_base64: String,
@@ -538,6 +543,7 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/mods/catalog", get(list_mod_catalog_handler))
         .route("/control/mods/upload", post(upload_mod_handler))
         .route("/control/mods/install", post(install_mod_handler))
+        .route("/control/mods/unload", post(unload_mod_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -2195,6 +2201,26 @@ async fn install_mod_handler(
     }))
 }
 
+async fn unload_mod_handler(
+    State(state): State<AppState>,
+    Json(req): Json<UnloadModReq>,
+) -> Result<Json<ControlOk>, (StatusCode, Json<ControlOk>)> {
+    let mut sim = state.sim.lock().await;
+    let record = sim.unload_mod_by_id(&req.mod_id, "user_request").map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    Ok(Json(ControlOk {
+        ok: true,
+        message: Some(format!("unloaded {} ({})", record.mod_name, record.mod_id)),
+    }))
+}
+
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -2680,6 +2706,63 @@ mod api_tests {
                     .uri("/control/mods/install")
                     .header("content-type", "application/json")
                     .body(Body::from(r#"{"source":"not-a-real-mod"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn post_mods_unload_removes_installed_mod() {
+        let state = test_state();
+        let app = test_app_with_state(state.clone());
+
+        let install_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/install")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"source":"mods/example-policy"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(install_response.status(), StatusCode::OK);
+
+        let unload_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/unload")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"mod_id":"example-policy"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(unload_response.status(), StatusCode::OK);
+
+        let sim = state.sim.lock().await;
+        assert!(
+            sim.mod_browser_entries()
+                .iter()
+                .all(|entry| entry.id != "example-policy")
+        );
+    }
+
+    #[tokio::test]
+    async fn post_mods_unload_rejects_unknown_mod() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/unload")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"mod_id":"not-loaded"}"#))
                     .unwrap(),
             )
             .await

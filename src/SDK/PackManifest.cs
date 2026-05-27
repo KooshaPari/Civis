@@ -181,35 +181,35 @@ namespace DINOForge.SDK
 
         /// <summary>Paths to resource definition files.</summary>
         [YamlMember(Alias = "resources")]
-        public List<string>? Resources { get; set; }
+        public List<string>? Resources { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to economy profile definition files.</summary>
         [YamlMember(Alias = "economy_profiles")]
-        public List<string>? EconomyProfiles { get; set; }
+        public List<string>? EconomyProfiles { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to trade route definition files.</summary>
         [YamlMember(Alias = "trade_routes")]
-        public List<string>? TradeRoutes { get; set; }
+        public List<string>? TradeRoutes { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to HUD element definition files.</summary>
         [YamlMember(Alias = "hud_elements")]
-        public List<string>? HudElements { get; set; }
+        public List<string>? HudElements { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to menu definition files.</summary>
         [YamlMember(Alias = "menus")]
-        public List<string>? Menus { get; set; }
+        public List<string>? Menus { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to UI theme definition files.</summary>
         [YamlMember(Alias = "ui_themes")]
-        public List<string>? UiThemes { get; set; }
+        public List<string>? UiThemes { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to wave definition files.</summary>
         [YamlMember(Alias = "waves")]
-        public List<string>? Waves { get; set; }
+        public List<string>? Waves { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>Paths to stat definition files.</summary>
         [YamlMember(Alias = "stats")]
-        public List<string>? Stats { get; set; }
+        public List<string>? Stats { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
     }
 
     /// <summary>

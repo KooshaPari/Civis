@@ -65,6 +65,9 @@
 | FR-CIV-TACTICS-063 | implemented | `POST /control/mods/unload` + `mod.unloaded.v1` bus JSON |
 | FR-CIV-TACTICS-064 | implemented | `POST /control/mods/upload` → `mods/uploads/*.civmod` |
 | FR-CIV-TACTICS-065 | implemented | production slots `slot-1`..`slot-5` + autosave ring (10) |
+| FR-CIV-TACTICS-066 | implemented | `save.slot` / `save.load` / `save.list` JSON-RPC (civ-server) |
+| FR-CIV-TACTICS-067 | implemented | mod publish store `mods/publish` + HTTP API |
+| FR-CIV-TACTICS-068 | implemented | mod hot reload `POST /control/mods/reload` |
 
 ## First PR slice (recommended)
 
@@ -88,7 +91,8 @@
 18. **action_emit float data-flow trace** — **done** (item 18b).
 19. **In-game mod install** — **done** (item 18c: catalog + install API).
 20. **Save/mod distribution** — **done** (item 21): slot-1..5, autosave ring, signed `.civmod` upload, mod unload.
-21. **Next:** `save.slot` JSON-RPC on civ-server, mod publish store, hot reload.
+21. **Save/mod distribution v2** — **done** (item 22): `save.slot` / `save.load` / `save.list` on civ-server; web server slot UI; `mods/publish` + publish API; `POST /control/mods/reload`.
+22. **Next:** session-scoped save DB, remote mod store, capability enforcement (CIV-0700 §5–8).
 
 ## Run
 

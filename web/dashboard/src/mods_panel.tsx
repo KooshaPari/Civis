@@ -27,7 +27,6 @@ export function ModsPanel() {
   const [installing, setInstalling] = useState<string | null>(null);
   const [unloadError, setUnloadError] = useState<string | null>(null);
   const [unloading, setUnloading] = useState<string | null>(null);
-  const [reloading, setReloading] = useState<string | null>(null);
 
   const mods =
     state.attachMode === "server"
@@ -81,19 +80,6 @@ export function ModsPanel() {
     }
   };
 
-  const reloadMod = async (modId: string) => {
-    setReloading(modId);
-    try {
-      await postControl("/control/mods/reload", { mod_id: modId });
-      setUnloadError(null);
-      await refreshCatalog();
-    } catch (err) {
-      setUnloadError(err instanceof Error ? err.message : "reload failed");
-    } finally {
-      setReloading(null);
-    }
-  };
-
   return (
     <section className="inspector-section">
       <h3>Mods</h3>
@@ -101,10 +87,32 @@ export function ModsPanel() {
         <>
           <div className="mods-catalog-header">
             <span className="mods-meta">Installable</span>
-            <button type="button" className="mods-refresh" onClick={() => void refreshCatalog()}>
-              Refresh
-            </button>
+            <div className="mods-catalog-actions">
+              <label className="mods-upload-label">
+                <input
+                  type="file"
+                  accept=".civmod"
+                  className="mods-upload-input"
+                  disabled={uploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) {
+                      void uploadModFile(file);
+                    }
+                  }}
+                />
+                {uploading ? "Uploading…" : "Upload .civmod"}
+              </label>
+              <button type="button" className="mods-refresh" onClick={() => void refreshCatalog()}>
+                Refresh
+              </button>
+            </div>
           </div>
+          <p className="mods-meta">
+            Signed mods need manifest <code>author_pubkey_hex</code> and <code>mod.wasm.sig</code> in
+            the archive.
+          </p>
           {catalogError ? <p className="inspector-empty">{catalogError}</p> : null}
           {catalog.length === 0 ? (
             <p className="inspector-empty">No installable mods in catalog</p>
@@ -156,24 +164,14 @@ export function ModsPanel() {
                   : ""}
               </span>
               {state.attachMode !== "server" ? (
-                <span className="mods-loaded-actions">
-                  <button
-                    type="button"
-                    className="mods-reload"
-                    disabled={reloading === mod.id || unloading === mod.id}
-                    onClick={() => void reloadMod(mod.id)}
-                  >
-                    {reloading === mod.id ? "Reloading…" : "Reload"}
-                  </button>
-                  <button
-                    type="button"
-                    className="mods-unload"
-                    disabled={unloading === mod.id || reloading === mod.id}
-                    onClick={() => void unloadMod(mod.id)}
-                  >
-                    {unloading === mod.id ? "Unloading…" : "Unload"}
-                  </button>
-                </span>
+                <button
+                  type="button"
+                  className="mods-unload"
+                  disabled={unloading === mod.id}
+                  onClick={() => void unloadMod(mod.id)}
+                >
+                  {unloading === mod.id ? "Unloading…" : "Unload"}
+                </button>
               ) : null}
             </li>
           ))}

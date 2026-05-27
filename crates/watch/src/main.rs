@@ -453,18 +453,6 @@ struct ReloadModReq {
 }
 
 #[derive(Debug, Deserialize)]
-struct UploadModReq {
-    filename: String,
-    data_base64: String,
-}
-
-#[derive(Debug, Serialize)]
-struct UploadModResponse {
-    ok: bool,
-    source: String,
-}
-
-#[derive(Debug, Deserialize)]
 struct PublishModReq {
     source: String,
 }
@@ -480,6 +468,18 @@ struct PublishedModEntry {
     id: String,
     name: String,
     version: String,
+    source: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UploadModReq {
+    filename: String,
+    data_base64: String,
+}
+
+#[derive(Debug, Serialize)]
+struct UploadModResponse {
+    ok: bool,
     source: String,
 }
 

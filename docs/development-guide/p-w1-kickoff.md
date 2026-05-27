@@ -84,7 +84,7 @@
 17. **Compressed `.civsave.zst` save archives** — **done** (item 18a).
 18. **action_emit float data-flow trace** — **done** (item 18b).
 19. **In-game mod install** — **done** (item 18c: catalog + install API).
-20. **Next:** Signed `.civmod` upload, mod unload, production save slots.
+20. **Production save slots** — **partial** (slot-1..5 + autosave ring MVP; signed `.civmod` upload + mod unload remain).
 
 ## Run
 

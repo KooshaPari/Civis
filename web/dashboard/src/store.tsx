@@ -272,6 +272,7 @@ export type SaveEntry = {
   name: string;
   size_bytes: number;
   modified: number | null;
+  save_type?: "slot" | "auto" | "manual";
 };
 
 export type { ThemeMode } from "./lib/theme";

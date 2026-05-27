@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Post-PR188 follow-up: GameLaunch attach-mode bridge restart, Sonar batch-4 exclusions, packages.lock.json refresh for CI.
+
 ### Changed
 - CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.
 

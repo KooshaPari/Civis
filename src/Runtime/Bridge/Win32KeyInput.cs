@@ -146,18 +146,97 @@ namespace DINOForge.Runtime.Bridge
         {
             try
             {
-                Process? gameProcess = Process.GetProcesses()
-                    .FirstOrDefault(p =>
-                        !string.IsNullOrEmpty(p.MainWindowTitle)
-                        && p.MainWindowTitle.Contains("Diplomacy is Not an Option", StringComparison.OrdinalIgnoreCase));
+                Process current = Process.GetCurrentProcess();
+                if (current.MainWindowHandle != IntPtr.Zero)
+                {
+                    return current.MainWindowHandle;
+                }
 
-                return gameProcess?.MainWindowHandle ?? IntPtr.Zero;
+                foreach (string processName in new[] { "Diplomacy is Not an Option", "DINO" })
+                {
+                    foreach (Process process in Process.GetProcessesByName(processName))
+                    {
+                        using (process)
+                        {
+                            if (process.MainWindowHandle != IntPtr.Zero)
+                            {
+                                return process.MainWindowHandle;
+                            }
+                        }
+                    }
+                }
+
+                IntPtr byTitle = FindWindowByTitle();
+                if (byTitle != IntPtr.Zero)
+                {
+                    return byTitle;
+                }
+
+                foreach (Process process in Process.GetProcesses())
+                {
+                    using (process)
+                    {
+                        if (!MatchesGameProcess(process))
+                        {
+                            continue;
+                        }
+
+                        if (process.MainWindowHandle != IntPtr.Zero)
+                        {
+                            return process.MainWindowHandle;
+                        }
+                    }
+                }
+
+                return IntPtr.Zero;
             }
             // safe-swallow: process enumeration is best-effort when locating the game window
             catch (Exception)
             {
                 return IntPtr.Zero;
             }
+        }
+
+        private static IntPtr FindWindowByTitle()
+        {
+            foreach (Process process in Process.GetProcesses())
+            {
+                using (process)
+                {
+                    string windowTitle = process.MainWindowTitle ?? "";
+                    if (windowTitle.Length == 0 || process.MainWindowHandle == IntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    if (windowTitle.Contains("Diplomacy is Not an Option", StringComparison.OrdinalIgnoreCase)
+                        || windowTitle.Contains("Diplomacy", StringComparison.OrdinalIgnoreCase)
+                        || windowTitle.Contains("DINO", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return process.MainWindowHandle;
+                    }
+                }
+            }
+
+            return IntPtr.Zero;
+        }
+
+        private static bool MatchesGameProcess(Process process)
+        {
+            if (process.MainWindowHandle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            string processName = process.ProcessName ?? "";
+            string windowTitle = process.MainWindowTitle ?? "";
+
+            return processName.Contains("DINO", StringComparison.OrdinalIgnoreCase)
+                || processName.Contains("Diplomacy", StringComparison.OrdinalIgnoreCase)
+                || processName.Contains("Not an Option", StringComparison.OrdinalIgnoreCase)
+                || windowTitle.Contains("Diplomacy is Not an Option", StringComparison.OrdinalIgnoreCase)
+                || windowTitle.Contains("Diplomacy", StringComparison.OrdinalIgnoreCase)
+                || windowTitle.Contains("DINO", StringComparison.OrdinalIgnoreCase);
         }
 
         private static ushort ResolveVirtualKey(string keyName) =>

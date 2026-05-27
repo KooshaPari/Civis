@@ -172,6 +172,11 @@ public interface IGameClient : IDisposable
     Task<StartGameResult> PressEscapeAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Opens the native pause menu via bridge main-thread reflection (<c>togglePauseMenu</c>).
+    /// </summary>
+    Task<StartGameResult> TogglePauseMenuAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Invokes a void(0-param) method on any active MonoBehaviour matching target.
     /// </summary>
     /// <param name="target">MonoBehaviour type or GameObject name.</param>

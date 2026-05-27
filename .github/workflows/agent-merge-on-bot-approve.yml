@@ -1,0 +1,102 @@
+# Merges agent/follow-up PRs on allowed branches after CI is green.
+# - workflow_dispatch: solo-maintainer escape hatch (no bot approval; waits for test, then merges)
+# - pull_request_review: merges when coderabbitai[bot] or github-actions[bot] approves (then waits for test)
+name: Agent merge on bot approval
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to merge (e.g. 221)
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  merge-when-ready:
+    # workflow_dispatch always runs (no pull_request_review required)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.review.state == 'approved' &&
+        (
+          github.event.review.user.login == 'coderabbitai[bot]' ||
+          github.event.review.user.login == 'github-actions[bot]'
+        )
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "number=${{ github.event.inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate allowed head branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = Number('${{ steps.pr.outputs.number }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: pr });
+            const allowed = ['followup/', 'safety/', 'agent/', 'convoy/', 'cursor/'];
+            const headRef = pull.head.ref;
+            if (!allowed.some((p) => headRef.startsWith(p))) {
+              core.setFailed(
+                `PR #${pr} head branch "${headRef}" is not allowed. Must start with: ${allowed.join(' ')}`
+              );
+            }
+            core.info(`PR #${pr} head branch "${headRef}" is allowed`);
+
+      - name: Wait for core CI (test check)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = Number('${{ steps.pr.outputs.number }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: pr });
+            const sha = pull.head.sha;
+            const deadline = Date.now() + 45 * 60 * 1000;
+            while (Date.now() < deadline) {
+              const { data: checks } = await github.rest.checks.listForRef({ owner, repo, ref: sha });
+              const test = checks.check_runs.find((c) => c.name === 'test');
+              if (test?.status === 'completed') {
+                if (test.conclusion !== 'success') {
+                  core.setFailed(`test check conclusion=${test.conclusion}`);
+                }
+                core.info(`test check succeeded on ${sha}`);
+                return;
+              }
+              await new Promise((r) => setTimeout(r, 30_000));
+            }
+            core.setFailed('Timed out waiting for test check');
+
+      - name: Merge PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = Number('${{ steps.pr.outputs.number }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            try {
+              await github.rest.pulls.merge({
+                owner,
+                repo,
+                pull_number: pr,
+                merge_method: 'merge',
+              });
+              core.info(`Merged PR #${pr}`);
+            } catch (err) {
+              core.setFailed(`Merge failed: ${err.message}`);
+            }

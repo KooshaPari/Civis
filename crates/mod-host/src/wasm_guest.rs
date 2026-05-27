@@ -69,8 +69,8 @@ fn trim_guest_memory(mem: &mut Vec<u8>) {
     }
 }
 
-fn record_permission_denial(state: &mut HostState) {
-    state.enforcement.record_denial();
+fn record_permission_denial(state: &mut HostState, call: &str, domain: Option<WorldDomain>) {
+    state.enforcement.record_denial(call, domain);
 }
 
 fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Error> {
@@ -133,16 +133,17 @@ fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Err
         |mut caller: Caller<'_, HostState>, domain: i32| -> Result<i32, wasmtime::Error> {
             let state = caller.data_mut();
             if state.enforcement.suspended {
-                record_permission_denial(state);
+                record_permission_denial(state, "world_read", None);
                 return Ok(ERR_PERMISSION_DENIED);
             }
             let Some(domain) = WorldDomain::from_i32(domain) else {
+                record_permission_denial(state, "world_read", None);
                 return Ok(ERR_PERMISSION_DENIED);
             };
             if state.capabilities.can_read_domain(domain) {
                 Ok(1)
             } else {
-                record_permission_denial(state);
+                record_permission_denial(state, "world_read", Some(domain));
                 Ok(ERR_PERMISSION_DENIED)
             }
         },
@@ -158,14 +159,14 @@ fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Err
          -> Result<i32, wasmtime::Error> {
             let state = caller.data_mut();
             if state.enforcement.suspended {
-                record_permission_denial(state);
+                record_permission_denial(state, "action_emit", None);
                 return Ok(ERR_PERMISSION_DENIED);
             }
             let action_type = u32::try_from(action_type).unwrap_or(u32::MAX);
             if state.capabilities.can_emit_action(action_type) {
                 Ok(0)
             } else {
-                record_permission_denial(state);
+                record_permission_denial(state, "action_emit", None);
                 Ok(ERR_PERMISSION_DENIED)
             }
         },
@@ -195,6 +196,8 @@ fn with_guest_instance<R>(
             enforcement: ModEnforcementCtx {
                 violations: enforcement.violations,
                 suspended: enforcement.suspended,
+                last_call: enforcement.last_call.clone(),
+                last_domain: enforcement.last_domain,
             },
         },
     );
@@ -205,6 +208,8 @@ fn with_guest_instance<R>(
     *guest_memory = store.data().guest_memory.clone();
     enforcement.violations = store.data().enforcement.violations;
     enforcement.suspended = store.data().enforcement.suspended;
+    enforcement.last_call = store.data().enforcement.last_call.clone();
+    enforcement.last_domain = store.data().enforcement.last_domain;
     trim_guest_memory(guest_memory);
     Ok(result)
 }
@@ -501,6 +506,34 @@ mod tests {
             0
         );
         assert_eq!(enforcement.violations, 0);
+    }
+
+    #[test]
+    fn denied_action_emit_returns_permission_denied() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "action_emit" (func $emit (param i64 i32 i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i64.const 5)
+                (i32.const 0)
+                (i32.const 0)
+                (call $emit))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        let caps = ModCapabilitySet::from_permissions(&crate::ModPermissions {
+            write_policy: true,
+            ..crate::ModPermissions::default()
+        });
+        let mut enforcement = ModEnforcementCtx::default();
+        assert_eq!(
+            invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
+                .expect("invoke"),
+            ERR_PERMISSION_DENIED
+        );
+        assert_eq!(enforcement.violations, 1);
+        assert_eq!(enforcement.last_call.as_deref(), Some("action_emit"));
     }
 
     #[test]

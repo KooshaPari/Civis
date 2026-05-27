@@ -1,8 +1,8 @@
 //! civ-mod-host — manifest-only mod host stub (CIV-0700 Sprint D / v2).
 //!
 //! Loads and validates `manifest.toml` (or `mod.toml`) from a mod directory.
-//! WASM sandboxing and capability enforcement are future work; v2 adds a
-//! [`ModRegistry`] with a log-only policy-phase stub invoked from [`ModHost::tick`].
+//! WASM guests run via `wasmtime` with manifest-derived capability enforcement on
+//! `world_read` / `action_emit` host imports (CIV-0700 §4.3 MVP).
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -329,6 +329,25 @@ pub struct ModHost {
     mod_status_by_id: std::collections::BTreeMap<String, ModStatus>,
 }
 
+fn push_permission_violation_if_needed(
+    lines: &mut Vec<String>,
+    mod_id: &str,
+    sim_tick: u64,
+    violations_before: u32,
+    enforcement: &ModEnforcementCtx,
+) {
+    if enforcement.violations <= violations_before {
+        return;
+    }
+    let call = enforcement.last_call.as_deref().unwrap_or("unknown");
+    lines.push(format_mod_permission_violation_json(
+        mod_id,
+        sim_tick,
+        call,
+        enforcement.last_domain,
+    ));
+}
+
 impl ModHost {
     /// Empty host with no mods registered.
     #[must_use]
@@ -560,6 +579,7 @@ impl ModHost {
                 .enforcement_by_mod
                 .entry(mod_id.clone())
                 .or_default();
+            let violations_before = enforcement.violations;
             match invoke_military_tick_with_capabilities(
                 wasm,
                 sim_tick,
@@ -576,6 +596,13 @@ impl ModHost {
                     &err.to_string(),
                 )),
             }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
             if enforcement.suspended {
                 self.mod_status_by_id
                     .insert(mod_id, ModStatus::Suspended);
@@ -611,6 +638,7 @@ impl ModHost {
                 .enforcement_by_mod
                 .entry(mod_id.clone())
                 .or_default();
+            let violations_before = enforcement.violations;
             match invoke_policy_tick_with_capabilities(
                 wasm,
                 sim_tick,
@@ -627,6 +655,13 @@ impl ModHost {
                     &err.to_string(),
                 )),
             }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
             if enforcement.suspended {
                 self.mod_status_by_id
                     .insert(mod_id, ModStatus::Suspended);
@@ -661,6 +696,7 @@ impl ModHost {
                 .enforcement_by_mod
                 .entry(mod_id.clone())
                 .or_default();
+            let violations_before = enforcement.violations;
             match invoke_economy_tick_with_capabilities(
                 wasm,
                 sim_tick,
@@ -677,6 +713,13 @@ impl ModHost {
                     &err.to_string(),
                 )),
             }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
             if enforcement.suspended {
                 self.mod_status_by_id
                     .insert(mod_id, ModStatus::Suspended);
@@ -1206,6 +1249,55 @@ write_policy = false
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"memory_read"));
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"world_read"));
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
+    }
+
+    #[test]
+    fn policy_tick_emits_permission_violation_on_denied_world_read() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 2)
+                (call $read))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "cap-viol"
+name = "Cap Viol"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let lines = host.tick(7);
+        assert!(
+            lines.iter().any(|l| l.contains("mod.permission_violation.v1")),
+            "expected violation event in {lines:?}"
+        );
+        assert!(lines.iter().any(|l| l.contains("world_read")));
+        assert_eq!(host.enforcement_violations("cap-viol"), 1);
+        assert!(
+            lines.iter().any(|l| l.contains("code=-2")),
+            "guest should return ERR_PERMISSION_DENIED: {lines:?}"
+        );
     }
 
     #[test]

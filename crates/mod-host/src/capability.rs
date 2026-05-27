@@ -146,12 +146,18 @@ pub struct ModEnforcementCtx {
     pub violations: u32,
     /// Set when violations reach the suspension threshold within a tick.
     pub suspended: bool,
+    /// Host import that caused the most recent denial (`world_read`, `action_emit`, …).
+    pub last_call: Option<String>,
+    /// World domain tag when the denial was from `world_read`.
+    pub last_domain: Option<WorldDomain>,
 }
 
 impl ModEnforcementCtx {
     /// Record a permission denial; may set [`ModEnforcementCtx::suspended`].
-    pub fn record_denial(&mut self) {
+    pub fn record_denial(&mut self, call: &str, domain: Option<WorldDomain>) {
         self.violations = self.violations.saturating_add(1);
+        self.last_call = Some(call.to_owned());
+        self.last_domain = domain;
         if self.violations >= 5 {
             self.suspended = true;
         }
@@ -195,5 +201,22 @@ mod tests {
         assert!(caps.can_emit_action(ACTION_SET_TAX_RATE));
         assert!(caps.can_emit_action(ACTION_SET_POLICY_PARAM));
         assert!(!caps.can_emit_action(ACTION_TRIGGER_EVENT));
+    }
+
+    #[test]
+    fn record_denial_tracks_call_and_domain() {
+        let mut ctx = ModEnforcementCtx::default();
+        ctx.record_denial("world_read", Some(WorldDomain::Military));
+        assert_eq!(ctx.violations, 1);
+        assert_eq!(ctx.last_call.as_deref(), Some("world_read"));
+        assert_eq!(ctx.last_domain, Some(WorldDomain::Military));
+    }
+
+    #[test]
+    fn permission_violation_json_includes_event_and_call() {
+        let json = format_mod_permission_violation_json("demo-mod", 42, "action_emit", None);
+        assert!(json.contains("mod.permission_violation.v1"));
+        assert!(json.contains("demo-mod"));
+        assert!(json.contains("action_emit"));
     }
 }

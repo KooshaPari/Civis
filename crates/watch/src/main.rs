@@ -37,6 +37,7 @@ use civ_agents::{
 use civ_engine::{Citizen, CivSaveBundle, DiplomacyKind, JobType, ModBrowserEntry, ModType, Simulation, load_manifest};
 use base64::Engine as _;
 use civ_mod_host::{read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
+use civ_save_db::{format_session_saved_event_json, SaveDb};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
@@ -55,6 +56,19 @@ fn env_u16(name: &str, default: u16) -> u16 {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(default)
+}
+
+fn resolve_data_dir() -> PathBuf {
+    std::env::var("CIVIS_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("."))
+}
+
+fn resolve_session_id() -> String {
+    std::env::var("CIVIS_SESSION_ID")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -347,6 +361,8 @@ struct AppState {
     speed: Arc<AtomicU8>,
     saves_dir: Arc<PathBuf>,
     mods_dir: Arc<PathBuf>,
+    session_id: String,
+    save_db: Arc<SaveDb>,
 }
 
 #[derive(Debug, Serialize)]
@@ -424,6 +440,14 @@ struct SaveListEntry {
     size_bytes: u64,
     modified: Option<u64>,
     save_type: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    save_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tick: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -496,8 +520,15 @@ async fn main() {
     let terrain = Terrain::generate(42);
     let terrain_cache = TerrainCache::from_terrain(&terrain);
     let laws = Arc::new(default_law_db());
-    let saves_dir = Arc::new(PathBuf::from("saves"));
+    let data_dir = resolve_data_dir();
+    let saves_dir = Arc::new(data_dir.join("saves"));
     std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
+    let save_db_path = data_dir.join("saves.db");
+    let save_db = Arc::new(
+        SaveDb::open(&save_db_path).unwrap_or_else(|err| panic!("open save db at {save_db_path:?}: {err}")),
+    );
+    let session_id = resolve_session_id();
+    info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let mods_dir = Arc::new(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../mods")
@@ -542,6 +573,8 @@ async fn main() {
         speed: Arc::new(AtomicU8::new(1)),
         saves_dir,
         mods_dir,
+        session_id,
+        save_db,
     };
 
     tokio::spawn(simulation_worker(state.clone()));
@@ -1841,6 +1874,57 @@ fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
     Ok(dir.join(format!("{name}.civsave.zst")))
 }
 
+fn record_save_metadata(
+    state: &AppState,
+    filename: &str,
+    path: &Path,
+    tick: u64,
+) {
+    let byte_size = std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+    let file_path = path.display().to_string();
+    let result = if is_autosave_name(filename) {
+        state
+            .save_db
+            .record_autosave(&state.session_id, tick, &file_path, byte_size)
+            .map(|save_id| (save_id, filename.to_string()))
+    } else if PRODUCTION_SLOTS.contains(&filename) {
+        state
+            .save_db
+            .record_slot_save(&state.session_id, filename, tick, &file_path, byte_size)
+            .map(|save_id| (save_id, filename.to_string()))
+    } else {
+        return;
+    };
+    match result {
+        Ok((save_id, slot)) => {
+            let event_json = format_session_saved_event_json(
+                &state.session_id,
+                &save_id,
+                &slot,
+                tick,
+                byte_size,
+            );
+            info!(%event_json, "save metadata recorded");
+            if is_autosave_name(filename) {
+                match state
+                    .save_db
+                    .evict_autosaves(&state.session_id, u32::try_from(AUTOSAVE_RING_MAX).unwrap_or(u32::MAX))
+                {
+                    Ok(evicted_paths) => {
+                        for evicted in evicted_paths {
+                            if let Err(err) = std::fs::remove_file(&evicted) {
+                                warn!(path = %evicted, ?err, "failed to remove evicted autosave file");
+                            }
+                        }
+                    }
+                    Err(err) => warn!(?err, "failed to evict autosaves from save db"),
+                }
+            }
+        }
+        Err(err) => warn!(?err, filename, "failed to record save metadata"),
+    }
+}
+
 fn dir_size_bytes(dir: &Path) -> u64 {
     let mut total = 0u64;
     if let Ok(read) = std::fs::read_dir(dir) {
@@ -1962,6 +2046,7 @@ async fn save_handler(
     if is_autosave_name(&filename) {
         enforce_autosave_ring(state.saves_dir.as_ref());
     }
+    record_save_metadata(&state, &filename, &path, tick);
     Ok(Json(SaveResponse {
         ok: true,
         path: path.display().to_string(),
@@ -2529,6 +2614,37 @@ async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
     let mut entries = Vec::new();
+    let db_by_name = match state.save_db.list_for_session(&state.session_id) {
+        Ok(records) => {
+            let mut map = std::collections::HashMap::new();
+            for record in records {
+                match record {
+                    civ_save_db::SessionSaveRecord::Slot(slot) => {
+                        map.insert(
+                            slot.slot_name.clone(),
+                            (Some(slot.id), Some(slot.tick as u64), Some(slot.created_at)),
+                        );
+                    }
+                    civ_save_db::SessionSaveRecord::Autosave(autosave) => {
+                        let name = Path::new(&autosave.file_path)
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.trim_end_matches(".civsave.zst").to_string())
+                            .unwrap_or_else(|| format!("autosave-{}", autosave.tick));
+                        map.insert(
+                            name,
+                            (Some(autosave.id), Some(autosave.tick as u64), Some(autosave.created_at)),
+                        );
+                    }
+                }
+            }
+            Some(map)
+        }
+        Err(err) => {
+            warn!(?err, "failed to list save metadata from db");
+            None
+        }
+    };
     let dir = state.saves_dir.as_ref();
     let read_dir = std::fs::read_dir(dir).map_err(|err| {
         (
@@ -2578,6 +2694,22 @@ async fn list_saves_handler(
             size_bytes,
             modified,
             save_type: save_type_for_name(&name),
+            session_id: db_by_name
+                .as_ref()
+                .and_then(|map| map.get(&name))
+                .map(|_| state.session_id.clone()),
+            save_id: db_by_name
+                .as_ref()
+                .and_then(|map| map.get(&name))
+                .and_then(|(id, _, _)| id.clone()),
+            tick: db_by_name
+                .as_ref()
+                .and_then(|map| map.get(&name))
+                .and_then(|(_, tick, _)| *tick),
+            created_at: db_by_name
+                .as_ref()
+                .and_then(|map| map.get(&name))
+                .and_then(|(_, _, created_at)| created_at.clone()),
         });
     }
     entries.sort_by(|a, b| a.name.cmp(&b.name));
@@ -2626,6 +2758,8 @@ mod api_tests {
             .as_nanos();
         let saves_dir = std::env::temp_dir().join(format!("civis-watch-test-{nanos}"));
         std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let save_db_path = saves_dir.join("saves.db");
+        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let mods_dir = repo_root().join("mods");
         AppState {
             latest: Arc::new(RwLock::new(None)),
@@ -2639,6 +2773,8 @@ mod api_tests {
             speed: Arc::new(AtomicU8::new(1)),
             saves_dir: Arc::new(saves_dir),
             mods_dir: Arc::new(mods_dir),
+            session_id: "test-session".to_string(),
+            save_db,
         }
     }
 
@@ -2930,6 +3066,9 @@ mod api_tests {
             .find(|entry| entry["name"] == "slot-1")
             .expect("slot-1 listed");
         assert_eq!(slot_entry["save_type"], "slot");
+        assert_eq!(slot_entry["session_id"], "test-session");
+        assert!(slot_entry["save_id"].as_str().is_some_and(|id| !id.is_empty()));
+        assert!(slot_entry["tick"].as_u64().is_some());
 
         let load_response = app
             .oneshot(

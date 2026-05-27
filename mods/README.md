@@ -35,6 +35,10 @@ Packaging today (`scripts/package-example-mod.ps1`) emits `manifest.toml` + `mod
 
 Default builds (no `mod-dev`) enforce determinism and verify signatures when pubkey + sig are present.
 
+## Upload workflow (civ-watch)
+
+`POST /control/mods/upload` accepts JSON `{ "filename": "my-mod.civmod", "data_base64": "..." }`. The archive is written to `mods/uploads/<sanitized-name>.civmod`, validated as a ZIP with `manifest.toml` (and Ed25519 signature when `author_pubkey_hex` is set), then returned as `{ "ok": true, "source": "mods/uploads/my-mod.civmod" }` for catalog listing and `POST /control/mods/install`.
+
 ## Verify
 
 ```bash

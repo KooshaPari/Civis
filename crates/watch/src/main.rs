@@ -392,17 +392,9 @@ struct SpeedReq {
     speed: u8,
 }
 
-const PRODUCTION_SLOTS: [&str; 5] = ["slot-1", "slot-2", "slot-3", "slot-4", "slot-5"];
-const AUTOSAVE_RING_MAX: usize = 10;
-
 #[derive(Debug, Deserialize)]
 struct SaveReq {
     filename: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct SlotReq {
-    slot: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -423,7 +415,6 @@ struct SaveListEntry {
     name: String,
     size_bytes: u64,
     modified: Option<u64>,
-    save_type: &'static str,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -440,11 +431,6 @@ struct ModCatalogEntry {
 #[derive(Debug, Deserialize)]
 struct InstallModReq {
     source: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct UnloadModReq {
-    mod_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -547,14 +533,11 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/damage", post(damage_handler))
         .route("/control/speed", post(speed_handler))
         .route("/control/save", post(save_handler))
-        .route("/control/save/slot", post(save_slot_handler))
         .route("/control/load", post(load_handler))
-        .route("/control/load/slot", post(load_slot_handler))
         .route("/control/saves", get(list_saves_handler))
         .route("/control/mods/catalog", get(list_mod_catalog_handler))
         .route("/control/mods/upload", post(upload_mod_handler))
         .route("/control/mods/install", post(install_mod_handler))
-        .route("/control/mods/unload", post(unload_mod_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -1833,71 +1816,6 @@ fn legacy_replay_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
     Ok(dir.join(format!("{name}.civreplay")))
 }
 
-fn validate_production_slot(slot: &str) -> Result<(), String> {
-    if PRODUCTION_SLOTS.contains(&slot) {
-        Ok(())
-    } else {
-        Err(format!(
-            "invalid slot {slot:?}; expected one of {}",
-            PRODUCTION_SLOTS.join(", ")
-        ))
-    }
-}
-
-fn save_type_for_name(name: &str) -> &'static str {
-    if PRODUCTION_SLOTS.contains(&name) {
-        "slot"
-    } else if name == "autosave" || name.starts_with("autosave-") {
-        "auto"
-    } else {
-        "manual"
-    }
-}
-
-fn is_autosave_name(name: &str) -> bool {
-    name == "autosave" || name.starts_with("autosave-")
-}
-
-fn enforce_autosave_ring(dir: &Path) {
-    let mut autosaves = Vec::new();
-    let Ok(read_dir) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in read_dir.flatten() {
-        let path = entry.path();
-        if !CivSaveBundle::is_save_archive(&path) {
-            continue;
-        }
-        let Some(stem) = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .map(|s| s.trim_end_matches(".civsave.zst"))
-        else {
-            continue;
-        };
-        if !stem.starts_with("autosave") {
-            continue;
-        }
-        let mtime = entry
-            .metadata()
-            .ok()
-            .and_then(|meta| meta.modified().ok())
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        autosaves.push((path, mtime));
-    }
-    if autosaves.len() <= AUTOSAVE_RING_MAX {
-        return;
-    }
-    autosaves.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
-    for (path, _) in autosaves.into_iter().skip(AUTOSAVE_RING_MAX) {
-        if let Err(err) = std::fs::remove_file(&path) {
-            warn!(?path, ?err, "failed to evict autosave from ring");
-        }
-    }
-}
-
 async fn save_handler(
     State(state): State<AppState>,
     Json(req): Json<SaveReq>,
@@ -1922,67 +1840,11 @@ async fn save_handler(
         )
     })?;
     let tick = sim.state.tick;
-    let filename = sanitize_save_filename(&req.filename).map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
-    if is_autosave_name(&filename) {
-        enforce_autosave_ring(state.saves_dir.as_ref());
-    }
     Ok(Json(SaveResponse {
         ok: true,
         path: path.display().to_string(),
         tick,
     }))
-}
-
-async fn save_slot_handler(
-    State(state): State<AppState>,
-    Json(req): Json<SlotReq>,
-) -> Result<Json<SaveResponse>, (StatusCode, Json<ControlOk>)> {
-    validate_production_slot(&req.slot).map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
-    save_handler(
-        State(state),
-        Json(SaveReq {
-            filename: req.slot,
-        }),
-    )
-    .await
-}
-
-async fn load_slot_handler(
-    State(state): State<AppState>,
-    Json(req): Json<SlotReq>,
-) -> Result<Json<LoadResponse>, (StatusCode, Json<ControlOk>)> {
-    validate_production_slot(&req.slot).map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
-    load_handler(
-        State(state),
-        Json(SaveReq {
-            filename: req.slot,
-        }),
-    )
-    .await
 }
 
 async fn load_handler(
@@ -2333,26 +2195,6 @@ async fn install_mod_handler(
     }))
 }
 
-async fn unload_mod_handler(
-    State(state): State<AppState>,
-    Json(req): Json<UnloadModReq>,
-) -> Result<Json<ControlOk>, (StatusCode, Json<ControlOk>)> {
-    let mut sim = state.sim.lock().await;
-    let record = sim.unload_mod_by_id(&req.mod_id, "user_request").map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
-    Ok(Json(ControlOk {
-        ok: true,
-        message: Some(format!("unloaded {} ({})", record.mod_name, record.mod_id)),
-    }))
-}
-
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -2402,10 +2244,9 @@ async fn list_saves_handler(
             meta.len()
         };
         entries.push(SaveListEntry {
-            name: name.clone(),
+            name,
             size_bytes,
             modified,
-            save_type: save_type_for_name(&name),
         });
     }
     entries.sort_by(|a, b| a.name.cmp(&b.name));
@@ -2688,141 +2529,6 @@ mod api_tests {
         assert_eq!(load_json["ok"], true);
     }
 
-    fn touch_mtime(path: &std::path::Path, secs: u64) {
-        use std::time::{Duration, UNIX_EPOCH};
-        let time = UNIX_EPOCH + Duration::from_secs(secs);
-        std::fs::OpenOptions::new()
-            .write(true)
-            .open(path)
-            .expect("open for mtime")
-            .set_modified(time)
-            .expect("set mtime");
-    }
-
-    fn autosave_archive_count(dir: &std::path::Path) -> usize {
-        std::fs::read_dir(dir)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .filter(|entry| {
-                let path = entry.path();
-                CivSaveBundle::is_save_archive(&path)
-                    && path
-                        .file_name()
-                        .and_then(|s| s.to_str())
-                        .is_some_and(|s| s.starts_with("autosave") && s.ends_with(".civsave.zst"))
-            })
-            .count()
-    }
-
-    #[tokio::test]
-    async fn post_save_slot_round_trip() {
-        let app = test_app();
-
-        let save_response = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/save/slot")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"slot":"slot-1"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(save_response.status(), StatusCode::OK);
-        let save_json = body_json(save_response).await;
-        assert_eq!(save_json["ok"], true);
-        assert!(save_json["path"]
-            .as_str()
-            .unwrap_or("")
-            .ends_with("slot-1.civsave.zst"));
-
-        let list_response = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/control/saves")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(list_response.status(), StatusCode::OK);
-        let list_json = body_json(list_response).await;
-        let slot_entry = list_json
-            .as_array()
-            .expect("save list array")
-            .iter()
-            .find(|entry| entry["name"] == "slot-1")
-            .expect("slot-1 listed");
-        assert_eq!(slot_entry["save_type"], "slot");
-
-        let load_response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/load/slot")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"slot":"slot-1"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(load_response.status(), StatusCode::OK);
-        let load_json = body_json(load_response).await;
-        assert_eq!(load_json["ok"], true);
-    }
-
-    #[tokio::test]
-    async fn autosave_ring_evicts_oldest_beyond_max() {
-        let state = test_state();
-        let saves_dir = state.saves_dir.clone();
-        let app = test_app_with_state(state);
-
-        for index in 0..=AUTOSAVE_RING_MAX {
-            let name = format!("autosave-ring-{index:02}");
-            let response = app
-                .clone()
-                .oneshot(
-                    Request::builder()
-                        .method("POST")
-                        .uri("/control/save")
-                        .header("content-type", "application/json")
-                        .body(Body::from(format!(r#"{{"filename":"{name}"}}"#)))
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::OK);
-            touch_mtime(
-                &saves_dir.join(format!("{name}.civsave.zst")),
-                1_700_000_000 + u64::try_from(index).expect("index fits u64"),
-            );
-        }
-
-        assert_eq!(autosave_archive_count(&saves_dir), AUTOSAVE_RING_MAX + 1);
-
-        let trigger = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/save")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"filename":"autosave-ring-trigger"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(trigger.status(), StatusCode::OK);
-
-        assert_eq!(autosave_archive_count(&saves_dir), AUTOSAVE_RING_MAX);
-        assert!(!saves_dir.join("autosave-ring-00.civsave.zst").is_file());
-        assert!(saves_dir.join("autosave-ring-trigger.civsave.zst").is_file());
-    }
-
     #[tokio::test]
     async fn get_events_streams_snapshot_within_timeout() {
         use http_body_util::BodyExt;
@@ -2981,63 +2687,6 @@ mod api_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
-    #[tokio::test]
-    async fn post_mods_unload_removes_installed_mod() {
-        let state = test_state();
-        let app = test_app_with_state(state.clone());
-
-        let install_response = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/mods/install")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"source":"mods/example-policy"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(install_response.status(), StatusCode::OK);
-
-        let unload_response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/mods/unload")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"mod_id":"example-policy"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(unload_response.status(), StatusCode::OK);
-
-        let sim = state.sim.lock().await;
-        assert!(
-            sim.mod_browser_entries()
-                .iter()
-                .all(|entry| entry.id != "example-policy")
-        );
-    }
-
-    #[tokio::test]
-    async fn post_mods_unload_rejects_unknown_mod() {
-        let app = test_app();
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/control/mods/unload")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"mod_id":"not-loaded"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    }
-
     fn minimal_upload_civmod_bytes(mod_id: &str) -> Vec<u8> {
         use std::io::Write;
         use zip::write::SimpleFileOptions;
@@ -3158,4 +2807,5 @@ write_policy = true
         let uploaded_path = repo_root().join(source.replace('/', std::path::MAIN_SEPARATOR_STR));
         let _ = std::fs::remove_file(uploaded_path);
     }
+
 }

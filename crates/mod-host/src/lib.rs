@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod capability;
 mod determinism;
 mod float_data_flow;
 mod guest_state;
@@ -19,8 +20,16 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use signature::verify_wasm_signature;
 use thiserror::Error;
-use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
+use capability::ModCapabilitySet;
+use wasm_guest::{
+    invoke_economy_tick_with_capabilities, invoke_military_tick_with_capabilities,
+    invoke_policy_tick_with_capabilities, MOD_WASM_NAME,
+};
 
+pub use capability::{
+    format_mod_permission_violation_json, ModCapabilitySet as CapabilitySet, ModEnforcementCtx,
+    ModStatus, WorldDomain, ACTION_SET_POLICY_PARAM, ACTION_SET_TAX_RATE, ERR_PERMISSION_DENIED,
+};
 pub use determinism::{
     scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
 };
@@ -31,8 +40,9 @@ pub use guest_state::{
 };
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{
-    HostState, WasmGuestError, HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS,
-    HOST_GUEST_MEMORY_CAP, HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
+    invoke_economy_tick, invoke_military_tick, invoke_policy_tick, HostState, WasmGuestError,
+    HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS, HOST_GUEST_MEMORY_CAP, HOST_IMPORT_MODULE,
+    MOD_WASM_NAME as MOD_WASM_FILE,
 };
 
 /// Supported mod kinds per CIV-0700 §4.1.
@@ -221,6 +231,8 @@ pub struct LoadedMod {
     pub root: PathBuf,
     /// Parsed manifest.
     pub manifest: ModManifest,
+    /// Runtime capability set compiled from manifest permissions.
+    pub capabilities: ModCapabilitySet,
     /// Optional `mod.wasm` bytes when present beside manifest or in archive.
     pub wasm_bytes: Option<Vec<u8>>,
     /// Float opcode count from the last determinism scan (0 when WASM absent).
@@ -308,6 +320,10 @@ pub struct ModHost {
     reload_roots: std::collections::BTreeMap<String, PathBuf>,
     /// Per-mod guest scratch memory persisted across phase ticks (FR-CIV-TACTICS-052).
     guest_memory_by_mod: std::collections::BTreeMap<String, Vec<u8>>,
+    /// Permission violations accumulated during the current policy tick.
+    enforcement_by_mod: std::collections::BTreeMap<String, ModEnforcementCtx>,
+    /// Runtime mod lifecycle status (CIV-0700 §4.3).
+    mod_status_by_id: std::collections::BTreeMap<String, ModStatus>,
 }
 
 impl ModHost {
@@ -333,6 +349,24 @@ impl ModHost {
     #[must_use]
     pub fn loaded_records(&self) -> &[ModLoadedRecord] {
         &self.loaded_records
+    }
+
+    /// Runtime status for a loaded mod (`Active` when unknown).
+    #[must_use]
+    pub fn mod_status(&self, mod_id: &str) -> ModStatus {
+        self.mod_status_by_id
+            .get(mod_id)
+            .copied()
+            .unwrap_or(ModStatus::Active)
+    }
+
+    /// Permission violations recorded for the current policy tick.
+    #[must_use]
+    pub fn enforcement_violations(&self, mod_id: &str) -> u32 {
+        self.enforcement_by_mod
+            .get(mod_id)
+            .map(|ctx| ctx.violations)
+            .unwrap_or(0)
     }
 
     /// Snapshot of a mod's guest scratch memory (empty vec if the mod is unknown).
@@ -503,27 +537,45 @@ impl ModHost {
     #[must_use]
     pub fn military_tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_military_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
             if !entry.manifest.permissions.read_military {
                 continue;
             }
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
             let mem = self
                 .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
+                .entry(mod_id.clone())
                 .or_default();
-            match invoke_military_tick(wasm, sim_tick, mem) {
+            let enforcement = self
+                .enforcement_by_mod
+                .entry(mod_id.clone())
+                .or_default();
+            match invoke_military_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_military_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_military_tick:tick={sim_tick}:code={code}"
                 )),
                 Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
+                    &mod_id,
                     sim_tick,
                     &err.to_string(),
                 )),
+            }
+            if enforcement.suspended {
+                self.mod_status_by_id
+                    .insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -532,8 +584,10 @@ impl ModHost {
     /// Policy-phase hook — stubs + WASM `civlab_policy_tick` when loaded.
     #[must_use]
     pub fn tick(&mut self, sim_tick: u64) -> Vec<String> {
+        self.reset_tick_enforcement();
         let mut lines = self.registry.on_policy_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
@@ -542,20 +596,37 @@ impl ModHost {
             {
                 continue;
             }
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
             let mem = self
                 .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
+                .entry(mod_id.clone())
                 .or_default();
-            match invoke_policy_tick(wasm, sim_tick, mem) {
+            let enforcement = self
+                .enforcement_by_mod
+                .entry(mod_id.clone())
+                .or_default();
+            match invoke_policy_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_policy_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_policy_tick:tick={sim_tick}:code={code}"
                 )),
                 Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
+                    &mod_id,
                     sim_tick,
                     &err.to_string(),
                 )),
+            }
+            if enforcement.suspended {
+                self.mod_status_by_id
+                    .insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -565,7 +636,8 @@ impl ModHost {
     #[must_use]
     pub fn economy_tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_economy_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
@@ -574,20 +646,37 @@ impl ModHost {
             {
                 continue;
             }
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
             let mem = self
                 .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
+                .entry(mod_id.clone())
                 .or_default();
-            match invoke_economy_tick(wasm, sim_tick, mem) {
+            let enforcement = self
+                .enforcement_by_mod
+                .entry(mod_id.clone())
+                .or_default();
+            match invoke_economy_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_economy_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_economy_tick:tick={sim_tick}:code={code}"
                 )),
                 Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
+                    &mod_id,
                     sim_tick,
                     &err.to_string(),
                 )),
+            }
+            if enforcement.suspended {
+                self.mod_status_by_id
+                    .insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -605,6 +694,8 @@ impl ModHost {
             .remove_by_id(mod_id)
             .ok_or_else(|| format!("mod not loaded: {mod_id}"))?;
         self.guest_memory_by_mod.remove(mod_id);
+        self.enforcement_by_mod.remove(mod_id);
+        self.mod_status_by_id.remove(mod_id);
         Ok(ModUnloadedRecord {
             mod_id: mod_id.to_owned(),
             mod_name: removed.manifest.meta.name,
@@ -624,6 +715,17 @@ impl ModHost {
             version: manifest.meta.version.clone(),
             tick,
         });
+    }
+
+    fn reset_tick_enforcement(&mut self) {
+        for ctx in self.enforcement_by_mod.values_mut() {
+            *ctx = ModEnforcementCtx::default();
+        }
+        for status in self.mod_status_by_id.values_mut() {
+            if *status == ModStatus::Suspended {
+                *status = ModStatus::Active;
+            }
+        }
     }
 }
 
@@ -794,6 +896,7 @@ fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<
         .unwrap_or((0, 0));
     LoadedMod {
         root,
+        capabilities: ModCapabilitySet::from_permissions(&manifest.permissions),
         manifest,
         wasm_bytes,
         float_instruction_count,
@@ -1098,6 +1201,40 @@ write_policy = false
     fn capability_imports_list_is_complete() {
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"sim_tick"));
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"memory_read"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"world_read"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
+    }
+
+    #[test]
+    fn loaded_mod_carries_capability_set_from_manifest() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "cap-demo"
+name = "Cap Demo"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+read_economy = true
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let entry = &host.mods()[0];
+        assert!(entry.capabilities.can_read_domain(WorldDomain::Economy));
+        assert!(entry.capabilities.can_emit_action(ACTION_SET_TAX_RATE));
+        assert!(!entry.capabilities.can_read_domain(WorldDomain::Military));
     }
 
     #[test]

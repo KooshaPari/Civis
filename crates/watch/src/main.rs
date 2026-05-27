@@ -459,6 +459,25 @@ struct UploadModResponse {
     source: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct PublishModReq {
+    source: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PublishModResponse {
+    ok: bool,
+    published_source: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct PublishedModEntry {
+    id: String,
+    name: String,
+    version: String,
+    source: String,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -482,6 +501,7 @@ async fn main() {
     );
     std::fs::create_dir_all(&*mods_dir).ok();
     std::fs::create_dir_all(mods_dir.join("uploads")).ok();
+    std::fs::create_dir_all(mods_dir.join("publish")).ok();
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -553,6 +573,8 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/saves", get(list_saves_handler))
         .route("/control/mods/catalog", get(list_mod_catalog_handler))
         .route("/control/mods/upload", post(upload_mod_handler))
+        .route("/control/mods/publish", post(publish_mod_handler))
+        .route("/control/mods/published", get(list_published_mods_handler))
         .route("/control/mods/install", post(install_mod_handler))
         .route("/control/mods/unload", post(unload_mod_handler))
 }
@@ -2135,6 +2157,12 @@ fn scan_mod_catalog(mods_dir: &Path, installed_ids: &std::collections::HashSet<S
         installed_ids,
         &mut seen,
     ));
+    entries.extend(civmod_catalog_entries(
+        &repo,
+        &mods_dir.join("publish"),
+        installed_ids,
+        &mut seen,
+    ));
 
     for name in ["example-policy", "example-economic"] {
         let dir = mods_dir.join(name);
@@ -2220,6 +2248,54 @@ fn mod_source_relative(path: &Path) -> String {
         .unwrap_or_else(|_| path.display().to_string())
 }
 
+fn resolve_repo_mod_path(source: &str) -> Result<PathBuf, String> {
+    let trimmed = source.trim();
+    if trimmed.is_empty() {
+        return Err("source cannot be empty".into());
+    }
+    if trimmed.contains("..") {
+        return Err("source must not contain '..'".into());
+    }
+    let normalized = trimmed.replace('\\', "/");
+    if !normalized.starts_with("mods/") {
+        return Err("source must be under mods/".into());
+    }
+    let path = repo_root().join(&normalized);
+    if !path.is_file() {
+        return Err(format!("mod source not found: {normalized}"));
+    }
+    Ok(path)
+}
+
+fn scan_published_mods(mods_dir: &Path) -> Vec<PublishedModEntry> {
+    let publish_dir = mods_dir.join("publish");
+    let repo = repo_root();
+    let mut entries = Vec::new();
+    let Ok(read) = std::fs::read_dir(&publish_dir) else {
+        return entries;
+    };
+    for entry in read.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("civmod") {
+            continue;
+        }
+        let source = path
+            .strip_prefix(&repo)
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_else(|_| path.display().to_string());
+        if let Ok(manifest) = read_manifest_from_civmod(&path) {
+            entries.push(PublishedModEntry {
+                id: manifest.meta.id.clone(),
+                name: manifest.meta.name.clone(),
+                version: manifest.meta.version.clone(),
+                source,
+            });
+        }
+    }
+    entries.sort_by(|a, b| a.id.cmp(&b.id));
+    entries
+}
+
 async fn upload_mod_handler(
     State(state): State<AppState>,
     Json(req): Json<UploadModReq>,
@@ -2290,6 +2366,76 @@ async fn upload_mod_handler(
         ok: true,
         source: mod_source_relative(&path),
     }))
+}
+
+async fn publish_mod_handler(
+    State(state): State<AppState>,
+    Json(req): Json<PublishModReq>,
+) -> Result<Json<PublishModResponse>, (StatusCode, Json<ControlOk>)> {
+    let source_path = resolve_repo_mod_path(&req.source).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    let manifest = read_manifest_from_civmod(&source_path).map_err(|err| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(format!("invalid civmod archive: {err}")),
+            }),
+        )
+    })?;
+    let id = manifest.meta.id.trim();
+    if id.is_empty()
+        || id.contains('/')
+        || id.contains('\\')
+        || id.contains("..")
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some("manifest mod id must be a simple name".into()),
+            }),
+        ));
+    }
+
+    let publish_dir = state.mods_dir.join("publish");
+    std::fs::create_dir_all(&publish_dir).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+    let dest = publish_dir.join(format!("{id}.civmod"));
+    std::fs::copy(&source_path, &dest).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+
+    Ok(Json(PublishModResponse {
+        ok: true,
+        published_source: mod_source_relative(&dest),
+    }))
+}
+
+async fn list_published_mods_handler(
+    State(state): State<AppState>,
+) -> Json<Vec<PublishedModEntry>> {
+    Json(scan_published_mods(state.mods_dir.as_ref()))
 }
 
 async fn list_mod_catalog_handler(
@@ -3149,6 +3295,129 @@ write_policy = true
 
         let uploaded_path = repo_root().join(source.replace('/', std::path::MAIN_SEPARATOR_STR));
         let _ = std::fs::remove_file(uploaded_path);
+    }
+
+    #[tokio::test]
+    async fn post_mods_publish_round_trip() {
+        use base64::Engine as _;
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let mod_id = format!("publish-test-{nanos}");
+        let filename = format!("publish-{nanos}.civmod");
+        let civmod_bytes = minimal_upload_civmod_bytes(&mod_id);
+        let data_base64 = base64::engine::general_purpose::STANDARD.encode(&civmod_bytes);
+        let upload_body = serde_json::json!({
+            "filename": filename,
+            "data_base64": data_base64,
+        })
+        .to_string();
+
+        let app = test_app();
+        let upload_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/upload")
+                    .header("content-type", "application/json")
+                    .body(Body::from(upload_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(upload_response.status(), StatusCode::OK);
+        let upload_json = body_json(upload_response).await;
+        let upload_source = upload_json["source"]
+            .as_str()
+            .expect("upload source")
+            .to_owned();
+
+        let publish_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/publish")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(r#"{{"source":"{upload_source}"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(publish_response.status(), StatusCode::OK);
+        let publish_json = body_json(publish_response).await;
+        assert_eq!(publish_json["ok"], true);
+        let published_source = publish_json["published_source"]
+            .as_str()
+            .expect("published source")
+            .to_owned();
+        assert_eq!(published_source, format!("mods/publish/{mod_id}.civmod"));
+
+        let published_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/control/mods/published")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(published_response.status(), StatusCode::OK);
+        let published_json = body_json(published_response).await;
+        assert!(published_json
+            .as_array()
+            .expect("published array")
+            .iter()
+            .any(|entry| {
+                entry["id"] == mod_id
+                    && entry["source"] == published_source
+                    && entry["name"] == "Upload Test"
+                    && entry["version"] == "0.0.1"
+            }));
+
+        let catalog_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/control/mods/catalog")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(catalog_response.status(), StatusCode::OK);
+        let catalog_json = body_json(catalog_response).await;
+        assert!(catalog_json
+            .as_array()
+            .expect("catalog array")
+            .iter()
+            .any(|entry| entry["source"] == published_source && entry["id"] == mod_id));
+
+        let install_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/install")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(r#"{{"source":"{published_source}"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(install_response.status(), StatusCode::OK);
+        let install_json = body_json(install_response).await;
+        assert_eq!(install_json["ok"], true);
+
+        let uploaded_path = repo_root().join(upload_source.replace('/', std::path::MAIN_SEPARATOR_STR));
+        let published_path =
+            repo_root().join(published_source.replace('/', std::path::MAIN_SEPARATOR_STR));
+        let _ = std::fs::remove_file(uploaded_path);
+        let _ = std::fs::remove_file(published_path);
     }
 
 }

@@ -448,6 +448,11 @@ struct UnloadModReq {
 }
 
 #[derive(Debug, Deserialize)]
+struct ReloadModReq {
+    mod_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct UploadModReq {
     filename: String,
     data_base64: String,
@@ -577,6 +582,7 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/mods/published", get(list_published_mods_handler))
         .route("/control/mods/install", post(install_mod_handler))
         .route("/control/mods/unload", post(unload_mod_handler))
+        .route("/control/mods/reload", post(reload_mod_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -2499,6 +2505,26 @@ async fn unload_mod_handler(
     }))
 }
 
+async fn reload_mod_handler(
+    State(state): State<AppState>,
+    Json(req): Json<ReloadModReq>,
+) -> Result<Json<ControlOk>, (StatusCode, Json<ControlOk>)> {
+    let mut sim = state.sim.lock().await;
+    let record = sim.reload_mod_by_id(&req.mod_id).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    Ok(Json(ControlOk {
+        ok: true,
+        message: Some(format!("reloaded {} ({})", record.mod_name, record.mod_id)),
+    }))
+}
+
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -3174,6 +3200,47 @@ mod api_tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn post_mods_reload() {
+        let state = test_state();
+        let app = test_app_with_state(state.clone());
+
+        let install_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/install")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"source":"mods/example-policy"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(install_response.status(), StatusCode::OK);
+
+        let reload_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/reload")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"mod_id":"example-policy"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(reload_response.status(), StatusCode::OK);
+
+        let sim = state.sim.lock().await;
+        assert!(
+            sim.mod_browser_entries()
+                .iter()
+                .any(|entry| entry.id == "example-policy")
+        );
     }
 
     fn minimal_upload_civmod_bytes(mod_id: &str) -> Vec<u8> {

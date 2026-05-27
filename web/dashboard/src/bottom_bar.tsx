@@ -11,6 +11,8 @@ import {
   exportReplayBlob,
   importReplayBytes,
   jsonRpcCall,
+  jsonRpcLoadSlot,
+  jsonRpcSaveSlot,
   normalizeServerSnapshot,
 } from "./lib/civisServer";
 import { getActiveServerSocket } from "./lib/civisSocket";
@@ -187,6 +189,57 @@ export function BottomBar() {
       });
     } catch {
       dispatch({ type: "set_toast", message: "sim.set_speed failed" });
+    }
+  };
+
+  const refreshServerSnapshot = async (ws: WebSocket) => {
+    const snap = await jsonRpcCall<unknown>(ws, "sim.snapshot");
+    const metrics = normalizeServerSnapshot(snap);
+    dispatch({ type: "set_server_metrics", metrics });
+    dispatch({
+      type: "set_snapshot",
+      snapshot: mergeServerSnapshot(snap, (metrics.speed_multiplier as TimeSpeed) ?? 1),
+    });
+  };
+
+  const serverSaveSlot = async (slot: (typeof PRODUCTION_SLOTS)[number]) => {
+    const ws = getActiveServerSocket();
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      dispatch({ type: "set_toast", message: "Not connected to civ-server" });
+      return;
+    }
+    try {
+      const result = await jsonRpcSaveSlot(ws, slot);
+      dispatch({ type: "set_last_save_tick", tick: result.tick });
+      dispatch({ type: "set_toast", message: `Saved ${slot} @ tick ${result.tick}` });
+    } catch (err) {
+      dispatch({
+        type: "set_toast",
+        message: err instanceof Error ? err.message : "save.slot failed",
+      });
+    }
+  };
+
+  const serverLoadSlot = async (slot: (typeof PRODUCTION_SLOTS)[number]) => {
+    const ws = getActiveServerSocket();
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      dispatch({ type: "set_toast", message: "Not connected to civ-server" });
+      return;
+    }
+    try {
+      const result = await jsonRpcLoadSlot(ws, slot);
+      autosaveBucketRef.current = Math.floor(result.resumed_at_tick / 1000);
+      dispatch({ type: "set_last_save_tick", tick: result.resumed_at_tick });
+      dispatch({
+        type: "set_toast",
+        message: `Loaded ${slot} @ tick ${result.resumed_at_tick}`,
+      });
+      await refreshServerSnapshot(ws);
+    } catch (err) {
+      dispatch({
+        type: "set_toast",
+        message: err instanceof Error ? err.message : "save.load failed",
+      });
     }
   };
 
@@ -502,6 +555,41 @@ export function BottomBar() {
               title="Import .civreplay"
               emoji="📂"
               onClick={() => fileInputRef.current?.click()}
+            />
+            <ToolButton
+              title="Save slot 1 (save.slot)"
+              emoji="1️⃣"
+              onClick={() => void serverSaveSlot("slot-1")}
+            />
+            <ToolButton
+              title="Load slot 1 (save.load)"
+              emoji="📥"
+              onClick={() => void serverLoadSlot("slot-1")}
+            />
+            <label className="slot-picker">
+              Slot
+              <select
+                value={selectedSlot}
+                onChange={(e) =>
+                  setSelectedSlot(e.target.value as (typeof PRODUCTION_SLOTS)[number])
+                }
+              >
+                {PRODUCTION_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ToolButton
+              title={`Save ${selectedSlot} (save.slot)`}
+              emoji="💾"
+              onClick={() => void serverSaveSlot(selectedSlot)}
+            />
+            <ToolButton
+              title={`Load ${selectedSlot} (save.load)`}
+              emoji="📂"
+              onClick={() => void serverLoadSlot(selectedSlot)}
             />
           </div>
         ) : (

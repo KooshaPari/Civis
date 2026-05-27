@@ -1,7 +1,23 @@
 //! civlab-sdk — guest API for CivLab WASM mods.
+//!
+//! # Policy mods
+//!
+//! The [`policy`] module defines the [`PolicyMod`](policy::PolicyMod) trait,
+//! [`PolicyContext`](policy::PolicyContext), and [`PolicyAction`](policy::PolicyAction)
+//! surface described in [CIV-0700 §5](https://github.com/civlab/civis/blob/main/docs/specs/CIV-0700-modding-api-spec.md#5-policymod-api).
+//! Host-side enforcement lives in `civ-mod-host`.
 
 #![cfg_attr(not(target_arch = "wasm32"), forbid(unsafe_code))]
 #![warn(missing_docs)]
+
+mod policy;
+
+pub use policy::{
+    CitizensSnapshot, ClimateSnapshot, DiplomacySnapshot, EconomySnapshot, MilitarySnapshot,
+    ModMetadata, PolicyAction, PolicyContext, PolicyMod, SimEvent, WorldDomain,
+    ACTION_SET_POLICY_PARAM, ACTION_SET_SUBSIDY_RATE, ACTION_SET_TAX_RATE, ACTION_TRANSFER_FUNDS,
+    ACTION_TRIGGER_EVENT,
+};
 
 /// Capability surface version echoed by host and guest (FR-CIV-TACTICS-044).
 pub const CAPABILITY_API_VERSION: &str = "0.1.0";

@@ -399,6 +399,7 @@ pub struct SnapshotFields {
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
     /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
     pub mod_lifecycle: Vec<String>,
+    /// `session.saved.v1` replay-bus JSON from the most recent tick (slot/autosave).
     pub session_saved: Vec<String>,
 }
 

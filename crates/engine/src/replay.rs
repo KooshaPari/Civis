@@ -468,4 +468,18 @@ mod tests {
         log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
         assert_eq!(log.session_saved_bus_at_tick(42).len(), 1);
     }
+
+    #[test]
+    fn session_saved_round_trips_through_save_load() {
+        let mut log = ReplayLog::default();
+        log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        log.save(file.path()).expect("save replay log");
+        let loaded = ReplayLog::load(file.path()).expect("load replay log");
+        assert_eq!(loaded.events, log.events);
+        assert_eq!(
+            loaded.session_saved_bus_at_tick(42),
+            log.session_saved_bus_at_tick(42)
+        );
+    }
 }

@@ -1,7 +1,6 @@
 //! WASM determinism scan before guest instantiation (CIV-0700 §3.5 / §14.5).
 
 use crate::float_data_flow::scan_float_action_emit_contamination;
-
 use thiserror::Error;
 use wasmparser::{Operator, Parser, Payload};
 
@@ -23,13 +22,21 @@ pub enum DeterminismError {
         /// Number of float opcodes observed.
         count: u32,
     },
+    /// Float-derived value reaches `civlab::action_emit` (CIV-0700 §3.5 data-flow trace).
+    #[error("float contamination: {count} action_emit sites with float-derived args")]
+    ActionEmitFloatContamination {
+        /// Number of contaminated `action_emit` call sites.
+        count: u32,
+    },
 }
 
-/// Summary from scanning a WASM module (float data-flow stub, FR-CIV-TACTICS-057).
+/// Summary from scanning a WASM module (FR-CIV-TACTICS-057 / FR-CIV-TACTICS-061).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DeterminismScanReport {
     /// Count of `f32` / `f64` opcodes (internal use may be OK; strict mode rejects).
     pub float_instruction_count: u32,
+    /// `action_emit` call sites where a float-derived value is passed (CIV-0700 §3.5).
+    pub float_contamination_site_count: u32,
     /// Hard-rejected opcodes (atomics, sqrt, nearest, clz).
     pub hard_rejections: Vec<String>,
     /// Float-derived values reaching `civlab::action_emit`.
@@ -60,8 +67,11 @@ pub fn scan_wasm_determinism_report(
             }
         }
     }
-    report.float_contamination_sites =
-        scan_float_action_emit_contamination(wasm_bytes).unwrap_or_default();
+    let sites = scan_float_action_emit_contamination(wasm_bytes)
+        .map_err(|e| DeterminismError::Parse(e))?;
+    report.float_contamination_sites = sites;
+    report.float_contamination_site_count =
+        u32::try_from(report.float_contamination_sites.len()).unwrap_or(u32::MAX);
     Ok(report)
 }
 
@@ -79,6 +89,11 @@ pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> 
     if cfg!(feature = "determinism-strict") && report.float_instruction_count > 0 {
         return Err(DeterminismError::FloatContamination {
             count: report.float_instruction_count,
+        });
+    }
+    if report.float_contamination_site_count > 0 {
+        return Err(DeterminismError::ActionEmitFloatContamination {
+            count: report.float_contamination_site_count,
         });
     }
     Ok(())
@@ -149,5 +164,45 @@ mod tests {
         assert!(report.float_instruction_count >= 1);
         assert!(report.hard_rejections.is_empty());
         scan_wasm_determinism(&wasm).expect("non-sqrt float allowed in default mode");
+    }
+
+    #[test]
+    fn rejects_reinterpret_f64_before_action_emit() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "action_emit" (func (param i64)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                f64.const 1.0
+                i64.reinterpret_f64
+                call 0
+                i32.const 0)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let report = scan_wasm_determinism_report(&wasm).expect("scan");
+        assert_eq!(report.float_contamination_site_count, 1);
+        let err = scan_wasm_determinism(&wasm).expect_err("reinterpret before action_emit");
+        assert!(matches!(
+            err,
+            DeterminismError::ActionEmitFloatContamination { count: 1 }
+        ));
+    }
+
+    #[test]
+    fn trunc_before_action_emit_passes_data_flow_scan() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "action_emit" (func (param i64)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                f64.const 1.0
+                i64.trunc_f64_s
+                call 0
+                i32.const 0)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let report = scan_wasm_determinism_report(&wasm).expect("scan");
+        assert_eq!(report.float_contamination_site_count, 0);
+        scan_wasm_determinism(&wasm).expect("truncated float arg is clean");
     }
 }

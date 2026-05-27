@@ -141,6 +141,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-055 | Mod guest state JSON save/load stub. | `guest_state.rs`, `engine.rs` | `mod_guest_state_save_round_trips_json` | implemented |
 | FR-CIV-TACTICS-056 | WASM determinism scan at mod load. | `determinism.rs` | `rejects_f32_sqrt` | implemented |
 | FR-CIV-TACTICS-057 | Float opcode count in determinism report. | `determinism.rs` | `report_counts_float_ops_without_hard_reject` | implemented |
+| FR-CIV-TACTICS-061 | `action_emit` float data-flow trace at mod load. | `float_data_flow.rs`, `determinism.rs` | `rejects_reinterpret_f64_before_action_emit` | implemented |
 | FR-CIV-TACTICS-058 | `.civsave/` debug save folder. | `save_bundle.rs`, `civ-watch` | `civsave_folder_round_trips_mod_guest_state` | implemented |
 | FR-CIV-TACTICS-059 | Package example mods as `.civmod`. | `justfile`, `package-example-mod.ps1` | `civis-3d-mod-package-all` | implemented |
 

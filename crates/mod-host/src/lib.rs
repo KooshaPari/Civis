@@ -212,7 +212,7 @@ pub struct LoadedMod {
     pub wasm_bytes: Option<Vec<u8>>,
     /// Float opcode count from the last determinism scan (0 when WASM absent).
     pub float_instruction_count: u32,
-    /// Float-derived `action_emit` call sites from data-flow scan (0 when WASM absent).
+    /// `action_emit` contamination sites from data-flow scan (0 when WASM absent).
     pub float_contamination_site_count: u32,
 }
 
@@ -687,7 +687,7 @@ fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<
                 .map(|report| {
                     (
                         report.float_instruction_count,
-                        report.float_contamination_sites.len() as u32,
+                        report.float_contamination_site_count,
                     )
                 })
                 .unwrap_or((0, 0))

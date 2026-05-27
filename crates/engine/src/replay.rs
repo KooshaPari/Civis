@@ -61,6 +61,16 @@ pub enum ReplayEvent {
         #[serde(default)]
         bus_json: String,
     },
+    /// Session persisted to slot or autosave (`session.saved.v1`, CIV-1000).
+    SessionSaved {
+        tick: u64,
+        session_id: String,
+        save_id: String,
+        slot: String,
+        byte_size: u64,
+        #[serde(default)]
+        bus_json: String,
+    },
 }
 
 /// Persistent replay log.
@@ -226,6 +236,27 @@ impl ReplayLog {
         });
     }
 
+    /// Record a `session.saved.v1` event with replay-bus JSON (FR-SAVE-002 partial).
+    pub fn record_session_saved(
+        &mut self,
+        session_id: &str,
+        save_id: &str,
+        slot: &str,
+        tick: u64,
+        byte_size: u64,
+    ) {
+        let bus_json =
+            civ_save_db::format_session_saved_event_json(session_id, save_id, slot, tick, byte_size);
+        self.events.push(ReplayEvent::SessionSaved {
+            tick,
+            session_id: session_id.to_string(),
+            save_id: save_id.to_string(),
+            slot: slot.to_string(),
+            byte_size,
+            bus_json,
+        });
+    }
+
     /// `mod.loaded.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
     #[must_use]
     pub fn mod_loaded_bus_at_tick(&self, tick: u64) -> Vec<String> {
@@ -250,6 +281,36 @@ impl ReplayLog {
                         version: version.clone(),
                         tick: *event_tick,
                     },
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// `session.saved.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
+    #[must_use]
+    pub fn session_saved_bus_at_tick(&self, tick: u64) -> Vec<String> {
+        self.events
+            .iter()
+            .filter_map(|event| match event {
+                ReplayEvent::SessionSaved {
+                    tick: event_tick,
+                    bus_json,
+                    ..
+                } if *event_tick == tick && !bus_json.is_empty() => Some(bus_json.clone()),
+                ReplayEvent::SessionSaved {
+                    tick: event_tick,
+                    session_id,
+                    save_id,
+                    slot,
+                    byte_size,
+                    ..
+                } if *event_tick == tick => Some(civ_save_db::format_session_saved_event_json(
+                    session_id,
+                    save_id,
+                    slot,
+                    *event_tick,
+                    *byte_size,
                 )),
                 _ => None,
             })
@@ -390,8 +451,35 @@ impl ReplayLog {
                 }
                 ReplayEvent::ModLoaded { .. } => {}
                 ReplayEvent::ModUnloaded { .. } => {}
+                ReplayEvent::SessionSaved { .. } => {}
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn session_saved_records_bus_json_at_tick() {
+        let mut log = ReplayLog::default();
+        log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
+        assert_eq!(log.session_saved_bus_at_tick(42).len(), 1);
+    }
+
+    #[test]
+    fn session_saved_round_trips_through_save_load() {
+        let mut log = ReplayLog::default();
+        log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        log.save(file.path()).expect("save replay log");
+        let loaded = ReplayLog::load(file.path()).expect("load replay log");
+        assert_eq!(loaded.events, log.events);
+        assert_eq!(
+            loaded.session_saved_bus_at_tick(42),
+            log.session_saved_bus_at_tick(42)
+        );
     }
 }

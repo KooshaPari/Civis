@@ -399,6 +399,8 @@ pub struct SnapshotFields {
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
     /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
     pub mod_lifecycle: Vec<String>,
+    /// `session.saved.v1` replay-bus JSON from the most recent tick (slot/autosave).
+    pub session_saved: Vec<String>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -515,6 +517,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.mod_lifecycle).unwrap_or(Value::Null),
         );
     }
+    if !fields.session_saved.is_empty() {
+        obj.insert(
+            "session_saved".to_owned(),
+            serde_json::to_value(&fields.session_saved).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
 }
 
@@ -596,6 +604,7 @@ pub fn snapshot_fields_from_sim(
         mod_lifecycle: sim
             .replay_log()
             .mod_loaded_bus_at_tick(sim.state.tick),
+        session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
     }
 }
 
@@ -1918,6 +1927,7 @@ mod tests {
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
                     mod_lifecycle: vec![],
+                    session_saved: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1971,6 +1981,7 @@ mod tests {
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
                     mod_lifecycle: vec![],
+                    session_saved: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2029,6 +2040,7 @@ mod tests {
                     voxel_damage_removed_this_tick: 0,
                     mods: vec![],
                     mod_lifecycle: vec![],
+                    session_saved: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,

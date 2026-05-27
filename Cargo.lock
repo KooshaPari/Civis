@@ -2183,6 +2183,7 @@ dependencies = [
  "civ-economy",
  "civ-mod-host",
  "civ-planet",
+ "civ-save-db",
  "civ-tactics",
  "civ-voxel",
  "hecs",

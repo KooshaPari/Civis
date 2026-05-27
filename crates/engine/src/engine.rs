@@ -1033,6 +1033,19 @@ impl Simulation {
         &self.last_tick_mod_lifecycle
     }
 
+    /// Record `session.saved.v1` on the replay bus (slot or autosave; CIV-1000).
+    pub fn record_session_saved(
+        &mut self,
+        session_id: &str,
+        save_id: &str,
+        slot: &str,
+        byte_size: u64,
+    ) {
+        let tick = self.state.tick;
+        self.replay_log
+            .record_session_saved(session_id, save_id, slot, tick, byte_size);
+    }
+
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
     pub fn hash_chain_root(&self) -> Option<[u8; crate::hash_chain::HASH_LEN]> {
         self.replay_log.running_hash

@@ -444,6 +444,7 @@ async fn ws_smoke() {
             max_clients: PARALLEL_CLIENTS,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Binary,
+            ..Default::default()
         },
     )
     .await;
@@ -486,6 +487,7 @@ async fn ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required() {
             max_clients: 4,
             require_role: true,
             tick_broadcast_format: TickBroadcastFormat::Both,
+            ..Default::default()
         },
     )
     .await;
@@ -536,6 +538,7 @@ async fn ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header() {
             max_clients: 4,
             require_role: true,
             tick_broadcast_format: TickBroadcastFormat::Both,
+            ..Default::default()
         },
     )
     .await;
@@ -1217,6 +1220,7 @@ async fn collect_f3d0_frames_after_sim_command_tick(
             max_clients: 4,
             require_role: false,
             tick_broadcast_format: format,
+            ..Default::default()
         },
     )
     .await;
@@ -1326,6 +1330,7 @@ async fn count_tick_broadcast_ws_frames_after_sim_command(format: TickBroadcastF
             max_clients: 4,
             require_role: false,
             tick_broadcast_format: format,
+            ..Default::default()
         },
     )
     .await;
@@ -1750,4 +1755,162 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
         .await
         .unwrap_or_else(|_| panic!("spawn_entity timeout for kind={kind}"));
     }
+}
+
+#[tokio::test]
+async fn ws_jsonrpc_save_slot_roundtrip() {
+    let saves_dir = tempfile::tempdir().expect("temp saves dir");
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(42)));
+    {
+        let mut guard = sim.lock().await;
+        for _ in 0..3 {
+            guard.tick();
+        }
+    }
+    let saved_tick = sim.lock().await.state.tick;
+
+    let addr = spawn_ws_bridge_with_config(
+        sim.clone(),
+        WsBridgeConfig {
+            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+            max_clients: 4,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::Both,
+            saves_dir: saves_dir.path().to_path_buf(),
+        },
+    )
+    .await;
+    let url = format!("ws://{addr}/ws");
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    let save_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 60,
+        "method": "save.slot",
+        "params": { "slot_name": "slot-1" }
+    });
+    socket
+        .send(Message::Text(save_req.to_string()))
+        .await
+        .expect("send save.slot");
+
+    let save_response = timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(60)) {
+                return value;
+            }
+        }
+        panic!("ws closed before save.slot response");
+    })
+    .await
+    .expect("save.slot timeout");
+
+    assert_eq!(
+        save_response.pointer("/result/saved"),
+        Some(&serde_json::json!(true))
+    );
+    assert_eq!(
+        save_response.pointer("/result/slot_name"),
+        Some(&serde_json::json!("slot-1"))
+    );
+    assert_eq!(
+        save_response.pointer("/result/tick").and_then(|v| v.as_u64()),
+        Some(saved_tick)
+    );
+    assert!(
+        saves_dir
+            .path()
+            .join("slot-1.civsave.zst")
+            .is_file(),
+        "expected slot-1.civsave.zst on disk"
+    );
+
+    {
+        let mut guard = sim.lock().await;
+        for _ in 0..5 {
+            guard.tick();
+        }
+    }
+    assert!(sim.lock().await.state.tick > saved_tick);
+
+    let load_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 61,
+        "method": "save.load",
+        "params": { "slot_name": "slot-1" }
+    });
+    socket
+        .send(Message::Text(load_req.to_string()))
+        .await
+        .expect("send save.load");
+
+    let load_response = timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(61)) {
+                return value;
+            }
+        }
+        panic!("ws closed before save.load response");
+    })
+    .await
+    .expect("save.load timeout");
+
+    assert_eq!(
+        load_response.pointer("/result/loaded"),
+        Some(&serde_json::json!(true))
+    );
+    assert_eq!(
+        load_response.pointer("/result/tick").and_then(|v| v.as_u64()),
+        Some(saved_tick)
+    );
+    assert_eq!(sim.lock().await.state.tick, saved_tick);
+
+    let list_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 62,
+        "method": "save.list",
+        "params": {}
+    });
+    socket
+        .send(Message::Text(list_req.to_string()))
+        .await
+        .expect("send save.list");
+
+    let list_response = timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+            if value.get("id") == Some(&serde_json::json!(62)) {
+                return value;
+            }
+        }
+        panic!("ws closed before save.list response");
+    })
+    .await
+    .expect("save.list timeout");
+
+    let entries = list_response
+        .pointer("/result")
+        .and_then(|v| v.as_array())
+        .expect("save.list array");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].get("name"), Some(&serde_json::json!("slot-1")));
+    assert_eq!(
+        entries[0].get("tick").and_then(|v| v.as_u64()),
+        Some(saved_tick)
+    );
+    assert_eq!(
+        entries[0].get("save_type"),
+        Some(&serde_json::json!("slot"))
+    );
 }

@@ -71,6 +71,9 @@
 | FR-CIV-TACTICS-069 | implemented | session-scoped SQLite save metadata (`civ-save-db`) |
 | FR-CIV-TACTICS-070 | implemented | remote mod fetch cache `mods/remote` + HTTP API |
 | FR-CIV-TACTICS-071 | implemented | CIV-0700 `world_read` / `action_emit` capability enforcement |
+| FR-CIV-TACTICS-072 | implemented | `session.saved.v1` on replay bus + snapshot feed |
+| FR-CIV-TACTICS-073 | implemented | web remote mod fetch UI (`GET/POST` mods/remote) |
+| FR-CIV-TACTICS-074 | implemented | `PolicyMod` trait surface in civlab-sdk (CIV-0700 §5) |
 
 ## First PR slice (recommended)
 

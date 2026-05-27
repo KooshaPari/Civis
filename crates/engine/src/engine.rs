@@ -692,6 +692,18 @@ impl Simulation {
         Ok(record)
     }
 
+    /// Hot-reload a mod from its remembered source path and emit `mod.loaded.v1`.
+    pub fn reload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, String> {
+        let record = self.mod_host.reload_mod(mod_id, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
     /// Load mod manifests from scenario `mods` paths (repo-relative).
     ///
     /// Paths are resolved from the repo root (`crates/engine/../../`). Failures are

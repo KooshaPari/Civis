@@ -304,6 +304,8 @@ impl ModRegistry {
 pub struct ModHost {
     registry: ModRegistry,
     loaded_records: Vec<ModLoadedRecord>,
+    /// Source paths for hot reload (mod id → directory or `.civmod` archive).
+    reload_roots: std::collections::BTreeMap<String, PathBuf>,
     /// Per-mod guest scratch memory persisted across phase ticks (FR-CIV-TACTICS-052).
     guest_memory_by_mod: std::collections::BTreeMap<String, Vec<u8>>,
 }
@@ -437,10 +439,12 @@ impl ModHost {
             )?;
         }
         let mod_id = manifest.meta.id.clone();
+        let root = mod_dir.to_path_buf();
+        self.remember_reload_root(&mod_id, root.clone());
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
         self.registry
-            .register(make_loaded_mod(mod_dir.to_path_buf(), manifest, wasm_bytes));
+            .register(make_loaded_mod(root, manifest, wasm_bytes));
         Ok(())
     }
 
@@ -452,11 +456,47 @@ impl ModHost {
         let archive_path = archive_path.as_ref().to_path_buf();
         let (manifest, wasm_bytes) = read_civmod_archive(&archive_path)?;
         let mod_id = manifest.meta.id.clone();
+        self.remember_reload_root(&mod_id, archive_path.clone());
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
         self.registry
             .register(make_loaded_mod(archive_path, manifest, wasm_bytes));
         Ok(())
+    }
+
+    /// Unload then reload a mod from its remembered source path (hot reload).
+    pub fn reload_mod(&mut self, mod_id: &str, tick: u64) -> Result<ModLoadedRecord, String> {
+        let root = self
+            .registry
+            .mods()
+            .iter()
+            .find(|entry| entry.manifest.meta.id == mod_id)
+            .map(|entry| entry.root.clone())
+            .or_else(|| self.reload_roots.get(mod_id).cloned())
+            .ok_or_else(|| format!("mod not loaded: {mod_id}"))?;
+
+        self.unload_mod(mod_id, "hot_reload", tick)?;
+        self.load_mod_path(&root).map_err(|err| err.to_string())?;
+
+        let entry = self
+            .registry
+            .mods()
+            .iter()
+            .find(|entry| entry.manifest.meta.id == mod_id)
+            .ok_or_else(|| format!("mod reload produced no registry entry: {mod_id}"))?;
+
+        if let Some(record) = self.loaded_records.last_mut() {
+            if record.mod_id == mod_id {
+                record.tick = tick;
+            }
+        }
+
+        Ok(ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick,
+        })
     }
 
     /// Military-phase hook (P-W1) — manifest stubs + WASM `civlab_military_tick` when loaded.
@@ -571,6 +611,10 @@ impl ModHost {
             tick,
             reason: reason.to_owned(),
         })
+    }
+
+    fn remember_reload_root(&mut self, mod_id: &str, root: PathBuf) {
+        self.reload_roots.insert(mod_id.to_owned(), root);
     }
 
     fn push_loaded(&mut self, manifest: &ModManifest, tick: u64) {
@@ -1443,5 +1487,58 @@ civlab-api = ">=1.0.0, <2.0.0"
         assert_eq!(record.mod_id, "example-policy");
         assert!(host.mods().is_empty());
         assert!(host.guest_memory_snapshot("example-policy").is_empty());
+    }
+
+    #[test]
+    fn reload_mod_rereads_wasm_from_root() {
+        const WAT_V1: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 1)
+            )
+        "#;
+        const WAT_V2: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 2)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "reload-demo"
+name = "Reload Demo"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT_V1).expect("wat"))
+            .expect("wasm v1");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let lines_v1 = host.tick(1);
+        assert!(lines_v1.iter().any(|line| line.contains("code=1")));
+
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT_V2).expect("wat"))
+            .expect("wasm v2");
+        let record = host.reload_mod("reload-demo", 9).expect("reload");
+        assert_eq!(record.mod_id, "reload-demo");
+        assert_eq!(record.tick, 9);
+
+        let lines_v2 = host.tick(2);
+        assert!(lines_v2.iter().any(|line| line.contains("code=2")));
     }
 }

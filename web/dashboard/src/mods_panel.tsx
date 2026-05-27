@@ -28,6 +28,7 @@ export function ModsPanel() {
   const [uploading, setUploading] = useState(false);
   const [unloadError, setUnloadError] = useState<string | null>(null);
   const [unloading, setUnloading] = useState<string | null>(null);
+  const [reloading, setReloading] = useState<string | null>(null);
 
   const mods =
     state.attachMode === "server"
@@ -99,6 +100,19 @@ export function ModsPanel() {
       setUnloadError(err instanceof Error ? err.message : "unload failed");
     } finally {
       setUnloading(null);
+    }
+  };
+
+  const reloadMod = async (modId: string) => {
+    setReloading(modId);
+    try {
+      await postControl("/control/mods/reload", { mod_id: modId });
+      setUnloadError(null);
+      await refreshCatalog();
+    } catch (err) {
+      setUnloadError(err instanceof Error ? err.message : "reload failed");
+    } finally {
+      setReloading(null);
     }
   };
 
@@ -186,14 +200,24 @@ export function ModsPanel() {
                   : ""}
               </span>
               {state.attachMode !== "server" ? (
-                <button
-                  type="button"
-                  className="mods-unload"
-                  disabled={unloading === mod.id}
-                  onClick={() => void unloadMod(mod.id)}
-                >
-                  {unloading === mod.id ? "Unloading…" : "Unload"}
-                </button>
+                <span className="mods-loaded-actions">
+                  <button
+                    type="button"
+                    className="mods-reload"
+                    disabled={reloading === mod.id || unloading === mod.id}
+                    onClick={() => void reloadMod(mod.id)}
+                  >
+                    {reloading === mod.id ? "Reloading…" : "Reload"}
+                  </button>
+                  <button
+                    type="button"
+                    className="mods-unload"
+                    disabled={unloading === mod.id || reloading === mod.id}
+                    onClick={() => void unloadMod(mod.id)}
+                  >
+                    {unloading === mod.id ? "Unloading…" : "Unload"}
+                  </button>
+                </span>
               ) : null}
             </li>
           ))}

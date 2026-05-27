@@ -6,6 +6,9 @@ extends Node3D
 ## When true (ADR-009), hide world-mutation tools.
 @export var spectator_mode := true
 
+## `standalone` runs the in-process SimulationHost; `server` attaches to civ-server WS.
+@export var attach_mode := "standalone"
+
 const TERRAIN_GRID_SIZE := 128
 const CIVILIAN_FOOT_OFFSET := 0.55
 const BUILDING_FOOT_OFFSET := 1.0
@@ -42,6 +45,8 @@ const MILITARY_COLORS := {
 }
 
 var _simulation_host: SimulationHost
+var _ws_client: CivisWsClient
+var _server_attach := false
 @onready var terrain_mesh: MeshInstance3D = $Terrain/TerrainMesh
 @onready var civilians_root: Node3D = $Civilians
 @onready var buildings_root: Node3D = $Buildings
@@ -64,11 +69,21 @@ var _spawn_drag_start := Vector2(-1.0, -1.0)
 var _drag_preview: MeshInstance3D
 
 func _ready() -> void:
+	_server_attach = attach_mode == "server"
 	_simulation_host = SimulationHost.new()
 	_simulation_host.name = "SimulationHost"
 	add_child(_simulation_host)
 	_load_terrain()
 	_build_terrain_mesh()
+	if _server_attach:
+		var timer := $Timer as Timer
+		timer.stop()
+		timer.autostart = false
+		_ws_client = CivisWsClient.new()
+		_ws_client.name = "CivisWsClient"
+		add_child(_ws_client)
+		_ws_client.snapshot_received.connect(_apply_snapshot)
+		_ws_client.connect_server()
 	_bind_ui()
 	ui.get_node("Minimap").setup(terrain_heights, terrain_biomes, $Camera3D, terrain_height_exaggeration)
 
@@ -150,7 +165,8 @@ func _bind_ui() -> void:
 	spawn_kind_ui.select(0)
 	spawn_kind_ui.item_selected.connect(_on_spawn_kind_selected)
 	var mode_label := "Spectator" if spectator_mode else "Authoring"
-	var hint := "%s — standalone in-process simulation." % mode_label
+	var attach_hint := "civ-server WebSocket attach" if _server_attach else "standalone in-process simulation"
+	var hint := "%s — %s." % [mode_label, attach_hint]
 	ui.get_node("BottomBar").tooltip_text = hint
 	if spectator_mode:
 		ui.get_node("BottomBar/HBoxContainer/Material").visible = false
@@ -171,6 +187,9 @@ func _bind_ui() -> void:
 	_apply_speed(current_speed)
 
 func _apply_speed(speed: int) -> void:
+	if _server_attach and _ws_client != null:
+		_ws_client.set_speed(speed)
+		return
 	var timer := $Timer as Timer
 	if speed <= 0:
 		timer.stop()
@@ -317,6 +336,8 @@ func _handle_mutation_click() -> void:
 		SpawnBurst.emit_at(self, pos + Vector3(0, 0.6, 0), Color(1.0, 0.3, 0.3))
 
 func _on_timer_timeout() -> void:
+	if _server_attach:
+		return
 	_simulation_host.tick()
 	var snapshot := _simulation_host.snapshot()
 	if snapshot.is_empty():
@@ -327,6 +348,7 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 	var tick := int(snapshot.get("tick", 0))
 	ui.get_node("BottomBar/HBoxContainer/TickLabel").text = "Tick: %s" % tick
 	ui.get_node("BottomBar/HBoxContainer/PopulationLabel").text = "Population: %s" % snapshot.get("population", 0)
+	ui.get_node("BottomBar/HBoxContainer/ModsLabel").text = _mods_label_text(snapshot.get("mods", []))
 	ui.get_node("BottomBar/HBoxContainer/EraLabel").text = EraTimelapse.era_label(tick)
 	_apply_day_night(bool(snapshot.get("is_day", true)))
 	_sync_civilians(snapshot.get("civ_pins", []))
@@ -462,3 +484,19 @@ func _spawn_burst_at_norm(norm_x: float, norm_y: float, color: Color) -> void:
 	var gz := norm_y * float(TERRAIN_GRID_SIZE)
 	var gy := _world_y_at_norm(norm_x, norm_y, SPAWN_BURST_FOOT_OFFSET)
 	SpawnBurst.emit_at(civilians_root, Vector3(gx, gy, gz), color)
+
+func _mods_label_text(mods: Array) -> String:
+	if mods.is_empty():
+		return "Mods: 0"
+	var names: PackedStringArray = PackedStringArray()
+	for entry in mods:
+		if typeof(entry) != TYPE_DICTIONARY:
+			continue
+		var mod_name := str(entry.get("name", entry.get("id", "")))
+		if not mod_name.is_empty():
+			names.append(mod_name)
+	if names.is_empty():
+		return "Mods: %d" % mods.size()
+	if names.size() <= 2:
+		return "Mods: %s" % ", ".join(names)
+	return "Mods: %d (%s, …)" % [mods.size(), names[0]]

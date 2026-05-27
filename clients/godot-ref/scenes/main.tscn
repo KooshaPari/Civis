@@ -58,3 +58,5 @@ wait_time = 0.1
 autostart = true
 
 [node name="UI" parent="." instance=ExtResource("3_ui")]
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

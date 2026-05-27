@@ -25,6 +25,7 @@ export function ModsPanel() {
   const [catalog, setCatalog] = useState<ModCatalogEntry[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [unloadError, setUnloadError] = useState<string | null>(null);
   const [unloading, setUnloading] = useState<string | null>(null);
 
@@ -64,6 +65,27 @@ export function ModsPanel() {
       setCatalogError(err instanceof Error ? err.message : "install failed");
     } finally {
       setInstalling(null);
+    }
+  };
+
+  const uploadModFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i] ?? 0);
+      }
+      const data_base64 = btoa(binary);
+      await postControl("/control/mods/upload", {
+        filename: file.name,
+        data_base64,
+      });
+      await refreshCatalog();
+    } catch (err) {
+      setCatalogError(err instanceof Error ? err.message : "upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 

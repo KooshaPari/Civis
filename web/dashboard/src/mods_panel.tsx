@@ -25,6 +25,8 @@ export function ModsPanel() {
   const [catalog, setCatalog] = useState<ModCatalogEntry[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
+  const [unloadError, setUnloadError] = useState<string | null>(null);
+  const [unloading, setUnloading] = useState<string | null>(null);
 
   const mods =
     state.attachMode === "server"
@@ -62,6 +64,19 @@ export function ModsPanel() {
       setCatalogError(err instanceof Error ? err.message : "install failed");
     } finally {
       setInstalling(null);
+    }
+  };
+
+  const unloadMod = async (modId: string) => {
+    setUnloading(modId);
+    try {
+      await postControl("/control/mods/unload", { mod_id: modId });
+      setUnloadError(null);
+      await refreshCatalog();
+    } catch (err) {
+      setUnloadError(err instanceof Error ? err.message : "unload failed");
+    } finally {
+      setUnloading(null);
     }
   };
 
@@ -107,6 +122,7 @@ export function ModsPanel() {
       ) : null}
 
       <h4 className="mods-loaded-title">Loaded</h4>
+      {unloadError ? <p className="inspector-empty">{unloadError}</p> : null}
       {mods.length === 0 ? (
         <p className="inspector-empty">No mods loaded</p>
       ) : (
@@ -125,6 +141,16 @@ export function ModsPanel() {
                   ? ` · float sites ${mod.float_contamination_site_count}`
                   : ""}
               </span>
+              {state.attachMode !== "server" ? (
+                <button
+                  type="button"
+                  className="mods-unload"
+                  disabled={unloading === mod.id}
+                  onClick={() => void unloadMod(mod.id)}
+                >
+                  {unloading === mod.id ? "Unloading…" : "Unload"}
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>

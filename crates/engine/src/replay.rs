@@ -52,6 +52,15 @@ pub enum ReplayEvent {
         #[serde(default)]
         bus_json: String,
     },
+    /// Mod removed at runtime (`mod.unloaded.v1`, FR-MOD-004 partial).
+    ModUnloaded {
+        tick: u64,
+        mod_id: String,
+        mod_name: String,
+        reason: String,
+        #[serde(default)]
+        bus_json: String,
+    },
 }
 
 /// Persistent replay log.
@@ -201,6 +210,18 @@ impl ReplayLog {
             mod_id: record.mod_id.clone(),
             mod_name: record.mod_name.clone(),
             version: record.version.clone(),
+            bus_json,
+        });
+    }
+
+    /// Record a `mod.unloaded.v1` lifecycle event with replay-bus JSON (FR-MOD-004 partial).
+    pub fn record_mod_unloaded(&mut self, record: &civ_mod_host::ModUnloadedRecord) {
+        let bus_json = civ_mod_host::format_mod_unloaded_event_json(record);
+        self.events.push(ReplayEvent::ModUnloaded {
+            tick: record.tick,
+            mod_id: record.mod_id.clone(),
+            mod_name: record.mod_name.clone(),
+            reason: record.reason.clone(),
             bus_json,
         });
     }
@@ -368,6 +389,7 @@ impl ReplayLog {
                     into.apply_replay_tick(*tick);
                 }
                 ReplayEvent::ModLoaded { .. } => {}
+                ReplayEvent::ModUnloaded { .. } => {}
             }
         }
         Ok(())

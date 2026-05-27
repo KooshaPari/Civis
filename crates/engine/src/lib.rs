@@ -38,8 +38,9 @@ pub use spawn::{
 
 pub use civ_mod_host::{
     format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
-    format_mod_loaded_event_json, load_manifest, ModBrowserEntry, ModGuestStateSave, ModHost,
-    ModLoadedRecord, ModManifest, ModRegistry, ModType,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
+    ModGuestStateSave, ModHost, ModLoadedRecord, ModUnloadedRecord, ModManifest, ModRegistry,
+    ModType,
 };
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{

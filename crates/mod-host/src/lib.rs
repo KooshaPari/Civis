@@ -201,6 +201,19 @@ pub struct ModLoadedRecord {
     pub tick: u64,
 }
 
+/// `mod.unloaded.v1` structured lifecycle record (FR-MOD-004 partial).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModUnloadedRecord {
+    /// Stable mod id from manifest.
+    pub mod_id: String,
+    /// Display name.
+    pub mod_name: String,
+    /// Simulation tick at unload time.
+    pub tick: u64,
+    /// Human-readable unload reason (e.g. `user_request`).
+    pub reason: String,
+}
+
 /// Loaded mod entry kept by the host.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoadedMod {
@@ -238,6 +251,15 @@ impl ModRegistry {
     /// Register a loaded mod entry.
     pub fn register(&mut self, entry: LoadedMod) {
         self.mods.push(entry);
+    }
+
+    /// Remove a loaded mod by stable id; returns the removed entry when found.
+    pub fn remove_by_id(&mut self, mod_id: &str) -> Option<LoadedMod> {
+        let index = self
+            .mods
+            .iter()
+            .position(|entry| entry.manifest.meta.id == mod_id)?;
+        Some(self.mods.remove(index))
     }
 
     /// Military-phase stub (P-W1): one log line per mod with `read_military`.
@@ -531,6 +553,26 @@ impl ModHost {
         lines
     }
 
+    /// Unload a mod by stable id and emit a `mod.unloaded.v1` record.
+    pub fn unload_mod(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+        tick: u64,
+    ) -> Result<ModUnloadedRecord, String> {
+        let removed = self
+            .registry
+            .remove_by_id(mod_id)
+            .ok_or_else(|| format!("mod not loaded: {mod_id}"))?;
+        self.guest_memory_by_mod.remove(mod_id);
+        Ok(ModUnloadedRecord {
+            mod_id: mod_id.to_owned(),
+            mod_name: removed.manifest.meta.name,
+            tick,
+            reason: reason.to_owned(),
+        })
+    }
+
     fn push_loaded(&mut self, manifest: &ModManifest, tick: u64) {
         self.loaded_records.push(ModLoadedRecord {
             mod_id: manifest.meta.id.clone(),
@@ -559,6 +601,19 @@ pub fn format_mod_loaded_event_json(record: &ModLoadedRecord) -> String {
         "mod_name": record.mod_name,
         "version": record.version,
         "tick": record.tick,
+    })
+    .to_string()
+}
+
+/// Format `mod.unloaded.v1` as JSON for the replay bus (FR-MOD-004 partial).
+#[must_use]
+pub fn format_mod_unloaded_event_json(record: &ModUnloadedRecord) -> String {
+    serde_json::json!({
+        "event": "mod.unloaded.v1",
+        "mod_id": record.mod_id,
+        "mod_name": record.mod_name,
+        "tick": record.tick,
+        "reason": record.reason,
     })
     .to_string()
 }
@@ -1359,5 +1414,34 @@ civlab-api = ">=1.0.0, <2.0.0"
 
         let err = load_manifest(&path).expect_err("bad id");
         assert!(matches!(err, ManifestError::Validation { .. }));
+    }
+
+    #[test]
+    fn mod_unloaded_event_json_has_required_keys() {
+        let record = ModUnloadedRecord {
+            mod_id: "example-policy".to_owned(),
+            mod_name: "Example Policy".to_owned(),
+            tick: 99,
+            reason: "user_request".to_owned(),
+        };
+        let json = format_mod_unloaded_event_json(&record);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.unloaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert_eq!(v["reason"], "user_request");
+    }
+
+    #[test]
+    fn unload_mod_removes_from_registry() {
+        let mut host = ModHost::new();
+        host.load_manifest_dir(example_policy_mod_dir())
+            .expect("load example mod");
+        assert_eq!(host.mods().len(), 1);
+        let record = host
+            .unload_mod("example-policy", "user_request", 5)
+            .expect("unload");
+        assert_eq!(record.mod_id, "example-policy");
+        assert!(host.mods().is_empty());
+        assert!(host.guest_memory_snapshot("example-policy").is_empty());
     }
 }

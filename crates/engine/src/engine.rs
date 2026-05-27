@@ -677,6 +677,21 @@ impl Simulation {
         Ok(record)
     }
 
+    /// Unload a loaded mod by stable id and emit `mod.unloaded.v1` on the lifecycle bus.
+    pub fn unload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+    ) -> Result<civ_mod_host::ModUnloadedRecord, String> {
+        let record = self
+            .mod_host
+            .unload_mod(mod_id, reason, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_unloaded_event_json(&record);
+        self.replay_log.record_mod_unloaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
     /// Load mod manifests from scenario `mods` paths (repo-relative).
     ///
     /// Paths are resolved from the repo root (`crates/engine/../../`). Failures are

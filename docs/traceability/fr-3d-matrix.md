@@ -144,6 +144,8 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-061 | `action_emit` float data-flow trace at mod load. | `float_data_flow.rs`, `determinism.rs` | `rejects_reinterpret_f64_before_action_emit` | implemented |
 | FR-CIV-TACTICS-058 | `.civsave/` debug save folder. | `save_bundle.rs`, `civ-watch` | `civsave_folder_round_trips_mod_guest_state` | implemented |
 | FR-CIV-TACTICS-059 | Package example mods as `.civmod`. | `justfile`, `package-example-mod.ps1` | `civis-3d-mod-package-all` | implemented |
+| FR-CIV-TACTICS-060 | `.civsave.zst` compressed save archive. | `save_bundle.rs`, `civ-watch` | `civsave_archive_round_trips_mod_guest_state` | implemented |
+| FR-CIV-TACTICS-062 | Mod catalog + runtime install. | `civ-watch`, `web/dashboard` | `post_mods_install` | implemented |
 
 ---
 

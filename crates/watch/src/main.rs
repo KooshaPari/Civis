@@ -34,7 +34,8 @@ use civ_agents::{
     drift_toward_home, spawn_civilian_at, tick_movement, Civilian as AgentCivilian, Needs,
     Position3d, Velocity,
 };
-use civ_engine::{Citizen, CivSaveBundle, DiplomacyKind, JobType, ModBrowserEntry, Simulation};
+use civ_engine::{Citizen, CivSaveBundle, DiplomacyKind, JobType, ModBrowserEntry, ModType, Simulation, load_manifest};
+use civ_mod_host::{read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_tactics::DamageEvent;
@@ -344,6 +345,7 @@ struct AppState {
     target_era: Arc<AtomicU16>,
     speed: Arc<AtomicU8>,
     saves_dir: Arc<PathBuf>,
+    mods_dir: Arc<PathBuf>,
 }
 
 #[derive(Debug, Serialize)]
@@ -414,6 +416,22 @@ struct SaveListEntry {
     modified: Option<u64>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct ModCatalogEntry {
+    source: String,
+    id: String,
+    name: String,
+    version: String,
+    mod_type: String,
+    kind: String,
+    installed: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct InstallModReq {
+    source: String,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -429,6 +447,13 @@ async fn main() {
     let laws = Arc::new(default_law_db());
     let saves_dir = Arc::new(PathBuf::from("saves"));
     std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
+    let mods_dir = Arc::new(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../mods")
+            .canonicalize()
+            .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods")),
+    );
+    std::fs::create_dir_all(&*mods_dir).ok();
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -463,6 +488,7 @@ async fn main() {
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
         saves_dir,
+        mods_dir,
     };
 
     tokio::spawn(simulation_worker(state.clone()));
@@ -495,6 +521,8 @@ fn build_api_router() -> Router<AppState> {
         .route("/control/save", post(save_handler))
         .route("/control/load", post(load_handler))
         .route("/control/saves", get(list_saves_handler))
+        .route("/control/mods/catalog", get(list_mod_catalog_handler))
+        .route("/control/mods/install", post(install_mod_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -1873,6 +1901,165 @@ async fn load_handler(
     Ok(Json(LoadResponse { ok: true, tick }))
 }
 
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+fn mod_type_label(kind: ModType) -> &'static str {
+    match kind {
+        ModType::Policy => "policy",
+        ModType::Economic => "economic",
+        ModType::Event => "event",
+        ModType::Scenario => "scenario",
+    }
+}
+
+fn catalog_entry_from_manifest(
+    source: String,
+    kind: &str,
+    manifest: &civ_mod_host::ModManifest,
+    installed_ids: &std::collections::HashSet<String>,
+) -> ModCatalogEntry {
+    ModCatalogEntry {
+        source,
+        id: manifest.meta.id.clone(),
+        name: manifest.meta.name.clone(),
+        version: manifest.meta.version.clone(),
+        mod_type: mod_type_label(manifest.meta.mod_type).to_owned(),
+        kind: kind.to_owned(),
+        installed: installed_ids.contains(&manifest.meta.id),
+    }
+}
+
+fn scan_mod_catalog(mods_dir: &Path, installed_ids: &std::collections::HashSet<String>) -> Vec<ModCatalogEntry> {
+    let repo = repo_root();
+    let mut entries = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    if let Ok(read) = std::fs::read_dir(mods_dir) {
+        for entry in read.flatten() {
+            let path = entry.path();
+            let ext = path.extension().and_then(|e| e.to_str());
+            if ext == Some("civmod") {
+                let source = path
+                    .strip_prefix(&repo)
+                    .map(|p| p.to_string_lossy().replace('\\', "/"))
+                    .unwrap_or_else(|_| path.display().to_string());
+                if !seen.insert(source.clone()) {
+                    continue;
+                }
+                if let Ok(manifest) = read_manifest_from_civmod(&path) {
+                    entries.push(catalog_entry_from_manifest(
+                        source,
+                        "civmod",
+                        &manifest,
+                        installed_ids,
+                    ));
+                }
+            }
+        }
+    }
+
+    for name in ["example-policy", "example-economic"] {
+        let dir = mods_dir.join(name);
+        let manifest_path = dir.join(CIVMOD_MANIFEST_NAME);
+        if !manifest_path.is_file() {
+            continue;
+        }
+        let source = format!("mods/{name}");
+        if !seen.insert(source.clone()) {
+            continue;
+        }
+        if let Ok(manifest) = load_manifest(&manifest_path) {
+            entries.push(catalog_entry_from_manifest(
+                source,
+                "dir",
+                &manifest,
+                installed_ids,
+            ));
+        }
+    }
+
+    entries.sort_by(|a, b| a.source.cmp(&b.source));
+    entries
+}
+
+fn resolve_install_source(source: &str, mods_dir: &Path) -> Result<String, String> {
+    let trimmed = source.trim();
+    if trimmed.is_empty() {
+        return Err("source cannot be empty".into());
+    }
+    if trimmed.contains("..") {
+        return Err("source must not contain '..'".into());
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    if normalized.starts_with("mods/") {
+        return Ok(normalized);
+    }
+
+    if normalized.ends_with(".civmod") {
+        let path = mods_dir.join(
+            normalized
+                .trim_start_matches("mods/")
+                .trim_start_matches('/'),
+        );
+        if path.is_file() {
+            return Ok(format!("mods/{}", path.file_name().unwrap().to_string_lossy()));
+        }
+        return Err(format!("mod archive not found: {normalized}"));
+    }
+
+    let dir_name = normalized.trim_start_matches("mods/").trim_start_matches('/');
+    let dir = mods_dir.join(dir_name);
+    if dir.is_dir() {
+        return Ok(format!("mods/{dir_name}"));
+    }
+
+    Err(format!("unknown mod source: {trimmed}"))
+}
+
+async fn list_mod_catalog_handler(
+    State(state): State<AppState>,
+) -> Json<Vec<ModCatalogEntry>> {
+    let sim = state.sim.lock().await;
+    let installed: std::collections::HashSet<String> = sim
+        .mod_browser_entries()
+        .into_iter()
+        .map(|entry| entry.id)
+        .collect();
+    Json(scan_mod_catalog(state.mods_dir.as_ref(), &installed))
+}
+
+async fn install_mod_handler(
+    State(state): State<AppState>,
+    Json(req): Json<InstallModReq>,
+) -> Result<Json<ControlOk>, (StatusCode, Json<ControlOk>)> {
+    let rel = resolve_install_source(&req.source, state.mods_dir.as_ref()).map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
+    let mut sim = state.sim.lock().await;
+    let record = sim.install_mod_path(&rel).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ControlOk {
+                ok: false,
+                message: Some(err.to_string()),
+            }),
+        )
+    })?;
+    Ok(Json(ControlOk {
+        ok: true,
+        message: Some(format!("installed {} ({})", record.mod_name, record.mod_id)),
+    }))
+}
+
 async fn list_saves_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SaveListEntry>>, (StatusCode, Json<ControlOk>)> {
@@ -1973,6 +2160,7 @@ mod api_tests {
             .as_nanos();
         let saves_dir = std::env::temp_dir().join(format!("civis-watch-test-{nanos}"));
         std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let mods_dir = repo_root().join("mods");
         AppState {
             latest: Arc::new(RwLock::new(None)),
             tx,
@@ -1984,6 +2172,7 @@ mod api_tests {
             target_era: Arc::new(AtomicU16::new(0)),
             speed: Arc::new(AtomicU8::new(1)),
             saves_dir: Arc::new(saves_dir),
+            mods_dir: Arc::new(mods_dir),
         }
     }
 
@@ -2325,5 +2514,41 @@ mod api_tests {
         assert_eq!(response.status(), StatusCode::OK);
         let json = body_json(response).await;
         assert_eq!(json["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn get_mods_catalog_lists_example_mods() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/control/mods/catalog")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        let entries = json.as_array().expect("catalog array");
+        assert!(entries.iter().any(|entry| entry["source"] == "mods/example-policy"));
+        assert!(entries.iter().any(|entry| entry["source"] == "mods/example-economic"));
+    }
+
+    #[tokio::test]
+    async fn post_mods_install_rejects_unknown_source() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/mods/install")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"source":"not-a-real-mod"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

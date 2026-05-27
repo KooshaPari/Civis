@@ -61,6 +61,7 @@
 | FR-CIV-TACTICS-058 | implemented | `.civsave/` folder stub (`CivSaveBundle`) |
 | FR-CIV-TACTICS-059 | implemented | `civis-3d-mod-package-all` for example mods |
 | FR-CIV-TACTICS-060 | implemented | `.civsave.zst` compressed archive (`save_archive` / `load_archive`; civ-watch default) |
+| FR-CIV-TACTICS-062 | implemented | mod catalog + `POST /control/mods/install` (civ-watch + dashboard) |
 
 ## First PR slice (recommended)
 
@@ -82,7 +83,8 @@
 16. **CIV-1000 civsave folder + float scan report + mod packaging** — **done** (item 17).
 17. **Compressed `.civsave.zst` save archives** — **done** (item 18a).
 18. **action_emit float data-flow trace** — **done** (item 18b).
-19. **Next:** In-game mod install polish (catalog UX, signed `.civmod` upload).
+19. **In-game mod install** — **done** (item 18c: catalog + install API).
+20. **Next:** Signed `.civmod` upload, mod unload, production save slots.
 
 ## Run
 

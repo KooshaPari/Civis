@@ -146,6 +146,15 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-059 | Package example mods as `.civmod`. | `justfile`, `package-example-mod.ps1` | `civis-3d-mod-package-all` | implemented |
 | FR-CIV-TACTICS-060 | `.civsave.zst` compressed save archive. | `save_bundle.rs`, `civ-watch` | `civsave_archive_round_trips_mod_guest_state` | implemented |
 | FR-CIV-TACTICS-062 | Mod catalog + runtime install. | `civ-watch`, `web/dashboard` | `post_mods_install` | implemented |
+| FR-CIV-TACTICS-063 | Mod unload HTTP + `mod.unloaded.v1` bus JSON. | `civ-watch`, `mod-host` | `post_mods_unload` | implemented |
+| FR-CIV-TACTICS-064 | Signed `.civmod` upload API. | `civ-watch` | `post_mods_upload` | implemented |
+| FR-CIV-TACTICS-065 | Production slots + autosave ring. | `civ-watch` | `post_save_slot`, `autosave_ring` | implemented |
+| FR-CIV-TACTICS-066 | `save.slot` / `save.load` / `save.list` JSON-RPC. | `civ-server` | `ws_jsonrpc_save_slot_roundtrip` | implemented |
+| FR-CIV-TACTICS-067 | Mod publish store + HTTP API. | `civ-watch` | `post_mods_publish` | implemented |
+| FR-CIV-TACTICS-068 | Mod hot reload API. | `civ-watch`, `mod-host` | `post_mods_reload` | implemented |
+| FR-CIV-TACTICS-069 | Session-scoped SQLite save metadata. | `civ-save-db`, `civ-watch` | `save_db::*`, `post_save_slot` | implemented |
+| FR-CIV-TACTICS-070 | Remote mod fetch cache. | `civ-watch`, `mods/remote/` | `post_mods_fetch`, `list_remote_mods` | implemented |
+| FR-CIV-TACTICS-071 | CIV-0700 capability enforcement (`world_read`, `action_emit`). | `mod-host/capability.rs` | `capability::*` | implemented |
 
 ---
 

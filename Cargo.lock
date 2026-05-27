@@ -2359,6 +2359,7 @@ dependencies = [
  "civ-agents",
  "civ-engine",
  "civ-laws",
+ "civ-mod-host",
  "civ-planet",
  "civ-protocol-3d",
  "civ-server",

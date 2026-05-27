@@ -8,6 +8,7 @@ export type ModBrowserEntry = {
   has_wasm: boolean;
   guest_memory_len: number;
   float_instruction_count?: number;
+  float_contamination_site_count?: number;
 };
 
 export type ServerMetrics = {

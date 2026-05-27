@@ -642,6 +642,41 @@ impl Simulation {
         }
     }
 
+    /// Install a single mod at runtime (directory or `.civmod` archive).
+    ///
+    /// `rel_path` is resolved from the repo root (`crates/engine/../../`).
+    pub fn install_mod_path(
+        &mut self,
+        rel_path: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, civ_mod_host::ManifestError> {
+        let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = repo_root.join(rel_path);
+        let named_civmod = dir.file_name().and_then(|name| {
+            let archive = dir.join(format!("{}.civmod", name.to_string_lossy()));
+            archive.is_file().then_some(archive)
+        });
+        let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
+        self.mod_host.load_mod_path(load_path)?;
+        let entry = self
+            .mod_host
+            .mods()
+            .last()
+            .ok_or_else(|| civ_mod_host::ManifestError::Validation {
+                path: load_path.to_path_buf(),
+                message: "mod load produced no registry entry".into(),
+            })?;
+        let record = civ_mod_host::ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick: self.state.tick,
+        };
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
     /// Load mod manifests from scenario `mods` paths (repo-relative).
     ///
     /// Paths are resolved from the repo root (`crates/engine/../../`). Failures are

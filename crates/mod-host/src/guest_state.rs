@@ -76,4 +76,6 @@ pub struct ModBrowserEntry {
     pub guest_memory_len: usize,
     /// Float opcode count from determinism scan (0 when WASM absent).
     pub float_instruction_count: u32,
+    /// `action_emit` float data-flow contamination sites (0 when clean).
+    pub float_contamination_site_count: u32,
 }

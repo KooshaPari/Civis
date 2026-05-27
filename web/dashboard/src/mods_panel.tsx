@@ -1,5 +1,17 @@
+import { useCallback, useEffect, useState } from "react";
 import type { ModBrowserEntry } from "./lib/civisServer";
+import { postControl } from "./control";
 import { useDashboardStore } from "./store";
+
+export type ModCatalogEntry = {
+  source: string;
+  id: string;
+  name: string;
+  version: string;
+  mod_type: string;
+  kind: string;
+  installed: boolean;
+};
 
 function modsFromSnapshot(snapshot: Record<string, unknown> | null): ModBrowserEntry[] {
   if (!snapshot || !Array.isArray(snapshot.mods)) {
@@ -10,14 +22,91 @@ function modsFromSnapshot(snapshot: Record<string, unknown> | null): ModBrowserE
 
 export function ModsPanel() {
   const { state } = useDashboardStore();
+  const [catalog, setCatalog] = useState<ModCatalogEntry[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [installing, setInstalling] = useState<string | null>(null);
+
   const mods =
     state.attachMode === "server"
       ? (state.serverMetrics?.mods ?? [])
       : modsFromSnapshot(state.snapshot as Record<string, unknown> | null);
 
+  const refreshCatalog = useCallback(async () => {
+    if (state.attachMode === "server") {
+      setCatalog([]);
+      return;
+    }
+    try {
+      const response = await fetch("/control/mods/catalog");
+      if (!response.ok) {
+        throw new Error(`catalog ${response.status}`);
+      }
+      const data = (await response.json()) as ModCatalogEntry[];
+      setCatalog(Array.isArray(data) ? data : []);
+      setCatalogError(null);
+    } catch (err) {
+      setCatalogError(err instanceof Error ? err.message : "catalog fetch failed");
+    }
+  }, [state.attachMode]);
+
+  useEffect(() => {
+    void refreshCatalog();
+  }, [refreshCatalog, mods.length]);
+
+  const installMod = async (source: string) => {
+    setInstalling(source);
+    try {
+      await postControl("/control/mods/install", { source });
+      await refreshCatalog();
+    } catch (err) {
+      setCatalogError(err instanceof Error ? err.message : "install failed");
+    } finally {
+      setInstalling(null);
+    }
+  };
+
   return (
     <section className="inspector-section">
       <h3>Mods</h3>
+      {state.attachMode !== "server" ? (
+        <>
+          <div className="mods-catalog-header">
+            <span className="mods-meta">Installable</span>
+            <button type="button" className="mods-refresh" onClick={() => void refreshCatalog()}>
+              Refresh
+            </button>
+          </div>
+          {catalogError ? <p className="inspector-empty">{catalogError}</p> : null}
+          {catalog.length === 0 ? (
+            <p className="inspector-empty">No installable mods in catalog</p>
+          ) : (
+            <ul className="mods-list">
+              {catalog.map((entry) => (
+                <li key={entry.source} className="mods-list-item">
+                  <strong>{entry.name || entry.id}</strong>
+                  <span className="mods-meta">
+                    {entry.source} · v{entry.version} · {entry.mod_type} · {entry.kind}
+                  </span>
+                  {entry.installed ? (
+                    <span className="mods-installed">Installed</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mods-install"
+                      disabled={installing === entry.source}
+                      onClick={() => void installMod(entry.source)}
+                    >
+                      {installing === entry.source ? "Installing…" : "Install"}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
+
+      <h4 className="mods-loaded-title">Loaded</h4>
       {mods.length === 0 ? (
         <p className="inspector-empty">No mods loaded</p>
       ) : (
@@ -31,6 +120,9 @@ export function ModsPanel() {
                 {mod.guest_memory_len > 0 ? ` · mem ${mod.guest_memory_len}B` : ""}
                 {(mod.float_instruction_count ?? 0) > 0
                   ? ` · float ops ${mod.float_instruction_count}`
+                  : ""}
+                {(mod.float_contamination_site_count ?? 0) > 0
+                  ? ` · float sites ${mod.float_contamination_site_count}`
                   : ""}
               </span>
             </li>

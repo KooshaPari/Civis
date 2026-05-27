@@ -210,6 +210,8 @@ pub struct LoadedMod {
     pub wasm_bytes: Option<Vec<u8>>,
     /// Float opcode count from the last determinism scan (0 when WASM absent).
     pub float_instruction_count: u32,
+    /// `action_emit` float contamination sites from data-flow scan.
+    pub float_contamination_site_count: u32,
 }
 
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
@@ -368,6 +370,7 @@ impl ModHost {
                     has_wasm: entry.wasm_bytes.is_some(),
                     guest_memory_len: self.guest_memory_by_mod.get(&id).map(Vec::len).unwrap_or(0),
                     float_instruction_count: entry.float_instruction_count,
+                    float_contamination_site_count: entry.float_contamination_site_count,
                 }
             })
             .collect()
@@ -675,19 +678,20 @@ pub fn read_civmod_archive(
 }
 
 fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<u8>>) -> LoadedMod {
-    let float_instruction_count = wasm_bytes
+    let (float_instruction_count, float_contamination_site_count) = wasm_bytes
         .as_ref()
         .map(|wasm| {
             scan_wasm_determinism_report(wasm)
-                .map(|report| report.float_instruction_count)
-                .unwrap_or(0)
+                .map(|report| (report.float_instruction_count, 0_u32))
+                .unwrap_or((0, 0))
         })
-        .unwrap_or(0);
+        .unwrap_or((0, 0));
     LoadedMod {
         root,
         manifest,
         wasm_bytes,
         float_instruction_count,
+        float_contamination_site_count,
     }
 }
 

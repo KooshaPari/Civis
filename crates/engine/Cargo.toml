@@ -49,6 +49,7 @@ civ-economy = { path = "../economy" }
 
 # Mod manifest host stub (CIV-0700 Sprint D).
 civ-mod-host = { path = "../mod-host" }
+civ-save-db = { path = "../save-db" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

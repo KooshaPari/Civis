@@ -1123,6 +1123,24 @@ fn game_events(
         });
     }
 
+    for bus in sim.replay_log().session_saved_bus_at_tick(tick) {
+        let message = serde_json::from_str::<serde_json::Value>(&bus)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("slot")
+                    .and_then(|slot| slot.as_str())
+                    .map(|slot| format!("Game saved to {slot}"))
+            })
+            .unwrap_or_else(|| "Game saved".to_string());
+        events.push(GameEvent {
+            tick,
+            kind: "session.saved".to_string(),
+            message,
+            faction_id: None,
+        });
+    }
+
     for building in buildings {
         if matches!(building.kind, BuildingKind::Residential) {
             events.push(GameEvent {
@@ -1922,6 +1940,7 @@ fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
 
 fn record_save_metadata(
     state: &AppState,
+    sim: &mut Simulation,
     filename: &str,
     path: &Path,
     tick: u64,
@@ -1943,6 +1962,7 @@ fn record_save_metadata(
     };
     match result {
         Ok((save_id, slot)) => {
+            sim.record_session_saved(&state.session_id, &save_id, &slot, byte_size);
             let event_json = format_session_saved_event_json(
                 &state.session_id,
                 &save_id,
@@ -1950,7 +1970,7 @@ fn record_save_metadata(
                 tick,
                 byte_size,
             );
-            info!(%event_json, "save metadata recorded");
+            info!(%event_json, "session.saved.v1 on replay bus");
             if is_autosave_name(filename) {
                 match state
                     .save_db
@@ -2069,7 +2089,7 @@ async fn save_handler(
             }),
         )
     })?;
-    let sim = state.sim.lock().await;
+    let mut sim = state.sim.lock().await;
     CivSaveBundle::save_archive(&path, &sim).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -2092,7 +2112,7 @@ async fn save_handler(
     if is_autosave_name(&filename) {
         enforce_autosave_ring(state.saves_dir.as_ref());
     }
-    record_save_metadata(&state, &filename, &path, tick);
+    record_save_metadata(&state, &mut sim, &filename, &path, tick);
     Ok(Json(SaveResponse {
         ok: true,
         path: path.display().to_string(),
@@ -3379,7 +3399,8 @@ mod api_tests {
 
     #[tokio::test]
     async fn post_save_slot_round_trip() {
-        let app = test_app();
+        let state = test_state();
+        let app = test_app_with_state(state.clone());
 
         let save_response = app
             .clone()
@@ -3400,6 +3421,16 @@ mod api_tests {
             .as_str()
             .unwrap_or("")
             .ends_with("slot-1.civsave.zst"));
+
+        {
+            let sim = state.sim.lock().await;
+            let buses = sim.replay_log().session_saved_bus_at_tick(sim.state.tick);
+            assert_eq!(buses.len(), 1);
+            let value: serde_json::Value =
+                serde_json::from_str(&buses[0]).expect("session.saved bus json");
+            assert_eq!(value["event_type"], "session.saved.v1");
+            assert_eq!(value["slot"], "slot-1");
+        }
 
         let list_response = app
             .clone()

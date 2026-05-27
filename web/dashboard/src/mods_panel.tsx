@@ -13,6 +13,28 @@ export type ModCatalogEntry = {
   installed: boolean;
 };
 
+export type RemoteModEntry = {
+  id: string;
+  path: string;
+  fetched_at: number;
+  url: string;
+};
+
+function isRemoteSource(source: string): boolean {
+  return source.startsWith("mods/remote/");
+}
+
+function catalogKindLabel(entry: ModCatalogEntry): string {
+  return isRemoteSource(entry.source) ? "remote" : entry.kind;
+}
+
+function formatFetchedAt(epochSec: number): string {
+  if (epochSec <= 0) {
+    return "unknown";
+  }
+  return new Date(epochSec * 1000).toLocaleString();
+}
+
 function modsFromSnapshot(snapshot: Record<string, unknown> | null): ModBrowserEntry[] {
   if (!snapshot || !Array.isArray(snapshot.mods)) {
     return [];
@@ -24,6 +46,11 @@ export function ModsPanel() {
   const { state } = useDashboardStore();
   const [catalog, setCatalog] = useState<ModCatalogEntry[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [remoteMods, setRemoteMods] = useState<RemoteModEntry[]>([]);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [fetchUrl, setFetchUrl] = useState("");
+  const [fetchModId, setFetchModId] = useState("");
+  const [fetching, setFetching] = useState(false);
   const [installing, setInstalling] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [unloadError, setUnloadError] = useState<string | null>(null);
@@ -53,15 +80,40 @@ export function ModsPanel() {
     }
   }, [state.attachMode]);
 
+  const refreshRemoteMods = useCallback(async () => {
+    if (state.attachMode === "server") {
+      setRemoteMods([]);
+      return;
+    }
+    try {
+      const response = await fetch("/control/mods/remote");
+      if (!response.ok) {
+        throw new Error(`remote ${response.status}`);
+      }
+      const data = (await response.json()) as RemoteModEntry[];
+      setRemoteMods(Array.isArray(data) ? data : []);
+      setRemoteError(null);
+    } catch (err) {
+      setRemoteError(err instanceof Error ? err.message : "remote list fetch failed");
+    }
+  }, [state.attachMode]);
+
+  const refreshInstallable = useCallback(async () => {
+    await Promise.all([refreshCatalog(), refreshRemoteMods()]);
+  }, [refreshCatalog, refreshRemoteMods]);
+
   useEffect(() => {
-    void refreshCatalog();
-  }, [refreshCatalog, mods.length]);
+    void refreshInstallable();
+  }, [refreshInstallable, mods.length]);
+
+  const isRemoteInstalled = (source: string) =>
+    catalog.some((entry) => entry.source === source && entry.installed);
 
   const installMod = async (source: string) => {
     setInstalling(source);
     try {
       await postControl("/control/mods/install", { source });
-      await refreshCatalog();
+      await refreshInstallable();
     } catch (err) {
       setCatalogError(err instanceof Error ? err.message : "install failed");
     } finally {
@@ -82,7 +134,7 @@ export function ModsPanel() {
         filename: file.name,
         data_base64,
       });
-      await refreshCatalog();
+      await refreshInstallable();
     } catch (err) {
       setCatalogError(err instanceof Error ? err.message : "upload failed");
     } finally {
@@ -95,7 +147,7 @@ export function ModsPanel() {
     try {
       await postControl("/control/mods/unload", { mod_id: modId });
       setUnloadError(null);
-      await refreshCatalog();
+      await refreshInstallable();
     } catch (err) {
       setUnloadError(err instanceof Error ? err.message : "unload failed");
     } finally {
@@ -108,11 +160,36 @@ export function ModsPanel() {
     try {
       await postControl("/control/mods/reload", { mod_id: modId });
       setUnloadError(null);
-      await refreshCatalog();
+      await refreshInstallable();
     } catch (err) {
       setUnloadError(err instanceof Error ? err.message : "reload failed");
     } finally {
       setReloading(null);
+    }
+  };
+
+  const fetchRemoteMod = async () => {
+    const url = fetchUrl.trim();
+    if (!url) {
+      setRemoteError("URL required");
+      return;
+    }
+    setFetching(true);
+    try {
+      const body: { url: string; mod_id?: string } = { url };
+      const modId = fetchModId.trim();
+      if (modId) {
+        body.mod_id = modId;
+      }
+      await postControl("/control/mods/fetch", body);
+      setRemoteError(null);
+      setFetchUrl("");
+      setFetchModId("");
+      await refreshInstallable();
+    } catch (err) {
+      setRemoteError(err instanceof Error ? err.message : "fetch failed");
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -140,7 +217,11 @@ export function ModsPanel() {
                 />
                 {uploading ? "Uploading…" : "Upload .civmod"}
               </label>
-              <button type="button" className="mods-refresh" onClick={() => void refreshCatalog()}>
+              <button
+                type="button"
+                className="mods-refresh"
+                onClick={() => void refreshInstallable()}
+              >
                 Refresh
               </button>
             </div>
@@ -158,7 +239,8 @@ export function ModsPanel() {
                 <li key={entry.source} className="mods-list-item">
                   <strong>{entry.name || entry.id}</strong>
                   <span className="mods-meta">
-                    {entry.source} · v{entry.version} · {entry.mod_type} · {entry.kind}
+                    {entry.source} · v{entry.version} · {entry.mod_type} ·{" "}
+                    {catalogKindLabel(entry)}
                   </span>
                   {entry.installed ? (
                     <span className="mods-installed">Installed</span>
@@ -170,6 +252,79 @@ export function ModsPanel() {
                       onClick={() => void installMod(entry.source)}
                     >
                       {installing === entry.source ? "Installing…" : "Install"}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h4 className="mods-loaded-title">Remote mods</h4>
+          <form
+            className="mods-fetch-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void fetchRemoteMod();
+            }}
+          >
+            <label className="mods-meta">
+              URL
+              <input
+                type="url"
+                className="mods-fetch-input"
+                placeholder="https://example.com/mods/demo.civmod"
+                value={fetchUrl}
+                disabled={fetching}
+                onChange={(event) => setFetchUrl(event.target.value)}
+              />
+            </label>
+            <label className="mods-meta">
+              Mod id (optional)
+              <input
+                type="text"
+                className="mods-fetch-input"
+                placeholder="demo-mod"
+                value={fetchModId}
+                disabled={fetching}
+                onChange={(event) => setFetchModId(event.target.value)}
+              />
+            </label>
+            <div className="mods-fetch-actions">
+              <button type="submit" className="mods-fetch" disabled={fetching}>
+                {fetching ? "Fetching…" : "Fetch"}
+              </button>
+              <button
+                type="button"
+                className="mods-refresh"
+                disabled={fetching}
+                onClick={() => void refreshInstallable()}
+              >
+                Refresh
+              </button>
+            </div>
+          </form>
+          {remoteError ? <p className="inspector-empty">{remoteError}</p> : null}
+          {remoteMods.length === 0 ? (
+            <p className="inspector-empty">No remote mods cached</p>
+          ) : (
+            <ul className="mods-list">
+              {remoteMods.map((entry) => (
+                <li key={entry.path} className="mods-list-item">
+                  <strong>{entry.id}</strong>
+                  <span className="mods-meta">
+                    {entry.path} · fetched {formatFetchedAt(entry.fetched_at)}
+                  </span>
+                  <span className="mods-meta">{entry.url}</span>
+                  {isRemoteInstalled(entry.path) ? (
+                    <span className="mods-installed">Installed</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mods-install"
+                      disabled={installing === entry.path}
+                      onClick={() => void installMod(entry.path)}
+                    >
+                      {installing === entry.path ? "Installing…" : "Install"}
                     </button>
                   )}
                 </li>

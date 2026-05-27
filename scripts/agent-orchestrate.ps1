@@ -4,7 +4,7 @@
 #   powershell -NoProfile -File scripts\agent-orchestrate.ps1 -Step worktrees
 #   powershell -NoProfile -File scripts\agent-orchestrate.ps1 -Step poll -PrNumber 221
 param(
-    [string]$BaseBranch = 'followup/post-pr188-followups',
+    [string]$BaseBranch = 'main',
     [string]$Repo = 'KooshaPari/Dino',
     [int]$PrNumber = 0,
     [ValidateSet('worktrees', 'coderabbit', 'poll', 'merge', 'workflow', 'sync', 'all')]

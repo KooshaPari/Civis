@@ -178,6 +178,38 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "faction_patches")]
         public List<string>? FactionPatches { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>Paths to resource definition files.</summary>
+        [YamlMember(Alias = "resources")]
+        public List<string>? Resources { get; set; }
+
+        /// <summary>Paths to economy profile definition files.</summary>
+        [YamlMember(Alias = "economy_profiles")]
+        public List<string>? EconomyProfiles { get; set; }
+
+        /// <summary>Paths to trade route definition files.</summary>
+        [YamlMember(Alias = "trade_routes")]
+        public List<string>? TradeRoutes { get; set; }
+
+        /// <summary>Paths to HUD element definition files.</summary>
+        [YamlMember(Alias = "hud_elements")]
+        public List<string>? HudElements { get; set; }
+
+        /// <summary>Paths to menu definition files.</summary>
+        [YamlMember(Alias = "menus")]
+        public List<string>? Menus { get; set; }
+
+        /// <summary>Paths to UI theme definition files.</summary>
+        [YamlMember(Alias = "ui_themes")]
+        public List<string>? UiThemes { get; set; }
+
+        /// <summary>Paths to wave definition files.</summary>
+        [YamlMember(Alias = "waves")]
+        public List<string>? Waves { get; set; }
+
+        /// <summary>Paths to stat definition files.</summary>
+        [YamlMember(Alias = "stats")]
+        public List<string>? Stats { get; set; }
     }
 
     /// <summary>

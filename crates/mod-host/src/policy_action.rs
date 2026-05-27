@@ -56,6 +56,7 @@ mod tests {
 
     #[test]
     fn policy_action_constants_match_civlab_sdk() {
+        // Must stay in sync with civlab-sdk/src/policy.rs (CIV-0700 §5.3).
         assert_eq!(ACTION_SET_TAX_RATE, 1);
         assert_eq!(ACTION_SET_POLICY_PARAM, 2);
         assert_eq!(ACTION_SET_SUBSIDY_RATE, 3);

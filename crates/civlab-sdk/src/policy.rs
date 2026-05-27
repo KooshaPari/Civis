@@ -1,17 +1,22 @@
 //! PolicyMod guest API (CIV-0700 §5).
+//!
+//! Defines the [`PolicyMod`] trait, read-only [`PolicyContext`] views, and
+//! [`PolicyAction`] values emitted into Phase 3a. Host-side enforcement maps
+//! action discriminants to `civlab::action_emit` type constants (see
+//! `civ-mod-host::policy_action`).
 
 /// `action_emit` type: set tax rate (CIV-0700 §5.3 / mod-host `ACTION_SET_TAX_RATE`).
 pub const ACTION_SET_TAX_RATE: u32 = 1;
 /// `action_emit` type: set policy parameter (`ACTION_SET_POLICY_PARAM`).
 pub const ACTION_SET_POLICY_PARAM: u32 = 2;
-/// `action_emit` type: set subsidy rate.
+/// `action_emit` type: set subsidy rate (reserved; host enforces separately).
 pub const ACTION_SET_SUBSIDY_RATE: u32 = 3;
 /// `action_emit` type: transfer funds between actors.
 pub const ACTION_TRANSFER_FUNDS: u32 = 4;
 /// `action_emit` type: trigger a simulation event.
 pub const ACTION_TRIGGER_EVENT: u32 = 5;
 
-/// World-state domain tags for read-only context slices.
+/// World-state domain tags for read-only context slices (mirrors mod-host [`WorldDomain`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(i32)]
 pub enum WorldDomain {
@@ -73,14 +78,17 @@ pub struct DiplomacySnapshot {
 /// Minimal citizen welfare snapshot visible to policy mods (MVP stub).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CitizensSnapshot {
-    /// Population headcount.
+    /// Population headcount (fixed-point not required for MVP).
     pub population: i64,
 }
 
 /// Read-only view of world state provided to [`PolicyMod::on_tick`].
+///
+/// Domain snapshots are present only when the mod declared the corresponding
+/// read permission in its manifest; otherwise the field is `None`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PolicyContext {
-    /// Current simulation tick.
+    /// Current simulation tick (monotonically increasing from 0).
     pub tick: u64,
     /// Economy slice when `read_economy = true`.
     pub economy: Option<EconomySnapshot>,
@@ -95,19 +103,22 @@ pub struct PolicyContext {
 }
 
 /// Actions a [`PolicyMod`] can emit into Phase 3a.
+///
+/// MVP surface: tax rate and policy-parameter updates. Additional variants from
+/// CIV-0700 §5.3 will be added without breaking existing discriminants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PolicyAction {
-    /// Set the headline tax rate (permille).
+    /// Set the headline tax rate (permille: 0..=1000 maps to 0%..=100%).
     SetTaxRate {
-        /// Tax rate in permille.
+        /// Tax rate in permille (host validates/clamps).
         rate_permille: i64,
     },
     /// Set a named policy parameter on the bound nation.
     SetPolicyParam {
-        /// Stable hash of the parameter key.
+        /// Stable hash of the parameter key (host resolves to manifest key table).
         key_hash: u64,
-        /// Parameter value.
+        /// Parameter value (fixed-point scale matches engine policy params).
         value: i64,
     },
 }
@@ -128,9 +139,9 @@ impl PolicyAction {
 pub struct SimEvent {
     /// Simulation tick when the event was raised.
     pub tick: u64,
-    /// Stable hash of the event type string.
+    /// Stable hash of the event type string (`climate.co2_spike`, etc.).
     pub event_type_hash: u64,
-    /// Opaque payload length in bytes.
+    /// Opaque payload length in bytes (payload bytes live in host memory).
     pub payload_len: u32,
 }
 
@@ -148,11 +159,15 @@ pub struct ModMetadata {
 }
 
 /// Primary trait for policy mods (CIV-0700 §5.1).
+///
+/// Implementors define custom policy algorithms that inject [`PolicyAction`]
+/// values into the engine's Phase 3a pipeline. All methods must be
+/// deterministic — do not use wall-clock time or platform RNG.
 pub trait PolicyMod: Send + 'static {
     /// Called once per tick during Phase 3a (Policy Application).
     fn on_tick(&mut self, ctx: &PolicyContext) -> Vec<PolicyAction>;
 
-    /// Called when a matching [`SimEvent`] arrives.
+    /// Called when a [`SimEvent`] matching [`ModMetadata::subscribed_event_hashes`] arrives.
     fn on_event(&mut self, event: &SimEvent) -> Vec<PolicyAction>;
 
     /// Returns static metadata stored by the host at load time.
@@ -186,6 +201,7 @@ mod tests {
 
     #[test]
     fn policy_action_type_constants_match_mod_host() {
+        // Keep in sync with civ-mod-host/src/capability.rs (CIV-0700 §5.3).
         assert_eq!(ACTION_SET_TAX_RATE, 1);
         assert_eq!(ACTION_SET_POLICY_PARAM, 2);
         assert_eq!(ACTION_SET_SUBSIDY_RATE, 3);
@@ -202,6 +218,21 @@ mod tests {
             .action_type(),
             ACTION_SET_TAX_RATE
         );
+        assert_eq!(
+            PolicyAction::SetPolicyParam {
+                key_hash: 42,
+                value: 7
+            }
+            .action_type(),
+            ACTION_SET_POLICY_PARAM
+        );
+    }
+
+    #[test]
+    fn world_domain_from_i32_round_trips() {
+        assert_eq!(WorldDomain::from_i32(0), Some(WorldDomain::Economy));
+        assert_eq!(WorldDomain::from_i32(4), Some(WorldDomain::Citizens));
+        assert_eq!(WorldDomain::from_i32(99), None);
     }
 
     #[test]
@@ -210,5 +241,33 @@ mod tests {
         let ctx = PolicyContext::default();
         assert!(policy.on_tick(&ctx).is_empty());
         assert_eq!(policy.metadata().id, "noop");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    mod example_policy_stub {
+        use super::super::{
+            ClimateSnapshot, ModMetadata, PolicyAction, PolicyContext, PolicyMod, SimEvent,
+            ACTION_SET_TAX_RATE,
+        };
+
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../mods/example-policy/policy_stub.rs"
+        ));
+
+        #[test]
+        fn example_policy_stub_compiles_and_runs() {
+            let mut policy = ExampleCarbonTaxPolicy::default();
+            let ctx = PolicyContext {
+                tick: 1,
+                climate: Some(ClimateSnapshot {
+                    co2_ppm_milliunits: 500_000,
+                }),
+                ..PolicyContext::default()
+            };
+            let actions = policy.on_tick(&ctx);
+            assert_eq!(actions.len(), 1);
+            assert_eq!(actions[0].action_type(), ACTION_SET_TAX_RATE);
+        }
     }
 }

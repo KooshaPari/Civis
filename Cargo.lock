@@ -2358,6 +2358,7 @@ name = "civ-watch"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "civ-agents",
  "civ-engine",
  "civ-laws",
@@ -2370,14 +2371,18 @@ dependencies = [
  "futures",
  "hecs",
  "http-body-util",
+ "reqwest",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
  "tokio-stream",
  "tower",
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "wat",
+ "zip",
 ]
 
 [[package]]

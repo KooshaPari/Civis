@@ -1743,13 +1743,14 @@ fn sanitize_save_filename(filename: &str) -> Result<String, String> {
     }
     Ok(trimmed
         .trim_end_matches(".civreplay")
+        .trim_end_matches(".civsave.zst")
         .trim_end_matches(".civsave")
         .to_string())
 }
 
 fn save_path(dir: &Path, filename: &str) -> Result<PathBuf, String> {
     let name = sanitize_save_filename(filename)?;
-    Ok(dir.join(format!("{name}.civsave")))
+    Ok(dir.join(format!("{name}.civsave.zst")))
 }
 
 fn dir_size_bytes(dir: &Path) -> u64 {
@@ -1786,7 +1787,7 @@ async fn save_handler(
         )
     })?;
     let sim = state.sim.lock().await;
-    CivSaveBundle::save_dir(&path, &sim).map_err(|err| {
+    CivSaveBundle::save_archive(&path, &sim).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ControlOk {
@@ -1807,7 +1808,7 @@ async fn load_handler(
     State(state): State<AppState>,
     Json(req): Json<SaveReq>,
 ) -> Result<Json<LoadResponse>, (StatusCode, Json<ControlOk>)> {
-    let path = save_path(&state.saves_dir, &req.filename).map_err(|message| {
+    let archive_path = save_path(&state.saves_dir, &req.filename).map_err(|message| {
         (
             StatusCode::BAD_REQUEST,
             Json(ControlOk {
@@ -1816,9 +1817,28 @@ async fn load_handler(
             }),
         )
     })?;
+    let folder_path = state.saves_dir.join(format!(
+        "{}.civsave",
+        sanitize_save_filename(&req.filename).map_err(|message| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ControlOk {
+                    ok: false,
+                    message: Some(message),
+                }),
+            )
+        })?
+    ));
+    let path = if CivSaveBundle::is_save_archive(&archive_path) {
+        archive_path
+    } else if CivSaveBundle::is_save_dir(&folder_path) {
+        folder_path
+    } else {
+        archive_path
+    };
     let mut sim = state.sim.lock().await;
-    let loaded = if CivSaveBundle::is_save_dir(&path) {
-        CivSaveBundle::load_dir(&path).map_err(|err| {
+    let loaded = if CivSaveBundle::is_save_archive(&path) || CivSaveBundle::is_save_dir(&path) {
+        CivSaveBundle::load(&path).map_err(|err| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ControlOk {
@@ -1869,7 +1889,11 @@ async fn list_saves_handler(
     })?;
     for entry in read_dir.flatten() {
         let path = entry.path();
-        let name = if CivSaveBundle::is_save_dir(&path) {
+        let name = if CivSaveBundle::is_save_archive(&path) {
+            path.file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.trim_end_matches(".civsave.zst").to_string())
+        } else if CivSaveBundle::is_save_dir(&path) {
             path.file_stem()
                 .and_then(|s| s.to_str())
                 .map(|s| s.trim_end_matches(".civsave").to_string())

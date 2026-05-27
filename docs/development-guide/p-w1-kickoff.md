@@ -59,6 +59,7 @@
 | FR-CIV-TACTICS-057 | implemented | float opcode count in determinism report |
 | FR-CIV-TACTICS-058 | implemented | `.civsave/` folder stub (`CivSaveBundle`) |
 | FR-CIV-TACTICS-059 | implemented | `civis-3d-mod-package-all` for example mods |
+| FR-CIV-TACTICS-060 | implemented | `.civsave.zst` compressed archive (`save_archive` / `load_archive`; civ-watch default) |
 
 ## First PR slice (recommended)
 
@@ -78,7 +79,8 @@
 14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
 15. **Guest memory save/load + mod browser + determinism scan** — **done** (item 16).
 16. **CIV-1000 civsave folder + float scan report + mod packaging** — **done** (item 17).
-17. **Next:** Compressed `.civsave.zst`, full float data-flow trace, in-game mod install.
+17. **Compressed `.civsave.zst` save archives** — **done** (item 18a).
+18. **Next:** Full float data-flow trace, in-game mod install.
 
 ## Run
 

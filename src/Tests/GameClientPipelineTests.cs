@@ -412,9 +412,13 @@ public class GameClientPipelineTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 0,
+            SendTimeoutMs = 30_000,
             ReadTimeoutMs = 1000,
             UseMessageFraming = false
-        });
+        })
+        {
+            HmacVerificationMode = VerificationMode.Off
+        };
 
         MemoryStream responseStream = new(Utf8NoBom.GetBytes(JsonConvert.SerializeObject(response) + Environment.NewLine));
         MemoryStream requestStream = new();

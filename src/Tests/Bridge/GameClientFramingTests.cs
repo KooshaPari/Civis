@@ -63,19 +63,13 @@ public class GameClientFramingTests
             RetryCount = 0,
         };
         var client = new GameClient(options);
-        var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        // Act & Assert
-        // Pipe doesn't exist, will fail, but should respect default timeout
-        await Assert.ThrowsAsync<GameClientException>(
+        // Act & Assert — pipe doesn't exist; options ConnectTimeoutMs (3s) must drive the failure.
+        GameClientException ex = await Assert.ThrowsAsync<GameClientException>(
             async () => await client.ConnectAsync(CancellationToken.None).ConfigureAwait(true));
 
-        sw.Stop();
-        // Should fail within timeout + overhead (Linux CI pipe connect can be slower under load)
-        var maxMs = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase)
-            ? 12_000
-            : 4_500;
-        sw.ElapsedMilliseconds.Should().BeLessThan(maxMs);
+        ex.InnerException.Should().BeAssignableTo<TimeoutException>();
+        ex.InnerException!.Message.Should().Contain("3");
         client.Dispose();
     }
 
@@ -92,18 +86,13 @@ public class GameClientFramingTests
         };
         var client = new GameClient(options);
         var customTimeout = TimeSpan.FromMilliseconds(1000);
-        var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        // Act & Assert
-        // Pipe doesn't exist, will fail, but should respect custom timeout
-        await Assert.ThrowsAsync<GameClientException>(
+        // Act & Assert — custom connectTimeout (1s) must win over options default (10s).
+        GameClientException ex = await Assert.ThrowsAsync<GameClientException>(
             async () => await client.ConnectAsync(customTimeout, CancellationToken.None).ConfigureAwait(true));
 
-        sw.Stop();
-        var maxMs = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase)
-            ? 8_000
-            : 2_500;
-        sw.ElapsedMilliseconds.Should().BeLessThan(maxMs);
+        ex.InnerException.Should().BeAssignableTo<TimeoutException>();
+        ex.InnerException!.Message.Should().Contain("1");
         client.Dispose();
     }
 

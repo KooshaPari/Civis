@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Pre-push unit tests: stabilize GameClient connect/send timeouts under CI load, DumpTools subprocess build-once + kill-on-timeout, framing tests assert timeout values not wall clock.
 - Post-PR188 follow-up: GameLaunch attach-mode bridge restart, Sonar batch-4 exclusions, packages.lock.json refresh for CI.
 - `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.
 

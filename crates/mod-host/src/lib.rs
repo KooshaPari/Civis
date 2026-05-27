@@ -11,6 +11,7 @@ mod capability;
 mod determinism;
 mod float_data_flow;
 mod guest_state;
+mod policy_action;
 mod signature;
 mod wasm_guest;
 
@@ -28,8 +29,10 @@ use wasm_guest::{
 
 pub use capability::{
     format_mod_permission_violation_json, ModCapabilitySet as CapabilitySet, ModEnforcementCtx,
-    ModStatus, WorldDomain, ACTION_SET_POLICY_PARAM, ACTION_SET_TAX_RATE, ERR_PERMISSION_DENIED,
+    ModStatus, WorldDomain, ACTION_SET_POLICY_PARAM, ACTION_SET_SUBSIDY_RATE, ACTION_SET_TAX_RATE,
+    ACTION_TRANSFER_FUNDS, ACTION_TRIGGER_EVENT, ERR_PERMISSION_DENIED,
 };
+pub use policy_action::{policy_action_to_emit_type, PolicyActionKind};
 pub use determinism::{
     scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
 };

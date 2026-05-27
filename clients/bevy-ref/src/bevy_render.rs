@@ -1,4 +1,4 @@
-//! Bevy 0.14 renderer for `civ-voxel` worlds.
+//! Bevy 0.18 renderer for `civ-voxel` worlds.
 //!
 //! Behind the `bevy` feature flag so the default workspace build stays cheap.
 //! Run with:
@@ -12,8 +12,9 @@
 //! land in a follow-up PR once the protocol bridge is wired.
 
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::pbr::MeshMaterial3d;
 
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
@@ -108,9 +109,10 @@ pub fn spawn_default_scene(commands: &mut Commands) {
         clear_rgb[1],
         clear_rgb[2],
     )));
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(ambient_rgb[0], ambient_rgb[1], ambient_rgb[2]),
         brightness: presentation_ambient_brightness(day_factor),
+        affects_lightmapped_meshes: true,
     });
 
     // Sun light — offset from the camera azimuth so voxels pick up depth.
@@ -150,11 +152,7 @@ pub fn spawn_voxel_mesh(
         metallic: 0.0,
         ..default()
     });
-    commands.spawn(PbrBundle {
-        mesh: handle,
-        material,
-        ..default()
-    });
+    commands.spawn((Mesh3d(handle), MeshMaterial3d(material)));
 }
 
 #[cfg(test)]

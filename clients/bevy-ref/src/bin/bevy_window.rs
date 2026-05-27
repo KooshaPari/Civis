@@ -242,11 +242,11 @@ fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
     mut lights: Query<&mut DirectionalLight>,
-    mut ambient: ResMut<AmbientLight>,
+    mut ambient: ResMut<GlobalAmbientLight>,
     mut clear: ResMut<ClearColor>,
 ) {
     let target = presentation_day_factor_target(presentation.is_day);
-    let step = (time.delta_seconds() * 2.5).clamp(0.0, 1.0);
+    let step = (time.delta_secs() * 2.5).clamp(0.0, 1.0);
     presentation.day_factor += (target - presentation.day_factor) * step;
 
     let day_factor = presentation.day_factor;
@@ -419,8 +419,8 @@ fn orbit_camera_input(
     time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion_events: EventReader<MouseMotion>,
-    mut scroll_events: EventReader<MouseWheel>,
+    mut motion_events: MessageReader<MouseMotion>,
+    mut scroll_events: MessageReader<MouseWheel>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
@@ -466,7 +466,7 @@ fn orbit_camera_input(
         orbit.adjust_distance(ORBIT_KEYBOARD_DISTANCE_STEP);
     }
 
-    let pan = ORBIT_PAN_SPEED * time.delta_seconds();
+    let pan = ORBIT_PAN_SPEED * time.delta_secs();
     let mut right = 0.0;
     let mut forward = 0.0;
     if keys.pressed(KeyCode::KeyW) {
@@ -504,7 +504,7 @@ fn update_hud(
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
-    let fps = 1.0 / time.delta_seconds();
+    let fps = 1.0 / time.delta_secs();
     hud.snapshot.fps = if hud.snapshot.fps <= 0.0 {
         fps
     } else {
@@ -759,12 +759,9 @@ fn apply_voxel_delta(
                     .id()
             });
         commands.entity(entity).insert((
-            PbrBundle {
-                mesh,
-                material: material_handle,
-                transform,
-                ..default()
-            },
+            Mesh3d(mesh),
+            MeshMaterial3d(material_handle),
+            transform,
             ChunkFade::new(),
         ));
         if debug.wireframe {
@@ -795,7 +792,7 @@ fn update_chunk_fade(
     }
 
     for (entity, mut fade, material_handle) in &mut fades {
-        fade.elapsed += time.delta_seconds();
+        fade.elapsed += time.delta_secs();
         if let Some(material) = materials.get_mut(material_handle) {
             apply_chunk_material(material, fade.base_rgb, false, Some(fade.elapsed));
         }
@@ -863,12 +860,11 @@ fn apply_agent_appearance(
             entity
         });
 
-        commands.entity(entity).insert(PbrBundle {
-            mesh: assets.mesh.clone(),
-            material: material_handle,
+        commands.entity(entity).insert((
+            Mesh3d(assets.mesh.clone()),
+            MeshMaterial3d(material_handle),
             transform,
-            ..default()
-        });
+        ));
     }
 }
 

@@ -4,8 +4,9 @@
 //! native renderer escape hatches where the backend exposes extra features.
 
 use bevy::prelude::*;
-use bevy::render::render_resource::{WgpuAdapterInfo, WgpuFeatures};
+use bevy::render::render_resource::WgpuAdapterInfo;
 use bevy::render::renderer::{RenderAdapterInfo, RenderDevice};
+use wgpu;
 use bevy::render::RenderApp;
 
 /// Runtime GPU capabilities detected from the active Bevy render device.
@@ -60,7 +61,8 @@ pub fn detect_capabilities(render_device: &RenderDevice, adapter_info: &RenderAd
     let is_intel = vendor == 0x8086;
     let is_apple = vendor == 0x106B;
 
-    let ray_tracing = features.contains(WgpuFeatures::RAY_TRACING_ACCELERATION_STRUCTURE)
+    // wgpu 27 / Bevy 0.18: no stable RT feature flag; stage vendor/backend inference only.
+    let ray_tracing = is_nvidia && matches!(info.backend, wgpu::Backend::Dx12)
         || (is_apple && matches!(info.backend, wgpu::Backend::Metal));
 
     // wgpu 0.20 does not expose mesh shader capability directly, so this is a

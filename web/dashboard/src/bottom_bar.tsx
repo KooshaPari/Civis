@@ -22,6 +22,8 @@ import {
   type TimeSpeed,
 } from "./store";
 
+const PRODUCTION_SLOTS = ["slot-1", "slot-2", "slot-3", "slot-4", "slot-5"] as const;
+
 export function BottomBar() {
   const { state, dispatch } = useDashboardStore();
   const miniMapRef = useRef<HTMLCanvasElement | null>(null);
@@ -30,6 +32,7 @@ export function BottomBar() {
   const [saveName, setSaveName] = useState("");
   const [loadEntries, setLoadEntries] = useState<SaveEntry[]>([]);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<(typeof PRODUCTION_SLOTS)[number]>("slot-1");
 
   const runWatchControl = async (path: string, body: object = {}) => {
     try {
@@ -108,6 +111,61 @@ export function BottomBar() {
       dispatch({ type: "set_snapshot", snapshot: snap });
     } catch (err) {
       dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Load failed" });
+    }
+  };
+
+  const saveSlot = async (slot: (typeof PRODUCTION_SLOTS)[number]) => {
+    if (state.attachMode !== "watch") {
+      dispatch({ type: "set_toast", message: "Save/load is available in civ-watch mode" });
+      return;
+    }
+    try {
+      const response = await fetch("/control/save/slot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot }),
+      });
+      const data = (await response.json()) as { ok?: boolean; tick?: number; message?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? `save slot failed ${response.status}`);
+      }
+      const tick = Number(data.tick ?? 0);
+      dispatch({ type: "set_last_save_tick", tick });
+      dispatch({ type: "set_toast", message: `Saved ${slot} @ tick ${tick}` });
+    } catch (err) {
+      dispatch({
+        type: "set_toast",
+        message: err instanceof Error ? err.message : "Save slot failed",
+      });
+    }
+  };
+
+  const loadSlot = async (slot: (typeof PRODUCTION_SLOTS)[number]) => {
+    if (state.attachMode !== "watch") {
+      dispatch({ type: "set_toast", message: "Save/load is available in civ-watch mode" });
+      return;
+    }
+    try {
+      const response = await fetch("/control/load/slot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot }),
+      });
+      const data = (await response.json()) as { ok?: boolean; tick?: number; message?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? `load slot failed ${response.status}`);
+      }
+      const tick = Number(data.tick ?? 0);
+      autosaveBucketRef.current = Math.floor(tick / 1000);
+      dispatch({ type: "set_last_save_tick", tick });
+      dispatch({ type: "set_toast", message: `Loaded ${slot} @ tick ${tick}` });
+      const snap = await fetch("/snapshot").then((r) => r.json());
+      dispatch({ type: "set_snapshot", snapshot: snap });
+    } catch (err) {
+      dispatch({
+        type: "set_toast",
+        message: err instanceof Error ? err.message : "Load slot failed",
+      });
     }
   };
 
@@ -450,6 +508,33 @@ export function BottomBar() {
           <div className="tool-row">
             <ToolButton title="Save game" emoji="💾" onClick={promptSave} />
             <ToolButton title="Load game" emoji="📂" onClick={() => void openLoadDialog()} />
+            <ToolButton title="Save slot 1" emoji="1️⃣" onClick={() => void saveSlot("slot-1")} />
+            <ToolButton title="Load slot 1" emoji="📥" onClick={() => void loadSlot("slot-1")} />
+            <label className="slot-picker">
+              Slot
+              <select
+                value={selectedSlot}
+                onChange={(e) =>
+                  setSelectedSlot(e.target.value as (typeof PRODUCTION_SLOTS)[number])
+                }
+              >
+                {PRODUCTION_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ToolButton
+              title={`Save ${selectedSlot}`}
+              emoji="💾"
+              onClick={() => void saveSlot(selectedSlot)}
+            />
+            <ToolButton
+              title={`Load ${selectedSlot}`}
+              emoji="📂"
+              onClick={() => void loadSlot(selectedSlot)}
+            />
           </div>
         )}
         <input
@@ -481,7 +566,10 @@ export function BottomBar() {
                 <div className="load-list">
                   {loadEntries.map((entry) => (
                     <button key={entry.name} type="button" className="load-item" onClick={() => void loadGame(entry.name)}>
-                      <span>{entry.name}</span>
+                      <span>
+                        {entry.name}
+                        {entry.save_type ? ` (${entry.save_type})` : ""}
+                      </span>
                       <small>{Math.round(entry.size_bytes / 1024)} KB</small>
                     </button>
                   ))}

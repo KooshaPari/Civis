@@ -79,6 +79,7 @@
 | FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
 | FR-CIV-BEVY-001 | implemented | `civ-standalone` gameplay plugins (sim bridge, HUD, spawn tools, minimap) |
 | FR-CIV-BEVY-002 | implemented | live attach scene sync (`live_scene`: voxel chunks + agent markers from `Frame3d`) |
+| FR-CIV-BEVY-014 | implemented | `live_stream` unit tests (colors, ground Y, voxel delta apply) |
 
 ## First PR slice (recommended)
 
@@ -118,6 +119,9 @@
 34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
 35. **Shared live_stream frame apply** — **done** (item 36): `live_stream` module dedupes `LiveScenePlugin` and `bevy_window`; graph parcels render in both paths.
 36. **bevy_window live minimap parity** — **done** (item 37): HUD minimap shows streamed agents, buildings, graph parcels, and camera position (matches `live_scene`).
+37. **live_stream unit tests** — **done** (item 39): `#[cfg(test)]` in `live_stream.rs` — color/provenance helpers, parcel→kind mapping, `live_ground_y` offsets, minimal `VoxelDeltaFrame` apply via Bevy `World`.
+38. **bevy_window live scene focus** — **done** (item 40): shared `live_focus`; orbit centre lerps to streamed bounds when WS connected; minimap UV + click pan use focus rect (FR-CIV-BEVY-015).
+39. **Live attach HUD scene stats** — **done** (item 42): `LiveHudSnapshot` overlay shows tick, connection, C/A/B/G counts, optional `sim.snapshot` RTT; wired in `civ-bevy-window` and `civ-standalone` server attach (`FR-CIV-BEVY-017`).
 
 ## Run
 

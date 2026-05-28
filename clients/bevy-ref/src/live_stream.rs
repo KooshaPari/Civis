@@ -579,3 +579,166 @@ fn building_material_style(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::encode_chunk_id;
+    use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
+    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
+    use civ_voxel::MaterialId;
+
+    const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
+
+    fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {
+        ix + iy * LIVE_CHUNK_EDGE + iz * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE
+    }
+
+    fn solid_chunk_voxels() -> Vec<MaterialId> {
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
+        voxels
+    }
+
+    fn color_rgb(c: Color) -> [f32; 3] {
+        let s = c.to_srgba();
+        [s.red, s.green, s.blue]
+    }
+
+    #[test]
+    fn building_minimap_dot_color_matches_provenance() {
+        let procedural = building_minimap_dot_color(BuildingProvenance::Procedural);
+        let freehand = building_minimap_dot_color(BuildingProvenance::Freehand);
+        assert!(procedural.alpha() > 0.99);
+        assert!(freehand.alpha() > 0.99);
+        assert_ne!(color_rgb(procedural), color_rgb(freehand));
+    }
+
+    #[test]
+    fn parcel_kind_to_building_kind_maps_zoning() {
+        assert_eq!(
+            parcel_kind_to_building_kind(ParcelKind::Residential),
+            BuildingKind3d::House
+        );
+        assert_eq!(
+            parcel_kind_to_building_kind(ParcelKind::Commercial),
+            BuildingKind3d::Market
+        );
+        assert_eq!(
+            parcel_kind_to_building_kind(ParcelKind::Industrial),
+            BuildingKind3d::Mine
+        );
+        assert_eq!(
+            parcel_kind_to_building_kind(ParcelKind::Civic),
+            BuildingKind3d::CityCenter
+        );
+    }
+
+    #[test]
+    fn building_kind_color_is_distinct_per_kind() {
+        let kinds = [
+            BuildingKind3d::Farm,
+            BuildingKind3d::Mine,
+            BuildingKind3d::Barracks,
+            BuildingKind3d::Temple,
+            BuildingKind3d::Market,
+            BuildingKind3d::House,
+            BuildingKind3d::CityCenter,
+        ];
+        let colors: Vec<_> = kinds.iter().map(|k| color_rgb(building_kind_color(*k))).collect();
+        for (i, left) in colors.iter().enumerate() {
+            for (j, right) in colors.iter().enumerate() {
+                if i != j {
+                    assert_ne!(left, right, "kinds {i} and {j} share a color");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn parcel_kind_color_uses_building_kind_palette() {
+        let parcel = color_rgb(parcel_kind_color(ParcelKind::Residential));
+        let house = color_rgb(building_kind_color(BuildingKind3d::House));
+        assert_eq!(parcel, house);
+    }
+
+    #[test]
+    fn building_material_style_freehand_adds_emissive() {
+        let (base, emissive, roughness) =
+            building_material_style(BuildingKind3d::Market, BuildingProvenance::Freehand);
+        let (proc_base, proc_emissive, proc_roughness) =
+            building_material_style(BuildingKind3d::Market, BuildingProvenance::Procedural);
+        assert_eq!(color_rgb(base), color_rgb(proc_base));
+        assert_ne!(color_rgb(emissive), color_rgb(proc_emissive));
+        assert!(roughness < proc_roughness);
+    }
+
+    #[test]
+    fn blend_facade_base_mixes_toward_styled_base() {
+        let facade = Color::srgb(1.0, 0.0, 0.0);
+        let styled = Color::srgb(0.0, 0.0, 1.0);
+        let blended = blend_facade_base(facade, styled);
+        let b = color_rgb(blended);
+        assert!(b[0] > 0.4 && b[0] < 0.8);
+        assert!(b[2] > 0.1 && b[2] < 0.5);
+    }
+
+    #[test]
+    fn material_id_color_is_stable_for_same_id() {
+        let a = color_rgb(material_id_color(MaterialId(3)));
+        let b = color_rgb(material_id_color(MaterialId(3)));
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn stream_ground_y_uses_voxel_surface_plus_agent_offset() {
+        let mut cache = ChunkVoxelCache::new();
+        cache.insert(encode_chunk_id(0, 0, 0), solid_chunk_voxels());
+        let surface = live_voxel_surface_y(&cache, 4.5, 5.5).expect("surface");
+        let agent_y = live_ground_y(&cache, 4.5, 5.5, AGENT_GROUND_Y);
+        let building_y = live_ground_y(&cache, 4.5, 5.5, BUILDING_GROUND_Y);
+        assert!((agent_y - (surface + AGENT_GROUND_Y)).abs() < f32::EPSILON);
+        assert!((building_y - (surface + BUILDING_GROUND_Y)).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn apply_voxel_delta_frame_spawns_chunk_in_scene() {
+        use bevy::prelude::*;
+
+        let mut world = World::new();
+        let mut mesh_assets = Assets::<Mesh>::default();
+        let mut material_assets = Assets::<StandardMaterial>::default();
+
+        let chunk_id = encode_chunk_id(0, 0, 0);
+        let delta = VoxelDeltaFrame {
+            tick: 1,
+            deltas: vec![VoxelChunkDelta {
+                event: DirtyChunkEvent {
+                    chunk_id,
+                    write_seq: WriteSeq(1),
+                },
+                voxels: solid_chunk_voxels(),
+            }],
+        };
+        let culling = StreamCulling {
+            eye: [8.0, 8.0, 8.0],
+            max_distance: 512.0,
+        };
+
+        let mut scene = LiveStreamScene::default();
+        let mut commands = world.commands();
+        apply_voxel_delta_frame(
+            &mut commands,
+            &mut scene,
+            &mut mesh_assets,
+            &mut material_assets,
+            culling,
+            &DebugRender::default(),
+            delta,
+            None,
+        );
+
+        assert_eq!(scene.chunks.len(), 1);
+        assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
+    }
+}

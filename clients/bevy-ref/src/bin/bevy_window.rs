@@ -28,7 +28,7 @@ use civ_protocol_3d::{
     agent_world_translation, AgentAppearanceFrame, BuildingDiffFrame, BuildingKind3d, Frame3d,
     VoxelDeltaFrame,
 };
-use civ_voxel::{ChunkId, ChunkView, LodLevel, MaterialId};
+use civ_voxel::{ChunkId, ChunkView, LodLevel};
 
 const CHUNK_EDGE: usize = 16;
 const CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];

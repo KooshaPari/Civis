@@ -22,6 +22,9 @@ cargo run -p civ-bevy-ref
 Live window (WebSocket attach + HUD overlay):
 
 ```bash
+# Headless protocol smoke (no window): F3D0 tick + voxel ground + standalone compile
+just civis-3d-live-smoke
+
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
 cargo run -p civ-server
 
@@ -29,6 +32,9 @@ cargo run -p civ-server
 CIVIS_TICK_BROADCAST=binary cargo run -p civ-server
 
 cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
+# Standalone gameplay client on a remote civ-server (e.g. Tailscale proxy):
+# just civis-3d-standalone-live-url URL=ws://host:3000/ws?tick_format=binary
 ```
 
 ### WebSocket binary tick frames (`F3D0`)

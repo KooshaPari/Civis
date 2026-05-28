@@ -119,6 +119,18 @@ civis-3d-standalone:
 civis-3d-standalone-live:
     powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
 
+# Standalone live attach with explicit WS URL (Tailscale / remote civ-server).
+civis-3d-standalone-live-url URL:
+    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+
+# Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
+civis-3d-live-smoke:
+    cargo test -p civ-server frame_triple
+    cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick
+    cargo test -p civ-bevy-ref --features bevy --lib live_ground::
+    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:

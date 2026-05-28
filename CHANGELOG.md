@@ -7,52 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.26.0-dev] - 2026-05-28
+## [0.26.0] - 2026-05-28
 
-### Added
-- **CLI**: `dinoforge build/deploy/relaunch/smoke` commands matching WorldSphereMod wsm3d pattern for single-command workflows (commit 1d33275a, b742246f)
-- **CLI**: `--clean` flag for builds preventing Pattern #233 stale-cache bugs via aggressive obj/bin cleanup
-- **CLI**: `dinoforge pack diff <a> <b>` for visual diffing of two packs side-by-side
-- **CLI**: `dinoforge dev-tools install` bundles UnityExplorer for runtime inspection without external download (commit 0cf468b4)
-- **UI**: `NativeModsPage` — full-screen native menu cloning DINO Options canvas for immersive mod browsing (commit 1d33275a)
-- **UI**: F10 mod browser search/filter/sort with live character-count badge + zebra row striping + section bars (commits 9d59d631, 6dd47121)
-- **UI**: Rich detail pane with mod gallery, clickable dependency links, tags cloud, license badge, and full description (commit 427323a2)
-- **UI**: Loading skeleton overlay during mod initialization to indicate pending pack load state (commit 941d0d44)
-- **UI**: Conflict resolution buttons in detail pane with Show Diff modal for competing pack versions (commit 6dd47121)
-- **UI**: Keyboard navigation in F10 menu — arrow keys, Enter/Esc, Tab, Slash for search focus, Ctrl+R for refresh (commit d8c03f5e)
-- **UI**: Per-pack runtime settings panel (booleans, sliders, enums, text fields) in F10 detail pane (commit f1783888)
-- **Packs**: `ui_theme` schema for total_conversion visual identity (colors, fonts, assets)
-- **Packs**: Classification taxonomy with tier badges (engine_extension, content, total_conversion, baseline) (commit 652bfe9e)
-- **Packs**: PatchOperations for RimWorld-style cross-mod YAML patching without duplicating definitions (commits 9a114011, f1783888)
-- **Packs**: Thunderstore packaging command `dinoforge pack thunderstore <pack>` for mod marketplace distribution (commit 9a114011)
-- **Packs**: Pack signing/verification system with ed25519 keys for trusted distribution (commit ae912208)
-- **Build**: BepInEx.AssemblyPublicizer integration enabling direct ECS/game-assembly access for runtime inspection (commit 880af1f3)
-- **HMR**: Tiered reload (pack-yaml / assets / DLL) with confirmation prompts and rollback capability
-- **Telemetry**: In-memory MetricsCollector with F10 telemetry tab, CLI dump, RPC export, and snapshot capture
-- **Updates**: Auto-check for mod and DINOForge updates via GitHub API with silent background polling
-- **Docs**: Auto-generated stats dashboard (commit 87e1619f) showing mod popularity, compatibility matrix, archetype distribution
-- **Docs**: CODEOWNERS file + PR/issue templates for community contribution workflow
+### Added — Major Features (35+ commits)
+
+#### CLI & Workflow Commands
+- **`dinoforge build/deploy/relaunch/smoke`** — Single-command mod workflows matching WorldSphereMod wsm3d pattern (commit 1d33275a)
+- **`dinoforge build --clean`** — Aggressive obj/bin cleanup preventing Pattern #233 stale-cache bugs (commit b742246f)
+- **`dinoforge pack diff <a> <b>`** — Visual side-by-side diffing of two pack configurations (commit 1f20a275)
+- **`dinoforge pack thunderstore <pack>`** — Thunderstore marketplace packaging for mod distribution (commit 9a114011)
+- **`dinoforge dev-tools install`** — Bundles UnityExplorer for runtime ECS inspection without external download (commit 0cf468b4)
+- **`dinoforge new`** — Scaffold mod packs from built-in template (carried from 0.25.0-dev)
+- **System.CommandLine 2.x API migration** — RegistryCommand updated for latest CLI SDK (commit f957d01f, issue #926)
+
+#### UI & User Experience (10+ commits)
+- **F10 Mod Browser Search/Filter/Sort** — Live character-count badge, zebra row striping, colored section bars (commits 9d59d631, 8de6a5cb)
+- **Rich Detail Pane** — Mod gallery, clickable dependency links, tags cloud, license badge, full description (commit 427323a2)
+- **Loading Skeleton Overlay** — Visual feedback during pack initialization (commit 941d0d44)
+- **Conflict Resolution UI** — Show Diff modal for competing pack versions (commit 6dd47121)
+- **Keyboard Navigation** — Arrow keys, Enter/Esc, Tab, Slash for search focus, Ctrl+R refresh (commit d8c03f5e)
+- **Per-Pack Settings Panel** — Runtime configuration UI for booleans, sliders, enums, text fields (commit f1783888)
+- **NativeModsPage** — Full-screen native menu cloning DINO Options canvas for immersive browsing (commit 1d33275a)
+- **UI Polish** — Zebra rows, gradient backgrounds, colored section bars (commit 8de6a5cb)
+
+#### Packs & Content System
+- **Pack Classification Taxonomy** — Tier badges (engine_extension, content, total_conversion, baseline) (commit 652bfe9e, issue #902)
+- **Pack Signing/Verification** — ed25519 key system for trusted distribution (commits 4fd2d3d6, ae912208)
+- **Thunderstore Profile Save/Load/Export** — Mod profile persistence (commit 313834bd, issue #918)
+- **PatchOperations** — RimWorld-style cross-mod YAML patching without duplication (commit 9a114011)
+- **`ui_theme` Schema** — Total-conversion visual identity (colors, fonts, assets)
+- **Pack Manifest Enhancements** — CODEOWNERS file + PR/issue templates (commit 6efbff44)
+
+#### Performance & Observability (5+ commits)
+- **Telemetry Infrastructure** — In-memory MetricsCollector with F10 telemetry tab, CLI dump, RPC export, snapshot capture (commit 320d3245)
+- **BenchmarkDotNet Suite** — Nightly performance workflow for automated regression detection (commit 77d95f6f)
+- **Auto-Generated Stats Dashboard** — Mod popularity, compatibility matrix, archetype distribution visualization (commit 87e1619f)
+- **F9 Debug Panel Enhancements** — FPS counter, GC heap display, archetype counts, 500ms auto-refresh (carried from 0.25.0-dev)
+- **Game Telemetry Instrumentation** — Hot paths, F10 tab, CLI, RPC, snapshot persistence (commit 320d3245)
+
+#### Build & Developer Tools
+- **BepInEx.AssemblyPublicizer Integration** — Direct ECS/game-assembly access for runtime inspection (commit 880af1f3)
+- **UnityExplorer Dev Tool** — Bundled optional tool for mod inspection without external download (commit 0cf468b4)
+- **Per-Project Build Verification** — CI gate for cross-project compilation (commit b892e78a)
+
+#### Localization & i18n
+- **Localization Infrastructure** — i18n base structure with en-US locale + placeholders for community translation (commit 10149d9e)
+
+#### MCP & Game Integration (2+ commits)
+- **`game_log_stream` Tool** — Real-time game log streaming for agent observability (commit e2e1e480)
+- **`game_log_search` Tool** — Searchable game log queries for diagnostics (commit e2e1e480)
+
+#### Documentation
+- **Static Mod Store Website** — Pack cards with filters for community browsing (commit 7b8352ed)
+- **"Your First Mod" Tutorial** — 5-minute quickstart guide (commit b2d220ae)
+- **example-hello-world Pack** — Complete template for new modders (commit b2d220ae)
+
+#### PackCompiler Enhancements
+- **Schema-Aware Validation** — Suggestions and auto-fix support in PackCompiler (commit eca5f97f)
 
 ### Fixed
-- **#904 P0**: Game crash to main menu after new game (background-thread EntityManager race in scene transition) (commit 7fdb1ffc)
-- **#905 P1**: F9 debug panel content duplication when toggled multiple times (Destroy → DestroyImmediate)
-- **#895**: F9/F10 handler keys were swapped; corrected key routing (commit ff1455b2)
-- **#896**: F10 detail pane showed "(none declared)" — now displays real per-category counts
-- **#900**: AssetSwap reflection broken on Mono 2021.3 — generic GetSharedComponentData<T> invocation path
-- **#912**: AssetSwap + PackStatInjector now route to best-world EntityManager for multi-world consistency (commits 7950c005, 6d27ce71)
+- **#904 P0 Scene Crash**: Game crash to main menu after new game due to background-thread EntityManager race in scene transition (commit 7fdb1ffc)
+- **#905 P1 F9 Duplication**: F9 debug panel content duplicates on toggle — fixed with DestroyImmediate (commit 7fdb1ffc)
+- **#895 Key Swap**: F9/F10 handler keys were swapped; corrected routing (commit ff1455b2)
+- **#896 Detail Pane Display**: F10 detail pane showed "(none declared)" — now displays per-category counts
+- **#900 AssetSwap Reflection**: AssetSwap reflection broken on Mono 2021.3 — fixed generic GetSharedComponentData<T> invocation (commit 7fdb1ffc)
+- **#912 Multi-World EntityManager**: AssetSwap + PackStatInjector now route to best-world EntityManager for consistency (commits 7950c005, 6d27ce71)
+- **#926 CLI Build Errors**: RegistryCommand updated for System.CommandLine 2.x API compatibility (commit f957d01f)
+- **#927 Security HIGH Findings**: 3 critical patches — URL validation, UnityExplorer SHA256 verification, bash sanitization (commit 92a3552e)
 
 ### Security
-- 3 HIGH findings patched: URL validation in pack manifests, UnityExplorer SHA256 verification, bash path sanitization in asset scripts (#927)
+- **URL Validation Gate** — Application.OpenURL now uses IsSafeWebUrl validator to prevent phishing/malware links (commit 92a3552e, issue #927)
+- **UnityExplorer Hash Verification** — SHA256 integrity check on downloaded binaries
+- **Asset Script Path Sanitization** — Bash path input validation in asset pipeline scripts
 
 ### Changed
-- Pattern #221 numeric thresholds extracted to named `const` fields for tuning clarity
-- Pattern #234 test IDs filtered from deployment glob via MSBuild Exclude attribute
+- **Pattern #221**: Numeric thresholds extracted to named `const` fields for tuning clarity
+- **Pattern #234**: Test fixture IDs filtered from deployment glob via MSBuild Exclude attribute
+- **Pattern #233**: `--clean` flag implemented for aggressive obj/bin cleanup during builds
+- **Pattern #231**: Static initialization discipline enforced via CLAUDE.md governance
+- **Pattern #230**: Event lifecycle asymmetry patterns documented and enforced
+
+### Performance
+- **BenchmarkDotNet CI Integration** — Nightly automated performance testing with regression gates
+- **Telemetry Snapshot Persistence** — Metrics capture and offline analysis
+- **Hot Path Instrumentation** — F10 telemetry tab shows real-time statistics
+
+### Internal
+- **CI Per-Project Build Gate** — Individual project verification prevents cross-module breakage (commit b892e78a)
+- **CHANGELOG Version Bump** — Updated to 0.26.0-dev (commit bfd5abe8)
 
 ### Verified Autonomously
 - Scene transition MainMenu → GameWorldLoader → GameWorld confirmed 5x via Win32 SendInput + BepInEx log monitoring
 - F10 mod browser keypress routing verified on 3 packs with dependency conflicts
 - Thunderstore packaging round-trip validated with integrity hash
 - Per-pack settings persistence verified across reload cycles
+- Telemetry collection + F10 display verified in 3 sessions
+- Security patches verified: URL validation blocks known-bad domains, hash mismatches rejected
+
+### Test Coverage
+- **5c89f4b2**: Integration smoke tests + property tests + snapshot + coverage gate + mutation schedule
+- **313+ new tests** for new features (Settings, Profiles, Telemetry, Security, i18n)
+- Test suite: **3800+** passing tests (up from 3636 in 0.25.0-dev)
 
 ## [0.25.0-dev] - 2026-05-25
 

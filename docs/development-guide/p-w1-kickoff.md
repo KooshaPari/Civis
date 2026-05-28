@@ -111,7 +111,9 @@
 27. **Live attach scene sync** — **done** (item 28): `live_scene` applies `Frame3d::VoxelDelta` / `AgentAppearance`; server mode skips sandbox terrain; minimap dots from live chunks/agents.
 28. **Building-diff + agent positions** — **done** (item 29): protocol `WorldXZ` / `BuildingDiffEntry`; civ-server fills frames; `live_scene` renders buildings and uses `agent_world_translation`.
 29. **Live scene focus + provenance styling** — **done** (item 30): `LiveSceneFocus` drives camera rig + minimap ortho; procedural vs freehand building materials and minimap dots.
-30. **Next:** terrain height sampling for streamed agents/buildings; `BuildingGraph` delta payloads.
+30. **Terrain anchoring for live entities** — **done** (item 31): `terrain_surface_y` snaps streamed agents/buildings to procedural height in `live_scene`.
+31. **BuildingGraph on live attach** — **done** (item 32): optional `BuildingDiffFrame.graph` from civ-server; `live_scene` renders parcels with facade/provenance styling.
+32. **Next:** voxel-surface anchoring (sample chunk mesh) when streamed terrain replaces analytic height.
 
 ## Run
 

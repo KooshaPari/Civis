@@ -23,9 +23,9 @@ use civ_engine::{
     decode_civreplay, encode_civreplay, Building, BuildingType, Citizen, CivSaveBundle, Simulation,
 };
 use civ_protocol_3d::{
-    encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d,
-    BuildingProvenance, Frame3d, WorldXZ,
+    encode_frame3d_binary, encode_frame3d_binary_from_json, map_build_provenance,
+    AgentAppearanceFrame, AgentAppearanceUpdate, BuildingDiffEntry, BuildingDiffFrame,
+    BuildingGraph, BuildingKind3d, BuildingProvenance, Frame3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -436,14 +436,41 @@ fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
             },
         })
         .collect();
-    BuildingDiffFrame {
-        tick,
-        provenance: if sim.snapshot().building_count % 2 == 0 {
+    let graph = sim.building_graph();
+    let graph_payload = if graph.parcels.is_empty() {
+        None
+    } else {
+        Some(graph.clone())
+    };
+    let provenance = graph_payload.as_ref().map_or(
+        if sim.snapshot().building_count % 2 == 0 {
             BuildingProvenance::Procedural
         } else {
             BuildingProvenance::Freehand
         },
+        dominant_building_provenance,
+    );
+    BuildingDiffFrame {
+        tick,
+        provenance,
         buildings,
+        graph: graph_payload,
+    }
+}
+
+fn dominant_building_provenance(graph: &BuildingGraph) -> BuildingProvenance {
+    let mut procedural = 0usize;
+    let mut freehand = 0usize;
+    for provenance in graph.provenance.values() {
+        match map_build_provenance(*provenance) {
+            BuildingProvenance::Procedural => procedural += 1,
+            BuildingProvenance::Freehand => freehand += 1,
+        }
+    }
+    if freehand > procedural {
+        BuildingProvenance::Freehand
+    } else {
+        BuildingProvenance::Procedural
     }
 }
 
@@ -879,11 +906,13 @@ mod tests {
                 tick: 1,
                 provenance: BuildingProvenance::Procedural,
                 buildings: Vec::new(),
+                graph: None,
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Freehand,
                 buildings: Vec::new(),
+                graph: None,
             }),
             Frame3d::AgentAppearance(AgentAppearanceFrame {
                 tick: 1,
@@ -920,6 +949,7 @@ mod tests {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("json");
         let decoded: Frame3d = serde_json::from_str(&json).expect("decode");
@@ -943,6 +973,22 @@ mod tests {
                 .iter()
                 .all(|update| update.position.is_some()),
             "agent updates should carry ECS world anchors"
+        );
+    }
+
+    #[test]
+    fn frame_triple_includes_building_graph_when_parcels_exist() {
+        let mut sim = Simulation::with_seed(42);
+        for _ in 0..32 {
+            sim.tick();
+        }
+        let frames = build_frame_triple(&sim).expect("frame triple");
+        let Frame3d::BuildingDiff(building) = &frames[1] else {
+            panic!("expected building diff as second frame");
+        };
+        assert!(
+            building.graph.as_ref().is_some_and(|graph| !graph.parcels.is_empty()),
+            "seeded sim should stream BuildingGraph parcels after growth ticks"
         );
     }
 

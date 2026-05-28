@@ -8,8 +8,9 @@ use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use bevy::ui::FocusPolicy;
 use civ_protocol_3d::{
-    agent_world_translation, AgentAppearanceFrame, BuildingDiffFrame, BuildingKind3d,
-    BuildingProvenance, Frame3d, VoxelDeltaFrame,
+    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BuildingDiffFrame,
+    BuildingGraph, BuildingKind3d, BuildingProvenance, FacadeStyle, Frame3d, ParcelKind, WorldXZ,
+    VoxelDeltaFrame,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel};
 
@@ -17,6 +18,7 @@ use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::camera::CameraRig;
+use crate::terrain::terrain_surface_y;
 use crate::{
     agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
     chunk_fade_complete, decode_chunk_id, mesh_lod_level, should_render_chunk, AttachMode,
@@ -60,8 +62,10 @@ pub struct LiveScene {
     chunks: HashMap<u64, Entity>,
     agents: HashMap<u64, Entity>,
     buildings: HashMap<u64, Entity>,
+    graph_parcels: HashMap<u64, Entity>,
     agent_materials: HashMap<u64, Handle<StandardMaterial>>,
     building_materials: HashMap<u64, Handle<StandardMaterial>>,
+    graph_parcel_materials: HashMap<u64, Handle<StandardMaterial>>,
     building_provenance: BuildingProvenance,
 }
 
@@ -71,8 +75,10 @@ impl Default for LiveScene {
             chunks: HashMap::new(),
             agents: HashMap::new(),
             buildings: HashMap::new(),
+            graph_parcels: HashMap::new(),
             agent_materials: HashMap::new(),
             building_materials: HashMap::new(),
+            graph_parcel_materials: HashMap::new(),
             building_provenance: BuildingProvenance::Procedural,
         }
     }
@@ -117,6 +123,12 @@ struct AgentLabel;
 
 #[derive(Component)]
 struct BuildingTag {
+    #[allow(dead_code)]
+    id: u64,
+}
+
+#[derive(Component)]
+struct GraphParcelTag {
     #[allow(dead_code)]
     id: u64,
 }
@@ -284,7 +296,8 @@ fn apply_agent_appearance(
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
-        let (x, y, z) = agent_world_translation(&update, AGENT_GROUND_Y);
+        let (x, _, z) = agent_world_translation(&update, 0.0);
+        let y = terrain_surface_y(x, z) + AGENT_GROUND_Y;
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -339,14 +352,24 @@ fn apply_building_diff(
     assets: &LiveSceneAssets,
     frame: BuildingDiffFrame,
 ) {
-    if frame.buildings.is_empty() {
+    let BuildingDiffFrame {
+        provenance,
+        buildings,
+        graph,
+        ..
+    } = frame;
+
+    scene.building_provenance = provenance;
+
+    if let Some(graph) = graph {
+        apply_building_graph(commands, scene, materials, assets, graph);
+    }
+
+    if buildings.is_empty() {
         return;
     }
 
-    scene.building_provenance = frame.provenance;
-
-    let incoming: std::collections::HashSet<u64> =
-        frame.buildings.iter().map(|entry| entry.id).collect();
+    let incoming: std::collections::HashSet<u64> = buildings.iter().map(|entry| entry.id).collect();
     for (id, entity) in scene.buildings.clone() {
         if !incoming.contains(&id) {
             commands.entity(entity).despawn();
@@ -355,9 +378,8 @@ fn apply_building_diff(
         }
     }
 
-    for entry in frame.buildings {
-        let (base_color, emissive, roughness) =
-            building_material_style(entry.kind, frame.provenance);
+    for entry in buildings {
+        let (base_color, emissive, roughness) = building_material_style(entry.kind, provenance);
         let material_handle = scene
             .building_materials
             .entry(entry.id)
@@ -376,7 +398,9 @@ fn apply_building_diff(
             material.perceptual_roughness = roughness;
         }
 
-        let transform = Transform::from_xyz(entry.position.x, BUILDING_GROUND_Y, entry.position.z);
+        let ground = terrain_surface_y(entry.position.x, entry.position.z);
+        let transform =
+            Transform::from_xyz(entry.position.x, ground + BUILDING_GROUND_Y, entry.position.z);
         let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
             commands
                 .spawn(BuildingTag { id: entry.id })
@@ -388,6 +412,126 @@ fn apply_building_diff(
             transform,
         ));
     }
+}
+
+fn apply_building_graph(
+    commands: &mut Commands,
+    scene: &mut LiveScene,
+    materials: &mut Assets<StandardMaterial>,
+    assets: &LiveSceneAssets,
+    graph: BuildingGraph,
+) {
+    let incoming: std::collections::HashSet<u64> =
+        graph.parcels.iter().map(|parcel| parcel.id.0).collect();
+    for (id, entity) in scene.graph_parcels.clone() {
+        if !incoming.contains(&id) {
+            commands.entity(entity).despawn();
+            scene.graph_parcels.remove(&id);
+            scene.graph_parcel_materials.remove(&id);
+        }
+    }
+
+    let scale = civ_voxel::FIXED_SCALE as f32;
+    for parcel in graph.parcels {
+        let id = parcel.id.0;
+        let provenance = graph
+            .provenance
+            .get(&parcel.id)
+            .copied()
+            .map(map_build_provenance)
+            .unwrap_or(scene.building_provenance);
+        let kind = parcel_kind_to_building_kind(parcel.kind);
+        let mut base_color = parcel_kind_color(parcel.kind);
+        if let Some(facade) = graph.facades.get(&parcel.id) {
+            base_color = facade_material_color(facade);
+        }
+        let (styled_base, emissive, roughness) = building_material_style(kind, provenance);
+        let base_color = blend_facade_base(base_color, styled_base);
+
+        let material_handle = scene
+            .graph_parcel_materials
+            .entry(id)
+            .or_insert_with(|| {
+                materials.add(StandardMaterial {
+                    base_color,
+                    emissive: emissive.into(),
+                    perceptual_roughness: roughness,
+                    ..default()
+                })
+            })
+            .clone();
+        if let Some(material) = materials.get_mut(&material_handle) {
+            material.base_color = base_color;
+            material.emissive = emissive.into();
+            material.perceptual_roughness = roughness;
+        }
+
+        let anchor = WorldXZ::from_fixed_coord(&parcel.origin);
+        let ground = terrain_surface_y(anchor.x, anchor.z);
+        let height = parcel.size[1] as f32 / scale;
+        let width = parcel.size[0] as f32 / scale;
+        let depth = parcel.size[2] as f32 / scale;
+        let transform = Transform::from_xyz(anchor.x, ground + height * 0.5, anchor.z)
+            .with_scale(Vec3::new(width.max(0.5), height.max(0.5), depth.max(0.5)));
+
+        let entity = *scene.graph_parcels.entry(id).or_insert_with(|| {
+            commands
+                .spawn(GraphParcelTag { id })
+                .id()
+        });
+        commands.entity(entity).insert((
+            Mesh3d(assets.building_mesh.clone()),
+            MeshMaterial3d(material_handle),
+            transform,
+        ));
+    }
+}
+
+fn parcel_kind_to_building_kind(kind: ParcelKind) -> BuildingKind3d {
+    match kind {
+        ParcelKind::Residential => BuildingKind3d::House,
+        ParcelKind::Commercial => BuildingKind3d::Market,
+        ParcelKind::Industrial => BuildingKind3d::Mine,
+        ParcelKind::Civic => BuildingKind3d::CityCenter,
+    }
+}
+
+fn parcel_kind_color(kind: ParcelKind) -> Color {
+    building_kind_color(parcel_kind_to_building_kind(kind))
+}
+
+fn facade_material_color(facade: &FacadeStyle) -> Color {
+    let material = facade
+        .materials
+        .first()
+        .copied()
+        .unwrap_or(civ_voxel::MaterialId(0));
+    material_id_color(material)
+}
+
+fn material_id_color(material: civ_voxel::MaterialId) -> Color {
+    let palette = [
+        (0.62, 0.52, 0.44),
+        (0.55, 0.42, 0.32),
+        (0.58, 0.58, 0.60),
+        (0.72, 0.48, 0.36),
+        (0.68, 0.70, 0.74),
+        (0.42, 0.58, 0.72),
+        (0.78, 0.80, 0.84),
+    ];
+    let idx = material.0 as usize % palette.len();
+    let (r, g, b) = palette[idx];
+    Color::srgb(r, g, b)
+}
+
+fn blend_facade_base(facade: Color, styled: Color) -> Color {
+    let f = facade.to_srgba();
+    let s = styled.to_srgba();
+    Color::srgb(
+        f.red * 0.65 + s.red * 0.35,
+        f.green * 0.65 + s.green * 0.35,
+        f.blue * 0.65 + s.blue * 0.35,
+    )
 }
 
 fn building_kind_color(kind: BuildingKind3d) -> Color {
@@ -457,6 +601,7 @@ fn sync_live_minimap_dots(
     focus: Res<LiveSceneFocus>,
     agents: Query<&Transform, With<AgentTag>>,
     buildings: Query<&Transform, With<BuildingTag>>,
+    graph_parcels: Query<&Transform, With<GraphParcelTag>>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -540,6 +685,24 @@ fn sync_live_minimap_dots(
                 FocusPolicy::Pass,
             ));
         }
+
+        for transform in &graph_parcels {
+            let uv = world_to_minimap_uv_focus(transform.translation, *focus);
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_LIVE_DOT * 0.5),
+                    top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_LIVE_DOT * 0.5),
+                    width: Val::Px(MINIMAP_LIVE_DOT * 0.85),
+                    height: Val::Px(MINIMAP_LIVE_DOT * 0.85),
+                    border_radius: BorderRadius::MAX,
+                    ..default()
+                },
+                BackgroundColor(building_dot),
+                MinimapDot,
+                FocusPolicy::Pass,
+            ));
+        }
     });
 }
 
@@ -560,13 +723,14 @@ fn update_live_scene_focus(
     scene: Res<LiveScene>,
     agents: Query<&Transform, With<AgentTag>>,
     buildings: Query<&Transform, With<BuildingTag>>,
+    graph_parcels: Query<&Transform, With<GraphParcelTag>>,
     mut focus: ResMut<LiveSceneFocus>,
 ) {
     if *attach != AttachMode::Server {
         return;
     }
 
-    let next = compute_live_scene_focus(&scene, &agents, &buildings);
+    let next = compute_live_scene_focus(&scene, &agents, &buildings, &graph_parcels);
     if next != *focus {
         *focus = next;
     }
@@ -576,6 +740,7 @@ fn compute_live_scene_focus(
     scene: &LiveScene,
     agents: &Query<&Transform, With<AgentTag>>,
     buildings: &Query<&Transform, With<BuildingTag>>,
+    graph_parcels: &Query<&Transform, With<GraphParcelTag>>,
 ) -> LiveSceneFocus {
     let mut min_x = f32::MAX;
     let mut max_x = f32::MIN;
@@ -600,6 +765,9 @@ fn compute_live_scene_focus(
         extend(transform.translation.x, transform.translation.z);
     }
     for transform in buildings.iter() {
+        extend(transform.translation.x, transform.translation.z);
+    }
+    for transform in graph_parcels.iter() {
         extend(transform.translation.x, transform.translation.z);
     }
 

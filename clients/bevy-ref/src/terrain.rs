@@ -52,6 +52,12 @@ pub fn terrain_mesh() -> Mesh {
     mesh
 }
 
+/// Sample procedural terrain surface height at mesh-space XZ (0..[`WORLD_SIZE`]).
+#[must_use]
+pub fn terrain_surface_y(x: f32, z: f32) -> f32 {
+    terrain_height(x.clamp(0.0, WORLD_SIZE), z.clamp(0.0, WORLD_SIZE))
+}
+
 pub fn terrain_height(x: f32, z: f32) -> f32 {
     let nx = x / WORLD_SIZE - 0.5;
     let nz = z / WORLD_SIZE - 0.5;
@@ -112,4 +118,21 @@ pub fn smooth(t: f32) -> f32 {
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn terrain_surface_y_matches_height_inside_bounds() {
+        let y = terrain_surface_y(64.0, 128.0);
+        assert_eq!(y, terrain_height(64.0, 128.0));
+    }
+
+    #[test]
+    fn terrain_surface_y_clamps_out_of_bounds() {
+        let y = terrain_surface_y(-10.0, 999.0);
+        assert_eq!(y, terrain_height(0.0, WORLD_SIZE));
+    }
 }

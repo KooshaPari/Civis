@@ -166,7 +166,8 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-003 | Live attach scene sync (`Frame3d` voxel/agent streams) in `civ-standalone`. | `clients/bevy-ref` (`live_scene`) | `cargo check … civ-standalone`, server attach smoke | implemented |
 | FR-CIV-BEVY-004 | Building diff entries + agent `WorldXZ` positions in live attach. | `live_scene`, `civ-protocol-3d` | `building_and_agent_position_*`, server attach smoke | implemented |
 | FR-CIV-BEVY-005 | Live scene focus follow + building provenance styling. | `live_scene`, `camera`, `minimap` | server attach smoke, `cargo check … civ-standalone` | implemented |
-| FR-CIV-BEVY-005 | Live scene focus (camera + minimap) and building provenance styling. | `clients/bevy-ref` (`live_scene`) | server attach smoke | implemented |
+| FR-CIV-BEVY-006 | Terrain height anchoring for live-streamed agents and buildings. | `clients/bevy-ref` (`terrain`, `live_scene`) | `cargo test -p civ-bevy-ref terrain::` | implemented |
+| FR-CIV-BEVY-007 | Optional `BuildingGraph` snapshot on `BuildingDiffFrame` (live attach parcels). | `civ-protocol-3d`, `civ-server`, `live_scene` | `cargo test -p civ-protocol-3d building_graph` | implemented |
 
 ---
 

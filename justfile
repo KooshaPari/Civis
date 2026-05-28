@@ -165,10 +165,6 @@ test-all:
     cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
     cd web && npm test
 
-# Lint, audit, and format checks.
-quality: lint audit
-    cargo fmt --check
-
 # Release build + signing + packaging.
 deploy:
     cargo build --release --workspace
@@ -179,10 +175,6 @@ deploy:
 # Criterion benchmarks.
 bench:
     cargo bench --workspace
-
-# Native infra + civ-watch stack.
-infra-up:
-    process-compose up
 
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test

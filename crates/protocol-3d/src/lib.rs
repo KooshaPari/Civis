@@ -27,6 +27,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub use civ_build::{BuildingGraph, BuildingId, FacadeStyle, Parcel, ParcelKind};
 pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
 
 /// Schema version of the public protocol-3d frame types. Bumped on any
@@ -106,6 +107,9 @@ pub struct BuildingDiffFrame {
     /// Buildings visible this tick (full snapshot; empty on legacy servers).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub buildings: Vec<BuildingDiffEntry>,
+    /// Full `BuildingGraph` snapshot for facade/provenance detail (optional).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graph: Option<BuildingGraph>,
 }
 
 /// One delta event for a single chunk. The renderer pairs `event` with the
@@ -205,6 +209,15 @@ pub fn agent_world_translation(update: &AgentAppearanceUpdate, y: f32) -> (f32, 
         (pos.x, y, pos.z)
     } else {
         (update.agent_id as f32, y, 0.0)
+    }
+}
+
+/// Maps civ-build provenance tags into wire [`BuildingProvenance`].
+#[must_use]
+pub fn map_build_provenance(provenance: civ_build::BuildingProvenance) -> BuildingProvenance {
+    match provenance {
+        civ_build::BuildingProvenance::Procedural => BuildingProvenance::Procedural,
+        civ_build::BuildingProvenance::Freehand => BuildingProvenance::Freehand,
     }
 }
 
@@ -331,10 +344,37 @@ mod tests {
             tick: 100,
             provenance: BuildingProvenance::Freehand,
             buildings: Vec::new(),
+            graph: None,
         };
         let s = serde_json::to_string(&f).expect("serialize");
         let back: BuildingDiffFrame = serde_json::from_str(&s).expect("deserialize");
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
+    }
+
+    /// FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
+    #[test]
+    fn building_graph_snapshot_roundtrips() {
+        use civ_build::{BuildingId, BuildingProvenance as BuildProvenance, ParcelKind};
+
+        let mut graph = BuildingGraph::new();
+        graph.insert_parcel(Parcel {
+            id: BuildingId(7),
+            kind: ParcelKind::Residential,
+            origin: civ_voxel::WorldCoord { x: 128, y: 0, z: 256 },
+            size: [8, 6, 4],
+            era_min: 1,
+        });
+        graph.set_provenance(BuildingId(7), BuildProvenance::Freehand);
+
+        let frame = BuildingDiffFrame {
+            tick: 12,
+            provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
+            graph: Some(graph.clone()),
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: BuildingDiffFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.graph, Some(graph));
     }
 
     /// FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
@@ -348,6 +388,7 @@ mod tests {
                 kind: BuildingKind3d::House,
                 position: WorldXZ { x: 12.5, z: 48.0 },
             }],
+            graph: None,
         };
         let building_json = serde_json::to_string(&building).expect("serialize building");
         let building_back: BuildingDiffFrame =
@@ -386,6 +427,7 @@ mod tests {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));
@@ -425,6 +467,7 @@ mod tests {
             tick: 1,
             provenance: BuildingProvenance::Freehand,
             buildings: Vec::new(),
+            graph: None,
         });
         let mut bytes = encode_frame3d_binary(&frame).expect("encode");
         bytes[0] = b'X';

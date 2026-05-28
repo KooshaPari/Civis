@@ -1012,6 +1012,7 @@ mod tests {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("serialize");
         let parsed = parse_frame3d_json(&json).expect("parse");
@@ -1036,6 +1037,7 @@ mod tests {
             tick: 3,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("serialize");
         let bytes = encode_frame3d_binary(&frame).expect("encode");
@@ -1054,6 +1056,7 @@ mod tests {
             tick: 11,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert_eq!(parse_ws_payload(&bytes).expect("binary-first"), frame);
@@ -1070,6 +1073,7 @@ mod tests {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
             buildings: Vec::new(),
+            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         let parsed = parse_frame3d_binary(&bytes).expect("parse");

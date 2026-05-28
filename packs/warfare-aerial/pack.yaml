@@ -36,5 +36,4 @@ loads:
     - buildings/airfield_buildings.yaml
   doctrines:
     - doctrines/aerial_doctrines.yaml
-  stats:
-    - stats
+  # stats/ deferred until aerial_buffs.yaml has valid overrides (empty list fails validation on ReloadPacks)

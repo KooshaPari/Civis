@@ -803,6 +803,7 @@ namespace DINOForge.Runtime
                 }
 
                 bool isDisabled = _disabledPacks.Contains(loadedId);
+                PackTier fallbackTier = DerivePackTier(null, loadedId);
                 packInfos.Add(new PackDisplayInfo(
                     id: loadedId,
                     name: loadedId,
@@ -814,7 +815,11 @@ namespace DINOForge.Runtime
                     isEnabled: !isDisabled,
                     dependencies: Array.Empty<string>(),
                     conflicts: Array.Empty<string>(),
-                    errors: new List<string>().AsReadOnly()));
+                    errors: new List<string>().AsReadOnly(),
+                    contentSummary: null,
+                    detectedConflicts: null,
+                    classification: null,
+                    tier: fallbackTier));
             }
 
             DetectContentConflicts(packInfos);

@@ -7,7 +7,7 @@
 //! untouched.
 
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
 /// Lightweight sim snapshot consumed by the HUD.
 #[derive(Resource, Debug, Clone)]
@@ -22,6 +22,8 @@ pub struct GameUiSnapshot {
     pub era: String,
     /// Current tick speed multiplier.
     pub speed_multiplier: u32,
+    /// Live attach scene stats line (`LiveHudSnapshot::format_overlay`) when in server mode.
+    pub live_hud_overlay: Option<String>,
 }
 
 impl Default for GameUiSnapshot {
@@ -32,6 +34,7 @@ impl Default for GameUiSnapshot {
             factions: 0,
             era: "0".to_string(),
             speed_multiplier: 1,
+            live_hud_overlay: None,
         }
     }
 }
@@ -112,7 +115,8 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
-            .add_systems(Update, (handle_speed_shortcuts, draw_game_ui));
+            .add_systems(Update, handle_speed_shortcuts)
+            .add_systems(EguiPrimaryContextPass, draw_game_ui);
     }
 }
 
@@ -173,6 +177,10 @@ fn draw_game_ui(
                     })
                     .unwrap_or("WS: connecting");
                 ui.label(status);
+                if let Some(overlay) = &snapshot.live_hud_overlay {
+                    ui.separator();
+                    ui.label(overlay);
+                }
             }
         });
     });

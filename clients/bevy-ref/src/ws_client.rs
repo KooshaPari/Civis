@@ -33,6 +33,7 @@ impl Default for WsClientConfig {
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
     meta_rx: Receiver<WsSpectatorMeta>,
+    rtt_rx: Receiver<f32>,
 }
 
 impl WsClient {
@@ -45,8 +46,13 @@ impl WsClient {
     pub fn spawn_with_config(url: String, config: WsClientConfig) -> Self {
         let (frame_tx, frame_rx) = crossbeam_channel::unbounded();
         let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
-        thread::spawn(move || run_client(url, config, frame_tx, meta_tx));
-        Self { frame_rx, meta_rx }
+        let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx));
+        Self {
+            frame_rx,
+            meta_rx,
+            rtt_rx,
+        }
     }
 
     /// Drain all currently available frames without blocking the main thread.
@@ -68,6 +74,16 @@ impl WsClient {
         }
         metas
     }
+
+    /// Latest measured `sim.snapshot` round-trip time in milliseconds, if any.
+    #[must_use]
+    pub fn latest_rtt_ms(&self) -> Option<f32> {
+        let mut latest = None;
+        while let Ok(ms) = self.rtt_rx.try_recv() {
+            latest = Some(ms);
+        }
+        latest
+    }
 }
 
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
@@ -78,6 +94,7 @@ fn run_client(
     config: WsClientConfig,
     frame_tx: Sender<Frame3d>,
     meta_tx: Sender<WsSpectatorMeta>,
+    rtt_tx: Sender<f32>,
 ) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -85,7 +102,8 @@ fn run_client(
         .expect("tokio runtime");
     runtime.block_on(async move {
         loop {
-            if let Err(err) = connect_and_stream(&url, config, &frame_tx, &meta_tx).await {
+            if let Err(err) = connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx).await
+            {
                 eprintln!("bevy ws client disconnected: {err}");
                 thread::sleep(Duration::from_secs(1));
             }
@@ -100,11 +118,19 @@ async fn request_snapshot(
         >,
         Message,
     >,
+    snapshot_ping: &mut Option<Instant>,
 ) -> Result<(), String> {
+    *snapshot_ping = Some(Instant::now());
     write
         .send(Message::Text(SNAPSHOT_RPC.into()))
         .await
         .map_err(|err| err.to_string())
+}
+
+fn record_snapshot_rtt(snapshot_ping: &mut Option<Instant>, rtt_tx: &Sender<f32>) {
+    if let Some(sent) = snapshot_ping.take() {
+        let _ = rtt_tx.send(sent.elapsed().as_secs_f32() * 1000.0);
+    }
 }
 
 async fn connect_and_stream(
@@ -112,19 +138,21 @@ async fn connect_and_stream(
     config: WsClientConfig,
     frame_tx: &Sender<Frame3d>,
     meta_tx: &Sender<WsSpectatorMeta>,
+    rtt_tx: &Sender<f32>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
         .map_err(|err| err.to_string())?;
     let (mut write, mut read) = ws.split();
 
-    request_snapshot(&mut write).await?;
+    let mut snapshot_ping = None;
+    request_snapshot(&mut write, &mut snapshot_ping).await?;
 
     let mut last_snapshot = Instant::now();
 
     while let Some(msg) = read.next().await {
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
-            request_snapshot(&mut write).await?;
+            request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = Instant::now();
         }
 
@@ -132,6 +160,7 @@ async fn connect_and_stream(
         match msg {
             Message::Text(text) => {
                 if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
+                    record_snapshot_rtt(&mut snapshot_ping, rtt_tx);
                     if meta_tx.send(meta).is_err() {
                         return Err("bevy meta receiver dropped".into());
                     }

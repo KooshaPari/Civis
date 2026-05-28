@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::atmosphere::DayNightCycle;
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
-use crate::{resolve_live_ws_url, AttachMode, WsSpectatorMeta};
+use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
 
 /// Connection state mirrored from the live attach WebSocket client.
 #[derive(Resource, Debug, Clone, Default)]
@@ -30,13 +30,14 @@ impl Plugin for LiveAttachPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(LiveScenePlugin)
             .init_resource::<LiveAttachState>()
+            .init_resource::<LiveHudSnapshot>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
                     WsClientConfig::default(),
                 ),
             })
-            .add_systems(Update, poll_live_meta);
+            .add_systems(Update, (poll_live_meta, sync_live_hud_stats));
         #[cfg(feature = "egui")]
         app.add_systems(Update, sync_live_game_ui);
     }
@@ -45,10 +46,38 @@ impl Plugin for LiveAttachPlugin {
 fn poll_live_meta(
     bridge: Res<LiveAttachBridge>,
     mut state: ResMut<LiveAttachState>,
+    mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
 ) {
     for meta in bridge.client.poll_meta() {
+        if let Some(tick) = meta.tick {
+            hud.tick = Some(tick);
+        }
+        hud.connected = true;
         apply_snapshot_meta(&mut state, &mut day_night, meta);
+    }
+    if let Some(rtt) = bridge.client.latest_rtt_ms() {
+        hud.ws_rtt_ms = Some(rtt);
+    }
+}
+
+fn sync_live_hud_stats(
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    scene: Res<crate::live_stream::LiveStreamScene>,
+    mut hud: ResMut<LiveHudSnapshot>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+    hud.sync_scene_counts(
+        scene.chunks.len(),
+        scene.agents.len(),
+        scene.buildings.len(),
+        scene.graph_parcels.len(),
+    );
+    if let Some(rtt) = bridge.client.latest_rtt_ms() {
+        hud.ws_rtt_ms = Some(rtt);
     }
 }
 
@@ -56,14 +85,16 @@ fn poll_live_meta(
 fn sync_live_game_ui(
     attach: Res<crate::AttachMode>,
     state: Res<LiveAttachState>,
+    hud: Res<LiveHudSnapshot>,
     mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>,
 ) {
     if *attach != crate::AttachMode::Server {
         return;
     }
-    let tick = state.tick.unwrap_or(0);
+    let tick = hud.tick.or(state.tick).unwrap_or(0);
     let era = tick.to_string();
     snapshot.set_sim_state(tick, 0, 0, era, 1);
+    snapshot.live_hud_overlay = Some(hud.format_overlay());
 }
 
 fn apply_snapshot_meta(

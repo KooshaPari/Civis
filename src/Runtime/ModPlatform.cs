@@ -402,6 +402,26 @@ namespace DINOForge.Runtime
             {
                 try
                 {
+                    // Iter-148 #912: same world-resolution fix as AssetSwapSystem.FindBestEntityManager.
+                    // The incoming `world` may be Default World (~25 entities); gameplay entities live
+                    // in a different World (49K+). Reroute when the entity count is suspiciously low.
+                    int worldCount = 0;
+                    try { worldCount = world.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { }
+                    if (worldCount < 1000)
+                    {
+                        World? better = FindBestWorld();
+                        if (better != null)
+                        {
+                            int betterCount = 0;
+                            try { betterCount = better.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { }
+                            if (betterCount > worldCount)
+                            {
+                                _log.LogInfo($"[ModPlatform] Stats: rerouting from '{world.Name}' ({worldCount}) to '{better.Name}' ({betterCount})");
+                                world = better;
+                            }
+                        }
+                    }
+
                     int injectedWrites = PackStatInjector.Apply(
                         world.EntityManager,
                         _registryManager,
@@ -440,6 +460,32 @@ namespace DINOForge.Runtime
                     _log.LogWarning($"[ModPlatform] YAML stat override re-apply failed: {ex}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Iter-148 #912: Scan all live ECS worlds and return the one with the most entities.
+        /// Mirrors AssetSwapSystem.FindBestEntityManager so both stat injection and asset swap
+        /// target the same gameplay world rather than the sparse Default World.
+        /// </summary>
+        private static World? FindBestWorld()
+        {
+            World? best = null;
+            int bestCount = -1;
+            try
+            {
+                foreach (World w in World.All)
+                {
+                    if (w == null || !w.IsCreated) continue;
+                    int c;
+                    try { c = w.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { continue; }
+                    if (c > bestCount) { bestCount = c; best = w; }
+                }
+            }
+            catch
+            {
+                // World.All access failed — return null and let caller use its original world
+            }
+            return best;
         }
 
         /// <summary>

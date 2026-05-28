@@ -117,6 +117,7 @@
 33. **Live attach smoke harness** — **done** (item 34): `just civis-3d-live-smoke` (F3D0 + voxel ground + standalone check); `just civis-3d-standalone-live-url URL=ws://…` for remote civ-server.
 34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
 35. **Shared live_stream frame apply** — **done** (item 36): `live_stream` module dedupes `LiveScenePlugin` and `bevy_window`; graph parcels render in both paths.
+36. **bevy_window live minimap parity** — **done** (item 37): HUD minimap shows streamed agents, buildings, graph parcels, and camera position (matches `live_scene`).
 
 ## Run
 

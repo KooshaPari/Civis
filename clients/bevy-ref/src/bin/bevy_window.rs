@@ -9,11 +9,13 @@ use civ_bevy_ref::{
     focused_chunk_at_grid, gpu_features::GpuFeaturesPlugin,
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_voxel_delta_frame, default_stream_meshes, AgentLabelConfig, LiveChunkFade,
-        LiveChunkTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR,
-        LIVE_CHUNK_EDGE,
+        apply_voxel_delta_frame, building_minimap_dot_color, default_stream_meshes,
+        AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag,
+        LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
+        LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     minimap_uv_to_chunk_grid, native_backend::native_render_plugin,
+    world_xz_to_minimap_uv,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
@@ -32,6 +34,7 @@ const MIN_ORBIT_DISTANCE: f32 = 8.0;
 const MAX_ORBIT_DISTANCE: f32 = 200.0;
 const MINIMAP_SIZE: f32 = 160.0;
 const MINIMAP_DOT: f32 = 4.0;
+const MINIMAP_LIVE_DOT: f32 = 4.0;
 const MINIMAP_INSET: f32 = 6.0;
 
 #[derive(Resource, Debug, Clone, Copy)]
@@ -120,6 +123,10 @@ impl Default for ScenePresentation {
 #[derive(Resource, Default)]
 struct MinimapCache {
     chunk_keys: Vec<u64>,
+    agent_count: usize,
+    building_count: usize,
+    graph_count: usize,
+    camera_chunk: Option<(i32, i32)>,
     bounds: Option<MinimapBounds>,
 }
 
@@ -485,6 +492,30 @@ fn minimap_bounds_from_keys(chunk_keys: &[u64]) -> Option<MinimapBounds> {
     }
 }
 
+fn spawn_minimap_dot(
+    parent: &mut ChildSpawnerCommands,
+    uv: [f32; 2],
+    size: f32,
+    color: Color,
+) {
+    let plot = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
+    let left = MINIMAP_INSET + uv[0] * plot - size * 0.5;
+    let top = MINIMAP_INSET + uv[1] * plot - size * 0.5;
+    parent.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(left),
+            top: Val::Px(top),
+            width: Val::Px(size),
+            height: Val::Px(size),
+            border_radius: BorderRadius::MAX,
+            ..default()
+        },
+        BackgroundColor(color),
+        FocusPolicy::Pass,
+    ));
+}
+
 fn update_minimap(
     mut commands: Commands,
     scene: Res<LiveStreamScene>,
@@ -493,13 +524,33 @@ fn update_minimap(
     hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
     children: Query<&Children>,
+    agents: Query<&Transform, With<LiveAgentTag>>,
+    buildings: Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
 ) {
     let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
     keys.sort_unstable();
-    if keys == cache.chunk_keys {
+    let agent_count = scene.agents.len();
+    let building_count = scene.buildings.len();
+    let graph_count = scene.graph_parcels.len();
+    let cam_cx = (orbit.centre[0] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let cam_cz = (orbit.centre[2] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let camera_chunk = Some((cam_cx, cam_cz));
+
+    if keys == cache.chunk_keys
+        && agent_count == cache.agent_count
+        && building_count == cache.building_count
+        && graph_count == cache.graph_count
+        && camera_chunk == cache.camera_chunk
+    {
         return;
     }
+
     cache.chunk_keys = keys.clone();
+    cache.agent_count = agent_count;
+    cache.building_count = building_count;
+    cache.graph_count = graph_count;
+    cache.camera_chunk = camera_chunk;
     cache.bounds = minimap_bounds_from_keys(&keys);
 
     for child in children
@@ -514,58 +565,61 @@ fn update_minimap(
         return;
     };
 
-    let plot = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
+    let building_dot = building_minimap_dot_color(scene.building_provenance);
     let focused = hud.snapshot.focused_chunk;
-    for &raw in &keys {
-        let [u, v] = chunk_to_minimap_uv(ChunkId(raw), bounds);
-        let left = MINIMAP_INSET + u * plot;
-        let top = MINIMAP_INSET + v * plot;
-        let is_focused = focused.map(|id| id.0 == raw).unwrap_or(false);
-        let dot_color = if is_focused {
-            Color::srgb(0.95, 0.92, 0.45)
-        } else {
-            Color::srgb(0.72, 0.69, 0.62)
-        };
-        commands.entity(minimap.dots).with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(left),
-                    top: Val::Px(top),
-                    width: Val::Px(MINIMAP_DOT),
-                    height: Val::Px(MINIMAP_DOT),
-                    ..default()
-                },
-                BackgroundColor(dot_color),
-                FocusPolicy::Pass,
-            ));
-        });
-    }
 
-    let cam_cx = (orbit.centre[0] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-    let cam_cz = (orbit.centre[2] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-    if let Some(cam_raw) = keys.iter().find(|&&raw| {
-        let (cx, _cy, cz) = decode_chunk_id(ChunkId(raw));
-        cx == cam_cx && cz == cam_cz
-    }) {
-        let [u, v] = chunk_to_minimap_uv(ChunkId(*cam_raw), bounds);
-        let left = MINIMAP_INSET + u * plot - 1.0;
-        let top = MINIMAP_INSET + v * plot - 1.0;
-        commands.entity(minimap.dots).with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(left),
-                    top: Val::Px(top),
-                    width: Val::Px(MINIMAP_DOT + 2.0),
-                    height: Val::Px(MINIMAP_DOT + 2.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.95, 0.95, 0.98)),
-                FocusPolicy::Pass,
-            ));
-        });
-    }
+    commands.entity(minimap.dots).with_children(|parent| {
+        for &raw in &keys {
+            let [u, v] = chunk_to_minimap_uv(ChunkId(raw), bounds);
+            let is_focused = focused.map(|id| id.0 == raw).unwrap_or(false);
+            let dot_color = if is_focused {
+                Color::srgb(0.95, 0.92, 0.45)
+            } else {
+                Color::srgb(0.72, 0.69, 0.62)
+            };
+            spawn_minimap_dot(parent, [u, v], MINIMAP_DOT, dot_color);
+        }
+
+        for transform in &agents {
+            let uv = world_xz_to_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
+            spawn_minimap_dot(
+                parent,
+                uv,
+                MINIMAP_LIVE_DOT,
+                Color::srgba(0.35, 0.82, 0.95, 1.0),
+            );
+        }
+
+        for transform in &buildings {
+            let uv = world_xz_to_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
+            spawn_minimap_dot(parent, uv, MINIMAP_LIVE_DOT, building_dot);
+        }
+
+        for transform in &graph_parcels {
+            let uv = world_xz_to_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
+            spawn_minimap_dot(parent, uv, MINIMAP_LIVE_DOT * 0.85, building_dot);
+        }
+
+        let cam_uv = world_xz_to_minimap_uv(orbit.centre[0], orbit.centre[2], bounds);
+        spawn_minimap_dot(
+            parent,
+            cam_uv,
+            MINIMAP_DOT + 2.0,
+            Color::srgb(0.95, 0.95, 0.98),
+        );
+    });
 }
 
 fn minimap_click_focus(

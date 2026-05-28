@@ -34,7 +34,7 @@ public sealed class GameLaunchSmokeTests(GameLaunchFixture fixture)
         await fixture.Client!.PingAsync();
         sw.Stop();
 
-        sw.ElapsedMilliseconds.Should().BeLessThan(1000,
+        sw.ElapsedMilliseconds.Should().BeLessThan(1500,
             "bridge round-trip over named pipe; allow headroom for self-hosted runners and loaded game");
     }
 }

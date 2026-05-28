@@ -52,7 +52,8 @@ function Write-Gate([string]$Message, [string]$Level = 'Info') {
         'Warn' { 'Yellow' }
         default { 'Cyan' }
     }
-    Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [SPEC-007] $Message" -ForegroundColor $color
+    $ts = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
+    Write-Host "${ts}Z [SPEC-007] $Message" -ForegroundColor $color
 }
 
 function Write-GateResult([hashtable]$Result) {
@@ -62,12 +63,61 @@ function Write-GateResult([hashtable]$Result) {
     $Result | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $gateResultPath -Encoding utf8
 }
 
-function Test-GameAvailable {
+$script:GameProcessBaseName = 'Diplomacy is Not an Option'
+$script:GameExecutableFileName = 'Diplomacy is Not an Option.exe'
+
+function Test-GameAttachOnlyMode {
+    $value = $env:DINO_GAME_ALREADY_RUNNING
+    return (-not [string]::IsNullOrWhiteSpace($value)) -and
+        ($value -eq '1' -or $value -ieq 'true')
+}
+
+function Stop-StrayGameLaunchProcesses {
+    Write-Gate 'Stopping stray game processes (pre/post flight)' 'Warn'
+    foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
+        Get-Process -Name $procName -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+    }
+    # Game Launch Protocol: wait 3s and verify no processes remain
+    Start-Sleep -Seconds 3
+    $remaining = @()
+    foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
+        $remaining += @(Get-Process -Name $procName -ErrorAction SilentlyContinue)
+    }
+    if ($remaining.Count -gt 0) {
+        Write-Gate "Warning: $($remaining.Count) game-related process(es) still running after cleanup" 'Warn'
+    }
+}
+
+function Resolve-DinoGameExePath {
     $path = $env:DINO_GAME_PATH
-    return (-not [string]::IsNullOrWhiteSpace($path)) -and (Test-Path -LiteralPath $path)
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        return $null
+    }
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        if ([string]::Equals([IO.Path]::GetFileName($path), $script:GameExecutableFileName, [StringComparison]::OrdinalIgnoreCase)) {
+            return $path
+        }
+        return $null
+    }
+    if (Test-Path -LiteralPath $path -PathType Container) {
+        $exe = Join-Path $path $script:GameExecutableFileName
+        if (Test-Path -LiteralPath $exe) {
+            return $exe
+        }
+    }
+    return $null
+}
+
+function Test-GameAvailable {
+    return $null -ne (Resolve-DinoGameExePath)
 }
 
 function Get-GameInstallRoot {
+    $exe = Resolve-DinoGameExePath
+    if ($exe) {
+        return Split-Path -Parent $exe
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:DINO_GAME_PATH)) {
         return $env:DINO_GAME_PATH
     }
@@ -214,12 +264,34 @@ function Invoke-FullGate {
     }
 
     if (Test-GameAvailable) {
-        Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
-        dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
-            -c Release `
-            --filter 'Category=GameLaunch' `
-            --verbosity minimal
-        $gameExit = $LASTEXITCODE
+        $resolvedExe = Resolve-DinoGameExePath
+        if ($resolvedExe) {
+            $env:DINO_GAME_PATH = $resolvedExe
+            Write-Gate "Using game executable: $resolvedExe"
+        }
+
+        if (-not (Test-GameAttachOnlyMode)) {
+            Stop-StrayGameLaunchProcesses
+        }
+        else {
+            Write-Gate 'Attach-only mode (DINO_GAME_ALREADY_RUNNING) — skipping pre-flight process cleanup' 'Warn'
+        }
+
+        $gameExit = 0
+        try {
+            Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
+            dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
+                -c Release `
+                --filter 'Category=GameLaunch' `
+                --verbosity minimal
+            $gameExit = $LASTEXITCODE
+        }
+        finally {
+            if (-not (Test-GameAttachOnlyMode)) {
+                Stop-StrayGameLaunchProcesses
+            }
+        }
+
         if ($gameExit -ne 0) {
             Write-GateResult @{
                 timestamp = (Get-Date).ToUniversalTime().ToString('o')
@@ -229,6 +301,7 @@ function Invoke-FullGate {
             }
             exit $gameExit
         }
+
         Write-GateResult @{
             timestamp = (Get-Date).ToUniversalTime().ToString('o')
             status    = 'PASSED'

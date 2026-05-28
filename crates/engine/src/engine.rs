@@ -1168,7 +1168,7 @@ impl Simulation {
             .iter()
             .map(|(&(x, z), column)| {
                 let new_y = column.base_y.saturating_add(offset_units);
-                (((x, z)), column.last_water_y, new_y)
+                ((x, z), column.last_water_y, new_y)
             })
             .collect();
 
@@ -2073,7 +2073,7 @@ mod tests {
         assert_eq!(sim.coastal_column_count(), 1);
         assert_eq!(sim.coastal_water_level(x, z), Some(base_y));
 
-        let amplitude_units = FIXED_SCALE as i64; // tidal_amplitude * FIXED_SCALE
+        let amplitude_units = FIXED_SCALE; // tidal_amplitude * FIXED_SCALE
         let tolerance: i64 = ((FIXED_SCALE as f64) * 1.0e-4_f64).ceil() as i64;
 
         // Tick 1 -> moon_phase = 0.25 -> tide_offset = +1.0 -> peak.

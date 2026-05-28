@@ -76,6 +76,49 @@ namespace DINOForge.Runtime.Bridge
         private int _reflectionFailCount;
         private const int ReflectionFailLogEvery = 50;
 
+        // Iter-148 #912: track which world we selected so we log the switch only once.
+        private string _loggedWorldSelection = "";
+
+        /// <summary>
+        /// Iter-148 #912: AssetSwapSystem may run in a World that has only prefab templates
+        /// (Default World ~25 entities) while gameplay entities live in a separate World.
+        /// Scan all worlds and return the EntityManager from the one with the most entities.
+        /// </summary>
+        private EntityManager FindBestEntityManager(out int bestCount, out string bestName)
+        {
+            EntityManager best = EntityManager;
+            bestCount = -1;
+            bestName = World.Name;
+            try
+            {
+                foreach (World w in World.All)
+                {
+                    if (w == null || !w.IsCreated) continue;
+                    int c;
+                    try
+                    {
+                        c = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (c > bestCount)
+                    {
+                        bestCount = c;
+                        best = w.EntityManager;
+                        bestName = w.Name;
+                    }
+                }
+            }
+            catch
+            {
+                // World.All access failed — keep our own EntityManager as fallback
+            }
+            if (bestCount < 0) bestCount = 0;
+            return best;
+        }
+
         /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
         public static void ScheduleReset()
         {
@@ -131,26 +174,25 @@ namespace DINOForge.Runtime.Bridge
                 return;
 
             // Gate at OnUpdate level: skip the entire swap pass until the world is populated.
-            // The swap registry retries each frame, but TrySwap returning false rapidly burns
-            // through MaxRetries before entities populate. Check entity count here to defer
-            // properly until the gameplay world is ready.
-            try
+            // Iter-148 #912: AssetSwapSystem may run in Default World which only has prefab
+            // templates (~25 entities). The actual gameplay world has 49K+ entities. Find
+            // the world with the most entities (likely the gameplay world) and use its EM.
+            EntityManager bestEm = FindBestEntityManager(out int bestCount, out string bestName);
+            if (bestCount < 1000)
             {
-                int entityCount = EntityManager.UniversalQuery.CalculateEntityCount();
-                if (entityCount < 1000)
+                if (_frameCount % 60 == 0)
                 {
-                    // Log once per 60 frames to avoid spam, but indicate we're waiting
-                    if (_frameCount % 60 == 0)
-                    {
-                        DebugLog.Write("AssetSwap",
-                            $"AssetSwapSystem: waiting for entities (current={entityCount}, need>=1000, frame={_frameCount})");
-                    }
-                    return;
+                    DebugLog.Write("AssetSwap",
+                        $"AssetSwapSystem: waiting for entities (best world='{bestName}' count={bestCount}, need>=1000, frame={_frameCount})");
                 }
+                return;
             }
-            catch
+
+            if (_loggedWorldSelection != bestName)
             {
-                // Can't determine entity count — fall through and let the swap try
+                _loggedWorldSelection = bestName;
+                DebugLog.Write("AssetSwap",
+                    $"AssetSwapSystem: using world '{bestName}' with {bestCount} entities (was running in '{World.Name}')");
             }
 
             DebugLog.Write("AssetSwap", $"AssetSwapSystem: processing {pending.Count} pending swap(s)");
@@ -165,7 +207,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    bool result = ApplySwap(request, patchDir, assetService);
+                    bool result = ApplySwap(request, patchDir, assetService, bestEm);
                     if (result)
                     {
                         AssetSwapRegistry.MarkApplied(request.AssetAddress);
@@ -210,7 +252,7 @@ namespace DINOForge.Runtime.Bridge
         /// if the mod bundle contains a Unity Mesh or Material, attempts a live
         /// RenderMesh swap on matched ECS entities.
         /// </summary>
-        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService)
+        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService, EntityManager bestEm)
         {
             // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
             string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
@@ -270,7 +312,7 @@ namespace DINOForge.Runtime.Bridge
 
             // Best-effort live RenderMesh swap on ECS entities.
             bool entitySwapResult = TrySwapRenderMeshFromBundle(
-                modBundleFullPath, request.AssetName, request.VanillaMapping);
+                modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
             DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
 
             return patchResult || entitySwapResult;
@@ -284,7 +326,7 @@ namespace DINOForge.Runtime.Bridge
         /// <c>Components.MeleeUnit</c>), preventing the replacement from touching unrelated geometry.
         /// </summary>
         private bool TrySwapRenderMeshFromBundle(
-            string modBundlePath, string assetName, string? vanillaMapping)
+            string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
         {
             AssetBundle? bundle = LoadBundle(modBundlePath);
             if (bundle == null) return false;
@@ -381,7 +423,7 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
-            EntityQuery query = EntityManager.CreateEntityQuery(
+            EntityQuery query = em.CreateEntityQuery(
                 new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
@@ -492,12 +534,12 @@ namespace DINOForge.Runtime.Bridge
                 Entity entity = entities[i];
                 try
                 {
-                    if (!EntityManager.HasComponent(entity, renderMeshComponentType))
+                    if (!em.HasComponent(entity, renderMeshComponentType))
                         continue;
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        EntityManager, new object[] { entity, renderMeshComponentType });
+                        em, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
                     bool changed = false;
@@ -530,7 +572,7 @@ namespace DINOForge.Runtime.Bridge
 
                     if (changed)
                     {
-                        genericSet.Invoke(EntityManager, new object[] { entity, renderMesh });
+                        genericSet.Invoke(em, new object[] { entity, renderMesh });
                         swapCount++;
                     }
                 }

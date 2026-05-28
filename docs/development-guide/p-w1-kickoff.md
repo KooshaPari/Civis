@@ -114,7 +114,9 @@
 30. **Terrain anchoring for live entities** — **done** (item 31): `terrain_surface_y` snaps streamed agents/buildings to procedural height in `live_scene`.
 31. **BuildingGraph on live attach** — **done** (item 32): optional `BuildingDiffFrame.graph` from civ-server; `live_scene` renders parcels with facade/provenance styling.
 32. **Voxel-surface anchoring** — **done** (item 33): cached `chunk_voxels` + column sampling in `live_scene`; falls back to `terrain_surface_y`.
-33. **Next:** (TBD — follow kickoff / FR matrix).
+33. **Live attach smoke harness** — **done** (item 34): `just civis-3d-live-smoke` (F3D0 + voxel ground + standalone check); `just civis-3d-standalone-live-url URL=ws://…` for remote civ-server.
+34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
+35. **Next:** graph-parcel rendering in `bevy_window`; dedupe `LiveScenePlugin` vs `bevy_window` frame apply.
 
 ## Run
 
@@ -123,5 +125,6 @@ cargo test -p civ-tactics
 cargo test -p civ-engine pending_damage
 cargo test -p civ-engine war_bridge_records
 cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+just civis-3d-live-smoke
 just civis-3d-verify
 ```

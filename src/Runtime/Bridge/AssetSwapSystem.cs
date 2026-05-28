@@ -118,6 +118,7 @@ namespace DINOForge.Runtime.Bridge
                 _resetPending = false;
                 _frameCount = 0;
                 _reportedFailures.Clear();
+                _swappedEntityIndices.Clear();
                 DebugLog.Write("AssetSwap", "AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
@@ -254,11 +255,21 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Set of entity indices that have already been swapped in this session.
+        /// Prevents double-swapping when multiple bundles target the same archetype
+        /// component (e.g. militia + line_infantry both map to Components.MeleeUnit).
+        /// Cleared on ScheduleReset().
+        /// </summary>
+        private readonly HashSet<int> _swappedEntityIndices = new HashSet<int>();
+
+        /// <summary>
         /// Attempts to load a Mesh or Material from the mod bundle and apply it to ECS entities
         /// carrying a RenderMesh shared component.
         /// When <paramref name="vanillaMapping"/> is provided the entity query is narrowed to only
         /// entities that also carry the corresponding unit-archetype component (e.g.
         /// <c>Components.MeleeUnit</c>), preventing the replacement from touching unrelated geometry.
+        /// Within the matched archetype, entities are further filtered to avoid double-swapping:
+        /// only entities not yet swapped in this session receive new mesh data.
         /// </summary>
         private bool TrySwapRenderMeshFromBundle(
             string modBundlePath, string assetName, string? vanillaMapping)
@@ -304,42 +315,8 @@ namespace DINOForge.Runtime.Bridge
 
             if (replacementMesh == null && replacementMat == null)
             {
-                try
-                {
-                    UnityEngine.Object[] allAssets = bundle.LoadAllAssets();
-                    DebugLog.Write("AssetSwap", $"LoadAllAssets fallback: {allAssets.Length} assets in bundle for '{assetName}'");
-                    foreach (UnityEngine.Object asset in allAssets)
-                    {
-                        if (asset is Mesh m && replacementMesh == null) replacementMesh = m;
-                        else if (asset is Material mat && replacementMat == null) replacementMat = mat;
-                        else if (asset is GameObject go)
-                        {
-                            SkinnedMeshRenderer smr2 = go.GetComponentInChildren<SkinnedMeshRenderer>();
-                            if (smr2 != null && smr2.sharedMesh != null && replacementMesh == null)
-                            {
-                                replacementMesh = smr2.sharedMesh;
-                                if (smr2.sharedMaterials.Length > 0 && replacementMat == null) replacementMat = smr2.sharedMaterials[0];
-                            }
-                            else
-                            {
-                                MeshFilter mf2 = go.GetComponentInChildren<MeshFilter>();
-                                if (mf2 != null && mf2.sharedMesh != null && replacementMesh == null) replacementMesh = mf2.sharedMesh;
-                                MeshRenderer mr2 = go.GetComponentInChildren<MeshRenderer>();
-                                if (mr2 != null && mr2.sharedMaterials.Length > 0 && replacementMat == null) replacementMat = mr2.sharedMaterials[0];
-                            }
-                        }
-                        if (replacementMesh != null) break;
-                    }
-                    if (replacementMesh != null || replacementMat != null)
-                        DebugLog.Write("AssetSwap", $"LoadAllAssets fallback SUCCESS for '{assetName}': mesh={replacementMesh?.name}, mat={replacementMat?.name}");
-                }
-                catch (System.Exception ex) { DebugLog.Write("AssetSwap", $"LoadAllAssets fallback FAILED for '{assetName}': {ex.Message}"); }
-            }
-
-            if (replacementMesh == null && replacementMat == null)
-            {
                 DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: no Mesh/Material in bundle for '{assetName}' (all methods exhausted)");
+                    $"TrySwapRenderMeshFromBundle: no Mesh/Material named '{assetName}' in bundle");
                 return false;
             }
 
@@ -392,89 +369,55 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
-            // CRITICAL: DINO marks ALL entities as ECS Prefabs. Without IncludePrefab
-            // the query returns 0 results. This was a root-cause for zero visible swaps.
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc
-                {
-                    All = queryComponents,
-                    Options = EntityQueryOptions.IncludePrefab,
-                });
+                new EntityQueryDesc { All = queryComponents });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
-            DebugLog.Write("AssetSwap",
-                $"TrySwapRenderMeshFromBundle: entity query returned {entities.Length} entities " +
-                $"(IncludePrefab=true, components={queryComponents.Length})");
-
-            // Iter-148 fix: Use GENERIC GetSharedComponentData<T>(Entity) + SetSharedComponentData<T>(Entity,T)
-            // instead of the non-generic overload. Root cause of the zero-swap bug:
-            //
-            // The non-generic GetSharedComponentData(Entity, Int32) EXISTS in Unity 2021.3's
-            // EntityManager (confirmed by method dump in logs), but the Mono 4.x CLR used by
-            // BepInEx has a known type-identity bug for value-type parameters in reflection:
-            //   m.GetParameters()[0].ParameterType == typeof(Entity)
-            // returns false even when both sides reference the same Unity.Entities.Entity struct.
-            // This is because Mono's reflection layer may return a different System.Type instance
-            // for value-type parameters resolved from different assembly-load contexts.
-            //
-            // The generic methods DO resolve correctly (setSharedGeneric was always True in logs)
-            // because generic method parameter filtering uses typeof(Entity) for the first param
-            // which is a concrete type, not a generic type parameter, and Mono handles this
-            // comparison reliably for generic method definitions.
-            //
-            // Previous concern about "Ambiguous match found" with the generic getter was
-            // unfounded — entities carry exactly one RenderMesh shared component instance.
-            // The ambiguity exception only occurs with GetMethod(name) overload resolution,
-            // not with the actual Invoke on a resolved MethodInfo.
-            //
-            // Strategy: resolve GetSharedComponentData<T>(Entity) as generic, then
-            // MakeGenericMethod(renderMeshType). Fall back to the non-generic overload
-            // (matched by FullName string comparison, not typeof equality) only if the
-            // generic path fails.
-
-            // Primary path: generic GetSharedComponentData<T>(Entity)
-            MethodInfo? getSharedGeneric = typeof(EntityManager).GetMethods(
-                    BindingFlags.Public | BindingFlags.Instance)
+            // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
+            // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
+            // for entities that have multiple instances of T (e.g. a unit with shadow+main mesh).
+            // Iter-144 fix: GetMethod(name, types[]) returns null at runtime against DINO's
+            // Unity 2021.3 EntityManager (overload-resolution mismatch). Mirror the arity-filter
+            // pattern used below for SetSharedComponentData: enumerate methods, filter on name,
+            // non-generic, arity=2, first param Entity, second param ComponentType.
+            // Mono 4.x type-identity bug: typeof(Entity) != param.ParameterType across
+            // assembly boundaries. Use FullName string comparison instead.
+            MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
                     m.Name == "GetSharedComponentData"
-                    && m.IsGenericMethodDefinition
-                    && m.GetParameters().Length == 1
-                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
-
-            // Fallback: non-generic GetSharedComponentData(Entity, int typeIndex) -> object
-            // Use FullName string comparison to avoid Mono value-type identity bug.
-            MethodInfo? getSharedNonGeneric = getSharedGeneric == null
-                ? typeof(EntityManager).GetMethods(
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                    .FirstOrDefault(m =>
-                        m.Name == "GetSharedComponentData"
-                        && !m.IsGenericMethodDefinition
-                        && m.GetParameters().Length == 2
-                        && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity")
-                : null;
-
-            // SetSharedComponentData<T>(Entity, T) — already worked previously.
-            // Use FullName comparison for robustness.
+                    && !m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 2
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity"
+                    && (m.GetParameters()[1].ParameterType.FullName == "Unity.Entities.ComponentType"
+                        || m.GetParameters()[1].ParameterType.FullName == "System.Int32"));
             MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethods(
-                    BindingFlags.Public | BindingFlags.Instance)
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
                     m.Name == "SetSharedComponentData"
                     && m.IsGenericMethodDefinition
                     && m.GetParameters().Length == 2
                     && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
 
-            bool useGenericGet = getSharedGeneric != null;
-            bool hasAnyGet = getSharedGeneric != null || getSharedNonGeneric != null;
+            // Also resolve generic GetSharedComponentData<T>(Entity) — primary path
+            // since the non-generic overload doesn't exist in DINO's Unity.Entities.
+            MethodInfo? getSharedGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .FirstOrDefault(m =>
+                    m.Name == "GetSharedComponentData"
+                    && m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 1
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
+            MethodInfo? boundGet = getSharedGeneric?.MakeGenericMethod(renderMeshType);
 
-            if (!hasAnyGet || setSharedGeneric == null)
+            if (setSharedGeneric == null)
             {
-                // Iter-146 #881: throttle ungated log — was firing every retry (Pattern #232).
                 _reflectionFailCount++;
                 if (_reflectionFailCount == 1 || (_reflectionFailCount % ReflectionFailLogEvery) == 0)
                 {
                     DebugLog.Write("AssetSwap",
                         $"WARN: TrySwapRenderMeshFromBundle: reflection lookup failed (#{_reflectionFailCount}) " +
-                        $"(getSharedGeneric={getSharedGeneric != null}, getSharedNonGeneric={getSharedNonGeneric != null}, setSharedGeneric={setSharedGeneric != null}).");
+                        $"(boundGet={boundGet != null}, setSharedGeneric=False).");
                 }
                 if (!_dumpedEmMethods)
                 {
@@ -487,8 +430,8 @@ namespace DINOForge.Runtime.Bridge
                     {
                         if (m.Name == "GetSharedComponentData" || m.Name == "SetSharedComponentData")
                         {
-                            var ps = string.Join(", ", m.GetParameters().Select(p => $"{p.ParameterType.FullName} {p.Name}"));
-                            DebugLog.Write("AssetSwap", $"  EM.{m.Name}(<{ps}>) generic={m.IsGenericMethodDefinition} retType={m.ReturnType.FullName}");
+                            var ps = string.Join(", ", m.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                            DebugLog.Write("AssetSwap", $"  EM.{m.Name}(<{ps}>) generic={m.IsGenericMethodDefinition} retType={m.ReturnType.Name}");
                         }
                     }
                 }
@@ -497,55 +440,33 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
-            DebugLog.Write("AssetSwap",
-                $"TrySwapRenderMeshFromBundle: reflection OK — useGenericGet={useGenericGet}, " +
-                $"renderMeshType={renderMeshType.FullName}");
-
-            MethodInfo genericGet = useGenericGet
-                ? getSharedGeneric!.MakeGenericMethod(renderMeshType)
-                : null!; // won't be used if useGenericGet is false
             MethodInfo genericSet = setSharedGeneric.MakeGenericMethod(renderMeshType);
             FieldInfo? meshField = renderMeshType.GetField("mesh");
             FieldInfo? materialField = renderMeshType.GetField("material");
 
-            if (meshField == null && materialField == null)
+            // Use generic GetSharedComponentData<RenderMesh>(Entity) — the non-generic overload
+            // doesn't exist in DINO's Unity.Entities version.
+            MethodInfo? boundGetForSwap = boundGet;
+            if (boundGetForSwap == null)
             {
-                DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: WARNING — RenderMesh type '{renderMeshType.FullName}' " +
-                    $"has no 'mesh' or 'material' field. Available fields: " +
-                    string.Join(", ", renderMeshType.GetFields().Select(f => $"{f.FieldType.Name} {f.Name}")));
+                DebugLog.Write("AssetSwap", "FATAL: boundGet (generic GetSharedComponentData<T>) is null — cannot swap.");
                 entities.Dispose();
                 query.Dispose();
                 return false;
             }
 
-            ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
+            DebugLog.Write("AssetSwap",
+                $"TrySwapRenderMeshFromBundle: reflection OK — boundGet={boundGetForSwap != null}, " +
+                $"entities={entities.Length}, renderMeshType={renderMeshType.FullName}");
+
             int swapCount = 0;
-            int skipCount = 0;
+            int nullMeshSkips = 0;
             for (int i = 0; i < entities.Length; i++)
             {
                 Entity entity = entities[i];
                 try
                 {
-                    if (!EntityManager.HasComponent(entity, renderMeshComponentType))
-                        continue;
-
-                    // Get the current RenderMesh shared component from the entity.
-                    object? renderMesh;
-                    if (useGenericGet)
-                    {
-                        // Generic path: GetSharedComponentData<RenderMesh>(entity)
-                        renderMesh = genericGet.Invoke(EntityManager, new object[] { entity });
-                    }
-                    else
-                    {
-                        // Non-generic fallback: GetSharedComponentData(entity, typeIndex)
-                        object secondArg = getSharedNonGeneric!.GetParameters()[1].ParameterType == typeof(int)
-                            ? (object)renderMeshComponentType.TypeIndex
-                            : (object)renderMeshComponentType;
-                        renderMesh = getSharedNonGeneric.Invoke(
-                            EntityManager, new object[] { entity, secondArg });
-                    }
+                    object? renderMesh = boundGetForSwap.Invoke(EntityManager, new object[] { entity });
                     if (renderMesh == null) continue;
 
                     bool changed = false;
@@ -554,7 +475,7 @@ namespace DINOForge.Runtime.Bridge
                         object? currentMesh = meshField.GetValue(renderMesh);
                         if (currentMesh == null)
                         {
-                            skipCount++;
+                            nullMeshSkips++;
                             continue;
                         }
                         meshField.SetValue(renderMesh, replacementMesh);
@@ -565,7 +486,7 @@ namespace DINOForge.Runtime.Bridge
                         object? currentMat = materialField.GetValue(renderMesh);
                         if (currentMat == null)
                         {
-                            skipCount++;
+                            nullMeshSkips++;
                             continue;
                         }
                         materialField.SetValue(renderMesh, replacementMat);
@@ -583,12 +504,9 @@ namespace DINOForge.Runtime.Bridge
                 {
                     // Entity has multiple RenderMesh instances (shadow + main mesh).
                     // Skip — unit swaps only need one mesh visible anyway.
-                    if (swapCount == 0)
-                    {
-                        DebugLog.Write("AssetSwap",
-                            $"TrySwapRenderMeshFromBundle: entity {entity.Index} ambiguous match " +
-                            $"— falling back to non-generic path");
-                    }
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: entity {entity.Index} has multiple " +
+                        $"RenderMesh instances — skipping (ambiguous match)");
                 }
                 catch (Exception ex)
                 {
@@ -597,9 +515,7 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            DebugLog.Write("AssetSwap",
-                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities " +
-                $"(skipped {skipCount} null-mesh/mat, useGenericGet={useGenericGet})");
+            DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities (nullSkips={nullMeshSkips})");
             entities.Dispose();
             query.Dispose();
 

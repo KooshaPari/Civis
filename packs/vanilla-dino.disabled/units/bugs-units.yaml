@@ -1,0 +1,171 @@
+# Bugs - Vanilla DINO Units (5 units total)
+# Tier 1: Basic Swarm
+- id: vanilla_bugs_larva
+  display_name: Larva
+  description: Insect larva. Minimal threat but reproductive value. Extremely cheap.
+  unit_class: MilitiaLight
+  faction_id: bugs
+  tier: 1
+  vanilla_dino_name: Larva
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Larva"
+  stats:
+    hp: 20.0
+    damage: 1.0
+    armor: 0.0
+    range: 0.0
+    speed: 2.0
+    accuracy: 0.3
+    fire_rate: 0.4
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 0
+      gold: 0
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine]
+  weapon: melee_bite
+
+- id: vanilla_bugs_bug
+  display_name: Bug
+  description: Standard insect warrior. The basic unit of the swarm.
+  unit_class: CoreLineInfantry
+  faction_id: bugs
+  tier: 1
+  vanilla_dino_name: Bug
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Bug"
+  stats:
+    hp: 32.0
+    damage: 5.0
+    armor: 0.8
+    range: 0.0
+    speed: 4.5
+    accuracy: 0.5
+    fire_rate: 0.8
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 2
+      gold: 1
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [HoldLine]
+  weapon: melee_claw
+
+# Tier 2: Specialized Bugs
+- id: vanilla_bugs_runner
+  display_name: Runner
+  description: Fast swarm unit with poison attacks. Scout and skirmisher.
+  unit_class: FastVehicle
+  faction_id: bugs
+  tier: 2
+  vanilla_dino_name: Runner
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Runner"
+  stats:
+    hp: 38.0
+    damage: 6.0
+    armor: 0.5
+    range: 0.0
+    speed: 7.0
+    accuracy: 0.6
+    fire_rate: 0.9
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 3
+      gold: 2
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: melee_poison_claw
+
+- id: vanilla_bugs_poisonous
+  display_name: Poisonous
+  description: Swarm unit with acidic attacks. Area damage and armor penetration.
+  unit_class: AntiArmor
+  faction_id: bugs
+  tier: 2
+  vanilla_dino_name: Poisonous
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Poisonous"
+  stats:
+    hp: 40.0
+    damage: 7.0
+    armor: 1.0
+    range: 0.0
+    speed: 4.0
+    accuracy: 0.55
+    fire_rate: 0.7
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 4
+      gold: 2
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [Charge, AntiArmor]
+  weapon: melee_acid
+
+# Tier 3: Elite Bugs
+- id: vanilla_bugs_gargantua
+  display_name: Gargantua
+  description: Massive insectoid creature. Slow but devastating melee power.
+  unit_class: WalkerHeavy
+  faction_id: bugs
+  tier: 3
+  vanilla_dino_name: Gargantua
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Gargantua"
+  stats:
+    hp: 105.0
+    damage: 13.0
+    armor: 2.5
+    range: 0.0
+    speed: 3.0
+    accuracy: 0.55
+    fire_rate: 0.7
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 20
+      gold: 10
+      population: 3
+  defense_tags: [Exotic, Biological]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_mandibles
+
+- id: vanilla_bugs_queen
+  display_name: Queen
+  description: Hive ruler and production center. Commands the swarm and spawns units.
+  unit_class: WalkerHeavy
+  faction_id: bugs
+  tier: 3
+  vanilla_dino_name: Queen
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Queen"
+  stats:
+    hp: 140.0
+    damage: 10.0
+    armor: 3.0
+    range: 0.0
+    speed: 2.0
+    accuracy: 0.5
+    fire_rate: 0.8
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 50
+      gold: 30
+      population: 5
+  defense_tags: [Exotic, Biological]
+  behavior_tags: [HoldLine, SiegePriority]
+  weapon: melee_mandibles

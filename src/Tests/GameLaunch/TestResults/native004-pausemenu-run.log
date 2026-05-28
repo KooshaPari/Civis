@@ -1,0 +1,69 @@
+
+Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Debug\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 11.0.0-preview.2.26159.112)
+[xUnit.net 00:00:00.36]   Discovering: DINOForge.Tests.GameLaunch
+[xUnit.net 00:00:00.56]   Discovered:  DINOForge.Tests.GameLaunch
+[xUnit.net 00:00:00.58]   Starting:    DINOForge.Tests.GameLaunch
+[01:04:46 INF] Connecting to pipe 'dinoforge-game-bridge' with timeout 10000ms
+[01:04:46 INF] Successfully connected to pipe 'dinoforge-game-bridge'
+[01:04:46 DBG] Sending request 'connect' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:46 INF] Request 'connect' completed successfully in 242ms
+[01:04:46 INF] Captured session_id a8a1a00ffc784008a4921f59be44611d from connect handshake
+[01:04:46 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:47 INF] Request 'waitForWorld' completed successfully in 218ms
+[01:04:47 DBG] Sending request 'startGame' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:47 INF] Request 'startGame' completed successfully in 234ms
+[01:04:50 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:50 INF] Request 'status' completed successfully in 334ms
+[01:04:50 DBG] Sending request 'pressEscape' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:51 INF] Request 'pressEscape' completed successfully in 470ms
+[01:04:51 DBG] Sending request 'simulateKey' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:51 INF] Request 'simulateKey' completed successfully in 268ms
+[01:04:51 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:51 INF] Request 'invokeMethod' completed successfully in 284ms
+[01:04:51 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:52 INF] Request 'invokeMethod' completed successfully in 365ms
+[01:04:52 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:52 INF] Request 'invokeMethod' completed successfully in 532ms
+[01:04:52 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:53 INF] Request 'invokeMethod' completed successfully in 682ms
+[01:04:53 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:53 INF] Request 'invokeMethod' completed successfully in 452ms
+[01:04:53 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:54 INF] Request 'invokeMethod' completed successfully in 439ms
+[01:04:54 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:54 INF] Request 'invokeMethod' completed successfully in 417ms
+[01:04:54 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)
+[01:04:55 INF] Request 'invokeMethod' completed successfully in 431ms
+[xUnit.net 00:00:10.20]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [FAIL]
+[xUnit.net 00:00:10.20]       Expected pauseOpened to be True because pause menu must open via bridge simulateKey (Escape) or invokeMethod fallback, but found False.
+[xUnit.net 00:00:10.20]       Stack Trace:
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+[xUnit.net 00:00:10.20]            at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+[xUnit.net 00:00:10.20]         C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(86,0): at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened()
+[xUnit.net 00:00:10.20]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:10.23]   Finished:    DINOForge.Tests.GameLaunch
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [8 s]
+  Error Message:
+   Expected pauseOpened to be True because pause menu must open via bridge simulateKey (Escape) or invokeMethod fallback, but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 86
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 1
+     Failed: 1
+ Total time: 12.0821 Seconds

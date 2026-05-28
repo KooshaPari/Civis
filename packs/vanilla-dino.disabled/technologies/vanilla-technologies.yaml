@@ -1,0 +1,395 @@
+# Vanilla DINO - Technology and Research Trees
+
+# Warrior Training (Barracks I)
+- id: tech_mongoose_reflexes
+  display_name: Mongoose Reflexes
+  description: Improves dodge and evasion of infantry units.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_1
+  cost:
+    gold: 50
+  research_time: 60
+  effects:
+    unit_accuracy: -0.1
+    unit_defense: 0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Mongoose_Reflexes"
+
+- id: tech_sharpshooter
+  display_name: Sharpshooter
+  description: Improves accuracy and damage of ranged units.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_1
+  cost:
+    gold: 50
+  research_time: 60
+  effects:
+    ranged_accuracy: 0.2
+    ranged_damage: 0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Sharpshooter"
+
+# Barracks II Technologies
+- id: tech_quad_cure
+  display_name: Quad Cure
+  description: Advanced healing techniques for support units.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_2
+  cost:
+    gold: 75
+  research_time: 90
+  effects:
+    healer_effectiveness: 0.3
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Quad_Cure"
+
+- id: tech_harsh_training
+  display_name: Harsh Training
+  description: Rigorous training improves unit damage and morale.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_2
+  cost:
+    gold: 75
+  research_time: 90
+  effects:
+    unit_damage: 0.15
+    morale_recovery: 0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Harsh_Training"
+
+- id: tech_quick_reload
+  display_name: Quick Reload
+  description: Faster weapon reloading for ranged units.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_2
+  cost:
+    gold: 60
+  research_time: 75
+  effects:
+    ranged_fire_rate: 0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Quick_Reload"
+
+# Barracks III Technologies
+- id: tech_blacksmith_guild
+  display_name: Blacksmith Guild
+  description: Superior weapon crafting and armor improvement.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_3
+  cost:
+    gold: 100
+  research_time: 120
+  effects:
+    unit_damage: 0.2
+    unit_armor: 0.15
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Blacksmith_Guild"
+
+- id: tech_infected_mushroom
+  display_name: Infected Mushroom
+  description: Fungal enhancement for potent unit abilities.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_3
+  cost:
+    gold: 90
+  research_time: 110
+  effects:
+    unit_special_ability_power: 0.3
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Infected_Mushroom"
+
+- id: tech_cast_iron_hammer
+  display_name: Cast-Iron Hammer
+  description: Heavy weaponry for crushing offensive force.
+  category: military_training
+  faction_id: null
+  building_required: barracks_tier_3
+  cost:
+    gold: 85
+  research_time: 105
+  effects:
+    heavy_unit_damage: 0.25
+    heavy_unit_cost: -0.05
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Cast_Iron_Hammer"
+
+# Siege Engineering
+- id: tech_conveyor_method
+  display_name: Conveyor Method
+  description: Improved projectile delivery for siege weapons.
+  category: siege
+  faction_id: null
+  building_required: engineer_guild_tier_1
+  cost:
+    gold: 80
+  research_time: 90
+  effects:
+    siege_fire_rate: 0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Conveyor_Method"
+
+- id: tech_big_rocks
+  display_name: Big Rocks
+  description: Larger projectiles for increased siege damage.
+  category: siege
+  faction_id: null
+  building_required: engineer_guild_tier_1
+  cost:
+    gold: 85
+  research_time: 95
+  effects:
+    siege_damage: 0.3
+    siege_cost: -0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Big_Rocks"
+
+# Engineer Guild II
+- id: tech_manufacturing_production
+  display_name: Manufacturing Production
+  description: Industrial techniques for mass production of siege engines.
+  category: siege
+  faction_id: null
+  building_required: engineer_guild_tier_2
+  cost:
+    gold: 120
+  research_time: 150
+  effects:
+    siege_production_speed: 0.3
+    siege_cost: -0.15
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Manufacturing_Production"
+
+- id: tech_shrapnel_projectiles
+  display_name: Shrapnel Projectiles
+  description: Fragmented ammunition for area effect damage.
+  category: siege
+  faction_id: null
+  building_required: engineer_guild_tier_2
+  cost:
+    gold: 115
+  research_time: 145
+  effects:
+    siege_area_damage: 0.4
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Shrapnel_Projectiles"
+
+- id: tech_foolproof_charge
+  display_name: Foolproof Charge
+  description: Reliable explosive charges for improved siege reliability.
+  category: siege
+  faction_id: null
+  building_required: engineer_guild_tier_2
+  cost:
+    gold: 110
+  research_time: 140
+  effects:
+    siege_accuracy: 0.25
+    siege_reliability: 0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Foolproof_Charge"
+
+# Economy and Welfare
+- id: tech_hygiene
+  display_name: Hygiene
+  description: Sanitation practices reduce disease and improve health.
+  category: economy
+  faction_id: null
+  building_required: hospital
+  cost:
+    gold: 60
+  research_time: 70
+  effects:
+    citizen_health: 0.15
+    disease_resistance: 0.3
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Hygiene"
+
+- id: tech_urgency_bonus
+  display_name: Urgency Bonus
+  description: Emergency protocols improve hospital efficiency during crises.
+  category: economy
+  faction_id: null
+  building_required: hospital
+  cost:
+    gold: 70
+  research_time: 80
+  effects:
+    hospital_healing: 0.4
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Urgency_Bonus"
+
+- id: tech_general_wards
+  display_name: General Wards
+  description: Specialized medical wards for comprehensive patient care.
+  category: economy
+  faction_id: null
+  building_required: hospital
+  cost:
+    gold: 75
+  research_time: 90
+  effects:
+    citizen_morale: 0.2
+    hospital_effectiveness: 0.25
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#General_Wards"
+
+# University Technologies
+- id: tech_dietetics
+  display_name: Dietetics
+  description: Nutritional science improves food efficiency.
+  category: economy
+  faction_id: null
+  building_required: university
+  cost:
+    gold: 80
+  research_time: 100
+  effects:
+    food_production: 0.15
+    citizen_happiness: 0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Dietetics"
+
+- id: tech_urban_planning_1
+  display_name: Urban Planning I
+  description: City planning improves resource efficiency and happiness.
+  category: economy
+  faction_id: null
+  building_required: university
+  cost:
+    gold: 85
+  research_time: 105
+  effects:
+    building_efficiency: 0.15
+    citizen_happiness: 0.15
+  unlocks:
+    - tech_urban_planning_2
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Urban_Planning_I"
+
+- id: tech_urban_planning_2
+  display_name: Urban Planning II
+  description: Advanced city planning with comprehensive infrastructure.
+  category: economy
+  faction_id: null
+  building_required: university
+  cost:
+    gold: 100
+  research_time: 120
+  effects:
+    building_efficiency: 0.25
+    citizen_happiness: 0.25
+    storage_capacity: 0.15
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Urban_Planning_II"
+
+# Cavalry Training
+- id: tech_horse_tactics
+  display_name: Horse Tactics
+  description: Mounted unit training and cavalry tactics.
+  category: military_training
+  faction_id: null
+  building_required: stables_tier_1
+  cost:
+    gold: 75
+  research_time: 85
+  effects:
+    cavalry_damage: 0.15
+    cavalry_morale: 0.1
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Horse_Tactics"
+
+- id: tech_heavy_cavalry
+  display_name: Heavy Cavalry
+  description: Advanced armor and training for heavy mounted knights.
+  category: military_training
+  faction_id: null
+  building_required: stables_tier_2
+  cost:
+    gold: 100
+  research_time: 120
+  effects:
+    heavy_cavalry_armor: 0.25
+    heavy_cavalry_damage: 0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Heavy_Cavalry"
+
+# Undead-Specific Technologies (if Undead faction is unlocked)
+- id: tech_corpse_reanimation
+  display_name: Corpse Reanimation
+  description: Necromantic techniques for raising the dead (Undead faction only).
+  category: magic
+  faction_id: undead
+  building_required: null
+  cost:
+    gold: 150
+  research_time: 180
+  effects:
+    undead_production_speed: 0.4
+    undead_cost: -0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Corpse_Reanimation"
+
+- id: tech_plague_mastery
+  display_name: Plague Mastery
+  description: Command over pestilence and disease (Undead faction only).
+  category: magic
+  faction_id: undead
+  building_required: null
+  cost:
+    gold: 140
+  research_time: 170
+  effects:
+    poison_damage: 0.3
+    plague_spread: 0.2
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Plague_Mastery"
+
+# Magic Systems (Rebel/Magic Factions)
+- id: tech_astral_ray
+  display_name: Astral Ray
+  description: Magical spell for ranged magical attacks (Rebel/Magic factions).
+  category: magic
+  faction_id: null
+  building_required: null
+  cost:
+    gold: 100
+  research_time: 120
+  effects:
+    magic_damage: 0.3
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Astral_Ray"
+
+- id: tech_mass_healing
+  display_name: Mass Healing
+  description: Wide-area healing spell (Rebel/Magic factions).
+  category: magic
+  faction_id: null
+  building_required: null
+  cost:
+    gold: 110
+  research_time: 130
+  effects:
+    spell_healing: 0.4
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Mass_Healing"
+
+- id: tech_meteor
+  display_name: Meteor
+  description: Devastating spell summoning meteors (Rebel/Magic factions).
+  category: magic
+  faction_id: null
+  building_required: null
+  cost:
+    gold: 130
+  research_time: 160
+  effects:
+    spell_damage: 0.5
+    spell_area_effect: 0.3
+  unlocks: []
+  wiki_reference: "https://dino.fandom.com/wiki/Technologies#Meteor"

@@ -1,0 +1,9 @@
+id: gold
+name: Gold
+description: |
+  Premium currency obtained exclusively through trade or plundering. Scarce and valuable.
+  Used for elite units and special buildings. No decay.
+production_rate: 0.0
+storage_capacity: 500.0
+decay_rate: 0.0
+is_tradeable_default: true

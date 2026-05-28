@@ -1,0 +1,59 @@
+
+Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:46.48]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [SKIP]
+  Skipped DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [1 ms]
+[xUnit.net 00:01:31.24]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [44 s]
+  Error Message:
+   Expected modsVisible to be True because native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe), but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 215
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 124
+--- End of stack trace from previous location ---
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [40 s]
+  Error Message:
+   Expected modsVisible to be True because native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe), but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 215
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 140
+--- End of stack trace from previous location ---
+[xUnit.net 00:02:12.05]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [FAIL]
+[xUnit.net 00:02:52.70]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [40 s]
+  Error Message:
+   Expected modsVisible to be True because native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe), but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 215
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 38
+--- End of stack trace from previous location ---
+[xUnit.net 00:03:10.32]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [2 s]
+  Error Message:
+   Expected modMenuPanel.MatchedNode!.Visible to be False because ModMenuPanel should start hidden (CanvasGroup alpha 0) before F10 toggle, but found True.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeFalse(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 56
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:    23, Skipped:     1, Total:    28, Duration: 3 m 21 s - DINOForge.Tests.GameLaunch.dll (net11.0)

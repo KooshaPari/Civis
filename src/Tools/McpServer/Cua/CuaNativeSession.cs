@@ -21,15 +21,29 @@ internal static class CuaNativeSession
 
         try
         {
+<<<<<<< Updated upstream
             await using CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct)
                 .ConfigureAwait(false);
             byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: windowTitle, ct: ct)
                 .ConfigureAwait(false);
             if (pngBytes.Length == 0)
                 return false;
+=======
+            CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct).ConfigureAwait(false);
+            try
+            {
+                byte[] pngBytes = await computer.ScreenshotAsync(windowTitle: windowTitle, ct: ct).ConfigureAwait(false);
+                if (pngBytes.Length == 0)
+                    return false;
+>>>>>>> Stashed changes
 
-            await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
-            return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+                await File.WriteAllBytesAsync(outputPath, pngBytes, ct).ConfigureAwait(false);
+                return File.Exists(outputPath) && new FileInfo(outputPath).Length > 1000;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch
         {
@@ -48,11 +62,24 @@ internal static class CuaNativeSession
 
         try
         {
+<<<<<<< Updated upstream
             await using CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct)
                 .ConfigureAwait(false);
             await computer.PressKeyAsync(keyName, ct)
                 .ConfigureAwait(false);
             return true;
+=======
+            CuaNativeClient computer = await StartClientAsync(options, nativePath, "warn", ct).ConfigureAwait(false);
+            try
+            {
+                await computer.PressKeyAsync(keyName, ct).ConfigureAwait(false);
+                return true;
+            }
+            finally
+            {
+                await computer.DisposeAsync().ConfigureAwait(false);
+            }
+>>>>>>> Stashed changes
         }
         catch
         {

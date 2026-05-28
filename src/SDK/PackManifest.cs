@@ -47,6 +47,13 @@ namespace DINOForge.SDK
         public string Type { get; set; } = "content";
 
         /// <summary>
+        /// Pack classification tier: engine_extension, content, total_conversion, or baseline.
+        /// Determines how the pack is displayed in mod menus and which features it can access.
+        /// </summary>
+        [YamlMember(Alias = "classification")]
+        public string? Classification { get; set; }
+
+        /// <summary>
         /// Optional description of the pack's purpose and content.
         /// </summary>
         [YamlMember(Alias = "description")]
@@ -87,6 +94,38 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "unity_version")]
         public string UnityVersion { get; set; } = ">=2021.3.0 <2022.0.0";
+
+        /// <summary>
+        /// Optional homepage URL for the pack (opened in browser from mod menu).
+        /// </summary>
+        [YamlMember(Alias = "homepage_url")]
+        public string? HomepageUrl { get; set; }
+
+        /// <summary>
+        /// Optional GitHub repository URL for the pack.
+        /// </summary>
+        [YamlMember(Alias = "github_url")]
+        public string? GithubUrl { get; set; }
+
+        /// <summary>
+        /// Optional Discord server/channel invite URL for the pack.
+        /// </summary>
+        [YamlMember(Alias = "discord_url")]
+        public string? DiscordUrl { get; set; }
+
+        /// <summary>
+        /// SPDX license identifier (e.g., "CC0-1.0", "CC-BY-4.0", "MIT").
+        /// Displayed as a badge in the mod menu detail pane.
+        /// </summary>
+        [YamlMember(Alias = "license")]
+        public string? License { get; set; }
+
+        /// <summary>
+        /// Searchable tags for the pack (e.g., ["warfare", "sci-fi", "total-conversion"]).
+        /// Displayed as colored chips in the mod menu detail pane.
+        /// </summary>
+        [YamlMember(Alias = "tags")]
+        public List<string>? Tags { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
         /// <summary>
         /// Content types and files to load from this pack.

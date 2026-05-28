@@ -17,6 +17,7 @@ using DINOForge.Runtime.HotReload;
 using DINOForge.Runtime.UI;
 using DINOForge.SDK;
 using DINOForge.SDK.HotReload;
+using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using Unity.Entities;
 using UnityEngine;
@@ -952,6 +953,119 @@ namespace DINOForge.Runtime
             }
         }
 
+        /// <summary>
+        /// #897: Reads up to <paramref name="maxNames"/> item names (the "name:" YAML field value)
+        /// from the YAML files listed under a pack category (e.g., units, buildings, factions).
+        /// Falls back to bare file-stem names when "name:" is absent. Best-effort only.
+        /// </summary>
+        private static List<string> ExtractContentNames(string? packDirectory, List<string>? loadEntries, int maxNames)
+        {
+            List<string> names = new List<string>(maxNames);
+            if (string.IsNullOrEmpty(packDirectory) || loadEntries == null || loadEntries.Count == 0)
+                return names;
+
+            foreach (string entry in loadEntries)
+            {
+                if (string.IsNullOrWhiteSpace(entry)) continue;
+                string resolved = Path.Combine(packDirectory, entry);
+                try
+                {
+                    IEnumerable<string> yamlFiles;
+                    if (Directory.Exists(resolved))
+                        yamlFiles = Directory.GetFiles(resolved, "*.yaml", SearchOption.TopDirectoryOnly);
+                    else if (File.Exists(resolved))
+                        yamlFiles = new[] { resolved };
+                    else
+                    {
+                        string withExt = resolved + ".yaml";
+                        yamlFiles = File.Exists(withExt) ? new[] { withExt } : new string[0];
+                    }
+
+                    foreach (string yamlFile in yamlFiles)
+                    {
+                        if (names.Count >= maxNames) break;
+                        string? itemName = ReadYamlNameField(yamlFile)
+                            ?? Path.GetFileNameWithoutExtension(yamlFile);
+                        if (!string.IsNullOrEmpty(itemName))
+                            names.Add(itemName!);
+                    }
+                }
+                catch
+                {
+                    // safe-swallow: UI preview only, non-critical
+                }
+                if (names.Count >= maxNames) break;
+            }
+            return names;
+        }
+
+        /// <summary>
+        /// #897: Reads the first "name:" value from a YAML file (handles both mapping and list-of-mappings).
+        /// Returns null if not found or on any error.
+        /// </summary>
+        private static string? ReadYamlNameField(string yamlFile)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(yamlFile, System.Text.Encoding.UTF8);
+                // Walk through lines looking for "name:" (top-level key in mapping, or after "- " list entry)
+                foreach (string raw in lines)
+                {
+                    string line = raw.TrimStart();
+                    // Handle list entries: "- name: Foo" or nested "  name: Foo"
+                    if (line.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string value = line.Substring(5).Trim().Trim('"', '\'');
+                        if (!string.IsNullOrEmpty(value))
+                            return value;
+                    }
+                    // Support "- name: Foo" syntax (list item starting with dash)
+                    if (line.StartsWith("- name:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string value = line.Substring(7).Trim().Trim('"', '\'');
+                        if (!string.IsNullOrEmpty(value))
+                            return value;
+                    }
+                }
+            }
+            catch
+            {
+                // safe-swallow: UI preview only
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// #897: Returns absolute paths to screenshot images under packs/&lt;id&gt;/screenshots/.
+        /// Supports PNG and JPG. Returns at most <paramref name="maxCount"/> paths.
+        /// </summary>
+        private static List<string> ScanScreenshots(string? packDirectory, int maxCount)
+        {
+            List<string> paths = new List<string>(maxCount);
+            if (string.IsNullOrEmpty(packDirectory)) return paths;
+            string screenshotsDir = Path.Combine(packDirectory, "screenshots");
+            if (!Directory.Exists(screenshotsDir)) return paths;
+            try
+            {
+                string[] pngs = Directory.GetFiles(screenshotsDir, "*.png", SearchOption.TopDirectoryOnly);
+                string[] jpgs = Directory.GetFiles(screenshotsDir, "*.jpg", SearchOption.TopDirectoryOnly);
+                List<string> all = new List<string>(pngs.Length + jpgs.Length);
+                all.AddRange(pngs);
+                all.AddRange(jpgs);
+                all.Sort(StringComparer.OrdinalIgnoreCase);
+                foreach (string p in all)
+                {
+                    paths.Add(p);
+                    if (paths.Count >= maxCount) break;
+                }
+            }
+            catch
+            {
+                // safe-swallow: UI gallery is optional
+            }
+            return paths;
+        }
+
         private static void DetectContentConflicts(List<PackDisplayInfo> packs)
         {
             var contentTypeOwners = new Dictionary<string, List<string>>(StringComparer.Ordinal);
@@ -997,6 +1111,23 @@ namespace DINOForge.Runtime
             }
         }
 
+        /// <summary>
+        /// Derives the pack tier from the manifest's classification string and pack ID.
+        /// </summary>
+        private static PackTier DerivePackTier(string? classification, string packId)
+        {
+            if (packId == "vanilla-dino")
+                return PackTier.Baseline;
+
+            return classification?.ToLowerInvariant() switch
+            {
+                "engine_extension" => PackTier.EngineExtension,
+                "content" => PackTier.Content,
+                "total_conversion" => PackTier.TotalConversion,
+                _ => PackTier.Content // default
+            };
+        }
+
         private PackDisplayInfo GetCachedPackDisplayInfo(string manifestPath, PackLoader packLoader)
         {
             FileInfo manifestFile = new FileInfo(manifestPath);
@@ -1010,6 +1141,17 @@ namespace DINOForge.Runtime
             PackManifest manifest = packLoader.LoadFromFile(manifestPath);
             string packDirectory = Path.GetDirectoryName(manifestPath) ?? string.Empty;
             Dictionary<string, int> contentSummary = ExtractContentSummary(manifest, packDirectory);
+
+            // #897: Populate rich metadata — names preview, links, license, tags, screenshots.
+            List<string> unitNames = ExtractContentNames(packDirectory, manifest.Loads?.Units, maxNames: 5);
+            List<string> buildingNames = ExtractContentNames(packDirectory, manifest.Loads?.Buildings, maxNames: 3);
+            List<string> factionNames = ExtractContentNames(packDirectory, manifest.Loads?.Factions, maxNames: 5);
+            List<string> screenshotPaths = ScanScreenshots(packDirectory, maxCount: 10);
+            List<string> tags = manifest.Tags != null ? new List<string>(manifest.Tags) : new List<string>();
+
+            // #902: Derive pack tier from classification.
+            PackTier tier = DerivePackTier(manifest.Classification, manifest.Id);
+
             PackDisplayInfo displayInfo = new PackDisplayInfo(
                 id: manifest.Id,
                 name: manifest.Name,
@@ -1022,7 +1164,19 @@ namespace DINOForge.Runtime
                 dependencies: manifest.DependsOn.AsReadOnly(),
                 conflicts: manifest.ConflictsWith.AsReadOnly(),
                 errors: new List<string>().AsReadOnly(),
-                contentSummary: contentSummary);
+                contentSummary: contentSummary,
+                detectedConflicts: null,
+                homepageUrl: manifest.HomepageUrl,
+                githubUrl: manifest.GithubUrl,
+                discordUrl: manifest.DiscordUrl,
+                license: manifest.License,
+                tags: tags.AsReadOnly(),
+                unitNames: unitNames.AsReadOnly(),
+                buildingNames: buildingNames.AsReadOnly(),
+                factionNames: factionNames.AsReadOnly(),
+                screenshotPaths: screenshotPaths.AsReadOnly(),
+                classification: manifest.Classification,
+                tier: tier);
 
             _packDisplayInfoCache[manifestPath] = new CachedPackDisplayInfo(
                 manifestFile.LastWriteTimeUtc,

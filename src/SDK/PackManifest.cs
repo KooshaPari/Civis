@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Models;
 using DINOForge.SDK.Patching;
 using YamlDotNet.Serialization;
 
@@ -156,6 +157,14 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "patches")]
         public List<PatchSet>? Patches { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
+        /// User-configurable runtime settings for this pack.
+        /// Exposed in the F10 mod menu's detail pane, allowing players to customize
+        /// difficulty, enabled features, and other mod behaviors.
+        /// </summary>
+        [YamlMember(Alias = "settings")]
+        public List<PackSetting>? Settings { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
     }
 
     /// <summary>

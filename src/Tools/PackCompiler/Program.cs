@@ -323,7 +323,7 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
                     if (fix) AnsiConsole.MarkupLine("[yellow]Mode: Auto-repair enabled[/]");
                     if (strict) AnsiConsole.MarkupLine("[yellow]Mode: Strict (warnings treated as errors)[/]");
                     AnsiConsole.WriteLine();
@@ -380,7 +380,7 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -468,21 +468,21 @@ namespace DINOForge.Tools.PackCompiler
                 var table = new Table();
                 table.AddColumn("Field");
                 table.AddColumn("Value");
-                table.AddRow("ID", manifest.Id);
-                table.AddRow("Name", manifest.Name);
-                table.AddRow("Version", manifest.Version);
-                table.AddRow("Author", manifest.Author ?? "[dim]<not set>[/]");
-                table.AddRow("Type", manifest.Type);
-                table.AddRow("Description", manifest.Description ?? "[dim]<not set>[/]");
-                table.AddRow("Framework Version", manifest.FrameworkVersion);
-                table.AddRow("Game Version", manifest.GameVersion ?? "[dim]<not set>[/]");
+                table.AddRow("ID", Markup.Escape(manifest.Id));
+                table.AddRow("Name", Markup.Escape(manifest.Name));
+                table.AddRow("Version", Markup.Escape(manifest.Version));
+                table.AddRow("Author", manifest.Author is not null ? Markup.Escape(manifest.Author) : "[dim]<not set>[/]");
+                table.AddRow("Type", Markup.Escape(manifest.Type));
+                table.AddRow("Description", manifest.Description is not null ? Markup.Escape(manifest.Description) : "[dim]<not set>[/]");
+                table.AddRow("Framework Version", Markup.Escape(manifest.FrameworkVersion));
+                table.AddRow("Game Version", manifest.GameVersion is not null ? Markup.Escape(manifest.GameVersion) : "[dim]<not set>[/]");
                 table.AddRow("Load Order", manifest.LoadOrder.ToString());
 
                 if (manifest.DependsOn.Count > 0)
-                    table.AddRow("Depends On", string.Join(", ", manifest.DependsOn));
+                    table.AddRow("Depends On", Markup.Escape(string.Join(", ", manifest.DependsOn)));
 
                 if (manifest.ConflictsWith.Count > 0)
-                    table.AddRow("Conflicts With", string.Join(", ", manifest.ConflictsWith));
+                    table.AddRow("Conflicts With", Markup.Escape(string.Join(", ", manifest.ConflictsWith)));
 
                 AnsiConsole.Write(table);
                 AnsiConsole.WriteLine();
@@ -603,9 +603,9 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Build[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
                     if (!string.IsNullOrEmpty(outputDir))
-                        AnsiConsole.MarkupLine($"Output Directory: {outputDir}");
+                        AnsiConsole.MarkupLine($"Output Directory: {Markup.Escape(outputDir)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -647,7 +647,7 @@ namespace DINOForge.Tools.PackCompiler
                 var manifest = loader.LoadFromFile(manifestPath);
                 if (!jsonMode)
                 {
-                    AnsiConsole.MarkupLine($"[green]v[/] Manifest valid: {manifest.Name} v{manifest.Version}");
+                    AnsiConsole.MarkupLine($"[green]v[/] Manifest valid: {Markup.Escape(manifest.Name)} v{Markup.Escape(manifest.Version)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -682,7 +682,7 @@ namespace DINOForge.Tools.PackCompiler
                 {
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[bold green]Build successful![/]");
-                    AnsiConsole.MarkupLine($"Output: {finalOutputDir}");
+                    AnsiConsole.MarkupLine($"Output: {Markup.Escape(finalOutputDir)}");
                 }
             }
             catch (Exception ex)
@@ -697,7 +697,7 @@ namespace DINOForge.Tools.PackCompiler
                         writer.WriteEndArray();
                     });
                 else
-                    AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {ex.Message}");
+                    AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {Markup.Escape(ex.Message)}");
                 Environment.Exit(1);
             }
         }
@@ -708,9 +708,9 @@ namespace DINOForge.Tools.PackCompiler
             try
             {
                 AnsiConsole.MarkupLine("[bold blue]Thunderstore Package Creation[/]");
-                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
-                AnsiConsole.MarkupLine($"Author: {author}");
-                AnsiConsole.MarkupLine($"Output Directory: {outputDir}");
+                AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
+                AnsiConsole.MarkupLine($"Author: {Markup.Escape(author)}");
+                AnsiConsole.MarkupLine($"Output Directory: {Markup.Escape(outputDir)}");
                 AnsiConsole.WriteLine();
 
                 if (!Directory.Exists(packPath))
@@ -854,17 +854,17 @@ namespace DINOForge.Tools.PackCompiler
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold green]Package created successfully![/]");
-                AnsiConsole.MarkupLine($"[bold]ZIP:[/] {zipPath}");
-                AnsiConsole.MarkupLine($"[bold]Size:[/] {FormatBytes(zipSize)}");
-                AnsiConsole.MarkupLine($"[bold]Package Name:[/] {tsName}");
-                AnsiConsole.MarkupLine($"[bold]Version:[/] {manifest.Version}");
+                AnsiConsole.MarkupLine($"[bold]ZIP:[/] {Markup.Escape(zipPath)}");
+                AnsiConsole.MarkupLine($"[bold]Size:[/] {Markup.Escape(FormatBytes(zipSize))}");
+                AnsiConsole.MarkupLine($"[bold]Package Name:[/] {Markup.Escape(tsName)}");
+                AnsiConsole.MarkupLine($"[bold]Version:[/] {Markup.Escape(manifest.Version)}");
                 AnsiConsole.MarkupLine($"[bold]Dependencies:[/] {dependencies.Count}");
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[green]Ready to upload to Thunderstore![/]");
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[bold red]Package creation failed:[/] {ex.Message}");
+                AnsiConsole.MarkupLine($"[bold red]Package creation failed:[/] {Markup.Escape(ex.Message)}");
                 Environment.Exit(1);
             }
         }
@@ -877,7 +877,7 @@ namespace DINOForge.Tools.PackCompiler
                 string manifestPath = Path.Combine(packPath, "pack.yaml");
                 if (!File.Exists(manifestPath))
                 {
-                    AnsiConsole.MarkupLine($"[bold red]ERROR:[/] No pack.yaml found in {packPath}");
+                    AnsiConsole.MarkupLine($"[bold red]ERROR:[/] No pack.yaml found in {Markup.Escape(packPath)}");
                     Environment.Exit(1);
                     return;
                 }
@@ -924,13 +924,13 @@ namespace DINOForge.Tools.PackCompiler
                 string json = JsonSerializer.Serialize(tsManifest, PackCompilerJsonOptions.GoFfi);
                 File.WriteAllText(outPath, json, Encoding.UTF8);
 
-                AnsiConsole.MarkupLine($"[green]✓[/] Thunderstore manifest written to: [bold]{outPath}[/]");
-                AnsiConsole.MarkupLine($"  Package: [bold]{tsManifest.name}[/] v{tsManifest.version_number}");
+                AnsiConsole.MarkupLine($"[green]✓[/] Thunderstore manifest written to: [bold]{Markup.Escape(outPath)}[/]");
+                AnsiConsole.MarkupLine($"  Package: [bold]{Markup.Escape(tsManifest.name)}[/] v{Markup.Escape(tsManifest.version_number)}");
                 AnsiConsole.MarkupLine($"  Dependencies: [dim]{dependencies.Count}[/]");
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[bold red]Thunderstore generation failed:[/] {ex.Message}");
+                AnsiConsole.MarkupLine($"[bold red]Thunderstore generation failed:[/] {Markup.Escape(ex.Message)}");
                 Environment.Exit(1);
             }
         }

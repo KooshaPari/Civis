@@ -10,6 +10,10 @@ default:
 build:
     cargo build --workspace
 
+# Compile-only check for the workspace.
+check:
+    cargo check --workspace
+
 # Run tests
 test:
     cargo test --workspace

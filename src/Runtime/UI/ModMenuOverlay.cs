@@ -485,6 +485,9 @@ namespace DINOForge.Runtime.UI
         /// <summary>Raw classification string from manifest (engine_extension, content, total_conversion, baseline).</summary>
         public string? Classification { get; }
 
+        /// <summary>User-configurable runtime settings for this pack (from pack.yaml settings).</summary>
+        public IReadOnlyList<PackSetting>? Settings { get; }
+
         /// <summary>
         /// Creates a new pack display info instance.
         /// </summary>
@@ -512,7 +515,8 @@ namespace DINOForge.Runtime.UI
             IReadOnlyList<string>? factionNames = null,
             IReadOnlyList<string>? screenshotPaths = null,
             string? classification = null,
-            PackTier tier = PackTier.Content)
+            PackTier tier = PackTier.Content,
+            IReadOnlyList<PackSetting>? settings = null)
         {
             Id = id;
             Name = name;
@@ -538,6 +542,7 @@ namespace DINOForge.Runtime.UI
             ScreenshotPaths = screenshotPaths ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
             Classification = classification;
             Tier = tier;
+            Settings = settings;
         }
 
         /// <summary>Returns a copy with the enabled state changed.</summary>
@@ -545,6 +550,6 @@ namespace DINOForge.Runtime.UI
             => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled,
                 Dependencies, Conflicts, Errors, ContentSummary, DetectedConflicts,
                 HomepageUrl, GithubUrl, DiscordUrl, License, Tags,
-                UnitNames, BuildingNames, FactionNames, ScreenshotPaths, Classification, Tier);
+                UnitNames, BuildingNames, FactionNames, ScreenshotPaths, Classification, Tier, Settings);
     }
 }

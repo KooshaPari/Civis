@@ -27,5 +27,15 @@ namespace DINOForge.SDK
             string contentType,
             PackManifest manifest,
             IList<string> errors);
+
+        /// <summary>
+        /// Stores a patched YAML string that will be used in place of reading the
+        /// specified file path from disk during subsequent
+        /// <see cref="LoadAndRegisterContent"/> calls.
+        /// Populated by <see cref="ContentLoader"/> after the patch phase runs.
+        /// </summary>
+        /// <param name="filePath">Absolute file path acting as the cache key.</param>
+        /// <param name="patchedYaml">Patched YAML content to use instead of the file.</param>
+        void SetPatchedYaml(string filePath, string patchedYaml);
     }
 }

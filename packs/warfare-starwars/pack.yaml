@@ -32,7 +32,6 @@ description: |
 
   Experience the conflict between biological discipline and mechanical coordination in a galaxy far, far away.
 type: total_conversion
-classification: total_conversion
 
 depends_on: []
 conflicts_with: []
@@ -45,6 +44,30 @@ ui_theme:
   accent_color: "#C0392B"
   text_color: "#FFE81F"
   background_tint: "#0A0A1A"
+
+settings:
+  - key: difficulty_multiplier
+    display_name: "Difficulty Multiplier"
+    type: float
+    default_value: 1.0
+    min: 0.5
+    max: 3.0
+    description: "Multiplies enemy unit stats (health, damage) for harder or easier gameplay"
+  - key: enable_jedi_powers
+    display_name: "Enable Jedi Powers"
+    type: bool
+    default_value: true
+    description: "Jedi units gain special Force ability bonuses"
+  - key: clone_legion_quality
+    display_name: "Clone Trooper Quality"
+    type: enum
+    default_value: "standard"
+    enum_options:
+      - "recruit"
+      - "standard"
+      - "elite"
+      - "legendary"
+    description: "Training level for Republic clone legions (affects unit stats)"
 
 loads:
   factions:

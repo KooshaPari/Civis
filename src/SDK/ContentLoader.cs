@@ -5,6 +5,7 @@ using System.Linq;
 using DINOForge.SDK.Dependencies;
 using DINOForge.SDK.HotReload;
 using DINOForge.SDK.Models;
+using DINOForge.SDK.Patching;
 using DINOForge.SDK.Registry;
 using DINOForge.SDK.Validation;
 using YamlDotNet.Serialization;
@@ -254,6 +255,12 @@ namespace DINOForge.SDK
                 }
             }
 
+            // Patch phase: run BEFORE any typed deserialization or registry population.
+            // Collects raw YAML for all packs, applies cross-pack PatchSets declared in
+            // pack.yaml `patches:` sections, then stores patched YAML strings into
+            // _registryImport so the subsequent per-pack load loop reads patched content.
+            ApplyPatchPhase(manifests, directoriesByPackId, errors);
+
             List<string> loadedPacks = new List<string>();
             foreach (PackManifest orderedManifest in dependencyResult.LoadOrder)
             {
@@ -275,6 +282,197 @@ namespace DINOForge.SDK
                 ? ContentLoadResult.Partial(loadedPacks.AsReadOnly(), LastLoadErrors)
                 : ContentLoadResult.Success(loadedPacks.AsReadOnly());
         }
+
+        // ----------------------------------------------------------------------------------
+        // Patch phase
+        // ----------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Runs the RimWorld-style patch phase between manifest discovery and typed loading.
+        ///
+        /// Algorithm:
+        /// 1. For every pack that declares at least one patch, collect the raw YAML files
+        ///    for all OTHER packs (targets) as a nested generic dictionary.
+        /// 2. Call <see cref="PatchApplicator.Apply"/> with all collected patch sets.
+        /// 3. Re-serialize each section of the patched dictionary back to YAML and store
+        ///    the result via <see cref="IRegistryImportService.SetPatchedYaml"/>, keyed by
+        ///    the original absolute file path.  The subsequent per-pack load loop will then
+        ///    pick up the patched YAML instead of re-reading from disk.
+        /// </summary>
+        private void ApplyPatchPhase(
+            IReadOnlyList<(string Directory, PackManifest Manifest)> manifests,
+            Dictionary<string, string> directoriesByPackId,
+            List<string> errors)
+        {
+            // Collect patch sets from all manifests.
+            List<(string SourcePackId, PatchSet PatchSet)> allPatchSets =
+                new List<(string SourcePackId, PatchSet PatchSet)>();
+
+            foreach ((string _, PackManifest manifest) in manifests)
+            {
+                if (manifest.Patches == null || manifest.Patches.Count == 0)
+                    continue;
+
+                foreach (PatchSet patchSet in manifest.Patches)
+                {
+                    allPatchSets.Add((manifest.Id, patchSet));
+                }
+            }
+
+            if (allPatchSets.Count == 0)
+                return; // No patches declared — skip entire phase.
+
+            // Determine which packs are targeted by at least one patch set.
+            HashSet<string> targetedPackIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string _, PatchSet patchSet) in allPatchSets)
+            {
+                targetedPackIds.Add(patchSet.TargetPack);
+            }
+
+            // Build the generic content dictionary for targeted packs only.
+            // Shape: packId → sectionName → itemId → { property → value }
+            List<Dictionary<string, Dictionary<string, Dictionary<string, object>>>> perPackDicts =
+                new List<Dictionary<string, Dictionary<string, Dictionary<string, object>>>>();
+
+            // Track file paths per (packId, sectionName) so we can re-serialize
+            // patched sections back to the correct file path keys.
+            // Key: packId → sectionName → list of absolute file paths
+            Dictionary<string, Dictionary<string, List<string>>> packSectionFilePaths =
+                new Dictionary<string, Dictionary<string, List<string>>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach ((string packDirectory, PackManifest manifest) in manifests)
+            {
+                if (!targetedPackIds.Contains(manifest.Id))
+                    continue;
+
+                Dictionary<string, List<string>> sectionFilePaths =
+                    new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                // Collect files per section using the same discovery logic as LoadManifestContent.
+                Dictionary<string, IReadOnlyList<string>> contentFiles = CollectContentFiles(packDirectory, manifest);
+                foreach (KeyValuePair<string, IReadOnlyList<string>> kvp in contentFiles)
+                {
+                    sectionFilePaths[kvp.Key] = new List<string>(kvp.Value);
+                }
+
+                packSectionFilePaths[manifest.Id] = sectionFilePaths;
+
+                Dictionary<string, Dictionary<string, Dictionary<string, object>>> packDict =
+                    PackContentBuilder.Build(manifest.Id, contentFiles);
+                perPackDicts.Add(packDict);
+            }
+
+            if (perPackDicts.Count == 0)
+                return; // Targeted packs had no discoverable content.
+
+            Dictionary<string, Dictionary<string, Dictionary<string, object>>> unified =
+                PackContentBuilder.Merge(perPackDicts);
+
+            PatchApplicator patchApplicator = new PatchApplicator(msg =>
+            {
+                // Patch log messages are informational — not load errors.
+                // Surface them via errors list prefixed so consumers can distinguish.
+                errors.Add($"[patch] {msg}");
+            });
+
+            patchApplicator.Apply(unified, allPatchSets);
+
+            // Re-serialize patched sections and push into the registry import cache,
+            // keyed by the original file paths that the load loop will request.
+            foreach (KeyValuePair<string, Dictionary<string, Dictionary<string, object>>> packEntry in unified)
+            {
+                string packId = packEntry.Key;
+                if (!packSectionFilePaths.TryGetValue(packId, out Dictionary<string, List<string>>? sectionFilePaths2))
+                    continue;
+
+                Dictionary<string, Dictionary<string, object>> sections = packEntry.Value;
+                foreach (KeyValuePair<string, Dictionary<string, object>> sectionEntry in sections)
+                {
+                    string sectionName = sectionEntry.Key;
+                    if (!sectionFilePaths2.TryGetValue(sectionName, out List<string>? filePaths))
+                        continue;
+
+                    if (filePaths.Count == 0)
+                        continue;
+
+                    // Re-serialize the full patched section as a list. When a section
+                    // spans multiple files we map ALL patched items to the FIRST file
+                    // (which is always the one the load loop discovers first) and mark
+                    // the remaining files as empty lists so they produce no duplicates.
+                    string patchedYaml = PackContentBuilder.SerializeSectionToYaml(sectionEntry.Value);
+                    _registryImport.SetPatchedYaml(filePaths[0], patchedYaml);
+
+                    for (int i = 1; i < filePaths.Count; i++)
+                    {
+                        // Subsequent files for this section are now subsumed into the
+                        // first file's patched YAML — mark them empty so no double-registration.
+                        _registryImport.SetPatchedYaml(filePaths[i], "[]");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns the set of content YAML files a pack would load, grouped by section
+        /// name, using the same discovery logic as <see cref="LoadManifestContent"/>.
+        /// </summary>
+        private Dictionary<string, IReadOnlyList<string>> CollectContentFiles(
+            string packDirectory,
+            PackManifest manifest)
+        {
+            Dictionary<string, IReadOnlyList<string>> result =
+                new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+            string[] contentTypes;
+            if (manifest.Loads != null)
+            {
+                // Mirror LoadManifestContent's explicit section list.
+                contentTypes = new[]
+                {
+                    "units", "buildings", "factions", "weapons", "doctrines", "faction_patches", "stats"
+                };
+            }
+            else
+            {
+                contentTypes = _schemaResolver.ContentTypes.ToArray();
+            }
+
+            foreach (string contentType in contentTypes)
+            {
+                List<string>? declaredPaths = GetDeclaredPaths(manifest, contentType);
+                IReadOnlyList<string> files = _discoveryService.DiscoverYamlFiles(packDirectory, contentType, declaredPaths);
+                if (files.Count > 0)
+                {
+                    result[contentType] = files;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns the declared paths list for a given content type from the manifest,
+        /// matching the switch-like logic used in <see cref="LoadManifestContent"/>.
+        /// </summary>
+        private static List<string>? GetDeclaredPaths(PackManifest manifest, string contentType)
+        {
+            if (manifest.Loads == null)
+                return null;
+
+            return contentType.ToLowerInvariant() switch
+            {
+                "units" => manifest.Loads.Units,
+                "buildings" => manifest.Loads.Buildings,
+                "factions" => manifest.Loads.Factions,
+                "weapons" => manifest.Loads.Weapons,
+                "doctrines" => manifest.Loads.Doctrines,
+                "faction_patches" => manifest.Loads.FactionPatches,
+                "stats" => manifest.Overrides?.Stats?.Count > 0 ? manifest.Overrides.Stats : null,
+                _ => null
+            };
+        }
+
+        // ----------------------------------------------------------------------------------
 
         private List<(string Directory, PackManifest Manifest)> DiscoverPackManifests(
             string packsRootDirectory,

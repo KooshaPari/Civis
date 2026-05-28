@@ -24,8 +24,21 @@ namespace DINOForge.SDK
         private readonly IList<StatOverrideDefinition> _loadedOverrides;
         private readonly Action<string> _log;
 
+        // Patched YAML cache: absolute filePath → patched YAML string.
+        // Populated by ContentLoader.ApplyPatchPhase() before the typed load loop.
+        // When a file path has an entry here, LoadAndRegisterContent uses this YAML
+        // instead of reading from disk. This is the hook point for PatchApplicator.
+        private readonly Dictionary<string, string> _patchedYamlCache =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         /// <inheritdoc/>
         public IReadOnlyList<StatOverrideDefinition> LoadedOverrides => (IReadOnlyList<StatOverrideDefinition>)_loadedOverrides;
+
+        /// <inheritdoc/>
+        public void SetPatchedYaml(string filePath, string patchedYaml)
+        {
+            _patchedYamlCache[filePath] = patchedYaml;
+        }
 
         /// <summary>
         /// Initializes a new <see cref="RegistryImportService"/>.
@@ -54,14 +67,27 @@ namespace DINOForge.SDK
             IList<string> errors)
         {
             string yamlContent;
-            try
+
+            // Patch phase hook: if a patched version of this file was produced by
+            // PatchApplicator, use it instead of reading from disk. This allows
+            // cross-pack patches (replace, multiply, add, remove) to take effect
+            // before the typed deserialization and registry registration.
+            if (_patchedYamlCache.TryGetValue(yamlFilePath, out string? cached))
             {
-                yamlContent = SafeFileIO.ReadText(yamlFilePath);
+                _log($"[ContentLoader] Using patched YAML for {Path.GetFileName(yamlFilePath)}");
+                yamlContent = cached;
             }
-            catch (Exception ex)
+            else
             {
-                errors.Add($"Failed to read {yamlFilePath}: {ex.Message}");
-                return;
+                try
+                {
+                    yamlContent = SafeFileIO.ReadText(yamlFilePath);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Failed to read {yamlFilePath}: {ex.Message}");
+                    return;
+                }
             }
 
             if (!ValidateContent(yamlFilePath, contentType, yamlContent, errors))

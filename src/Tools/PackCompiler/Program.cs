@@ -8,11 +8,13 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Spectre.Console;
 using DINOForge.SDK;
 using DINOForge.SDK.Assets;
 using DINOForge.SDK.IO;
 using DINOForge.SDK.Models;
+using DINOForge.SDK.Signing;
 using DINOForge.SDK.Validation;
 using DINOForge.Tools.PackCompiler.Json;
 using DINOForge.Tools.PackCompiler.Models;
@@ -228,6 +230,35 @@ namespace DINOForge.Tools.PackCompiler
             packCommand.Subcommands.Add(packUpdateCommand);
             packCommand.Subcommands.Add(packLockCommand);
 
+            // Sign command - cryptographic pack signing
+            var signPackPathArg = new Argument<string>("pack-path") { Description = "Path to the pack directory" };
+            var signKeyPathOption = new Option<string>("--key", "-k") { Description = "Path to PEM-format RSA private key file (required)" };
+            var signOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory for signature file (defaults to pack-path)" };
+            var signCommand = new Command("sign") { Description = "Sign a pack with an RSA private key" };
+            signCommand.Arguments.Add(signPackPathArg);
+            signCommand.Options.Add(signKeyPathOption);
+            signCommand.Options.Add(signOutputOption);
+            signCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(signPackPathArg)!;
+                string keyPath = parseResult.GetValue(signKeyPathOption)!;
+                string? outputDir = parseResult.GetValue(signOutputOption);
+                SignPack(packPath, keyPath, outputDir ?? packPath);
+            });
+
+            // Verify command - cryptographic pack verification
+            var verifyPackPathArg = new Argument<string>("pack-path") { Description = "Path to the pack directory" };
+            var verifyKeysOption = new Option<string?>("--trusted-keys", "-t") { Description = "Path to trusted keys file (optional)" };
+            var verifyCommand = new Command("verify") { Description = "Verify a pack signature" };
+            verifyCommand.Arguments.Add(verifyPackPathArg);
+            verifyCommand.Options.Add(verifyKeysOption);
+            verifyCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(verifyPackPathArg)!;
+                string? trustedKeysFile = parseResult.GetValue(verifyKeysOption);
+                VerifyPack(packPath, trustedKeysFile);
+            });
+
             var rootCommand = new RootCommand("DINOForge PackCompiler - Validate and bundle content packs");
             rootCommand.Subcommands.Add(validateCommand);
             rootCommand.Subcommands.Add(buildCommand);
@@ -236,6 +267,8 @@ namespace DINOForge.Tools.PackCompiler
             rootCommand.Subcommands.Add(assetsCommand);
             rootCommand.Subcommands.Add(bundlesCommand);
             rootCommand.Subcommands.Add(packCommand);
+            rootCommand.Subcommands.Add(signCommand);
+            rootCommand.Subcommands.Add(verifyCommand);
 
             ParseResult parseResultObj = rootCommand.Parse(args);
 
@@ -1677,6 +1710,120 @@ namespace DINOForge.Tools.PackCompiler
         private static string GetDefaultWebsiteUrl()
         {
             return Environment.GetEnvironmentVariable("DINOFORGE_WEBSITE_URL") ?? "https://github.com/DINOForge/DINOForge";
+        }
+
+        /// <summary>
+        /// Signs a pack with an RSA private key and writes the signature to pack.signature.
+        /// </summary>
+        private static void SignPack(string packPath, string keyPath, string outputDir)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]PackCompiler Sign[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                AnsiConsole.MarkupLine($"Key File: {keyPath}");
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                }
+
+                if (!File.Exists(keyPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Private key file not found");
+                    Environment.Exit(1);
+                }
+
+                // Load the private key from PEM file
+                var keyContent = File.ReadAllText(keyPath, Encoding.UTF8);
+                var rsa = RSA.Create();
+                rsa.ImportFromPem(keyContent.ToCharArray());
+
+                // Sign the pack
+                AnsiConsole.MarkupLine("[cyan]Computing pack hash...[/]");
+                var packHash = PackSigner.ComputePackHash(packPath);
+                AnsiConsole.MarkupLine($"Pack hash: {packHash}");
+
+                AnsiConsole.MarkupLine("[cyan]Signing pack...[/]");
+                var signature = PackSigner.SignPack(packPath, rsa);
+
+                // Write signature to file
+                var outputPath = Path.Combine(outputDir, "pack.signature");
+                Directory.CreateDirectory(outputDir);
+                File.WriteAllText(outputPath, signature, Encoding.UTF8);
+
+                AnsiConsole.MarkupLine($"[bold green]Success![/] Signature written to: {outputPath}");
+                AnsiConsole.MarkupLine($"Signature: {signature[..Math.Min(64, signature.Length)]}...");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// Verifies a pack's signature.
+        /// </summary>
+        private static void VerifyPack(string packPath, string? trustedKeysFile)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]PackCompiler Verify[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                if (trustedKeysFile != null)
+                {
+                    AnsiConsole.MarkupLine($"Trusted Keys: {trustedKeysFile}");
+                }
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                }
+
+                var verifier = new PackVerifier();
+
+                // Load trusted keys if provided
+                int trustedCount = 0;
+                if (!string.IsNullOrEmpty(trustedKeysFile) && File.Exists(trustedKeysFile))
+                {
+                    trustedCount = verifier.LoadTrustedKeys(trustedKeysFile);
+                    AnsiConsole.MarkupLine($"[cyan]Loaded {trustedCount} trusted author(s)[/]");
+                }
+
+                // Verify the pack
+                AnsiConsole.MarkupLine("[cyan]Verifying pack signature...[/]");
+                var result = verifier.Verify(packPath);
+
+                AnsiConsole.WriteLine();
+                switch (result.Status)
+                {
+                    case SignatureStatus.Unsigned:
+                        AnsiConsole.MarkupLine("[yellow]⚠ Unsigned:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.VerifiedAuthor:
+                        AnsiConsole.MarkupLine("[bold green]✓ Verified:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.UnknownAuthor:
+                        AnsiConsole.MarkupLine("[yellow]⚠ Unknown Author:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.TamperedSignatureMismatch:
+                        AnsiConsole.MarkupLine("[bold red]✗ Tampered:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.VerificationError:
+                        AnsiConsole.MarkupLine("[bold red]✗ Error:[/] " + result.Message);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}");
+                Environment.Exit(1);
+            }
         }
     }
 }

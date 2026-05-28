@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
 using DINOForge.SDK;
 using DINOForge.SDK.Registry;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -37,16 +38,20 @@ public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
         LoadSceneResult sceneResult = await fixture.Client.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex);
         if (sceneResult.Success)
         {
-            await Task.Delay(3000);
+            bool dfCanvasReady = await TestWait.UntilAsync(
+                async () =>
+                {
+                    UiWaitResult wait = await fixture.Client.WaitForUiAsync(
+                        "name=CountLabel",
+                        "exists",
+                        timeoutMs: 2000).ConfigureAwait(false);
+                    return wait.Ready;
+                },
+                TimeSpan.FromSeconds(15),
+                pollMs: 250).ConfigureAwait(false);
+            dfCanvasReady.Should().BeTrue(
+                "HudStrip CountLabel should exist on DFCanvas after main menu load (DFCanvas may lag mod platform)");
         }
-
-        // DFCanvas/HudStrip may finish building after mod platform reports ready (alpha=0 strip is "exists" not "visible").
-        UiWaitResult hudReady = await fixture.Client.WaitForUiAsync(
-            "name=CountLabel",
-            "exists",
-            timeoutMs: 15_000);
-        hudReady.Ready.Should().BeTrue(
-            "HudStrip CountLabel should exist on DFCanvas after bootstrap (DFCanvas may lag mod platform)");
 
         UiActionResult hudLabel = await fixture.Client.QueryUiAsync("name=CountLabel");
         hudLabel.Success.Should().BeTrue("HudStrip CountLabel should be queryable after waitForUi");

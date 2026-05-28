@@ -4,7 +4,7 @@ Civis Bevy 3D reference client. Per `docs/adr/ADR-007-three-renderers.md`:
 
 > **Daily-driver for CI, deterministic replay verification, screenshot regression,
 > agent-driven workflows.** Visual quality below Unreal but improving (`bevy_pbr`,
-> `bevy_solari` for RT GI in 0.15+).
+> `bevy_solari` for RT GI on **Bevy 0.18**, feature-gated via `solari`).
 
 ## Status
 
@@ -68,7 +68,8 @@ Press **`F3`** in `civ-bevy-window` to toggle chunk wireframe rendering. State l
 
 When enabled:
 
-- Bevy 0.14 [`WireframePlugin`](https://docs.rs/bevy/latest/bevy/pbr/wireframe/struct.WireframePlugin.html) draws native line wireframes on chunk meshes (DX12 / Vulkan / Metal; requires `WgpuFeatures::POLYGON_MODE_LINE`).
+- Bevy 0.18 [`WireframePlugin`](https://docs.rs/bevy/latest/bevy/pbr/wireframe/struct.WireframePlugin.html) draws native line wireframes on chunk meshes (DX12 / Vulkan / Metal; requires `WgpuFeatures::POLYGON_MODE_LINE`).
+- Renderer adapters are restricted to **native HAL backends** (DX12 + Vulkan on Windows) via [`native_backend`](src/native_backend.rs). Override with `CIV_BEVY_BACKEND=dx12|vulkan|metal`. Future DXR/mesh-shader work uses `wgpu::Device::as_hal` — see `docs/research/wgpu-native-escape-hatches.md`.
 - Chunk fill uses unlit [`StandardMaterial`](https://docs.rs/bevy/latest/bevy/pbr/struct.StandardMaterial.html) at low alpha ([`DEBUG_WIREFRAME_OVERLAY_ALPHA`](src/lib.rs), default `0.22`) so solid faces stay visible under the lines.
 - Agent markers are unaffected.
 

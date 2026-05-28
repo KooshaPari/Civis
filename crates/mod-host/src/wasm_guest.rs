@@ -1,5 +1,6 @@
 //! WASM guest invocation via `wasmtime` (CIV-0700 v3 — policy, economy, military exports).
 
+use crate::capability::{ModCapabilitySet, ModEnforcementCtx, WorldDomain, ERR_PERMISSION_DENIED};
 use thiserror::Error;
 use wasmtime::{Caller, Engine, Instance, Linker, Module, Store};
 
@@ -16,6 +17,8 @@ pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
     "memory_size",
     "memory_read",
     "memory_write",
+    "world_read",
+    "action_emit",
 ];
 
 /// Packed capability API major version returned by host import `capability_api_version`.
@@ -25,10 +28,23 @@ pub const HOST_CAPABILITY_API_VERSION: i32 = 1;
 pub const HOST_GUEST_MEMORY_CAP: usize = 65_536;
 
 /// Per-instance host state for capability imports.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct HostState {
     guest_memory: Vec<u8>,
     sim_tick: u64,
+    capabilities: ModCapabilitySet,
+    enforcement: ModEnforcementCtx,
+}
+
+impl Default for HostState {
+    fn default() -> Self {
+        Self {
+            guest_memory: Vec::new(),
+            sim_tick: 0,
+            capabilities: ModCapabilitySet::allow_all(),
+            enforcement: ModEnforcementCtx::default(),
+        }
+    }
 }
 
 /// Errors from guest instantiation or export calls.
@@ -49,6 +65,10 @@ fn trim_guest_memory(mem: &mut Vec<u8>) {
     if mem.len() > HOST_GUEST_MEMORY_CAP {
         mem.truncate(HOST_GUEST_MEMORY_CAP);
     }
+}
+
+fn record_permission_denial(state: &mut HostState, call: &str, domain: Option<WorldDomain>) {
+    state.enforcement.record_denial(call, domain);
 }
 
 fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Error> {
@@ -104,6 +124,51 @@ fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Err
             Ok(())
         },
     )?;
+
+    linker.func_wrap(
+        HOST_IMPORT_MODULE,
+        "world_read",
+        |mut caller: Caller<'_, HostState>, domain: i32| -> Result<i32, wasmtime::Error> {
+            let state = caller.data_mut();
+            if state.enforcement.suspended {
+                record_permission_denial(state, "world_read", None);
+                return Ok(ERR_PERMISSION_DENIED);
+            }
+            let Some(domain) = WorldDomain::from_i32(domain) else {
+                record_permission_denial(state, "world_read", None);
+                return Ok(ERR_PERMISSION_DENIED);
+            };
+            if state.capabilities.can_read_domain(domain) {
+                Ok(1)
+            } else {
+                record_permission_denial(state, "world_read", Some(domain));
+                Ok(ERR_PERMISSION_DENIED)
+            }
+        },
+    )?;
+
+    linker.func_wrap(
+        HOST_IMPORT_MODULE,
+        "action_emit",
+        |mut caller: Caller<'_, HostState>,
+         action_type: i64,
+         _payload_ptr: i32,
+         _payload_len: i32|
+         -> Result<i32, wasmtime::Error> {
+            let state = caller.data_mut();
+            if state.enforcement.suspended {
+                record_permission_denial(state, "action_emit", None);
+                return Ok(ERR_PERMISSION_DENIED);
+            }
+            let action_type = u32::try_from(action_type).unwrap_or(u32::MAX);
+            if state.capabilities.can_emit_action(action_type) {
+                Ok(0)
+            } else {
+                record_permission_denial(state, "action_emit", None);
+                Ok(ERR_PERMISSION_DENIED)
+            }
+        },
+    )?;
     Ok(())
 }
 
@@ -111,6 +176,8 @@ fn with_guest_instance<R>(
     wasm_bytes: &[u8],
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
     invoke: impl FnOnce(Instance, &mut Store<HostState>) -> Result<R, WasmGuestError>,
 ) -> Result<R, WasmGuestError> {
     trim_guest_memory(guest_memory);
@@ -123,6 +190,13 @@ fn with_guest_instance<R>(
         HostState {
             guest_memory: guest_memory.clone(),
             sim_tick,
+            capabilities,
+            enforcement: ModEnforcementCtx {
+                violations: enforcement.violations,
+                suspended: enforcement.suspended,
+                last_call: enforcement.last_call.clone(),
+                last_domain: enforcement.last_domain,
+            },
         },
     );
     let instance = linker
@@ -130,6 +204,10 @@ fn with_guest_instance<R>(
         .map_err(WasmGuestError::Engine)?;
     let result = invoke(instance, &mut store)?;
     *guest_memory = store.data().guest_memory.clone();
+    enforcement.violations = store.data().enforcement.violations;
+    enforcement.suspended = store.data().enforcement.suspended;
+    enforcement.last_call = store.data().enforcement.last_call.clone();
+    enforcement.last_domain = store.data().enforcement.last_domain;
     trim_guest_memory(guest_memory);
     Ok(result)
 }
@@ -138,50 +216,74 @@ fn invoke_tick_export(
     wasm_bytes: &[u8],
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
     primary: &str,
     fallback: &str,
 ) -> Result<i32, WasmGuestError> {
-    with_guest_instance(wasm_bytes, sim_tick, guest_memory, |instance, store| {
-        if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, primary) {
-            return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
-        }
-        if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, fallback) {
-            return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
-        }
-        Err(WasmGuestError::MissingExport {
-            export: primary.to_owned(),
-        })
-    })
+    with_guest_instance(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        capabilities,
+        enforcement,
+        |instance, store| {
+            if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, primary) {
+                return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
+            }
+            if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, fallback) {
+                return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
+            }
+            Err(WasmGuestError::MissingExport {
+                export: primary.to_owned(),
+            })
+        },
+    )
 }
 
 fn invoke_tick_with_sim_tick(
     wasm_bytes: &[u8],
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
     primary: &str,
     fallback: &str,
 ) -> Result<i32, WasmGuestError> {
     let tick_arg = i64::try_from(sim_tick).unwrap_or(i64::MAX);
-    let result = with_guest_instance(wasm_bytes, sim_tick, guest_memory, |instance, store| {
-        if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, primary) {
-            return func
-                .call(&mut *store, tick_arg)
-                .map_err(WasmGuestError::Engine);
-        }
-        if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, fallback) {
-            return func
-                .call(&mut *store, tick_arg)
-                .map_err(WasmGuestError::Engine);
-        }
-        Err(WasmGuestError::MissingExport {
-            export: primary.to_owned(),
-        })
-    });
+    let result = with_guest_instance(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        capabilities.clone(),
+        enforcement,
+        |instance, store| {
+            if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, primary) {
+                return func
+                    .call(&mut *store, tick_arg)
+                    .map_err(WasmGuestError::Engine);
+            }
+            if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, fallback) {
+                return func
+                    .call(&mut *store, tick_arg)
+                    .map_err(WasmGuestError::Engine);
+            }
+            Err(WasmGuestError::MissingExport {
+                export: primary.to_owned(),
+            })
+        },
+    );
     match result {
         Ok(code) => Ok(code),
-        Err(WasmGuestError::MissingExport { .. }) => {
-            invoke_tick_export(wasm_bytes, sim_tick, guest_memory, primary, fallback)
-        }
+        Err(WasmGuestError::MissingExport { .. }) => invoke_tick_export(
+            wasm_bytes,
+            sim_tick,
+            guest_memory,
+            capabilities,
+            enforcement,
+            primary,
+            fallback,
+        ),
         Err(err) => Err(err),
     }
 }
@@ -192,7 +294,32 @@ pub fn invoke_policy_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
-    invoke_tick_with_sim_tick(wasm_bytes, sim_tick, guest_memory, "civlab_policy_tick", "policy_tick")
+    invoke_policy_tick_with_capabilities(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        ModCapabilitySet::allow_all(),
+        &mut ModEnforcementCtx::default(),
+    )
+}
+
+/// Invoke policy tick with manifest-derived capabilities and violation tracking.
+pub fn invoke_policy_tick_with_capabilities(
+    wasm_bytes: &[u8],
+    sim_tick: u64,
+    guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
+) -> Result<i32, WasmGuestError> {
+    invoke_tick_with_sim_tick(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        capabilities,
+        enforcement,
+        "civlab_policy_tick",
+        "policy_tick",
+    )
 }
 
 /// Invoke the economy-phase export (`civlab_economy_tick`, else `economy_tick`).
@@ -201,10 +328,29 @@ pub fn invoke_economy_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
+    invoke_economy_tick_with_capabilities(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        ModCapabilitySet::allow_all(),
+        &mut ModEnforcementCtx::default(),
+    )
+}
+
+/// Invoke economy tick with manifest-derived capabilities and violation tracking.
+pub fn invoke_economy_tick_with_capabilities(
+    wasm_bytes: &[u8],
+    sim_tick: u64,
+    guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
+) -> Result<i32, WasmGuestError> {
     invoke_tick_with_sim_tick(
         wasm_bytes,
         sim_tick,
         guest_memory,
+        capabilities,
+        enforcement,
         "civlab_economy_tick",
         "economy_tick",
     )
@@ -216,10 +362,29 @@ pub fn invoke_military_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
+    invoke_military_tick_with_capabilities(
+        wasm_bytes,
+        sim_tick,
+        guest_memory,
+        ModCapabilitySet::allow_all(),
+        &mut ModEnforcementCtx::default(),
+    )
+}
+
+/// Invoke military tick with manifest-derived capabilities and violation tracking.
+pub fn invoke_military_tick_with_capabilities(
+    wasm_bytes: &[u8],
+    sim_tick: u64,
+    guest_memory: &mut Vec<u8>,
+    capabilities: ModCapabilitySet,
+    enforcement: &mut ModEnforcementCtx,
+) -> Result<i32, WasmGuestError> {
     invoke_tick_with_sim_tick(
         wasm_bytes,
         sim_tick,
         guest_memory,
+        capabilities,
+        enforcement,
         "civlab_military_tick",
         "military_tick",
     )
@@ -228,6 +393,7 @@ pub fn invoke_military_tick(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capability::ERR_PERMISSION_DENIED;
 
     #[test]
     fn host_memory_import_read_write() {
@@ -288,9 +454,107 @@ mod tests {
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
+        assert_eq!(invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"), 17);
+    }
+
+    #[test]
+    fn denied_world_read_returns_permission_denied() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 2)
+                (call $read))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        let caps = ModCapabilitySet::from_permissions(&crate::ModPermissions::default());
+        let mut enforcement = ModEnforcementCtx::default();
         assert_eq!(
-            invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"),
-            17
+            invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
+                .expect("invoke"),
+            ERR_PERMISSION_DENIED
+        );
+        assert_eq!(enforcement.violations, 1);
+    }
+
+    #[test]
+    fn allowed_write_policy_permits_action_emit_type_one() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "action_emit" (func $emit (param i64 i32 i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i64.const 1)
+                (i32.const 0)
+                (i32.const 0)
+                (call $emit))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        let caps = ModCapabilitySet::from_permissions(&crate::ModPermissions {
+            write_policy: true,
+            ..crate::ModPermissions::default()
+        });
+        let mut enforcement = ModEnforcementCtx::default();
+        assert_eq!(
+            invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
+                .expect("invoke"),
+            0
+        );
+        assert_eq!(enforcement.violations, 0);
+    }
+
+    #[test]
+    fn denied_action_emit_returns_permission_denied() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "action_emit" (func $emit (param i64 i32 i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i64.const 5)
+                (i32.const 0)
+                (i32.const 0)
+                (call $emit))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        let caps = ModCapabilitySet::from_permissions(&crate::ModPermissions {
+            write_policy: true,
+            ..crate::ModPermissions::default()
+        });
+        let mut enforcement = ModEnforcementCtx::default();
+        assert_eq!(
+            invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
+                .expect("invoke"),
+            ERR_PERMISSION_DENIED
+        );
+        assert_eq!(enforcement.violations, 1);
+        assert_eq!(enforcement.last_call.as_deref(), Some("action_emit"));
+    }
+
+    #[test]
+    fn allowed_world_read_returns_one() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (call $read))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        let caps = ModCapabilitySet::from_permissions(&crate::ModPermissions {
+            read_economy: true,
+            ..crate::ModPermissions::default()
+        });
+        let mut enforcement = ModEnforcementCtx::default();
+        assert_eq!(
+            invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
+                .expect("invoke"),
+            1
         );
     }
 }

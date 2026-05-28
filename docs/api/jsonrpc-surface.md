@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (14)
+## Method catalog (17)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -26,6 +26,9 @@
 | `sim.spawn_entity` | **operator** | `{ "kind", "x", "y", "faction"? }` — `kind`: `civilian` \| `vehicle` \| `airport` \| `port` \| `hangar` | Dispatch: `{ "accepted": true, "kind": <wire label> }`; bridge adds `ok`, `entity_id` | [`ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.place_voxel` | **operator** | `{ "x", "y", "z": <i64 world>, "material"? }` default `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok": true }` | — (unit: `parse_place_voxel_params_reads_coords` in `jsonrpc.rs`) |
 | `sim.damage` | **operator** | `{ "x", "y", "z": <i64>, "radius"? }` default `8` clamped 1–32, `"energy"?` default `1000` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "queued": true }` (applied next tick) | [`ws_jsonrpc_sim_damage_accepts_event`](../../crates/server/tests/ws_smoke.rs) |
+| `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
+| `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
+| `save.list` | — | `{}` or omit | `[ { "name", "tick", "save_type": "slot" \| "auto" \| "manual" }, … ]` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 
 **Invalid `sim.command` action:** `-32601` `Method not found` (not `-32602`).
 

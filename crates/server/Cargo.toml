@@ -12,6 +12,8 @@ civ-agents = { path = "../agents" }
 civ-economy = { path = "../economy" }
 civ-voxel = { path = "../voxel" }
 civ-protocol-3d = { path = "../protocol-3d" }
+civ-mod-host = { path = "../mod-host" }
+civ-save-db = { path = "../save-db" }
 axum = { version = "0.7", features = ["ws"] }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
@@ -19,6 +21,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net"] }
 tracing = "0.1"
 thiserror = "1"
+uuid = { version = "1", features = ["v4"] }
 
 [lib]
 path = "src/lib.rs"

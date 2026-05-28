@@ -21,6 +21,7 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
@@ -36,8 +37,10 @@ pub use spawn::{
 };
 
 pub use civ_mod_host::{
-    format_mod_error_event, format_mod_loaded_event, load_manifest, ModHost, ModLoadedRecord,
-    ModManifest, ModRegistry, ModType,
+    format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
+    ModGuestStateSave, ModHost, ModLoadedRecord, ModManifest, ModRegistry, ModType,
+    ModUnloadedRecord,
 };
 pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
 pub use civ_tactics::{
@@ -64,6 +67,9 @@ pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
     FORMAT_VERSION, MAGIC,
+};
+pub use save_bundle::{
+    CivSaveBundle, CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
 };
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,

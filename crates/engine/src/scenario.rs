@@ -265,7 +265,10 @@ mod tests {
         assert_eq!(scenario.fog_grid_size, 64);
         assert_eq!(scenario.military.war_cadence_ticks, Some(16));
         assert_eq!(scenario.military.engage_range_grid, Some(10));
-        assert_eq!(scenario.mods, vec!["mods/example-policy"]);
+        assert_eq!(
+            scenario.mods,
+            vec!["mods/example-policy", "mods/example-economic"]
+        );
     }
 
     #[test]
@@ -336,6 +339,32 @@ mods:
                 .iter()
                 .any(|e| matches!(e, crate::ReplayEvent::ModLoaded { mod_id, .. } if mod_id == "example-policy"))
         );
+        let bus = sim.replay_log().mod_loaded_bus_events();
+        assert_eq!(bus.len(), 1);
+        let v: serde_json::Value = serde_json::from_str(&bus[0]).expect("mod.loaded bus json");
+        assert_eq!(v["event"], "mod.loaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert!(v.get("mod_name").is_some());
+        assert!(v.get("version").is_some());
+        assert!(v.get("tick").is_some());
+    }
+
+    #[test]
+    fn mod_guest_state_exports_after_baseline_load() {
+        let scenario = load_scenario(baseline_scenario_path()).expect("baseline");
+        let mut sim = scenario.clone().into_simulation(1);
+        assert!(sim.mod_browser_entries().len() >= 2);
+        sim.mod_host_mut()
+            .restore_guest_memory("example-policy", vec![1, 2]);
+        let save = sim.export_mod_guest_state();
+        let json = save.to_json().expect("json");
+        let mut sim2 = scenario.into_simulation(2);
+        sim2.restore_mod_guest_state(&crate::ModGuestStateSave::from_json(&json).expect("parse"))
+            .expect("restore");
+        assert_eq!(
+            sim2.mod_host().guest_memory_snapshot("example-policy"),
+            vec![1, 2]
+        );
     }
 
     #[test]
@@ -348,8 +377,15 @@ mods:
         let mut sim = scenario.into_simulation(42);
         assert_eq!(sim.state.tick, 0);
         assert_eq!(sim.state.population, 1_000_000);
-        assert_eq!(sim.mod_host().mods().len(), 1);
-        assert_eq!(sim.mod_host().mods()[0].manifest.meta.id, "example-policy");
+        assert_eq!(sim.mod_host().mods().len(), 2);
+        let ids: Vec<_> = sim
+            .mod_host()
+            .mods()
+            .iter()
+            .map(|m| m.manifest.meta.id.as_str())
+            .collect();
+        assert!(ids.contains(&"example-policy"));
+        assert!(ids.contains(&"example-economic"));
 
         for _ in 0..10 {
             sim.tick();

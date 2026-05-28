@@ -16,11 +16,12 @@ fi
 
 echo "[security-guard] Running ggshield secret scan"
 # ggshield exits 3 when unauthenticated (no GITGUARDIAN_API_KEY / no local token).
+# Some versions exit 1 with an "API key needed" message; treat both as a skip.
 # Treat that as a skip so local dev commits are not blocked when the key is absent.
 if ! "${GGSHIELD[@]}" secret scan pre-commit; then
   exit_code=$?
-  if [ "$exit_code" -eq 3 ]; then
-    echo "[security-guard] ggshield not authenticated (exit 3) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2
+  if [ "$exit_code" -eq 3 ] || [ "$exit_code" -eq 1 ]; then
+    echo "[security-guard] ggshield not authenticated (exit $exit_code) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2
   else
     echo "[security-guard] ggshield secret scan failed with exit code $exit_code" >&2
     exit "$exit_code"

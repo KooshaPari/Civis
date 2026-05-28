@@ -1,5 +1,16 @@
 /** Browser JSON-RPC client for `civ-server` (FR-CIV-WEB-002..005). */
 
+export type ModBrowserEntry = {
+  id: string;
+  name: string;
+  version: string;
+  mod_type: string;
+  has_wasm: boolean;
+  guest_memory_len: number;
+  float_instruction_count?: number;
+  float_contamination_site_count?: number;
+};
+
 export type ServerMetrics = {
   tick: number;
   population: number;
@@ -8,6 +19,7 @@ export type ServerMetrics = {
   market_prices: Record<string, number>;
   hash_chain_root?: string;
   speed_multiplier: number;
+  mods?: ModBrowserEntry[];
 };
 
 let rpcId = 1;
@@ -69,6 +81,7 @@ export function normalizeServerSnapshot(result: unknown): ServerMetrics {
     hash_chain_root:
       typeof r.hash_chain_root === "string" ? r.hash_chain_root : undefined,
     speed_multiplier: Number(r.speed_multiplier ?? 1),
+    mods: Array.isArray(r.mods) ? (r.mods as ModBrowserEntry[]) : undefined,
   };
 }
 
@@ -94,4 +107,79 @@ export async function importReplayBytes(body: ArrayBuffer): Promise<{ tick: numb
   if (!response.ok) throw new Error(`replay import ${response.status}`);
   const data = (await response.json()) as { tick?: number };
   return { tick: Number(data.tick ?? 0) };
+}
+
+export type SaveSlotResult = {
+  save_id: string;
+  slot_name: string;
+  tick: number;
+  size_bytes?: number;
+  duration_ms?: number;
+  state_hash?: string;
+};
+
+export type SaveLoadResult = {
+  save_id?: string;
+  resumed_at_tick: number;
+  duration_ms?: number;
+  skipped_mods?: string[];
+  migration_applied?: boolean;
+};
+
+export type RpcSaveEntry = {
+  save_id: string;
+  save_type: string;
+  slot_name: string | null;
+  tick: number;
+  size_bytes: number;
+  created_at: string;
+  format_version: number;
+};
+
+export type SaveListResult = {
+  saves: RpcSaveEntry[];
+  total_count: number;
+  has_more: boolean;
+};
+
+export async function jsonRpcSaveSlot(
+  ws: WebSocket,
+  slotName: string,
+): Promise<SaveSlotResult> {
+  const result = await jsonRpcCall<SaveSlotResult>(ws, "save.slot", { slot_name: slotName });
+  return { ...result, tick: Number(result.tick ?? 0) };
+}
+
+export async function jsonRpcLoadSlot(
+  ws: WebSocket,
+  slotName: string,
+): Promise<SaveLoadResult> {
+  const result = await jsonRpcCall<Record<string, unknown>>(ws, "save.load", {
+    slot_name: slotName,
+  });
+  const tick = Number(result.resumed_at_tick ?? result.tick ?? 0);
+  return {
+    save_id: typeof result.save_id === "string" ? result.save_id : undefined,
+    resumed_at_tick: tick,
+    duration_ms: result.duration_ms != null ? Number(result.duration_ms) : undefined,
+    skipped_mods: Array.isArray(result.skipped_mods)
+      ? (result.skipped_mods as string[])
+      : undefined,
+    migration_applied:
+      typeof result.migration_applied === "boolean" ? result.migration_applied : undefined,
+  };
+}
+
+export async function jsonRpcSaveList(ws: WebSocket): Promise<SaveListResult> {
+  return jsonRpcCall<SaveListResult>(ws, "save.list", {});
+}
+
+/** Returns true when civ-server exposes save.list (save.slot / save.load probe). */
+export async function probeSaveRpc(ws: WebSocket): Promise<boolean> {
+  try {
+    await jsonRpcSaveList(ws);
+    return true;
+  } catch {
+    return false;
+  }
 }

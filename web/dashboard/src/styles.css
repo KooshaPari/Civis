@@ -764,6 +764,57 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 .inspector-hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 12px; line-height: 1.4; }
 .inspector-section { margin-bottom: 16px; }
 .inspector-section h3 { font-size: 0.9rem; margin: 0 0 8px; color: var(--accent); }
+.mods-catalog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.mods-catalog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mods-upload-label {
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.mods-upload-input {
+  display: none;
+}
+.mods-fetch-form {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mods-fetch-input {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  font-size: 0.75rem;
+}
+.mods-fetch-actions {
+  display: flex;
+  gap: 6px;
+}
+.mods-loaded-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.mods-list { list-style: none; margin: 0; padding: 0; }
+.mods-list-item { margin-bottom: 8px; font-size: 0.85rem; }
+.mods-meta { display: block; color: var(--muted, #888); font-size: 0.75rem; }
+.mods-installed { font-size: 0.75rem; color: var(--muted, #888); }
+.mods-refresh,
+.mods-install,
+.mods-fetch,
+.mods-reload,
+.mods-unload {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
 .event-feed {
   display: grid;
   gap: 10px;

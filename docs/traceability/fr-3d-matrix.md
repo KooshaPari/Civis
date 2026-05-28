@@ -134,6 +134,33 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-048 | Example economic mod directory + WASM tick. | `mods/example-economic/`, `mod-host` | `example_economic_dir_wasm_ticks_when_built` | implemented |
 | FR-CIV-TACTICS-049 | Host guest memory read/write imports. | `wasm_guest.rs` | `host_memory_import_read_write` | implemented |
 | FR-CIV-TACTICS-050 | Scenario military cadence/range tuning. | `scenario.rs`, `baseline.yaml` | `scenario_military_wires_military_phase` | implemented |
+| FR-CIV-TACTICS-051 | Baseline scenario loads example-economic mod. | `scenarios/baseline.yaml` | `baseline_yaml_parses` | implemented |
+| FR-CIV-TACTICS-052 | Per-mod guest memory snapshots on ModHost. | `mod-host` | `guest_memory_persists_across_invocations` | implemented |
+| FR-CIV-TACTICS-053 | Full capability host imports (`sim_tick`, import list). | `wasm_guest.rs`, `civlab-sdk` | `sim_tick_host_import_visible_to_guest` | implemented |
+| FR-CIV-TACTICS-054 | Mod browser on watch/server snapshot + dashboard. | `watch`, `server`, `web/dashboard` | `mods_panel` | implemented |
+| FR-CIV-TACTICS-055 | Mod guest state JSON save/load stub. | `guest_state.rs`, `engine.rs` | `mod_guest_state_save_round_trips_json` | implemented |
+| FR-CIV-TACTICS-056 | WASM determinism scan at mod load. | `determinism.rs` | `rejects_f32_sqrt` | implemented |
+| FR-CIV-TACTICS-057 | Float opcode count in determinism report. | `determinism.rs` | `report_counts_float_ops_without_hard_reject` | implemented |
+| FR-CIV-TACTICS-061 | `action_emit` float data-flow trace at mod load. | `float_data_flow.rs`, `determinism.rs` | `rejects_reinterpret_f64_before_action_emit` | implemented |
+| FR-CIV-TACTICS-058 | `.civsave/` debug save folder. | `save_bundle.rs`, `civ-watch` | `civsave_folder_round_trips_mod_guest_state` | implemented |
+| FR-CIV-TACTICS-059 | Package example mods as `.civmod`. | `justfile`, `package-example-mod.ps1` | `civis-3d-mod-package-all` | implemented |
+| FR-CIV-TACTICS-060 | `.civsave.zst` compressed save archive. | `save_bundle.rs`, `civ-watch` | `civsave_archive_round_trips_mod_guest_state` | implemented |
+| FR-CIV-TACTICS-062 | Mod catalog + runtime install. | `civ-watch`, `web/dashboard` | `post_mods_install` | implemented |
+| FR-CIV-TACTICS-063 | Mod unload HTTP + `mod.unloaded.v1` bus JSON. | `civ-watch`, `mod-host` | `post_mods_unload` | implemented |
+| FR-CIV-TACTICS-064 | Signed `.civmod` upload API. | `civ-watch` | `post_mods_upload` | implemented |
+| FR-CIV-TACTICS-065 | Production slots + autosave ring. | `civ-watch` | `post_save_slot`, `autosave_ring` | implemented |
+| FR-CIV-TACTICS-066 | `save.slot` / `save.load` / `save.list` JSON-RPC. | `civ-server` | `ws_jsonrpc_save_slot_roundtrip` | implemented |
+| FR-CIV-TACTICS-067 | Mod publish store + HTTP API. | `civ-watch` | `post_mods_publish` | implemented |
+| FR-CIV-TACTICS-068 | Mod hot reload API. | `civ-watch`, `mod-host` | `post_mods_reload` | implemented |
+| FR-CIV-TACTICS-069 | Session-scoped SQLite save metadata. | `civ-save-db`, `civ-watch` | `save_db::*`, `post_save_slot` | implemented |
+| FR-CIV-TACTICS-070 | Remote mod fetch cache. | `civ-watch`, `mods/remote/` | `post_mods_fetch`, `list_remote_mods` | implemented |
+| FR-CIV-TACTICS-071 | CIV-0700 capability enforcement (`world_read`, `action_emit`). | `mod-host/capability.rs` | `capability::*` | implemented |
+| FR-CIV-TACTICS-072 | `session.saved.v1` on replay bus + snapshot. | `engine/replay.rs`, `civ-watch` | `session_saved_*` | implemented |
+| FR-CIV-TACTICS-073 | Web remote mod fetch UI. | `web/dashboard/mods_panel.tsx` | manual / tsc | implemented |
+| FR-CIV-TACTICS-074 | PolicyMod trait surface (CIV-0700 §5). | `civlab-sdk/policy.rs` | `policy::*` | implemented |
+| FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
+| FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
+| FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
 
 ---
 

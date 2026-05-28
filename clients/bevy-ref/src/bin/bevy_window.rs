@@ -2,12 +2,10 @@ use std::collections::HashMap;
 
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
+use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy::render::{
-    render_resource::WgpuFeatures,
-    settings::{RenderCreation, WgpuSettings},
-    RenderPlugin,
-};
+use bevy::sprite::Text2d;
+use bevy::text::{TextColor, TextFont};
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
     agent_color_from_id, agent_label_stub, agent_scale_multiplier,
@@ -15,7 +13,10 @@ use civ_bevy_ref::{
         apply_chunk_material, mesh_buffer_to_bevy, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR,
     },
     chunk_distance_from_camera, chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
-    decode_chunk_id, focused_chunk_at_grid, mesh_lod_level, minimap_uv_to_chunk_grid,
+    decode_chunk_id, focused_chunk_at_grid,
+    gpu_features::GpuFeaturesPlugin,
+    mesh_lod_level, minimap_uv_to_chunk_grid,
+    native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url, should_render_chunk,
     ws_client::{WsClient, WsClientConfig},
@@ -187,15 +188,9 @@ fn main() {
                     }),
                     ..default()
                 })
-                .set(RenderPlugin {
-                    render_creation: RenderCreation::Automatic(WgpuSettings {
-                        // Native-only: required for Bevy 0.14 wireframe lines.
-                        features: WgpuFeatures::POLYGON_MODE_LINE,
-                        ..default()
-                    }),
-                    ..default()
-                }),
-            WireframePlugin,
+                .set(native_render_plugin()),
+            WireframePlugin::default(),
+            GpuFeaturesPlugin,
         ))
         .insert_resource(LiveScene::default())
         .insert_resource(ScenePresentation::default())
@@ -217,8 +212,7 @@ fn main() {
                 update_hud,
                 update_minimap,
                 update_presentation_lighting,
-            )
-                .chain(),
+            ),
         )
         .run();
 }
@@ -242,11 +236,11 @@ fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
     mut lights: Query<&mut DirectionalLight>,
-    mut ambient: ResMut<AmbientLight>,
+    mut ambient: ResMut<GlobalAmbientLight>,
     mut clear: ResMut<ClearColor>,
 ) {
     let target = presentation_day_factor_target(presentation.is_day);
-    let step = (time.delta_seconds() * 2.5).clamp(0.0, 1.0);
+    let step = (time.delta_secs() * 2.5).clamp(0.0, 1.0);
     presentation.day_factor += (target - presentation.day_factor) * step;
 
     let day_factor = presentation.day_factor;
@@ -277,20 +271,15 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
     let text = commands
         .spawn((
-            TextBundle::from_section(
-                LiveHudSnapshot::default().format_overlay(),
-                TextStyle {
-                    font_size: 16.0,
-                    color: Color::srgb(0.9, 0.92, 0.95),
-                    ..default()
-                },
-            )
-            .with_style(Style {
+            Node {
                 position_type: PositionType::Absolute,
                 top: Val::Px(8.0),
                 left: Val::Px(8.0),
                 ..default()
-            }),
+            },
+            Text::new(LiveHudSnapshot::default().format_overlay()),
+            TextFont::from_font_size(16.0),
+            TextColor(Color::srgb(0.9, 0.92, 0.95)),
             HudText,
         ))
         .id();
@@ -301,20 +290,17 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
     let panel = commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(8.0),
-                    right: Val::Px(8.0),
-                    width: Val::Px(MINIMAP_SIZE),
-                    height: Val::Px(MINIMAP_SIZE),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                background_color: Color::srgba(0.03, 0.06, 0.11, 0.88).into(),
-                border_color: Color::srgba(0.35, 0.42, 0.52, 0.65).into(),
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(8.0),
+                right: Val::Px(8.0),
+                width: Val::Px(MINIMAP_SIZE),
+                height: Val::Px(MINIMAP_SIZE),
+                border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
+            BackgroundColor(Color::srgba(0.03, 0.06, 0.11, 0.88)),
+            BorderColor::all(Color::srgba(0.35, 0.42, 0.52, 0.65)),
             MinimapPanel,
             Interaction::default(),
             RelativeCursorPosition::default(),
@@ -323,13 +309,10 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
     let dots = commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    position_type: PositionType::Relative,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Relative,
                 ..default()
             },
             MinimapDots,
@@ -351,13 +334,20 @@ fn sync_chunk_debug_render(
     debug: Res<DebugRender>,
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    chunks: Query<(Entity, &Handle<StandardMaterial>, Option<&ChunkFade>), With<ChunkTag>>,
+    chunks: Query<
+        (
+            Entity,
+            &MeshMaterial3d<StandardMaterial>,
+            Option<&ChunkFade>,
+        ),
+        With<ChunkTag>,
+    >,
 ) {
     if !debug.is_changed() {
         return;
     }
 
-    for (entity, material_handle, fade) in &chunks {
+    for (entity, material, fade) in &chunks {
         if debug.wireframe {
             commands.entity(entity).insert((
                 Wireframe,
@@ -372,7 +362,7 @@ fn sync_chunk_debug_render(
                 .remove::<WireframeColor>();
         }
 
-        if let Some(material) = materials.get_mut(material_handle) {
+        if let Some(material) = materials.get_mut(&material.0) {
             let fade_elapsed = fade.map(|state| state.elapsed);
             apply_chunk_material(material, CHUNK_BASE_COLOR, debug.wireframe, fade_elapsed);
         }
@@ -419,13 +409,13 @@ fn orbit_camera_input(
     time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion_events: EventReader<MouseMotion>,
-    mut scroll_events: EventReader<MouseWheel>,
+    mut motion_events: MessageReader<MouseMotion>,
+    mut scroll_events: MessageReader<MouseWheel>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
     let minimap_active = minimap
-        .get_single()
+        .single()
         .map(|interaction| *interaction != Interaction::None)
         .unwrap_or(false);
 
@@ -466,7 +456,7 @@ fn orbit_camera_input(
         orbit.adjust_distance(ORBIT_KEYBOARD_DISTANCE_STEP);
     }
 
-    let pan = ORBIT_PAN_SPEED * time.delta_seconds();
+    let pan = ORBIT_PAN_SPEED * time.delta_secs();
     let mut right = 0.0;
     let mut forward = 0.0;
     if keys.pressed(KeyCode::KeyW) {
@@ -504,7 +494,7 @@ fn update_hud(
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
-    let fps = 1.0 / time.delta_seconds();
+    let fps = 1.0 / time.delta_secs();
     hud.snapshot.fps = if hud.snapshot.fps <= 0.0 {
         fps
     } else {
@@ -514,7 +504,7 @@ fn update_hud(
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;
     };
-    text.sections[0].value = hud.snapshot.format_overlay();
+    *text = Text::new(hud.snapshot.format_overlay());
 }
 
 fn minimap_bounds_from_keys(chunk_keys: &[u64]) -> Option<MinimapBounds> {
@@ -558,7 +548,7 @@ fn update_minimap(
         .into_iter()
         .flat_map(|c| c.iter())
     {
-        commands.entity(*child).despawn_recursive();
+        commands.entity(child).despawn();
     }
 
     let Some(bounds) = cache.bounds else {
@@ -579,18 +569,15 @@ fn update_minimap(
         };
         commands.entity(minimap.dots).with_children(|parent| {
             parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(left),
-                        top: Val::Px(top),
-                        width: Val::Px(MINIMAP_DOT),
-                        height: Val::Px(MINIMAP_DOT),
-                        ..default()
-                    },
-                    background_color: dot_color.into(),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(left),
+                    top: Val::Px(top),
+                    width: Val::Px(MINIMAP_DOT),
+                    height: Val::Px(MINIMAP_DOT),
                     ..default()
                 },
+                BackgroundColor(dot_color),
                 FocusPolicy::Pass,
             ));
         });
@@ -607,18 +594,15 @@ fn update_minimap(
         let top = MINIMAP_INSET + v * plot - 1.0;
         commands.entity(minimap.dots).with_children(|parent| {
             parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(left),
-                        top: Val::Px(top),
-                        width: Val::Px(MINIMAP_DOT + 2.0),
-                        height: Val::Px(MINIMAP_DOT + 2.0),
-                        ..default()
-                    },
-                    background_color: Color::srgb(0.95, 0.95, 0.98).into(),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(left),
+                    top: Val::Px(top),
+                    width: Val::Px(MINIMAP_DOT + 2.0),
+                    height: Val::Px(MINIMAP_DOT + 2.0),
                     ..default()
                 },
+                BackgroundColor(Color::srgb(0.95, 0.95, 0.98)),
                 FocusPolicy::Pass,
             ));
         });
@@ -637,10 +621,10 @@ fn minimap_click_focus(
         return;
     }
 
-    let Ok((interaction, cursor)) = panels.get_single() else {
+    let Ok((interaction, cursor)) = panels.single() else {
         return;
     };
-    if *interaction == Interaction::None || !cursor.mouse_over() {
+    if *interaction == Interaction::None || cursor.normalized.is_none() {
         return;
     }
 
@@ -673,23 +657,23 @@ fn viewport_chunk_raycast(
     }
 
     let minimap_active = minimap
-        .get_single()
+        .single()
         .map(|interaction| *interaction != Interaction::None)
         .unwrap_or(false);
     if minimap_active {
         return;
     }
 
-    let Ok(window) = windows.get_single() else {
+    let Ok(window) = windows.single() else {
         return;
     };
     let Some(cursor) = window.cursor_position() else {
         return;
     };
-    let Ok((camera, transform)) = cameras.get_single() else {
+    let Ok((camera, transform)) = cameras.single() else {
         return;
     };
-    let Some(ray) = camera.viewport_to_world(transform, cursor) else {
+    let Ok(ray) = camera.viewport_to_world(transform, cursor) else {
         return;
     };
 
@@ -717,7 +701,7 @@ fn apply_voxel_delta(
         let chunk_id = chunk.event.chunk_id;
         if !should_render_chunk(chunk_id, eye, max_dist) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
-                commands.entity(entity).despawn_recursive();
+                commands.entity(entity).despawn();
             }
             continue;
         }
@@ -759,12 +743,9 @@ fn apply_voxel_delta(
                     .id()
             });
         commands.entity(entity).insert((
-            PbrBundle {
-                mesh,
-                material: material_handle,
-                transform,
-                ..default()
-            },
+            Mesh3d(mesh),
+            MeshMaterial3d(material_handle),
+            transform,
             ChunkFade::new(),
         ));
         if debug.wireframe {
@@ -787,16 +768,16 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(Entity, &mut ChunkFade, &Handle<StandardMaterial>)>,
+    mut fades: Query<(Entity, &mut ChunkFade, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if debug.wireframe {
         return;
     }
 
-    for (entity, mut fade, material_handle) in &mut fades {
-        fade.elapsed += time.delta_seconds();
-        if let Some(material) = materials.get_mut(material_handle) {
+    for (entity, mut fade, material) in fades.iter_mut() {
+        fade.elapsed += time.delta_secs();
+        if let Some(material) = materials.get_mut(&material.0) {
             apply_chunk_material(material, fade.base_rgb, false, Some(fade.elapsed));
         }
         if chunk_fade_complete(fade.elapsed) {
@@ -844,18 +825,10 @@ fn apply_agent_appearance(
                 let label = agent_label_stub(update.agent_id, None);
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
-                        Text2dBundle {
-                            text: Text::from_section(
-                                label,
-                                TextStyle {
-                                    font_size: AGENT_LABEL_FONT_SIZE,
-                                    color: Color::srgba(0.95, 0.96, 0.98, 0.92),
-                                    ..default()
-                                },
-                            ),
-                            transform: Transform::from_xyz(0.0, AGENT_LABEL_Y_OFFSET, 0.0),
-                            ..default()
-                        },
+                        Text2d::new(label),
+                        TextFont::from_font_size(AGENT_LABEL_FONT_SIZE),
+                        TextColor(Color::srgba(0.95, 0.96, 0.98, 0.92)),
+                        Transform::from_xyz(0.0, AGENT_LABEL_Y_OFFSET, 0.0),
                         AgentLabel,
                     ));
                 });
@@ -863,12 +836,11 @@ fn apply_agent_appearance(
             entity
         });
 
-        commands.entity(entity).insert(PbrBundle {
-            mesh: assets.mesh.clone(),
-            material: material_handle,
+        commands.entity(entity).insert((
+            Mesh3d(assets.mesh.clone()),
+            MeshMaterial3d(material_handle),
             transform,
-            ..default()
-        });
+        ));
     }
 }
 

@@ -22,6 +22,10 @@ serde_path_to_error = "0.1"
 ron = "0.8"
 blake3 = "1"
 sha2 = "0.10"
+thiserror = "1"
+tar = "0.4"
+tempfile = "3"
+zstd = "0.13"
 
 # Logging
 tracing = "0.1"
@@ -45,6 +49,7 @@ civ-economy = { path = "../economy" }
 
 # Mod manifest host stub (CIV-0700 Sprint D).
 civ-mod-host = { path = "../mod-host" }
+civ-save-db = { path = "../save-db" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

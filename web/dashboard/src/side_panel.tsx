@@ -1,5 +1,6 @@
 import { ConnectionStatusCard } from "./connection_status";
 import { AgentsPanel } from "./agents_panel";
+import { ModsPanel } from "./mods_panel";
 import { EventFeed } from "./event_feed";
 import { PerfPanel } from "./perf_panel";
 import { StatsPanel } from "./stats_panel";
@@ -46,6 +47,7 @@ export function SidePanel() {
             <>
               <ConnectionStatusCard />
               <StatsPanel />
+              <ModsPanel />
               <AgentsPanel />
               <PerfPanel />
 

@@ -6,6 +6,10 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[lib]
+name = "civ_watch"
+path = "src/lib.rs"
+
 [[bin]]
 name = "civ-watch"
 path = "src/main.rs"
@@ -19,6 +23,8 @@ civ-server = { path = "../server" }
 civ-agents = { path = "../agents" }
 civ-laws = { path = "../laws" }
 civ-tactics = { path = "../tactics" }
+civ-mod-host = { path = "../mod-host" }
+civ-save-db = { path = "../save-db" }
 hecs = "0.10"
 axum = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
@@ -29,7 +35,16 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower-http = { version = "0.5", features = ["cors", "fs"] }
 futures = "0.3"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+sha2 = "0.10"
 
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
+zip = "2"
+wat = "1"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+tempfile = "3"

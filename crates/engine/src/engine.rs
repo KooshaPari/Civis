@@ -3,7 +3,7 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
+    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
     Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
@@ -141,6 +141,31 @@ pub fn attach_citizen_to_agents(world: &mut World) {
     }
 }
 
+fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
+    const CIVILIANS_PER_FACTION: usize = 32;
+    const QUADRANT_SPREAD: i32 = 2_500;
+
+    let faction_capitals = [
+        (-7_500, 7_500),  // faction 0: NW
+        (7_500, 7_500),   // faction 1: NE
+        (-7_500, -7_500), // faction 2: SW
+        (7_500, -7_500),  // faction 3: SE
+    ];
+
+    let scale = FIXED_SCALE as f32;
+    let mut next_civilian_id = 1u64;
+    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
+        for _ in 0..CIVILIANS_PER_FACTION {
+            let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+            let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
+            let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
+            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
+            next_civilian_id += 1;
+        }
+    }
+}
+
 /// Building entity component
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Building {
@@ -168,6 +193,15 @@ pub struct Resources {
     pub wood: Fixed,
     pub metal: Fixed,
     pub energy: Fixed, // Joules
+}
+
+/// Simple trade route between two factions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRoute {
+    pub from_faction: u32,
+    pub to_faction: u32,
+    pub goods: String,
+    pub volume: Fixed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -245,6 +279,10 @@ pub struct WorldState {
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
     pub faction_treasury: HashMap<u32, Fixed>,
+    /// Faction ID -> resource holdings.
+    pub faction_resources: HashMap<u32, Resources>,
+    /// Active trade routes connecting factions.
+    pub trade_routes: Vec<TradeRoute>,
     pub resources: Resources,
 }
 
@@ -265,6 +303,55 @@ impl Default for WorldState {
                 (1, Fixed::from_num(8_000)),
                 (2, Fixed::from_num(8_000)),
             ]),
+            faction_resources: HashMap::from([
+                (
+                    0,
+                    Resources {
+                        food: Fixed::from_num(120),
+                        wood: Fixed::from_num(90),
+                        metal: Fixed::from_num(70),
+                        energy: Fixed::from_num(50),
+                    },
+                ),
+                (
+                    1,
+                    Resources {
+                        food: Fixed::from_num(80),
+                        wood: Fixed::from_num(110),
+                        metal: Fixed::from_num(100),
+                        energy: Fixed::from_num(40),
+                    },
+                ),
+                (
+                    2,
+                    Resources {
+                        food: Fixed::from_num(60),
+                        wood: Fixed::from_num(70),
+                        metal: Fixed::from_num(120),
+                        energy: Fixed::from_num(60),
+                    },
+                ),
+            ]),
+            trade_routes: vec![
+                TradeRoute {
+                    from_faction: 0,
+                    to_faction: 1,
+                    goods: "grain".to_string(),
+                    volume: Fixed::from_num(12),
+                },
+                TradeRoute {
+                    from_faction: 1,
+                    to_faction: 2,
+                    goods: "ore".to_string(),
+                    volume: Fixed::from_num(10),
+                },
+                TradeRoute {
+                    from_faction: 2,
+                    to_faction: 0,
+                    goods: "cloth".to_string(),
+                    volume: Fixed::from_num(8),
+                },
+            ],
             resources: Resources::default(),
         }
     }
@@ -303,6 +390,8 @@ pub struct Simulation {
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     last_tick_engagements: Vec<CombatEngagement>,
+    /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
+    last_tick_mod_lifecycle: Vec<String>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -449,7 +538,8 @@ impl Simulation {
 
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
@@ -482,6 +572,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -500,7 +591,8 @@ impl Simulation {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
@@ -536,6 +628,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -547,6 +640,66 @@ impl Simulation {
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
         }
+    }
+
+    /// Install a single mod at runtime (directory or `.civmod` archive).
+    ///
+    /// `rel_path` is resolved from the repo root (`crates/engine/../../`).
+    pub fn install_mod_path(
+        &mut self,
+        rel_path: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, civ_mod_host::ManifestError> {
+        let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = repo_root.join(rel_path);
+        let named_civmod = dir.file_name().and_then(|name| {
+            let archive = dir.join(format!("{}.civmod", name.to_string_lossy()));
+            archive.is_file().then_some(archive)
+        });
+        let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
+        self.mod_host.load_mod_path(load_path)?;
+        let entry =
+            self.mod_host
+                .mods()
+                .last()
+                .ok_or_else(|| civ_mod_host::ManifestError::Validation {
+                    path: load_path.to_path_buf(),
+                    message: "mod load produced no registry entry".into(),
+                })?;
+        let record = civ_mod_host::ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick: self.state.tick,
+        };
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Unload a loaded mod by stable id and emit `mod.unloaded.v1` on the lifecycle bus.
+    pub fn unload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+    ) -> Result<civ_mod_host::ModUnloadedRecord, String> {
+        let record = self.mod_host.unload_mod(mod_id, reason, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_unloaded_event_json(&record);
+        self.replay_log.record_mod_unloaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Hot-reload a mod from its remembered source path and emit `mod.loaded.v1`.
+    pub fn reload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, String> {
+        let record = self.mod_host.reload_mod(mod_id, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
     }
 
     /// Load mod manifests from scenario `mods` paths (repo-relative).
@@ -572,11 +725,15 @@ impl Simulation {
                 continue;
             }
             if let Some(entry) = self.mod_host.mods().last() {
-                self.replay_log.record_mod_loaded(
-                    self.state.tick,
-                    &entry.manifest.meta.id,
-                    &entry.manifest.meta.version,
-                );
+                let record = civ_mod_host::ModLoadedRecord {
+                    mod_id: entry.manifest.meta.id.clone(),
+                    mod_name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    tick: self.state.tick,
+                };
+                let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+                self.replay_log.record_mod_loaded(&record);
+                self.last_tick_mod_lifecycle.push(bus_json);
             }
         }
     }
@@ -585,6 +742,31 @@ impl Simulation {
     #[must_use]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
+    }
+
+    /// Mutable mod host (phase ticks and guest memory restore).
+    pub fn mod_host_mut(&mut self) -> &mut ModHost {
+        &mut self.mod_host
+    }
+
+    /// Export per-mod guest scratch memory for CIV-1000 save bundles.
+    #[must_use]
+    pub fn export_mod_guest_state(&self) -> civ_mod_host::ModGuestStateSave {
+        self.mod_host.export_guest_state()
+    }
+
+    /// Restore per-mod guest scratch memory after load.
+    pub fn restore_mod_guest_state(
+        &mut self,
+        save: &civ_mod_host::ModGuestStateSave,
+    ) -> Result<(), civ_mod_host::GuestStateError> {
+        self.mod_host.import_guest_state(save)
+    }
+
+    /// Loaded mods for mod-browser UI (`sim.snapshot` / civ-watch).
+    #[must_use]
+    pub fn mod_browser_entries(&self) -> Vec<civ_mod_host::ModBrowserEntry> {
+        self.mod_host.browser_entries()
     }
 
     /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
@@ -803,6 +985,7 @@ impl Simulation {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
+        self.last_tick_mod_lifecycle.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -834,6 +1017,42 @@ impl Simulation {
     /// Mutable borrow of the replay log (tests and integrity tooling).
     pub fn replay_log_mut(&mut self) -> &mut ReplayLog {
         &mut self.replay_log
+    }
+
+    /// `mod.loaded.v1` JSON payloads recorded on the replay bus (FR-MOD-004 partial).
+    #[must_use]
+    pub fn mod_loaded_bus_events(&self) -> Vec<String> {
+        self.replay_log.mod_loaded_bus_events()
+    }
+
+    /// `mod.loaded.v1` bus JSON emitted on the most recent tick (scenario load or hot reload).
+    #[must_use]
+    pub fn last_tick_mod_lifecycle(&self) -> &[String] {
+        &self.last_tick_mod_lifecycle
+    }
+
+    /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
+    fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
+        for line in lines {
+            if line.contains("mod.permission_violation.v1") {
+                self.replay_log
+                    .record_mod_permission_violation_bus(tick, &line);
+            }
+            tracing::debug!(mod_log = %line, phase = phase, "mod phase");
+        }
+    }
+
+    /// Record `session.saved.v1` on the replay bus (slot or autosave; CIV-1000).
+    pub fn record_session_saved(
+        &mut self,
+        session_id: &str,
+        save_id: &str,
+        slot: &str,
+        byte_size: u64,
+    ) {
+        let tick = self.state.tick;
+        self.replay_log
+            .record_session_saved(session_id, save_id, slot, tick, byte_size);
     }
 
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
@@ -1095,9 +1314,9 @@ impl Simulation {
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
 
-        for line in self.mod_host.military_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod military phase");
-        }
+        let tick = self.state.tick;
+        let lines = self.mod_host.military_tick(tick);
+        self.ingest_mod_phase_lines(lines, tick, "military");
 
         let phase_cfg = self.military_phase;
 
@@ -1251,12 +1470,11 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
-        for line in self.mod_host.tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod policy phase");
-        }
-        for line in self.mod_host.economy_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod economy phase");
-        }
+        let tick = self.state.tick;
+        let policy_lines = self.mod_host.tick(tick);
+        self.ingest_mod_phase_lines(policy_lines, tick, "policy");
+        let economy_lines = self.mod_host.economy_tick(tick);
+        self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
@@ -1268,7 +1486,69 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+    }
+
+    fn tick_trade_routes(&mut self) {
+        for route in &self.state.trade_routes {
+            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
+                continue;
+            }
+
+            let resource = route_resource(&route.goods);
+            let available = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            if available <= Fixed::ZERO {
+                continue;
+            }
+
+            let quantity = route.volume.min(available);
+            {
+                let from_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.from_faction)
+                    .or_default();
+                adjust_resource(from_resources, resource, Fixed::ZERO - quantity);
+            }
+            {
+                let to_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.to_faction)
+                    .or_default();
+                adjust_resource(to_resources, resource, quantity);
+            }
+
+            let supply = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            let demand = {
+                let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
+                    continue;
+                };
+                resource_amount(to_resources, resource)
+            };
+            let margin = (demand - supply).max(Fixed::ZERO);
+            let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
+
+            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&route.from_faction) {
+                *from_treasury += profit;
+            }
+            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&route.to_faction) {
+                *to_treasury -= profit;
+            }
+        }
     }
 
     /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
@@ -1321,6 +1601,34 @@ impl Simulation {
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
         }
+    }
+}
+
+fn route_resource(goods: &str) -> ResourceType {
+    match goods {
+        "grain" => ResourceType::Food,
+        "timber" => ResourceType::Wood,
+        "ore" | "tools" => ResourceType::Metal,
+        "cloth" | "salt" => ResourceType::Energy,
+        _ => ResourceType::Food,
+    }
+}
+
+fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
+    match resource {
+        ResourceType::Food => resources.food,
+        ResourceType::Wood => resources.wood,
+        ResourceType::Metal => resources.metal,
+        ResourceType::Energy => resources.energy,
+    }
+}
+
+fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
+    match resource {
+        ResourceType::Food => resources.food += delta,
+        ResourceType::Wood => resources.wood += delta,
+        ResourceType::Metal => resources.metal += delta,
+        ResourceType::Energy => resources.energy += delta,
     }
 }
 
@@ -1399,12 +1707,12 @@ mod tests {
         }
     }
 
-    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
-    fn startup_spawns_32_civilians() {
+    fn startup_spawns_128_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 32);
+        assert_eq!(count_civilians(&sim.world), 128);
     }
 
     #[test]
@@ -1685,7 +1993,10 @@ mod tests {
     /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
     #[test]
     fn cold_tier_diffusion_only_on_cadence_boundaries() {
+        use civ_agents::spawn_many;
+
         let mut sim = Simulation::with_seed(55);
+        let _ = spawn_many(&mut sim.world, 6, 50_000, 0);
         let policy = LodPolicy::default();
 
         let cold_entities: Vec<hecs::Entity> = sim

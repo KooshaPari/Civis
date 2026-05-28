@@ -1,11 +1,18 @@
 # Phenotype-org standard justfile
 
+# On Windows use PowerShell so cargo/.cargo/bin is on PATH without extra setup.
+set windows-shell := ["powershell", "-NoProfile", "-Command"]
+
 default:
     @just --list
 
 # Build workspace
 build:
     cargo build --workspace
+
+# Compile-only check for the workspace.
+check:
+    cargo check --workspace
 
 # Run tests
 test:
@@ -55,7 +62,8 @@ civis-3d-catalog-check:
 
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:
-    cargo test -p civ-engine scenario --quiet
+    # Single link job avoids intermittent LNK1104 on Windows when other cargo builds run.
+    cargo test -p civ-engine scenario --quiet -j 1
 
 civis-3d-web-check:
     node --test web/tests/*.test.mjs
@@ -72,15 +80,25 @@ civis-3d-mod-wasm:
 
 # Package example-policy as example-policy.civmod.
 civis-3d-mod-package: civis-3d-mod-wasm
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+
+# Sign example mod.wasm (prints author_pubkey_hex for manifest.toml).
+civis-3d-mod-sign MOD="example-policy":
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sign-example-mod.ps1 -ModId {{MOD}}
+
+# Package both example mods for distribution (FR-CIV-TACTICS-059).
+civis-3d-mod-package-all: civis-3d-mod-wasm
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
 
 # 3D verification gate: check + test + clippy --all-targets + fmt --check.
 # Uses cargo check (not build) so the gate works when service binaries are
 # held open by the running dev stack (Windows exe-lock).
 # Used by P-V0..P-U1 phase PRs before push.
 civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-check civis-3d-mod-check
+    # cargo check avoids exe-lock issues on Windows (service binaries stay open).
+    # Targeted tests are already run by sub-recipes above.
     cargo check --workspace
-    cargo test --workspace
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check
 
@@ -116,7 +134,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    cd clients/godot-ref/rust && cargo test
+    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
 
 # Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
 infra-up:

@@ -50,6 +50,33 @@
 | FR-CIV-TACTICS-048 | implemented | `mods/example-economic` + economy WASM tick test |
 | FR-CIV-TACTICS-049 | implemented | `civlab::memory_read` / `memory_write` host imports |
 | FR-CIV-TACTICS-050 | implemented | scenario `military:` cadence/range overrides |
+| FR-CIV-TACTICS-051 | implemented | `baseline.yaml` loads `mods/example-economic` |
+| FR-CIV-TACTICS-052 | implemented | per-mod guest memory snapshots on `ModHost` |
+| FR-CIV-TACTICS-053 | implemented | `civlab::sim_tick` + `HOST_CAPABILITY_IMPORTS` |
+| FR-CIV-TACTICS-054 | implemented | mod browser on watch/server snapshot + dashboard |
+| FR-CIV-TACTICS-055 | implemented | `ModGuestStateSave` JSON export/import |
+| FR-CIV-TACTICS-056 | implemented | WASM determinism scan at mod load |
+| FR-CIV-TACTICS-057 | implemented | float opcode count in determinism report |
+| FR-CIV-TACTICS-061 | implemented | action_emit float data-flow trace |
+| FR-CIV-TACTICS-058 | implemented | `.civsave/` folder stub (`CivSaveBundle`) |
+| FR-CIV-TACTICS-059 | implemented | `civis-3d-mod-package-all` for example mods |
+| FR-CIV-TACTICS-060 | implemented | `.civsave.zst` compressed archive (`save_archive` / `load_archive`; civ-watch default) |
+| FR-CIV-TACTICS-062 | implemented | mod catalog + `POST /control/mods/install` (civ-watch + dashboard) |
+| FR-CIV-TACTICS-063 | implemented | `POST /control/mods/unload` + `mod.unloaded.v1` bus JSON |
+| FR-CIV-TACTICS-064 | implemented | `POST /control/mods/upload` → `mods/uploads/*.civmod` |
+| FR-CIV-TACTICS-065 | implemented | production slots `slot-1`..`slot-5` + autosave ring (10) |
+| FR-CIV-TACTICS-066 | implemented | `save.slot` / `save.load` / `save.list` JSON-RPC (civ-server) |
+| FR-CIV-TACTICS-067 | implemented | mod publish store `mods/publish` + HTTP API |
+| FR-CIV-TACTICS-068 | implemented | mod hot reload `POST /control/mods/reload` |
+| FR-CIV-TACTICS-069 | implemented | session-scoped SQLite save metadata (`civ-save-db`) |
+| FR-CIV-TACTICS-070 | implemented | remote mod fetch cache `mods/remote` + HTTP API |
+| FR-CIV-TACTICS-071 | implemented | CIV-0700 `world_read` / `action_emit` capability enforcement |
+| FR-CIV-TACTICS-072 | implemented | `session.saved.v1` on replay bus + snapshot feed |
+| FR-CIV-TACTICS-073 | implemented | web remote mod fetch UI (`GET/POST` mods/remote) |
+| FR-CIV-TACTICS-074 | implemented | `PolicyMod` trait surface in civlab-sdk (CIV-0700 §5) |
+| FR-CIV-TACTICS-075 | implemented | `mod.permission_violation.v1` on replay bus + snapshot/SSE |
+| FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
+| FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
 
 ## First PR slice (recommended)
 
@@ -66,7 +93,18 @@
 11. **Fog in war bridge + mod signing + WASM capability surface** — **done** (item 12).
 12. **Scenario fog + economic WASM + capability host imports** — **done** (item 13).
 13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
-14. **Next:** Wire example-economic in baseline scenario, host memory snapshots, full capability API.
+14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
+15. **Guest memory save/load + mod browser + determinism scan** — **done** (item 16).
+16. **CIV-1000 civsave folder + float scan report + mod packaging** — **done** (item 17).
+17. **Compressed `.civsave.zst` save archives** — **done** (item 18a).
+18. **action_emit float data-flow trace** — **done** (item 18b).
+19. **In-game mod install** — **done** (item 18c: catalog + install API).
+20. **Save/mod distribution** — **done** (item 21): slot-1..5, autosave ring, signed `.civmod` upload, mod unload.
+21. **Save/mod distribution v2** — **done** (item 22): `save.slot` / `save.load` / `save.list` on civ-server; web server slot UI; `mods/publish` + publish API; `POST /control/mods/reload`.
+22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
+23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
+24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
+25. **Next:** TBD (post–kickoff slice planning).
 
 ## Run
 

@@ -23,8 +23,8 @@
 **What does not work yet**
 
 - Full capability API: `world_read` / `action_emit` (§5–8).
-- Economic WASM phase hooks; mod signing (§14).
-- Replay bus JSON `mod.loaded.v1` (engine has `ReplayEvent::ModLoaded` only).
+- Full float data-flow scan (§3.5); mod signing is partial (§14).
+- Replay bus JSON `mod.unloaded.v1` (engine records `mod.loaded.v1` JSON on `ReplayEvent::ModLoaded` — partial FR-MOD-004).
 
 ## v2 — Host registry + policy stub — Done (stub)
 
@@ -32,7 +32,7 @@
 |------|--------|----------|
 | `ModRegistry` | Done (stub) | `crates/mod-host` — `on_policy_phase` filters policy + `write_policy` |
 | Engine Phase 3a callsite | Done (stub) | `Simulation::phase_economy` — `tracing::debug!` per log line |
-| `mod.loaded.v1` / `mod.error.v1` | Planned | replay bus (EVENT_TAXONOMY) |
+| `mod.loaded.v1` / `mod.error.v1` | **Partial** | `format_mod_loaded_event_json` / `format_mod_error_event_json`; `ReplayEvent::ModLoaded.bus_json` |
 
 **What works today (v2)**
 
@@ -42,7 +42,7 @@
 **What does not work yet (v2+)**
 
 - Capability enforcement beyond manifest flags; actual policy writes.
-- `mod.loaded.v1` / `mod.error.v1` on replay bus.
+- `mod.unloaded.v1` on replay bus; `mod.error.v1` JSON only as formatter stub (runtime bus TBD).
 
 ## v3 — WASM sandbox (**partial**, 2026-05-25)
 
@@ -52,7 +52,7 @@
 | `.civmod` ZIP load | Done | `ModHost::load_civmod_archive` |
 | `civlab-sdk` | Done | `crates/civlab-sdk` |
 | Example WASM build | Script | `scripts/build-example-policy-wasm.ps1` |
-| Determinism scan | Planned | §3.4 |
+| Determinism scan | Done (MVP) | `crates/mod-host/src/determinism.rs` |
 | CI packaged `.civmod` | Planned | `scripts/package-example-mod.ps1` (optional) |
 
 ## v4 — Save/load + distribution (planned)

@@ -1,6 +1,6 @@
 # FR-CIV-MATURITY — AX / DX / UX / Modding maturity audit
 
-**Date:** 2026-05-25
+**Date:** 2026-05-26
 **Scope:** Civis 3D workspace (`feat/civis-3d-foundation` line) — what is **mature** vs **immature** for agents, developers, players/modders.
 
 Legend: **Mature** = documented + tested + automatable · **Partial** = works but gaps · **Immature** = spec-only or stub · **Missing** = no code path.
@@ -13,10 +13,10 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |---------|----------|-------------------|
 | **AX (agents)** | Good | `AGENTS.md` + `agent-smoke.ps1` + attach matrix; optional `-FullUnreal` off default verify |
 | **DX (developers)** | Good | `just civis-3d-verify` (catalog + scenario checks), `jsonrpc-surface.md`, `client-attach-matrix.md` |
-| **UX (players / L2)** | Partial | Godot/web L2 strong; **F3D0 partial** — Bevy full mesh; Godot/Unreal **VoxelDelta markers**; Unreal minimap UMG partial |
-| **Modding** | Partial (v3) | Manifest + `.civmod` + WASM policy tick + `ReplayEvent::ModLoaded`; no signing / economic WASM |
+| **UX (players / L2)** | Partial–Good | Godot/web L2 strong; **F3D0 partial–good** — Bevy full mesh; Godot/Unreal **16³ mesh** when dense `voxels`; cross-client minimap click-to-focus (Bevy/Godot/web/Unreal) |
+| **Modding** | Partial–Good (v3) | WASM policy/economy/military ticks, `.civmod`, signing (`just civis-3d-mod-sign`), mod browser on `sim.snapshot`, `mod.loaded.v1` replay-bus JSON |
 
-**Gates (2026-05-25):** `ws_smoke` 32 tests · `just civis-3d-verify` pass (incl. `check-jsonrpc-catalog.ps1`, `civis-3d-scenario-check`).
+**Gates (2026-05-26):** `agent-smoke.ps1` **PASS** · `just civis-3d-verify` **PASS** (catalog, scenario, web, mod-host) · `just godot-test` via `--manifest-path clients/godot-ref/rust/Cargo.toml`.
 
 **Recommended finish order:** P0 agent contracts → P1 protocol/attach parity → P2 modding MVP hooks → P3 L5 polish.
 
@@ -39,7 +39,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 
 | ID | Gap | Evidence | Finish criterion |
 |----|-----|----------|------------------|
-| DX-01 | **Modding API** v3 partial | `wasmtime`, `.civmod`, `civlab-sdk`; 7 `civ-mod-host` tests | Capability API + economic WASM per `fr-modding-roadmap.md` |
+| DX-01 | **Modding API** v3 partial | `wasmtime`, `.civmod`, `civlab-sdk`; **25+** `civ-mod-host` tests (27 in crate) | Capability API + signing polish per `fr-modding-roadmap.md` |
 | DX-02 | ~~Scenario YAML~~ **Done** | [`scenario-yaml.md`](../guides/scenario-yaml.md); `civis-3d-scenario-check` in verify | Keep keys in sync with `scenario.rs` |
 | DX-03 | ~~JSON-RPC catalog split~~ **Done** | [`jsonrpc-surface.md`](../api/jsonrpc-surface.md) + [`scripts/check-jsonrpc-catalog.ps1`](../../scripts/check-jsonrpc-catalog.ps1) in `civis-3d-verify` | Keep doc table in sync when adding `JsonRpcMethod` variants |
 | DX-04 | ~~Client attach matrix~~ **Done** | [`docs/guides/client-attach-matrix.md`](../guides/client-attach-matrix.md) | Update when new client or default URL changes |
@@ -55,11 +55,11 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |----|-----|----------|------------------|
 | UX-01 | **`job` on `civ_pins`** wired from `Citizen` on agent entities | `spectator.rs` reads `Citizen.job`; `attach_citizen_to_agents` | **Mature** — `civ-engine` `civ_pins_include_job_when_citizen_component_present` |
 | UX-02 | ~~Cross-client spawn palette~~ **Partial–Good** | [`client-attach-matrix.md`](../guides/client-attach-matrix.md) — all five `kind`s on WS; `ws_smoke` covers civilian + vehicle | Optional `ws_smoke` per `port` / `hangar` |
-| UX-03 | **F3D0 voxel stream** partial–good | Bevy: binary `Frame3d`; Godot/Unreal: **16³ procedural mesh** when dense `voxels` (4096), else markers + throttle | Unreal click-to-focus; full-world mesh budget |
-| UX-04 | **Minimap conventions** — Bevy/Godot/web; Unreal partial | `ACivMinimapCapture` + `UCivMinimapWidget` in CivShow | Click-to-focus + parity tests when product needs it |
+| UX-03 | **F3D0 voxel stream** partial–good | Bevy: binary `Frame3d`; Godot/Unreal: **16³ procedural mesh** when dense `voxels` (4096), else markers + throttle | Full-world mesh budget; chunk-dot overlays on web minimap |
+| UX-04 | ~~Minimap conventions~~ **Done** | Bevy/Godot/web + Unreal `UCivMinimapWidget` click-to-focus | Keep [`minimap-conventions.md`](../guides/minimap-conventions.md) in sync |
 | UX-05 | **spectator_mode default** differs (Godot true, web false) | Confusing for demos | Document in attach matrix; align defaults or query params |
 | UX-06 | **Manor Lords L5** incremental only | `fr-l5-visual-pass.md` IN PROGRESS | Close scoped slices; defer art to Quixel |
-| UX-07 | **Modder-facing surface** none | No in-game mod browser; no hot reload | Post CIV-0700 MVP |
+| UX-07 | ~~Modder-facing surface~~ **Partial–Good** | Web **Mods** panel; `mods` on `sim.snapshot`; watch event feed `mod.loaded` | Hot reload + publish store post-MVP |
 
 ---
 
@@ -71,11 +71,13 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | `.civmod` format | **Partial** | ZIP load in `ModHost::load_civmod_archive` |
 | `civlab-sdk` guest crate | **Partial** | `crates/civlab-sdk` + `build-example-policy-wasm.ps1` |
 | `mods/` directory | **Partial** | `mods/manifest.schema.json`, `mods/example-policy/manifest.toml` |
-| Manifest host (`civ-mod-host`) | **Partial** | 7 unit tests; WASM + registry policy phase |
+| Manifest host (`civ-mod-host`) | **Partial** | 25+ unit tests; WASM policy/economy/military ticks + registry phases |
 | Engine scenario hook | **Partial** | `register_mod_stubs`; `ReplayEvent::ModLoaded` in replay |
-| PolicyMod / EconomicMod hooks | **Partial** | Economy phase `ModHost::tick`; military stub; no economic WASM |
+| PolicyMod / EconomicMod hooks | **Partial** | Policy + economy + military WASM ticks; baseline loads `example-policy` + `example-economic` |
 | Lua scenario path | Missing | Spec §12 |
-| Mod signing / dev mode | Missing | Spec §14 |
+| Mod signing / dev mode | **Partial–Good** | `just civis-3d-mod-sign` → `scripts/sign-example-mod.ps1`; `signed_mod_rejects_tampered_wasm` test; `mod-dev` skips verify in tests |
+| Mod browser | **Partial–Good** | `mods` + `mod_lifecycle` on `sim.snapshot`; web **Mods** panel; Godot **Mods** label; watch HTTP |
+| Replay bus consumer | **Partial–Good** | `mod.loaded.v1` JSON on `ReplayEvent::ModLoaded.bus_json`; watch event feed `mod.loaded`; `mod_loaded_event_json_has_required_keys` |
 
 **Minimum modding MVP (v1 — done 2026-05-25):**
 
@@ -132,7 +134,7 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 | 1 | Wire `job` on `CivPin` | [x] Done |
 | 2 | F3D0 throttle doc for Godot | [x] Done — `fr-godot-attach.md` § F3D0; attach matrix notes throttle vs Bevy mesh path |
 | 3 | Unreal build + Play checklist | [x] Done — `build.ps1` on VS 2026 + UE 5.7; default smoke = preflight; full UBT via `-FullUnreal` |
-| 4 | Godot/Unreal F3D0 markers | [x] Done — `VoxelDelta` overlays documented; not full Bevy mesh |
+| 4 | Godot/Unreal F3D0 mesh | [x] Done — **16³ procedural mesh** when dense `voxels`; else chunk markers |
 
 ### Sprint D — Modding MVP (1 week)
 
@@ -178,17 +180,19 @@ VS 2022 without `VC\Tools\MSVC` remains insufficient until the C++ workload is i
 
 ## Loop status
 
-**Last verified:** 2026-05-25 (local, `feat/civis-3d-foundation` workspace)
+**Last verified:** 2026-05-26 (local, `feat/p-w1-tactics-012` workspace)
 
 | Gate | Result |
 |------|--------|
-| `.\scripts\agent-smoke.ps1` | **PASS** — civ-server 32/32 `ws_smoke`, civ-watch, Unreal preflight |
+| `.\scripts\agent-smoke.ps1` | **PASS** — `ws_smoke`, catalog/scenario/mod-host/godot gates, civ-watch, Unreal preflight |
 | `.\scripts\agent-smoke.ps1 -FullUnreal` | **PASS** when UE 5.7 + VS 2026 present — full `build.ps1` |
-| `just civis-3d-verify` | **PASS** — workspace check/test/clippy/fmt + catalog/scenario/web/mod-host |
-| `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm` (gitignored) |
-| `just godot-test` | **PASS** — F3D0 mesh + WS decode (13 tests) |
+| `just civis-3d-verify` | **PASS** — workspace check/clippy/fmt + catalog/scenario/web/mod-host |
+| `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm`, `mods/example-economic/mod.wasm` (gitignored) |
+| `just godot-test` | **PASS** — `cargo test --manifest-path clients/godot-ref/rust/Cargo.toml` (F3D0 mesh + WS decode) |
 | `just civis-3d-catalog-check` | **PASS** — 14 methods: `jsonrpc.rs` ↔ `jsonrpc-surface.md` |
-| `just civis-3d-scenario-check` | **PASS** — 7 `scenario::*` tests |
+| `just civis-3d-scenario-check` | **PASS** — `civ-engine` `scenario::*` tests (`-j 1` on Windows; see `agent-smoke.md`) |
+| `cargo test -p civ-mod-host -- mod_loaded` + `signed_mod` | **PASS** — `mod_loaded_event_json_has_required_keys` + `signed_mod_rejects_tampered_wasm` |
+| `just civis-3d-mod-sign` | **Local** — signs `mods/{MOD}/mod.wasm`; prints `author_pubkey_hex` for manifest |
 
 ### Open P0
 

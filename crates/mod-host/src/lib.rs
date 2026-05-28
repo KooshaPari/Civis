@@ -1,27 +1,51 @@
 //! civ-mod-host — manifest-only mod host stub (CIV-0700 Sprint D / v2).
 //!
 //! Loads and validates `manifest.toml` (or `mod.toml`) from a mod directory.
-//! WASM sandboxing and capability enforcement are future work; v2 adds a
-//! [`ModRegistry`] with a log-only policy-phase stub invoked from [`ModHost::tick`].
+//! WASM guests run via `wasmtime` with manifest-derived capability enforcement on
+//! `world_read` / `action_emit` host imports (CIV-0700 §4.3 MVP).
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod capability;
+mod determinism;
+mod float_data_flow;
+mod guest_state;
+mod policy_action;
 mod signature;
 mod wasm_guest;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use capability::ModCapabilitySet;
 use serde::Deserialize;
 use signature::verify_wasm_signature;
 use thiserror::Error;
-use wasm_guest::{invoke_economy_tick, invoke_military_tick, invoke_policy_tick, MOD_WASM_NAME};
+use wasm_guest::{
+    invoke_economy_tick_with_capabilities, invoke_military_tick_with_capabilities,
+    invoke_policy_tick_with_capabilities, MOD_WASM_NAME,
+};
 
+pub use capability::{
+    format_mod_permission_violation_json, ModCapabilitySet as CapabilitySet, ModEnforcementCtx,
+    ModStatus, WorldDomain, ACTION_SET_POLICY_PARAM, ACTION_SET_SUBSIDY_RATE, ACTION_SET_TAX_RATE,
+    ACTION_TRANSFER_FUNDS, ACTION_TRIGGER_EVENT, ERR_PERMISSION_DENIED,
+};
+pub use determinism::{
+    scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
+};
+pub use float_data_flow::{scan_float_action_emit_contamination, FloatContaminationSite};
+pub use guest_state::{
+    GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave,
+    MOD_GUEST_STATE_VERSION,
+};
+pub use policy_action::{policy_action_to_emit_type, PolicyActionKind};
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{
-    HostState, WasmGuestError, HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS,
-    HOST_GUEST_MEMORY_CAP, HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
+    invoke_economy_tick, invoke_military_tick, invoke_policy_tick, HostState, WasmGuestError,
+    HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS, HOST_GUEST_MEMORY_CAP,
+    HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
 };
 
 /// Supported mod kinds per CIV-0700 §4.1.
@@ -190,6 +214,19 @@ pub struct ModLoadedRecord {
     pub tick: u64,
 }
 
+/// `mod.unloaded.v1` structured lifecycle record (FR-MOD-004 partial).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModUnloadedRecord {
+    /// Stable mod id from manifest.
+    pub mod_id: String,
+    /// Display name.
+    pub mod_name: String,
+    /// Simulation tick at unload time.
+    pub tick: u64,
+    /// Human-readable unload reason (e.g. `user_request`).
+    pub reason: String,
+}
+
 /// Loaded mod entry kept by the host.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoadedMod {
@@ -197,8 +234,14 @@ pub struct LoadedMod {
     pub root: PathBuf,
     /// Parsed manifest.
     pub manifest: ModManifest,
+    /// Runtime capability set compiled from manifest permissions.
+    pub capabilities: ModCapabilitySet,
     /// Optional `mod.wasm` bytes when present beside manifest or in archive.
     pub wasm_bytes: Option<Vec<u8>>,
+    /// Float opcode count from the last determinism scan (0 when WASM absent).
+    pub float_instruction_count: u32,
+    /// `action_emit` contamination sites from data-flow scan (0 when WASM absent).
+    pub float_contamination_site_count: u32,
 }
 
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
@@ -223,6 +266,15 @@ impl ModRegistry {
     /// Register a loaded mod entry.
     pub fn register(&mut self, entry: LoadedMod) {
         self.mods.push(entry);
+    }
+
+    /// Remove a loaded mod by stable id; returns the removed entry when found.
+    pub fn remove_by_id(&mut self, mod_id: &str) -> Option<LoadedMod> {
+        let index = self
+            .mods
+            .iter()
+            .position(|entry| entry.manifest.meta.id == mod_id)?;
+        Some(self.mods.remove(index))
     }
 
     /// Military-phase stub (P-W1): one log line per mod with `read_military`.
@@ -267,8 +319,33 @@ impl ModRegistry {
 pub struct ModHost {
     registry: ModRegistry,
     loaded_records: Vec<ModLoadedRecord>,
+    /// Source paths for hot reload (mod id → directory or `.civmod` archive).
+    reload_roots: std::collections::BTreeMap<String, PathBuf>,
     /// Per-mod guest scratch memory persisted across phase ticks (FR-CIV-TACTICS-052).
     guest_memory_by_mod: std::collections::BTreeMap<String, Vec<u8>>,
+    /// Permission violations accumulated during the current policy tick.
+    enforcement_by_mod: std::collections::BTreeMap<String, ModEnforcementCtx>,
+    /// Runtime mod lifecycle status (CIV-0700 §4.3).
+    mod_status_by_id: std::collections::BTreeMap<String, ModStatus>,
+}
+
+fn push_permission_violation_if_needed(
+    lines: &mut Vec<String>,
+    mod_id: &str,
+    sim_tick: u64,
+    violations_before: u32,
+    enforcement: &ModEnforcementCtx,
+) {
+    if enforcement.violations <= violations_before {
+        return;
+    }
+    let call = enforcement.last_call.as_deref().unwrap_or("unknown");
+    lines.push(format_mod_permission_violation_json(
+        mod_id,
+        sim_tick,
+        call,
+        enforcement.last_domain,
+    ));
 }
 
 impl ModHost {
@@ -296,6 +373,24 @@ impl ModHost {
         &self.loaded_records
     }
 
+    /// Runtime status for a loaded mod (`Active` when unknown).
+    #[must_use]
+    pub fn mod_status(&self, mod_id: &str) -> ModStatus {
+        self.mod_status_by_id
+            .get(mod_id)
+            .copied()
+            .unwrap_or(ModStatus::Active)
+    }
+
+    /// Permission violations recorded for the current policy tick.
+    #[must_use]
+    pub fn enforcement_violations(&self, mod_id: &str) -> u32 {
+        self.enforcement_by_mod
+            .get(mod_id)
+            .map(|ctx| ctx.violations)
+            .unwrap_or(0)
+    }
+
     /// Snapshot of a mod's guest scratch memory (empty vec if the mod is unknown).
     #[must_use]
     pub fn guest_memory_snapshot(&self, mod_id: &str) -> Vec<u8> {
@@ -312,6 +407,55 @@ impl ModHost {
             trimmed.truncate(HOST_GUEST_MEMORY_CAP);
         }
         self.guest_memory_by_mod.insert(mod_id.to_owned(), trimmed);
+    }
+
+    /// Export all per-mod guest scratch bytes for save files (CIV-1000 §16.3).
+    #[must_use]
+    pub fn export_guest_state(&self) -> ModGuestStateSave {
+        ModGuestStateSave {
+            version: MOD_GUEST_STATE_VERSION,
+            memories: self
+                .guest_memory_by_mod
+                .iter()
+                .map(|(mod_id, bytes)| ModGuestMemoryBlob {
+                    mod_id: mod_id.clone(),
+                    bytes: bytes.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    /// Restore guest scratch bytes from a save bundle.
+    pub fn import_guest_state(&mut self, save: &ModGuestStateSave) -> Result<(), GuestStateError> {
+        if save.version > MOD_GUEST_STATE_VERSION {
+            return Err(GuestStateError::UnsupportedVersion(save.version));
+        }
+        for blob in &save.memories {
+            self.restore_guest_memory(&blob.mod_id, blob.bytes.clone());
+        }
+        Ok(())
+    }
+
+    /// Loaded mods for mod-browser UI / `sim.snapshot` wire (FR-CIV-TACTICS-054).
+    #[must_use]
+    pub fn browser_entries(&self) -> Vec<ModBrowserEntry> {
+        self.registry
+            .mods()
+            .iter()
+            .map(|entry| {
+                let id = entry.manifest.meta.id.clone();
+                ModBrowserEntry {
+                    id: id.clone(),
+                    name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    mod_type: mod_type_label(entry.manifest.meta.mod_type).to_owned(),
+                    has_wasm: entry.wasm_bytes.is_some(),
+                    guest_memory_len: self.guest_memory_by_mod.get(&id).map(Vec::len).unwrap_or(0),
+                    float_instruction_count: entry.float_instruction_count,
+                    float_contamination_site_count: entry.float_contamination_site_count,
+                }
+            })
+            .collect()
     }
 
     /// `mod.loaded.v1` lifecycle strings (replay / watch consumers).
@@ -338,15 +482,25 @@ impl ModHost {
         let mod_dir = mod_dir.as_ref();
         let manifest_path = mod_dir.join(CIVMOD_MANIFEST_NAME);
         let manifest = load_manifest(&manifest_path)?;
-        let wasm_bytes = read_wasm_file(mod_dir.join(MOD_WASM_NAME));
+        let wasm_path = mod_dir.join(MOD_WASM_NAME);
+        let wasm_bytes = read_optional_file(wasm_path);
+        let sig_bytes = read_optional_file(mod_dir.join(MOD_WASM_SIG_NAME));
+        if let Some(ref wasm) = wasm_bytes {
+            enforce_wasm_determinism(mod_dir, wasm)?;
+            enforce_wasm_signature(
+                mod_dir,
+                &manifest,
+                Some(wasm.as_slice()),
+                sig_bytes.as_deref(),
+            )?;
+        }
         let mod_id = manifest.meta.id.clone();
+        let root = mod_dir.to_path_buf();
+        self.remember_reload_root(&mod_id, root.clone());
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
-        self.registry.register(LoadedMod {
-            root: mod_dir.to_path_buf(),
-            manifest,
-            wasm_bytes,
-        });
+        self.registry
+            .register(make_loaded_mod(root, manifest, wasm_bytes));
         Ok(())
     }
 
@@ -358,41 +512,89 @@ impl ModHost {
         let archive_path = archive_path.as_ref().to_path_buf();
         let (manifest, wasm_bytes) = read_civmod_archive(&archive_path)?;
         let mod_id = manifest.meta.id.clone();
+        self.remember_reload_root(&mod_id, archive_path.clone());
         self.push_loaded(&manifest, 0);
         self.guest_memory_by_mod.entry(mod_id).or_default();
-        self.registry.register(LoadedMod {
-            root: archive_path,
-            manifest,
-            wasm_bytes,
-        });
+        self.registry
+            .register(make_loaded_mod(archive_path, manifest, wasm_bytes));
         Ok(())
+    }
+
+    /// Unload then reload a mod from its remembered source path (hot reload).
+    pub fn reload_mod(&mut self, mod_id: &str, tick: u64) -> Result<ModLoadedRecord, String> {
+        let root = self
+            .registry
+            .mods()
+            .iter()
+            .find(|entry| entry.manifest.meta.id == mod_id)
+            .map(|entry| entry.root.clone())
+            .or_else(|| self.reload_roots.get(mod_id).cloned())
+            .ok_or_else(|| format!("mod not loaded: {mod_id}"))?;
+
+        self.unload_mod(mod_id, "hot_reload", tick)?;
+        self.load_mod_path(&root).map_err(|err| err.to_string())?;
+
+        let entry = self
+            .registry
+            .mods()
+            .iter()
+            .find(|entry| entry.manifest.meta.id == mod_id)
+            .ok_or_else(|| format!("mod reload produced no registry entry: {mod_id}"))?;
+
+        if let Some(record) = self.loaded_records.last_mut() {
+            if record.mod_id == mod_id {
+                record.tick = tick;
+            }
+        }
+
+        Ok(ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick,
+        })
     }
 
     /// Military-phase hook (P-W1) — manifest stubs + WASM `civlab_military_tick` when loaded.
     #[must_use]
     pub fn military_tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_military_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
             if !entry.manifest.permissions.read_military {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
-                .or_default();
-            match invoke_military_tick(wasm, sim_tick, mem) {
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
+            let violations_before = enforcement.violations;
+            match invoke_military_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_military_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_military_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
+            }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
+            if enforcement.suspended {
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -401,8 +603,10 @@ impl ModHost {
     /// Policy-phase hook — stubs + WASM `civlab_policy_tick` when loaded.
     #[must_use]
     pub fn tick(&mut self, sim_tick: u64) -> Vec<String> {
+        self.reset_tick_enforcement();
         let mut lines = self.registry.on_policy_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
@@ -411,20 +615,34 @@ impl ModHost {
             {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
-                .or_default();
-            match invoke_policy_tick(wasm, sim_tick, mem) {
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
+            let violations_before = enforcement.violations;
+            match invoke_policy_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_policy_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_policy_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
+            }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
+            if enforcement.suspended {
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -434,7 +652,8 @@ impl ModHost {
     #[must_use]
     pub fn economy_tick(&mut self, sim_tick: u64) -> Vec<String> {
         let mut lines = self.registry.on_economy_phase(sim_tick);
-        for entry in self.registry.mods() {
+        let mods: Vec<_> = self.registry.mods().to_vec();
+        for entry in mods {
             let Some(wasm) = entry.wasm_bytes.as_ref() else {
                 continue;
             };
@@ -443,23 +662,63 @@ impl ModHost {
             {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(entry.manifest.meta.id.clone())
-                .or_default();
-            match invoke_economy_tick(wasm, sim_tick, mem) {
+            let mod_id = entry.manifest.meta.id.clone();
+            if self.mod_status(&mod_id) == ModStatus::Suspended {
+                continue;
+            }
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
+            let violations_before = enforcement.violations;
+            match invoke_economy_tick_with_capabilities(
+                wasm,
+                sim_tick,
+                mem,
+                entry.capabilities.clone(),
+                enforcement,
+            ) {
                 Ok(code) => lines.push(format!(
-                    "mod:{}:wasm_economy_tick:tick={sim_tick}:code={code}",
-                    entry.manifest.meta.id
+                    "mod:{mod_id}:wasm_economy_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &entry.manifest.meta.id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
+            }
+            push_permission_violation_if_needed(
+                &mut lines,
+                &mod_id,
+                sim_tick,
+                violations_before,
+                enforcement,
+            );
+            if enforcement.suspended {
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
+    }
+
+    /// Unload a mod by stable id and emit a `mod.unloaded.v1` record.
+    pub fn unload_mod(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+        tick: u64,
+    ) -> Result<ModUnloadedRecord, String> {
+        let removed = self
+            .registry
+            .remove_by_id(mod_id)
+            .ok_or_else(|| format!("mod not loaded: {mod_id}"))?;
+        self.guest_memory_by_mod.remove(mod_id);
+        self.enforcement_by_mod.remove(mod_id);
+        self.mod_status_by_id.remove(mod_id);
+        Ok(ModUnloadedRecord {
+            mod_id: mod_id.to_owned(),
+            mod_name: removed.manifest.meta.name,
+            tick,
+            reason: reason.to_owned(),
+        })
+    }
+
+    fn remember_reload_root(&mut self, mod_id: &str, root: PathBuf) {
+        self.reload_roots.insert(mod_id.to_owned(), root);
     }
 
     fn push_loaded(&mut self, manifest: &ModManifest, tick: u64) {
@@ -469,6 +728,17 @@ impl ModHost {
             version: manifest.meta.version.clone(),
             tick,
         });
+    }
+
+    fn reset_tick_enforcement(&mut self) {
+        for ctx in self.enforcement_by_mod.values_mut() {
+            *ctx = ModEnforcementCtx::default();
+        }
+        for status in self.mod_status_by_id.values_mut() {
+            if *status == ModStatus::Suspended {
+                *status = ModStatus::Active;
+            }
+        }
     }
 }
 
@@ -481,13 +751,51 @@ pub fn format_mod_loaded_event(record: &ModLoadedRecord) -> String {
     )
 }
 
-/// Format `mod.error.v1` for host-side guest failures.
+/// Format `mod.loaded.v1` as JSON for the replay bus (FR-MOD-004 partial).
+#[must_use]
+pub fn format_mod_loaded_event_json(record: &ModLoadedRecord) -> String {
+    serde_json::json!({
+        "event": "mod.loaded.v1",
+        "mod_id": record.mod_id,
+        "mod_name": record.mod_name,
+        "version": record.version,
+        "tick": record.tick,
+    })
+    .to_string()
+}
+
+/// Format `mod.unloaded.v1` as JSON for the replay bus (FR-MOD-004 partial).
+#[must_use]
+pub fn format_mod_unloaded_event_json(record: &ModUnloadedRecord) -> String {
+    serde_json::json!({
+        "event": "mod.unloaded.v1",
+        "mod_id": record.mod_id,
+        "mod_name": record.mod_name,
+        "tick": record.tick,
+        "reason": record.reason,
+    })
+    .to_string()
+}
+
+/// Format `mod.error.v1` as JSON for the replay bus (FR-MOD-004 partial stub).
+#[must_use]
+pub fn format_mod_error_event_json(mod_id: &str, tick: u64, message: &str) -> String {
+    serde_json::json!({
+        "event": "mod.error.v1",
+        "mod_id": mod_id,
+        "tick": tick,
+        "message": message,
+    })
+    .to_string()
+}
+
+/// Format `mod.error.v1` for host-side guest failures (log-line form).
 #[must_use]
 pub fn format_mod_error_event(mod_id: &str, tick: u64, message: &str) -> String {
     format!("mod.error.v1 mod_id={mod_id} tick={tick} message={message}")
 }
 
-fn read_wasm_file(path: PathBuf) -> Option<Vec<u8>> {
+fn read_optional_file(path: PathBuf) -> Option<Vec<u8>> {
     std::fs::read(path).ok()
 }
 
@@ -573,6 +881,9 @@ pub fn read_civmod_archive(
     })?;
 
     let manifest = parse_manifest(&contents, archive_path)?;
+    if let Some(ref wasm) = wasm_bytes {
+        enforce_wasm_determinism(archive_path, wasm)?;
+    }
     enforce_wasm_signature(
         archive_path,
         &manifest,
@@ -580,6 +891,49 @@ pub fn read_civmod_archive(
         wasm_sig.as_deref(),
     )?;
     Ok((manifest, wasm_bytes))
+}
+
+fn make_loaded_mod(root: PathBuf, manifest: ModManifest, wasm_bytes: Option<Vec<u8>>) -> LoadedMod {
+    let (float_instruction_count, float_contamination_site_count) = wasm_bytes
+        .as_ref()
+        .map(|wasm| {
+            scan_wasm_determinism_report(wasm)
+                .map(|report| {
+                    (
+                        report.float_instruction_count,
+                        report.float_contamination_site_count,
+                    )
+                })
+                .unwrap_or((0, 0))
+        })
+        .unwrap_or((0, 0));
+    LoadedMod {
+        root,
+        capabilities: ModCapabilitySet::from_permissions(&manifest.permissions),
+        manifest,
+        wasm_bytes,
+        float_instruction_count,
+        float_contamination_site_count,
+    }
+}
+
+fn mod_type_label(kind: ModType) -> &'static str {
+    match kind {
+        ModType::Policy => "policy",
+        ModType::Economic => "economic",
+        ModType::Event => "event",
+        ModType::Scenario => "scenario",
+    }
+}
+
+fn enforce_wasm_determinism(path: &Path, wasm: &[u8]) -> Result<(), ManifestError> {
+    if cfg!(feature = "mod-dev") {
+        return Ok(());
+    }
+    scan_wasm_determinism(wasm).map_err(|e| ManifestError::Validation {
+        path: path.to_path_buf(),
+        message: format!("determinism scan: {e}"),
+    })
 }
 
 fn enforce_wasm_signature(
@@ -838,6 +1192,175 @@ write_policy = false
     }
 
     #[test]
+    fn mod_guest_state_save_round_trips_json() {
+        let mut host = ModHost::new();
+        host.restore_guest_memory("demo", vec![9, 8, 7]);
+        let json = host.export_guest_state().to_json().expect("json");
+        let mut other = ModHost::new();
+        let save = ModGuestStateSave::from_json(&json).expect("parse");
+        other.import_guest_state(&save).expect("import");
+        assert_eq!(other.guest_memory_snapshot("demo"), vec![9, 8, 7]);
+    }
+
+    #[test]
+    fn mod_host_guest_memory_snapshot_roundtrip() {
+        let mut host = ModHost::new();
+        host.restore_guest_memory("demo", vec![1, 2, 3]);
+        assert_eq!(host.guest_memory_snapshot("demo"), vec![1, 2, 3]);
+        assert!(host.guest_memory_snapshot("missing").is_empty());
+    }
+
+    #[test]
+    fn capability_imports_list_is_complete() {
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"sim_tick"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"memory_read"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"world_read"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
+    }
+
+    #[test]
+    fn policy_tick_emits_permission_violation_on_denied_world_read() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 2)
+                (call $read))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "cap-viol"
+name = "Cap Viol"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let lines = host.tick(7);
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("mod.permission_violation.v1")),
+            "expected violation event in {lines:?}"
+        );
+        assert!(lines.iter().any(|l| l.contains("world_read")));
+        assert_eq!(host.enforcement_violations("cap-viol"), 1);
+        assert!(
+            lines.iter().any(|l| l.contains("code=-2")),
+            "guest should return ERR_PERMISSION_DENIED: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn loaded_mod_carries_capability_set_from_manifest() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "cap-demo"
+name = "Cap Demo"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+read_economy = true
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let entry = &host.mods()[0];
+        assert!(entry.capabilities.can_read_domain(WorldDomain::Economy));
+        assert!(entry.capabilities.can_emit_action(ACTION_SET_TAX_RATE));
+        assert!(!entry.capabilities.can_read_domain(WorldDomain::Military));
+    }
+
+    #[test]
+    fn mod_host_economy_tick_persists_guest_memory() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "memory_read" (func $read (param i32) (result i32)))
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (call $read)
+                (if (result i32)
+                  (i32.eqz)
+                  (then
+                    (i32.const 0)
+                    (i32.const 55)
+                    (call $write)
+                    (i32.const 55))
+                  (else
+                    (i32.const 0)
+                    (call $read))))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "mem-econ"
+name = "Mem Econ"
+version = "0.0.1"
+api_version = "1"
+mod_type = "economic"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+read_economy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let _ = host.economy_tick(1);
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
+        let _ = host.economy_tick(2);
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
+    }
+
+    #[test]
     fn wasm_guest_reads_capability_host_import() {
         const WAT: &str = r#"
             (module
@@ -865,7 +1388,10 @@ write_policy = false
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
-        assert_eq!(invoke_military_tick(&wasm, 11, &mut mem).expect("invoke"), 11);
+        assert_eq!(
+            invoke_military_tick(&wasm, 11, &mut mem).expect("invoke"),
+            11
+        );
     }
 
     /// When `just civis-3d-mod-wasm` has been run, repo example-policy loads WASM on tick.
@@ -1002,13 +1528,111 @@ write_policy = false
 
         let manifest = load_manifest(&path).expect("manifest");
         let mut registry = ModRegistry::new();
-        registry.register(LoadedMod {
-            root: dir.path().to_path_buf(),
-            manifest,
-            wasm_bytes: None,
-        });
+        registry.register(make_loaded_mod(dir.path().to_path_buf(), manifest, None));
 
         assert!(registry.on_policy_phase(1).is_empty());
+    }
+
+    #[test]
+    fn signed_mod_rejects_tampered_wasm() {
+        use ed25519_dalek::Signer;
+        use rand::rngs::OsRng;
+
+        const WAT_SIGNED: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 1)
+            )
+        "#;
+        const WAT_TAMPERED: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 2)
+            )
+        "#;
+        let signed_wasm = wat::parse_str(WAT_SIGNED).expect("signed wat");
+        let tampered_wasm = wat::parse_str(WAT_TAMPERED).expect("tampered wat");
+        let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);
+        let signature = signing_key.sign(&signed_wasm);
+        let pk_hex: String = signing_key
+            .verifying_key()
+            .as_bytes()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let civmod = dir.path().join("signed-policy.civmod");
+        let manifest = format!(
+            r#"
+[mod]
+id = "signed-policy"
+name = "Signed"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+author_pubkey_hex = "{pk_hex}"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#
+        );
+
+        let file = std::fs::File::create(&civmod).expect("create");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+        zip.start_file(CIVMOD_MANIFEST_NAME, options)
+            .expect("manifest");
+        zip.write_all(manifest.as_bytes()).expect("write manifest");
+        zip.start_file(MOD_WASM_NAME, options).expect("wasm");
+        zip.write_all(&tampered_wasm).expect("write wasm");
+        zip.start_file(MOD_WASM_SIG_NAME, options).expect("sig");
+        zip.write_all(signature.to_bytes().as_slice())
+            .expect("write sig");
+        zip.finish().expect("finish");
+
+        let err = read_civmod_archive(&civmod).expect_err("tampered wasm must fail verify");
+        match err {
+            ManifestError::Validation { message, .. } => {
+                assert!(
+                    message.contains("signature verification failed"),
+                    "unexpected message: {message}"
+                );
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn mod_loaded_event_json_has_required_keys() {
+        let record = ModLoadedRecord {
+            mod_id: "example-policy".to_owned(),
+            mod_name: "Example Policy".to_owned(),
+            version: "0.1.0".to_owned(),
+            tick: 42,
+        };
+        let json = format_mod_loaded_event_json(&record);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.loaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert_eq!(v["mod_name"], "Example Policy");
+        assert_eq!(v["version"], "0.1.0");
+        assert_eq!(v["tick"], 42);
+    }
+
+    #[test]
+    fn mod_error_event_json_has_required_keys() {
+        let json = format_mod_error_event_json("demo-mod", 7, "guest trap");
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.error.v1");
+        assert_eq!(v["mod_id"], "demo-mod");
+        assert_eq!(v["tick"], 7);
+        assert_eq!(v["message"], "guest trap");
     }
 
     #[test]
@@ -1035,5 +1659,93 @@ civlab-api = ">=1.0.0, <2.0.0"
 
         let err = load_manifest(&path).expect_err("bad id");
         assert!(matches!(err, ManifestError::Validation { .. }));
+    }
+
+    #[test]
+    fn mod_unloaded_event_json_has_required_keys() {
+        let record = ModUnloadedRecord {
+            mod_id: "example-policy".to_owned(),
+            mod_name: "Example Policy".to_owned(),
+            tick: 99,
+            reason: "user_request".to_owned(),
+        };
+        let json = format_mod_unloaded_event_json(&record);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event"], "mod.unloaded.v1");
+        assert_eq!(v["mod_id"], "example-policy");
+        assert_eq!(v["reason"], "user_request");
+    }
+
+    #[test]
+    fn unload_mod_removes_from_registry() {
+        let mut host = ModHost::new();
+        host.load_manifest_dir(example_policy_mod_dir())
+            .expect("load example mod");
+        assert_eq!(host.mods().len(), 1);
+        let record = host
+            .unload_mod("example-policy", "user_request", 5)
+            .expect("unload");
+        assert_eq!(record.mod_id, "example-policy");
+        assert!(host.mods().is_empty());
+        assert!(host.guest_memory_snapshot("example-policy").is_empty());
+    }
+
+    #[test]
+    fn reload_mod_rereads_wasm_from_root() {
+        const WAT_V1: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 1)
+            )
+        "#;
+        const WAT_V2: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 2)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "reload-demo"
+name = "Reload Demo"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT_V1).expect("wat"),
+        )
+        .expect("wasm v1");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let lines_v1 = host.tick(1);
+        assert!(lines_v1.iter().any(|line| line.contains("code=1")));
+
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT_V2).expect("wat"),
+        )
+        .expect("wasm v2");
+        let record = host.reload_mod("reload-demo", 9).expect("reload");
+        assert_eq!(record.mod_id, "reload-demo");
+        assert_eq!(record.tick, 9);
+
+        let lines_v2 = host.tick(2);
+        assert!(lines_v2.iter().any(|line| line.contains("code=2")));
     }
 }

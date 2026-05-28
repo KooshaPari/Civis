@@ -58,54 +58,40 @@ internal static class DevToolsCommand
     {
         try
         {
-            // Determine which script to run based on platform
+            string resolvedGamePath = GamePathHelper.Detect(gamePath);
             string scriptPath = GetInstallScript();
 
             if (!File.Exists(scriptPath))
             {
-                AnsiConsole.MarkupLine($"[red]Error: Install script not found at {scriptPath}[/]");
-                Environment.Exit(1);
+                AnsiConsole.MarkupLine($"[red]Install script not found:[/] {Markup.Escape(scriptPath)}");
+                Environment.ExitCode = 1;
                 return;
             }
 
-            // Build command arguments
             List<string> args = new();
-
-            if (!string.IsNullOrWhiteSpace(gamePath))
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    args.Add($"-GamePath \"{gamePath}\"");
-                }
-                else
-                {
-                    args.Add($"--game-path \"{gamePath}\"");
-                }
-            }
+            string gamePathArgument = OperatingSystem.IsWindows()
+                ? $"\"{resolvedGamePath}\""
+                : $"\"{resolvedGamePath}\"";
+            args.Add(OperatingSystem.IsWindows()
+                ? $"-GamePath {gamePathArgument}"
+                : $"--game-path {gamePathArgument}");
 
             if (force)
             {
-                if (OperatingSystem.IsWindows())
-                {
-                    args.Add("-Force");
-                }
-                else
-                {
-                    args.Add("--force");
-                }
+                args.Add(OperatingSystem.IsWindows() ? "-Force" : "--force");
             }
 
-            // Execute install script
+            AnsiConsole.MarkupLine($"[bold]Installing dev tools[/] for {Markup.Escape(resolvedGamePath)}");
             await RunInstallScriptAsync(scriptPath, args, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            AnsiConsole.MarkupLine("[yellow]Installation cancelled.[/]");
+            AnsiConsole.MarkupLine("[yellow]Dev tools installation cancelled.[/]");
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Installation failed: {ex.Message}[/]");
-            Environment.Exit(1);
+            AnsiConsole.MarkupLine($"[red]Dev tools installation failed:[/] {Markup.Escape(ex.Message)}");
+            Environment.ExitCode = 1;
         }
     }
 
@@ -114,9 +100,7 @@ internal static class DevToolsCommand
     /// </summary>
     private static string GetInstallScript()
     {
-        // Get the repo root (go up from src/Tools/Cli)
-        string cliDir = AppContext.BaseDirectory;
-        string repoRoot = Path.GetFullPath(Path.Combine(cliDir, "..", "..", ".."));
+        string repoRoot = FindRepoRoot();
 
         if (OperatingSystem.IsWindows())
         {
@@ -126,6 +110,29 @@ internal static class DevToolsCommand
         {
             return Path.Combine(repoRoot, "scripts", "install-dev-tools.sh");
         }
+    }
+
+    private static string FindRepoRoot()
+    {
+        string current = AppContext.BaseDirectory;
+        while (!string.IsNullOrWhiteSpace(current))
+        {
+            string propsPath = Path.Combine(current, "Directory.Build.props");
+            if (File.Exists(propsPath))
+            {
+                return current;
+            }
+
+            DirectoryInfo? parent = Directory.GetParent(current);
+            if (parent is null)
+            {
+                break;
+            }
+
+            current = parent.FullName;
+        }
+
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
     }
 
     /// <summary>
@@ -169,11 +176,12 @@ internal static class DevToolsCommand
 
         if (process.ExitCode != 0)
         {
+            AnsiConsole.MarkupLine($"[yellow]Install script exited with code {process.ExitCode}.[/]");
             throw new InvalidOperationException(
                 $"Installation script exited with code {process.ExitCode}."
             );
         }
 
-        AnsiConsole.MarkupLine("[green]✓ Dev tools installation completed successfully![/]");
+        AnsiConsole.MarkupLine("[green]Dev tools installation completed successfully.[/]");
     }
 }

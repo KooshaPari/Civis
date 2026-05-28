@@ -165,7 +165,8 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-002 | `civ-standalone` live WS attach + render-to-texture minimap. | `clients/bevy-ref` (`live_attach`, `minimap`) | `resolve_attach_mode_*`, `cargo check … civ-standalone` | implemented |
 | FR-CIV-BEVY-003 | Live attach scene sync (`Frame3d` voxel/agent streams) in `civ-standalone`. | `clients/bevy-ref` (`live_scene`) | `cargo check … civ-standalone`, server attach smoke | implemented |
 | FR-CIV-BEVY-004 | Building diff entries + agent `WorldXZ` positions in live attach. | `live_scene`, `civ-protocol-3d` | `building_and_agent_position_*`, server attach smoke | implemented |
-| FR-CIV-BEVY-004 | Building-diff snapshots + agent `WorldXZ` positions on live attach. | `civ-protocol-3d`, `civ-server` `ws_bridge`, `live_scene` | `cargo test -p civ-protocol-3d`, server attach smoke | implemented |
+| FR-CIV-BEVY-005 | Live scene focus follow + building provenance styling. | `live_scene`, `camera`, `minimap` | server attach smoke, `cargo check … civ-standalone` | implemented |
+| FR-CIV-BEVY-005 | Live scene focus (camera + minimap) and building provenance styling. | `clients/bevy-ref` (`live_scene`) | server attach smoke | implemented |
 
 ---
 

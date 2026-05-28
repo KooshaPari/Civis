@@ -8,6 +8,7 @@ use civ_agents::Civilian as AgentCivilian;
 use civ_engine::Building;
 
 use crate::sim_bridge::SimState;
+use crate::camera::CameraRig;
 use crate::terrain::WORLD_SIZE;
 use crate::AttachMode;
 
@@ -221,7 +222,7 @@ fn sync_minimap_dots(
 fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
-    mut cameras: Query<&mut Transform, (With<Camera3d>, Without<MinimapCamera>)>,
+    mut rig: ResMut<CameraRig>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -235,10 +236,6 @@ fn teleport_camera_from_minimap(
     };
 
     let world = minimap_uv_to_world(normalized);
-    let Ok(mut camera) = cameras.single_mut() else {
-        return;
-    };
-
-    camera.translation.x = world.x;
-    camera.translation.z = world.z;
+    rig.target.x = world.x;
+    rig.target.z = world.z;
 }

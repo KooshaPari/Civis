@@ -61,7 +61,10 @@ pub fn camera_input(
     }
 }
 
-pub fn update_camera(mut query: Query<&mut Transform, With<Camera3d>>, rig: Res<CameraRig>) {
+pub fn update_camera(
+    mut query: Query<&mut Transform, (With<Camera3d>, Without<crate::minimap::MinimapCamera>)>,
+    rig: Res<CameraRig>,
+) {
     let distance = 170.0;
     let dir = Vec3::new(
         rig.yaw.sin() * rig.pitch.cos(),

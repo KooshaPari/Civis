@@ -8,14 +8,15 @@ use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use bevy::ui::FocusPolicy;
 use civ_protocol_3d::{
-    agent_world_translation, AgentAppearanceFrame, BuildingDiffFrame, BuildingKind3d, Frame3d,
-    VoxelDeltaFrame,
+    agent_world_translation, AgentAppearanceFrame, BuildingDiffFrame, BuildingKind3d,
+    BuildingProvenance, Frame3d, VoxelDeltaFrame,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
-use crate::minimap::{MinimapDot, MinimapRoot, MINIMAP_SIZE};
+use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
+use crate::camera::CameraRig;
 use crate::{
     agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
     chunk_fade_complete, decode_chunk_id, mesh_lod_level, should_render_chunk, AttachMode,
@@ -28,20 +29,53 @@ const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const AGENT_NAME_LABELS: bool = true;
 const AGENT_LABEL_FONT_SIZE: f32 = 10.0;
 const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
-const MINIMAP_WORLD_MIN: f32 = 0.0;
-const MINIMAP_WORLD_MAX: f32 = 256.0;
 const MINIMAP_LIVE_DOT: f32 = 4.0;
+const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
+const LIVE_FOCUS_LERP_SPEED: f32 = 2.5;
+const LIVE_FOCUS_MIN_HALF_EXTENT: f32 = 32.0;
 const AGENT_GROUND_Y: f32 = 0.8;
 const BUILDING_GROUND_Y: f32 = 1.25;
 
+/// Smoothed world-space centre and half-extent for live attach camera + minimap framing.
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct LiveSceneFocus {
+    /// World-space centre (XZ from streamed entities).
+    pub centre: Vec3,
+    /// Half-width of the orthographic/minimap view in world units.
+    pub half_extent: f32,
+}
+
+impl Default for LiveSceneFocus {
+    fn default() -> Self {
+        Self {
+            centre: Vec3::ZERO,
+            half_extent: crate::terrain::WORLD_SIZE * 0.5,
+        }
+    }
+}
+
 /// Tracks spawned entities for streamed voxel chunks and agents.
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct LiveScene {
     chunks: HashMap<u64, Entity>,
     agents: HashMap<u64, Entity>,
     buildings: HashMap<u64, Entity>,
     agent_materials: HashMap<u64, Handle<StandardMaterial>>,
     building_materials: HashMap<u64, Handle<StandardMaterial>>,
+    building_provenance: BuildingProvenance,
+}
+
+impl Default for LiveScene {
+    fn default() -> Self {
+        Self {
+            chunks: HashMap::new(),
+            agents: HashMap::new(),
+            buildings: HashMap::new(),
+            agent_materials: HashMap::new(),
+            building_materials: HashMap::new(),
+            building_provenance: BuildingProvenance::Procedural,
+        }
+    }
 }
 
 /// Shared marker meshes for streamed agents and buildings.
@@ -93,15 +127,20 @@ pub struct LiveScenePlugin;
 impl Plugin for LiveScenePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LiveScene>()
+            .init_resource::<LiveSceneFocus>()
             .init_resource::<DebugRender>()
             .add_systems(Startup, setup_live_scene_assets)
             .add_systems(
                 Update,
                 (
                     apply_live_scene_frames,
+                    update_live_scene_focus,
+                    follow_live_scene_focus,
+                    update_live_minimap_camera,
                     update_chunk_fade,
                     sync_live_minimap_dots,
-                ),
+                )
+                    .chain(),
             );
     }
 }
@@ -304,6 +343,8 @@ fn apply_building_diff(
         return;
     }
 
+    scene.building_provenance = frame.provenance;
+
     let incoming: std::collections::HashSet<u64> =
         frame.buildings.iter().map(|entry| entry.id).collect();
     for (id, entity) in scene.buildings.clone() {
@@ -315,20 +356,24 @@ fn apply_building_diff(
     }
 
     for entry in frame.buildings {
-        let color = building_kind_color(entry.kind);
+        let (base_color, emissive, roughness) =
+            building_material_style(entry.kind, frame.provenance);
         let material_handle = scene
             .building_materials
             .entry(entry.id)
             .or_insert_with(|| {
                 materials.add(StandardMaterial {
-                    base_color: color,
-                    perceptual_roughness: 0.9,
+                    base_color,
+                    emissive: emissive.into(),
+                    perceptual_roughness: roughness,
                     ..default()
                 })
             })
             .clone();
         if let Some(material) = materials.get_mut(&material_handle) {
-            material.base_color = color;
+            material.base_color = base_color;
+            material.emissive = emissive.into();
+            material.perceptual_roughness = roughness;
         }
 
         let transform = Transform::from_xyz(entry.position.x, BUILDING_GROUND_Y, entry.position.z);
@@ -354,6 +399,31 @@ fn building_kind_color(kind: BuildingKind3d) -> Color {
         BuildingKind3d::Market => Color::srgb(0.88, 0.67, 0.25),
         BuildingKind3d::House => Color::srgb(0.79, 0.59, 0.40),
         BuildingKind3d::CityCenter => Color::srgb(0.38, 0.58, 0.86),
+    }
+}
+
+fn building_material_style(
+    kind: BuildingKind3d,
+    provenance: BuildingProvenance,
+) -> (Color, Color, f32) {
+    let base = building_kind_color(kind);
+    match provenance {
+        BuildingProvenance::Procedural => (base, Color::BLACK, 0.92),
+        BuildingProvenance::Freehand => {
+            let emissive = Color::srgb(
+                base.to_srgba().red * 0.55,
+                base.to_srgba().green * 0.55,
+                base.to_srgba().blue * 0.55,
+            );
+            (base, emissive, 0.55)
+        }
+    }
+}
+
+fn building_minimap_dot_color(provenance: BuildingProvenance) -> Color {
+    match provenance {
+        BuildingProvenance::Procedural => Color::srgba(0.92, 0.90, 0.86, 1.0),
+        BuildingProvenance::Freehand => Color::srgba(0.98, 0.62, 0.28, 1.0),
     }
 }
 
@@ -384,6 +454,7 @@ fn sync_live_minimap_dots(
     attach: Res<AttachMode>,
     state: Res<LiveAttachState>,
     scene: Res<LiveScene>,
+    focus: Res<LiveSceneFocus>,
     agents: Query<&Transform, With<AgentTag>>,
     buildings: Query<&Transform, With<BuildingTag>>,
     mut commands: Commands,
@@ -394,9 +465,11 @@ fn sync_live_minimap_dots(
         return;
     }
 
-    if !scene.is_changed() && !state.is_changed() {
+    if !scene.is_changed() && !state.is_changed() && !focus.is_changed() {
         return;
     }
+
+    let building_dot = building_minimap_dot_color(scene.building_provenance);
 
     for entity in &existing {
         commands.entity(entity).despawn();
@@ -415,7 +488,7 @@ fn sync_live_minimap_dots(
                 0.0,
                 (cz as f32 + 0.5) * CHUNK_EDGE as f32,
             );
-            let uv = world_to_minimap_uv(world);
+            let uv = world_to_minimap_uv_focus(world, *focus);
             parent.spawn((
                 Node {
                     position_type: PositionType::Absolute,
@@ -433,7 +506,7 @@ fn sync_live_minimap_dots(
         }
 
         for transform in &agents {
-            let uv = world_to_minimap_uv(transform.translation);
+            let uv = world_to_minimap_uv_focus(transform.translation, *focus);
             parent.spawn((
                 Node {
                     position_type: PositionType::Absolute,
@@ -451,7 +524,7 @@ fn sync_live_minimap_dots(
         }
 
         for transform in &buildings {
-            let uv = world_to_minimap_uv(transform.translation);
+            let uv = world_to_minimap_uv_focus(transform.translation, *focus);
             parent.spawn((
                 Node {
                     position_type: PositionType::Absolute,
@@ -462,7 +535,7 @@ fn sync_live_minimap_dots(
                     border_radius: BorderRadius::MAX,
                     ..default()
                 },
-                BackgroundColor(Color::WHITE),
+                BackgroundColor(building_dot),
                 MinimapDot,
                 FocusPolicy::Pass,
             ));
@@ -470,12 +543,112 @@ fn sync_live_minimap_dots(
     });
 }
 
-fn world_to_minimap_uv(position: Vec3) -> Vec2 {
-    let u = ((position.x - MINIMAP_WORLD_MIN) / (MINIMAP_WORLD_MAX - MINIMAP_WORLD_MIN))
-        .clamp(0.0, 1.0);
-    let v = ((position.z - MINIMAP_WORLD_MIN) / (MINIMAP_WORLD_MAX - MINIMAP_WORLD_MIN))
-        .clamp(0.0, 1.0);
+fn world_to_minimap_uv_focus(position: Vec3, focus: LiveSceneFocus) -> Vec2 {
+    let min_x = focus.centre.x - focus.half_extent;
+    let max_x = focus.centre.x + focus.half_extent;
+    let min_z = focus.centre.z - focus.half_extent;
+    let max_z = focus.centre.z + focus.half_extent;
+    let span_x = (max_x - min_x).max(f32::EPSILON);
+    let span_z = (max_z - min_z).max(f32::EPSILON);
+    let u = ((position.x - min_x) / span_x).clamp(0.0, 1.0);
+    let v = ((position.z - min_z) / span_z).clamp(0.0, 1.0);
     Vec2::new(u, 1.0 - v)
+}
+
+fn update_live_scene_focus(
+    attach: Res<AttachMode>,
+    scene: Res<LiveScene>,
+    agents: Query<&Transform, With<AgentTag>>,
+    buildings: Query<&Transform, With<BuildingTag>>,
+    mut focus: ResMut<LiveSceneFocus>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    let next = compute_live_scene_focus(&scene, &agents, &buildings);
+    if next != *focus {
+        *focus = next;
+    }
+}
+
+fn compute_live_scene_focus(
+    scene: &LiveScene,
+    agents: &Query<&Transform, With<AgentTag>>,
+    buildings: &Query<&Transform, With<BuildingTag>>,
+) -> LiveSceneFocus {
+    let mut min_x = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut min_z = f32::MAX;
+    let mut max_z = f32::MIN;
+
+    let mut extend = |x: f32, z: f32| {
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+        min_z = min_z.min(z);
+        max_z = max_z.max(z);
+    };
+
+    for raw in scene.chunks.keys() {
+        let (cx, _cy, cz) = decode_chunk_id(ChunkId(*raw));
+        extend(
+            (cx as f32 + 0.5) * CHUNK_EDGE as f32,
+            (cz as f32 + 0.5) * CHUNK_EDGE as f32,
+        );
+    }
+    for transform in agents.iter() {
+        extend(transform.translation.x, transform.translation.z);
+    }
+    for transform in buildings.iter() {
+        extend(transform.translation.x, transform.translation.z);
+    }
+
+    if min_x == f32::MAX {
+        return LiveSceneFocus::default();
+    }
+
+    let centre = Vec3::new((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5);
+    let half_extent = ((max_x - min_x).max(max_z - min_z) * 0.55)
+        .max(LIVE_FOCUS_MIN_HALF_EXTENT)
+        .min(crate::terrain::WORLD_SIZE * 0.5);
+    LiveSceneFocus {
+        centre,
+        half_extent,
+    }
+}
+
+fn follow_live_scene_focus(
+    attach: Res<AttachMode>,
+    focus: Res<LiveSceneFocus>,
+    time: Res<Time>,
+    mut rig: ResMut<CameraRig>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    let target = Vec3::new(focus.centre.x, 30.0, focus.centre.z);
+    let alpha = (time.delta_secs() * LIVE_FOCUS_LERP_SPEED).clamp(0.0, 1.0);
+    rig.target = rig.target.lerp(target, alpha);
+}
+
+fn update_live_minimap_camera(
+    attach: Res<AttachMode>,
+    focus: Res<LiveSceneFocus>,
+    mut minimap_cameras: Query<(&mut Transform, &mut Projection), With<MinimapCamera>>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    let viewport_height = (focus.half_extent * 2.2).clamp(64.0, crate::terrain::WORLD_SIZE);
+    for (mut transform, mut projection) in &mut minimap_cameras {
+        transform.translation = Vec3::new(focus.centre.x, MINIMAP_CAMERA_HEIGHT, focus.centre.z);
+        *transform = transform.looking_at(focus.centre, Vec3::NEG_Z);
+        if let Projection::Orthographic(ref mut ortho) = *projection {
+            ortho.scaling_mode = bevy::camera::ScalingMode::FixedVertical { viewport_height };
+        }
+    }
 }
 
 fn chunk_transform(id: ChunkId) -> Transform {

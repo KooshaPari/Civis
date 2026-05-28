@@ -304,6 +304,9 @@ function Invoke-FullGate {
                 --filter 'Category=GameLaunch' `
                 --verbosity minimal 2>&1 | Out-String
             $gameExit = $LASTEXITCODE
+            if ($gameTestOutput) {
+                Write-Host $gameTestOutput
+            }
             if ($gameExit -eq 0 -and (Test-GameLaunchAllSkipped $gameTestOutput)) {
                 Write-Gate 'GameLaunch tests all skipped (fixture not initialized) — treating as failure' 'Error'
                 $gameExit = 1

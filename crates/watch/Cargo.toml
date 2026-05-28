@@ -6,6 +6,10 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[lib]
+name = "civ_watch"
+path = "src/lib.rs"
+
 [[bin]]
 name = "civ-watch"
 path = "src/main.rs"

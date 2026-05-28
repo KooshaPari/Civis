@@ -96,3 +96,23 @@ cargo check -p civ-watch
 ## Stop condition
 
 If a step introduces unresolved compile errors that require broad rework of shared state or route ownership, stop the extraction and keep `main.rs` untouched for that step. Resume from the last green boundary rather than forcing the entire split in one edit.
+
+## Status (2026-05-26)
+
+**Done** on `feat/p-w1-tactics-012`:
+
+| Module | File |
+|--------|------|
+| Shared state/types | `app.rs` |
+| Snapshot synthesis | `snapshot.rs` |
+| 10 Hz worker | `sim_worker.rs` |
+| SSE + snapshot/terrain GET | `sse.rs` |
+| Saves API | `saves_api.rs` |
+| Mods API | `mods_api.rs` |
+| Control routes | `control_routes.rs` |
+| Router + bootstrap | `server.rs` |
+| Integration tests | `api_tests.rs` |
+| Thin entrypoint | `main.rs` (13 lines) |
+| Library root | `lib.rs` (`civ_watch::run`) |
+
+Validation: `cargo check -p civ-watch` and `cargo test -p civ-watch` (35 tests) pass.

@@ -65,8 +65,8 @@ impl GeologyMap {
         const NUM_REGIONS: u32 = 16;
         // Ocean fraction: earth-sized planet (6_371 km) → 8 ocean regions out of 16.
         // Scale linearly; clamp to [0, NUM_REGIONS].
-        let ocean_regions = ((planet_config.radius_km as u64 * 8) / 6_371)
-            .min(NUM_REGIONS as u64) as u32;
+        let ocean_regions =
+            ((planet_config.radius_km as u64 * 8) / 6_371).min(NUM_REGIONS as u64) as u32;
 
         let mut regions = Vec::with_capacity(NUM_REGIONS as usize);
         for r in 0..NUM_REGIONS {
@@ -88,7 +88,10 @@ impl GeologyMap {
                 BiomeKind::Plains
             };
 
-            regions.push(RegionBiome { region_id: r, biome });
+            regions.push(RegionBiome {
+                region_id: r,
+                biome,
+            });
         }
 
         GeologyMap { regions }
@@ -107,8 +110,7 @@ mod tests {
         let a = GeologyMap::seed(&planet);
         let b = GeologyMap::seed(&planet);
         assert_eq!(
-            a,
-            b,
+            a, b,
             "GeologyMap must be identical across two calls with the same PlanetConfig"
         );
 
@@ -119,14 +121,8 @@ mod tests {
         let c = GeologyMap::seed(&tweaked);
         // The tweak shifts ocean_regions; maps must differ.
         assert_ne!(
-            a.regions
-                .iter()
-                .map(|r| r.biome as u8)
-                .collect::<Vec<_>>(),
-            c.regions
-                .iter()
-                .map(|r| r.biome as u8)
-                .collect::<Vec<_>>(),
+            a.regions.iter().map(|r| r.biome as u8).collect::<Vec<_>>(),
+            c.regions.iter().map(|r| r.biome as u8).collect::<Vec<_>>(),
             "radius_km delta of 1000 km must change the geology map"
         );
     }

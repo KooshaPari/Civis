@@ -93,7 +93,7 @@ function Invoke-Curl {
     $args += $Url
     try {
         $out = & curl.exe @args 2>$null
-        if ($tmp) { Remove-Item -Path $tmp.FullName -Force -ErrorAction SilentlyContinue }
+        if ($tmp) { Remove-Item -Path $tmp.FullName -Force -ErrorAction SilentlyContinue } # remove-item-ok: temp-cleanup-ok: ephemeral curl request body temp file
         return ($out -join "`n")
     } catch {
         return $null

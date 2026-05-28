@@ -82,7 +82,10 @@ if ($IsLinux) {
         }
         "Uninstall" {
             Invoke-CommandSafe -Command "systemctl" -ArgumentList @("--user", "disable", "--now", $serviceName)
-            if (Test-Path $serviceFile) { Remove-Item $serviceFile -Force }
+            if (Test-Path $serviceFile) {
+                # Linux: Recycle Bin not available; Remove-Item is acceptable for service config files
+                Remove-Item $serviceFile -Force # linux-service-config-ok: systemd unit file, non-Windows
+            }
             Invoke-CommandSafe -Command "systemctl" -ArgumentList @("--user", "daemon-reload")
             return
         }
@@ -121,7 +124,10 @@ if ($IsMacOS) {
                 Invoke-CommandSafe -Command "launchctl" -ArgumentList @("bootout", "gui/$UID", $plistFile)
             }
             catch {}
-            if (Test-Path $agentDir) { Remove-Item $plistFile -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $agentDir) {
+                # macOS: Recycle Bin not available; Remove-Item is acceptable for launchd plist files
+                Remove-Item $plistFile -Force -ErrorAction SilentlyContinue # macos-launchd-config-ok: non-Windows
+            }
             return
         }
         "Start" {

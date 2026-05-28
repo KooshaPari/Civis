@@ -48,7 +48,11 @@ Write-Host ""
 # Cleanup previous run
 if (Test-Path $OutputDir) {
     Write-Host "Removing previous output: $OutputDir" -ForegroundColor Yellow
-    Remove-Item $OutputDir -Recurse -Force
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+        (Resolve-Path $OutputDir).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
 }
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Write-Host "Output directory: $(Resolve-Path $OutputDir)" -ForegroundColor Green
@@ -181,7 +185,7 @@ if ($nupkgs) {
             }
         }
 
-        Remove-Item $tmpDir -Recurse -Force
+        Remove-Item $tmpDir -Recurse -Force # remove-item-ok: temp-cleanup-ok: NuGet dry-run extraction temp dir in $env:TEMP CI context
     }
     catch {
         Write-Host "  (Could not extract metadata: $_)" -ForegroundColor Yellow

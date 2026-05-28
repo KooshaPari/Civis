@@ -35,7 +35,11 @@ Write-Host ""
 Write-Host "Running mutation tests..." -ForegroundColor Cyan
 $outputDir = "StrykerOutput"
 if (Test-Path $outputDir) {
-    Remove-Item $outputDir -Recurse -Force
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+        (Resolve-Path $outputDir).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
 }
 
 dotnet stryker --project $Project --output $outputDir

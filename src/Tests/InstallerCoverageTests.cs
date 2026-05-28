@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DINOForge.Tools.Installer;
@@ -1599,6 +1600,216 @@ public class InstallerCoverageTests
             string? result = SteamLocator.FindGameInLibrary(tempDir, SteamLocator.DinoAppId);
 
             result.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    // ──────────────────────── InstallVerifier.VerifyManifestDigests (#139 / #721) ────────────────────────
+
+    /// <summary>
+    /// #139 / #721: When the on-disk file hash matches the manifest record, no issue is added.
+    /// </summary>
+    [Fact]
+    public void VerifyManifestDigests_HashMatches_ReturnsNoIssues()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+
+        // Create a real file and compute its actual hash.
+        byte[] fileBytes = new byte[] { 0x44, 0x49, 0x4e, 0x4f }; // "DINO"
+        string filePath = Path.Combine(pluginsDir, "DINOForge.Runtime.dll");
+        File.WriteAllBytes(filePath, fileBytes);
+        string correctHash;
+        using (var sha = SHA256.Create())
+        using (var fs = File.OpenRead(filePath))
+            correctHash = Convert.ToHexString(sha.ComputeHash(fs));
+
+        // Write a manifest that records the correct hash.
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, $$"""
+{
+    "SchemaVersion": "1",
+    "InstallerVersion": "1.0.0",
+    "InstalledAtUtc": "2026-01-01T00:00:00Z",
+    "Files": [
+        { "RelativePath": "BepInEx/plugins/DINOForge.Runtime.dll", "Size": 4, "Sha256": "{{correctHash}}" }
+    ]
+}
+""");
+
+        try
+        {
+            var issues = new List<string>();
+            bool result = InstallVerifier.VerifyManifestDigests(tempDir, issues);
+
+            result.Should().BeTrue("all digests matched");
+            issues.Should().BeEmpty("no mismatch was present");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// #139 / #721: When the on-disk file hash differs from the manifest record, an issue is
+    /// added naming both the expected and actual digests.
+    /// </summary>
+    [Fact]
+    public void VerifyManifestDigests_HashMismatch_AddsDescriptiveIssue()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+
+        // Create file with content whose real hash will differ from the recorded one.
+        byte[] fileBytes = new byte[] { 0x01, 0x02, 0x03 };
+        string filePath = Path.Combine(pluginsDir, "DINOForge.Runtime.dll");
+        File.WriteAllBytes(filePath, fileBytes);
+
+        string wrongHash = new string('a', 64); // valid format, wrong value
+
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, $$"""
+{
+    "SchemaVersion": "1",
+    "InstallerVersion": "1.0.0",
+    "InstalledAtUtc": "2026-01-01T00:00:00Z",
+    "Files": [
+        { "RelativePath": "BepInEx/plugins/DINOForge.Runtime.dll", "Size": 3, "Sha256": "{{wrongHash}}" }
+    ]
+}
+""");
+
+        try
+        {
+            var issues = new List<string>();
+            bool result = InstallVerifier.VerifyManifestDigests(tempDir, issues);
+
+            result.Should().BeFalse("a digest mismatch was detected");
+            issues.Should().ContainSingle();
+            issues[0].Should().Contain("SHA256 mismatch");
+            issues[0].Should().Contain(wrongHash, "expected hash appears in error message");
+            issues[0].Should().Contain("DINOForge.Runtime.dll");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// #139 / #721: When a manifest entry's file does not exist on disk, the missing-file case
+    /// is skipped by <see cref="InstallVerifier.VerifyManifestDigests"/> (already reported by
+    /// Inspect). The method must not throw and must return true (no new issue added by digests check).
+    /// </summary>
+    [Fact]
+    public void VerifyManifestDigests_FileMissingFromDisk_NoIssueAddedByDigestCheck()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(pluginsDir);
+
+        // Write manifest referencing a file that does NOT exist on disk.
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, """
+{
+    "SchemaVersion": "1",
+    "InstallerVersion": "1.0.0",
+    "InstalledAtUtc": "2026-01-01T00:00:00Z",
+    "Files": [
+        { "RelativePath": "BepInEx/plugins/missing.dll", "Size": 0, "Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }
+    ]
+}
+""");
+
+        try
+        {
+            var issues = new List<string>();
+            // Should not throw and should not add a duplicate "mismatch" issue
+            // (missing-file issues come from Inspect, not from the digest check).
+            bool result = InstallVerifier.VerifyManifestDigests(tempDir, issues);
+
+            result.Should().BeTrue("missing file is skipped, not a digest failure");
+            issues.Should().BeEmpty("no digest-mismatch issue for a missing file");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// #139 / #721: When no manifest is present, VerifyManifestDigests is a no-op and returns true.
+    /// </summary>
+    [Fact]
+    public void VerifyManifestDigests_NoManifest_ReturnsTrue()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        Directory.CreateDirectory(Path.Combine(tempDir, "BepInEx", "plugins"));
+
+        try
+        {
+            var issues = new List<string>();
+            bool result = InstallVerifier.VerifyManifestDigests(tempDir, issues);
+
+            result.Should().BeTrue("no manifest means nothing to verify");
+            issues.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// #139 / #721: End-to-end — Verify() surfaces SHA256 mismatch through the full pipeline.
+    /// </summary>
+    [Fact]
+    public void Verify_ManifestWithSha256Mismatch_IssuesContainsMismatch()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dino_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        // Full valid install layout
+        File.WriteAllText(Path.Combine(tempDir, "Diplomacy is Not an Option.exe"), "");
+        File.WriteAllText(Path.Combine(tempDir, "winhttp.dll"), "");
+        File.WriteAllText(Path.Combine(tempDir, "doorstop_config.ini"), "");
+        string pluginsDir = Path.Combine(tempDir, "BepInEx", "plugins");
+        Directory.CreateDirectory(Path.Combine(tempDir, "BepInEx", "core"));
+        Directory.CreateDirectory(pluginsDir);
+        Directory.CreateDirectory(Path.Combine(tempDir, "BepInEx", "dinoforge_packs"));
+
+        // Runtime DLL with content whose hash will not match the manifest record.
+        File.WriteAllBytes(Path.Combine(pluginsDir, "DINOForge.Runtime.dll"), new byte[] { 0xFF });
+
+        string wrongHash = new string('b', 64);
+        string manifestPath = Path.Combine(pluginsDir, "dinoforge.install_manifest.json");
+        File.WriteAllText(manifestPath, $$"""
+{
+    "SchemaVersion": "1",
+    "InstallerVersion": "1.0.0",
+    "InstalledAtUtc": "2026-01-01T00:00:00Z",
+    "Files": [
+        { "RelativePath": "BepInEx/plugins/DINOForge.Runtime.dll", "Size": 1, "Sha256": "{{wrongHash}}" }
+    ]
+}
+""");
+
+        try
+        {
+            InstallStatus status = InstallVerifier.Verify(tempDir);
+
+            status.Issues.Should().Contain(i => i.Contains("SHA256 mismatch"),
+                "Verify() must surface SHA256 mismatches detected by VerifyManifestDigests");
         }
         finally
         {

@@ -86,11 +86,10 @@ namespace DINOForge.Runtime.UI
         public static Button? CloneSelectableAsButton(Selectable donor, string newText)
         {
             if (donor == null) return null;
-            if (donor is Button) return null; // caller should use CloneButton for Button donors
+            if (donor is Button) return null;
 
             try
             {
-                // 1. Clone the donor GameObject, keeping the same parent.
                 GameObject clone = UnityEngine.Object.Instantiate(donor.gameObject, donor.transform.parent);
                 clone.name = "DINOForge_ModsButton";
 
@@ -117,12 +116,12 @@ namespace DINOForge.Runtime.UI
                     CopySelectableVisualState(btn, preserved);
                 }
 
-                // 5. Set label text.
                 SetButtonText(btn, newText);
 
                 return btn;
             }
-            catch { /* safe-swallow: best-effort Selectable-to-Button clone; caller handles null and logs the failure */
+            catch
+            {
                 return null;
             }
         }

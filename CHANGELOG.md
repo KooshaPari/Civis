@@ -25,6 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.25.0-dev] - 2026-05-25
 
+#### Iter-147 — AX/DX/UX Maturity Wave (2026-05-25)
+
+**Added**
+- **CLI**: `dinoforge new` command — scaffold mod packs from built-in template with `--author`/`--type`/`--output`
+- **Docs**: `docs/guides/your-first-mod.md` — 5-minute quickstart for first-time modders
+- **BepInEx Config**: 4 new settings (ShowDebugOverlayOnStart, EnableHotReload, HotReloadDebounceMs, LogLevel)
+- **F9 DebugPanel**: FPS counter, GC heap display, real archetype content (entity counts per ECS world), 500ms auto-refresh coroutine
+- **F10 ModMenuPanel**: Pack load error count + red status header when errors > 0
+
+**Fixed**
+- **MainMenu pack-load**: DLL was stale — redeployed with iter-146 code; 9/9 packs now load at main menu
+- **EventSystem log spam**: Throttled reconcile logging to fire only on state change (was ~6 lines/sec)
+- **HMR pipeline**: Unified to single `RequestPackReload` path — eliminates UGUI-reset hack, consistent with F10 Reload button
+- **HMR config gating**: Watcher disabled when `General.EnableHotReload=false`
+
 #### Stabilization — Tests, Specs, Journey Viewer Schema (2026-05-23)
 
 **Verification** — ~3853 tests passing, CI green.

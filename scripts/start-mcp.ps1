@@ -58,7 +58,7 @@ function Get-ScriptState {
         return $process
     }
     catch {
-        Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: service PID file in $env:TEMP, not a repo artifact
         return $null
     }
 }
@@ -153,7 +153,7 @@ function Stop-ProcessByPidFile {
     if ($process) {
         Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
         $process.WaitForExit(5000) | Out-Null
-        Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: service PID file in $env:TEMP, not a repo artifact
         return $process.Id
     }
     return $null

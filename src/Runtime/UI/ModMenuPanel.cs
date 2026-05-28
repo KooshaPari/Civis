@@ -309,8 +309,6 @@ namespace DINOForge.Runtime.UI
             HorizontalLayoutGroup hlg = body.AddComponent<HorizontalLayoutGroup>();
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
-            hlg.childControlWidth = true;
-            hlg.childControlHeight = true;
             hlg.spacing = 0f;
 
             BuildListPane(body.transform);
@@ -327,56 +325,101 @@ namespace DINOForge.Runtime.UI
 
         private void BuildListPane(Transform parent)
         {
-            // Absolute-positioned list pane — no layout groups, no ScrollRect.
-            // DINO's PlayerLoop replacement breaks Unity's layout rebuild cycle,
-            // so we position everything manually with RectTransform anchors.
+            _log?.LogInfo("[ModMenuPanel.BuildListPane] Starting pack list pane construction...");
+
             GameObject pane = new GameObject("ListPane", typeof(RectTransform));
             pane.transform.SetParent(parent, false);
 
             LayoutElement paneLe = pane.AddComponent<LayoutElement>();
             paneLe.preferredWidth = ListWidth;
             paneLe.minWidth = ListWidth;
+            paneLe.flexibleHeight = 1f;  // CRITICAL: Allow ListPane to expand to fill parent height!
 
-            // "Loaded Packs" header — top 32px of the pane
+            VerticalLayoutGroup paneLayout = pane.AddComponent<VerticalLayoutGroup>();
+            paneLayout.childForceExpandWidth = true;
+            paneLayout.childForceExpandHeight = false;
+            paneLayout.childControlWidth = true;
+            paneLayout.childControlHeight = false;
+            paneLayout.childAlignment = TextAnchor.UpperLeft;
+            paneLayout.spacing = 0f;
+            paneLayout.padding = new RectOffset(0, 0, 0, 0);
+
+            // List header
             GameObject listHeader = UiBuilder.MakePanel(pane.transform, "ListHeader",
                 UiBuilder.BgSurface, new Vector2(ListWidth, 32f));
             RectTransform lhRt = listHeader.GetComponent<RectTransform>();
             lhRt.anchorMin = new Vector2(0f, 1f);
             lhRt.anchorMax = new Vector2(1f, 1f);
             lhRt.pivot = new Vector2(0.5f, 1f);
-            lhRt.anchoredPosition = Vector2.zero;
             lhRt.sizeDelta = new Vector2(0f, 32f);
 
+            UiBuilder.AddHorizontalLayout(listHeader, 4f, new RectOffset(8, 8, 6, 6));
             Text lhTitle = UiBuilder.MakeText(listHeader.transform, "ListTitle",
                 "Loaded Packs", 12, UiBuilder.TextSecondary, bold: false);
-            RectTransform lhTitleRt = lhTitle.GetComponent<RectTransform>();
-            lhTitleRt.anchorMin = Vector2.zero;
-            lhTitleRt.anchorMax = Vector2.one;
-            lhTitleRt.offsetMin = new Vector2(8f, 0f);
-            lhTitleRt.offsetMax = new Vector2(-8f, 0f);
+            LayoutElement lhTitleLe = lhTitle.gameObject.AddComponent<LayoutElement>();
+            lhTitleLe.flexibleWidth = 1f;
+            LayoutElement listHeaderLe = listHeader.AddComponent<LayoutElement>();
+            listHeaderLe.preferredWidth = ListWidth;
+            listHeaderLe.minWidth = ListWidth;
+            listHeaderLe.preferredHeight = 32f;
 
-            // Content container — fills remaining space below header
-            GameObject contentGo = new GameObject("ListContent", typeof(RectTransform));
-            contentGo.transform.SetParent(pane.transform, false);
-            RectTransform contentRt = contentGo.GetComponent<RectTransform>();
-            contentRt.anchorMin = Vector2.zero;
-            contentRt.anchorMax = Vector2.one;
-            contentRt.offsetMin = Vector2.zero;
-            contentRt.offsetMax = new Vector2(0f, -32f);
+            // Scroll view for pack items
+            _log?.LogInfo("[ModMenuPanel.BuildListPane] Creating scroll view...");
+            (ScrollRect scrollRect, RectTransform content) = UiBuilder.MakeScrollView(
+                pane.transform, "PackListScroll",
+                new Vector2(ListWidth, 0f));
 
-            _listContent = contentRt;
+            // Validate the result
+            if (content == null || scrollRect == null)
+            {
+                _log?.LogError("[ModMenuPanel.BuildListPane] CRITICAL: MakeScrollView failed! " +
+                    $"scrollRect={scrollRect != null}, content={content != null}. " +
+                    "Pack list will not render. Check UiBuilder.MakeScrollView for exceptions.");
+                _listContent = null;
+                return;
+            }
+
+            RectTransform scrollRt = scrollRect.GetComponent<RectTransform>();
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = new Vector2(0f, 0f);
+            scrollRt.offsetMax = new Vector2(0f, -32f);
+            scrollRt.sizeDelta = Vector2.zero;
+            LayoutElement scrollLe = scrollRect.gameObject.AddComponent<LayoutElement>();
+            scrollLe.preferredWidth = ListWidth;
+            scrollLe.minWidth = ListWidth;
+            scrollLe.flexibleHeight = 1f;
+
+            content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth);
+            content.sizeDelta = new Vector2(ListWidth, content.sizeDelta.y);
+
+            _listContent = content;
+            _log?.LogInfo($"[ModMenuPanel.BuildListPane] Scroll view initialized successfully.");
+            _log?.LogInfo($"  scrollRt.rect.size={scrollRt.rect.size} (viewport visible area)");
+            _log?.LogInfo($"  scrollRt.sizeDelta={scrollRt.sizeDelta}, anchorMin={scrollRt.anchorMin}, anchorMax={scrollRt.anchorMax}");
+            _log?.LogInfo($"  content.name={content.name}");
+            _log?.LogInfo($"  content.active={content.gameObject.activeSelf}");
+            _log?.LogInfo($"  content.anchorMin={content.anchorMin}, anchorMax={content.anchorMax}");
+            _log?.LogInfo($"  content.sizeDelta={content.sizeDelta}");
+            _log?.LogInfo($"  content.anchoredPosition={content.anchoredPosition}");
+            _log?.LogInfo($"  ScrollRect component on: {scrollRect.name}");
+            _log?.LogInfo($"  ScrollRect.content set to: {scrollRect.content?.name ?? "NULL"}");
+            _log?.LogInfo($"  ScrollRect.vertical={scrollRect.vertical}");
+            _log?.LogInfo($"  ScrollRect.enabled={scrollRect.enabled}");
+            Image viewportImage = scrollRect.GetComponent<Image>();
+            _log?.LogInfo($"  Viewport Image: exists={viewportImage != null}, raycastTarget={viewportImage?.raycastTarget}");
+
+            // Verify components on content
+            ContentSizeFitter csf = content.GetComponent<ContentSizeFitter>();
+            VerticalLayoutGroup vlg = content.GetComponent<VerticalLayoutGroup>();
+            _log?.LogInfo($"  content has ContentSizeFitter: {csf != null} (verticalFit={csf?.verticalFit})");
+            _log?.LogInfo($"  content has VerticalLayoutGroup: {vlg != null} (childForceExpandHeight={vlg?.childForceExpandHeight}, spacing={vlg?.spacing})");
         }
 
         private void BuildDetailPane(Transform parent)
         {
-            _detailPane = new GameObject("DetailPane", typeof(RectTransform), typeof(Image), typeof(Mask));
+            _detailPane = new GameObject("DetailPane", typeof(RectTransform));
             _detailPane.transform.SetParent(parent, false);
-
-            Image detailBg = _detailPane.GetComponent<Image>();
-            detailBg.color = new Color(0f, 0f, 0f, 0.01f);
-            detailBg.raycastTarget = false;
-            Mask detailMask = _detailPane.GetComponent<Mask>();
-            detailMask.showMaskGraphic = false;
 
             RectTransform detailRt = _detailPane.GetComponent<RectTransform>();
             LayoutElement detailLe = _detailPane.AddComponent<LayoutElement>();
@@ -438,28 +481,21 @@ namespace DINOForge.Runtime.UI
 
             UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
 
-            // Content + Overlaps side-by-side
-            GameObject contentRow = new GameObject("ContentRow", typeof(RectTransform));
-            contentRow.transform.SetParent(_detailPane.transform, false);
-            HorizontalLayoutGroup contentHlg = contentRow.AddComponent<HorizontalLayoutGroup>();
-            contentHlg.spacing = 12f;
-            contentHlg.childForceExpandWidth = false;
-            contentHlg.childForceExpandHeight = true;
-            contentHlg.childControlWidth = true;
-            LayoutElement contentRowLe = contentRow.AddComponent<LayoutElement>();
-            contentRowLe.preferredHeight = 60f;
-            contentRowLe.flexibleWidth = 1f;
-            contentRowLe.flexibleHeight = 0.5f;
-
-            _detailContent = UiBuilder.MakeText(contentRow.transform, "DetailContent",
+            // Content summary
+            _detailContent = UiBuilder.MakeText(_detailPane.transform, "DetailContent",
                 "Content: (none)", 12, new Color(0.6f, 0.85f, 0.6f, 1f));
             LayoutElement contentLe = _detailContent.gameObject.AddComponent<LayoutElement>();
+            contentLe.preferredHeight = 40f;
             contentLe.flexibleWidth = 1f;
+            contentLe.flexibleHeight = 0.5f;
 
-            _detailDetectedConflicts = UiBuilder.MakeText(contentRow.transform, "DetailDetectedConflicts",
+            // Auto-detected conflicts
+            _detailDetectedConflicts = UiBuilder.MakeText(_detailPane.transform, "DetailDetectedConflicts",
                 "", 12, new Color(0.9f, 0.6f, 0.2f, 1f));
             LayoutElement dcLe = _detailDetectedConflicts.gameObject.AddComponent<LayoutElement>();
+            dcLe.preferredHeight = 30f;
             dcLe.flexibleWidth = 1f;
+            dcLe.flexibleHeight = 0.5f;
 
             UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
 
@@ -530,8 +566,22 @@ namespace DINOForge.Runtime.UI
 
         private void RebuildPackList()
         {
-            if (_listContent == null) return;
+            if (_listContent == null)
+            {
+                _log?.LogWarning("[ModMenuPanel.RebuildPackList] _listContent is NULL — UI not initialized yet. " +
+                    "Pack list will render once Build() completes. Ensure DFCanvas.Start() runs before SetPacks() is called.");
+                return;
+            }
 
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] START: presenter.Packs.Count={_presenter.Packs.Count}, _listContent={_listContent.name}, active={_listContent.gameObject.activeSelf}");
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] _listContent RectTransform: position={_listContent.anchoredPosition}, sizeDelta={_listContent.sizeDelta}");
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] Clearing {_listContent.childCount} existing items");
+
+            _listContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth);
+            _listContent.sizeDelta = new Vector2(ListWidth, _listContent.sizeDelta.y);
+
+            // Remove existing items immediately from the layout tree to avoid
+            // same-frame duplicate entries when SetPacks triggers rapid rebuilds.
             for (int i = _listContent.childCount - 1; i >= 0; i--)
             {
                 Transform child = _listContent.GetChild(i);
@@ -539,29 +589,112 @@ namespace DINOForge.Runtime.UI
                 Destroy(child.gameObject);
             }
 
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] After clear: childCount={_listContent.childCount}. Now rendering {_presenter.Packs.Count} pack(s)...");
+
             for (int i = 0; i < _presenter.Packs.Count; i++)
             {
+                _log?.LogInfo($"[ModMenuPanel.RebuildPackList] Creating item {i}: '{_presenter.Packs[i].Name}' (ID: {_presenter.Packs[i].Id})");
                 BuildPackListItem(_presenter.Packs[i], i);
+
+                Transform item = _listContent.GetChild(i);
+                RectTransform rt = item.GetComponent<RectTransform>();
+                _log?.LogInfo($"[ModMenuPanel.probe] item[{i}] name={item.name} childCount={item.transform.childCount} rect=({rt.sizeDelta.x}x{rt.sizeDelta.y}) active={item.gameObject.activeSelf}");
+                for (int childIndex = 0; childIndex < item.transform.childCount; childIndex++)
+                {
+                    Transform child = item.transform.GetChild(childIndex);
+                    Text text = child.GetComponent<Text>();
+                    if (text != null)
+                    {
+                        RectTransform textRt = text.GetComponent<RectTransform>();
+                        _log?.LogInfo($"[ModMenuPanel.probe] item[{i}].child[{childIndex}] Text color={text.color} text='{text.text}' active={text.gameObject.activeSelf} rect=({textRt.sizeDelta.x}x{textRt.sizeDelta.y})");
+                    }
+
+                    Image image = child.GetComponent<Image>();
+                    if (image != null)
+                    {
+                        _log?.LogInfo($"[ModMenuPanel.probe] item[{i}].child[{childIndex}] Image color={image.color} spriteNull={image.sprite == null} raycastTarget={image.raycastTarget}");
+                    }
+                }
             }
+
+            // CRITICAL FIX: Manually set content height since ContentSizeFitter is not calculating correctly
+            // Calculate: padding.top + (itemCount * itemHeight) + (itemCount-1 * spacing) + padding.bottom
+            float padding_top = 4f, padding_bottom = 4f, spacing = 2f, itemHeight = 40f;
+            float calculatedHeight = padding_top + (_presenter.Packs.Count * itemHeight) + (Mathf.Max(0, _presenter.Packs.Count - 1) * spacing) + padding_bottom;
+            _listContent.sizeDelta = new Vector2(_listContent.sizeDelta.x, calculatedHeight);
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] MANUAL FIX APPLIED: Set content height to {calculatedHeight} (was {_listContent.sizeDelta.y})");
+
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] COMPLETE: childCount={_listContent.childCount}. Listing items:");
+            for (int i = 0; i < _listContent.childCount; i++)
+            {
+                Transform child = _listContent.GetChild(i);
+                RectTransform childRt = child.GetComponent<RectTransform>();
+                _log?.LogInfo($"  Item {i}: name={child.name}, active={child.gameObject.activeSelf}, sizeDelta={childRt.sizeDelta}, childCount={child.childCount}");
+            }
+
+            // CRITICAL: Log content size AFTER all items are created and VerticalLayoutGroup has calculated
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] FINAL CONTENT SIZE: sizeDelta={_listContent.sizeDelta}, rect.height={_listContent.rect.height}");
+            ContentSizeFitter csf = _listContent.GetComponent<ContentSizeFitter>();
+            VerticalLayoutGroup vlg = _listContent.GetComponent<VerticalLayoutGroup>();
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] ContentSizeFitter: {(csf != null ? $"enabled={csf.enabled}, verticalFit={csf.verticalFit}" : "NULL")}");
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] VerticalLayoutGroup: {(vlg != null ? $"enabled={vlg.enabled}, spacing={vlg.spacing}, padding={vlg.padding}, preferredHeight={vlg.preferredHeight}" : "NULL")}");
+
+            // Calculate expected height manually
+            float expectedHeight = 0f;
+            if (vlg != null)
+            {
+                expectedHeight = vlg.padding.top + vlg.padding.bottom;
+                for (int i = 0; i < _listContent.childCount; i++)
+                {
+                    Transform child = _listContent.GetChild(i);
+                    LayoutElement childLe = child.GetComponent<LayoutElement>();
+                    if (childLe != null && childLe.preferredHeight > 0)
+                    {
+                        expectedHeight = expectedHeight + childLe.preferredHeight;
+                        if (i > 0) expectedHeight = expectedHeight + vlg.spacing;
+                    }
+                }
+            }
+            _log?.LogInfo($"[ModMenuPanel.RebuildPackList] MANUAL CALCULATION: expected total height={expectedHeight} (padding.top={vlg?.padding.top}, padding.bottom={vlg?.padding.bottom}, spacing={vlg?.spacing}, items={_listContent.childCount})");
+
+            // Drive layout immediately so the ScrollRect sees the correct content bounds
+            // even when the panel is currently hidden.
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_listContent);
         }
 
         private void BuildPackListItem(PackDisplayInfo pack, int index)
         {
-            if (_listContent == null) return;
+            if (_listContent == null)
+            {
+                _log?.LogWarning($"[ModMenuPanel.BuildPackListItem] _listContent is NULL for pack '{pack.Id}' — item {index} skipped.");
+                return;
+            }
+
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Starting item {index}: '{pack.Name}' (enabled={pack.IsEnabled}, selected={index == _presenter.SelectedIndex})");
 
             bool isSelected = index == _presenter.SelectedIndex;
+            bool hasErrors = pack.Errors.Count > 0;
+            bool hasConflicts = pack.Conflicts.Count > 0;
+
+            // Card
             Color bgColor = isSelected ? UiBuilder.BgSurface : UiBuilder.BgDeep;
+            Color alpha = pack.IsEnabled ? Color.white : new Color(1f, 1f, 1f, 0.6f);
 
-            GameObject card = UiBuilder.MakePanel(_listContent, $"PackItem_{pack.Id}", bgColor,
-                new Vector2(ListWidth, ItemHeight));
+            GameObject card = UiBuilder.MakePanel(_listContent, $"PackItem_{pack.Id}", bgColor, new Vector2(0f, ItemHeight));
             RectTransform cardRt = card.GetComponent<RectTransform>();
-            cardRt.anchorMin = new Vector2(0f, 1f);
-            cardRt.anchorMax = new Vector2(1f, 1f);
-            cardRt.pivot = new Vector2(0.5f, 1f);
-            cardRt.anchoredPosition = new Vector2(0f, -(index * (ItemHeight + 2f)));
-            cardRt.sizeDelta = new Vector2(0f, ItemHeight);
+            cardRt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth - 8f);
+            cardRt.sizeDelta = new Vector2(ListWidth - 8f, ItemHeight);
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} card created: sizeDelta={cardRt.sizeDelta}, active={card.activeSelf}");
 
-            // Amber left-border for enabled packs
+            LayoutElement cardLe = card.AddComponent<LayoutElement>();
+            cardLe.minWidth = ListWidth - 8f;
+            cardLe.preferredWidth = ListWidth - 8f;
+            cardLe.minHeight = ItemHeight;
+            cardLe.preferredHeight = ItemHeight;
+            cardLe.flexibleWidth = 1f;
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} LayoutElement set: minHeight={cardLe.minHeight}, preferredHeight={cardLe.preferredHeight}");
+
+            // Amber left-border strip for enabled packs
             if (pack.IsEnabled)
             {
                 GameObject border = UiBuilder.MakePanel(card.transform, "EnabledBorder",
@@ -572,19 +705,69 @@ namespace DINOForge.Runtime.UI
                 bRt.pivot = new Vector2(0f, 0.5f);
                 bRt.offsetMin = Vector2.zero;
                 bRt.offsetMax = new Vector2(4f, 0f);
+                bRt.anchoredPosition = Vector2.zero;
             }
 
-            // Pack name — absolute positioned inside card
+            // Content layout
+            HorizontalLayoutGroup hlg = card.AddComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 6f;
+            hlg.padding = new RectOffset(pack.IsEnabled ? 10 : 6, 6, 4, 4);
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = true;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+
+            // Pack name
             Color nameColor = pack.IsEnabled ? UiBuilder.TextPrimary : UiBuilder.TextSecondary;
-            if (!pack.IsEnabled) nameColor = new Color(nameColor.r, nameColor.g, nameColor.b, 0.6f);
             Text nameText = UiBuilder.MakeText(card.transform, "PackName", pack.Name, 13,
                 nameColor, bold: isSelected);
-            RectTransform nameRt = nameText.GetComponent<RectTransform>();
-            nameRt.anchorMin = new Vector2(0f, 0f);
-            nameRt.anchorMax = new Vector2(1f, 1f);
-            int leftPad = pack.IsEnabled ? 10 : 6;
-            nameRt.offsetMin = new Vector2(leftPad, 2f);
-            nameRt.offsetMax = new Vector2(-6f, -2f);
+            RectTransform nameTextRt = nameText.GetComponent<RectTransform>();
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} nameText created: text='{pack.Name}', fontSize={nameText.fontSize}, color={nameColor}, sizeDelta={nameTextRt.sizeDelta}, font={nameText.font?.name}");
+
+            if (!pack.IsEnabled)
+            {
+                nameText.color = new Color(nameColor.r, nameColor.g, nameColor.b, 0.6f);
+            }
+            LayoutElement nameLe = nameText.gameObject.AddComponent<LayoutElement>();
+            nameLe.minWidth = 100f;
+            nameLe.flexibleWidth = 1f;
+            nameLe.minHeight = 16f;
+            nameLe.preferredHeight = ItemHeight - 8f;
+            _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} nameText LayoutElement: minWidth={nameLe.minWidth}, flexibleWidth={nameLe.flexibleWidth}, minHeight={nameLe.minHeight}");
+
+            // Error / Conflict badge
+            if (hasErrors)
+            {
+                GameObject badge = UiBuilder.MakePanel(card.transform, "ErrorBadge",
+                    UiBuilder.Error, new Vector2(32f, 18f));
+                LayoutElement badgeLe = badge.AddComponent<LayoutElement>();
+                badgeLe.preferredWidth = 32f;
+                badgeLe.preferredHeight = 18f;
+
+                Text badgeText = UiBuilder.MakeText(badge.transform, "BadgeText", "ERR",
+                    10, Color.white, bold: true, TextAnchor.MiddleCenter);
+                UiBuilder.FillParent(badgeText.GetComponent<RectTransform>());
+            }
+            else if (hasConflicts)
+            {
+                GameObject badge = UiBuilder.MakePanel(card.transform, "ConflictBadge",
+                    UiBuilder.Warning, new Vector2(40f, 18f));
+                LayoutElement badgeLe = badge.AddComponent<LayoutElement>();
+                badgeLe.preferredWidth = 40f;
+                badgeLe.preferredHeight = 18f;
+
+                Text badgeText = UiBuilder.MakeText(badge.transform, "BadgeText", "CONF",
+                    10, Color.black, bold: true, TextAnchor.MiddleCenter);
+                UiBuilder.FillParent(badgeText.GetComponent<RectTransform>());
+            }
+
+            // Version label
+            Text versionText = UiBuilder.MakeText(card.transform, "Version",
+                $"v{pack.Version}", 11, UiBuilder.TextSecondary);
+            LayoutElement verLe = versionText.gameObject.AddComponent<LayoutElement>();
+            verLe.preferredWidth = 50f;
+            verLe.minWidth = 40f;
+            verLe.minHeight = 16f;
 
             // Click to select
             int capturedIndex = index;

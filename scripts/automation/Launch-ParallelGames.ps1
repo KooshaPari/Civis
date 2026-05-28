@@ -231,11 +231,15 @@ if ($launchFailureFlag) {
 
     # Cleanup sandbox directories
     if ($boxPool.CreatedDirs) {
+        Add-Type -AssemblyName Microsoft.VisualBasic
         foreach ($dir in $boxPool.CreatedDirs) {
             try {
                 if (Test-Path $dir) {
                     Write-LogInfo "Removing sandbox directory after launch failure" @{ directory = $dir } -RequestId $requestId
-                    Remove-Item -Path $dir -Recurse -Force -ErrorAction Stop
+                    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+                        (Resolve-Path $dir).ProviderPath,
+                        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+                        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
                 }
             } catch {
                 Write-LogError "Failed to cleanup sandbox directory" @{

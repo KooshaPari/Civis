@@ -84,7 +84,7 @@ Test-SandboxValidation "Symlinks are created and verify correctly" {
         Write-Host "    Link:   $linkDir" -ForegroundColor Gray
     } finally {
         if (Test-Path $testDir) {
-            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }
@@ -120,7 +120,7 @@ Test-SandboxValidation "Steam auth validation detects missing files" {
         Write-Host "    Successfully created Steam auth structure at: $steamDir" -ForegroundColor Gray
     } finally {
         if (Test-Path $testDir) {
-            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }
@@ -149,7 +149,7 @@ Test-SandboxValidation "LocalAppData is properly isolated" {
         Write-Host "    Path: $isolatedLocalAppData" -ForegroundColor Gray
     } finally {
         if (Test-Path $testDir) {
-            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }
@@ -174,7 +174,7 @@ Test-SandboxValidation "Cleanup removes all sandbox files on failure" {
         Write-Host "    Created sandbox with $fileCount items" -ForegroundColor Gray
 
         # Cleanup
-        Remove-Item -Path $testDir -Recurse -Force -ErrorAction Stop
+        Remove-Item -Path $testDir -Recurse -Force -ErrorAction Stop # remove-item-ok: test-cleanup-ok: validates cleanup behavior on ephemeral $env:TEMP fixture
 
         # Verify cleanup
         if (Test-Path $testDir) {
@@ -184,7 +184,7 @@ Test-SandboxValidation "Cleanup removes all sandbox files on failure" {
         Write-Host "    Cleanup successful, all files removed" -ForegroundColor Gray
     } finally {
         if (Test-Path $testDir) {
-            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }
@@ -204,7 +204,7 @@ Test-SandboxValidation "Cleanup preserves main game directory" {
         cmd /c mklink /d "$sandboxDir\game_link" "$mainGameDir" 2>&1 | Out-Null
 
         # Remove only sandbox
-        Remove-Item -Path $sandboxDir -Recurse -Force -ErrorAction Stop
+        Remove-Item -Path $sandboxDir -Recurse -Force -ErrorAction Stop # remove-item-ok: test-cleanup-ok: validates sandbox-only removal on ephemeral $env:TEMP fixture
 
         # Verify main game still exists
         if (-not (Test-Path "$mainGameDir\game.exe")) {
@@ -215,10 +215,10 @@ Test-SandboxValidation "Cleanup preserves main game directory" {
         Write-Host "    Main Game: $mainGameDir (still exists)" -ForegroundColor Gray
     } finally {
         if (Test-Path $mainGameDir) {
-            Remove-Item -Path $mainGameDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $mainGameDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
         if (Test-Path $sandboxDir) {
-            Remove-Item -Path $sandboxDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $sandboxDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }
@@ -260,7 +260,7 @@ Test-SandboxValidation "Full instance creation applies all validations" {
         Write-Host "    Instance: $sandboxDir" -ForegroundColor Gray
     } finally {
         if (Test-Path $outputDir) {
-            Remove-Item -Path $outputDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $outputDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: test-cleanup-ok: ephemeral test fixture in $env:TEMP
         }
     }
 }

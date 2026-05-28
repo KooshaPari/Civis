@@ -387,7 +387,7 @@ namespace DINOForge.Runtime.Bridge
             }
 
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents });
+                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.

@@ -252,7 +252,7 @@ namespace DINOForge.Tools.PackCompiler.Services
         private class ResolverInput
         {
             [JsonPropertyName("available")]
-            public List<PackManifest> Available { get; set; } = new();
+            public List<PackManifest> Available { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List
 
             [JsonPropertyName("target")]
             public PackManifest Target { get; set; } = new();
@@ -265,10 +265,10 @@ namespace DINOForge.Tools.PackCompiler.Services
         public class ResolverOutput : IValidatable
         {
             [JsonPropertyName("resolved")]
-            public List<string> Resolved { get; set; } = new();
+            public List<string> Resolved { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List
 
             [JsonPropertyName("errors")]
-            public List<string> Errors { get; set; } = new();
+            public List<string> Errors { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List
 
             /// <summary>
             /// Validates that the resolver output is meaningful (either has resolved packs OR errors).

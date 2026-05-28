@@ -1,0 +1,321 @@
+Build started 5/27/2026 3:56:02 PM.
+
+     1>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" on node 1 (Restore target(s)).
+     1>_GetAllRestoreProjectPathItems:
+         Determining projects to restore...
+     1>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1) is building "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:8) on node 7 (_GenerateProjectRestoreGraph target(s)).
+   3:8>Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:8) is building "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:11) on node 7 (_GenerateProjectRestoreGraphPerFramework target(s)).
+     3>AddPrunePackageReferences:
+         Loaded prune package data from framework packages
+     3>Done Building Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (_GenerateProjectRestoreGraphPerFramework target(s)).
+   3:8>Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:8) is building "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:12) on node 7 (_GenerateProjectRestoreGraphPerFramework target(s)).
+     3>AddPrunePackageReferences:
+         Loaded prune package data from framework packages
+     3>Done Building Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (_GenerateProjectRestoreGraphPerFramework target(s)).
+     3>Done Building Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (_GenerateProjectRestoreGraph target(s)).
+     1>Restore:
+         X.509 certificate chain validation will use the default trust store selected by .NET for code signing.
+         X.509 certificate chain validation will use the default trust store selected by .NET for timestamping.
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Analyzers\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj (in 98 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Bridge\Client\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj (in 102 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj (in 102 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Runtime\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj (in 103 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Domains\Scenario\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj (in 87 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Bridge\Protocol\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj (in 103 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Tests\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj (in 108 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Domains\UI\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj (in 102 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\SDK\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj (in 91 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Domains\Warfare\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj (in 108 ms).
+         Assets file has not changed. Skipping assets file writing. Path: C:\Users\koosh\Dino\src\Domains\Economy\obj\project.assets.json
+         Restored C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj (in 107 ms).
+         
+         NuGet Config files used:
+             C:\Users\koosh\Dino\NuGet.Config
+             C:\Users\koosh\AppData\Roaming\NuGet\NuGet.Config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.FallbackLocation.config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config
+         
+         Feeds used:
+             https://api.nuget.org/v3/index.json
+             C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+             c:\program files\dotnet\library-packs
+         All projects are up-to-date for restore.
+     1>Done Building Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (Restore target(s)).
+   1:7>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" on node 3 (VSTest target(s)).
+     1>BuildProject:
+         Build started, please wait...
+   1:7>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:7) is building "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) on node 3 (default targets).
+     1>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (5:6) on node 1 (default targets).
+     5>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" (9:7) on node 10 (default targets).
+     9>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" (8:6) on node 4 (default targets).
+     8>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj" (2:13) on node 2 (default targets).
+     2>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj" (7:14) on node 7 (default targets).
+     7>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" (4:6) on node 5 (default targets).
+     4>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj" (11:6) on node 8 (default targets).
+    11>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj]
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" (6:6) on node 6 (default targets).
+     6>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj]
+     7>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Analyzers" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+       CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Analyzers.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Analyzers -> C:\Users\koosh\Dino\src\Analyzers\bin\Release\netstandard2.0\DINOForge.Analyzers.dll
+     7>Done Building Project "C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj" (default targets).
+     2>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\SDK" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     9>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Bridge\Protocol" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     2>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.SDK.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.SDK -> C:\Users\koosh\Dino\src\SDK\bin\Release\netstandard2.0\DINOForge.SDK.dll
+     2>Done Building Project "C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj" (default targets).
+     4>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Domains\Scenario" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj" (10:6) on node 3 (default targets).
+    10>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Domains\Economy" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     6>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Domains\Warfare" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     8>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     9>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Bridge.Protocol.sourcelink.json' is up-to-date.
+    11>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+     9>CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+    11>MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Domains\UI" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+     9>GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Bridge.Protocol -> C:\Users\koosh\Dino\src\Bridge\Protocol\bin\Release\netstandard2.0\DINOForge.Bridge.Protocol.dll
+     9>Done Building Project "C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" (default targets).
+     5>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Bridge\Client" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+    11>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Domains.UI.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+     6>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+    10>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+     4>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+    10>_GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Domains.Economy.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+     6>_GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Domains.Warfare.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+    10>GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Domains.Economy -> C:\Users\koosh\Dino\src\Domains\Economy\bin\Release\netstandard2.0\DINOForge.Domains.Economy.dll
+    10>Done Building Project "C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj" (default targets).
+     4>_GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Domains.Scenario.sourcelink.json' is up-to-date.
+    11>GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+     4>CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+    11>CopyFilesToOutputDirectory:
+         DINOForge.Domains.UI -> C:\Users\koosh\Dino\src\Domains\UI\bin\Release\netstandard2.0\DINOForge.Domains.UI.dll
+     6>GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Domains.Warfare -> C:\Users\koosh\Dino\src\Domains\Warfare\bin\Release\netstandard2.0\DINOForge.Domains.Warfare.dll
+    11>Done Building Project "C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj" (default targets).
+     6>Done Building Project "C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj" (default targets).
+     4>GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Domains.Scenario -> C:\Users\koosh\Dino\src\Domains\Scenario\bin\Release\netstandard2.0\DINOForge.Domains.Scenario.dll
+     4>Done Building Project "C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj" (default targets).
+     5>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\netstandard2.0\DINOForge.Bridge.Client.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Bridge.Client -> C:\Users\koosh\Dino\src\Bridge\Client\bin\Release\netstandard2.0\DINOForge.Bridge.Client.dll
+     5>Done Building Project "C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj" (default targets).
+     8>CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\net8.0\DINOForge.Tools.Installer.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Tools.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\bin\Release\net8.0\DINOForge.Tools.Installer.dll
+       GenerateNuspec:
+       Skipping target "GenerateNuspec" because all output files are up-to-date with respect to the input files.
+     8>Done Building Project "C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" (default targets).
+   1:8>Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (1:8) is building "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (3:16) on node 9 (default targets).
+     3>_CheckForNETCoreSdkIsPreview:
+       c:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj::TargetFramework=net8.0]
+       GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       MinVer:
+         "c:\program files\dotnet\dotnet.exe" "C:\Users\koosh\.nuget\packages\minver\7.0.0\build\bin/net10.0/MinVer.dll" "C:\Users\koosh\Dino\src\Runtime" --auto-increment "" --build-metadata "" --default-pre-release-identifiers "preview.0" --default-pre-release-phase "" --minimum-major-minor "" --tag-prefix "v" --verbosity "" --version-override ""
+       CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Release\net8.0\DINOForge.Runtime.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Runtime -> C:\Users\koosh\Dino\src\Runtime\bin\Release\net8.0\DINOForge.Runtime.dll
+     3>Done Building Project "C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj" (default targets).
+     1>_GenerateSourceLinkFile:
+         Source Link file 'obj\Release\net8.0\DINOForge.Tests.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       Skipping target "_CopyOutOfDateSourceItemsToOutputDirectory" because all output files are up-to-date with respect to the input files.
+       _CopyAppConfigFile:
+       Skipping target "_CopyAppConfigFile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildRuntimeConfigurationFiles:
+       Skipping target "GenerateBuildRuntimeConfigurationFiles" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         DINOForge.Tests -> C:\Users\koosh\Dino\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll
+     1>Done Building Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (default targets).
+     1>BuildProject:
+         Build completed.
+         
+Test run for C:\Users\koosh\Dino\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 8.0.27)
+[xUnit.net 00:00:00.41]   Discovering: DINOForge.Tests
+[xUnit.net 00:00:01.45]   Discovered:  DINOForge.Tests
+[xUnit.net 00:00:01.46]   Starting:    DINOForge.Tests
+[15:56:48 DBG] Sending request 'ping' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:48 INF] Request 'ping' completed successfully in 24ms
+[15:56:48 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'status' completed successfully in 10ms
+[15:56:51 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'waitForWorld' completed successfully in 2ms
+[15:56:51 DBG] Sending request 'queryEntities' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'queryEntities' completed successfully in 1ms
+[15:56:51 DBG] Sending request 'getStat' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'getStat' completed successfully in 2ms
+[15:56:51 DBG] Sending request 'applyOverride' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'applyOverride' completed successfully in 2ms
+[15:56:51 DBG] Sending request 'reloadPacks' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'reloadPacks' completed successfully in 0ms
+[15:56:51 DBG] Sending request 'getCatalog' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'getCatalog' completed successfully in 1ms
+[15:56:51 DBG] Sending request 'dumpState' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'dumpState' completed successfully in 0ms
+[15:56:51 DBG] Sending request 'getResources' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'getResources' completed successfully in 2ms
+[15:56:51 DBG] Sending request 'screenshot' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'screenshot' completed successfully in 1ms
+[15:56:51 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'loadScene' completed successfully in 2ms
+[15:56:51 DBG] Sending request 'startGame' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'startGame' completed successfully in 1ms
+[15:56:51 DBG] Sending request 'listSaves' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'listSaves' completed successfully in 0ms
+[15:56:51 DBG] Sending request 'dismissLoadScreen' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'dismissLoadScreen' completed successfully in 0ms
+[15:56:51 DBG] Sending request 'loadSave' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:51 INF] Request 'loadSave' completed successfully in 0ms
+[15:56:51 DBG] Sending request 'clickButton' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'clickButton' completed successfully in 0ms
+[15:56:52 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'toggleUi' completed successfully in 0ms
+[15:56:52 DBG] Sending request 'pressKey' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'pressKey' completed successfully in 0ms
+[15:56:52 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'invokeMethod' completed successfully in 0ms
+[15:56:52 DBG] Sending request 'verifyMod' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'verifyMod' completed successfully in 1ms
+[15:56:52 DBG] Sending request 'getComponentMap' to pipe 'dinoforge-game-bridge' (attempt 1/1)
+[15:56:52 INF] Request 'getComponentMap' completed successfully in 1ms
+[xUnit.net 00:00:05.32]   Finished:    DINOForge.Tests
+  Passed DINOForge.Tests.GameClientPipelineTests.CoreRequestWrappers_WriteExpectedJsonRpcRequests [3 s]
+
+Test Run Successful.
+Total tests: 1
+     Passed: 1
+ Total time: 7.2151 Seconds
+     1>Done Building Project "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (VSTest target(s)).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:50.70

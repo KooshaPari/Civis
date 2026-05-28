@@ -950,6 +950,7 @@ namespace DINOForge.Runtime
         private bool _pendingPackToggle;
         private string? _pendingPackToggleId;
         private bool _pendingPackToggleEnabled;
+        private World? _pendingCatalogWorld;
 
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
@@ -1306,6 +1307,29 @@ namespace DINOForge.Runtime
                 {
                     yield return ProcessPackToggleCoroutine(packId!, enabled);
                     continue;
+                }
+
+                // Deferred catalog rebuild (queued from background thread to avoid EntityManager race)
+                World? catalogWorld = null;
+                lock (_deferredWorkLock)
+                {
+                    if (_pendingCatalogWorld != null)
+                    {
+                        catalogWorld = _pendingCatalogWorld;
+                        _pendingCatalogWorld = null;
+                    }
+                }
+                if (catalogWorld != null && catalogWorld.IsCreated)
+                {
+                    try
+                    {
+                        _log?.LogInfo($"[RuntimeDriver] Catalog rebuild executing on main thread for world '{catalogWorld.Name}'");
+                        _modPlatform?.RebuildCatalogAndApplyStats(catalogWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.LogWarning($"[RuntimeDriver] Catalog rebuild failed: {ex.Message}");
+                    }
                 }
 
                 yield return null;
@@ -1815,66 +1839,58 @@ namespace DINOForge.Runtime
                                 }
                             }
                         }
-                        // World found — now check if we need to rebuild the catalog
-                        else if (!_catalogRebuilt)
-                        {
-                            if (_destroyed) break;
-                            // Also handle world changes (scene transitions): re-register KeyInputSystem
-                            // in the new DefaultGameObjectInjectionWorld if it changed since last registration.
-                            try
-                            {
-                                World? w = World.DefaultGameObjectInjectionWorld;
-                                if (w != null && w.IsCreated && (_registeredWorldInstance == null || !ReferenceEquals(_registeredWorldInstance, w)))
-                                {
-                                    TryRegisterKeyInputSystem(w);
-                                }
-                            }
-                            catch { } // safe-swallow: ECS world discovery best-effort
-
-                            // Catalog rebuild: only trigger once when enough entities exist
-                            try
-                            {
-                                World? w2 = World.DefaultGameObjectInjectionWorld;
-                                if (w2 != null && w2.IsCreated)
-                                {
-                                    int entityCount = w2.EntityManager.UniversalQuery.CalculateEntityCount();
-                                    if (entityCount > 1000)
-                                    {
-                                        _catalogRebuilt = true;
-                                        _log?.LogInfo($"[RuntimeDriver] Catalog rebuild triggered ({entityCount} entities)");
-                                        _modPlatform?.RebuildCatalogAndApplyStats(w2);
-                                    }
-                                }
-                            }
-                            catch { } // safe-swallow: catalog rebuild best-effort
-                        }
-                        // Stable state: detect world changes (scene transitions) and re-register KeyInputSystem.
-                        // After scene transitions, DINO creates a new ECS world and updates
-                        // DefaultGameObjectInjectionWorld. We detect this and re-register KeyInputSystem
-                        // so DrainQueue keeps pumping — this unblocks the MCP bridge.
+                        // World found — detect world CHANGES and re-trigger OnWorldReady
                         else
                         {
                             if (_destroyed) break;
                             try
                             {
-                                World? current = World.DefaultGameObjectInjectionWorld;
-                                if (current != null && current.IsCreated && !ReferenceEquals(current, _registeredWorldInstance))
+                                World? w = World.DefaultGameObjectInjectionWorld;
+                                if (w != null && w.IsCreated)
                                 {
-                                    _registeredWorldInstance = current;
-                                    _log?.LogInfo($"[RuntimeDriver] ECS world changed to '{current.Name}' — re-registering KeyInputSystem");
-                                    try
+                                    // Detect world change: new world created after scene transition
+                                    if (!ReferenceEquals(_registeredWorldInstance, w))
                                     {
-                                        current.GetOrCreateSystem<Bridge.KeyInputSystem>();
-                                        _log?.LogInfo("[RuntimeDriver] KeyInputSystem re-registered in new world.");
+                                        _log?.LogInfo($"[RuntimeDriver] World changed: '{w.Name}' (was {(_registeredWorldInstance != null ? _registeredWorldInstance.Name : "null")})");
+                                        TryRegisterKeyInputSystem(w);
+
+                                        // Re-trigger OnWorldReady for the new world
+                                        _worldFound = false;
+                                        _catalogRebuilt = false;
+                                        _worldFound = true;
+                                        DebugLog.Write("Plugin", $"[RuntimeDriver] World change detected — queueing OnWorldReady for '{w.Name}'");
+                                        OnWorldReady(w);
                                     }
-                                    catch (Exception ex)
+
+                                    // Deferred catalog rebuild: queue to main thread, don't call from BG thread
+                                    if (!_catalogRebuilt)
                                     {
-                                        _log?.LogWarning($"[RuntimeDriver] KeyInputSystem re-registration failed: {ex}");
+                                        int entityCount = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                                        if (entityCount > 1000)
+                                        {
+                                            _catalogRebuilt = true;
+                                            _log?.LogInfo($"[RuntimeDriver] Catalog rebuild deferred to main thread ({entityCount} entities)");
+                                            lock (_deferredWorkLock)
+                                            {
+                                                _pendingCatalogWorld = w;
+                                            }
+                                        }
+                                    }
+                                }
+                                else if (w == null || !w.IsCreated)
+                                {
+                                    // World was destroyed (scene transition) — reset for next world
+                                    if (_worldFound)
+                                    {
+                                        _worldFound = false;
+                                        _catalogRebuilt = false;
+                                        DebugLog.Write("Plugin", "[RuntimeDriver] World destroyed — reset worldFound, will re-detect");
                                     }
                                 }
                             }
-                            catch { } // safe-swallow: Key system discovery best-effort
+                            catch { } // safe-swallow: ECS world discovery best-effort
                         }
+                        // (World-change detection + KeyInputSystem re-registration merged into the else block above)
                     }
                 }
                 catch (System.Exception ex)
@@ -2077,10 +2093,11 @@ namespace DINOForge.Runtime
             // idempotent and call it from both paths so the native MODS button never fires with
             // _menuHost == null.
             NativeMainMenuModMenu nativeHost = new NativeMainMenuModMenu();
+            if (_log != null) nativeHost.SetLogger(_log);
             ContextualModMenuHost contextualHost = new ContextualModMenuHost(
                 _dfCanvas.ModMenuPanel, nativeHost);
             _nativeMenuInjector.SetModMenuHost(contextualHost);
-            _log?.LogInfo("[RuntimeDriver] NativeMenuInjector wired via ContextualModMenuHost (native stub active, overlay fallback).");
+            _log?.LogInfo("[RuntimeDriver] NativeMenuInjector wired via ContextualModMenuHost (native menu active, overlay fallback).");
         }
 
         /// <summary>

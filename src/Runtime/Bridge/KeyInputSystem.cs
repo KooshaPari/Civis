@@ -192,7 +192,7 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public World OwningWorld => World;
 
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             DebugLog.Write("KeyInput", $"KeyInputSystem.OnCreate: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
             Enabled = true;
@@ -292,7 +292,7 @@ namespace DINOForge.Runtime.Bridge
                     DINOForgeKeyLoopUpdate));
         }
 
-        protected override void OnDestroy()
+        public override void OnDestroy()
         {
             DebugLog.Write("KeyInput", $"KeyInputSystem.OnDestroy: World='{World?.Name ?? "null"}' IsCreated={World?.IsCreated ?? false}");
             // Clear the cached world reference so GetActiveWorld() falls back to scanning
@@ -311,7 +311,7 @@ namespace DINOForge.Runtime.Bridge
             base.OnDestroy();
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             try
             {

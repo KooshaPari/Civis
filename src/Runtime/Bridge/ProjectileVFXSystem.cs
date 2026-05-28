@@ -27,13 +27,13 @@ namespace DINOForge.Runtime.Bridge
             DebugLog.Write("ProjectileVFX", "SetPoolManager: Pool initialized");
         }
 
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("ProjectileVFX", "OnCreate");
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             _frameCount++;
 

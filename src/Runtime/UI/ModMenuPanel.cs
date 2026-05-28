@@ -2,7 +2,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using BepInEx.Logging;
+using DINOForge.Runtime.Conflicts;
 using DINOForge.Runtime.Updates;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -54,6 +56,9 @@ namespace DINOForge.Runtime.UI
         private string _stateFilter = "All"; // All, Enabled, Disabled, Has Errors
         private string _sortBy = "Name";     // Name, Type, Version, Recently Updated
         private readonly List<int> _filteredIndices = new List<int>();
+
+        // ── Keyboard navigation state ────────────────────────────────────────────
+        private int _keyboardFocusedRowIndex = -1; // -1 = no focus, 0+ = index in filtered pack list
 
         // ── Animation ────────────────────────────────────────────────────────────
         private CanvasGroup? _canvasGroup;
@@ -988,6 +993,9 @@ namespace DINOForge.Runtime.UI
                 return;
             }
 
+            // Reset keyboard focus when rebuilding the list
+            _keyboardFocusedRowIndex = -1;
+
             _log?.LogInfo($"[ModMenuPanel.RebuildPackList] START: presenter.Packs.Count={_presenter.Packs.Count}, _listContent={_listContent.name}, active={_listContent.gameObject.activeSelf}");
             _log?.LogInfo($"[ModMenuPanel.RebuildPackList] _listContent RectTransform: position={_listContent.anchoredPosition}, sizeDelta={_listContent.sizeDelta}");
             _log?.LogInfo($"[ModMenuPanel.RebuildPackList] Clearing {_listContent.childCount} existing items");
@@ -1649,6 +1657,9 @@ namespace DINOForge.Runtime.UI
 
             // ── Conflict resolution buttons (#903) ────────────────────────────
             RefreshConflictButtons(p);
+
+            // ── Per-pack runtime settings (#925) ───────────────────────────────
+            RefreshSettings(p);
 
             // ── Toggle button label ───────────────────────────────────────────
             if (_detailPane != null)
@@ -2585,26 +2596,5 @@ namespace DINOForge.Runtime.UI
             bannerRoot.SetActive(false);
         }
 
-        // ── Conflict resolution stubs (#903 — pending) ────────────────────────────
-
-        /// <summary>
-        /// Builds the diff modal overlay. Full implementation in task #903.
-        /// Stub prevents compile error while the feature is in progress.
-        /// </summary>
-        private void BuildDiffModal()
-        {
-            // #903 stub — _diffModal/_diffModalTitle/_diffLeftText/_diffRightText remain null.
-        }
-
-        /// <summary>
-        /// Refreshes conflict-resolution action buttons in the detail pane.
-        /// Full implementation in task #903.
-        /// </summary>
-        private void RefreshConflictButtons(PackDisplayInfo pack)
-        {
-            // #903 stub — hide the conflict section until the feature ships.
-            if (_conflictSection != null)
-                _conflictSection.gameObject.SetActive(false);
-        }
     }
 }

@@ -147,14 +147,14 @@ namespace DINOForge.Runtime.Bridge
         private const string PatchedBundlesDir = "dinoforge_patched_bundles";
 
         /// <inheritdoc/>
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("AssetSwap", "AssetSwapSystem.OnCreate");
         }
 
         /// <inheritdoc/>
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             if (_resetPending)
             {
@@ -809,7 +809,7 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <inheritdoc/>
-        protected override void OnDestroy()
+        public override void OnDestroy()
         {
             // Iter-144 #543 fix: skip bundle unload when RuntimeDriver is being destroyed as part
             // of a scene transition (NeedsResurrection / s_skipBundleUnload). AssetBundle.Unload(false)

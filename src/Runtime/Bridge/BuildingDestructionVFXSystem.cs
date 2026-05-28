@@ -32,13 +32,13 @@ namespace DINOForge.Runtime.Bridge
             DebugLog.Write("BuildingDestructionVFX", "SetPoolManager: Pool initialized");
         }
 
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("BuildingDestructionVFX", "OnCreate");
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             _frameCount++;
 

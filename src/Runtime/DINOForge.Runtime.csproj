@@ -59,9 +59,12 @@
   <!-- Game assemblies - only when game is installed -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <!-- Unity ECS / DOTS -->
+    <!-- Publicize=true: AssemblyPublicizer makes internal ECS members directly callable, -->
+    <!-- eliminating fragile reflection-based access (Mono type-identity bugs).           -->
     <Reference Include="Unity.Entities">
       <HintPath>$(ManagedDir)\Unity.Entities.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Unity.Entities.Hybrid">
       <HintPath>$(ManagedDir)\Unity.Entities.Hybrid.dll</HintPath>
@@ -147,9 +150,12 @@
     </Reference>
 
     <!-- Game DLLs -->
+    <!-- Publicize=true: AssemblyPublicizer makes internal game members directly callable, -->
+    <!-- eliminating fragile reflection-based access in AssetSwapSystem and EntityQueries. -->
     <Reference Include="DNO.Main">
       <HintPath>$(ManagedDir)\DNO.Main.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
@@ -172,9 +178,13 @@
   </ItemGroup>
 
   <!-- AssetsTools.NET for asset bundle reading/writing (Runtime-specific, not SDK) -->
+  <!-- BepInEx.AssemblyPublicizer: strips internal/private modifiers from game DLLs at build time -->
+  <!-- giving compile-time (not reflection-based) access to ECS internals. PrivateAssets=all so    -->
+  <!-- the tool package is never shipped as a runtime dependency.                                   -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
   </ItemGroup>
 
   <!--

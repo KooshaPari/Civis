@@ -23,13 +23,13 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialMovementSystem : SystemBase
     {
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("AerialMovement", "AerialMovementSystem.OnCreate");
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             float deltaTime = (float)World.Time.DeltaTime;
 

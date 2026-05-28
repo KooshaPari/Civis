@@ -887,6 +887,9 @@ namespace DINOForge.Runtime
         // UGUI system (preferred). Null if UGUI setup failed.
         internal DFCanvas? _dfCanvas;
 
+        // Loading overlay (shown during mod init, hidden when scene loads)
+        private ModLoadingOverlay? _loadingOverlay;
+
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
         // _debugOverlay is ALWAYS added (it owns the IMGUI F9 debug panel).
@@ -1071,17 +1074,8 @@ namespace DINOForge.Runtime
                     try
                     {
                         DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                        if (_uguiReady && _dfCanvas != null)
-                        {
-                            _dfCanvas.ToggleDebug();
-                            // ForceRefresh after toggle so the panel always shows current data
-                            // (Update() never fires in DINO — periodic refresh is dead code).
-                            if (_dfCanvas.DebugPanel != null && _dfCanvas.DebugPanel.IsVisible)
-                            {
-                                _dfCanvas.DebugPanel.ForceRefresh();
-                            }
-                        }
-                        else _debugOverlay?.Toggle();
+                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                        else _modMenuHost?.Toggle();
                     }
                     catch (Exception ex)
                     {
@@ -1093,8 +1087,17 @@ namespace DINOForge.Runtime
                     try
                     {
                         DebugLog.Write("Plugin", "[RuntimeDriver] F10 pressed (via KeyInputSystem)");
-                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                        else _modMenuHost?.Toggle();
+                        if (_uguiReady && _dfCanvas != null)
+                        {
+                            _dfCanvas.ToggleDebug();
+                            // ForceRefresh after toggle so the panel always shows current data
+                            // (Update() never fires in DINO — periodic refresh is dead code).
+                            if (_dfCanvas.DebugPanel != null && _dfCanvas.DebugPanel.IsVisible)
+                            {
+                                _dfCanvas.DebugPanel.ForceRefresh();
+                            }
+                        }
+                        else _debugOverlay?.Toggle();
                     }
                     catch (Exception ex)
                     {

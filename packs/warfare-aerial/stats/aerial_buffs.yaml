@@ -1,19 +1,6 @@
 # Aerial Warfare Stat Overrides
-# Makes aerial units more effective
-
-# Aerial units get bonuses
-overrides:
-  - target: unit.stats.hp
-    value: 1.3
-    mode: multiply
-    filter: Components.Aerial
-
-  - target: unit.stats.damage
-    value: 1.25
-    mode: multiply
-    filter: Components.Aerial
-
-  - target: unit.stats.speed
-    value: 1.15
-    mode: multiply
-    filter: Components.Aerial
+# NOTE: Aerial units are DINOForge-custom entities (AerialUnitComponent),
+# not vanilla DINO ECS archetypes. The stat override system currently only
+# resolves vanilla game component types via reflection. These overrides are
+# placeholders for when custom-component stat injection is implemented.
+overrides: []

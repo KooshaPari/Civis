@@ -1,0 +1,85 @@
+# Lord's Troops - Vanilla DINO Buildings
+
+- id: vanilla_barracks
+  display_name: Barracks
+  description: Infantry training facility. Produces basic and advanced infantry units.
+  faction_id: lords_troops
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Barracks"
+  cost:
+    wood: 100
+    stone: 50
+    gold: 25
+  upkeep_per_turn: 2
+  production_slots: 2
+  units_produced:
+    - vanilla_swordsman
+    - vanilla_archer
+    - vanilla_axe_warrior
+    - vanilla_spearman
+
+- id: vanilla_stables
+  display_name: Stables
+  description: Horse breeding and cavalry training grounds. Produces mounted units.
+  faction_id: lords_troops
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Stables"
+  cost:
+    wood: 120
+    stone: 60
+    gold: 40
+  upkeep_per_turn: 3
+  production_slots: 1
+  units_produced:
+    - vanilla_horseman
+    - vanilla_horse_archer
+    - vanilla_mounted_knight
+
+- id: vanilla_engineer_guild
+  display_name: Engineer Guild
+  description: Workshop for crafting advanced weapons and siege equipment.
+  faction_id: lords_troops
+  building_type: production
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Engineer_Guild"
+  cost:
+    wood: 150
+    stone: 100
+    gold: 50
+  upkeep_per_turn: 4
+  production_slots: 1
+  units_produced:
+    - vanilla_crossbowman
+    - vanilla_hammerguy
+
+- id: vanilla_siege_workshop
+  display_name: Siege Workshop
+  description: Heavy siege engine construction facility.
+  faction_id: lords_troops
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Siege_Workshop"
+  cost:
+    wood: 200
+    stone: 150
+    gold: 100
+  upkeep_per_turn: 6
+  production_slots: 1
+  units_produced:
+    - vanilla_catapult
+    - vanilla_ballista
+    - vanilla_trebuchet
+
+- id: vanilla_lord_hall
+  display_name: Lord's Hall
+  description: Seat of power for the Lord's Troops. Provides morale bonuses and rare unit recruitment.
+  faction_id: lords_troops
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Lord's_Hall"
+  cost:
+    wood: 250
+    stone: 200
+    gold: 150
+  upkeep_per_turn: 8
+  production_slots: 1
+  units_produced:
+    - vanilla_foot_knight
+    - vanilla_burrdam_chimera

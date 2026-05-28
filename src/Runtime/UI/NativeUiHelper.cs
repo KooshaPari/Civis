@@ -94,34 +94,28 @@ namespace DINOForge.Runtime.UI
                 GameObject clone = UnityEngine.Object.Instantiate(donor.gameObject, donor.transform.parent);
                 clone.name = "DINOForge_ModsButton";
 
-                // 2a. Strip game-specific MonoBehaviours FIRST so nothing fires during tear-down.
-                StripNonUiBehaviours(clone);
+                StripNonUiBehaviours(clone, preserveSelectables: true);
 
-                // 2b. Destroy the custom selectable component(s) on the clone root — we replace
-                //     them with a proper UnityEngine.UI.Button. We must iterate over all
-                //     Selectable-derived components because the type name is game-specific.
-                System.Type donorType = donor.GetType();
-                Selectable[] cloneSelectables = clone.GetComponents<Selectable>();
-                foreach (Selectable s in cloneSelectables)
+                Selectable preserved = clone.GetComponent<Selectable>();
+
+                if (preserved != null)
                 {
-                    if (s != null && s.GetType() == donorType)
-                    {
-                        UnityEngine.Object.Destroy(s);
-                    }
+                    Navigation nav = preserved.navigation;
+                    nav.mode = Navigation.Mode.Automatic;
+                    preserved.navigation = nav;
                 }
 
-                // 3. Add a fresh Button component.
-                Button btn = clone.AddComponent<Button>();
-
-                // 4. Clear inherited persistent callbacks + reset navigation.
+                Button btn = clone.GetComponent<Button>();
+                if (btn == null)
+                {
+                    btn = clone.AddComponent<Button>();
+                }
                 btn.onClick = new Button.ButtonClickedEvent();
-                Navigation nav = btn.navigation;
-                nav.mode = Navigation.Mode.Automatic;
-                btn.navigation = nav;
 
-                // 4b. Copy visual state from the donor Selectable so hover/press
-                //     color transitions match the native MainMenuButton appearance.
-                CopySelectableVisualState(btn, donor);
+                if (preserved != null && preserved != btn)
+                {
+                    CopySelectableVisualState(btn, preserved);
+                }
 
                 // 5. Set label text.
                 SetButtonText(btn, newText);
@@ -155,7 +149,7 @@ namespace DINOForge.Runtime.UI
             catch { /* safe-swallow: visual-state copy is best-effort; missing/destroyed donor is non-fatal */ }
         }
 
-        private static void StripNonUiBehaviours(GameObject root)
+        private static void StripNonUiBehaviours(GameObject root, bool preserveSelectables = false)
         {
             MonoBehaviour[] behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
             foreach (MonoBehaviour behaviour in behaviours)
@@ -167,6 +161,11 @@ namespace DINOForge.Runtime.UI
                     || behaviour is LayoutElement
                     || behaviour is LayoutGroup
                     || behaviour is ContentSizeFitter)
+                {
+                    continue;
+                }
+
+                if (preserveSelectables && behaviour is Selectable)
                 {
                     continue;
                 }

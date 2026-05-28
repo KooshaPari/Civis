@@ -1,0 +1,46 @@
+# Royal Army - Vanilla DINO Faction
+# Established military: disciplined professional soldiers with heavy armor
+# Archetype: Defense (expensive, high morale, defensive formations)
+
+faction:
+  id: royal_army
+  display_name: "Royal Army"
+  description: "The kingdom's professional military. Heavily armored disciplined troops with superior formations, slower but nearly unbreakable when dug in."
+  vanilla_dino_name: "Royal Army"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Royal_Army"
+  theme: medieval_royal
+  archetype: defense
+  doctrine: defensive_formations
+
+economy:
+  gather_bonus: 0.9
+  upkeep_modifier: 1.3
+  research_speed: 1.1
+  build_speed: 1.0
+
+army:
+  morale_style: disciplined
+  unit_cap_modifier: 0.9
+  elite_cost_modifier: 1.2
+  spawn_rate_modifier: 0.9
+
+roster:
+  cheap_infantry: vanilla_royal_footman
+  line_infantry: vanilla_royal_archer
+  elite_infantry: vanilla_royal_paladin
+  anti_armor: vanilla_royal_spearman
+  support_weapon: vanilla_royal_healer
+  recon: vanilla_royal_herald
+  light_vehicle: vanilla_royal_cavalry
+  heavy_vehicle: vanilla_royal_lieutenant
+  artillery: vanilla_royal_ballista
+  hero_commander: vanilla_royal_champion
+
+buildings:
+  barracks: vanilla_royal_barracks
+  stables: vanilla_royal_stables
+  workshop: vanilla_royal_armory
+  artillery_foundry: vanilla_royal_siege_workshop
+  special: vanilla_royal_throne_room
+
+color: "#4444FF"

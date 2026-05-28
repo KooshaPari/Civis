@@ -1,0 +1,61 @@
+
+Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:12.34]     DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase2_CloneTrooper_EntityRegistered [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase2_CloneTrooper_EntityRegistered [5 s]
+  Error Message:
+   Expected result.Entities not to be empty because clone trooper entities should exist after warfare-starwars is loaded.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Execution.GivenSelector`1.FailWith(String message, Object[] args)
+   at FluentAssertions.Execution.GivenSelector`1.FailWith(String message)
+   at FluentAssertions.Collections.GenericCollectionAssertions`3.NotBeEmpty(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase2_CloneTrooper_EntityRegistered() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchAssetSwapTests.cs:line 82
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:49.07]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay [1 s]
+  Error Message:
+   Expected modMenuPanel.MatchCount to be greater than 0 because ModMenuPanel should exist after Mods click, but found 0.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.BeGreaterThan(T expected, String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 66
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:54.28]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [SKIP]
+  Skipped DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [1 ms]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [1 s]
+  Error Message:
+   Expected modMenuPanel.MatchedNode!.Visible to be False because ModMenuPanel should start hidden (CanvasGroup alpha 0) before F10 toggle, but found True.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeFalse(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 49
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:19.62]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [FAIL]
+[xUnit.net 00:01:28.34]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [7 s]
+  Error Message:
+   Expected modWait.Ready to be True because mod menu should be visible after F10 toggle during gameplay, but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 156
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:    23, Skipped:     1, Total:    28, Duration: 1 m 28 s - DINOForge.Tests.GameLaunch.dll (net11.0)

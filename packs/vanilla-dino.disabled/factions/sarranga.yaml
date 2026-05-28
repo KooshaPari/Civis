@@ -1,0 +1,46 @@
+# Sarranga - Vanilla DINO Faction
+# Mystical faction: elemental beings and enchanted warriors
+# Archetype: Magic (special abilities, elemental effects, unique mechanics)
+
+faction:
+  id: sarranga
+  display_name: "Sarranga"
+  description: "The realm of magic and mystery. Mystical beings with elemental powers and enchantments. Strong in specialized roles, weaker in direct melee combat."
+  vanilla_dino_name: "Sarranga"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Sarranga"
+  theme: magical
+  archetype: magic
+  doctrine: elemental_mastery
+
+economy:
+  gather_bonus: 0.8
+  upkeep_modifier: 1.1
+  research_speed: 1.3
+  build_speed: 0.95
+
+army:
+  morale_style: arcane
+  unit_cap_modifier: 0.95
+  elite_cost_modifier: 1.0
+  spawn_rate_modifier: 0.85
+
+roster:
+  cheap_infantry: vanilla_sarranga_swordtail
+  line_infantry: vanilla_sarranga_priestess
+  elite_infantry: vanilla_sarranga_nimble_one
+  anti_armor: vanilla_sarranga_mighty_one
+  support_weapon: vanilla_sarranga_priestess
+  recon: vanilla_sarranga_nimble_one
+  light_vehicle: vanilla_sarranga_swordtail
+  heavy_vehicle: vanilla_sarranga_scorpio
+  artillery: vanilla_sarranga_bombus
+  hero_commander: null
+
+buildings:
+  barracks: vanilla_sarranga_training_grounds
+  stables: null
+  workshop: vanilla_sarranga_enchantry
+  artillery_foundry: null
+  special: vanilla_sarranga_mystical_circle
+
+color: "#BB44FF"

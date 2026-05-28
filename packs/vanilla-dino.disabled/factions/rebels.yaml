@@ -1,0 +1,46 @@
+# Rebels - Vanilla DINO Faction
+# Anti-establishment faction: populace uprising with improvised tactics
+# Archetype: Chaos (cheap units, high morale swings, aggressive tactics)
+
+faction:
+  id: rebels
+  display_name: "Rebels"
+  description: "The peasant uprising faction. Scrappy, determined populace with improvised weapons and tactics. High morale when winning, vulnerable to discipline and heavy armor."
+  vanilla_dino_name: "Rebels"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Rebels"
+  theme: medieval_peasant
+  archetype: chaos
+  doctrine: mass_assault
+
+economy:
+  gather_bonus: 1.2
+  upkeep_modifier: 0.8
+  research_speed: 0.8
+  build_speed: 0.9
+
+army:
+  morale_style: volatile
+  unit_cap_modifier: 1.15
+  elite_cost_modifier: 0.7
+  spawn_rate_modifier: 1.1
+
+roster:
+  cheap_infantry: vanilla_rebel_pitchfork
+  line_infantry: vanilla_rebel_flag_carrier
+  elite_infantry: vanilla_rebel_hulk
+  anti_armor: vanilla_rebel_scythe
+  support_weapon: vanilla_rebel_shield
+  recon: vanilla_rebel_hulk
+  light_vehicle: vanilla_rebel_pitchfork
+  heavy_vehicle: vanilla_rebel_hulk
+  artillery: null
+  hero_commander: null
+
+buildings:
+  barracks: vanilla_rebel_barracks
+  stables: null
+  workshop: vanilla_rebel_smithy
+  artillery_foundry: null
+  special: vanilla_rebel_meeting_hall
+
+color: "#FF6B35"

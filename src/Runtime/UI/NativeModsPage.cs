@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Localization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -187,7 +188,7 @@ namespace DINOForge.Runtime.UI
             titleLe.flexibleHeight = 0;
 
             // Back button
-            GameObject backBtn = CreateButton("BackButton", titleBar.transform, "Back", () =>
+            GameObject backBtn = CreateButton("BackButton", titleBar.transform, L10n.T("menu.button.cancel", "Back"), () =>
             {
                 Hide();
                 OnBackClicked?.Invoke();
@@ -197,7 +198,7 @@ namespace DINOForge.Runtime.UI
             backLe.preferredHeight = 36;
 
             // Title text
-            GameObject titleObj = CreateTextObj("TitleText", titleBar.transform, "MODS", 24, AccentColor);
+            GameObject titleObj = CreateTextObj("TitleText", titleBar.transform, L10n.T("menu.title", "MODS"), 24, AccentColor);
             LayoutElement titleTextLe = titleObj.AddComponent<LayoutElement>();
             titleTextLe.flexibleWidth = 1;
 

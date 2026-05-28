@@ -489,6 +489,13 @@ namespace DINOForge.Runtime.UI
         public IReadOnlyList<PackSetting>? Settings { get; }
 
         /// <summary>
+        /// Merged badge list: author-declared badges from pack.yaml, curated badges from the
+        /// signed allowlist, and auto-computed badges appended at runtime
+        /// (<c>popular</c>, <c>compatibility-tested</c>).
+        /// </summary>
+        public IReadOnlyList<string> Badges { get; }
+
+        /// <summary>
         /// Creates a new pack display info instance.
         /// </summary>
         public PackDisplayInfo(
@@ -516,7 +523,8 @@ namespace DINOForge.Runtime.UI
             IReadOnlyList<string>? screenshotPaths = null,
             string? classification = null,
             PackTier tier = PackTier.Content,
-            IReadOnlyList<PackSetting>? settings = null)
+            IReadOnlyList<PackSetting>? settings = null,
+            IReadOnlyList<string>? badges = null)
         {
             Id = id;
             Name = name;
@@ -543,6 +551,7 @@ namespace DINOForge.Runtime.UI
             Classification = classification;
             Tier = tier;
             Settings = settings;
+            Badges = badges ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
         }
 
         /// <summary>Returns a copy with the enabled state changed.</summary>
@@ -550,6 +559,6 @@ namespace DINOForge.Runtime.UI
             => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled,
                 Dependencies, Conflicts, Errors, ContentSummary, DetectedConflicts,
                 HomepageUrl, GithubUrl, DiscordUrl, License, Tags,
-                UnitNames, BuildingNames, FactionNames, ScreenshotPaths, Classification, Tier, Settings);
+                UnitNames, BuildingNames, FactionNames, ScreenshotPaths, Classification, Tier, Settings, Badges);
     }
 }

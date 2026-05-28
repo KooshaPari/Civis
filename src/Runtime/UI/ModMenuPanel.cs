@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using BepInEx.Logging;
 using DINOForge.Runtime.Conflicts;
+using DINOForge.Runtime.Localization;
 using DINOForge.Runtime.Profiles;
 using DINOForge.Runtime.Settings;
 using DINOForge.Runtime.Telemetry;
@@ -95,6 +96,10 @@ namespace DINOForge.Runtime.UI
         private RectTransform? _detailTagsRow;
         private RectTransform? _detailLinksRow;
         private RectTransform? _detailGalleryRow;
+
+        // ── Badge row (#928-935) ──────────────────────────────────────────────
+        /// <summary>Root GameObject of the horizontal badge row; rebuilt on each selection change.</summary>
+        private GameObject? _detailBadgesRow;
         private readonly List<Image> _galleryThumbs = new List<Image>();
         private GameObject? _screenshotModal;
         private Image? _modalImage;
@@ -139,6 +144,10 @@ namespace DINOForge.Runtime.UI
         /// <summary>Running coroutine handle for the 2-second auto-refresh loop; null when not running.</summary>
         private Coroutine? _telemetryRefreshCoroutine;
         private const float TelemetryRefreshIntervalSec = 2f;
+
+        // ── Help panel (#937) ──────────────────────────────────────────────────
+        /// <summary>FAQ/help panel component; built on-demand when first shown.</summary>
+        private HelpPanel? _helpPanel;
 
         // ── Bootstrap ────────────────────────────────────────────────────────────
 
@@ -330,6 +339,24 @@ namespace DINOForge.Runtime.UI
         {
             if (IsVisible) Hide();
             else Show();
+        }
+
+        /// <summary>
+        /// Shows the FAQ/help panel. Called when the Help button is clicked in the header.
+        /// </summary>
+        private void ShowHelpPanel()
+        {
+            if (_helpPanel == null && _canvasRoot != null)
+            {
+                // Build the help panel on first use
+                _helpPanel = new GameObject("HelpPanel").AddComponent<HelpPanel>();
+                _helpPanel.Build(_canvasRoot, _log);
+            }
+
+            if (_helpPanel != null)
+            {
+                _helpPanel.Show();
+            }
         }
 
         // ── MonoBehaviour ─────────────────────────────────────────────────────────
@@ -533,7 +560,7 @@ namespace DINOForge.Runtime.UI
             UiBuilder.AddHorizontalLayout(headerGradient, 8f, new RectOffset(12, 8, 6, 6));
 
             // Title
-            Text title = UiBuilder.MakeText(headerGradient.transform, "Title", "DINOForge", 16,
+            Text title = UiBuilder.MakeText(headerGradient.transform, "Title", L10n.T("menu.title", "DINOForge"), 16,
                 UiBuilder.Accent, bold: true);
             LayoutElement titleLe = title.gameObject.AddComponent<LayoutElement>();
             titleLe.preferredWidth = 120f;
@@ -545,6 +572,19 @@ namespace DINOForge.Runtime.UI
             LayoutElement statusLe = _headerStatusText.gameObject.AddComponent<LayoutElement>();
             statusLe.preferredWidth = 300f;
             statusLe.flexibleWidth = 1f;
+
+            // Help button
+            Button helpBtn = UiBuilder.MakeButton(
+                headerGradient.transform, "HelpBtn", "?",
+                UiBuilder.BgDeep, UiBuilder.TextSecondary,
+                () =>
+                {
+                    ShowHelpPanel();
+                });
+            RectTransform helpBtnRt = helpBtn.GetComponent<RectTransform>();
+            LayoutElement helpLe = helpBtn.gameObject.AddComponent<LayoutElement>();
+            helpLe.preferredWidth = 28f;
+            helpLe.preferredHeight = 28f;
 
             // Close button
             Button closeBtn = UiBuilder.MakeButton(
@@ -773,6 +813,10 @@ namespace DINOForge.Runtime.UI
             tagsRowLe.flexibleWidth = 1f;
             tagsHost.SetActive(false); // hidden until pack with tags is selected
 
+            // ── Badges row (#928-935) ─────────────────────────────────────────
+            // Rebuilt dynamically in RefreshDetail via RefreshBadgesRow(); no static
+            // host needed — the row is created fresh each time the selection changes.
+
             UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
 
             // ── Description ──────────────────────────────────────────────────
@@ -798,10 +842,10 @@ namespace DINOForge.Runtime.UI
             UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
 
             // ── Dependencies / Conflicts / Load order ────────────────────────
-            _detailDeps = UiBuilder.MakeText(c, "DetailDeps", "Dependencies: none", 12, UiBuilder.TextSecondary);
+            _detailDeps = UiBuilder.MakeText(c, "DetailDeps", L10n.T("menu.detail.dependencies", "Dependencies: none"), 12, UiBuilder.TextSecondary);
             AddFlexRow(_detailDeps.gameObject, preferredHeight: 18f);
 
-            _detailConflicts = UiBuilder.MakeText(c, "DetailConflicts", "Conflicts: none", 12, UiBuilder.TextSecondary);
+            _detailConflicts = UiBuilder.MakeText(c, "DetailConflicts", L10n.T("menu.detail.conflicts", "Conflicts: none"), 12, UiBuilder.TextSecondary);
             AddFlexRow(_detailConflicts.gameObject, preferredHeight: 18f);
 
             _detailLoadOrder = UiBuilder.MakeText(c, "DetailLoadOrder", "Load Order: —", 12, UiBuilder.TextSecondary);
@@ -811,7 +855,7 @@ namespace DINOForge.Runtime.UI
 
             // ── Rich content section ─────────────────────────────────────────
             // Shows count summary + first N item names (units, buildings, factions)
-            _detailRichContent = UiBuilder.MakeText(c, "DetailRichContent", "Content: (none declared)", 12,
+            _detailRichContent = UiBuilder.MakeText(c, "DetailRichContent", L10n.T("menu.detail.content", "Content: (none declared)"), 12,
                 new Color(0.6f, 0.85f, 0.6f, 1f));
             LayoutElement richContentLe = _detailRichContent.gameObject.AddComponent<LayoutElement>();
             richContentLe.preferredHeight = 60f;
@@ -904,7 +948,7 @@ namespace DINOForge.Runtime.UI
             btnRowLe.minHeight = 40f;
 
             Button toggleBtn = UiBuilder.MakeButton(
-                btnRow.transform, "ToggleBtn", "Disable",
+                btnRow.transform, "ToggleBtn", L10n.T("menu.button.disable", "Disable"),
                 UiBuilder.BgSurface, UiBuilder.TextPrimary,
                 OnToggleSelected);
             LayoutElement toggleBtnLe = toggleBtn.gameObject.AddComponent<LayoutElement>();
@@ -1021,7 +1065,7 @@ namespace DINOForge.Runtime.UI
 
             // Reload button
             Button reloadBtn = UiBuilder.MakeButton(
-                footer.transform, "ReloadBtn", "↺  Reload Packs",
+                footer.transform, "ReloadBtn", L10n.T("menu.button.reload", "↺  Reload Packs"),
                 UiBuilder.BgDeep, UiBuilder.Accent,
                 () =>
                 {
@@ -1170,7 +1214,7 @@ namespace DINOForge.Runtime.UI
             headerLayout.childForceExpandWidth = true;
             headerLayout.childForceExpandHeight = false;
 
-            Text headerTitle = UiBuilder.MakeText(headerBar.transform, "HeaderTitle", "FILTERS", 12,
+            Text headerTitle = UiBuilder.MakeText(headerBar.transform, "HeaderTitle", L10n.T("menu.filter.label", "FILTERS"), 12,
                 UiBuilder.TextSecondary, bold: true);
             LayoutElement headerTitleLe = headerTitle.gameObject.AddComponent<LayoutElement>();
             headerTitleLe.flexibleWidth = 1f;
@@ -1204,7 +1248,7 @@ namespace DINOForge.Runtime.UI
             LayoutElement searchRowLe = searchRow.AddComponent<LayoutElement>();
             searchRowLe.preferredHeight = 28f;
 
-            _searchInput = UiBuilder.MakeInputField(searchRow.transform, "SearchInput", "Search packs...",
+            _searchInput = UiBuilder.MakeInputField(searchRow.transform, "SearchInput", L10n.T("menu.search.placeholder", "Search packs..."),
                 OnSearchChanged);
             LayoutElement searchInputLe = _searchInput.gameObject.AddComponent<LayoutElement>();
             searchInputLe.preferredHeight = 28f;
@@ -1227,7 +1271,7 @@ namespace DINOForge.Runtime.UI
             tierLabelLe.preferredWidth = 40f;
 
             _tierDropdown = MakeDropdown(filterRow1.transform, "TierDropdown",
-                new[] { "All", "Engine Extension", "Content", "Total Conversion", "Baseline" },
+                new[] { L10n.T("menu.filter.tier.all", "All"), L10n.T("menu.filter.tier.engine_extension", "Engine Extension"), L10n.T("menu.filter.tier.content", "Content"), L10n.T("menu.filter.tier.total_conversion", "Total Conversion"), L10n.T("menu.filter.tier.baseline", "Baseline") },
                 OnTierFilterChanged);
             LayoutElement tierDdLe = _tierDropdown.gameObject.AddComponent<LayoutElement>();
             tierDdLe.preferredWidth = 90f;
@@ -1245,12 +1289,12 @@ namespace DINOForge.Runtime.UI
             filterRow2Le.preferredHeight = 28f;
             filterRow2Le.flexibleWidth = 1f;
 
-            Text stateLabel = UiBuilder.MakeText(filterRow2.transform, "StateLabel", "State:", 11, UiBuilder.TextSecondary);
+            Text stateLabel = UiBuilder.MakeText(filterRow2.transform, "StateLabel", L10n.T("menu.filter.state", "State:"), 11, UiBuilder.TextSecondary);
             LayoutElement stateLabelLe = stateLabel.gameObject.AddComponent<LayoutElement>();
             stateLabelLe.preferredWidth = 40f;
 
             _stateDropdown = MakeDropdown(filterRow2.transform, "StateDropdown",
-                new[] { "All", "Enabled", "Disabled", "Has Errors" },
+                new[] { L10n.T("menu.filter.state.all", "All"), L10n.T("menu.filter.state.enabled", "Enabled"), L10n.T("menu.filter.state.disabled", "Disabled"), L10n.T("menu.filter.state.errors", "Has Errors") },
                 OnStateFilterChanged);
             LayoutElement stateDdLe = _stateDropdown.gameObject.AddComponent<LayoutElement>();
             stateDdLe.preferredWidth = 90f;
@@ -1268,12 +1312,12 @@ namespace DINOForge.Runtime.UI
             sortRowLe.preferredHeight = 28f;
             sortRowLe.flexibleWidth = 1f;
 
-            Text sortLabel = UiBuilder.MakeText(sortRow.transform, "SortLabel", "Sort:", 11, UiBuilder.TextSecondary);
+            Text sortLabel = UiBuilder.MakeText(sortRow.transform, "SortLabel", L10n.T("menu.sort.label", "Sort:"), 11, UiBuilder.TextSecondary);
             LayoutElement sortLabelLe = sortLabel.gameObject.AddComponent<LayoutElement>();
             sortLabelLe.preferredWidth = 40f;
 
             _sortDropdown = MakeDropdown(sortRow.transform, "SortDropdown",
-                new[] { "Name", "Type", "Version" },
+                new[] { L10n.T("menu.sort.name", "Name"), L10n.T("menu.sort.type", "Type"), L10n.T("menu.sort.version", "Version") },
                 OnSortChanged);
             LayoutElement sortDdLe = _sortDropdown.gameObject.AddComponent<LayoutElement>();
             sortDdLe.preferredWidth = 90f;
@@ -1620,6 +1664,7 @@ namespace DINOForge.Runtime.UI
                 if (_detailTagsRow != null) _detailTagsRow.gameObject.SetActive(false);
                 if (_detailLinksRow != null) _detailLinksRow.gameObject.SetActive(false);
                 if (_detailGalleryRow != null) _detailGalleryRow.gameObject.SetActive(false);
+                if (_detailBadgesRow != null) { UnityEngine.Object.Destroy(_detailBadgesRow); _detailBadgesRow = null; }
                 return;
             }
 
@@ -1627,6 +1672,9 @@ namespace DINOForge.Runtime.UI
 
             // ── Name ──────────────────────────────────────────────────────────
             if (_detailName != null) _detailName.text = p.Name;
+
+            // ── Badges row (#928-935) — rendered above meta for visibility ─────
+            RefreshBadgesRow(p);
 
             // ── Meta + license badge ──────────────────────────────────────────
             if (_detailMeta != null) _detailMeta.text = $"by {p.Author}  ·  {p.Type}  ·  v{p.Version}";
@@ -1692,7 +1740,7 @@ namespace DINOForge.Runtime.UI
                 System.Text.StringBuilder sb = new System.Text.StringBuilder(512);
                 if (p.ContentSummary.Count == 0)
                 {
-                    sb.Append("Content: (none declared)");
+                    sb.Append(L10n.T("menu.detail.content", "Content: (none declared)"));
                 }
                 else
                 {
@@ -1766,6 +1814,33 @@ namespace DINOForge.Runtime.UI
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Rebuilds the badge row for the selected pack (#928-935).
+        /// Destroys any previous row, then delegates to <see cref="DINOForge.Runtime.UI.Badges.BadgeRenderer"/>
+        /// to create the new one.  The row is inserted as the first child of the detail scroll content
+        /// so badges appear at the very top of the detail pane.
+        /// </summary>
+        private void RefreshBadgesRow(PackDisplayInfo p)
+        {
+            // Destroy previous dynamic row
+            if (_detailBadgesRow != null)
+            {
+                Destroy(_detailBadgesRow);
+                _detailBadgesRow = null;
+            }
+
+            if (p.Badges.Count == 0) return;
+
+            // Find the detail scroll content (parent of _detailName)
+            Transform? contentParent = _detailName?.transform.parent;
+            if (contentParent == null) return;
+
+            _detailBadgesRow = DINOForge.Runtime.UI.Badges.BadgeRenderer.BuildBadgeRow(contentParent, p.Badges);
+
+            // Move to just before the pack name (index 0) so badges appear at the top
+            _detailBadgesRow.transform.SetSiblingIndex(0);
         }
 
         /// <summary>Populates the tags chip row for the selected pack.</summary>

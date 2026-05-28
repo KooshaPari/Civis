@@ -14,6 +14,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Localization;
 using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
 using DINOForge.Runtime.Updates;
@@ -1003,6 +1004,20 @@ namespace DINOForge.Runtime
 
         private IEnumerator InitializeRoutine()
         {
+            yield return null;
+
+            RunPhaseWithAbortGuard("L10n.Initialize", () =>
+            {
+                try
+                {
+                    Localization.L10n.Initialize();
+                    _log.LogInfo($"[RuntimeDriver] L10n initialized with locale: {Localization.L10n.CurrentLocale}");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] L10n initialization failed: {ex}");
+                }
+            });
             yield return null;
 
             RunPhaseWithAbortGuard("CleanupUiInterceptors", CleanupUiInterceptors);

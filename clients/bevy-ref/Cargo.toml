@@ -62,4 +62,4 @@ required-features = ["bevy"]
 [[bin]]
 name = "civ-standalone"
 path = "src/bin/standalone.rs"
-required-features = ["bevy"]
+required-features = ["bevy", "egui"]

@@ -168,6 +168,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-005 | Live scene focus follow + building provenance styling. | `live_scene`, `camera`, `minimap` | server attach smoke, `cargo check … civ-standalone` | implemented |
 | FR-CIV-BEVY-006 | Terrain height anchoring for live-streamed agents and buildings. | `clients/bevy-ref` (`terrain`, `live_scene`) | `cargo test -p civ-bevy-ref terrain::` | implemented |
 | FR-CIV-BEVY-007 | Optional `BuildingGraph` snapshot on `BuildingDiffFrame` (live attach parcels). | `civ-protocol-3d`, `civ-server`, `live_scene` | `cargo test -p civ-protocol-3d building_graph` | implemented |
+| FR-CIV-BEVY-008 | Voxel column ground anchoring for live agents/buildings (streamed chunks over analytic terrain). | `clients/bevy-ref` (`live_scene`) | `cargo test -p civ-bevy-ref --features bevy live_scene::voxel_ground` | implemented |
 
 ---
 

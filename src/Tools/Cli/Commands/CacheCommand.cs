@@ -1,15 +1,15 @@
 // STUB IMPLEMENTATION — Cache management CLI commands
-// Provides: cache stats, cache prune, cache prefetch
+// Provides: cache stats, cache prune, cache prefetch, cache clear
 // See docs/architecture/asset-cdn-lazy-load.md for design rationale.
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DINOForge.Tools.Cli.Commands
@@ -18,16 +18,19 @@ namespace DINOForge.Tools.Cli.Commands
     /// Cache management commands for CDN-hosted assets.
     ///
     /// Subcommands:
-    ///   - dinoforge cache stats     [--pack <id>]
-    ///   - dinoforge cache prune     [--keep <id>] [--all]
-    ///   - dinoforge cache prefetch  <pack-id> [--priority {prefabs|shared|all}]
-    ///   - dinoforge cache clear     <pack-id> [--confirm]
+    ///   - dinoforge cache stats     [--pack &lt;id&gt;]
+    ///   - dinoforge cache prune     [--keep &lt;id&gt;] [--all]
+    ///   - dinoforge cache prefetch  &lt;pack-id&gt; [--priority {prefabs|shared|all}]
+    ///   - dinoforge cache clear     &lt;pack-id&gt; [--confirm]
     /// </summary>
     [ExcludeFromCodeCoverage] // Stub implementation
     public sealed class CacheCommand
     {
         private readonly IConsoleWriter _console;
         private readonly string _cacheDir;
+
+        // 2 GB default cache limit expressed as a long constant (avoids CS0220 overflow)
+        private const long MaxGlobalBytes = 2L * 1024L * 1024L * 1024L;
 
         public CacheCommand(IConsoleWriter console, string cacheDir)
         {
@@ -42,34 +45,34 @@ namespace DINOForge.Tools.Cli.Commands
         {
             var cacheCommand = new Command("cache", "Manage asset cache");
 
-            cacheCommand.AddCommand(GetStatsCommand());
-            cacheCommand.AddCommand(GetPruneCommand());
-            cacheCommand.AddCommand(GetPrefetchCommand());
-            cacheCommand.AddCommand(GetClearCommand());
+            cacheCommand.Add(GetStatsCommand());
+            cacheCommand.Add(GetPruneCommand());
+            cacheCommand.Add(GetPrefetchCommand());
+            cacheCommand.Add(GetClearCommand());
 
             return cacheCommand;
         }
 
         /// <summary>
-        /// dinoforge cache stats [--pack <id>]
+        /// dinoforge cache stats [--pack &lt;id&gt;]
         /// Show cache statistics across all packs or for a specific pack.
         /// </summary>
         private Command GetStatsCommand()
         {
             var cmd = new Command("stats", "Show cache statistics");
 
-            var packOption = new Option<string?>(
-                new[] { "--pack", "-p" },
-                description: "Show stats for a specific pack (optional)")
+            var packOption = new Option<string?>("--pack", "-p")
             {
-                IsRequired = false,
+                Description = "Show stats for a specific pack (optional)",
             };
 
-            cmd.AddOption(packOption);
+            cmd.Add(packOption);
 
-            cmd.SetHandler(
-                async (packId) => await HandleStatsAsync(packId),
-                packOption);
+            cmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                string? packId = parseResult.GetValue(packOption);
+                await HandleStatsAsync(packId).ConfigureAwait(false);
+            });
 
             return cmd;
         }
@@ -103,7 +106,6 @@ namespace DINOForge.Tools.Cli.Commands
             }
 
             long globalTotalBytes = 0L;
-            const long maxGlobalBytes = 2 * 1024 * 1024 * 1024;  // 2 GB default
 
             foreach (var packDir in packDirs.OrderBy(p => p))
             {
@@ -131,13 +133,15 @@ namespace DINOForge.Tools.Cli.Commands
             }
 
             _console.WriteLine("Cache Policy (Global)");
-            _console.WriteLine($"  Max Size: {maxGlobalBytes / 1024 / 1024} MB");
-            _console.WriteLine($"  Utilization: {globalTotalBytes / 1024 / 1024} MB / {maxGlobalBytes / 1024 / 1024} MB ({(int)(100 * globalTotalBytes / (double)maxGlobalBytes)}%)");
+            _console.WriteLine($"  Max Size: {MaxGlobalBytes / 1024 / 1024} MB");
+            _console.WriteLine($"  Utilization: {globalTotalBytes / 1024 / 1024} MB / {MaxGlobalBytes / 1024 / 1024} MB ({(int)(100 * globalTotalBytes / (double)MaxGlobalBytes)}%)");
             _console.WriteLine($"  LRU Eviction: enabled");
+
+            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         /// <summary>
-        /// dinoforge cache prune [--keep <pack-id>] [--all]
+        /// dinoforge cache prune [--keep &lt;pack-id&gt;] [--all]
         /// Remove unused cached assets.
         /// --keep: don't delete assets from this pack
         /// --all: confirm deletion without prompting
@@ -146,24 +150,26 @@ namespace DINOForge.Tools.Cli.Commands
         {
             var cmd = new Command("prune", "Remove unused cached assets");
 
-            var keepOption = new Option<string?>(
-                new[] { "--keep", "-k" },
-                description: "Pack to preserve (do not delete assets from this pack)")
+            var keepOption = new Option<string?>("--keep", "-k")
             {
-                IsRequired = false,
+                Description = "Pack to preserve (do not delete assets from this pack)",
             };
 
-            var confirmOption = new Option<bool>(
-                new[] { "--all", "-y" },
-                description: "Skip confirmation prompt",
-                getDefaultValue: () => false);
+            var confirmOption = new Option<bool>("--all", "-y")
+            {
+                Description = "Skip confirmation prompt",
+                DefaultValueFactory = _ => false,
+            };
 
-            cmd.AddOption(keepOption);
-            cmd.AddOption(confirmOption);
+            cmd.Add(keepOption);
+            cmd.Add(confirmOption);
 
-            cmd.SetHandler(
-                async (keep, confirm) => await HandlePruneAsync(keep, confirm),
-                keepOption, confirmOption);
+            cmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                string? keep = parseResult.GetValue(keepOption);
+                bool confirm = parseResult.GetValue(confirmOption);
+                await HandlePruneAsync(keep, confirm).ConfigureAwait(false);
+            });
 
             return cmd;
         }
@@ -238,29 +244,38 @@ namespace DINOForge.Tools.Cli.Commands
             }
 
             _console.WriteLine("Done. Run 'dinoforge cache stats' to verify.");
+
+            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         /// <summary>
-        /// dinoforge cache prefetch <pack-id> [--priority {prefabs|shared|all}]
+        /// dinoforge cache prefetch &lt;pack-id&gt; [--priority {prefabs|shared|all}]
         /// Pre-download all assets for a pack.
         /// </summary>
         private Command GetPrefetchCommand()
         {
             var cmd = new Command("prefetch", "Pre-download all assets for a pack");
 
-            var packArg = new Argument<string>("pack-id", "Pack identifier to prefetch");
+            var packArg = new Argument<string>("pack-id")
+            {
+                Description = "Pack identifier to prefetch",
+            };
 
-            var priorityOption = new Option<string>(
-                new[] { "--priority" },
-                description: "Download strategy: prefabs (small first), shared (atlases first), all (no priority)",
-                getDefaultValue: () => "shared");
+            var priorityOption = new Option<string>("--priority")
+            {
+                Description = "Download strategy: prefabs (small first), shared (atlases first), all (no priority)",
+                DefaultValueFactory = _ => "shared",
+            };
 
-            cmd.AddArgument(packArg);
-            cmd.AddOption(priorityOption);
+            cmd.Add(packArg);
+            cmd.Add(priorityOption);
 
-            cmd.SetHandler(
-                async (packId, priority) => await HandlePrefetchAsync(packId, priority),
-                packArg, priorityOption);
+            cmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                string packId = parseResult.GetValue(packArg) ?? string.Empty;
+                string priority = parseResult.GetValue(priorityOption) ?? "shared";
+                await HandlePrefetchAsync(packId, priority).ConfigureAwait(false);
+            });
 
             return cmd;
         }
@@ -286,30 +301,37 @@ namespace DINOForge.Tools.Cli.Commands
             _console.WriteLine("");
             _console.WriteLine("Press Ctrl+C to cancel. Assets already cached will not re-download.");
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         /// <summary>
-        /// dinoforge cache clear <pack-id> [--confirm]
+        /// dinoforge cache clear &lt;pack-id&gt; [--confirm]
         /// Remove all cached assets for a pack.
         /// </summary>
         private Command GetClearCommand()
         {
             var cmd = new Command("clear", "Remove all cached assets for a pack");
 
-            var packArg = new Argument<string>("pack-id", "Pack to clear from cache");
+            var packArg = new Argument<string>("pack-id")
+            {
+                Description = "Pack to clear from cache",
+            };
 
-            var confirmOption = new Option<bool>(
-                new[] { "--confirm", "-y" },
-                description: "Skip confirmation prompt",
-                getDefaultValue: () => false);
+            var confirmOption = new Option<bool>("--confirm", "-y")
+            {
+                Description = "Skip confirmation prompt",
+                DefaultValueFactory = _ => false,
+            };
 
-            cmd.AddArgument(packArg);
-            cmd.AddOption(confirmOption);
+            cmd.Add(packArg);
+            cmd.Add(confirmOption);
 
-            cmd.SetHandler(
-                async (packId, confirm) => await HandleClearAsync(packId, confirm),
-                packArg, confirmOption);
+            cmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                string packId = parseResult.GetValue(packArg) ?? string.Empty;
+                bool skipConfirm = parseResult.GetValue(confirmOption);
+                await HandleClearAsync(packId, skipConfirm).ConfigureAwait(false);
+            });
 
             return cmd;
         }
@@ -340,6 +362,8 @@ namespace DINOForge.Tools.Cli.Commands
             }
 
             _console.WriteLine("Done. Cache cleared.");
+
+            await Task.CompletedTask.ConfigureAwait(false);
         }
     }
 

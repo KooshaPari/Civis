@@ -492,7 +492,12 @@ impl ReplayLog {
                 climate,
                 weather_grid,
                 geology_map,
-            } => Some(climate_event_bytes(*tick, climate, weather_grid, geology_map)),
+            } => Some(climate_event_bytes(
+                *tick,
+                climate,
+                weather_grid,
+                geology_map,
+            )),
             _ => None,
         }))
     }

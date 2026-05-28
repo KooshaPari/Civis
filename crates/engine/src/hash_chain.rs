@@ -264,16 +264,23 @@ mod tests {
         // Mutate day_phase — hash must differ
         let mut changed_climate = base_climate;
         changed_climate.day_phase = 0.75;
-        let changed_hash =
-            chain_advance(&GENESIS, &climate_event_bytes(1, &changed_climate, &weather, &geology));
+        let changed_hash = chain_advance(
+            &GENESIS,
+            &climate_event_bytes(1, &changed_climate, &weather, &geology),
+        );
         assert_ne!(base_hash, changed_hash, "day_phase delta must change chain");
 
         // Mutate tide_offset — hash must differ
         let mut changed_tide = base_climate;
         changed_tide.tide_offset = -0.3;
-        let changed_hash =
-            chain_advance(&GENESIS, &climate_event_bytes(1, &changed_tide, &weather, &geology));
-        assert_ne!(base_hash, changed_hash, "tide_offset delta must change chain");
+        let changed_hash = chain_advance(
+            &GENESIS,
+            &climate_event_bytes(1, &changed_tide, &weather, &geology),
+        );
+        assert_ne!(
+            base_hash, changed_hash,
+            "tide_offset delta must change chain"
+        );
 
         // Mutate weather cell temperature — hash must differ
         let weather_changed = vec![WeatherCell {
@@ -281,22 +288,37 @@ mod tests {
             temp_c_fp: 30_000,
             precip_mm_fp: 1_000,
         }];
-        let changed_hash =
-            chain_advance(&GENESIS, &climate_event_bytes(1, &base_climate, &weather_changed, &geology));
-        assert_ne!(base_hash, changed_hash, "WeatherCell temp delta must change chain");
+        let changed_hash = chain_advance(
+            &GENESIS,
+            &climate_event_bytes(1, &base_climate, &weather_changed, &geology),
+        );
+        assert_ne!(
+            base_hash, changed_hash,
+            "WeatherCell temp delta must change chain"
+        );
 
         // Mutate geology map (different planet config changes biomes)
         let mut tweaked_planet = planet_cfg;
         tweaked_planet.radius_km = planet_cfg.radius_km + 2_000;
         let geology_changed = GeologyMap::seed(&tweaked_planet);
-        let changed_hash =
-            chain_advance(&GENESIS, &climate_event_bytes(1, &base_climate, &weather, &geology_changed));
-        assert_ne!(base_hash, changed_hash, "GeologyMap delta must change chain");
+        let changed_hash = chain_advance(
+            &GENESIS,
+            &climate_event_bytes(1, &base_climate, &weather, &geology_changed),
+        );
+        assert_ne!(
+            base_hash, changed_hash,
+            "GeologyMap delta must change chain"
+        );
 
         // Identical inputs must produce the identical hash (determinism)
-        let replay_hash =
-            chain_advance(&GENESIS, &climate_event_bytes(1, &base_climate, &weather, &geology));
-        assert_eq!(base_hash, replay_hash, "identical inputs must be deterministic");
+        let replay_hash = chain_advance(
+            &GENESIS,
+            &climate_event_bytes(1, &base_climate, &weather, &geology),
+        );
+        assert_eq!(
+            base_hash, replay_hash,
+            "identical inputs must be deterministic"
+        );
     }
 
     #[test]

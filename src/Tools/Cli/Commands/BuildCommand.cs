@@ -23,14 +23,21 @@ internal static class BuildCommand
             Description = "Build configuration (Release or Debug)",
             DefaultValueFactory = _ => "Release"
         };
+        Option<bool> cleanOpt = new("--clean")
+        {
+            Description = "Force clean build (removes obj/bin first; prevents Pattern #233 stale-cache TFM bugs)",
+            DefaultValueFactory = _ => false
+        };
 
         Command command = new("build", "Build the DINOForge Runtime DLL");
         command.Add(configOpt);
+        command.Add(cleanOpt);
 
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
             string config = parseResult.GetValue(configOpt) ?? "Release";
-            int exitCode = await RunBuildAsync(config, ct).ConfigureAwait(false);
+            bool clean = parseResult.GetValue(cleanOpt);
+            int exitCode = await RunBuildAsync(config, ct, clean).ConfigureAwait(false);
             Environment.ExitCode = exitCode;
         });
 
@@ -43,9 +50,30 @@ internal static class BuildCommand
     /// <param name="config">Configuration (e.g. Release).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Process exit code (0 on success).</returns>
-    internal static async Task<int> RunBuildAsync(string config, CancellationToken ct)
+    internal static async Task<int> RunBuildAsync(string config, CancellationToken ct, bool clean = false)
     {
-        AnsiConsole.MarkupLine($"[bold]Building[/] {Markup.Escape(RuntimeProject)} ([cyan]{Markup.Escape(config)}[/], TFM=[cyan]{TargetFramework}[/])");
+        AnsiConsole.MarkupLine($"[bold]Building[/] {Markup.Escape(RuntimeProject)} ([cyan]{Markup.Escape(config)}[/], TFM=[cyan]{TargetFramework}[/]){(clean ? " [yellow]--clean[/]" : "")}");
+
+        if (clean)
+        {
+            try
+            {
+                string runtimeDir = Path.GetDirectoryName(RuntimeProject)!;
+                foreach (string sub in new[] { "obj", "bin" })
+                {
+                    string path = Path.Combine(runtimeDir, sub);
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, recursive: true);
+                        AnsiConsole.MarkupLine($"  [grey]removed {Markup.Escape(path)}[/]");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Warning:[/] clean failed: {Markup.Escape(ex.Message)}");
+            }
+        }
 
         Stopwatch sw = Stopwatch.StartNew();
 
@@ -61,6 +89,10 @@ internal static class BuildCommand
         psi.ArgumentList.Add("-c");
         psi.ArgumentList.Add(config);
         psi.ArgumentList.Add($"-p:TargetFramework={TargetFramework}");
+        if (clean)
+        {
+            psi.ArgumentList.Add("--no-incremental");
+        }
 
         using Process process = new() { StartInfo = psi };
 

@@ -1,0 +1,70 @@
+name: Performance Benchmarks
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC (10 PM EDT)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 11
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.100-preview.2.26159.112'
+          include-prerelease: true
+
+      - name: Restore dependencies
+        run: dotnet restore src/DINOForge.sln
+
+      - name: Run benchmarks
+        run: dotnet run --project src/Benchmarks/DINOForge.Benchmarks.csproj -c Release
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            src/Benchmarks/BenchmarkDotNet.Artifacts/results/
+          retention-days: 90
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Find the latest markdown report
+            const resultsDir = 'src/Benchmarks/BenchmarkDotNet.Artifacts/results/';
+            if (fs.existsSync(resultsDir)) {
+              const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.md'));
+              if (files.length > 0) {
+                const latestFile = files.sort().pop();
+                const content = fs.readFileSync(path.join(resultsDir, latestFile), 'utf8');
+
+                // Comment on PR
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `## Performance Benchmark Results\n\n${content}`
+                });
+              }
+            }
+
+      - name: Check for regressions
+        run: |
+          # This is a placeholder for regression detection logic
+          # Future: Compare against baseline and fail if >20% regression detected
+          Write-Host "Benchmark run complete. Review results in artifacts."
+        shell: pwsh

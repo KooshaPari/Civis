@@ -116,7 +116,7 @@
 32. **Voxel-surface anchoring** — **done** (item 33): cached `chunk_voxels` + column sampling in `live_scene`; falls back to `terrain_surface_y`.
 33. **Live attach smoke harness** — **done** (item 34): `just civis-3d-live-smoke` (F3D0 + voxel ground + standalone check); `just civis-3d-standalone-live-url URL=ws://…` for remote civ-server.
 34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
-35. **Next:** graph-parcel rendering in `bevy_window`; dedupe `LiveScenePlugin` vs `bevy_window` frame apply.
+35. **Shared live_stream frame apply** — **done** (item 36): `live_stream` module dedupes `LiveScenePlugin` and `bevy_window`; graph parcels render in both paths.
 
 ## Run
 

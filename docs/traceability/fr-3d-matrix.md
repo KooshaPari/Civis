@@ -171,6 +171,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-008 | Voxel column ground anchoring for live agents/buildings (streamed chunks over analytic terrain). | `clients/bevy-ref` (`live_ground`, `live_scene`) | `cargo test -p civ-bevy-ref --features bevy live_ground::` | implemented |
 | FR-CIV-BEVY-009 | Live attach smoke harness (F3D0 WS + Bevy compile gate). | `justfile` (`civis-3d-live-smoke`) | `just civis-3d-live-smoke` | implemented |
 | FR-CIV-BEVY-010 | `bevy_window` live attach parity — shared `live_ground`, `BuildingDiff` markers. | `clients/bevy-ref` (`bevy_window`, `live_ground`) | `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window` | implemented |
+| FR-CIV-BEVY-011 | Shared `live_stream` frame apply — dedupe `live_scene` and `bevy_window`; graph parcels in both. | `clients/bevy-ref` (`live_stream`, `live_scene`, `bevy_window`) | `cargo check -p civ-bevy-ref --features bevy`, `cargo test -p civ-bevy-ref --features bevy live_ground` | implemented |
 
 ---
 

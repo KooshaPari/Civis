@@ -1,42 +1,28 @@
 //! Live WebSocket scene sync — voxel chunks and agent markers from `Frame3d` streams.
 
-use std::collections::HashMap;
-
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy::sprite::Text2d;
-use bevy::text::{TextColor, TextFont};
 use bevy::ui::FocusPolicy;
-use civ_protocol_3d::{
-    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BuildingDiffFrame,
-    BuildingGraph, BuildingKind3d, BuildingProvenance, FacadeStyle, Frame3d, ParcelKind, WorldXZ,
-    VoxelDeltaFrame,
-};
-use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
+use civ_protocol_3d::Frame3d;
+use civ_voxel::ChunkId;
 
-use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::bevy_render::apply_chunk_material;
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
+use crate::live_stream::{
+    apply_agent_appearance_frame_with_labels, apply_building_diff_frame, apply_voxel_delta_frame,
+    building_minimap_dot_color, default_stream_meshes, AgentLabelConfig, LiveAgentTag,
+    LiveBuildingTag, LiveChunkFade, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
+    StreamCulling, LIVE_CHUNK_EDGE,
+};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::camera::CameraRig;
-use crate::terrain::terrain_surface_y;
-use crate::{
-    agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
-    chunk_fade_complete, decode_chunk_id, encode_chunk_id, mesh_lod_level, should_render_chunk,
-    AttachMode, DebugRender, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
-};
+use crate::{chunk_fade_complete, decode_chunk_id, AttachMode, DebugRender};
 
-const CHUNK_EDGE: usize = 16;
-const CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
-const AGENT_NAME_LABELS: bool = true;
-const AGENT_LABEL_FONT_SIZE: f32 = 10.0;
-const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 const MINIMAP_LIVE_DOT: f32 = 4.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
 const LIVE_FOCUS_LERP_SPEED: f32 = 2.5;
 const LIVE_FOCUS_MIN_HALF_EXTENT: f32 = 32.0;
-const AGENT_GROUND_Y: f32 = 0.8;
-const BUILDING_GROUND_Y: f32 = 1.25;
 
 /// Smoothed world-space centre and half-extent for live attach camera + minimap framing.
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
@@ -56,92 +42,18 @@ impl Default for LiveSceneFocus {
     }
 }
 
-/// Tracks spawned entities for streamed voxel chunks and agents.
-#[derive(Resource)]
-pub struct LiveScene {
-    chunks: HashMap<u64, Entity>,
-    /// Cached voxel payloads for ground-height sampling (retained when meshes are culled).
-    chunk_voxels: HashMap<u64, Vec<MaterialId>>,
-    agents: HashMap<u64, Entity>,
-    buildings: HashMap<u64, Entity>,
-    graph_parcels: HashMap<u64, Entity>,
-    agent_materials: HashMap<u64, Handle<StandardMaterial>>,
-    building_materials: HashMap<u64, Handle<StandardMaterial>>,
-    graph_parcel_materials: HashMap<u64, Handle<StandardMaterial>>,
-    building_provenance: BuildingProvenance,
-}
-
-impl Default for LiveScene {
-    fn default() -> Self {
-        Self {
-            chunks: HashMap::new(),
-            chunk_voxels: HashMap::new(),
-            agents: HashMap::new(),
-            buildings: HashMap::new(),
-            graph_parcels: HashMap::new(),
-            agent_materials: HashMap::new(),
-            building_materials: HashMap::new(),
-            graph_parcel_materials: HashMap::new(),
-            building_provenance: BuildingProvenance::Procedural,
-        }
-    }
-}
+/// Entity maps and voxel cache for the live attach renderer (alias of [`LiveStreamScene`]).
+pub type LiveScene = LiveStreamScene;
 
 /// Shared marker meshes for streamed agents and buildings.
-#[derive(Resource)]
-pub struct LiveSceneAssets {
-    agent_mesh: Handle<Mesh>,
-    building_mesh: Handle<Mesh>,
-}
-
-#[derive(Component)]
-struct ChunkTag {
-    #[allow(dead_code)]
-    id: ChunkId,
-}
-
-#[derive(Component)]
-struct ChunkFade {
-    elapsed: f32,
-    base_rgb: [f32; 3],
-}
-
-impl ChunkFade {
-    fn new() -> Self {
-        Self {
-            elapsed: 0.0,
-            base_rgb: CHUNK_BASE_COLOR,
-        }
-    }
-}
-
-#[derive(Component)]
-struct AgentTag {
-    #[allow(dead_code)]
-    id: u64,
-}
-
-#[derive(Component)]
-struct AgentLabel;
-
-#[derive(Component)]
-struct BuildingTag {
-    #[allow(dead_code)]
-    id: u64,
-}
-
-#[derive(Component)]
-struct GraphParcelTag {
-    #[allow(dead_code)]
-    id: u64,
-}
+pub type LiveSceneAssets = LiveStreamMeshes;
 
 /// Applies `Frame3d` voxel/agent payloads and maintains streamed scene entities.
 pub struct LiveScenePlugin;
 
 impl Plugin for LiveScenePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<LiveScene>()
+        app.init_resource::<LiveStreamScene>()
             .init_resource::<LiveSceneFocus>()
             .init_resource::<DebugRender>()
             .add_systems(Startup, setup_live_scene_assets)
@@ -161,23 +73,16 @@ impl Plugin for LiveScenePlugin {
 }
 
 fn setup_live_scene_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    commands.insert_resource(LiveSceneAssets {
-        agent_mesh: meshes.add(Cuboid::new(
-            AGENT_MARKER_WIDTH,
-            AGENT_MARKER_HEIGHT,
-            AGENT_MARKER_DEPTH,
-        )),
-        building_mesh: meshes.add(Cuboid::new(2.0, 2.5, 2.0)),
-    });
+    commands.insert_resource(default_stream_meshes(&mut meshes));
 }
 
 fn apply_live_scene_frames(
     attach: Res<AttachMode>,
     bridge: Res<LiveAttachBridge>,
     mut state: ResMut<LiveAttachState>,
-    mut scene: ResMut<LiveScene>,
+    mut scene: ResMut<LiveStreamScene>,
     debug: Res<DebugRender>,
-    assets: Res<LiveSceneAssets>,
+    assets: Res<LiveStreamMeshes>,
     cameras: Query<&Transform, (With<Camera3d>, Without<crate::minimap::MinimapCamera>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -197,385 +102,42 @@ fn apply_live_scene_frames(
         .single()
         .map(|transform| transform.translation.to_array())
         .unwrap_or([8.0, 8.0, 8.0]);
+    let culling = StreamCulling {
+        eye,
+        max_distance: LIVE_RENDER_MAX_DISTANCE,
+    };
 
     for frame in frames {
         state.tick = Some(frame.tick());
         match frame {
-            Frame3d::VoxelDelta(delta) => apply_voxel_delta(
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
                 &mut commands,
                 &mut scene,
                 &mut meshes,
                 &mut materials,
-                eye,
+                culling,
                 debug.as_ref(),
                 delta,
+                None,
             ),
             Frame3d::AgentAppearance(agents) => {
-                apply_agent_appearance(&mut commands, &mut scene, &mut materials, &assets, agents);
+                apply_agent_appearance_frame_with_labels(
+                    &mut commands,
+                    &mut scene,
+                    &mut materials,
+                    assets.as_ref(),
+                    agents,
+                    AgentLabelConfig { enabled: true },
+                );
             }
-            Frame3d::BuildingDiff(building) => apply_building_diff(
+            Frame3d::BuildingDiff(building) => apply_building_diff_frame(
                 &mut commands,
                 &mut scene,
                 &mut materials,
-                &assets,
+                assets.as_ref(),
                 building,
             ),
         }
-    }
-}
-
-fn apply_voxel_delta(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    eye: [f32; 3],
-    debug: &DebugRender,
-    delta: VoxelDeltaFrame,
-) {
-    let max_dist = LIVE_RENDER_MAX_DISTANCE;
-
-    for chunk in delta.deltas {
-        let chunk_id = chunk.event.chunk_id;
-        if chunk.voxels.len() == CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
-            scene
-                .chunk_voxels
-                .insert(chunk_id.0, chunk.voxels.clone());
-        }
-
-        if !should_render_chunk(chunk_id, eye, max_dist) {
-            if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
-                commands.entity(entity).despawn();
-            }
-            continue;
-        }
-
-        if chunk.voxels.len() != CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
-            continue;
-        }
-
-        let chunk_view = ChunkView {
-            id: chunk.event.chunk_id,
-            voxels: &chunk.voxels,
-        };
-        let distance = chunk_distance_from_camera(chunk.event.chunk_id, eye, CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
-        let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
-            continue;
-        };
-        let mesh = meshes.add(mesh_buffer_to_bevy(&mesh_buffer));
-        let mut material = StandardMaterial {
-            perceptual_roughness: 0.85,
-            metallic: 0.0,
-            ..default()
-        };
-        apply_chunk_material(&mut material, CHUNK_BASE_COLOR, debug.wireframe, Some(0.0));
-        let material_handle = materials.add(material);
-        let transform = chunk_transform(chunk.event.chunk_id);
-
-        let entity = *scene
-            .chunks
-            .entry(chunk.event.chunk_id.0)
-            .or_insert_with(|| {
-                commands
-                    .spawn((
-                        ChunkTag {
-                            id: chunk.event.chunk_id,
-                        },
-                        Transform::default(),
-                    ))
-                    .id()
-            });
-        commands.entity(entity).insert((
-            Mesh3d(mesh),
-            MeshMaterial3d(material_handle),
-            transform,
-            ChunkFade::new(),
-        ));
-    }
-}
-
-fn apply_agent_appearance(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &LiveSceneAssets,
-    agents: AgentAppearanceFrame,
-) {
-    for update in agents.updates {
-        let rgb = agent_color_from_id(update.agent_id);
-        let scale = agent_scale_multiplier(update.scale);
-        let (x, _, z) = agent_world_translation(&update, 0.0);
-        let y = live_ground_y(scene, x, z, AGENT_GROUND_Y);
-        let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
-
-        let material_handle = scene
-            .agent_materials
-            .entry(update.agent_id)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                    perceptual_roughness: 0.7,
-                    metallic: 0.0,
-                    ..default()
-                })
-            })
-            .clone();
-        if let Some(material) = materials.get_mut(&material_handle) {
-            material.base_color = Color::srgb(rgb[0], rgb[1], rgb[2]);
-        }
-
-        let entity = *scene.agents.entry(update.agent_id).or_insert_with(|| {
-            let entity = commands
-                .spawn(AgentTag {
-                    id: update.agent_id,
-                })
-                .id();
-            if AGENT_NAME_LABELS {
-                let label = agent_label_stub(update.agent_id, None);
-                commands.entity(entity).with_children(|parent| {
-                    parent.spawn((
-                        Text2d::new(label),
-                        TextFont::from_font_size(AGENT_LABEL_FONT_SIZE),
-                        TextColor(Color::srgba(0.95, 0.96, 0.98, 0.92)),
-                        Transform::from_xyz(0.0, AGENT_LABEL_Y_OFFSET, 0.0),
-                        AgentLabel,
-                    ));
-                });
-            }
-            entity
-        });
-
-        commands.entity(entity).insert((
-            Mesh3d(assets.agent_mesh.clone()),
-            MeshMaterial3d(material_handle),
-            transform,
-        ));
-    }
-}
-
-fn apply_building_diff(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &LiveSceneAssets,
-    frame: BuildingDiffFrame,
-) {
-    let BuildingDiffFrame {
-        provenance,
-        buildings,
-        graph,
-        ..
-    } = frame;
-
-    scene.building_provenance = provenance;
-
-    if let Some(graph) = graph {
-        apply_building_graph(commands, scene, materials, assets, graph);
-    }
-
-    if buildings.is_empty() {
-        return;
-    }
-
-    let incoming: std::collections::HashSet<u64> = buildings.iter().map(|entry| entry.id).collect();
-    for (id, entity) in scene.buildings.clone() {
-        if !incoming.contains(&id) {
-            commands.entity(entity).despawn();
-            scene.buildings.remove(&id);
-            scene.building_materials.remove(&id);
-        }
-    }
-
-    for entry in buildings {
-        let (base_color, emissive, roughness) = building_material_style(entry.kind, provenance);
-        let material_handle = scene
-            .building_materials
-            .entry(entry.id)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color,
-                    emissive: emissive.into(),
-                    perceptual_roughness: roughness,
-                    ..default()
-                })
-            })
-            .clone();
-        if let Some(material) = materials.get_mut(&material_handle) {
-            material.base_color = base_color;
-            material.emissive = emissive.into();
-            material.perceptual_roughness = roughness;
-        }
-
-        let ground = live_ground_y(scene, entry.position.x, entry.position.z, BUILDING_GROUND_Y);
-        let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
-        let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
-            commands
-                .spawn(BuildingTag { id: entry.id })
-                .id()
-        });
-        commands.entity(entity).insert((
-            Mesh3d(assets.building_mesh.clone()),
-            MeshMaterial3d(material_handle),
-            transform,
-        ));
-    }
-}
-
-fn apply_building_graph(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &LiveSceneAssets,
-    graph: BuildingGraph,
-) {
-    let incoming: std::collections::HashSet<u64> =
-        graph.parcels.iter().map(|parcel| parcel.id.0).collect();
-    for (id, entity) in scene.graph_parcels.clone() {
-        if !incoming.contains(&id) {
-            commands.entity(entity).despawn();
-            scene.graph_parcels.remove(&id);
-            scene.graph_parcel_materials.remove(&id);
-        }
-    }
-
-    let scale = civ_voxel::FIXED_SCALE as f32;
-    for parcel in graph.parcels {
-        let id = parcel.id.0;
-        let provenance = graph
-            .provenance
-            .get(&parcel.id)
-            .copied()
-            .map(map_build_provenance)
-            .unwrap_or(scene.building_provenance);
-        let kind = parcel_kind_to_building_kind(parcel.kind);
-        let mut base_color = parcel_kind_color(parcel.kind);
-        if let Some(facade) = graph.facades.get(&parcel.id) {
-            base_color = facade_material_color(facade);
-        }
-        let (styled_base, emissive, roughness) = building_material_style(kind, provenance);
-        let base_color = blend_facade_base(base_color, styled_base);
-
-        let material_handle = scene
-            .graph_parcel_materials
-            .entry(id)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color,
-                    emissive: emissive.into(),
-                    perceptual_roughness: roughness,
-                    ..default()
-                })
-            })
-            .clone();
-        if let Some(material) = materials.get_mut(&material_handle) {
-            material.base_color = base_color;
-            material.emissive = emissive.into();
-            material.perceptual_roughness = roughness;
-        }
-
-        let anchor = WorldXZ::from_fixed_coord(&parcel.origin);
-        let ground = live_ground_y(scene, anchor.x, anchor.z, 0.0);
-        let height = parcel.size[1] as f32 / scale;
-        let width = parcel.size[0] as f32 / scale;
-        let depth = parcel.size[2] as f32 / scale;
-        let transform = Transform::from_xyz(anchor.x, ground + height * 0.5, anchor.z)
-            .with_scale(Vec3::new(width.max(0.5), height.max(0.5), depth.max(0.5)));
-
-        let entity = *scene.graph_parcels.entry(id).or_insert_with(|| {
-            commands
-                .spawn(GraphParcelTag { id })
-                .id()
-        });
-        commands.entity(entity).insert((
-            Mesh3d(assets.building_mesh.clone()),
-            MeshMaterial3d(material_handle),
-            transform,
-        ));
-    }
-}
-
-fn parcel_kind_to_building_kind(kind: ParcelKind) -> BuildingKind3d {
-    match kind {
-        ParcelKind::Residential => BuildingKind3d::House,
-        ParcelKind::Commercial => BuildingKind3d::Market,
-        ParcelKind::Industrial => BuildingKind3d::Mine,
-        ParcelKind::Civic => BuildingKind3d::CityCenter,
-    }
-}
-
-fn parcel_kind_color(kind: ParcelKind) -> Color {
-    building_kind_color(parcel_kind_to_building_kind(kind))
-}
-
-fn facade_material_color(facade: &FacadeStyle) -> Color {
-    let material = facade
-        .materials
-        .first()
-        .copied()
-        .unwrap_or(civ_voxel::MaterialId(0));
-    material_id_color(material)
-}
-
-fn material_id_color(material: civ_voxel::MaterialId) -> Color {
-    let palette = [
-        (0.62, 0.52, 0.44),
-        (0.55, 0.42, 0.32),
-        (0.58, 0.58, 0.60),
-        (0.72, 0.48, 0.36),
-        (0.68, 0.70, 0.74),
-        (0.42, 0.58, 0.72),
-        (0.78, 0.80, 0.84),
-    ];
-    let idx = material.0 as usize % palette.len();
-    let (r, g, b) = palette[idx];
-    Color::srgb(r, g, b)
-}
-
-fn blend_facade_base(facade: Color, styled: Color) -> Color {
-    let f = facade.to_srgba();
-    let s = styled.to_srgba();
-    Color::srgb(
-        f.red * 0.65 + s.red * 0.35,
-        f.green * 0.65 + s.green * 0.35,
-        f.blue * 0.65 + s.blue * 0.35,
-    )
-}
-
-fn building_kind_color(kind: BuildingKind3d) -> Color {
-    match kind {
-        BuildingKind3d::Farm => Color::srgb(0.55, 0.75, 0.35),
-        BuildingKind3d::Mine => Color::srgb(0.52, 0.48, 0.42),
-        BuildingKind3d::Barracks => Color::srgb(0.72, 0.34, 0.34),
-        BuildingKind3d::Temple => Color::srgb(0.72, 0.62, 0.88),
-        BuildingKind3d::Market => Color::srgb(0.88, 0.67, 0.25),
-        BuildingKind3d::House => Color::srgb(0.79, 0.59, 0.40),
-        BuildingKind3d::CityCenter => Color::srgb(0.38, 0.58, 0.86),
-    }
-}
-
-fn building_material_style(
-    kind: BuildingKind3d,
-    provenance: BuildingProvenance,
-) -> (Color, Color, f32) {
-    let base = building_kind_color(kind);
-    match provenance {
-        BuildingProvenance::Procedural => (base, Color::BLACK, 0.92),
-        BuildingProvenance::Freehand => {
-            let emissive = Color::srgb(
-                base.to_srgba().red * 0.55,
-                base.to_srgba().green * 0.55,
-                base.to_srgba().blue * 0.55,
-            );
-            (base, emissive, 0.55)
-        }
-    }
-}
-
-fn building_minimap_dot_color(provenance: BuildingProvenance) -> Color {
-    match provenance {
-        BuildingProvenance::Procedural => Color::srgba(0.92, 0.90, 0.86, 1.0),
-        BuildingProvenance::Freehand => Color::srgba(0.98, 0.62, 0.28, 1.0),
     }
 }
 
@@ -584,7 +146,7 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(Entity, &mut ChunkFade, &MeshMaterial3d<StandardMaterial>)>,
+    mut fades: Query<(Entity, &mut LiveChunkFade, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if *attach != AttachMode::Server || debug.wireframe {
@@ -597,7 +159,7 @@ fn update_chunk_fade(
             apply_chunk_material(material, fade.base_rgb, false, Some(fade.elapsed));
         }
         if chunk_fade_complete(fade.elapsed) {
-            commands.entity(entity).remove::<ChunkFade>();
+            commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
 }
@@ -605,11 +167,11 @@ fn update_chunk_fade(
 fn sync_live_minimap_dots(
     attach: Res<AttachMode>,
     state: Res<LiveAttachState>,
-    scene: Res<LiveScene>,
+    scene: Res<LiveStreamScene>,
     focus: Res<LiveSceneFocus>,
-    agents: Query<&Transform, With<AgentTag>>,
-    buildings: Query<&Transform, With<BuildingTag>>,
-    graph_parcels: Query<&Transform, With<GraphParcelTag>>,
+    agents: Query<&Transform, With<LiveAgentTag>>,
+    buildings: Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -637,9 +199,9 @@ fn sync_live_minimap_dots(
             let chunk_id = ChunkId(*raw);
             let (cx, _cy, cz) = decode_chunk_id(chunk_id);
             let world = Vec3::new(
-                (cx as f32 + 0.5) * CHUNK_EDGE as f32,
+                (cx as f32 + 0.5) * LIVE_CHUNK_EDGE as f32,
                 0.0,
-                (cz as f32 + 0.5) * CHUNK_EDGE as f32,
+                (cz as f32 + 0.5) * LIVE_CHUNK_EDGE as f32,
             );
             let uv = world_to_minimap_uv_focus(world, *focus);
             parent.spawn((
@@ -728,10 +290,10 @@ fn world_to_minimap_uv_focus(position: Vec3, focus: LiveSceneFocus) -> Vec2 {
 
 fn update_live_scene_focus(
     attach: Res<AttachMode>,
-    scene: Res<LiveScene>,
-    agents: Query<&Transform, With<AgentTag>>,
-    buildings: Query<&Transform, With<BuildingTag>>,
-    graph_parcels: Query<&Transform, With<GraphParcelTag>>,
+    scene: Res<LiveStreamScene>,
+    agents: Query<&Transform, With<LiveAgentTag>>,
+    buildings: Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
     mut focus: ResMut<LiveSceneFocus>,
 ) {
     if *attach != AttachMode::Server {
@@ -745,10 +307,10 @@ fn update_live_scene_focus(
 }
 
 fn compute_live_scene_focus(
-    scene: &LiveScene,
-    agents: &Query<&Transform, With<AgentTag>>,
-    buildings: &Query<&Transform, With<BuildingTag>>,
-    graph_parcels: &Query<&Transform, With<GraphParcelTag>>,
+    scene: &LiveStreamScene,
+    agents: &Query<&Transform, With<LiveAgentTag>>,
+    buildings: &Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: &Query<&Transform, With<LiveGraphParcelTag>>,
 ) -> LiveSceneFocus {
     let mut min_x = f32::MAX;
     let mut max_x = f32::MIN;
@@ -765,8 +327,8 @@ fn compute_live_scene_focus(
     for raw in scene.chunks.keys() {
         let (cx, _cy, cz) = decode_chunk_id(ChunkId(*raw));
         extend(
-            (cx as f32 + 0.5) * CHUNK_EDGE as f32,
-            (cz as f32 + 0.5) * CHUNK_EDGE as f32,
+            (cx as f32 + 0.5) * LIVE_CHUNK_EDGE as f32,
+            (cz as f32 + 0.5) * LIVE_CHUNK_EDGE as f32,
         );
     }
     for transform in agents.iter() {
@@ -824,83 +386,5 @@ fn update_live_minimap_camera(
         if let Projection::Orthographic(ref mut ortho) = *projection {
             ortho.scaling_mode = bevy::camera::ScalingMode::FixedVertical { viewport_height };
         }
-    }
-}
-
-fn chunk_transform(id: ChunkId) -> Transform {
-    let (x, y, z) = decode_chunk_id(id);
-    Transform::from_xyz(
-        x as f32 * CHUNK_EDGE as f32,
-        y as f32 * CHUNK_EDGE as f32,
-        z as f32 * CHUNK_EDGE as f32,
-    )
-}
-
-fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {
-    ix + iy * CHUNK_EDGE + iz * CHUNK_EDGE * CHUNK_EDGE
-}
-
-fn is_solid_voxel(material: MaterialId) -> bool {
-    material.0 != 0
-}
-
-/// Top Y of the highest solid voxel in the world column at `(x, z)` from cached live chunks.
-#[must_use]
-pub(crate) fn live_voxel_surface_y(scene: &LiveScene, x: f32, z: f32) -> Option<f32> {
-    let edge_i = CHUNK_EDGE as i32;
-    let edge_f = CHUNK_EDGE as f32;
-    let cx = (x / edge_f).floor() as i32;
-    let cz = (z / edge_f).floor() as i32;
-    let ix = (x.floor() as i32).rem_euclid(edge_i) as usize;
-    let iz = (z.floor() as i32).rem_euclid(edge_i) as usize;
-
-    let mut best: Option<f32> = None;
-    for (&chunk_raw, voxels) in &scene.chunk_voxels {
-        if voxels.len() != CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
-            continue;
-        }
-        let (chunk_cx, chunk_cy, chunk_cz) = decode_chunk_id(ChunkId(chunk_raw));
-        if chunk_cx != cx || chunk_cz != cz {
-            continue;
-        }
-        for iy in (0..CHUNK_EDGE).rev() {
-            if is_solid_voxel(voxels[voxel_index(ix, iy, iz)]) {
-                let surface_y = (chunk_cy * edge_i + iy as i32 + 1) as f32;
-                best = Some(best.map_or(surface_y, |current| current.max(surface_y)));
-                break;
-            }
-        }
-    }
-    best
-}
-
-/// Ground height at `(x, z)` from streamed voxels when available, else procedural terrain.
-#[must_use]
-pub(crate) fn live_ground_y(scene: &LiveScene, x: f32, z: f32, offset: f32) -> f32 {
-    live_voxel_surface_y(scene, x, z).unwrap_or_else(|| terrain_surface_y(x, z)) + offset
-}
-
-#[cfg(test)]
-mod voxel_ground_tests {
-    use super::*;
-    use civ_voxel::MaterialId;
-
-    #[test]
-    fn voxel_column_surface_finds_top_solid() {
-        let mut voxels = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
-        let id = encode_chunk_id(0, 0, 0);
-        let mut scene = LiveScene::default();
-        scene.chunk_voxels.insert(id.0, voxels);
-        let y = live_voxel_surface_y(&scene, 4.5, 5.5).expect("surface");
-        assert!((y - 4.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn live_ground_y_falls_back_to_terrain_without_chunks() {
-        let scene = LiveScene::default();
-        let y = live_ground_y(&scene, 64.0, 128.0, AGENT_GROUND_Y);
-        let expected = terrain_surface_y(64.0, 128.0) + AGENT_GROUND_Y;
-        assert!((y - expected).abs() < 0.01);
     }
 }

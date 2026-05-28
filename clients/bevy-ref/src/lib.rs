@@ -26,7 +26,11 @@ pub mod gpu_features;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
+pub mod live_ground;
+#[cfg(feature = "bevy")]
 pub mod live_scene;
+#[cfg(feature = "bevy")]
+pub mod live_stream;
 #[cfg(feature = "bevy")]
 pub mod minimap;
 #[cfg(feature = "bevy")]

@@ -18,11 +18,14 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use civ_agents::{Tools, Wardrobe};
-use civ_engine::{decode_civreplay, encode_civreplay, Citizen, CivSaveBundle, Simulation};
+use civ_agents::{Position3d, Tools, Wardrobe};
+use civ_engine::{
+    decode_civreplay, encode_civreplay, Building, BuildingType, Citizen, CivSaveBundle, Simulation,
+};
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BuildingDiffFrame, BuildingProvenance, Frame3d,
+    AgentAppearanceUpdate, BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d,
+    BuildingProvenance, Frame3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -390,33 +393,65 @@ async fn handle_jsonrpc_text(
 fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceFrame {
     let updates = sim
         .world
-        .query::<(&Citizen, &Wardrobe, &Tools)>()
+        .query::<(&Citizen, &Position3d, &Wardrobe, &Tools)>()
         .iter()
         .map(
-            |(entity, (_citizen, wardrobe, tools))| AgentAppearanceUpdate {
+            |(entity, (_citizen, position, wardrobe, tools))| AgentAppearanceUpdate {
                 agent_id: u64::from(entity.id()),
                 era: wardrobe.era,
                 wardrobe: wardrobe.material,
                 tools: tools.material,
                 scale: 1.0,
+                position: Some(WorldXZ::from_fixed_coord(&position.coord)),
             },
         )
         .collect();
     AgentAppearanceFrame { tick, updates }
 }
 
-fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
-    let tick = sim.state.tick;
-    let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
-        .map_err(|e| e.to_string())?;
-    let building = BuildingDiffFrame {
+fn map_building_kind(building_type: BuildingType) -> BuildingKind3d {
+    match building_type {
+        BuildingType::Farm => BuildingKind3d::Farm,
+        BuildingType::Mine => BuildingKind3d::Mine,
+        BuildingType::Barracks => BuildingKind3d::Barracks,
+        BuildingType::Temple => BuildingKind3d::Temple,
+        BuildingType::Market => BuildingKind3d::Market,
+        BuildingType::House => BuildingKind3d::House,
+        BuildingType::CityCenter => BuildingKind3d::CityCenter,
+    }
+}
+
+fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
+    let scale = civ_voxel::FIXED_SCALE as f32;
+    let buildings = sim
+        .world
+        .query::<&Building>()
+        .iter()
+        .map(|(entity, building)| BuildingDiffEntry {
+            id: u64::from(entity.id()),
+            kind: map_building_kind(building.building_type),
+            position: WorldXZ {
+                x: building.position.x as f32 / scale,
+                z: building.position.y as f32 / scale,
+            },
+        })
+        .collect();
+    BuildingDiffFrame {
         tick,
         provenance: if sim.snapshot().building_count % 2 == 0 {
             BuildingProvenance::Procedural
         } else {
             BuildingProvenance::Freehand
         },
-    };
+        buildings,
+    }
+}
+
+fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
+    let tick = sim.state.tick;
+    let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
+        .map_err(|e| e.to_string())?;
+    let building = build_building_diff_frame(sim, tick);
     let agents = build_agent_appearance_frame(sim, tick);
     Ok([
         Frame3d::VoxelDelta(voxel),
@@ -843,10 +878,12 @@ mod tests {
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Procedural,
+                buildings: Vec::new(),
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Freehand,
+                buildings: Vec::new(),
             }),
             Frame3d::AgentAppearance(AgentAppearanceFrame {
                 tick: 1,
@@ -882,10 +919,31 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
+            buildings: Vec::new(),
         });
         let json = serde_json::to_string(&frame).expect("json");
         let decoded: Frame3d = serde_json::from_str(&json).expect("decode");
         assert_eq!(decoded.tick(), 9);
+    }
+
+    #[test]
+    fn frame_triple_populates_buildings_and_agent_positions() {
+        let sim = Simulation::with_seed(42);
+        let frames = build_frame_triple(&sim).expect("frame triple");
+        let Frame3d::BuildingDiff(building) = &frames[1] else {
+            panic!("expected building diff as second frame");
+        };
+        let Frame3d::AgentAppearance(agents) = &frames[2] else {
+            panic!("expected agent appearance as third frame");
+        };
+        assert!(!building.buildings.is_empty(), "seeded sim should have buildings");
+        assert!(
+            agents
+                .updates
+                .iter()
+                .all(|update| update.position.is_some()),
+            "agent updates should carry ECS world anchors"
+        );
     }
 
     #[tokio::test]

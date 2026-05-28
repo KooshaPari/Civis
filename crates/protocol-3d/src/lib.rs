@@ -43,6 +43,71 @@ pub enum BuildingProvenance {
     Freehand,
 }
 
+/// World-space X/Z anchor in Bevy terrain units (fixed-scale coords / [`civ_voxel::FIXED_SCALE`]).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct WorldXZ {
+    /// World X in the same units as the Bevy standalone terrain mesh.
+    pub x: f32,
+    /// World Z in the same units as the Bevy standalone terrain mesh.
+    pub z: f32,
+}
+
+impl WorldXZ {
+    /// Convert a fixed-point [`WorldCoord`] into Bevy terrain units.
+    #[must_use]
+    pub fn from_fixed_coord(coord: &civ_voxel::WorldCoord) -> Self {
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        Self {
+            x: coord.x as f32 / scale,
+            z: coord.z as f32 / scale,
+        }
+    }
+}
+
+/// Building kind mirrored for wire payloads (matches `civ_engine::BuildingType` labels).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BuildingKind3d {
+    /// Farm parcel.
+    Farm,
+    /// Mine parcel.
+    Mine,
+    /// Barracks parcel.
+    Barracks,
+    /// Temple parcel.
+    Temple,
+    /// Market parcel.
+    Market,
+    /// House parcel.
+    House,
+    /// City center parcel.
+    CityCenter,
+}
+
+/// One building entry carried in a [`BuildingDiffFrame`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildingDiffEntry {
+    /// Stable building entity id from the simulation ECS.
+    pub id: u64,
+    /// Building classification for client-side styling.
+    pub kind: BuildingKind3d,
+    /// World-space anchor for the building marker mesh.
+    pub position: WorldXZ,
+}
+
+/// Building-diff frame. Carries provenance plus optional building snapshots for renderers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildingDiffFrame {
+    /// Server tick at which the diff was produced.
+    pub tick: u64,
+    /// Provenance of every mutation in this frame (mixed-provenance frames
+    /// carry the dominant provenance — finer per-mutation tagging lives inside
+    /// the `BuildingGraph` payload itself once it lands).
+    pub provenance: BuildingProvenance,
+    /// Buildings visible this tick (full snapshot; empty on legacy servers).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<BuildingDiffEntry>,
+}
+
 /// One delta event for a single chunk. The renderer pairs `event` with the
 /// `voxels` payload to re-mesh the affected chunk.
 ///
@@ -76,19 +141,6 @@ pub struct VoxelDeltaFrame {
     pub deltas: Vec<VoxelChunkDelta>,
 }
 
-/// Building-diff frame. The actual `BuildingGraph` payload is supplied by
-/// `civ-build` in a future PR (the type is reserved here so renderers can
-/// recognise the frame kind before the schema lands).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BuildingDiffFrame {
-    /// Server tick at which the diff was produced.
-    pub tick: u64,
-    /// Provenance of every mutation in this frame (mixed-provenance frames
-    /// carry the dominant provenance — finer per-mutation tagging lives inside
-    /// the `BuildingGraph` payload itself once it lands).
-    pub provenance: BuildingProvenance,
-}
-
 /// Agent appearance update — one entry per agent whose visible state changed
 /// this tick (wardrobe, tools, era).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -113,6 +165,9 @@ pub struct AgentAppearanceUpdate {
     /// Uniform scale multiplier for the agent marker mesh (`1.0` when omitted).
     #[serde(default = "default_agent_scale")]
     pub scale: f32,
+    /// World-space anchor when the server knows agent ECS position (item 29+).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
 }
 
 fn default_agent_scale() -> f32 {
@@ -140,6 +195,16 @@ impl Frame3d {
             Self::BuildingDiff(f) => f.tick,
             Self::AgentAppearance(f) => f.tick,
         }
+    }
+}
+
+/// Resolve agent world translation for 3D clients (legacy fallback uses `agent_id` on X).
+#[must_use]
+pub fn agent_world_translation(update: &AgentAppearanceUpdate, y: f32) -> (f32, f32, f32) {
+    if let Some(pos) = update.position {
+        (pos.x, y, pos.z)
+    } else {
+        (update.agent_id as f32, y, 0.0)
     }
 }
 
@@ -265,10 +330,43 @@ mod tests {
         let f = BuildingDiffFrame {
             tick: 100,
             provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
         };
         let s = serde_json::to_string(&f).expect("serialize");
         let back: BuildingDiffFrame = serde_json::from_str(&s).expect("deserialize");
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
+    }
+
+    /// FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
+    #[test]
+    fn building_and_agent_position_extensions_roundtrip() {
+        let building = BuildingDiffFrame {
+            tick: 9,
+            provenance: BuildingProvenance::Procedural,
+            buildings: vec![BuildingDiffEntry {
+                id: 42,
+                kind: BuildingKind3d::House,
+                position: WorldXZ { x: 12.5, z: 48.0 },
+            }],
+        };
+        let building_json = serde_json::to_string(&building).expect("serialize building");
+        let building_back: BuildingDiffFrame =
+            serde_json::from_str(&building_json).expect("deserialize building");
+        assert_eq!(building, building_back);
+
+        let agent = AgentAppearanceUpdate {
+            agent_id: 7,
+            era: 1,
+            wardrobe: MaterialId(0),
+            tools: MaterialId(0),
+            scale: 1.0,
+            position: Some(WorldXZ { x: 3.0, z: 9.0 }),
+        };
+        let agent_json = serde_json::to_string(&agent).expect("serialize agent");
+        let agent_back: AgentAppearanceUpdate =
+            serde_json::from_str(&agent_json).expect("deserialize agent");
+        assert_eq!(agent_back.position, Some(WorldXZ { x: 3.0, z: 9.0 }));
+        assert_eq!(agent_world_translation(&agent_back, 0.8), (3.0, 0.8, 9.0));
     }
 
     /// FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
@@ -287,6 +385,7 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
+            buildings: Vec::new(),
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));
@@ -325,6 +424,7 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 1,
             provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
         });
         let mut bytes = encode_frame3d_binary(&frame).expect("encode");
         bytes[0] = b'X';

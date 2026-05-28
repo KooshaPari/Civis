@@ -164,6 +164,8 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-001 | `civ-standalone` gameplay plugins (sim tick, HUD, spawn tools, minimap). | `clients/bevy-ref` | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
 | FR-CIV-BEVY-002 | `civ-standalone` live WS attach + render-to-texture minimap. | `clients/bevy-ref` (`live_attach`, `minimap`) | `resolve_attach_mode_*`, `cargo check … civ-standalone` | implemented |
 | FR-CIV-BEVY-003 | Live attach scene sync (`Frame3d` voxel/agent streams) in `civ-standalone`. | `clients/bevy-ref` (`live_scene`) | `cargo check … civ-standalone`, server attach smoke | implemented |
+| FR-CIV-BEVY-004 | Building diff entries + agent `WorldXZ` positions in live attach. | `live_scene`, `civ-protocol-3d` | `building_and_agent_position_*`, server attach smoke | implemented |
+| FR-CIV-BEVY-004 | Building-diff snapshots + agent `WorldXZ` positions on live attach. | `civ-protocol-3d`, `civ-server` `ws_bridge`, `live_scene` | `cargo test -p civ-protocol-3d`, server attach smoke | implemented |
 
 ---
 
@@ -184,6 +186,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-PROTO3D-000 | Stub. | `crates/protocol-3d/` | `protocol3d::schema_version_stub` | implemented |
 | FR-CIV-PROTO3D-001 | Voxel delta frames binary serialize; lossless round-trip. | `crates/protocol-3d/` | `protocol3d::voxel_delta_roundtrip` | implemented |
 | FR-CIV-PROTO3D-002 | Building diff frames carry procedural vs freehand provenance. | `crates/protocol-3d/` | `protocol3d::building_diff_provenance` | implemented |
+| FR-CIV-PROTO3D-008 | Building diff entries + agent `WorldXZ` positions on wire. | `crates/protocol-3d/` | `building_and_agent_position_extensions_roundtrip` | implemented |
 
 ---
 

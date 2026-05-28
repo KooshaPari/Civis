@@ -109,7 +109,8 @@
 25. **Bevy gameplay client** — **done** (item 26): export gameplay modules in `civ-bevy-ref`, `civ-standalone` with `bevy,egui`, sim tick + spawn-tool → `Simulation`, HUD/minimap plugins.
 26. **Live WS attach + render-to-texture minimap** — **done** (item 27): `civ-standalone` server attach via `CIVIS_ATTACH=server` / `CIV_WS_URL`, `LiveAttachPlugin`, RTT minimap camera.
 27. **Live attach scene sync** — **done** (item 28): `live_scene` applies `Frame3d::VoxelDelta` / `AgentAppearance`; server mode skips sandbox terrain; minimap dots from live chunks/agents.
-28. **Next:** building-diff frames + agent world positions from server (protocol extension).
+28. **Building-diff + agent positions** — **done** (item 29): protocol `WorldXZ` / `BuildingDiffEntry`; civ-server fills frames; `live_scene` renders buildings and uses `agent_world_translation`.
+29. **Next:** minimap/camera follow live scene centre; building provenance styling.
 
 ## Run
 

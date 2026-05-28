@@ -23,7 +23,7 @@ use civ_bevy_ref::{
     CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, AGENT_MARKER_DEPTH,
     AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,
 };
-use civ_protocol_3d::{AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
+use civ_protocol_3d::{agent_world_translation, AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
 use civ_voxel::{ChunkId, ChunkView, LodLevel};
 
 const CHUNK_EDGE: usize = 16;
@@ -796,8 +796,8 @@ fn apply_agent_appearance(
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
-        let transform =
-            Transform::from_xyz(update.agent_id as f32, 0.8, 0.0).with_scale(Vec3::splat(scale));
+        let (x, y, z) = agent_world_translation(&update, 0.8);
+        let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
             .agent_materials

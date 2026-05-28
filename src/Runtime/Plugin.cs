@@ -954,6 +954,9 @@ namespace DINOForge.Runtime
         private string? _pendingPackToggleId;
         private bool _pendingPackToggleEnabled;
 
+        // HMR tiered reloader — created once ModPlatform is available.
+        private HotReload.HmrTieredReloader? _hmrTieredReloader;
+
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
         // cleanly when DINO is tearing down the ECS world. Set true at the TOP of OnDestroy
@@ -1208,6 +1211,24 @@ namespace DINOForge.Runtime
                 // When detected, triggers soft UI + pack reload without full game restart
                 if (Plugin._enableHotReload?.Value != false)
                 {
+                    // Create the tiered reloader so the watcher can classify signals.
+                    // The reloader captures the loaded-DLL hash at construction time.
+                    try
+                    {
+                        string runtimeDllPath = System.IO.Path.Combine(
+                            BepInEx.Paths.PluginPath, "DINOForge.Runtime.dll");
+                        _hmrTieredReloader = new HotReload.HmrTieredReloader(
+                            _log,
+                            packActions: new HmrPackActionsAdapter(this),
+                            uiActions: new HmrUiActionsAdapter(this),
+                            runtimeDllPath: runtimeDllPath);
+                        _log.LogInfo("[RuntimeDriver] HmrTieredReloader created.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] HmrTieredReloader creation failed (will use flat reload): {ex}");
+                    }
+
                     StartHmrWatcher();
                 }
                 else
@@ -1223,6 +1244,26 @@ namespace DINOForge.Runtime
             // ── Step 6: Log key handler registration ────────────────────────────────
             DebugLog.Write("Plugin", $"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
+
+            // ── Step 6.5: Create loading overlay ────────────────────────────────────
+            // Show a skeleton UI during the ~30-45s mod initialization phase.
+            // This overlay is hidden when the MainMenu scene fully loads.
+            RunPhaseWithAbortGuard("ModLoadingOverlay.Create", () =>
+            {
+                try
+                {
+                    _loadingOverlay = ModLoadingOverlay.Create(gameObject);
+                    if (_loadingOverlay != null)
+                    {
+                        _log.LogInfo("[RuntimeDriver] ModLoadingOverlay created.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] ModLoadingOverlay creation failed: {ex}");
+                }
+            });
+            yield return null;
 
             // ── Step 7: MainMenu-mode pack-load (no ECS world needed) ────────────────
             // Pack loading is YAML parsing — it does NOT require an ECS World.
@@ -1240,6 +1281,13 @@ namespace DINOForge.Runtime
                         _log.LogInfo($"[RuntimeDriver] MainMenu-mode pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
                         WireUguiToModPlatform();
                         PushLoadedPacksToUgui("main-menu init");
+
+                        // Hide loading overlay now that packs are loaded
+                        if (_loadingOverlay != null)
+                        {
+                            _loadingOverlay.Hide();
+                            _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode pack-load complete).");
+                        }
 
                         // Apply total_conversion theme to main menu
                         try
@@ -1342,7 +1390,7 @@ namespace DINOForge.Runtime
             }
         }
 
-        private void RequestPackReload(string reason)
+        internal void RequestPackReload(string reason)
         {
             lock (_deferredWorkLock)
             {
@@ -1469,6 +1517,13 @@ namespace DINOForge.Runtime
                         $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
+
+                    // Hide the loading overlay now that world is ready and packs are loaded
+                    if (_loadingOverlay != null)
+                    {
+                        _loadingOverlay.Hide();
+                        _log?.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (world ready).");
+                    }
                 }
 
                 yield return null;
@@ -1648,31 +1703,61 @@ namespace DINOForge.Runtime
 
                         if (System.IO.File.Exists(signalPath))
                         {
-                            try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
-
-                            _log?.LogInfo("[RuntimeDriver] HMR: Signal detected, enqueueing reload...");
-
-                            // #891: unified reload path — enqueue via RequestPackReload so
-                            // ProcessPackReloadCoroutine handles LoadPacks + UGUI refresh +
-                            // SetStatus + ShowToast consistently (same path as F10 "Reload Packs" button).
+                            // Read optional path hint written alongside the signal (first line of file).
+                            string changedPath = string.Empty;
                             try
                             {
-                                RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
-                                if (driver != null)
-                                {
-                                    driver.RequestPackReload("HMR signal");
-                                }
-                                else
-                                {
-                                    Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
-                                }
+                                string signalContent = System.IO.File.ReadAllText(signalPath).Trim();
+                                changedPath = signalContent;
                             }
-                            catch (System.Exception ex)
+                            catch { } // safe-swallow: path hint is optional; empty string → HandleUnknown()
+
+                            try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
+
+                            _log?.LogInfo($"[RuntimeDriver] HMR: Signal detected. changedPath='{changedPath}'");
+
+                            // #898: tiered reload — classify changed path and act accordingly.
+                            HotReload.HmrTieredReloader? reloader = _hmrTieredReloader;
+                            if (reloader != null)
                             {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload enqueue failed: {ex}");
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(changedPath))
+                                        reloader.HandleUnknown();
+                                    else
+                                        reloader.Handle(changedPath);
+                                    _log?.LogInfo("[RuntimeDriver] HMR: Tiered reloader handled signal.");
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] HMR: TieredReloader.Handle failed, falling back to flat reload: {ex}");
+                                    // Fall through to legacy path below
+                                    reloader = null;
+                                }
                             }
 
-                            _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");
+                            if (reloader == null)
+                            {
+                                // #891: legacy flat reload path — used when tiered reloader is unavailable.
+                                try
+                                {
+                                    RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
+                                    if (driver != null)
+                                    {
+                                        driver.RequestPackReload("HMR signal (fallback)");
+                                    }
+                                    else
+                                    {
+                                        Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
+                                    }
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload enqueue failed: {ex}");
+                                }
+                            }
+
+                            _log?.LogInfo("[RuntimeDriver] HMR: Signal handling complete.");
                         }
                     }
                     // #873: explicit exit log — proves thread terminated cleanly on OnDestroy.
@@ -2213,6 +2298,107 @@ namespace DINOForge.Runtime
                 DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
             }
             DebugLog.Write("Plugin", "[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
+        }
+    }
+
+    // ── HMR adapter implementations ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Bridges <see cref="HotReload.IHmrPackActions"/> to the <see cref="RuntimeDriver"/>
+    /// deferred-work queue so tier-1 and tier-2 actions run safely on the Unity main thread.
+    /// </summary>
+    internal sealed class HmrPackActionsAdapter : HotReload.IHmrPackActions
+    {
+        private readonly RuntimeDriver _driver;
+
+        internal HmrPackActionsAdapter(RuntimeDriver driver)
+        {
+            _driver = driver;
+        }
+
+        /// <inheritdoc/>
+        public void TriggerPackReload()
+        {
+            // Enqueue through the existing deferred-work mechanism so LoadPacks +
+            // UGUI refresh + SetStatus + ShowToast all fire from the main-thread coroutine.
+            _driver.RequestPackReload("HMR tier-1");
+        }
+
+        /// <inheritdoc/>
+        public void TriggerSceneReload()
+        {
+            // Load scene 1 (MainMenu) — asset bundles are re-evaluated on re-enter.
+            try
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(1);
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrPackActionsAdapter] TriggerSceneReload LoadScene(1) failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Bridges <see cref="HotReload.IHmrUiActions"/> to <see cref="DFCanvas"/> /
+    /// <see cref="UI.ModMenuPanel"/>. Called from the HMR background thread;
+    /// MonoBehaviour calls are permitted for DontDestroyOnLoad objects in Mono 2021.3
+    /// (confirmed by existing F9/F10 background-thread pattern).
+    /// </summary>
+    internal sealed class HmrUiActionsAdapter : HotReload.IHmrUiActions
+    {
+        private readonly RuntimeDriver _driver;
+
+        internal HmrUiActionsAdapter(RuntimeDriver driver)
+        {
+            _driver = driver;
+        }
+
+        /// <inheritdoc/>
+        public void ShowToast(string message, HotReload.HmrToastKind kind)
+        {
+            try
+            {
+                UI.ToastType toastType = kind switch
+                {
+                    HotReload.HmrToastKind.Warning => UI.ToastType.Warning,
+                    HotReload.HmrToastKind.Error => UI.ToastType.Error,
+                    _ => UI.ToastType.Info,
+                };
+
+                if (_driver._uguiReady && _driver._dfCanvas != null)
+                {
+                    _driver._dfCanvas.ShowToast(message, toastType);
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrUiActionsAdapter] ShowToast failed: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc/>
+        public void ShowConfirmDialog(string message, Action onConfirm, Action onCancel)
+        {
+            try
+            {
+                UI.ModMenuPanel? panel = _driver._dfCanvas?.ModMenuPanel;
+                if (panel != null)
+                {
+                    panel.ShowConfirmDialog(message, onConfirm, onCancel);
+                }
+                else
+                {
+                    // No panel available — auto-cancel so we never silently block.
+                    DebugLog.Write("Plugin", "[HmrUiActionsAdapter] ShowConfirmDialog: ModMenuPanel unavailable, auto-cancelling.");
+                    onCancel?.Invoke();
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrUiActionsAdapter] ShowConfirmDialog failed: {ex.Message}");
+                onCancel?.Invoke();
+            }
         }
     }
 }

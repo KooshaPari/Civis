@@ -116,10 +116,8 @@ fn scan_function_body(
             | Operator::I64TruncF32S
             | Operator::I64TruncF32U
             | Operator::I64TruncF64S
-            | Operator::I64TruncF64U => {
-                if stack.pop().is_some() {
-                    stack.push(StackSlot::Int);
-                }
+            | Operator::I64TruncF64U if stack.pop().is_some() => {
+                stack.push(StackSlot::Int);
             }
             Operator::I32ReinterpretF32 | Operator::I64ReinterpretF64
                 if stack.pop().is_some() =>

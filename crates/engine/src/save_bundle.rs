@@ -228,8 +228,8 @@ fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
     let mut tar_buf = Vec::new();
     {
         let mut builder = Builder::new(&mut tar_buf);
-        for entry in fs::read_dir(dir).map_err(|e| archive_err(e))? {
-            let entry = entry.map_err(|e| archive_err(e))?;
+        for entry in fs::read_dir(dir).map_err(archive_err)? {
+            let entry = entry.map_err(archive_err)?;
             let path = entry.path();
             if path.is_file() {
                 let name = path
@@ -238,30 +238,30 @@ fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
                     .ok_or_else(|| archive_err("non-utf8 file name in save dir"))?;
                 builder
                     .append_path_with_name(&path, name)
-                    .map_err(|e| archive_err(e))?;
+                    .map_err(archive_err)?;
             }
         }
-        builder.finish().map_err(|e| archive_err(e))?;
+        builder.finish().map_err(archive_err)?;
     }
     Ok(tar_buf)
 }
 
 fn extract_tar(bytes: &[u8], dest: &Path) -> Result<(), SaveBundleError> {
     let mut archive = Archive::new(bytes);
-    archive.unpack(dest).map_err(|e| archive_err(e))
+    archive.unpack(dest).map_err(archive_err)
 }
 
 fn read_metadata_from_tar(bytes: &[u8]) -> Result<CivSaveMetadata, SaveBundleError> {
     use std::io::Read;
     let mut archive = Archive::new(bytes);
-    for entry in archive.entries().map_err(|e| archive_err(e))? {
-        let mut entry = entry.map_err(|e| archive_err(e))?;
-        let entry_path = entry.path().map_err(|e| archive_err(e))?;
+    for entry in archive.entries().map_err(archive_err)? {
+        let mut entry = entry.map_err(archive_err)?;
+        let entry_path = entry.path().map_err(archive_err)?;
         if entry_path.file_name().and_then(|s| s.to_str()) != Some("metadata.json") {
             continue;
         }
         let mut json = String::new();
-        entry.read_to_string(&mut json).map_err(|e| archive_err(e))?;
+        entry.read_to_string(&mut json).map_err(archive_err)?;
         return Ok(serde_json::from_str(&json)?);
     }
     Err(SaveBundleError::MissingComponent {

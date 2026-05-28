@@ -68,7 +68,7 @@ pub fn scan_wasm_determinism_report(
         }
     }
     let sites = scan_float_action_emit_contamination(wasm_bytes)
-        .map_err(|e| DeterminismError::Parse(e))?;
+        .map_err(DeterminismError::Parse)?;
     report.float_contamination_sites = sites;
     report.float_contamination_site_count =
         u32::try_from(report.float_contamination_sites.len()).unwrap_or(u32::MAX);

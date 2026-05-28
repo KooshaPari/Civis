@@ -15,6 +15,7 @@ using BepInEx.Logging;
 using DINOForge.Runtime.Bridge;
 using DINOForge.Runtime.HotReload;
 using DINOForge.Runtime.UI;
+using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
 using DINOForge.SDK.HotReload;
 using DINOForge.SDK.Models;
@@ -128,6 +129,54 @@ namespace DINOForge.Runtime
 
         /// <summary>Returns the last pack load result (including errors) for UI display.</summary>
         internal ContentLoadResult? GetLastLoadResult() => _lastLoadResult;
+
+        /// <summary>
+        /// Collects <see cref="Updates.PackUpdateTarget"/> entries for every pack that declares
+        /// an <c>update_check</c> block in its <c>pack.yaml</c> manifest.
+        /// Best-effort: missing/malformed manifests are silently skipped.
+        /// </summary>
+        internal IReadOnlyList<Updates.PackUpdateTarget> GetPackUpdateTargets()
+        {
+            List<Updates.PackUpdateTarget> targets = new List<Updates.PackUpdateTarget>();
+            try
+            {
+                string packsDir = _packsDirectory?.Value ?? string.Empty;
+                if (!Directory.Exists(packsDir))
+                    return targets;
+
+                PackLoader packLoader = new PackLoader();
+                foreach (string dir in Directory.GetDirectories(packsDir))
+                {
+                    string manifestPath = Path.Combine(dir, "pack.yaml");
+                    if (!File.Exists(manifestPath))
+                        continue;
+                    try
+                    {
+                        PackManifest manifest = packLoader.LoadFromFile(manifestPath);
+                        if (manifest.UpdateCheck == null
+                            || string.IsNullOrEmpty(manifest.UpdateCheck.Owner)
+                            || string.IsNullOrEmpty(manifest.UpdateCheck.Repo))
+                            continue;
+
+                        targets.Add(new Updates.PackUpdateTarget(
+                            manifest.Id,
+                            string.IsNullOrEmpty(manifest.Name) ? manifest.Id : manifest.Name,
+                            manifest.UpdateCheck.Owner,
+                            manifest.UpdateCheck.Repo,
+                            manifest.Version ?? "0.0.0"));
+                    }
+                    catch
+                    {
+                        // safe-swallow: best-effort per-pack (Pattern #232 extension)
+                    }
+                }
+            }
+            catch
+            {
+                // safe-swallow: update check MUST NOT crash the plugin (Pattern #232)
+            }
+            return targets;
+        }
 
         /// <summary>Returns whether the last pack load result is available for diagnostics.</summary>
         internal bool HasLastLoadResult => _lastLoadResult != null;

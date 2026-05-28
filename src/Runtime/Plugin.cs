@@ -15,6 +15,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
 using DINOForge.Runtime.UI;
+using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
 using HarmonyLib;
 using Unity.Entities;
@@ -957,6 +958,12 @@ namespace DINOForge.Runtime
         // HMR tiered reloader — created once ModPlatform is available.
         private HotReload.HmrTieredReloader? _hmrTieredReloader;
 
+        // ── Step 8: Update checker (#899) ─────────────────────────────────────────
+        // The Task is fired on the thread pool after pack-load and polled in the
+        // deferred-work coroutine loop. Results are pushed to the UI panel when ready.
+        private System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Updates.UpdateInfo>>? _updateCheckTask;
+        private bool _updateCheckPushed;
+
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
         // cleanly when DINO is tearing down the ECS world. Set true at the TOP of OnDestroy
@@ -1312,6 +1319,30 @@ namespace DINOForge.Runtime
                 }
             });
 
+            // ── Step 8: Fire update check on the thread pool (best-effort, never blocks) ──
+            RunPhaseWithAbortGuard("UpdateChecker.Launch", () =>
+            {
+                if (_modPlatform != null && !_updateCheckPushed)
+                {
+                    try
+                    {
+                        string bepInExRoot = BepInEx.Paths.BepInExRootPath;
+                        string dinoForgeVersion = PluginInfo.VERSION;
+                        IReadOnlyList<Updates.PackUpdateTarget> packTargets =
+                            _modPlatform.GetPackUpdateTargets();
+                        Updates.UpdateChecker checker = new Updates.UpdateChecker(bepInExRoot);
+                        System.Threading.CancellationToken ct =
+                            new System.Threading.CancellationToken(false);
+                        _updateCheckTask = checker.RunAllChecksAsync(packTargets, dinoForgeVersion, ct);
+                        _log.LogInfo($"[RuntimeDriver] Update check launched for DINOForge + {packTargets.Count} pack(s).");
+                    }
+                    catch (Exception updateEx)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] Update check launch failed: {updateEx.Message}");
+                    }
+                }
+            });
+
             if (Plugin._showOverlayOnStart?.Value == true && _dfCanvas != null)
             {
                 _dfCanvas.ToggleDebug();
@@ -1339,6 +1370,33 @@ namespace DINOForge.Runtime
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
                     }
+                }
+
+                // ── Step 8 deferred: push update-check results to UI once the Task completes ──
+                if (!_updateCheckPushed && _updateCheckTask != null
+                    && _updateCheckTask.IsCompleted && _dfCanvas?.ModMenuPanel != null)
+                {
+                    _updateCheckPushed = true;
+                    try
+                    {
+                        System.Collections.Generic.IReadOnlyList<Updates.UpdateInfo> updates =
+                            _updateCheckTask.Result;
+                        if (updates.Count > 0)
+                        {
+                            _dfCanvas.ModMenuPanel.SetUpdatesAvailable(updates);
+                            _log?.LogInfo($"[RuntimeDriver] Update check: {updates.Count} update(s) pushed to UI.");
+                        }
+                        else
+                        {
+                            _log?.LogInfo("[RuntimeDriver] Update check: up to date.");
+                        }
+                    }
+                    catch (Exception updateEx)
+                    {
+                        // safe-swallow: update-check result delivery is best-effort
+                        _log?.LogWarning($"[RuntimeDriver] Update check result delivery failed: {updateEx.Message}");
+                    }
+                    _updateCheckTask = null;
                 }
 
                 if (TryDequeuePendingWorldReady(out World? pendingWorld))

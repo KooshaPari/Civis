@@ -1240,7 +1240,7 @@ namespace DINOForge.Runtime.UI
             labelText.alignment = TextAnchor.MiddleLeft;
 
             dropdown.targetGraphic = bgImg;
-            dropdown.onValueChanged.AddListener(onValueChanged);
+            dropdown.onValueChanged.AddListener(new UnityEngine.Events.UnityAction<int>(onValueChanged));
 
             return dropdown;
         }

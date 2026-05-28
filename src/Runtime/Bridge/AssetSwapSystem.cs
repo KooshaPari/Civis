@@ -302,10 +302,54 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
+            // Last resort: LoadAllAssets and grab first Mesh/Material/GameObject found.
+            // Our PackCompiler may name internal assets differently than the bundle filename.
+            if (replacementMesh == null && replacementMat == null)
+            {
+                try
+                {
+                    UnityEngine.Object[] allAssets = bundle.LoadAllAssets();
+                    DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: LoadAllAssets returned {allAssets.Length} assets for '{assetName}'");
+                    foreach (UnityEngine.Object asset in allAssets)
+                    {
+                        if (asset is Mesh m && replacementMesh == null)
+                            replacementMesh = m;
+                        else if (asset is Material mat && replacementMat == null)
+                            replacementMat = mat;
+                        else if (asset is GameObject go)
+                        {
+                            SkinnedMeshRenderer smr2 = go.GetComponentInChildren<SkinnedMeshRenderer>();
+                            if (smr2 != null && smr2.sharedMesh != null && replacementMesh == null)
+                            {
+                                replacementMesh = smr2.sharedMesh;
+                                if (smr2.sharedMaterials.Length > 0 && replacementMat == null)
+                                    replacementMat = smr2.sharedMaterials[0];
+                            }
+                            else
+                            {
+                                MeshFilter mf2 = go.GetComponentInChildren<MeshFilter>();
+                                if (mf2 != null && mf2.sharedMesh != null && replacementMesh == null)
+                                    replacementMesh = mf2.sharedMesh;
+                                MeshRenderer mr2 = go.GetComponentInChildren<MeshRenderer>();
+                                if (mr2 != null && mr2.sharedMaterials.Length > 0 && replacementMat == null)
+                                    replacementMat = mr2.sharedMaterials[0];
+                            }
+                        }
+                        if (replacementMesh != null) break;
+                    }
+                    if (replacementMesh != null || replacementMat != null)
+                        DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted via LoadAllAssets fallback for '{assetName}' (mesh={replacementMesh?.name}, mat={replacementMat?.name})");
+                }
+                catch (System.Exception ex)
+                {
+                    DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: LoadAllAssets failed for '{assetName}': {ex.Message}");
+                }
+            }
+
             if (replacementMesh == null && replacementMat == null)
             {
                 DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: no Mesh/Material named '{assetName}' in bundle");
+                    $"TrySwapRenderMeshFromBundle: no Mesh/Material in bundle for '{assetName}' (all extraction methods exhausted)");
                 return false;
             }
 
@@ -376,7 +420,8 @@ namespace DINOForge.Runtime.Bridge
                     && !m.IsGenericMethodDefinition
                     && m.GetParameters().Length == 2
                     && m.GetParameters()[0].ParameterType == typeof(Entity)
-                    && m.GetParameters()[1].ParameterType == typeof(ComponentType));
+                    && (m.GetParameters()[1].ParameterType == typeof(int)
+                        || m.GetParameters()[1].ParameterType == typeof(ComponentType)));
             // #101: SetSharedComponentData<T> has multiple overloads (Entity, EntityQuery,
             // NativeArray<Entity>), so plain GetMethod("SetSharedComponentData") throws
             // AmbiguousMatchException. GetMethod(name, types[]) also can't disambiguate
@@ -436,9 +481,12 @@ namespace DINOForge.Runtime.Bridge
                     if (!EntityManager.HasComponent(entity, renderMeshComponentType))
                         continue;
 
-                    // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
+                    // Use non-generic overload. The second param is either ComponentType or int (typeIndex).
+                    object secondArg = getSharedNonGeneric.GetParameters()[1].ParameterType == typeof(int)
+                        ? (object)renderMeshComponentType.TypeIndex
+                        : (object)renderMeshComponentType;
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        EntityManager, new object[] { entity, renderMeshComponentType });
+                        EntityManager, new object[] { entity, secondArg });
                     if (renderMesh == null) continue;
 
                     bool changed = false;

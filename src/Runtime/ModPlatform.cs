@@ -844,14 +844,7 @@ namespace DINOForge.Runtime
             Add("visuals", manifest.Loads.Visuals);
             Add("localization", manifest.Loads.Localization);
             Add("faction_patches", manifest.Loads.FactionPatches);
-            Add("resources", manifest.Loads.Resources);
-            Add("economy_profiles", manifest.Loads.EconomyProfiles);
-            Add("trade_routes", manifest.Loads.TradeRoutes);
-            Add("hud_elements", manifest.Loads.HudElements);
-            Add("menus", manifest.Loads.Menus);
-            Add("ui_themes", manifest.Loads.UiThemes);
-            Add("waves", manifest.Loads.Waves);
-            Add("stats", manifest.Loads.Stats);
+            // Fields below don't exist on PackLoads yet — add when SDK PackManifest gains them
 
             if (manifest.Overrides != null)
             {

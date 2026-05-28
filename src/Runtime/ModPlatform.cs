@@ -821,37 +821,49 @@ namespace DINOForge.Runtime
             return packInfos;
         }
 
-        private static Dictionary<string, int> ExtractContentSummary(PackManifest manifest)
+        private static Dictionary<string, int> ExtractContentSummary(PackManifest manifest, string? packDirectory = null)
         {
+            // #896: Pack manifests reference DIRECTORY names ("units", "buildings"), not individual files.
+            // Counting the manifest's string list always gives "1 file(s)" per category, which is useless.
+            // Instead, scan the pack directory and count actual definition items inside each category's
+            // YAML files. Falls back to manifest counts only if directory scan yields zero.
             var summary = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (manifest.Loads == null) return summary;
+            if (manifest.Loads == null && manifest.Overrides == null) return summary;
 
-            void Add(string key, List<string>? items)
+            void AddFromScan(string key, List<string>? loadEntries)
             {
-                if (items != null && items.Count > 0)
-                    summary[key] = items.Count;
+                if (loadEntries == null || loadEntries.Count == 0) return;
+                int itemCount = ScanCategoryItemCount(packDirectory, loadEntries);
+                if (itemCount > 0)
+                    summary[key] = itemCount;
+                else
+                    // Fall back to declared count so the UI still reports *something* if scanning fails.
+                    summary[key] = loadEntries.Count;
             }
 
-            Add("factions", manifest.Loads.Factions);
-            Add("units", manifest.Loads.Units);
-            Add("buildings", manifest.Loads.Buildings);
-            Add("weapons", manifest.Loads.Weapons);
-            Add("doctrines", manifest.Loads.Doctrines);
-            Add("scenarios", manifest.Loads.Scenarios);
-            Add("wave_templates", manifest.Loads.WaveTemplates);
-            Add("tech_nodes", manifest.Loads.TechNodes);
-            Add("audio", manifest.Loads.Audio);
-            Add("visuals", manifest.Loads.Visuals);
-            Add("localization", manifest.Loads.Localization);
-            Add("faction_patches", manifest.Loads.FactionPatches);
-            Add("resources", manifest.Loads.Resources);
-            Add("economy_profiles", manifest.Loads.EconomyProfiles);
-            Add("trade_routes", manifest.Loads.TradeRoutes);
-            Add("hud_elements", manifest.Loads.HudElements);
-            Add("menus", manifest.Loads.Menus);
-            Add("ui_themes", manifest.Loads.UiThemes);
-            Add("waves", manifest.Loads.Waves);
-            Add("stats", manifest.Loads.Stats);
+            if (manifest.Loads != null)
+            {
+                AddFromScan("factions", manifest.Loads.Factions);
+                AddFromScan("units", manifest.Loads.Units);
+                AddFromScan("buildings", manifest.Loads.Buildings);
+                AddFromScan("weapons", manifest.Loads.Weapons);
+                AddFromScan("doctrines", manifest.Loads.Doctrines);
+                AddFromScan("scenarios", manifest.Loads.Scenarios);
+                AddFromScan("wave_templates", manifest.Loads.WaveTemplates);
+                AddFromScan("tech_nodes", manifest.Loads.TechNodes);
+                AddFromScan("audio", manifest.Loads.Audio);
+                AddFromScan("visuals", manifest.Loads.Visuals);
+                AddFromScan("localization", manifest.Loads.Localization);
+                AddFromScan("faction_patches", manifest.Loads.FactionPatches);
+                AddFromScan("resources", manifest.Loads.Resources);
+                AddFromScan("economy_profiles", manifest.Loads.EconomyProfiles);
+                AddFromScan("trade_routes", manifest.Loads.TradeRoutes);
+                AddFromScan("hud_elements", manifest.Loads.HudElements);
+                AddFromScan("menus", manifest.Loads.Menus);
+                AddFromScan("ui_themes", manifest.Loads.UiThemes);
+                AddFromScan("waves", manifest.Loads.Waves);
+                AddFromScan("stats", manifest.Loads.Stats);
+            }
 
             if (manifest.Overrides != null)
             {
@@ -860,7 +872,8 @@ namespace DINOForge.Runtime
                     if (items != null && items.Count > 0)
                     {
                         string overrideKey = key + " (overrides)";
-                        summary[overrideKey] = items.Count;
+                        int itemCount = ScanCategoryItemCount(packDirectory, items);
+                        summary[overrideKey] = itemCount > 0 ? itemCount : items.Count;
                     }
                 }
                 AddOverride("units", manifest.Overrides.Units);
@@ -869,6 +882,74 @@ namespace DINOForge.Runtime
             }
 
             return summary;
+        }
+
+        /// <summary>
+        /// Counts the number of top-level definition items in a content category.
+        /// Each manifest entry is either a directory name (containing one or more *.yaml files)
+        /// or a relative file path. For each *.yaml file we count list entries (lines starting
+        /// with "- " at column 0) — if zero such lines exist we treat the file as a single object
+        /// definition (count = 1). Returns 0 on any I/O error so callers can fall back.
+        /// </summary>
+        private static int ScanCategoryItemCount(string? packDirectory, List<string> entries)
+        {
+            if (string.IsNullOrEmpty(packDirectory) || !Directory.Exists(packDirectory))
+                return 0;
+
+            int total = 0;
+            foreach (string entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry)) continue;
+
+                string resolved = Path.Combine(packDirectory, entry);
+                try
+                {
+                    if (Directory.Exists(resolved))
+                    {
+                        foreach (string yamlFile in Directory.GetFiles(resolved, "*.yaml", SearchOption.TopDirectoryOnly))
+                        {
+                            total += CountYamlTopLevelItems(yamlFile);
+                        }
+                    }
+                    else if (File.Exists(resolved))
+                    {
+                        total += CountYamlTopLevelItems(resolved);
+                    }
+                    else
+                    {
+                        // Try with .yaml extension appended (entry is a basename without extension).
+                        string withExt = resolved + ".yaml";
+                        if (File.Exists(withExt))
+                            total += CountYamlTopLevelItems(withExt);
+                    }
+                }
+                catch
+                {
+                    // swallow: best-effort UI display only; falls back to manifest declared count.
+                }
+            }
+            return total;
+        }
+
+        private static int CountYamlTopLevelItems(string yamlFile)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(yamlFile);
+                int listItems = 0;
+                foreach (string line in lines)
+                {
+                    // Top-level YAML list entries start with "- " at column 0.
+                    if (line.Length >= 2 && line[0] == '-' && line[1] == ' ')
+                        listItems++;
+                }
+                // If no top-level list found, assume the file is a single mapping (1 item).
+                return listItems > 0 ? listItems : 1;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         private static void DetectContentConflicts(List<PackDisplayInfo> packs)
@@ -927,7 +1008,8 @@ namespace DINOForge.Runtime
             }
 
             PackManifest manifest = packLoader.LoadFromFile(manifestPath);
-            Dictionary<string, int> contentSummary = ExtractContentSummary(manifest);
+            string packDirectory = Path.GetDirectoryName(manifestPath) ?? string.Empty;
+            Dictionary<string, int> contentSummary = ExtractContentSummary(manifest, packDirectory);
             PackDisplayInfo displayInfo = new PackDisplayInfo(
                 id: manifest.Id,
                 name: manifest.Name,

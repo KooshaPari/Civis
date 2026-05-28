@@ -856,7 +856,9 @@ namespace DINOForge.Runtime.UI
                     sb.Append("<color=#88dd88>Content:</color>\n");
                     foreach (System.Collections.Generic.KeyValuePair<string, int> kv in p.ContentSummary)
                     {
-                        sb.Append($"  {kv.Key}: {kv.Value} file(s)\n");
+                        // #896: friendlier label — "26 units" instead of "units: 26 file(s)".
+                        string label = kv.Key.Replace('_', ' ');
+                        sb.Append($"  {kv.Value} {label}\n");
                     }
                     _detailContent.text = sb.ToString().TrimEnd('\n');
                 }

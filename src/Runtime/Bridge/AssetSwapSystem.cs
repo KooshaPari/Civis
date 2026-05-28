@@ -130,6 +130,29 @@ namespace DINOForge.Runtime.Bridge
             if (pending.Count == 0)
                 return;
 
+            // Gate at OnUpdate level: skip the entire swap pass until the world is populated.
+            // The swap registry retries each frame, but TrySwap returning false rapidly burns
+            // through MaxRetries before entities populate. Check entity count here to defer
+            // properly until the gameplay world is ready.
+            try
+            {
+                int entityCount = EntityManager.UniversalQuery.CalculateEntityCount();
+                if (entityCount < 1000)
+                {
+                    // Log once per 60 frames to avoid spam, but indicate we're waiting
+                    if (_frameCount % 60 == 0)
+                    {
+                        DebugLog.Write("AssetSwap",
+                            $"AssetSwapSystem: waiting for entities (current={entityCount}, need>=1000, frame={_frameCount})");
+                    }
+                    return;
+                }
+            }
+            catch
+            {
+                // Can't determine entity count — fall through and let the swap try
+            }
+
             DebugLog.Write("AssetSwap", $"AssetSwapSystem: processing {pending.Count} pending swap(s)");
 
             string patchDir = Path.Combine(BepInEx.Paths.BepInExRootPath, PatchedBundlesDir);
@@ -362,6 +385,25 @@ namespace DINOForge.Runtime.Bridge
                 new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
+            // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
+            // fires before gameplay-scene entity population completes (observed ~9s gap
+            // between AssetSwapSystem first OnUpdate at frame 600 and entities arriving
+            // around frame 1000+). Returning false (not true) causes AssetSwapRegistry
+            // to MarkFailed, which keeps the request in the pending queue for the next
+            // OnUpdate retry. MaxRetries=200 gives a wide retry window past warmup.
+            if (entities.Length == 0)
+            {
+                if (_reportedFailures.Add($"empty-query:{assetName}"))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: entity query returned 0 results for asset='{assetName}' " +
+                        $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — entities not yet populated, will retry next frame.");
+                }
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
+
             // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
             // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
             // for entities that have multiple instances of T (e.g. a unit with shadow+main mesh).
@@ -428,7 +470,24 @@ namespace DINOForge.Runtime.Bridge
 
             ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
             int swapCount = 0;
-            for (int i = 0; i < entities.Length; i++)
+
+            // Iter-148 safety cap: bundle-to-archetype swaps can match tens of thousands of
+            // entities (observed 25,713 RenderMesh entities matching a single bundle). Applying
+            // the same replacement mesh+material to every match makes every unit look identical
+            // — the "everything looks the same" disaster. Cap at 100 entities per swap call
+            // until proper per-unit selective targeting lands. Logged once per bundle so the
+            // operator knows the cap was hit and additional matches were skipped.
+            const int MaxEntitiesPerSwap = 100;
+            int swapBudget = Math.Min(entities.Length, MaxEntitiesPerSwap);
+            if (entities.Length > MaxEntitiesPerSwap && _reportedFailures.Add($"cap:{assetName}"))
+            {
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: capping swap at {MaxEntitiesPerSwap}/{entities.Length} entities for asset='{assetName}' " +
+                    $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — prevents 'everything looks the same' disaster. " +
+                    "Selective targeting is a separate concern; tracked as follow-up.");
+            }
+
+            for (int i = 0; i < swapBudget; i++)
             {
                 Entity entity = entities[i];
                 try
@@ -491,7 +550,7 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities");
+            DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{swapBudget} entities (total matching={entities.Length}, cap={MaxEntitiesPerSwap})");
             entities.Dispose();
             query.Dispose();
 

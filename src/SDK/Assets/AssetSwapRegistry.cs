@@ -68,8 +68,15 @@ namespace DINOForge.SDK.Assets
     {
         /// <summary>
         /// Maximum number of retry attempts before a swap is permanently skipped.
+        /// Raised from 3 to 200 (iter-148): entities populate ~9s AFTER the initial
+        /// MinFrameDelay=600 fires (observed: AssetSwap at 02:42:51 with entities=0,
+        /// DumpSystem at 02:43:00 reports 49,014 entities). At 60 fps OnUpdate cadence
+        /// the system needs >540 frames of additional retries past the initial empty
+        /// query; 200 gives a generous budget without retrying forever. The "give up"
+        /// path now only triggers on genuine swap failures (reflection / bundle / field
+        /// errors), not on empty entity queries during gameplay-scene warmup.
         /// </summary>
-        public const int MaxRetries = 3;
+        public const int MaxRetries = 200;
 
         private static readonly object _lock = new object();
         private static readonly Dictionary<string, AssetSwapRequest> _requests =

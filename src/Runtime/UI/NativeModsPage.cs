@@ -55,6 +55,9 @@ namespace DINOForge.Runtime.UI
         private GameObject? _mainMenuContent;
         private Font? _font;
 
+        /// <summary>Canvas root used to anchor the dependency prompt dialog.</summary>
+        private Transform? _canvasRoot;
+
         // ── UI hierarchy built at Show time ────────────────────────────────────
         private GameObject? _root;
         private RectTransform? _packListContent;
@@ -96,6 +99,7 @@ namespace DINOForge.Runtime.UI
         public void Show(Canvas mainMenuCanvas, GameObject? mainMenuContent)
         {
             _mainMenuContent = mainMenuContent;
+            _canvasRoot = mainMenuCanvas.transform;
 
             if (_mainMenuContent != null)
                 _mainMenuContent.SetActive(false);
@@ -410,9 +414,42 @@ namespace DINOForge.Runtime.UI
             toggleLe.preferredHeight = 24;
 
             string packId = pack.Id;
-            bool currentEnabled = pack.IsEnabled;
+            string packName = pack.Name;
+            IReadOnlyList<string> packDeps = pack.Dependencies;
+            bool wasEnabled = pack.IsEnabled;
             toggle.onValueChanged.AddListener((bool val) =>
             {
+                // Only intercept when switching from disabled → enabled.
+                if (val && !wasEnabled)
+                {
+                    List<string> missing = CollectMissingDeps(packDeps);
+                    if (missing.Count > 0 && _canvasRoot != null)
+                    {
+                        // Revert the visual toggle immediately — we'll re-apply after confirmation.
+                        toggle.SetIsOnWithoutNotify(false);
+
+                        DepEnableDialog.Show(
+                            _canvasRoot,
+                            packName,
+                            missing,
+                            onEnableAll: () =>
+                            {
+                                // Enable each missing dependency first.
+                                foreach (string depId in missing)
+                                    OnPackToggled?.Invoke(depId, true);
+
+                                // Then enable the target pack and update the toggle visual.
+                                toggle.SetIsOnWithoutNotify(true);
+                                OnPackToggled?.Invoke(packId, true);
+                            },
+                            onCancel: () =>
+                            {
+                                // Toggle already reverted — nothing more to do.
+                            });
+                        return;
+                    }
+                }
+
                 OnPackToggled?.Invoke(packId, val);
             });
 
@@ -516,6 +553,31 @@ namespace DINOForge.Runtime.UI
                     _detailErrors.text = "";
                 }
             }
+        }
+
+        // ── Dependency helpers ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the IDs of <paramref name="dependencies"/> that are not currently enabled
+        /// in the loaded pack list.
+        /// </summary>
+        private List<string> CollectMissingDeps(IReadOnlyList<string> dependencies)
+        {
+            List<string> missing = new List<string>();
+            foreach (string depId in dependencies)
+            {
+                bool depEnabled = false;
+                foreach (PackDisplayInfo p in _packs)
+                {
+                    if (string.Equals(p.Id, depId, StringComparison.Ordinal) && p.IsEnabled)
+                    {
+                        depEnabled = true;
+                        break;
+                    }
+                }
+                if (!depEnabled) missing.Add(depId);
+            }
+            return missing;
         }
 
         // ── UI Helpers ─────────────────────────────────────────────────────────

@@ -66,6 +66,19 @@ namespace DINOForge.Runtime.UI
         private Text? _detailDetectedConflicts;
         private bool _listRefreshQueued;
 
+        // ── Rich detail pane refs (#897) ──────────────────────────────────────
+        private Text? _detailLicense;
+        private Text? _detailRichContent;
+        private RectTransform? _detailTagsRow;
+        private RectTransform? _detailLinksRow;
+        private RectTransform? _detailGalleryRow;
+        private readonly List<Image> _galleryThumbs = new List<Image>();
+        private GameObject? _screenshotModal;
+        private Image? _modalImage;
+
+        /// <summary>Canvas root used to anchor the dependency prompt dialog.</summary>
+        private Transform? _canvasRoot;
+
         // ── Bootstrap ────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -84,6 +97,7 @@ namespace DINOForge.Runtime.UI
         /// <param name="canvasRoot">Root canvas transform to attach to.</param>
         public void Build(Transform canvasRoot)
         {
+            _canvasRoot = canvasRoot;
             _log?.LogInfo("[ModMenuPanel.Build] Starting UGUI hierarchy construction...");
 
             // Root panel — centered
@@ -418,96 +432,163 @@ namespace DINOForge.Runtime.UI
 
         private void BuildDetailPane(Transform parent)
         {
+            // Outer container (uses full flexible width; houses a scroll view so all rich
+            // content fits without clipping even on a 560-px-tall panel).
             _detailPane = new GameObject("DetailPane", typeof(RectTransform));
             _detailPane.transform.SetParent(parent, false);
-
-            RectTransform detailRt = _detailPane.GetComponent<RectTransform>();
             LayoutElement detailLe = _detailPane.AddComponent<LayoutElement>();
             detailLe.flexibleWidth = 1f;
+            detailLe.flexibleHeight = 1f;
 
-            VerticalLayoutGroup vlg = _detailPane.AddComponent<VerticalLayoutGroup>();
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-            vlg.spacing = 6f;
-            vlg.padding = new RectOffset(14, 14, 12, 12);
+            // Outer layout: stacks the scroll area + the fixed action-buttons row
+            VerticalLayoutGroup outerVlg = _detailPane.AddComponent<VerticalLayoutGroup>();
+            outerVlg.childForceExpandWidth = true;
+            outerVlg.childForceExpandHeight = false;
+            outerVlg.spacing = 0f;
+            outerVlg.padding = new RectOffset(0, 0, 0, 0);
 
-            // Name
-            _detailName = UiBuilder.MakeText(_detailPane.transform, "DetailName",
-                "Select a pack", 15, UiBuilder.TextPrimary, bold: true);
-            LayoutElement nameLe = _detailName.gameObject.AddComponent<LayoutElement>();
-            nameLe.preferredHeight = 22f;
-            nameLe.flexibleWidth = 1f;
+            // ── Scrollable content area ───────────────────────────────────────
+            (ScrollRect detailScroll, RectTransform detailContent) =
+                UiBuilder.MakeScrollView(_detailPane.transform, "DetailScroll", Vector2.zero);
+            LayoutElement scrollLe = detailScroll.gameObject.AddComponent<LayoutElement>();
+            scrollLe.flexibleWidth = 1f;
+            scrollLe.flexibleHeight = 1f;
+            scrollLe.minHeight = 100f;
 
-            // Meta (author · type)
-            _detailMeta = UiBuilder.MakeText(_detailPane.transform, "DetailMeta",
-                "", 12, UiBuilder.TextSecondary);
-            LayoutElement metaLe = _detailMeta.gameObject.AddComponent<LayoutElement>();
-            metaLe.preferredHeight = 18f;
-            metaLe.flexibleWidth = 1f;
+            // Override the content VLG to use detail-pane padding
+            VerticalLayoutGroup contentVlg = detailContent.GetComponent<VerticalLayoutGroup>();
+            if (contentVlg != null)
+            {
+                contentVlg.padding = new RectOffset(14, 14, 12, 8);
+                contentVlg.spacing = 6f;
+            }
 
-            UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
+            Transform c = detailContent; // shorthand
 
-            // Description (scrollable text area)
-            _detailDesc = UiBuilder.MakeText(_detailPane.transform, "DetailDesc",
-                "", 12, UiBuilder.TextPrimary);
+            // ── Pack name ────────────────────────────────────────────────────
+            _detailName = UiBuilder.MakeText(c, "DetailName", "Select a pack", 15,
+                UiBuilder.TextPrimary, bold: true);
+            AddFlexRow(_detailName.gameObject, preferredHeight: 22f);
+
+            // ── Meta row (author · type · license badge) ─────────────────────
+            GameObject metaRow = new GameObject("MetaRow", typeof(RectTransform));
+            metaRow.transform.SetParent(c, false);
+            HorizontalLayoutGroup metaHlg = metaRow.AddComponent<HorizontalLayoutGroup>();
+            metaHlg.spacing = 6f;
+            metaHlg.childForceExpandHeight = false;
+            metaHlg.childForceExpandWidth = false;
+            metaRow.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+            _detailMeta = UiBuilder.MakeText(metaRow.transform, "DetailMeta", "", 12, UiBuilder.TextSecondary);
+            _detailMeta.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            _detailLicense = UiBuilder.MakeText(metaRow.transform, "LicenseBadge", "", 11, UiBuilder.Accent, bold: true);
+            LayoutElement licenseLe = _detailLicense.gameObject.AddComponent<LayoutElement>();
+            licenseLe.preferredWidth = 80f;
+            licenseLe.minWidth = 0f;
+
+            // ── Tags row ─────────────────────────────────────────────────────
+            GameObject tagsHost = new GameObject("TagsRow", typeof(RectTransform));
+            tagsHost.transform.SetParent(c, false);
+            _detailTagsRow = tagsHost.GetComponent<RectTransform>();
+            HorizontalLayoutGroup tagsHlg = tagsHost.AddComponent<HorizontalLayoutGroup>();
+            tagsHlg.spacing = 4f;
+            tagsHlg.childForceExpandHeight = false;
+            tagsHlg.childForceExpandWidth = false;
+            tagsHlg.childAlignment = TextAnchor.MiddleLeft;
+            LayoutElement tagsRowLe = tagsHost.AddComponent<LayoutElement>();
+            tagsRowLe.preferredHeight = 22f;
+            tagsRowLe.flexibleWidth = 1f;
+            tagsHost.SetActive(false); // hidden until pack with tags is selected
+
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
+
+            // ── Description ──────────────────────────────────────────────────
+            _detailDesc = UiBuilder.MakeText(c, "DetailDesc", "", 12, UiBuilder.TextPrimary);
             LayoutElement descLe = _detailDesc.gameObject.AddComponent<LayoutElement>();
-            descLe.preferredHeight = 80f;
+            descLe.preferredHeight = 60f;
             descLe.flexibleWidth = 1f;
-            descLe.flexibleHeight = 1f;
-            _detailDesc.verticalOverflow = VerticalWrapMode.Truncate;
+            _detailDesc.verticalOverflow = VerticalWrapMode.Overflow;
 
-            UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
+            // ── External links row ───────────────────────────────────────────
+            GameObject linksHost = new GameObject("LinksRow", typeof(RectTransform));
+            linksHost.transform.SetParent(c, false);
+            _detailLinksRow = linksHost.GetComponent<RectTransform>();
+            HorizontalLayoutGroup linksHlg = linksHost.AddComponent<HorizontalLayoutGroup>();
+            linksHlg.spacing = 6f;
+            linksHlg.childForceExpandHeight = false;
+            linksHlg.childForceExpandWidth = false;
+            LayoutElement linksRowLe = linksHost.AddComponent<LayoutElement>();
+            linksRowLe.preferredHeight = 26f;
+            linksRowLe.flexibleWidth = 1f;
+            linksHost.SetActive(false); // hidden when no URLs present
 
-            // Dependencies
-            _detailDeps = UiBuilder.MakeText(_detailPane.transform, "DetailDeps",
-                "Dependencies: none", 12, UiBuilder.TextSecondary);
-            LayoutElement depsLe = _detailDeps.gameObject.AddComponent<LayoutElement>();
-            depsLe.preferredHeight = 18f;
-            depsLe.flexibleWidth = 1f;
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
 
-            // Conflicts
-            _detailConflicts = UiBuilder.MakeText(_detailPane.transform, "DetailConflicts",
-                "Conflicts: none", 12, UiBuilder.TextSecondary);
-            LayoutElement conflictsLe = _detailConflicts.gameObject.AddComponent<LayoutElement>();
-            conflictsLe.preferredHeight = 18f;
-            conflictsLe.flexibleWidth = 1f;
+            // ── Dependencies / Conflicts / Load order ────────────────────────
+            _detailDeps = UiBuilder.MakeText(c, "DetailDeps", "Dependencies: none", 12, UiBuilder.TextSecondary);
+            AddFlexRow(_detailDeps.gameObject, preferredHeight: 18f);
 
-            // Load order
-            _detailLoadOrder = UiBuilder.MakeText(_detailPane.transform, "DetailLoadOrder",
-                "Load Order: —", 12, UiBuilder.TextSecondary);
-            LayoutElement loLe = _detailLoadOrder.gameObject.AddComponent<LayoutElement>();
-            loLe.preferredHeight = 18f;
-            loLe.flexibleWidth = 1f;
+            _detailConflicts = UiBuilder.MakeText(c, "DetailConflicts", "Conflicts: none", 12, UiBuilder.TextSecondary);
+            AddFlexRow(_detailConflicts.gameObject, preferredHeight: 18f);
 
-            UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
+            _detailLoadOrder = UiBuilder.MakeText(c, "DetailLoadOrder", "Load Order: —", 12, UiBuilder.TextSecondary);
+            AddFlexRow(_detailLoadOrder.gameObject, preferredHeight: 18f);
 
-            // Content summary
-            _detailContent = UiBuilder.MakeText(_detailPane.transform, "DetailContent",
-                "Content: (none)", 12, new Color(0.6f, 0.85f, 0.6f, 1f));
-            LayoutElement contentLe = _detailContent.gameObject.AddComponent<LayoutElement>();
-            contentLe.preferredHeight = 40f;
-            contentLe.flexibleWidth = 1f;
-            contentLe.flexibleHeight = 0.5f;
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
 
-            // Auto-detected conflicts
-            _detailDetectedConflicts = UiBuilder.MakeText(_detailPane.transform, "DetailDetectedConflicts",
-                "", 12, new Color(0.9f, 0.6f, 0.2f, 1f));
+            // ── Rich content section ─────────────────────────────────────────
+            // Shows count summary + first N item names (units, buildings, factions)
+            _detailRichContent = UiBuilder.MakeText(c, "DetailRichContent", "Content: (none declared)", 12,
+                new Color(0.6f, 0.85f, 0.6f, 1f));
+            LayoutElement richContentLe = _detailRichContent.gameObject.AddComponent<LayoutElement>();
+            richContentLe.preferredHeight = 60f;
+            richContentLe.flexibleWidth = 1f;
+            _detailRichContent.verticalOverflow = VerticalWrapMode.Overflow;
+
+            // Keep the legacy _detailContent / _detailDetectedConflicts wired so
+            // RefreshDetail doesn't crash — but hide them (rich content replaces them).
+            _detailContent = _detailRichContent; // alias — same text field
+            _detailDetectedConflicts = UiBuilder.MakeText(c, "DetailDetectedConflicts", "", 12,
+                new Color(0.9f, 0.6f, 0.2f, 1f));
             LayoutElement dcLe = _detailDetectedConflicts.gameObject.AddComponent<LayoutElement>();
             dcLe.preferredHeight = 30f;
             dcLe.flexibleWidth = 1f;
-            dcLe.flexibleHeight = 0.5f;
+            _detailDetectedConflicts.verticalOverflow = VerticalWrapMode.Overflow;
 
-            UiBuilder.MakeHorizontalSeparator(_detailPane.transform, UiBuilder.Border);
+            // ── Screenshot gallery ───────────────────────────────────────────
+            // Horizontal scroll strip of 200×150 thumbnails; hidden when no screenshots.
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
 
-            // Action buttons row
+            GameObject galleryHost = new GameObject("GalleryRow", typeof(RectTransform));
+            galleryHost.transform.SetParent(c, false);
+            _detailGalleryRow = galleryHost.GetComponent<RectTransform>();
+            LayoutElement galleryRowLe = galleryHost.AddComponent<LayoutElement>();
+            galleryRowLe.preferredHeight = 160f;
+            galleryRowLe.flexibleWidth = 1f;
+            galleryHost.SetActive(false); // hidden until screenshots found
+
+            // Horizontal scroll view for thumbnails
+            (ScrollRect galleryScroll, RectTransform galleryContent) =
+                BuildHorizontalScrollView(galleryHost.transform, "GalleryScroll");
+            RectTransform galleryScrollRt = galleryScroll.GetComponent<RectTransform>();
+            UiBuilder.FillParent(galleryScrollRt);
+
+            // We lazily populate galleryContent in RefreshDetail via the _detailGalleryRow tag.
+            // Store the content RT by tagging the galleryHost for later lookup.
+            galleryHost.name = "GalleryRow";
+
+            // ── Fixed action-buttons row (outside scroll) ────────────────────
             GameObject btnRow = new GameObject("ActionButtons", typeof(RectTransform));
             btnRow.transform.SetParent(_detailPane.transform, false);
             HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
             btnHlg.spacing = 8f;
             btnHlg.childForceExpandHeight = false;
             btnHlg.childForceExpandWidth = false;
+            btnHlg.padding = new RectOffset(14, 14, 6, 6);
             LayoutElement btnRowLe = btnRow.AddComponent<LayoutElement>();
-            btnRowLe.preferredHeight = 32f;
+            btnRowLe.preferredHeight = 40f;
+            btnRowLe.minHeight = 40f;
 
             Button toggleBtn = UiBuilder.MakeButton(
                 btnRow.transform, "ToggleBtn", "Disable",
@@ -517,6 +598,86 @@ namespace DINOForge.Runtime.UI
             toggleBtnLe.preferredWidth = 90f;
             toggleBtnLe.minWidth = 90f;
             toggleBtnLe.preferredHeight = 30f;
+
+            // ── Screenshot modal (full-size overlay, initially hidden) ────────
+            BuildScreenshotModal();
+        }
+
+        /// <summary>Adds a LayoutElement to a GO that occupies one full-width row.</summary>
+        private static void AddFlexRow(GameObject go, float preferredHeight)
+        {
+            LayoutElement le = go.AddComponent<LayoutElement>();
+            le.preferredHeight = preferredHeight;
+            le.flexibleWidth = 1f;
+        }
+
+        /// <summary>Builds a horizontal-only scroll view (no vertical scroll).</summary>
+        private static (ScrollRect scrollRect, RectTransform content) BuildHorizontalScrollView(Transform parent, string name)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(Mask));
+            go.transform.SetParent(parent, false);
+
+            Image bgImg = go.GetComponent<Image>();
+            bgImg.color = new Color(0f, 0f, 0f, 0f);
+            bgImg.raycastTarget = true;
+
+            Mask mask = go.GetComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            GameObject content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(go.transform, false);
+            RectTransform contentRt = content.GetComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 0f);
+            contentRt.anchorMax = new Vector2(0f, 1f);
+            contentRt.pivot = new Vector2(0f, 0.5f);
+            contentRt.offsetMin = Vector2.zero;
+            contentRt.offsetMax = Vector2.zero;
+
+            ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
+            csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            HorizontalLayoutGroup hlg = content.AddComponent<HorizontalLayoutGroup>();
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = true;
+            hlg.spacing = 6f;
+            hlg.padding = new RectOffset(4, 4, 4, 4);
+
+            ScrollRect scrollRect = go.GetComponent<ScrollRect>();
+            scrollRect.content = contentRt;
+            scrollRect.horizontal = true;
+            scrollRect.vertical = false;
+            scrollRect.scrollSensitivity = 20f;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.viewport = go.GetComponent<RectTransform>();
+
+            return (scrollRect, contentRt);
+        }
+
+        /// <summary>Builds the full-screen screenshot modal (hidden by default).</summary>
+        private void BuildScreenshotModal()
+        {
+            if (_panelRt == null) return;
+            _screenshotModal = UiBuilder.MakePanel(_panelRt, "ScreenshotModal",
+                new Color(0f, 0f, 0f, 0.88f), Vector2.zero);
+            UiBuilder.FillParent(_screenshotModal.GetComponent<RectTransform>());
+
+            // The modal image (fills modal with aspect-ratio letterboxing via AspectRatioFitter)
+            GameObject imgGo = new GameObject("ModalImage", typeof(RectTransform), typeof(Image));
+            imgGo.transform.SetParent(_screenshotModal.transform, false);
+            RectTransform imgRt = imgGo.GetComponent<RectTransform>();
+            imgRt.anchorMin = new Vector2(0.05f, 0.1f);
+            imgRt.anchorMax = new Vector2(0.95f, 0.95f);
+            imgRt.offsetMin = Vector2.zero;
+            imgRt.offsetMax = Vector2.zero;
+            _modalImage = imgGo.GetComponent<Image>();
+            _modalImage.preserveAspect = true;
+
+            // Click anywhere on the modal to close
+            Button closeOverlay = _screenshotModal.AddComponent<Button>();
+            closeOverlay.targetGraphic = _screenshotModal.GetComponent<Image>();
+            closeOverlay.onClick.AddListener(() => _screenshotModal.SetActive(false));
+
+            _screenshotModal.SetActive(false);
         }
 
         private void BuildFooter(Transform parent)
@@ -797,19 +958,44 @@ namespace DINOForge.Runtime.UI
             {
                 if (_detailName != null) _detailName.text = "Select a pack";
                 if (_detailMeta != null) _detailMeta.text = "";
+                if (_detailLicense != null) _detailLicense.text = "";
                 if (_detailDesc != null) _detailDesc.text = "";
                 if (_detailDeps != null) _detailDeps.text = "Dependencies: none";
                 if (_detailConflicts != null) _detailConflicts.text = "Conflicts: none";
                 if (_detailLoadOrder != null) _detailLoadOrder.text = "Load Order: —";
                 if (_detailContent != null) _detailContent.text = "Content: (none)";
                 if (_detailDetectedConflicts != null) _detailDetectedConflicts.text = "";
+                if (_detailTagsRow != null) _detailTagsRow.gameObject.SetActive(false);
+                if (_detailLinksRow != null) _detailLinksRow.gameObject.SetActive(false);
+                if (_detailGalleryRow != null) _detailGalleryRow.gameObject.SetActive(false);
                 return;
             }
 
             PackDisplayInfo p = selected;
 
+            // ── Name ──────────────────────────────────────────────────────────
             if (_detailName != null) _detailName.text = p.Name;
+
+            // ── Meta + license badge ──────────────────────────────────────────
             if (_detailMeta != null) _detailMeta.text = $"by {p.Author}  ·  {p.Type}  ·  v{p.Version}";
+            if (_detailLicense != null)
+            {
+                if (!string.IsNullOrEmpty(p.License))
+                {
+                    _detailLicense.text = $"[{p.License}]";
+                    _detailLicense.gameObject.SetActive(true);
+                }
+                else
+                {
+                    _detailLicense.text = "";
+                    _detailLicense.gameObject.SetActive(false);
+                }
+            }
+
+            // ── Tags row ──────────────────────────────────────────────────────
+            RefreshTagsRow(p);
+
+            // ── Description ───────────────────────────────────────────────────
             if (_detailDesc != null)
             {
                 string descText = string.IsNullOrEmpty(p.Description)
@@ -825,6 +1011,10 @@ namespace DINOForge.Runtime.UI
                 _detailDesc.text = descText;
             }
 
+            // ── External links row ────────────────────────────────────────────
+            RefreshLinksRow(p);
+
+            // ── Deps / Conflicts / Load order ─────────────────────────────────
             if (_detailDeps != null)
             {
                 _detailDeps.text = p.Dependencies.Count == 0
@@ -844,26 +1034,49 @@ namespace DINOForge.Runtime.UI
                 _detailLoadOrder.text = $"Load Order: {p.LoadOrder}";
             }
 
-            if (_detailContent != null)
+            // ── Rich content section ──────────────────────────────────────────
+            if (_detailRichContent != null)
             {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder(512);
                 if (p.ContentSummary.Count == 0)
                 {
-                    _detailContent.text = "Content: (none declared)";
+                    sb.Append("Content: (none declared)");
                 }
                 else
                 {
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
                     sb.Append("<color=#88dd88>Content:</color>\n");
                     foreach (System.Collections.Generic.KeyValuePair<string, int> kv in p.ContentSummary)
                     {
-                        // #896: friendlier label — "26 units" instead of "units: 26 file(s)".
                         string label = kv.Key.Replace('_', ' ');
                         sb.Append($"  {kv.Value} {label}\n");
                     }
-                    _detailContent.text = sb.ToString().TrimEnd('\n');
+
+                    // Show first N unit / building / faction names as previews
+                    if (p.UnitNames.Count > 0)
+                    {
+                        int shown = System.Math.Min(5, p.UnitNames.Count);
+                        string preview = string.Join(", ", SubList(p.UnitNames, shown));
+                        string more = p.UnitNames.Count > shown ? $" and {p.UnitNames.Count - shown} more" : "";
+                        sb.Append($"\n<color=#aaddaa>Units: </color>{preview}{more}\n");
+                    }
+                    if (p.BuildingNames.Count > 0)
+                    {
+                        int shown = System.Math.Min(3, p.BuildingNames.Count);
+                        string preview = string.Join(", ", SubList(p.BuildingNames, shown));
+                        string more = p.BuildingNames.Count > shown ? $" and {p.BuildingNames.Count - shown} more" : "";
+                        sb.Append($"<color=#aaddaa>Buildings: </color>{preview}{more}\n");
+                    }
+                    if (p.FactionNames.Count > 0)
+                    {
+                        string factionList = string.Join(", ", p.FactionNames);
+                        sb.Append($"<color=#aaddaa>Factions: </color>{factionList}\n");
+                    }
                 }
+
+                _detailRichContent.text = sb.ToString().TrimEnd('\n');
             }
 
+            // ── Detected conflicts ────────────────────────────────────────────
             if (_detailDetectedConflicts != null)
             {
                 if (p.DetectedConflicts.Count == 0)
@@ -877,7 +1090,10 @@ namespace DINOForge.Runtime.UI
                 }
             }
 
-            // Update toggle button label
+            // ── Screenshot gallery (lazy-load textures via coroutine) ─────────
+            RefreshGallery(p);
+
+            // ── Toggle button label ───────────────────────────────────────────
             if (_detailPane != null)
             {
                 Transform btnRow = _detailPane.transform.Find("ActionButtons");
@@ -894,13 +1110,314 @@ namespace DINOForge.Runtime.UI
             }
         }
 
+        /// <summary>Populates the tags chip row for the selected pack.</summary>
+        private void RefreshTagsRow(PackDisplayInfo p)
+        {
+            if (_detailTagsRow == null) return;
+            // Clear existing chips
+            for (int i = _detailTagsRow.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _detailTagsRow.GetChild(i);
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
+
+            if (p.Tags.Count == 0)
+            {
+                _detailTagsRow.gameObject.SetActive(false);
+                return;
+            }
+
+            _detailTagsRow.gameObject.SetActive(true);
+            // Cycle through a small set of muted accent colours for variety
+            Color[] chipColors = new Color[]
+            {
+                UiBuilder.HexColor("#2a4a38", 1f),
+                UiBuilder.HexColor("#3a3420", 1f),
+                UiBuilder.HexColor("#2a3a4a", 1f),
+                UiBuilder.HexColor("#4a2a38", 1f),
+            };
+            int colorIdx = 0;
+            foreach (string tag in p.Tags)
+            {
+                if (string.IsNullOrWhiteSpace(tag)) continue;
+                Color chipBg = chipColors[colorIdx % chipColors.Length];
+                colorIdx++;
+
+                GameObject chip = UiBuilder.MakePanel(_detailTagsRow, $"Tag_{tag}",
+                    chipBg, new Vector2(0f, 20f));
+                HorizontalLayoutGroup chipHlg = chip.AddComponent<HorizontalLayoutGroup>();
+                chipHlg.padding = new RectOffset(6, 6, 2, 2);
+                chipHlg.childForceExpandWidth = false;
+                LayoutElement chipLe = chip.AddComponent<LayoutElement>();
+                chipLe.preferredHeight = 20f;
+
+                Text chipText = UiBuilder.MakeText(chip.transform, "TagLabel", tag, 10,
+                    UiBuilder.TextPrimary, bold: false, TextAnchor.MiddleCenter);
+                LayoutElement textLe = chipText.gameObject.AddComponent<LayoutElement>();
+                textLe.preferredWidth = tag.Length * 6.5f + 12f; // threshold-ok: character-width estimate
+                textLe.minWidth = 20f;
+            }
+        }
+
+        /// <summary>Populates the external-links button row (homepage, GitHub, Discord).</summary>
+        private void RefreshLinksRow(PackDisplayInfo p)
+        {
+            if (_detailLinksRow == null) return;
+            // Clear existing buttons
+            for (int i = _detailLinksRow.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _detailLinksRow.GetChild(i);
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
+
+            bool hasLinks = !string.IsNullOrEmpty(p.HomepageUrl)
+                || !string.IsNullOrEmpty(p.GithubUrl)
+                || !string.IsNullOrEmpty(p.DiscordUrl);
+
+            if (!hasLinks)
+            {
+                _detailLinksRow.gameObject.SetActive(false);
+                return;
+            }
+
+            _detailLinksRow.gameObject.SetActive(true);
+
+            void MakeLinkBtn(string label, string? url, Color accent)
+            {
+                if (string.IsNullOrEmpty(url)) return;
+                string capturedUrl = url!;
+                Button btn = UiBuilder.MakeButton(_detailLinksRow, $"Btn_{label}",
+                    label, UiBuilder.BgSurface, accent,
+                    () =>
+                    {
+                        try { Application.OpenURL(capturedUrl); }
+                        catch { } // safe-swallow: OpenURL is best-effort
+                    });
+                LayoutElement le = btn.gameObject.AddComponent<LayoutElement>();
+                le.preferredWidth = label.Length * 7f + 20f; // threshold-ok: button width estimate
+                le.minWidth = 60f;
+                le.preferredHeight = 24f;
+            }
+
+            MakeLinkBtn("🌐 Homepage", p.HomepageUrl, UiBuilder.Accent);
+            MakeLinkBtn("⌥ GitHub", p.GithubUrl, UiBuilder.TextPrimary);
+            MakeLinkBtn("💬 Discord", p.DiscordUrl, UiBuilder.HexColor("#7289da", 1f));
+        }
+
+        /// <summary>Populates the screenshot gallery strip; lazy-loads PNG/JPG textures via coroutine.</summary>
+        private void RefreshGallery(PackDisplayInfo p)
+        {
+            if (_detailGalleryRow == null) return;
+
+            // Clear old thumbnails
+            _galleryThumbs.Clear();
+            Transform galleryScroll = _detailGalleryRow.Find("GalleryScroll");
+            if (galleryScroll != null)
+            {
+                Transform content = galleryScroll.Find("Content");
+                if (content != null)
+                {
+                    for (int i = content.childCount - 1; i >= 0; i--)
+                    {
+                        Transform child = content.GetChild(i);
+                        child.SetParent(null, false);
+                        Destroy(child.gameObject);
+                    }
+                }
+            }
+
+            if (p.ScreenshotPaths.Count == 0)
+            {
+                _detailGalleryRow.gameObject.SetActive(false);
+                return;
+            }
+
+            _detailGalleryRow.gameObject.SetActive(true);
+
+            if (galleryScroll == null) return;
+            Transform galleryContent = galleryScroll.Find("Content");
+            if (galleryContent == null) return;
+
+            // Spawn placeholder cards and kick off the texture load coroutine
+            for (int i = 0; i < p.ScreenshotPaths.Count; i++)
+            {
+                int capturedIdx = i;
+                string imgPath = p.ScreenshotPaths[i];
+
+                // Thumbnail card (200 × 150)
+                GameObject thumbCard = UiBuilder.MakePanel(galleryContent, $"Thumb_{i}",
+                    UiBuilder.BgSurface, new Vector2(200f, 150f));
+                LayoutElement thumbLe = thumbCard.AddComponent<LayoutElement>();
+                thumbLe.preferredWidth = 200f;
+                thumbLe.minWidth = 200f;
+                thumbLe.preferredHeight = 150f;
+                thumbLe.minHeight = 150f;
+
+                // The image placeholder (starts grey, filled by coroutine)
+                Image thumbImg = thumbCard.GetComponent<Image>();
+                thumbImg.preserveAspect = true;
+                _galleryThumbs.Add(thumbImg);
+
+                // "Loading…" label
+                Text loadingTxt = UiBuilder.MakeText(thumbCard.transform, "Loading",
+                    "…", 11, UiBuilder.TextSecondary, bold: false, TextAnchor.MiddleCenter);
+                UiBuilder.FillParent(loadingTxt.GetComponent<RectTransform>());
+
+                // Click to open full-size in modal
+                Button thumbBtn = thumbCard.AddComponent<Button>();
+                thumbBtn.targetGraphic = thumbImg;
+                int idx = capturedIdx;
+                thumbBtn.onClick.AddListener(() => OpenScreenshotModal(idx));
+
+                // Start lazy texture load
+                StartCoroutine(LoadTextureAsync(imgPath, thumbImg, loadingTxt));
+            }
+        }
+
+        /// <summary>Coroutine: loads an image file from disk into a Texture2D and assigns it to target.</summary>
+        private System.Collections.IEnumerator LoadTextureAsync(string path, Image target, Text loadingLabel)
+        {
+            yield return null; // yield once so we don't block the frame
+
+            Texture2D? tex = null;
+            try
+            {
+                byte[] bytes = System.IO.File.ReadAllBytes(path);
+                tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!tex.LoadImage(bytes))
+                {
+                    Destroy(tex);
+                    tex = null;
+                }
+            }
+            catch
+            {
+                // safe-swallow: screenshot load is best-effort UI decoration
+            }
+
+            if (target == null) yield break; // UI was destroyed while loading
+
+            if (tex != null)
+            {
+                target.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+                    new Vector2(0.5f, 0.5f));
+                target.color = Color.white;
+                if (loadingLabel != null) Destroy(loadingLabel.gameObject);
+            }
+            else
+            {
+                if (loadingLabel != null) loadingLabel.text = "⚠";
+            }
+        }
+
+        /// <summary>Opens the full-size screenshot modal for the given gallery index.</summary>
+        private void OpenScreenshotModal(int thumbIndex)
+        {
+            if (_screenshotModal == null || _modalImage == null) return;
+            if (thumbIndex < 0 || thumbIndex >= _galleryThumbs.Count) return;
+
+            Image thumbImg = _galleryThumbs[thumbIndex];
+            if (thumbImg == null || thumbImg.sprite == null) return;
+
+            _modalImage.sprite = thumbImg.sprite;
+            _screenshotModal.SetActive(true);
+        }
+
+        /// <summary>Returns the first <paramref name="count"/> elements of a read-only list.</summary>
+        private static IEnumerable<string> SubList(IReadOnlyList<string> list, int count)
+        {
+            for (int i = 0; i < count && i < list.Count; i++)
+                yield return list[i];
+        }
+
         private void OnToggleSelected()
         {
-            if (!_presenter.TryToggleEnabled(_presenter.SelectedIndex, out PackDisplayInfo updated)) return;
+            int index = _presenter.SelectedIndex;
+            if (!_presenter.IsValidIndex(index)) return;
+
+            PackDisplayInfo current = _presenter.Packs[index];
+
+            // Only prompt when the user is enabling (not disabling) a pack.
+            if (!current.IsEnabled)
+            {
+                List<string> missingDeps = CollectMissingDeps(current);
+                if (missingDeps.Count > 0 && _canvasRoot != null)
+                {
+                    // Show the dependency dialog; defer the actual enable until the user confirms.
+                    DepEnableDialog.Show(
+                        _canvasRoot,
+                        current.Name,
+                        missingDeps,
+                        onEnableAll: () =>
+                        {
+                            // Enable each missing dependency first, then the target pack.
+                            foreach (string depId in missingDeps)
+                            {
+                                int depIdx = FindPackIndexById(depId);
+                                if (depIdx < 0) continue;
+                                if (!_presenter.TryToggleEnabled(depIdx, out PackDisplayInfo depUpdated)) continue;
+                                OnPackToggled?.Invoke(depUpdated.Id, depUpdated.IsEnabled);
+                            }
+
+                            // Now enable the originally-selected pack.
+                            if (_presenter.TryToggleEnabled(index, out PackDisplayInfo updated))
+                            {
+                                ClearCurrentSelection();
+                                OnPackToggled?.Invoke(updated.Id, updated.IsEnabled);
+                                QueueListRefresh();
+                            }
+                        },
+                        onCancel: () =>
+                        {
+                            // Nothing to do — toggle was not applied.
+                            _log?.LogInfo($"[ModMenuPanel] Dependency prompt cancelled for pack '{current.Id}'.");
+                        });
+                    return; // Dialog is showing; do not proceed with the toggle now.
+                }
+            }
+
+            // No missing deps (or disabling) — apply the toggle immediately.
+            if (!_presenter.TryToggleEnabled(index, out PackDisplayInfo immediateUpdated)) return;
 
             ClearCurrentSelection();
-            OnPackToggled?.Invoke(updated.Id, updated.IsEnabled);
+            OnPackToggled?.Invoke(immediateUpdated.Id, immediateUpdated.IsEnabled);
             QueueListRefresh();
+        }
+
+        /// <summary>
+        /// Returns the IDs of dependencies that are declared by <paramref name="pack"/>
+        /// but are currently disabled (or not present) in the presenter pack list.
+        /// </summary>
+        private List<string> CollectMissingDeps(PackDisplayInfo pack)
+        {
+            List<string> missing = new List<string>();
+            foreach (string depId in pack.Dependencies)
+            {
+                bool depEnabled = false;
+                foreach (PackDisplayInfo p in _presenter.Packs)
+                {
+                    if (string.Equals(p.Id, depId, StringComparison.Ordinal) && p.IsEnabled)
+                    {
+                        depEnabled = true;
+                        break;
+                    }
+                }
+                if (!depEnabled) missing.Add(depId);
+            }
+            return missing;
+        }
+
+        /// <summary>Returns the presenter index of the pack with <paramref name="packId"/>, or -1.</summary>
+        private int FindPackIndexById(string packId)
+        {
+            for (int i = 0; i < _presenter.Packs.Count; i++)
+            {
+                if (string.Equals(_presenter.Packs[i].Id, packId, StringComparison.Ordinal))
+                    return i;
+            }
+            return -1;
         }
 
         private void QueueListRefresh()
@@ -929,6 +1446,144 @@ namespace DINOForge.Runtime.UI
                 }
             }
             catch { } // safe-swallow: UI selection cleanup is best-effort
+        }
+
+        // ── HMR notification API ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Displays a transient toast notification at the top of the panel.
+        /// Falls back to updating the status line when the HUD strip is unavailable.
+        /// Safe to call from any thread — delegates via the Unity main-thread coroutine.
+        /// </summary>
+        /// <param name="message">Text to show.</param>
+        /// <param name="kind">Visual severity (Info / Warning / Error).</param>
+        public void ShowToast(string message, HotReload.HmrToastKind kind)
+        {
+            // Map HmrToastKind to the existing DINOForge ToastType (defined in HudStrip.cs).
+            ToastType toastType = kind switch
+            {
+                HotReload.HmrToastKind.Warning => ToastType.Warning,
+                HotReload.HmrToastKind.Error => ToastType.Error,
+                _ => ToastType.Info,
+            };
+
+            // Best-effort: set status so the header always reflects the last toast.
+            SetStatus(message, kind == HotReload.HmrToastKind.Error ? 1 : 0);
+
+            // Propagate to the DFCanvas HudStrip toast if we can reach it.
+            try
+            {
+                DFCanvas? canvas = GetComponentInParent<DFCanvas>();
+                canvas?.ShowToast(message, toastType);
+            }
+            catch { } // safe-swallow: toast fallback is best-effort UI only
+        }
+
+        /// <summary>
+        /// Shows a blocking-style confirmation dialog overlay inside the mod menu panel.
+        /// Presents <paramref name="message"/> with "Yes" and "No" buttons.
+        /// Callbacks are invoked on the Unity main thread (inside the dialog button click handlers).
+        /// </summary>
+        /// <param name="message">Body text of the confirmation prompt.</param>
+        /// <param name="onConfirm">Called when the user presses "Yes".</param>
+        /// <param name="onCancel">Called when the user presses "No" or dismisses.</param>
+        public void ShowConfirmDialog(string message, Action onConfirm, Action onCancel)
+        {
+            if (_panelRt == null)
+            {
+                // Panel not yet built — fall back to executing cancel immediately.
+                onCancel?.Invoke();
+                return;
+            }
+
+            // Build a dimmed overlay that blocks interaction with the pack list beneath it.
+            GameObject overlay = new GameObject("HmrConfirmOverlay", typeof(RectTransform));
+            overlay.transform.SetParent(_panelRt, false);
+            RectTransform overlayRt = overlay.GetComponent<RectTransform>();
+            overlayRt.anchorMin = Vector2.zero;
+            overlayRt.anchorMax = Vector2.one;
+            overlayRt.offsetMin = Vector2.zero;
+            overlayRt.offsetMax = Vector2.zero;
+
+            // Dimmed backdrop
+            Image backdrop = overlay.AddComponent<Image>();
+            backdrop.color = new Color(0f, 0f, 0f, 0.72f);
+            backdrop.raycastTarget = true;
+
+            // Dialog box
+            GameObject dialog = UiBuilder.MakePanel(overlay.transform, "DialogBox",
+                UiBuilder.BgSurface, new Vector2(380f, 200f));
+            RectTransform dialogRt = dialog.GetComponent<RectTransform>();
+            dialogRt.anchorMin = new Vector2(0.5f, 0.5f);
+            dialogRt.anchorMax = new Vector2(0.5f, 0.5f);
+            dialogRt.pivot = new Vector2(0.5f, 0.5f);
+            dialogRt.anchoredPosition = Vector2.zero;
+
+            VerticalLayoutGroup vlg = dialog.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 10f;
+            vlg.padding = new RectOffset(16, 16, 14, 14);
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            // Title
+            Text titleText = UiBuilder.MakeText(dialog.transform, "DialogTitle",
+                "DINOForge — Mod Reload", 14, UiBuilder.Accent, bold: true);
+            LayoutElement titleLe = titleText.gameObject.AddComponent<LayoutElement>();
+            titleLe.preferredHeight = 20f;
+
+            // Body
+            Text bodyText = UiBuilder.MakeText(dialog.transform, "DialogBody", message,
+                12, UiBuilder.TextPrimary);
+            bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            bodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            LayoutElement bodyLe = bodyText.gameObject.AddComponent<LayoutElement>();
+            bodyLe.preferredHeight = 90f;
+            bodyLe.flexibleHeight = 1f;
+
+            // Button row
+            GameObject btnRow = new GameObject("BtnRow", typeof(RectTransform));
+            btnRow.transform.SetParent(dialog.transform, false);
+            HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
+            btnHlg.spacing = 10f;
+            btnHlg.childForceExpandHeight = false;
+            btnHlg.childForceExpandWidth = false;
+            btnHlg.childAlignment = TextAnchor.MiddleRight;
+            LayoutElement btnRowLe = btnRow.AddComponent<LayoutElement>();
+            btnRowLe.preferredHeight = 34f;
+            btnRowLe.flexibleWidth = 1f;
+
+            // Spacer pushes buttons to the right
+            GameObject spacer = new GameObject("Spacer", typeof(RectTransform));
+            spacer.transform.SetParent(btnRow.transform, false);
+            LayoutElement spacerLe = spacer.AddComponent<LayoutElement>();
+            spacerLe.flexibleWidth = 1f;
+
+            Button cancelBtn = UiBuilder.MakeButton(
+                btnRow.transform, "CancelBtn", "No — keep playing",
+                UiBuilder.BgDeep, UiBuilder.TextSecondary,
+                () =>
+                {
+                    Destroy(overlay);
+                    onCancel?.Invoke();
+                });
+            LayoutElement cancelLe = cancelBtn.gameObject.AddComponent<LayoutElement>();
+            cancelLe.preferredWidth = 130f;
+            cancelLe.preferredHeight = 30f;
+
+            Button confirmBtn = UiBuilder.MakeButton(
+                btnRow.transform, "ConfirmBtn", "Yes — reload",
+                UiBuilder.Accent, Color.black,
+                () =>
+                {
+                    Destroy(overlay);
+                    onConfirm?.Invoke();
+                });
+            LayoutElement confirmLe = confirmBtn.gameObject.AddComponent<LayoutElement>();
+            confirmLe.preferredWidth = 110f;
+            confirmLe.preferredHeight = 30f;
+
+            // Ensure panel is visible so user sees the dialog.
+            if (!IsVisible) Show();
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────────

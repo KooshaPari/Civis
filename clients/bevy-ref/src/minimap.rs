@@ -1,7 +1,7 @@
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::{ClearColorConfig, RenderTarget, ScalingMode};
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::Civilian as AgentCivilian;
@@ -58,13 +58,17 @@ fn setup_minimap_render_target(
         height: MINIMAP_TEXTURE_SIZE,
         depth_or_array_layers: 1,
     };
-    let image = Image::new_fill(
+    let mut image = Image::new_fill(
         extent,
         TextureDimension::D2,
         &[24, 32, 40, 255],
         TextureFormat::Bgra8UnormSrgb,
         RenderAssetUsages::RENDER_WORLD,
     );
+    // A camera render target must advertise RENDER_ATTACHMENT; the default
+    // texture usages (TEXTURE_BINDING | COPY_SRC | COPY_DST) are insufficient
+    // and wgpu 27 rejects the color attachment otherwise.
+    image.texture_descriptor.usage |= TextureUsages::RENDER_ATTACHMENT;
     let handle = images.add(image);
     commands.insert_resource(MinimapRenderTarget {
         image: handle.clone(),

@@ -1,0 +1,50 @@
+name: Dev Parity
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test and lint
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Web checks
+        run: |
+          cd web
+          npm test
+
+  clients:
+    strategy:
+      matrix:
+        include:
+          - name: godot
+            os: ubuntu-latest
+            command: cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+          - name: bevy
+            os: ubuntu-latest
+            command: cargo build -p civ-bevy-ref
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.command }}

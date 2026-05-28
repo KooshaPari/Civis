@@ -137,10 +137,13 @@ pub fn animate_water(
 pub fn update_lighting(
     cycle: Res<DayNightCycle>,
     mut clear_color: ResMut<ClearColor>,
-    mut sun_query: Query<&mut DirectionalLight, With<SunLight>>,
+    mut sun_query: Query<&mut DirectionalLight, (With<SunLight>, Without<MoonLight>)>,
     mut sun_transform_query: Query<&mut Transform, (With<SunLight>, Without<MoonLight>)>,
-    mut moon_query: Query<(&mut DirectionalLight, &mut Transform, &mut Visibility), With<MoonLight>>,
-    mut star_query: Query<&mut Visibility, With<StarField>>,
+    mut moon_query: Query<
+        (&mut DirectionalLight, &mut Transform, &mut Visibility),
+        (With<MoonLight>, Without<SunLight>, Without<StarField>),
+    >,
+    mut star_query: Query<&mut Visibility, (With<StarField>, Without<MoonLight>)>,
 ) {
     let t = cycle.time_of_day;
     let sun_angle = t * TAU - PI * 0.5;

@@ -44,9 +44,15 @@ fn main() {
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
+        .add_systems(Startup, setup_atmosphere)
         .add_systems(
             Startup,
-            (setup_atmosphere, setup_world, spawn_decorations).chain(),
+            (
+                setup_camera,
+                setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
+                spawn_decorations.run_if(in_sandbox_attach_mode),
+            )
+                .chain(),
         )
         .add_systems(
             Update,
@@ -60,16 +66,22 @@ fn main() {
     app.run();
 }
 
-fn setup_world(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
+    *mode == AttachMode::Standalone
+}
+
+fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(60.0, 80.0, 60.0).looking_at(Vec3::new(128.0, 30.0, 128.0), Vec3::Y),
     ));
+}
 
+fn setup_sandbox_terrain(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     let terrain = terrain_mesh();
     commands.spawn((
         Mesh3d(meshes.add(terrain)),

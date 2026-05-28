@@ -9,6 +9,7 @@ use civ_engine::Building;
 
 use crate::sim_bridge::SimState;
 use crate::terrain::WORLD_SIZE;
+use crate::AttachMode;
 
 /// Minimap side length in UI pixels.
 pub const MINIMAP_SIZE: f32 = 200.0;
@@ -26,13 +27,13 @@ struct MinimapRenderTarget {
 }
 
 #[derive(Component)]
-struct MinimapRoot;
+pub struct MinimapRoot;
 
 #[derive(Component)]
-struct MinimapDot;
+pub struct MinimapDot;
 
 #[derive(Component)]
-struct MinimapCamera;
+pub struct MinimapCamera;
 
 /// Plugin that renders a top-down minimap and lets the player click to teleport the main camera.
 pub struct MinimapPlugin;
@@ -152,11 +153,15 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 }
 
 fn sync_minimap_dots(
+    attach: Res<AttachMode>,
     sim: Res<SimState>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
 ) {
+    if *attach == AttachMode::Server {
+        return;
+    }
     if !sim.is_changed() {
         return;
     }

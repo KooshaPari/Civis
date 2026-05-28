@@ -163,6 +163,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
 | FR-CIV-BEVY-001 | `civ-standalone` gameplay plugins (sim tick, HUD, spawn tools, minimap). | `clients/bevy-ref` | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
 | FR-CIV-BEVY-002 | `civ-standalone` live WS attach + render-to-texture minimap. | `clients/bevy-ref` (`live_attach`, `minimap`) | `resolve_attach_mode_*`, `cargo check … civ-standalone` | implemented |
+| FR-CIV-BEVY-003 | Live attach scene sync (`Frame3d` voxel/agent streams) in `civ-standalone`. | `clients/bevy-ref` (`live_scene`) | `cargo check … civ-standalone`, server attach smoke | implemented |
 
 ---
 

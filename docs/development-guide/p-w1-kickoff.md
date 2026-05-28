@@ -78,6 +78,7 @@
 | FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
 | FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
 | FR-CIV-BEVY-001 | implemented | `civ-standalone` gameplay plugins (sim bridge, HUD, spawn tools, minimap) |
+| FR-CIV-BEVY-002 | implemented | live attach scene sync (`live_scene`: voxel chunks + agent markers from `Frame3d`) |
 
 ## First PR slice (recommended)
 
@@ -107,7 +108,8 @@
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
 25. **Bevy gameplay client** — **done** (item 26): export gameplay modules in `civ-bevy-ref`, `civ-standalone` with `bevy,egui`, sim tick + spawn-tool → `Simulation`, HUD/minimap plugins.
 26. **Live WS attach + render-to-texture minimap** — **done** (item 27): `civ-standalone` server attach via `CIVIS_ATTACH=server` / `CIV_WS_URL`, `LiveAttachPlugin`, RTT minimap camera.
-27. **Next:** extend live attach scene sync (voxel/agent frames) in standalone mode.
+27. **Live attach scene sync** — **done** (item 28): `live_scene` applies `Frame3d::VoxelDelta` / `AgentAppearance`; server mode skips sandbox terrain; minimap dots from live chunks/agents.
+28. **Next:** building-diff frames + agent world positions from server (protocol extension).
 
 ## Run
 

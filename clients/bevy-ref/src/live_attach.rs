@@ -1,9 +1,9 @@
 //! Live WebSocket attach for `civ-standalone` (server mode parity with `civ-bevy-window`).
 
 use bevy::prelude::*;
-use civ_protocol_3d::Frame3d;
 
 use crate::atmosphere::DayNightCycle;
+use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, WsSpectatorMeta};
 
@@ -28,14 +28,15 @@ pub struct LiveAttachPlugin;
 
 impl Plugin for LiveAttachPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<LiveAttachState>()
+        app.add_plugins(LiveScenePlugin)
+            .init_resource::<LiveAttachState>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
                     WsClientConfig::default(),
                 ),
             })
-            .add_systems(Update, (poll_live_meta, poll_live_frames));
+            .add_systems(Update, poll_live_meta);
         #[cfg(feature = "egui")]
         app.add_systems(Update, sync_live_game_ui);
     }
@@ -48,19 +49,6 @@ fn poll_live_meta(
 ) {
     for meta in bridge.client.poll_meta() {
         apply_snapshot_meta(&mut state, &mut day_night, meta);
-    }
-}
-
-fn poll_live_frames(bridge: Res<LiveAttachBridge>, mut state: ResMut<LiveAttachState>) {
-    let frames = bridge.client.poll();
-    if frames.is_empty() {
-        return;
-    }
-    state.connected = true;
-    for frame in frames {
-        if let Some(tick) = tick_from_frame(&frame) {
-            state.tick = Some(tick);
-        }
     }
 }
 
@@ -88,10 +76,6 @@ fn apply_snapshot_meta(
         state.tick = Some(tick);
     }
     day_night.set_from_is_day(meta.is_day);
-}
-
-fn tick_from_frame(frame: &Frame3d) -> Option<u64> {
-    Some(frame.tick())
 }
 
 /// Returns true when the standalone client should attach to `civ-server` instead of in-process sim.

@@ -39,8 +39,9 @@ unused:
 # Full local CI sweep (install cargo-deny for audit: cargo install cargo-deny)
 ci: lint test audit unused
 
-# Phenotype-aligned alias: Rust + optional infra note in README
-quality: civis-3d-verify
+# Lint + audit + format check.
+quality: lint audit
+    cargo fmt --check
 
 # Emit `.ci/quality-manifest.json` after local gates (for cloud CI verification).
 quality-manifest:
@@ -112,7 +113,11 @@ civis-3d-bevy-window:
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+
+# Standalone client attached to civ-server (requires server running on :3000).
+civis-3d-standalone-live:
+    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
@@ -136,7 +141,46 @@ civis-3d-watch-build:
 godot-test:
     cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
 
-# Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
+# Full local dev stack: infra + civ-watch.
+dev:
+    process-compose up
+
+# Tear down the local dev stack.
+dev-stop:
+    process-compose down
+
+# Build and run the Bevy desktop client.
+play:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
+# Build all clients.
+build-all:
+    cargo build -p civ-bevy-ref
+    cargo build --manifest-path clients/godot-ref/rust/Cargo.toml
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\clients\unreal-show\scripts\build.ps1
+
+# Run all available tests.
+test-all:
+    cargo test --workspace
+    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+    cd web && npm test
+
+# Lint, audit, and format checks.
+quality: lint audit
+    cargo fmt --check
+
+# Release build + signing + packaging.
+deploy:
+    cargo build --release --workspace
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sign-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
+
+# Criterion benchmarks.
+bench:
+    cargo bench --workspace
+
+# Native infra + civ-watch stack.
 infra-up:
     process-compose up
 

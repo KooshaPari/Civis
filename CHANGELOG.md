@@ -7,16 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0-dev] - 2026-05-28
+
+### Added
+- **CLI**: `dinoforge build/deploy/relaunch/smoke` commands matching WorldSphereMod wsm3d pattern for single-command workflows (commit 1d33275a, b742246f)
+- **CLI**: `--clean` flag for builds preventing Pattern #233 stale-cache bugs via aggressive obj/bin cleanup
+- **CLI**: `dinoforge pack diff <a> <b>` for visual diffing of two packs side-by-side
+- **CLI**: `dinoforge dev-tools install` bundles UnityExplorer for runtime inspection without external download (commit 0cf468b4)
+- **UI**: `NativeModsPage` — full-screen native menu cloning DINO Options canvas for immersive mod browsing (commit 1d33275a)
+- **UI**: F10 mod browser search/filter/sort with live character-count badge + zebra row striping + section bars (commits 9d59d631, 6dd47121)
+- **UI**: Rich detail pane with mod gallery, clickable dependency links, tags cloud, license badge, and full description (commit 427323a2)
+- **UI**: Loading skeleton overlay during mod initialization to indicate pending pack load state (commit 941d0d44)
+- **UI**: Conflict resolution buttons in detail pane with Show Diff modal for competing pack versions (commit 6dd47121)
+- **UI**: Keyboard navigation in F10 menu — arrow keys, Enter/Esc, Tab, Slash for search focus, Ctrl+R for refresh (commit d8c03f5e)
+- **UI**: Per-pack runtime settings panel (booleans, sliders, enums, text fields) in F10 detail pane (commit f1783888)
+- **Packs**: `ui_theme` schema for total_conversion visual identity (colors, fonts, assets)
+- **Packs**: Classification taxonomy with tier badges (engine_extension, content, total_conversion, baseline) (commit 652bfe9e)
+- **Packs**: PatchOperations for RimWorld-style cross-mod YAML patching without duplicating definitions (commits 9a114011, f1783888)
+- **Packs**: Thunderstore packaging command `dinoforge pack thunderstore <pack>` for mod marketplace distribution (commit 9a114011)
+- **Packs**: Pack signing/verification system with ed25519 keys for trusted distribution (commit ae912208)
+- **Build**: BepInEx.AssemblyPublicizer integration enabling direct ECS/game-assembly access for runtime inspection (commit 880af1f3)
+- **HMR**: Tiered reload (pack-yaml / assets / DLL) with confirmation prompts and rollback capability
+- **Telemetry**: In-memory MetricsCollector with F10 telemetry tab, CLI dump, RPC export, and snapshot capture
+- **Updates**: Auto-check for mod and DINOForge updates via GitHub API with silent background polling
+- **Docs**: Auto-generated stats dashboard (commit 87e1619f) showing mod popularity, compatibility matrix, archetype distribution
+- **Docs**: CODEOWNERS file + PR/issue templates for community contribution workflow
+
 ### Fixed
-- Pre-push unit tests: stabilize GameClient connect/send timeouts under CI load, DumpTools subprocess build-once + kill-on-timeout, framing tests assert timeout values not wall clock.
-- Post-PR188 follow-up: GameLaunch attach-mode bridge restart, Sonar batch-4 exclusions, packages.lock.json refresh for CI.
-- `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.
+- **#904 P0**: Game crash to main menu after new game (background-thread EntityManager race in scene transition) (commit 7fdb1ffc)
+- **#905 P1**: F9 debug panel content duplication when toggled multiple times (Destroy → DestroyImmediate)
+- **#895**: F9/F10 handler keys were swapped; corrected key routing (commit ff1455b2)
+- **#896**: F10 detail pane showed "(none declared)" — now displays real per-category counts
+- **#900**: AssetSwap reflection broken on Mono 2021.3 — generic GetSharedComponentData<T> invocation path
+- **#912**: AssetSwap + PackStatInjector now route to best-world EntityManager for multi-world consistency (commits 7950c005, 6d27ce71)
+
+### Security
+- 3 HIGH findings patched: URL validation in pack manifests, UnityExplorer SHA256 verification, bash path sanitization in asset scripts (#927)
 
 ### Changed
-- `prove-features-gate.ps1`: kill stray game processes before/after live runs (3s verify per Game Launch Protocol); skip cleanup in attach-only mode; resolve `DINO_GAME_PATH` to `.exe` when a directory is set; avoid `exit` inside `try` so `finally` cleanup always runs.
-- GameLaunch bridge ping SLA: 1500ms round-trip on self-hosted (was 500ms/1000ms flake under load).
-- Agent scripts default to `main`; add `scripts/agent-worktrees.ps1` for parallel worktrees under `~/.cursor/worktrees/Dino`.
-- CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.
+- Pattern #221 numeric thresholds extracted to named `const` fields for tuning clarity
+- Pattern #234 test IDs filtered from deployment glob via MSBuild Exclude attribute
+
+### Verified Autonomously
+- Scene transition MainMenu → GameWorldLoader → GameWorld confirmed 5x via Win32 SendInput + BepInEx log monitoring
+- F10 mod browser keypress routing verified on 3 packs with dependency conflicts
+- Thunderstore packaging round-trip validated with integrity hash
+- Per-pack settings persistence verified across reload cycles
 
 ## [0.25.0-dev] - 2026-05-25
 

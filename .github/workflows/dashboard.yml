@@ -1,0 +1,51 @@
+name: Update Stats Dashboard
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up PowerShell
+        run: |
+          # PowerShell 7 is already available on ubuntu-latest
+          pwsh -Version
+
+      - name: Generate stats dashboard
+        run: |
+          pwsh scripts/dinoforge-stats.ps1 -OutputPath docs/dashboard.md
+
+      - name: Check if dashboard changed
+        id: check
+        run: |
+          if git diff --quiet docs/dashboard.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push dashboard
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions"
+          git add docs/dashboard.md
+          git commit -m "chore(docs): auto-update stats dashboard"
+          git push
+
+      - name: Skip commit (no changes)
+        if: steps.check.outputs.changed == 'false'
+        run: |
+          echo "Dashboard is up to date, no changes to commit."

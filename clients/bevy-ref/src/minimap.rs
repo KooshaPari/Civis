@@ -1,30 +1,20 @@
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
-use bevy::ui::widget::ImageNode;
 use civ_agents::Civilian as AgentCivilian;
-use civ_engine::{Building, Simulation};
+use civ_engine::Building;
 
 use crate::sim_bridge::SimState;
 
 /// Minimap side length in UI pixels.
 pub const MINIMAP_SIZE: f32 = 200.0;
-const MINIMAP_TEXTURE_SIZE: u32 = 512;
 const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;
 const MINIMAP_WORLD_MAX: f32 = 256.0;
-const MINIMAP_CAMERA_HEIGHT: f32 = 300.0;
 const MINIMAP_CIVILIAN_DOT: f32 = 4.0;
 const MINIMAP_BUILDING_DOT: f32 = 5.0;
 
-#[derive(Resource)]
-struct MinimapTexture(Handle<Image>);
-
 #[derive(Component)]
 struct MinimapRoot;
-
-#[derive(Component)]
-struct MinimapImage;
 
 #[derive(Component)]
 struct MinimapDot;
@@ -39,72 +29,25 @@ impl Plugin for MinimapPlugin {
     }
 }
 
-fn setup_minimap(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-) {
-    let size = Extent3d {
-        width: MINIMAP_TEXTURE_SIZE,
-        height: MINIMAP_TEXTURE_SIZE,
-        depth_or_array_layers: 1,
-    };
-    let mut image = Image::new_fill(
-        size,
-        TextureDimension::D2,
-        &[8, 16, 24, 255],
-        TextureFormat::Rgba8UnormSrgb,
-    );
-    image.texture_descriptor.usage =
-        TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
-    let image = images.add(image);
-
-    commands.insert_resource(MinimapTexture(image.clone()));
-
+fn setup_minimap(mut commands: Commands) {
     commands.spawn((
-        Camera2d::default(),
-        Camera {
-            order: 10,
-            target: image.clone().into(),
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.03, 0.06, 0.09)),
+        Node {
+            position_type: PositionType::Absolute,
+            right: Val::Px(MINIMAP_INSET),
+            bottom: Val::Px(MINIMAP_INSET),
+            width: Val::Px(MINIMAP_SIZE),
+            height: Val::Px(MINIMAP_SIZE),
+            border: UiRect::all(Val::Px(1.0)),
+            overflow: Overflow::clip(),
             ..default()
         },
-        Transform::from_xyz(128.0, MINIMAP_CAMERA_HEIGHT, 128.0)
-            .looking_at(Vec3::new(128.0, 0.0, 128.0), Vec3::Z),
+        BackgroundColor(Color::srgba(0.02, 0.04, 0.06, 0.94)),
+        BorderColor::all(Color::srgba(0.35, 0.42, 0.50, 0.75)),
+        Interaction::default(),
+        RelativeCursorPosition::default(),
+        FocusPolicy::Pass,
+        MinimapRoot,
     ));
-
-    let root = commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                right: Val::Px(MINIMAP_INSET),
-                bottom: Val::Px(MINIMAP_INSET),
-                width: Val::Px(MINIMAP_SIZE),
-                height: Val::Px(MINIMAP_SIZE),
-                border: UiRect::all(Val::Px(1.0)),
-                overflow: Overflow::clip(),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.02, 0.04, 0.06, 0.94)),
-            BorderColor::all(Color::srgba(0.35, 0.42, 0.50, 0.75)),
-            Interaction::default(),
-            RelativeCursorPosition::default(),
-            FocusPolicy::Pass,
-            MinimapRoot,
-        ))
-        .id();
-
-    commands.entity(root).with_children(|parent| {
-        parent.spawn((
-            ImageNode::new(image),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            MinimapImage,
-            FocusPolicy::Pass,
-        ));
-    });
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {
@@ -126,8 +69,9 @@ fn civilian_color(civilian: &AgentCivilian) -> Color {
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
-fn world_position_for_civilian(civilian: &AgentCivilian, position: &civ_agents::Position3d) -> Vec3 {
-    Vec3::new(position.coord.x as f32, 0.0, position.coord.z as f32)
+fn world_position_for_civilian(_civilian: &AgentCivilian, position: &civ_agents::Position3d) -> Vec3 {
+    let scale = civ_voxel::FIXED_SCALE as f32;
+    Vec3::new(position.coord.x as f32 / scale, 0.0, position.coord.z as f32 / scale)
 }
 
 fn world_position_for_building(building: &Building) -> Vec3 {
@@ -153,7 +97,11 @@ fn sync_minimap_dots(
     };
 
     commands.entity(root).with_children(|parent| {
-        for (_, (civilian, position)) in sim.0.world.query::<(&AgentCivilian, &civ_agents::Position3d)>().iter()
+        for (_, (civilian, position)) in sim
+            .0
+            .world
+            .query::<(&AgentCivilian, &civ_agents::Position3d)>()
+            .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
             parent.spawn((

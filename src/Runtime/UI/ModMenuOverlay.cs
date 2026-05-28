@@ -443,10 +443,10 @@ namespace DINOForge.Runtime.UI
         /// <summary>Pack-specific error messages.</summary>
         public IReadOnlyList<string> Errors { get; }
 
-        /// <summary>Content type counts (e.g. factions:1, units:3).</summary>
+        /// <summary>Content summary: content type name → file count (e.g., "units" → 3, "factions" → 2).</summary>
         public IReadOnlyDictionary<string, int> ContentSummary { get; }
 
-        /// <summary>Auto-detected content-type overlaps with other packs.</summary>
+        /// <summary>Auto-detected content conflicts with other loaded packs (e.g., "warfare-starwars also loads: factions, units").</summary>
         public IReadOnlyList<string> DetectedConflicts { get; }
 
         /// <summary>

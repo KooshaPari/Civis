@@ -65,6 +65,34 @@ namespace DINOForge.Runtime.Bridge
 
         private int _frameCount;
 
+        /// <summary>Whether the one-shot vanilla mesh diagnostic dump has been emitted.</summary>
+        private bool _vanillaMeshDumpDone;
+
+        /// <summary>
+        /// Maximum number of entities to swap per bundle invocation.
+        /// Safety cap to prevent replacing the entire world with one mesh.
+        /// </summary>
+        private const int MaxSwapsPerBundle = 500;
+
+        /// <summary>
+        /// Maps mod bundle name prefixes to vanilla mesh name substrings for selective matching.
+        /// Key = substring found in the bundle filename (case-insensitive).
+        /// Value = list of vanilla mesh name substrings that should be replaced.
+        /// When a bundle's filename contains the key, only entities whose current mesh name
+        /// contains one of the value substrings will be swapped.
+        ///
+        /// This mapping is populated after the first diagnostic dump reveals vanilla mesh names.
+        /// Until the mapping is known, the system runs in DIAGNOSTIC MODE (logs mesh names, skips swap).
+        /// </summary>
+        private static readonly Dictionary<string, string[]> BundleToVanillaMeshMap =
+            new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Populated after diagnostic run identifies vanilla mesh names.
+                // Examples (to be filled in after reading the diagnostic log):
+                // { "clone-trooper",  new[] { "Swordsman", "soldier", "melee" } },
+                // { "clone-barracks", new[] { "Barracks", "barracks" } },
+            };
+
         private static volatile bool _resetPending;
         // Iter-144: dump EntityManager shared-component methods once on reflection failure
         // so we can diagnose Pattern #101 against DINO's actual Unity 2021.3 EntityManager surface.
@@ -359,7 +387,7 @@ namespace DINOForge.Runtime.Bridge
             }
 
             EntityQuery query = EntityManager.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents });
+                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
@@ -369,26 +397,29 @@ namespace DINOForge.Runtime.Bridge
             // Unity 2021.3 EntityManager (overload-resolution mismatch). Mirror the arity-filter
             // pattern used below for SetSharedComponentData: enumerate methods, filter on name,
             // non-generic, arity=2, first param Entity, second param ComponentType.
+            // Mono 4.x type-identity bug: typeof(Entity) != param.ParameterType across assembly
+            // boundaries. Use FullName string comparison instead of reference equality.
             MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
-                    BindingFlags.Public | BindingFlags.Instance)
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
                     m.Name == "GetSharedComponentData"
                     && !m.IsGenericMethodDefinition
                     && m.GetParameters().Length == 2
-                    && m.GetParameters()[0].ParameterType == typeof(Entity)
-                    && m.GetParameters()[1].ParameterType == typeof(ComponentType));
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity"
+                    && (m.GetParameters()[1].ParameterType.FullName == "Unity.Entities.ComponentType"
+                        || m.GetParameters()[1].ParameterType.FullName == "System.Int32"));
             // #101: SetSharedComponentData<T> has multiple overloads (Entity, EntityQuery,
             // NativeArray<Entity>), so plain GetMethod("SetSharedComponentData") throws
             // AmbiguousMatchException. GetMethod(name, types[]) also can't disambiguate
             // open generics (parameter type is T, not a concrete Type). Filter by arity +
             // first-parameter Entity to pin the (Entity, T) overload.
             MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethods(
-                    BindingFlags.Public | BindingFlags.Instance)
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
                     m.Name == "SetSharedComponentData"
                     && m.IsGenericMethodDefinition
                     && m.GetParameters().Length == 2
-                    && m.GetParameters()[0].ParameterType == typeof(Entity));
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
 
             if (getSharedNonGeneric == null || setSharedGeneric == null)
             {
@@ -427,9 +458,99 @@ namespace DINOForge.Runtime.Bridge
             FieldInfo? materialField = renderMeshType.GetField("material");
 
             ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
+
+            // ---- DIAGNOSTIC PASS: log unique vanilla mesh names (one-shot) ----
+            // Uses generic GetSharedComponentData<RenderMesh>(Entity) via MakeGenericMethod
+            // to avoid the Mono type-identity bug with non-generic overload parameter matching.
+            if (!_vanillaMeshDumpDone && meshField != null && setSharedGeneric != null)
+            {
+                _vanillaMeshDumpDone = true;
+                var uniqueMeshNames = new Dictionary<string, int>(StringComparer.Ordinal);
+                int scanned = 0;
+                int errors = 0;
+
+                // Find the generic GetSharedComponentData<T>(Entity) for reading
+                MethodInfo? genericGet = typeof(EntityManager).GetMethods(
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .FirstOrDefault(m =>
+                        m.Name == "GetSharedComponentData"
+                        && m.IsGenericMethodDefinition
+                        && m.GetParameters().Length == 1
+                        && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
+
+                MethodInfo? boundGet = genericGet?.MakeGenericMethod(renderMeshType);
+
+                if (boundGet != null)
+                {
+                    for (int i = 0; i < entities.Length && uniqueMeshNames.Count < 100; i++)
+                    {
+                        try
+                        {
+                            object? rm = boundGet.Invoke(EntityManager, new object[] { entities[i] });
+                            if (rm == null) continue;
+                            scanned++;
+                            object? meshObj = meshField.GetValue(rm);
+                            if (meshObj is Mesh diagMesh && diagMesh != null)
+                            {
+                                string meshName = diagMesh.name ?? "(null)";
+                                if (uniqueMeshNames.ContainsKey(meshName))
+                                    uniqueMeshNames[meshName]++;
+                                else
+                                    uniqueMeshNames[meshName] = 1;
+                            }
+                        }
+                        catch { errors++; if (errors > 10) break; }
+                    }
+                }
+
+                DebugLog.Write("AssetSwap",
+                    $"[DIAGNOSTIC] Vanilla mesh name survey: scanned {scanned}/{entities.Length} entities, " +
+                    $"found {uniqueMeshNames.Count} unique mesh names (errors={errors}, genericGet={boundGet != null}):");
+                foreach (var kvp in uniqueMeshNames.OrderByDescending(x => x.Value))
+                {
+                    DebugLog.Write("AssetSwap", $"  mesh=\"{kvp.Key}\"  count={kvp.Value}");
+                }
+            }
+
+            // ---- SELECTIVE SWAP: match by mesh name ----
+            // Determine which vanilla mesh names this bundle should target.
+            string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
+            string[]? targetMeshSubstrings = null;
+            foreach (var kvp in BundleToVanillaMeshMap)
+            {
+                if (bundleFileName.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    targetMeshSubstrings = kvp.Value;
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' matched mapping key '{kvp.Key}' " +
+                        $"→ targeting mesh substrings: [{string.Join(", ", kvp.Value)}]");
+                    break;
+                }
+            }
+
+            // If no mapping exists yet, we are in DIAGNOSTIC MODE — skip actual swaps.
+            if (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"[DIAGNOSTIC MODE] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
+                    $"Skipping entity swap for {entities.Length} entities. " +
+                    $"Check dinoforge_debug.log for '[DIAGNOSTIC] Vanilla mesh name survey' to build the mapping.");
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
+
             int swapCount = 0;
+            int skippedNoMatch = 0;
             for (int i = 0; i < entities.Length; i++)
             {
+                if (swapCount >= MaxSwapsPerBundle)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: hit MaxSwapsPerBundle cap ({MaxSwapsPerBundle}), stopping.");
+                    break;
+                }
+
                 Entity entity = entities[i];
                 try
                 {
@@ -441,17 +562,38 @@ namespace DINOForge.Runtime.Bridge
                         EntityManager, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
+                    // ---- Selective mesh-name check ----
+                    if (meshField != null)
+                    {
+                        object? currentMeshObj = meshField.GetValue(renderMesh);
+                        if (currentMeshObj is Mesh currentMesh && currentMesh != null)
+                        {
+                            string currentName = currentMesh.name ?? "";
+                            bool nameMatches = false;
+                            for (int s = 0; s < targetMeshSubstrings.Length; s++)
+                            {
+                                if (currentName.IndexOf(targetMeshSubstrings[s], StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    nameMatches = true;
+                                    break;
+                                }
+                            }
+                            if (!nameMatches)
+                            {
+                                skippedNoMatch++;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            // Mesh field is null — entity not yet loaded, skip.
+                            continue;
+                        }
+                    }
+
                     bool changed = false;
                     if (replacementMesh != null && meshField != null)
                     {
-                        object? currentMesh = meshField.GetValue(renderMesh);
-                        if (currentMesh == null)
-                        {
-                            DebugLog.Write("AssetSwap",
-                                $"TrySwapRenderMeshFromBundle: mesh field is null on entity {entity.Index} " +
-                                $"(building/entity not yet loaded — skipping)");
-                            continue;
-                        }
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
@@ -459,12 +601,7 @@ namespace DINOForge.Runtime.Bridge
                     {
                         object? currentMat = materialField.GetValue(renderMesh);
                         if (currentMat == null)
-                        {
-                            DebugLog.Write("AssetSwap",
-                                $"TrySwapRenderMeshFromBundle: material field is null on entity {entity.Index} " +
-                                $"(building/entity not yet loaded — skipping)");
                             continue;
-                        }
                         materialField.SetValue(renderMesh, replacementMat);
                         changed = true;
                     }
@@ -491,7 +628,9 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities");
+            DebugLog.Write("AssetSwap",
+                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities " +
+                $"(skipped {skippedNoMatch} non-matching meshes, cap={MaxSwapsPerBundle})");
             entities.Dispose();
             query.Dispose();
 

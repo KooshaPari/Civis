@@ -168,23 +168,15 @@ dotnet run --project src/Tools/PackCompiler -- validate packs/example-balance
 
 ### Create a Mod Pack
 
-Create a directory with a `pack.yaml` manifest:
+Scaffold a new pack with the CLI:
 
-```yaml
-id: my-balance-mod
-name: My Balance Mod
-version: 0.1.0
-author: YourName
-type: balance
-framework_version: ">=0.1.0"
-loads:
-  units:
-    - units/
-  buildings:
-    - buildings/
+```bash
+dotnet run --project src/Tools/Cli -- new my-balance-mod --author "YourName" --type balance
 ```
 
-Then add YAML content files in the referenced directories. See `packs/example-balance/` for a complete example.
+This creates `packs/my-balance-mod/` with a complete template. Then add YAML content files in the referenced directories.
+
+See [Your First Mod](docs/guides/your-first-mod.md) for a 5-minute quickstart, or `packs/example-balance/` for a complete example.
 
 ## Architecture
 

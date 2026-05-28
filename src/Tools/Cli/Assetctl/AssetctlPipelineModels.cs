@@ -163,7 +163,7 @@ public sealed class AssetctlValidationResult
     /// Validation errors.
     /// </summary>
     [JsonPropertyName("errors")]
-    public List<string> Errors { get; set; } = new();
+    public List<string> Errors { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List
 
     /// <summary>
     /// Path to validation report.

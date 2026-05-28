@@ -13,12 +13,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.
 
 ### Changed
+- Stash integration: Runtime UI (MainMenuThemer, NativeModsPage), AssetSwap/NativeMenuInjector, CLI build/deploy commands, MCP Cua session, PackManifest UiTheme fields; Cursor rule to use WIP branches instead of git stash.
 - `prove-features-gate.ps1`: kill stray game processes before/after live runs (3s verify per Game Launch Protocol); skip cleanup in attach-only mode; resolve `DINO_GAME_PATH` to `.exe` when a directory is set; avoid `exit` inside `try` so `finally` cleanup always runs.
 - GameLaunch bridge ping SLA: 1500ms round-trip on self-hosted (was 500ms/1000ms flake under load).
 - Agent scripts default to `main`; add `scripts/agent-worktrees.ps1` for parallel worktrees under `~/.cursor/worktrees/Dino`.
 - CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.
 
 ## [0.25.0-dev] - 2026-05-25
+
+#### Iter-147 — AX/DX/UX Maturity Wave (2026-05-25)
+
+**Added**
+- **CLI**: `dinoforge new` command — scaffold mod packs from built-in template with `--author`/`--type`/`--output`
+- **Docs**: `docs/guides/your-first-mod.md` — 5-minute quickstart for first-time modders
+- **BepInEx Config**: 4 new settings (ShowDebugOverlayOnStart, EnableHotReload, HotReloadDebounceMs, LogLevel)
+- **F9 DebugPanel**: FPS counter, GC heap display, real archetype content (entity counts per ECS world), 500ms auto-refresh coroutine
+- **F10 ModMenuPanel**: Pack load error count + red status header when errors > 0
+
+**Fixed**
+- **MainMenu pack-load**: DLL was stale — redeployed with iter-146 code; 9/9 packs now load at main menu
+- **EventSystem log spam**: Throttled reconcile logging to fire only on state change (was ~6 lines/sec)
+- **HMR pipeline**: Unified to single `RequestPackReload` path — eliminates UGUI-reset hack, consistent with F10 Reload button
+- **HMR config gating**: Watcher disabled when `General.EnableHotReload=false`
 
 #### Stabilization — Tests, Specs, Journey Viewer Schema (2026-05-23)
 

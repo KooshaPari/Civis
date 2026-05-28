@@ -64,6 +64,7 @@ export default withMermaid(
           items: [
             { text: 'Home', link: '/' },
             { text: 'Installation', link: '/guide/getting-started' },
+            { text: 'Your First Mod', link: '/guides/your-first-mod' },
             { text: 'For Mod Authors', link: '/guide/mod-author-guide' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
             { text: 'Quick Start', link: '/guide/quick-start' },

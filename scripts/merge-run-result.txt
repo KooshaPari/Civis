@@ -1,0 +1,74 @@
+CodeRabbit merge orchestration report
+Generated: 2026-05-27 (Cursor subagent)
+
+================================================================================
+EXECUTION STATUS
+================================================================================
+
+BLOCKED: Cursor Shell tool cannot run cmd.exe — every invocation fails with
+ParserError in generated ps-script-*.ps1 (line 7: unexpected token ')').
+This is the known MIC_LD_LIBRARY_PATH / fix-cursor-shell corruption.
+
+Steps attempted (all failed in Cursor):
+  1. cmd /c "C:\Users\koosh\.cursor\fix-cursor-shell.cmd"           — NOT RUN
+  2. cmd /c "C:\Users\koosh\Dino\scripts\coderabbit-main-config.bat"  — NOT RUN
+  3. Fallback push-coderabbit-main.ps1 + PR 221 poll/merge            — NOT RUN
+  4. cscript run-coderabbit-orchestration.vbs                         — NOT RUN
+
+To execute outside Cursor (bypasses broken ps-script wrapper):
+  wscript C:\Users\koosh\Dino\scripts\run-coderabbit-orchestration.vbs
+  Log: C:\Users\koosh\Dino\scripts\coderabbit-orchestration.log
+
+Or run fix first, restart Cursor, then:
+  cmd /c "C:\Users\koosh\.cursor\fix-cursor-shell.cmd"
+  cmd /c "C:\Users\koosh\Dino\scripts\coderabbit-main-config.bat"
+
+================================================================================
+REMOTE STATE (GitHub API, 2026-05-27)
+================================================================================
+
+Config PR (agent/coderabbit-main-config):
+  Number: (none — no open/merged PR for head agent/coderabbit-main-config)
+  Branch on origin: not present (empty PR list)
+
+PR #221 (followup/post-pr188-followups -> main):
+  State: open
+  Merged: NO
+  Mergeable: true
+  Mergeable state: unstable
+  Head SHA: eece6acb3034fd7e59a25ff86f9a3f4d0186712e
+  Base (main) SHA: 15ba282c02c35de752f5d60964c7f9ecaaf64fec
+  URL: https://github.com/KooshaPari/Dino/pull/221
+
+coderabbitai[bot] APPROVED on PR #221:
+  NO — reviews from coderabbitai[bot] are absent; only COMMENTED from other bots.
+  CodeRabbit issue comments indicate approval disabled until
+  request_changes_workflow is enabled on the default branch (main).
+
+origin/main HEAD:
+  SHA: 15ba282c02c35de752f5d60964c7f9ecaaf64fec
+  Message: Merge pull request #188 from KooshaPari/safety/iter145-recovery-20260523-0432
+
+main .coderabbit.yaml:
+  Missing request_changes_workflow and auto_approve (only basic auto_review).
+  Target config prepared at: scripts/coderabbit-main-target.yaml
+
+================================================================================
+ORCHESTRATION LOG (VBS)
+================================================================================
+
+Log path: C:\Users\koosh\Dino\scripts\coderabbit-orchestration.log
+Status: NOT CREATED (VBS orchestration was not executed)
+
+================================================================================
+SUMMARY
+================================================================================
+
+| Item                    | Value                                              |
+|-------------------------|----------------------------------------------------|
+| Config PR number        | none                                               |
+| Config PR merged        | no                                                 |
+| PR #221 merged          | no                                                 |
+| main HEAD SHA           | 15ba282c02c35de752f5d60964c7f9ecaaf64fec           |
+| Orchestration log used  | no (shell blocked)                                 |
+| Next unblock            | Run VBS or fix-cursor-shell.cmd outside Cursor     |

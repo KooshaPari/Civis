@@ -36,6 +36,15 @@ type: total_conversion
 depends_on: []
 conflicts_with: []
 
+ui_theme:
+  title: "STAR WARS"
+  subtitle: "Clone Wars — Republic vs Separatists"
+  primary_color: "#FFE81F"
+  secondary_color: "#000000"
+  accent_color: "#C0392B"
+  text_color: "#FFE81F"
+  background_tint: "#0A0A1A"
+
 loads:
   factions:
     - factions

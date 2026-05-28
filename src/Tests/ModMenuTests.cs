@@ -276,8 +276,8 @@ namespace DINOForge.Tests
         }
 
         /// <summary>
-        /// SPEC-007 Feature 2: The list pane uses explicit RectTransform sizing (not
-        /// VerticalLayoutGroup/ScrollRect) so pack rows stay visible when layout rebuild is broken.
+        /// SPEC-007 Feature 2: The list pane pins width via LayoutElement and reserves header
+        /// space on the scroll viewport so pack rows stay visible under layout rebuild stress.
         /// </summary>
         [Fact]
         [Trait("UserStory", "US-F3.1")]
@@ -289,10 +289,10 @@ namespace DINOForge.Tests
                 "the list pane should have an explicit fixed width");
             body.Should().Contain("paneLe.minWidth = ListWidth;",
                 "the list pane minimum width should match ListWidth");
-            body.Should().Contain("_listContent = contentRt;",
+            body.Should().Contain("_listContent = content;",
                 "the list pane should wire the pack list content container");
-            body.Should().Contain("contentRt.offsetMax = new Vector2(0f, -32f);",
-                "list content should reserve space below the header");
+            body.Should().Contain("scrollRt.offsetMax = new Vector2(0f, -32f);",
+                "scroll viewport should reserve space below the header");
         }
 
         /// <summary>

@@ -36,12 +36,12 @@ packs/warfare-starwars/assets/
 │   ├── intake_rules.yaml            # Acquisition, validation, processing rules
 │   └── risk_rules.yaml              # IP risk classification framework
 │
-└── asset_manifest.schema.json       # JSON Schema for asset manifests
+└── asset-manifest.schema.json        # JSON Schema for asset manifests (canonical: schemas/asset-manifest.schema.json)
 ```
 
 ## Key Files
 
-### 1. `asset_manifest.schema.json`
+### 1. `asset-manifest.schema.json`
 
 JSON Schema (draft-07) defining the structure for all asset manifest files.
 
@@ -174,7 +174,7 @@ Three template manifest files in `raw/` directories:
 8. Update `registry/provenance_index.json` with detailed assessment
 
 ### 3. Validation
-1. Verify manifest against `asset_manifest.schema.json`
+1. Verify manifest against `asset-manifest.schema.json`
 2. Check against `policies/intake_rules.yaml` requirements
 3. Apply risk assessment from `policies/risk_rules.yaml`
 4. Document any issues or warnings in manifest notes
@@ -231,7 +231,7 @@ Defines confidence scoring adjustments, source authority levels, license compati
 # Schema validation
 dotnet run --project src/Tools/PackCompiler -- validate-schema \
   packs/warfare-starwars/assets/raw/sw_clone_trooper_sketchfab_001/asset_manifest.json \
-  packs/warfare-starwars/assets/asset_manifest.schema.json
+  schemas/asset-manifest.schema.json
 ```
 
 ### Check asset status
@@ -286,7 +286,7 @@ cat packs/warfare-starwars/assets/registry/provenance_index.json | jq '.provenan
 
 ## Related Documentation
 
-- `asset_manifest.schema.json` - JSON Schema specification
+- `schemas/asset-manifest.schema.json` - JSON Schema specification (canonical kebab-case name)
 - `policies/intake_rules.yaml` - Acquisition and processing rules
 - `policies/risk_rules.yaml` - IP assessment framework
 - `registry/asset_index.json` - Asset registry

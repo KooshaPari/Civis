@@ -75,7 +75,11 @@ Write-Host "[Unity] Starting batch build..." -ForegroundColor Cyan
 
 # Remove old log
 if (Test-Path $LogFile) {
-    Remove-Item $LogFile -Force
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+        (Resolve-Path $LogFile).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
 }
 
 # Launch Unity in batch mode

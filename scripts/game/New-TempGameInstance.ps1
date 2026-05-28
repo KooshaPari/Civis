@@ -231,7 +231,11 @@ function Remove-InstanceDirectory {
             } else {
                 Write-Warning "Cleaning up failed instance directory: $InstanceDir"
             }
-            Remove-Item -Path $InstanceDir -Recurse -Force -ErrorAction Stop
+            Add-Type -AssemblyName Microsoft.VisualBasic
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+                (Resolve-Path $InstanceDir).ProviderPath,
+                [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
             if (Get-Command Write-LogInfo -ErrorAction SilentlyContinue) {
                 Write-LogInfo "Instance cleanup completed" @{ directory = $InstanceDir } -RequestId $RequestId
             }
@@ -272,7 +276,11 @@ function New-SingleInstance {
         # Clean up any previous instance at this number
         if (Test-Path $TempInstanceRoot) {
             if ($Verbose) { Write-Host "[TEMP-INSTANCE] Removing existing instance at: $TempInstanceRoot" -ForegroundColor Cyan }
-            Remove-Item $TempInstanceRoot -Recurse -Force -ErrorAction SilentlyContinue
+            Add-Type -AssemblyName Microsoft.VisualBasic
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+                (Resolve-Path $TempInstanceRoot).ProviderPath,
+                [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
         }
 
         # Create instance root

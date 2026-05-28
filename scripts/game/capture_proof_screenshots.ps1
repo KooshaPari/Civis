@@ -82,7 +82,7 @@ function CaptureGame {
         Copy-Item $tmp $out -Force -EA SilentlyContinue
         Log "  Fallback (full desktop): $((Get-Item $out).Length) bytes"
     }
-    Remove-Item $tmp -Force -EA SilentlyContinue
+    Remove-Item $tmp -Force -EA SilentlyContinue # remove-item-ok: temp-cleanup-ok: ephemeral screenshot temp file, not a repo artifact
 }
 
 # ---- STEP 1: FIX REGISTRY (windowed mode = 3) ----

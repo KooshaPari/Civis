@@ -1,0 +1,46 @@
+# Undead - Vanilla DINO Faction
+# Necromantic faction: risen corpses and dark magic
+# Archetype: Swarm (mass units, mixed quality, resource efficient)
+
+faction:
+  id: undead
+  display_name: "Undead"
+  description: "The risen corpses commanded by dark magic. Cheap to produce and difficult to break, but individually weak. Gains power from casualties and corpses."
+  vanilla_dino_name: "Undead"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Undead"
+  theme: necromantic
+  archetype: swarm
+  doctrine: corpse_mastery
+
+economy:
+  gather_bonus: 0.6
+  upkeep_modifier: 0.6
+  research_speed: 0.9
+  build_speed: 1.2
+
+army:
+  morale_style: relentless
+  unit_cap_modifier: 1.3
+  elite_cost_modifier: 0.8
+  spawn_rate_modifier: 1.4
+
+roster:
+  cheap_infantry: vanilla_undead_walking_corpse
+  line_infantry: vanilla_undead_shambler
+  elite_infantry: vanilla_undead_grim_pilgrim
+  anti_armor: vanilla_undead_ghoul
+  support_weapon: vanilla_undead_shepherd
+  recon: vanilla_undead_ghoul
+  light_vehicle: vanilla_undead_horsy
+  heavy_vehicle: vanilla_undead_nightmare_general
+  artillery: vanilla_undead_machine_o_flesh
+  hero_commander: null
+
+buildings:
+  barracks: vanilla_undead_tomb
+  stables: null
+  workshop: vanilla_undead_necromancy_lab
+  artillery_foundry: null
+  special: vanilla_undead_crypt
+
+color: "#665533"

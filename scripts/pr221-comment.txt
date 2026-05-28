@@ -1,0 +1,3 @@
+@coderabbitai review
+
+Agent push e07c312e: pause menu bridge, auto_approve enabled, agent-merge workflow. Core CI green on test and build.

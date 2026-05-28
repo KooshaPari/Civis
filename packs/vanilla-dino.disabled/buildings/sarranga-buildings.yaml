@@ -1,0 +1,50 @@
+# Sarranga - Vanilla DINO Buildings
+
+- id: vanilla_sarranga_training_grounds
+  display_name: Sarrangan Training Grounds
+  description: Mystical academy for training magical warriors.
+  faction_id: sarranga
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Sarrangan_Training_Grounds"
+  cost:
+    wood: 100
+    stone: 80
+    gold: 50
+  upkeep_per_turn: 3
+  production_slots: 1
+  units_produced:
+    - vanilla_sarranga_swordtail
+    - vanilla_sarranga_accurate_one
+
+- id: vanilla_sarranga_enchantry
+  display_name: Sarrangan Enchantry
+  description: Workshop for arcane crafting and spell imbuing.
+  faction_id: sarranga
+  building_type: production
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Sarrangan_Enchantry"
+  cost:
+    wood: 120
+    stone: 100
+    gold: 80
+  upkeep_per_turn: 5
+  production_slots: 1
+  units_produced:
+    - vanilla_sarranga_priestess
+    - vanilla_sarranga_nimble_one
+    - vanilla_sarranga_mighty_one
+
+- id: vanilla_sarranga_mystical_circle
+  display_name: Mystical Circle
+  description: Arcane summoning site. Channels mystical energies for powerful units.
+  faction_id: sarranga
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Mystical_Circle"
+  cost:
+    wood: 150
+    stone: 150
+    gold: 120
+  upkeep_per_turn: 8
+  production_slots: 1
+  units_produced:
+    - vanilla_sarranga_scorpio
+    - vanilla_sarranga_bombus

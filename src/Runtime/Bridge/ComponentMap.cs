@@ -152,6 +152,12 @@ namespace DINOForge.Runtime.Bridge
                 "projectile.damage",
                 "Runtime projectile damage value", "damage");
 
+        /// <summary>Alias: unit.stats.damage routes to ProjectileFlyData.damage for pack author convenience.</summary>
+        public static readonly ComponentMapping UnitDamage =
+            new ComponentMapping("Components.RawComponents.ProjectileFlyData",
+                "unit.stats.damage",
+                "Unit damage (alias for projectile fly-data damage field)", "damage");
+
         /// <summary>Projectile gravity. Field: gravity (float).</summary>
         public static readonly ComponentMapping ProjectileGravity =
             new ComponentMapping("Components.RawComponents.ProjectileFlyData",

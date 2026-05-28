@@ -1,4 +1,8 @@
-# Agent PR orchestration: worktrees -> CodeRabbit -> poll -> merge -> sync main
+# Agent PR orchestration: worktrees -> (main CodeRabbit config) -> CodeRabbit -> poll -> merge -> sync main
+#
+# Public repos: CodeRabbit reads .coderabbit.yaml from main only. Before bot-approve on agent PRs,
+# land scripts/coderabbit-main-target.yaml on main (see scripts/coderabbit-main-config.bat or push-coderabbit-main.ps1).
+#
 # Usage:
 #   powershell -NoProfile -File scripts\agent-orchestrate.ps1 -PrNumber 221
 #   powershell -NoProfile -File scripts\agent-orchestrate.ps1 -Step worktrees

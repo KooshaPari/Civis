@@ -1,0 +1,46 @@
+# Bugs - Vanilla DINO Faction
+# Insectoid faction: alien swarm with biological weapons
+# Archetype: Swarm (mass units, regeneration, biological attacks)
+
+faction:
+  id: bugs
+  display_name: "Bugs"
+  description: "The insectoid swarm. Organized biological entities with rapid reproduction and genetic specialization. Individually weak but overwhelming in numbers."
+  vanilla_dino_name: "Bugs"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Bugs"
+  theme: insectoid
+  archetype: swarm
+  doctrine: hive_coordination
+
+economy:
+  gather_bonus: 1.0
+  upkeep_modifier: 0.7
+  research_speed: 0.8
+  build_speed: 1.3
+
+army:
+  morale_style: instinctive
+  unit_cap_modifier: 1.25
+  elite_cost_modifier: 0.75
+  spawn_rate_modifier: 1.5
+
+roster:
+  cheap_infantry: vanilla_bugs_larva
+  line_infantry: vanilla_bugs_bug
+  elite_infantry: vanilla_bugs_gargantua
+  anti_armor: vanilla_bugs_runner
+  support_weapon: vanilla_bugs_runner
+  recon: vanilla_bugs_runner
+  light_vehicle: vanilla_bugs_runner
+  heavy_vehicle: vanilla_bugs_gargantua
+  artillery: null
+  hero_commander: vanilla_bugs_queen
+
+buildings:
+  barracks: vanilla_bugs_nest
+  stables: null
+  workshop: null
+  artillery_foundry: null
+  special: vanilla_bugs_hive
+
+color: "#FF8800"

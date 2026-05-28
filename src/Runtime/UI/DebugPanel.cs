@@ -249,7 +249,6 @@ namespace DINOForge.Runtime.UI
             scrollRt.anchorMax = Vector2.one;
             scrollRt.offsetMin = Vector2.zero;
             scrollRt.offsetMax = new Vector2(0f, -(HeaderHeight + 1f));
-            scrollRt.sizeDelta = Vector2.zero;
 
             _contentRoot = content;
             RefreshContent();
@@ -281,10 +280,11 @@ namespace DINOForge.Runtime.UI
 
             Debug.Log($"[DebugPanel.RefreshContent] Building content. _modPlatform={(_modPlatform != null ? "SET" : "NULL")}, childCount before={_contentRoot.childCount}");
 
-            // Destroy previous content
+            // Destroy previous content immediately so new children don't coexist
+            // with deferred-destroy ghosts from the same frame (#905).
             for (int i = _contentRoot.childCount - 1; i >= 0; i--)
             {
-                Destroy(_contentRoot.GetChild(i).gameObject);
+                DestroyImmediate(_contentRoot.GetChild(i).gameObject);
             }
 
             // Platform Status section
@@ -447,27 +447,38 @@ namespace DINOForge.Runtime.UI
                 AddInfoRow(parent, "Packs Dir", TruncatePath(_modPlatform.PacksDirectory, 30),
                     UiBuilder.TextSecondary);
 
-                // Loaded packs — count + names
-                System.Collections.Generic.IReadOnlyList<string>? packIds =
-                    _modPlatform.GetLoadedPackIds();
-                int packCount = packIds?.Count ?? 0;
+                // Loaded packs — count + names + content summary
+                System.Collections.Generic.IReadOnlyList<PackDisplayInfo> packInfos =
+                    _modPlatform.GetLoadedPackDisplayInfos();
+                int packCount = packInfos.Count;
                 AddInfoRow(parent, "Loaded Packs", packCount.ToString(),
                     packCount > 0 ? UiBuilder.Success : UiBuilder.TextSecondary);
 
-                if (packIds != null)
+                int showMax = Math.Min(packInfos.Count, 10);
+                for (int i = 0; i < showMax; i++)
                 {
-                    int showMax = Math.Min(packIds.Count, 10);
-                    for (int i = 0; i < showMax; i++)
+                    PackDisplayInfo pi = packInfos[i];
+                    string contentBrief = "";
+                    if (pi.ContentSummary.Count > 0)
                     {
-                        UiBuilder.MakeText(parent, $"Pack_{i}", $"  • {packIds[i]}",
-                            10, UiBuilder.TextPrimary);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder(64);
+                        foreach (System.Collections.Generic.KeyValuePair<string, int> kv in pi.ContentSummary)
+                        {
+                            if (sb.Length > 0) sb.Append(", ");
+                            sb.Append($"{kv.Key}:{kv.Value}");
+                        }
+                        contentBrief = $" [{sb}]";
                     }
+                    Color nameColor = pi.IsEnabled ? UiBuilder.TextPrimary : UiBuilder.TextSecondary;
+                    string enableTag = pi.IsEnabled ? "" : " (off)";
+                    UiBuilder.MakeText(parent, $"Pack_{i}", $"  • {pi.Name}{enableTag}{contentBrief}",
+                        10, nameColor);
+                }
 
-                    if (packIds.Count > 10)
-                    {
-                        UiBuilder.MakeText(parent, "PacksMore",
-                            $"  ... and {packIds.Count - 10} more", 10, UiBuilder.TextSecondary);
-                    }
+                if (packInfos.Count > 10)
+                {
+                    UiBuilder.MakeText(parent, "PacksMore",
+                        $"  ... and {packInfos.Count - 10} more", 10, UiBuilder.TextSecondary);
                 }
 
                 int errCount = GetErrorCount();

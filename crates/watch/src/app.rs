@@ -506,41 +506,7 @@ pub(crate) struct RemoteModRegistryEntry {
 }
 
 pub(crate) fn default_law_db() -> LawDb {
-    LawDb::load_ron(
-        r#"(
-            version: 0,
-            laws: [
-                (
-                    id: "mass_conservation",
-                    kind: Conservation,
-                    era_min: 0,
-                    inputs: [],
-                    outputs: [],
-                    losses: [],
-                    dependencies: [],
-                ),
-                (
-                    id: "steel",
-                    kind: Material,
-                    era_min: 4,
-                    inputs: ["iron_ore", "coal"],
-                    outputs: ["steel_ingot"],
-                    losses: ["slag"],
-                    dependencies: ["mass_conservation"],
-                ),
-                (
-                    id: "fusion_power",
-                    kind: FictionalExtension,
-                    era_min: 9,
-                    inputs: ["deuterium"],
-                    outputs: ["energy"],
-                    losses: ["helium_4"],
-                    dependencies: ["mass_conservation"],
-                ),
-            ],
-        )"#,
-    )
-    .expect("sample law db")
+    LawDb::default_canon().expect("embedded default law db")
 }
 
 #[derive(Debug, Deserialize)]

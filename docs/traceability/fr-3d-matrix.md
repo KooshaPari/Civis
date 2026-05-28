@@ -82,6 +82,12 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-LAWS-000 | Stub. | `crates/laws/` | `laws::schema_version_stub` | implemented |
 | FR-CIV-LAWS-001 | Versioned RON schema loads and round-trips. | `crates/laws/` | `laws::ron_roundtrip` | implemented |
 | FR-CIV-LAWS-002 | Validator rejects extensions missing required fields. | `crates/laws/` | `laws::validator_rejects_incomplete` | implemented |
+| FR-CIV-LAWS-003 | Validator detects missing dependencies. | `crates/laws/` | `laws::validator_detects_missing_dependency` | implemented |
+| FR-CIV-LAWS-004 | Validator detects duplicate law ids. | `crates/laws/` | `laws::validator_detects_duplicate_id` | implemented |
+| FR-CIV-LAWS-005 | Era filter returns laws at or before era. | `crates/laws/` | `laws::unlocked_at_era_filters_correctly` | implemented |
+| FR-CIV-LAWS-006 | Era unlock graph respects dependency closure and ordering. | `crates/laws/` | `laws::unlockable_at_era_respects_dependencies`, `laws::dependency_order_respects_prereqs` | implemented |
+| FR-CIV-LAWS-007 | Mod overlay merge replaces laws by id. | `crates/laws/` | `laws::merge_overlay_replaces_by_id` | implemented |
+| FR-CIV-LAWS-008 | Embedded default RON loads and validates. | `crates/laws/` | `laws::default_canon_loads_embedded_ron` | implemented |
 
 ---
 

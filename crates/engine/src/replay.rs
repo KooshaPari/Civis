@@ -255,8 +255,9 @@ impl ReplayLog {
         tick: u64,
         byte_size: u64,
     ) {
-        let bus_json =
-            civ_save_db::format_session_saved_event_json(session_id, save_id, slot, tick, byte_size);
+        let bus_json = civ_save_db::format_session_saved_event_json(
+            session_id, save_id, slot, tick, byte_size,
+        );
         self.events.push(ReplayEvent::SessionSaved {
             tick,
             session_id: session_id.to_string(),
@@ -563,12 +564,8 @@ mod tests {
     #[test]
     fn mod_permission_violation_records_bus_json_at_tick() {
         let mut log = ReplayLog::default();
-        let bus_json = civ_mod_host::format_mod_permission_violation_json(
-            "demo-mod",
-            42,
-            "action_emit",
-            None,
-        );
+        let bus_json =
+            civ_mod_host::format_mod_permission_violation_json("demo-mod", 42, "action_emit", None);
         log.record_mod_permission_violation_bus(42, &bus_json);
         let at_tick = log.mod_permission_violation_bus_at_tick(42);
         assert_eq!(at_tick.len(), 1);
@@ -596,5 +593,4 @@ mod tests {
             log.session_saved_bus_at_tick(42)
         );
     }
-
 }

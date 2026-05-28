@@ -167,8 +167,7 @@ impl CivSaveBundle {
         let path = path.as_ref();
         if Self::is_save_dir(path) {
             let metadata_path = path.join("metadata.json");
-            let json =
-                fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
+            let json = fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
             Ok(serde_json::from_str(&json)?)
         } else if Self::is_save_archive(path) {
             let compressed = fs::read(path).map_err(|e| io_err(path, e))?;

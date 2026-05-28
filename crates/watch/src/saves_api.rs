@@ -2,11 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-};
+use axum::{extract::State, http::StatusCode, response::Json};
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_save_db::format_session_saved_event_json;
 use tracing::{info, warn};
@@ -70,10 +66,10 @@ pub(crate) fn record_save_metadata(
             );
             info!(%event_json, "session.saved.v1 on replay bus");
             if is_autosave_name(filename) {
-                match state
-                    .save_db
-                    .evict_autosaves(&state.session_id, u32::try_from(AUTOSAVE_RING_MAX).unwrap_or(u32::MAX))
-                {
+                match state.save_db.evict_autosaves(
+                    &state.session_id,
+                    u32::try_from(AUTOSAVE_RING_MAX).unwrap_or(u32::MAX),
+                ) {
                     Ok(evicted_paths) => {
                         for evicted in evicted_paths {
                             if let Err(err) = std::fs::remove_file(&evicted) {
@@ -231,13 +227,7 @@ pub(crate) async fn save_slot_handler(
             }),
         )
     })?;
-    save_handler(
-        State(state),
-        Json(SaveReq {
-            filename: req.slot,
-        }),
-    )
-    .await
+    save_handler(State(state), Json(SaveReq { filename: req.slot })).await
 }
 
 pub(crate) async fn load_slot_handler(
@@ -253,13 +243,7 @@ pub(crate) async fn load_slot_handler(
             }),
         )
     })?;
-    load_handler(
-        State(state),
-        Json(SaveReq {
-            filename: req.slot,
-        }),
-    )
-    .await
+    load_handler(State(state), Json(SaveReq { filename: req.slot })).await
 }
 
 pub(crate) async fn load_handler(
@@ -354,7 +338,11 @@ pub(crate) async fn list_saves_handler(
                             .unwrap_or_else(|| format!("autosave-{}", autosave.tick));
                         map.insert(
                             name,
-                            (Some(autosave.id), Some(autosave.tick as u64), Some(autosave.created_at)),
+                            (
+                                Some(autosave.id),
+                                Some(autosave.tick as u64),
+                                Some(autosave.created_at),
+                            ),
                         );
                     }
                 }
@@ -436,4 +424,3 @@ pub(crate) async fn list_saves_handler(
     entries.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(Json(entries))
 }
-

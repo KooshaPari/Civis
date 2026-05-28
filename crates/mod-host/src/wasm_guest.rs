@@ -1,8 +1,6 @@
 //! WASM guest invocation via `wasmtime` (CIV-0700 v3 — policy, economy, military exports).
 
-use crate::capability::{
-    ModCapabilitySet, ModEnforcementCtx, WorldDomain, ERR_PERMISSION_DENIED,
-};
+use crate::capability::{ModCapabilitySet, ModEnforcementCtx, WorldDomain, ERR_PERMISSION_DENIED};
 use thiserror::Error;
 use wasmtime::{Caller, Engine, Instance, Linker, Module, Store};
 

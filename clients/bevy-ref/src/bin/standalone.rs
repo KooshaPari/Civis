@@ -1,7 +1,5 @@
 //! Civis Bevy standalone sandbox — composes library plugins and shared terrain/atmosphere modules.
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
@@ -32,13 +30,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            (
-                camera_input,
-                update_camera,
-                advance_day_night_cycle,
-                animate_water,
-                update_lighting,
-            ),
+            (camera_input, update_camera, animate_water, update_lighting),
         )
         .run();
 }
@@ -76,9 +68,4 @@ fn setup_world(
         Transform::from_xyz(0.0, -0.1, 0.0),
         WaterSurface,
     ));
-}
-
-fn advance_day_night_cycle(time: Res<Time>, mut cycle: ResMut<DayNightCycle>) {
-    const DAY_LENGTH_SECONDS: f32 = 10.0 * 60.0;
-    cycle.time_of_day = (cycle.time_of_day + time.delta_secs() / DAY_LENGTH_SECONDS) % 1.0;
 }

@@ -6,8 +6,8 @@
 use bevy::prelude::*;
 use bevy::render::render_resource::WgpuAdapterInfo;
 use bevy::render::renderer::{RenderAdapterInfo, RenderDevice};
-use wgpu;
 use bevy::render::RenderApp;
+use wgpu;
 
 /// Runtime GPU capabilities detected from the active Bevy render device.
 #[derive(Resource, Debug, Clone, PartialEq, Eq)]
@@ -44,7 +44,10 @@ impl Default for GpuCapabilities {
 
 /// Detect the active GPU capability set from Bevy's render resources.
 #[must_use]
-pub fn detect_capabilities(render_device: &RenderDevice, adapter_info: &RenderAdapterInfo) -> GpuCapabilities {
+pub fn detect_capabilities(
+    render_device: &RenderDevice,
+    adapter_info: &RenderAdapterInfo,
+) -> GpuCapabilities {
     let info: &WgpuAdapterInfo = &adapter_info.0;
     let features = render_device.features();
     let backend_name = match info.backend {

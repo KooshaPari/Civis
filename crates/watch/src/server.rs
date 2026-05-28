@@ -9,7 +9,10 @@ use std::{
     },
 };
 
-use axum::{routing::{get, post}, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use civ_engine::Simulation;
 use civ_save_db::SaveDb;
 use tokio::sync::{broadcast, Mutex, RwLock};

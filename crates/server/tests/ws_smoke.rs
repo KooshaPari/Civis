@@ -1887,7 +1887,9 @@ async fn ws_jsonrpc_save_slot_roundtrip() {
         Some(&serde_json::json!(true))
     );
     assert_eq!(
-        load_response.pointer("/result/tick").and_then(|v| v.as_u64()),
+        load_response
+            .pointer("/result/tick")
+            .and_then(|v| v.as_u64()),
         Some(saved_tick)
     );
     assert_eq!(sim.lock().await.state.tick, saved_tick);

@@ -505,7 +505,6 @@ pub(crate) struct RemoteModRegistryEntry {
     pub(crate) allowed_pubkeys: Vec<String>,
 }
 
-
 pub(crate) fn default_law_db() -> LawDb {
     LawDb::load_ron(
         r#"(
@@ -580,4 +579,3 @@ pub(crate) struct RemoteModEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) author_pubkey_hex: Option<String>,
 }
-

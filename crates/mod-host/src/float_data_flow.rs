@@ -32,10 +32,7 @@ fn collect_action_emit_import_index(wasm_bytes: &[u8]) -> Result<Option<u32>, St
             for import in imports.into_imports() {
                 let import = import.map_err(|e| e.to_string())?;
                 if matches!(import.ty, TypeRef::Func(_) | TypeRef::FuncExact(_)) {
-                    import_funcs.push((
-                        import.module.to_string(),
-                        import.name.to_string(),
-                    ));
+                    import_funcs.push((import.module.to_string(), import.name.to_string()));
                 }
             }
         }
@@ -89,9 +86,7 @@ fn scan_function_body(
     action_emit_idx: u32,
     sites: &mut Vec<FloatContaminationSite>,
 ) -> Result<(), String> {
-    let mut reader = body
-        .get_operators_reader()
-        .map_err(|e| e.to_string())?;
+    let mut reader = body.get_operators_reader().map_err(|e| e.to_string())?;
     let mut stack: Vec<StackSlot> = Vec::new();
     let mut instruction_index = 0u32;
 
@@ -116,18 +111,20 @@ fn scan_function_body(
             | Operator::I64TruncF32S
             | Operator::I64TruncF32U
             | Operator::I64TruncF64S
-            | Operator::I64TruncF64U if stack.pop().is_some() => {
-                stack.push(StackSlot::Int);
-            }
-            Operator::I32ReinterpretF32 | Operator::I64ReinterpretF64
+            | Operator::I64TruncF64U
                 if stack.pop().is_some() =>
             {
+                stack.push(StackSlot::Int);
+            }
+            Operator::I32ReinterpretF32 | Operator::I64ReinterpretF64 if stack.pop().is_some() => {
                 stack.push(StackSlot::FloatDerivedInt);
             }
             Operator::Drop => {
                 stack.pop();
             }
-            Operator::Call { function_index: callee } if callee == action_emit_idx => {
+            Operator::Call {
+                function_index: callee,
+            } if callee == action_emit_idx => {
                 if stack.last().is_some_and(|slot| {
                     matches!(slot, StackSlot::Float | StackSlot::FloatDerivedInt)
                 }) {

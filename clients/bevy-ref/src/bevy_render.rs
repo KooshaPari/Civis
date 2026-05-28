@@ -11,10 +11,10 @@
 //! `MeshBuffer` chunks via PBR. Per-tick streaming + voxel-delta integration
 //! land in a follow-up PR once the protocol bridge is wired.
 
-use bevy::prelude::*;
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
+use bevy::prelude::*;
 
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,

@@ -1,35 +1,33 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "1378d47424c9944096cfc15efc633abd7d39b653",
-  "created_at": "2026-05-26T07:07:15Z",
+  "git_sha": "71e8c6518546b165802ed419539f2e9dcce83a83",
+  "created_at": "2026-05-28T04:21:07Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.95.0 (59807616e 2026-04-14)"
   },
   "gates": {
-    "unreal_build": {
-      "status": "fail",
-      "detail": "",
-      "": ""
-    },
-    "civis_3d_verify": {
-      "detail": "exit 1",
-      "status": "fail"
-    },
     "web_test": {
-      "detail": "",
-      "status": "pass"
-    },
-    "dashboard_typecheck": {
       "detail": "",
       "status": "pass"
     },
     "unreal_preflight": {
       "status": "fail",
+      "detail": ""
+    },
+    "unreal_build": {
+      "status": "fail",
+      "detail": ""
+    },
+    "dashboard_typecheck": {
       "detail": "",
-      "": ""
+      "status": "pass"
+    },
+    "civis_3d_verify": {
+      "detail": "",
+      "status": "pass"
     }
   },
-  "manifest_hash": "a4e92e1cc80062727f8ccdddc3dcf277e01ad7a4390b0bebeb6491dff3cf784c"
+  "manifest_hash": "8a655f42bb3abf18931f84c7e3e92756020f5b93ae373c4f02fe808eea13f477"
 }

@@ -20,11 +20,11 @@ use axum::{
 };
 use civ_agents::{Tools, Wardrobe};
 use civ_engine::{decode_civreplay, encode_civreplay, Citizen, CivSaveBundle, Simulation};
-use civ_save_db::SaveDb;
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
     AgentAppearanceUpdate, BuildingDiffFrame, BuildingProvenance, Frame3d,
 };
+use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
 use tokio::{
     net::TcpListener,
@@ -1229,10 +1229,7 @@ mod tests {
             Some(saved_tick)
         );
         assert!(
-            state
-                .saves_dir
-                .join("slot-1.civsave.zst")
-                .is_file(),
+            state.saves_dir.join("slot-1.civsave.zst").is_file(),
             "expected slot archive on disk"
         );
 
@@ -1250,7 +1247,10 @@ mod tests {
 
         let guard = sim.lock().await;
         assert_eq!(
-            guard.replay_log().session_saved_bus_at_tick(saved_tick).len(),
+            guard
+                .replay_log()
+                .session_saved_bus_at_tick(saved_tick)
+                .len(),
             1
         );
     }

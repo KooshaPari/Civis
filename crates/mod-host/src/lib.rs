@@ -18,10 +18,10 @@ mod wasm_guest;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use capability::ModCapabilitySet;
 use serde::Deserialize;
 use signature::verify_wasm_signature;
 use thiserror::Error;
-use capability::ModCapabilitySet;
 use wasm_guest::{
     invoke_economy_tick_with_capabilities, invoke_military_tick_with_capabilities,
     invoke_policy_tick_with_capabilities, MOD_WASM_NAME,
@@ -32,7 +32,6 @@ pub use capability::{
     ModStatus, WorldDomain, ACTION_SET_POLICY_PARAM, ACTION_SET_SUBSIDY_RATE, ACTION_SET_TAX_RATE,
     ACTION_TRANSFER_FUNDS, ACTION_TRIGGER_EVENT, ERR_PERMISSION_DENIED,
 };
-pub use policy_action::{policy_action_to_emit_type, PolicyActionKind};
 pub use determinism::{
     scan_wasm_determinism, scan_wasm_determinism_report, DeterminismError, DeterminismScanReport,
 };
@@ -41,11 +40,12 @@ pub use guest_state::{
     GuestStateError, ModBrowserEntry, ModGuestMemoryBlob, ModGuestStateSave,
     MOD_GUEST_STATE_VERSION,
 };
+pub use policy_action::{policy_action_to_emit_type, PolicyActionKind};
 pub use signature::{SignatureError, MOD_WASM_SIG_NAME};
 pub use wasm_guest::{
     invoke_economy_tick, invoke_military_tick, invoke_policy_tick, HostState, WasmGuestError,
-    HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS, HOST_GUEST_MEMORY_CAP, HOST_IMPORT_MODULE,
-    MOD_WASM_NAME as MOD_WASM_FILE,
+    HOST_CAPABILITY_API_VERSION, HOST_CAPABILITY_IMPORTS, HOST_GUEST_MEMORY_CAP,
+    HOST_IMPORT_MODULE, MOD_WASM_NAME as MOD_WASM_FILE,
 };
 
 /// Supported mod kinds per CIV-0700 §4.1.
@@ -571,14 +571,8 @@ impl ModHost {
             if self.mod_status(&mod_id) == ModStatus::Suspended {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(mod_id.clone())
-                .or_default();
-            let enforcement = self
-                .enforcement_by_mod
-                .entry(mod_id.clone())
-                .or_default();
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
             let violations_before = enforcement.violations;
             match invoke_military_tick_with_capabilities(
                 wasm,
@@ -590,11 +584,7 @@ impl ModHost {
                 Ok(code) => lines.push(format!(
                     "mod:{mod_id}:wasm_military_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &mod_id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
             }
             push_permission_violation_if_needed(
                 &mut lines,
@@ -604,8 +594,7 @@ impl ModHost {
                 enforcement,
             );
             if enforcement.suspended {
-                self.mod_status_by_id
-                    .insert(mod_id, ModStatus::Suspended);
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -630,14 +619,8 @@ impl ModHost {
             if self.mod_status(&mod_id) == ModStatus::Suspended {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(mod_id.clone())
-                .or_default();
-            let enforcement = self
-                .enforcement_by_mod
-                .entry(mod_id.clone())
-                .or_default();
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
             let violations_before = enforcement.violations;
             match invoke_policy_tick_with_capabilities(
                 wasm,
@@ -649,11 +632,7 @@ impl ModHost {
                 Ok(code) => lines.push(format!(
                     "mod:{mod_id}:wasm_policy_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &mod_id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
             }
             push_permission_violation_if_needed(
                 &mut lines,
@@ -663,8 +642,7 @@ impl ModHost {
                 enforcement,
             );
             if enforcement.suspended {
-                self.mod_status_by_id
-                    .insert(mod_id, ModStatus::Suspended);
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -688,14 +666,8 @@ impl ModHost {
             if self.mod_status(&mod_id) == ModStatus::Suspended {
                 continue;
             }
-            let mem = self
-                .guest_memory_by_mod
-                .entry(mod_id.clone())
-                .or_default();
-            let enforcement = self
-                .enforcement_by_mod
-                .entry(mod_id.clone())
-                .or_default();
+            let mem = self.guest_memory_by_mod.entry(mod_id.clone()).or_default();
+            let enforcement = self.enforcement_by_mod.entry(mod_id.clone()).or_default();
             let violations_before = enforcement.violations;
             match invoke_economy_tick_with_capabilities(
                 wasm,
@@ -707,11 +679,7 @@ impl ModHost {
                 Ok(code) => lines.push(format!(
                     "mod:{mod_id}:wasm_economy_tick:tick={sim_tick}:code={code}"
                 )),
-                Err(err) => lines.push(format_mod_error_event(
-                    &mod_id,
-                    sim_tick,
-                    &err.to_string(),
-                )),
+                Err(err) => lines.push(format_mod_error_event(&mod_id, sim_tick, &err.to_string())),
             }
             push_permission_violation_if_needed(
                 &mut lines,
@@ -721,8 +689,7 @@ impl ModHost {
                 enforcement,
             );
             if enforcement.suspended {
-                self.mod_status_by_id
-                    .insert(mod_id, ModStatus::Suspended);
+                self.mod_status_by_id.insert(mod_id, ModStatus::Suspended);
             }
         }
         lines
@@ -1289,7 +1256,9 @@ write_policy = true
         host.load_manifest_dir(dir.path()).expect("load");
         let lines = host.tick(7);
         assert!(
-            lines.iter().any(|l| l.contains("mod.permission_violation.v1")),
+            lines
+                .iter()
+                .any(|l| l.contains("mod.permission_violation.v1")),
             "expected violation event in {lines:?}"
         );
         assert!(lines.iter().any(|l| l.contains("world_read")));
@@ -1756,16 +1725,22 @@ write_policy = true
 "#,
         )
         .expect("manifest");
-        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT_V1).expect("wat"))
-            .expect("wasm v1");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT_V1).expect("wat"),
+        )
+        .expect("wasm v1");
 
         let mut host = ModHost::new();
         host.load_manifest_dir(dir.path()).expect("load");
         let lines_v1 = host.tick(1);
         assert!(lines_v1.iter().any(|line| line.contains("code=1")));
 
-        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT_V2).expect("wat"))
-            .expect("wasm v2");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT_V2).expect("wat"),
+        )
+        .expect("wasm v2");
         let record = host.reload_mod("reload-demo", 9).expect("reload");
         assert_eq!(record.mod_id, "reload-demo");
         assert_eq!(record.tick, 9);

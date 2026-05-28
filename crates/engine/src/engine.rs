@@ -657,14 +657,14 @@ impl Simulation {
         });
         let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
         self.mod_host.load_mod_path(load_path)?;
-        let entry = self
-            .mod_host
-            .mods()
-            .last()
-            .ok_or_else(|| civ_mod_host::ManifestError::Validation {
-                path: load_path.to_path_buf(),
-                message: "mod load produced no registry entry".into(),
-            })?;
+        let entry =
+            self.mod_host
+                .mods()
+                .last()
+                .ok_or_else(|| civ_mod_host::ManifestError::Validation {
+                    path: load_path.to_path_buf(),
+                    message: "mod load produced no registry entry".into(),
+                })?;
         let record = civ_mod_host::ModLoadedRecord {
             mod_id: entry.manifest.meta.id.clone(),
             mod_name: entry.manifest.meta.name.clone(),
@@ -683,9 +683,7 @@ impl Simulation {
         mod_id: &str,
         reason: &str,
     ) -> Result<civ_mod_host::ModUnloadedRecord, String> {
-        let record = self
-            .mod_host
-            .unload_mod(mod_id, reason, self.state.tick)?;
+        let record = self.mod_host.unload_mod(mod_id, reason, self.state.tick)?;
         let bus_json = civ_mod_host::format_mod_unloaded_event_json(&record);
         self.replay_log.record_mod_unloaded(&record);
         self.last_tick_mod_lifecycle.push(bus_json);

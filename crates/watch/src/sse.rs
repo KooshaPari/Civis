@@ -64,4 +64,3 @@ pub(crate) async fn sse_handler(
     });
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
-

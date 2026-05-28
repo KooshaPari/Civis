@@ -155,7 +155,10 @@ impl SaveDb {
         Ok(id)
     }
 
-    pub fn list_for_session(&self, session_id: &str) -> Result<Vec<SessionSaveRecord>, SaveDbError> {
+    pub fn list_for_session(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<SessionSaveRecord>, SaveDbError> {
         let conn = self.conn()?;
         let mut records = Vec::new();
 

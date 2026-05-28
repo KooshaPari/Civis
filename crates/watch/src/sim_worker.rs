@@ -196,4 +196,3 @@ pub(crate) fn tick_military(
     }
     damage_events
 }
-

@@ -2,11 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-};
+use axum::{extract::State, http::StatusCode, response::Json};
 use base64::Engine as _;
 use civ_engine::{load_manifest, ModType};
 use civ_mod_host::{read_civmod_archive, read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
@@ -16,8 +12,8 @@ use crate::app::{
     AppState, ControlOk, FetchModReq, FetchModResponse, InstallModReq, ModCatalogEntry,
     PublishModReq, PublishModResponse, PublishedModEntry, ReloadModReq, RemoteModEntry,
     RemoteModMeta, RemoteModRegistry, RemoteModRegistryEntry, UnloadModReq, UploadModReq,
-    UploadModResponse, REMOTE_MOD_ARCHIVE_NAME, REMOTE_MOD_MAX_BYTES,
-    REMOTE_MOD_META_NAME, REMOTE_REGISTRY_NAME,
+    UploadModResponse, REMOTE_MOD_ARCHIVE_NAME, REMOTE_MOD_MAX_BYTES, REMOTE_MOD_META_NAME,
+    REMOTE_REGISTRY_NAME,
 };
 
 pub(crate) fn load_remote_mod_registry(mods_dir: &Path) -> RemoteModRegistry {
@@ -46,7 +42,10 @@ pub(crate) fn validate_remote_fetch_against_registry<'a>(
 ) -> Result<Option<&'a RemoteModRegistryEntry>, String> {
     let matched = match_registry_entry(registry, url);
     if registry.require_registry && matched.is_none() {
-        return Err(format!("url not in signed remote mod registry: {}", url.trim()));
+        return Err(format!(
+            "url not in signed remote mod registry: {}",
+            url.trim()
+        ));
     }
     if let (Some(entry), Some(requested_id)) = (matched, mod_id) {
         if let Some(expected) = entry.mod_id.as_deref() {
@@ -90,7 +89,6 @@ pub(crate) fn validate_remote_mod_against_registry(
     }
     Ok(())
 }
-
 
 pub(crate) fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -162,7 +160,10 @@ pub(crate) fn civmod_catalog_entries(
     entries
 }
 
-pub(crate) fn scan_mod_catalog(mods_dir: &Path, installed_ids: &std::collections::HashSet<String>) -> Vec<ModCatalogEntry> {
+pub(crate) fn scan_mod_catalog(
+    mods_dir: &Path,
+    installed_ids: &std::collections::HashSet<String>,
+) -> Vec<ModCatalogEntry> {
     let repo = repo_root();
     let mut entries = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -243,12 +244,17 @@ pub(crate) fn resolve_install_source(source: &str, mods_dir: &Path) -> Result<St
                 .trim_start_matches('/'),
         );
         if path.is_file() {
-            return Ok(format!("mods/{}", path.file_name().unwrap().to_string_lossy()));
+            return Ok(format!(
+                "mods/{}",
+                path.file_name().unwrap().to_string_lossy()
+            ));
         }
         return Err(format!("mod archive not found: {normalized}"));
     }
 
-    let dir_name = normalized.trim_start_matches("mods/").trim_start_matches('/');
+    let dir_name = normalized
+        .trim_start_matches("mods/")
+        .trim_start_matches('/');
     let dir = mods_dir.join(dir_name);
     if dir.is_dir() {
         return Ok(format!("mods/{dir_name}"));
@@ -346,7 +352,10 @@ pub(crate) fn sanitize_remote_mod_id(mod_id: &str) -> Result<String, String> {
     if trimmed.contains("..") || trimmed.contains('/') || trimmed.contains('\\') {
         return Err("mod_id must not contain path separators or '..'".into());
     }
-    let valid_id = trimmed.as_bytes().first().is_some_and(|b| b.is_ascii_lowercase())
+    let valid_id = trimmed
+        .as_bytes()
+        .first()
+        .is_some_and(|b| b.is_ascii_lowercase())
         && trimmed.len() <= 64
         && trimmed
             .bytes()
@@ -402,7 +411,10 @@ pub(crate) fn is_zip_payload(bytes: &[u8]) -> bool {
 
 pub(crate) fn format_remote_mod_validation_error(err: civ_mod_host::ManifestError) -> String {
     let msg = err.to_string();
-    if msg.contains("signature") || msg.contains("mod.wasm.sig") || msg.contains("author_pubkey_hex") {
+    if msg.contains("signature")
+        || msg.contains("mod.wasm.sig")
+        || msg.contains("author_pubkey_hex")
+    {
         format!("civmod signature verification failed: {msg}")
     } else {
         format!("invalid civmod archive: {msg}")
@@ -432,8 +444,7 @@ pub(crate) fn validate_remote_mod_bytes(
     std::fs::write(scratch_path, bytes).map_err(|err| err.to_string())?;
     match read_civmod_archive(scratch_path) {
         Ok((manifest, wasm)) => {
-            let signed =
-                manifest.meta.author_pubkey_hex.is_some() && wasm.is_some();
+            let signed = manifest.meta.author_pubkey_hex.is_some() && wasm.is_some();
             match validate_remote_mod_against_registry(registry_entry, &manifest) {
                 Ok(()) => Ok((manifest, signed)),
                 Err(err) => {
@@ -706,11 +717,7 @@ pub(crate) async fn publish_mod_handler(
         )
     })?;
     let id = manifest.meta.id.trim();
-    if id.is_empty()
-        || id.contains('/')
-        || id.contains('\\')
-        || id.contains("..")
-    {
+    if id.is_empty() || id.contains('/') || id.contains('\\') || id.contains("..") {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ControlOk {
@@ -799,15 +806,17 @@ pub(crate) async fn unload_mod_handler(
     Json(req): Json<UnloadModReq>,
 ) -> Result<Json<ControlOk>, (StatusCode, Json<ControlOk>)> {
     let mut sim = state.sim.lock().await;
-    let record = sim.unload_mod_by_id(&req.mod_id, "user_request").map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
+    let record = sim
+        .unload_mod_by_id(&req.mod_id, "user_request")
+        .map_err(|message| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ControlOk {
+                    ok: false,
+                    message: Some(message),
+                }),
+            )
+        })?;
     Ok(Json(ControlOk {
         ok: true,
         message: Some(format!("unloaded {} ({})", record.mod_name, record.mod_id)),
@@ -839,20 +848,17 @@ pub(crate) async fn fetch_mod_handler(
     Json(req): Json<FetchModReq>,
 ) -> Result<Json<FetchModResponse>, (StatusCode, Json<ControlOk>)> {
     let registry = load_remote_mod_registry(state.mods_dir.as_ref());
-    let registry_entry = validate_remote_fetch_against_registry(
-        &registry,
-        &req.url,
-        req.mod_id.as_deref(),
-    )
-    .map_err(|message| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ControlOk {
-                ok: false,
-                message: Some(message),
-            }),
-        )
-    })?;
+    let registry_entry =
+        validate_remote_fetch_against_registry(&registry, &req.url, req.mod_id.as_deref())
+            .map_err(|message| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ControlOk {
+                        ok: false,
+                        message: Some(message),
+                    }),
+                )
+            })?;
     let cache_id = resolve_remote_cache_id(&req.url, req.mod_id.as_deref()).map_err(|message| {
         (
             StatusCode::BAD_REQUEST,

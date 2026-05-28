@@ -609,9 +609,7 @@ pub fn snapshot_fields_from_sim(
         damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
         mods: sim.mod_browser_entries(),
-        mod_lifecycle: sim
-            .replay_log()
-            .mod_loaded_bus_at_tick(sim.state.tick),
+        mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
         session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
         mod_permission_violations: sim
             .replay_log()

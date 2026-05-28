@@ -22,12 +22,16 @@ fn usage() -> ! {
 fn decode_hex_seed(hex: &str) -> Result<[u8; 32], String> {
     let hex = hex.trim();
     if hex.len() != 64 {
-        return Err(format!("expected 64 hex chars (32 bytes), got {}", hex.len()));
+        return Err(format!(
+            "expected 64 hex chars (32 bytes), got {}",
+            hex.len()
+        ));
     }
     let mut out = [0u8; 32];
     for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
         let pair = std::str::from_utf8(chunk).map_err(|e| e.to_string())?;
-        out[i] = u8::from_str_radix(pair, 16).map_err(|e| format!("invalid hex at byte {i}: {e}"))?;
+        out[i] =
+            u8::from_str_radix(pair, 16).map_err(|e| format!("invalid hex at byte {i}: {e}"))?;
     }
     Ok(out)
 }

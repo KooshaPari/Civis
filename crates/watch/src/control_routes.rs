@@ -7,7 +7,10 @@ use civ_agents::spawn_civilian_at;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
 
-use crate::app::{AppState, ControlOk, DamageReq, MilitaryPin, PlaceVoxelReq, SpawnCivilianReq, SpawnEntityReq, SpeedReq};
+use crate::app::{
+    AppState, ControlOk, DamageReq, MilitaryPin, PlaceVoxelReq, SpawnCivilianReq, SpawnEntityReq,
+    SpeedReq,
+};
 
 pub(crate) async fn place_voxel_handler(
     State(state): State<AppState>,
@@ -133,4 +136,3 @@ pub(crate) async fn speed_handler(
         message: None,
     })
 }
-

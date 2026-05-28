@@ -8,14 +8,15 @@ use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
-    gpu_features::GpuFeaturesPlugin,
-    native_backend::native_render_plugin,
     agent_color_from_id, agent_label_stub, agent_scale_multiplier,
     bevy_render::{
         apply_chunk_material, mesh_buffer_to_bevy, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR,
     },
     chunk_distance_from_camera, chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
-    decode_chunk_id, focused_chunk_at_grid, mesh_lod_level, minimap_uv_to_chunk_grid,
+    decode_chunk_id, focused_chunk_at_grid,
+    gpu_features::GpuFeaturesPlugin,
+    mesh_lod_level, minimap_uv_to_chunk_grid,
+    native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url, should_render_chunk,
     ws_client::{WsClient, WsClientConfig},
@@ -333,7 +334,14 @@ fn sync_chunk_debug_render(
     debug: Res<DebugRender>,
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    chunks: Query<(Entity, &MeshMaterial3d<StandardMaterial>, Option<&ChunkFade>), With<ChunkTag>>,
+    chunks: Query<
+        (
+            Entity,
+            &MeshMaterial3d<StandardMaterial>,
+            Option<&ChunkFade>,
+        ),
+        With<ChunkTag>,
+    >,
 ) {
     if !debug.is_changed() {
         return;

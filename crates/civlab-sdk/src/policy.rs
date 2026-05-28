@@ -212,10 +212,7 @@ mod tests {
     #[test]
     fn policy_action_action_type_mapping() {
         assert_eq!(
-            PolicyAction::SetTaxRate {
-                rate_permille: 100
-            }
-            .action_type(),
+            PolicyAction::SetTaxRate { rate_permille: 100 }.action_type(),
             ACTION_SET_TAX_RATE
         );
         assert_eq!(

@@ -346,7 +346,11 @@ pub(crate) fn game_events(
         .collect()
 }
 
-pub(crate) fn disaster_events(tick: u64, factions: &[Faction], buildings: &[Building]) -> Vec<DisasterEvent> {
+pub(crate) fn disaster_events(
+    tick: u64,
+    factions: &[Faction],
+    buildings: &[Building],
+) -> Vec<DisasterEvent> {
     if tick == 0 || tick % 1000 != 0 {
         return Vec::new();
     }
@@ -420,7 +424,6 @@ pub(crate) fn faction_for_point(x: f32, y: f32) -> Option<u32> {
         })
         .map(|faction| faction.id)
 }
-
 
 pub(crate) fn tech_tree(db: &LawDb, current_era: u16) -> Vec<TechNode> {
     let mut nodes = db
@@ -852,7 +855,10 @@ pub(crate) fn route_resource(goods: &str) -> civ_engine::ResourceType {
     }
 }
 
-pub(crate) fn resource_amount(resources: &civ_engine::Resources, resource: civ_engine::ResourceType) -> f64 {
+pub(crate) fn resource_amount(
+    resources: &civ_engine::Resources,
+    resource: civ_engine::ResourceType,
+) -> f64 {
     match resource {
         civ_engine::ResourceType::Food => resources.food.to_f64(),
         civ_engine::ResourceType::Wood => resources.wood.to_f64(),
@@ -861,7 +867,10 @@ pub(crate) fn resource_amount(resources: &civ_engine::Resources, resource: civ_e
     }
 }
 
-pub(crate) fn resource_demand(resources: &civ_engine::Resources, resource: civ_engine::ResourceType) -> f64 {
+pub(crate) fn resource_demand(
+    resources: &civ_engine::Resources,
+    resource: civ_engine::ResourceType,
+) -> f64 {
     (1000.0 - resource_amount(resources, resource)).max(0.0)
 }
 
@@ -904,4 +913,3 @@ pub(crate) fn noise_offset(seed: u64, lane: u64) -> f32 {
 pub(crate) fn wrap01(value: f32) -> f32 {
     value.rem_euclid(1.0)
 }
-

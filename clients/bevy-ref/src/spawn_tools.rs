@@ -53,14 +53,14 @@ pub struct CursorMarker {
 }
 
 /// Request to spawn a civilian at the clicked point.
-#[derive(Event, Debug, Clone, Copy, PartialEq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq)]
 pub struct SpawnCivilianRequest {
     /// World-space click position.
     pub position: Vec3,
 }
 
 /// Request to spawn a building at the clicked point.
-#[derive(Event, Debug, Clone, Copy, PartialEq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq)]
 pub struct SpawnBuildingRequest {
     /// World-space click position.
     pub position: Vec3,

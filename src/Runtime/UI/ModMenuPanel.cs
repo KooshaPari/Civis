@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Logging;
+using DINOForge.Runtime.Updates;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -103,6 +104,12 @@ namespace DINOForge.Runtime.UI
         /// <summary>Vertical content inside the banner — one row per pending update.</summary>
         private RectTransform? _updateBannerContent;
         private const float UpdateBannerRowHeight = 24f;
+
+        // ── Pack settings panel (#925) ────────────────────────────────────────
+        /// <summary>Container for the per-pack settings section in the detail pane.</summary>
+        private GameObject? _settingsSection;
+        /// <summary>Content area inside the settings section for dynamically added setting controls.</summary>
+        private RectTransform? _settingsContent;
 
         /// <summary>Canvas root used to anchor the dependency prompt dialog.</summary>
         private Transform? _canvasRoot;
@@ -291,6 +298,7 @@ namespace DINOForge.Runtime.UI
         private void Update()
         {
             AnimatePanel();
+            KeyboardUpdate();
         }
 
         // ── Animation ─────────────────────────────────────────────────────────────
@@ -299,6 +307,162 @@ namespace DINOForge.Runtime.UI
         {
             // No-op: Update() never fires in DINO (MonoBehaviour.Update is not called).
             // Show()/Hide() set state immediately instead.
+        }
+
+        // ── Keyboard navigation ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Handles keyboard input for the mod menu panel.
+        ///
+        /// Keymap:
+        ///   - Arrow Up/Down: Navigate pack list (keyboard focus only)
+        ///   - Enter/Space: Toggle enable/disable on the focused pack
+        ///   - Tab: Cycle focus between sections (search → pack list)
+        ///   - Esc: Close the menu
+        ///   - '/': Focus the search input field
+        ///   - Ctrl+R: Reload packs
+        ///   - Ctrl+S: Reserved for future profile save feature
+        ///
+        /// Guards: Only processes input when the panel is visible.
+        /// </summary>
+        private void KeyboardUpdate()
+        {
+            if (!IsVisible)
+                return;
+
+            // Esc always closes, even if input is focused
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                ClearCurrentSelection();
+                Hide();
+                return;
+            }
+
+            // Check if an InputField currently has focus (e.g., search box)
+            bool inputFieldFocused = EventSystem.current?.currentSelectedGameObject?.GetComponent<InputField>() != null;
+
+            // Arrow keys + Enter/Space only work when no input field is focused
+            if (!inputFieldFocused)
+            {
+                // Arrow Up: Move focus up in the pack list
+                if (Input.GetKeyDown(KeyCode.UpArrow))
+                {
+                    if (_filteredIndices.Count > 0)
+                    {
+                        if (_keyboardFocusedRowIndex <= 0)
+                            _keyboardFocusedRowIndex = _filteredIndices.Count - 1;
+                        else
+                            _keyboardFocusedRowIndex--;
+                        RefreshPackListFocusIndicator();
+                    }
+                    return;
+                }
+
+                // Arrow Down: Move focus down in the pack list
+                if (Input.GetKeyDown(KeyCode.DownArrow))
+                {
+                    if (_filteredIndices.Count > 0)
+                    {
+                        _keyboardFocusedRowIndex++;
+                        if (_keyboardFocusedRowIndex >= _filteredIndices.Count)
+                            _keyboardFocusedRowIndex = 0;
+                        RefreshPackListFocusIndicator();
+                    }
+                    return;
+                }
+
+                // Enter/Space: Toggle the focused pack
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space))
+                {
+                    if (_keyboardFocusedRowIndex >= 0 && _keyboardFocusedRowIndex < _filteredIndices.Count)
+                    {
+                        int realIndex = _filteredIndices[_keyboardFocusedRowIndex];
+                        SelectPack(realIndex);
+                        OnToggleSelected();
+                    }
+                    return;
+                }
+            }
+
+            // Tab: Cycle focus between UI sections (works even with input focused)
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (inputFieldFocused)
+                {
+                    // If search input is focused, move to pack list
+                    _keyboardFocusedRowIndex = 0;
+                    RefreshPackListFocusIndicator();
+                }
+                else if (_keyboardFocusedRowIndex >= 0)
+                {
+                    // If pack list is focused, move back to search input
+                    if (_searchInput != null)
+                    {
+                        EventSystem.current?.SetSelectedGameObject(_searchInput.gameObject);
+                        _keyboardFocusedRowIndex = -1;
+                        RefreshPackListFocusIndicator();
+                    }
+                }
+                return;
+            }
+
+            // '/': Focus the search input (vim-style command prefix)
+            if (Input.GetKeyDown(KeyCode.Slash))
+            {
+                if (_searchInput != null)
+                {
+                    EventSystem.current?.SetSelectedGameObject(_searchInput.gameObject);
+                    _keyboardFocusedRowIndex = -1;
+                    RefreshPackListFocusIndicator();
+                }
+                return;
+            }
+
+            // Ctrl+R: Reload packs
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            {
+                if (Input.GetKeyDown(KeyCode.R))
+                {
+                    ClearCurrentSelection();
+                    OnReloadRequested?.Invoke();
+                    return;
+                }
+
+                // Ctrl+S: Reserved for profile save (placeholder)
+                if (Input.GetKeyDown(KeyCode.S))
+                {
+                    // Future: implement profile save
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the visual focus indicator on the pack list rows.
+        /// Applies a colored border highlight to the focused row.
+        /// </summary>
+        private void RefreshPackListFocusIndicator()
+        {
+            if (_listContent == null)
+                return;
+
+            // Clear all focus borders
+            for (int i = 0; i < _listContent.childCount; i++)
+            {
+                Transform child = _listContent.GetChild(i);
+                Outline outline = child.GetComponent<Outline>();
+                if (outline != null)
+                    Destroy(outline);
+            }
+
+            // Apply focus border to the focused row
+            if (_keyboardFocusedRowIndex >= 0 && _keyboardFocusedRowIndex < _listContent.childCount)
+            {
+                Transform focusedRow = _listContent.GetChild(_keyboardFocusedRowIndex);
+                Outline outline = focusedRow.gameObject.AddComponent<Outline>();
+                outline.effectColor = UiBuilder.Accent;
+                outline.effectDistance = new Vector2(2f, 2f);
+            }
         }
 
         // ── UI construction ────────────────────────────────────────────────────────
@@ -644,6 +808,26 @@ namespace DINOForge.Runtime.UI
             LayoutElement conflictHostLe = conflictHost.AddComponent<LayoutElement>();
             conflictHostLe.flexibleWidth = 1f;
             conflictHost.SetActive(false); // hidden until conflicts present
+
+            // ── Per-pack runtime settings section (#925) ──────────────────────
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
+
+            GameObject settingsHost = new GameObject("SettingsSection", typeof(RectTransform));
+            settingsHost.transform.SetParent(c, false);
+            _settingsSection = settingsHost;
+            VerticalLayoutGroup settingsVlg = settingsHost.AddComponent<VerticalLayoutGroup>();
+            settingsVlg.spacing = 8f;
+            settingsVlg.childForceExpandWidth = true;
+            settingsVlg.childForceExpandHeight = false;
+            settingsVlg.padding = new RectOffset(12, 12, 8, 8);
+            ContentSizeFitter settingsCsf = settingsHost.AddComponent<ContentSizeFitter>();
+            settingsCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            LayoutElement settingsHostLe = settingsHost.AddComponent<LayoutElement>();
+            settingsHostLe.flexibleWidth = 1f;
+            settingsHost.SetActive(false); // hidden until pack has settings
+
+            // Stores the setting controls for this pack
+            _settingsContent = settingsHost.GetComponent<RectTransform>();
 
             // ── Fixed action-buttons row (outside scroll) ────────────────────
             GameObject btnRow = new GameObject("ActionButtons", typeof(RectTransform));
@@ -1705,6 +1889,314 @@ namespace DINOForge.Runtime.UI
                 yield return list[i];
         }
 
+        // ── Conflict resolution UI (#903) ──────────────────────────────────────────
+
+        /// <summary>
+        /// Builds the full-screen diff modal (hidden by default).
+        /// Called once from <see cref="BuildDetailPane"/>.
+        /// </summary>
+        private void BuildDiffModal()
+        {
+            if (_panelRt == null) return;
+
+            _diffModal = new GameObject("DiffModal", typeof(RectTransform));
+            _diffModal.transform.SetParent(_panelRt, false);
+            UiBuilder.FillParent(_diffModal.GetComponent<RectTransform>());
+
+            Image dimmerImg = _diffModal.AddComponent<Image>();
+            dimmerImg.color = new Color(0f, 0f, 0f, 0.88f);
+            dimmerImg.raycastTarget = true;
+
+            GameObject card = UiBuilder.MakePanel(_diffModal.transform, "DiffCard",
+                UiBuilder.BgSurface, new Vector2(640f, 440f));
+            RectTransform cardRt = card.GetComponent<RectTransform>();
+            cardRt.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRt.pivot = new Vector2(0.5f, 0.5f);
+            cardRt.anchoredPosition = Vector2.zero;
+
+            VerticalLayoutGroup cardVlg = card.AddComponent<VerticalLayoutGroup>();
+            cardVlg.spacing = 6f;
+            cardVlg.padding = new RectOffset(12, 12, 10, 10);
+            cardVlg.childForceExpandWidth = true;
+            cardVlg.childForceExpandHeight = false;
+
+            // Title row: heading + close button
+            GameObject titleRow = new GameObject("TitleRow", typeof(RectTransform));
+            titleRow.transform.SetParent(card.transform, false);
+            HorizontalLayoutGroup titleHlg = titleRow.AddComponent<HorizontalLayoutGroup>();
+            titleHlg.spacing = 8f;
+            titleHlg.childForceExpandWidth = false;
+            titleHlg.childForceExpandHeight = false;
+            titleRow.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+            _diffModalTitle = UiBuilder.MakeText(titleRow.transform, "DiffTitle",
+                "Conflict Diff", 14, UiBuilder.Accent, bold: true);
+            _diffModalTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject diffModalRef = _diffModal; // capture for closure
+            Button diffCloseBtn = UiBuilder.MakeButton(titleRow.transform, "DiffCloseBtn", "X",
+                UiBuilder.BgDeep, UiBuilder.TextSecondary,
+                () => diffModalRef.SetActive(false));
+            LayoutElement diffCloseLe = diffCloseBtn.gameObject.AddComponent<LayoutElement>();
+            diffCloseLe.preferredWidth = 24f;
+            diffCloseLe.preferredHeight = 24f;
+
+            UiBuilder.MakeHorizontalSeparator(card.transform, UiBuilder.Border);
+
+            // Two-column scroll area
+            GameObject cols = new GameObject("Columns", typeof(RectTransform));
+            cols.transform.SetParent(card.transform, false);
+            HorizontalLayoutGroup colsHlg = cols.AddComponent<HorizontalLayoutGroup>();
+            colsHlg.spacing = 6f;
+            colsHlg.childForceExpandHeight = true;
+            colsHlg.childForceExpandWidth = false;
+            LayoutElement colsLe = cols.AddComponent<LayoutElement>();
+            colsLe.flexibleWidth = 1f;
+            colsLe.preferredHeight = 360f;
+            colsLe.minHeight = 200f; // threshold-ok: minimum readable diff panel height
+
+            _diffLeftText = BuildDiffColumn(cols.transform, "LeftColumn", "Pack A");
+            _diffRightText = BuildDiffColumn(cols.transform, "RightColumn", "Pack B");
+
+            _diffModal.SetActive(false);
+        }
+
+        /// <summary>Builds one scrollable text column inside the diff modal.</summary>
+        private static Text BuildDiffColumn(Transform parent, string name, string headerLabel)
+        {
+            GameObject col = new GameObject(name, typeof(RectTransform));
+            col.transform.SetParent(parent, false);
+            VerticalLayoutGroup colVlg = col.AddComponent<VerticalLayoutGroup>();
+            colVlg.spacing = 4f;
+            colVlg.childForceExpandWidth = true;
+            colVlg.childForceExpandHeight = false;
+            LayoutElement colLe = col.AddComponent<LayoutElement>();
+            colLe.flexibleWidth = 1f;
+            colLe.flexibleHeight = 1f;
+
+            Text colHeader = UiBuilder.MakeText(col.transform, "Header", headerLabel, 12,
+                UiBuilder.Accent, bold: true);
+            colHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+            (ScrollRect colScroll, RectTransform colContent) =
+                UiBuilder.MakeScrollView(col.transform, name + "Scroll", Vector2.zero);
+            LayoutElement colScrollLe = colScroll.gameObject.AddComponent<LayoutElement>();
+            colScrollLe.flexibleWidth = 1f;
+            colScrollLe.flexibleHeight = 1f;
+            colScrollLe.minHeight = 140f; // threshold-ok: minimum readable diff scroll height
+
+            VerticalLayoutGroup colContentVlg = colContent.GetComponent<VerticalLayoutGroup>();
+            if (colContentVlg != null) colContentVlg.padding = new RectOffset(6, 6, 4, 4);
+
+            Text bodyText = UiBuilder.MakeText(colContent, "Body", "", 10, UiBuilder.TextPrimary);
+            bodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            bodyText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            return bodyText;
+        }
+
+        /// <summary>Opens the diff modal populated with pack.yaml content for both packs.</summary>
+        private void OpenDiffModal(string selfPackId, string otherPackId, string overlapSummary)
+        {
+            if (_diffModal == null || _diffModalTitle == null ||
+                _diffLeftText == null || _diffRightText == null) return;
+
+            _diffModalTitle.text = "Diff: " + selfPackId + "  vs  " + otherPackId;
+            _diffLeftText.text = LoadPackYamlPreview(selfPackId, overlapSummary);
+            _diffRightText.text = LoadPackYamlPreview(otherPackId, overlapSummary);
+            _diffModal.SetActive(true);
+        }
+
+        /// <summary>
+        /// Reads pack.yaml for the given pack ID and returns a preview string (first 120 lines).
+        /// Falls back to an error notice if the file cannot be read.
+        /// </summary>
+        private string LoadPackYamlPreview(string packId, string overlapSummary)
+        {
+            if (string.IsNullOrEmpty(_packsDirectory)) return "(packs directory not set)";
+            string yamlPath = Path.Combine(_packsDirectory, packId, "pack.yaml");
+            try
+            {
+                if (!File.Exists(yamlPath)) return "(pack.yaml not found for " + packId + ")";
+                string yaml = File.ReadAllText(yamlPath, System.Text.Encoding.UTF8);
+                string[] lines = yaml.Split('\n');
+                int lineLimit = System.Math.Min(lines.Length, 120); // threshold-ok: modal line display limit
+                System.Text.StringBuilder sb = new System.Text.StringBuilder(2048);
+                sb.Append("=== ").Append(packId).Append(" / pack.yaml ===\n");
+                sb.Append("(overlap: ").Append(overlapSummary).Append(")\n\n");
+                for (int i = 0; i < lineLimit; i++)
+                {
+                    sb.Append(lines[i]);
+                    sb.Append('\n');
+                }
+                if (lines.Length > lineLimit)
+                    sb.Append("\n... (").Append(lines.Length - lineLimit).Append(" more lines)");
+                return sb.ToString();
+            }
+            catch
+            {
+                // safe-swallow: diff preview is best-effort UI decoration
+                return "(error reading pack.yaml for " + packId + ")";
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the interactive conflict-resolution button rows for the selected pack.
+        /// Called from <see cref="RefreshDetail"/> after the gallery section.
+        /// Hides the conflict section entirely when there are no detected conflicts.
+        /// </summary>
+        private void RefreshConflictButtons(PackDisplayInfo p)
+        {
+            if (_conflictSection == null) return;
+
+            for (int i = _conflictSection.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _conflictSection.GetChild(i);
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
+
+            if (p.DetectedConflicts.Count == 0)
+            {
+                _conflictSection.gameObject.SetActive(false);
+                return;
+            }
+
+            _conflictSection.gameObject.SetActive(true);
+
+            Text conflictHeader = UiBuilder.MakeText(_conflictSection, "ConflictHeader",
+                "Content Overlaps  --  Resolution", 12, UiBuilder.Warning, bold: true);
+            conflictHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+            UiBuilder.MakeHorizontalSeparator(_conflictSection, UiBuilder.Border);
+
+            foreach (string conflict in p.DetectedConflicts)
+                BuildConflictRow(p.Id, conflict);
+        }
+
+        /// <summary>
+        /// Builds one conflict row: description + status label + 4 action buttons.
+        /// DetectedConflicts format: "warfare-starwars also loads: factions, units"
+        /// </summary>
+        private void BuildConflictRow(string selfPackId, string conflictEntry)
+        {
+            if (_conflictSection == null) return;
+
+            string otherPackId = conflictEntry;
+            string overlapSummary = conflictEntry;
+
+            int alsoIdx = conflictEntry.IndexOf(" also loads:", StringComparison.Ordinal);
+            if (alsoIdx > 0)
+            {
+                otherPackId = conflictEntry.Substring(0, alsoIdx).Trim();
+                overlapSummary = conflictEntry.Substring(alsoIdx + " also loads:".Length).Trim();
+            }
+
+            string capturedSelf = selfPackId;
+            string capturedOther = otherPackId;
+            string capturedOverlap = overlapSummary;
+
+            GameObject row = new GameObject("ConflictRow_" + otherPackId, typeof(RectTransform));
+            row.transform.SetParent(_conflictSection, false);
+            VerticalLayoutGroup rowVlg = row.AddComponent<VerticalLayoutGroup>();
+            rowVlg.spacing = 4f;
+            rowVlg.childForceExpandWidth = true;
+            rowVlg.childForceExpandHeight = false;
+            rowVlg.padding = new RectOffset(0, 0, 2, 6);
+            ContentSizeFitter rowCsf = row.AddComponent<ContentSizeFitter>();
+            rowCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            row.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            string descText = "Pack \"" + otherPackId + "\" overlaps on: " + overlapSummary;
+            Text descLabel = UiBuilder.MakeText(row.transform, "ConflictDesc",
+                descText, 11, UiBuilder.Warning);
+            descLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            descLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            LayoutElement descLe = descLabel.gameObject.AddComponent<LayoutElement>();
+            descLe.flexibleWidth = 1f;
+            descLe.preferredHeight = 28f;
+
+            Text statusLabel = UiBuilder.MakeText(row.transform, "ResolutionStatus",
+                GetResolutionStatusText(capturedSelf, capturedOther), 10, UiBuilder.TextSecondary);
+            statusLabel.gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
+
+            GameObject btnRow = new GameObject("ResolutionBtns", typeof(RectTransform));
+            btnRow.transform.SetParent(row.transform, false);
+            HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
+            btnHlg.spacing = 4f;
+            btnHlg.childForceExpandWidth = false;
+            btnHlg.childForceExpandHeight = false;
+            btnHlg.padding = new RectOffset(0, 0, 2, 0);
+            btnRow.AddComponent<LayoutElement>().preferredHeight = 26f;
+
+            Text capturedStatus = statusLabel;
+
+            Button useSelfBtn = UiBuilder.MakeButton(btnRow.transform, "Btn_prefer_self",
+                "Use This Pack", UiBuilder.BgDeep, UiBuilder.Success,
+                () =>
+                {
+                    _conflictStore?.SetResolution(capturedSelf, capturedOther, "prefer_self");
+                    _conflictStore?.Save();
+                    if (capturedStatus != null)
+                        capturedStatus.text = GetResolutionStatusText(capturedSelf, capturedOther);
+                });
+            LayoutElement useSelfLe = useSelfBtn.gameObject.AddComponent<LayoutElement>();
+            useSelfLe.preferredWidth = 95f;
+            useSelfLe.minWidth = 80f;
+            useSelfLe.preferredHeight = 24f;
+
+            Button useOtherBtn = UiBuilder.MakeButton(btnRow.transform, "Btn_prefer_other",
+                "Use Other Pack", UiBuilder.BgDeep, UiBuilder.Warning,
+                () =>
+                {
+                    _conflictStore?.SetResolution(capturedSelf, capturedOther, "prefer_other");
+                    _conflictStore?.Save();
+                    if (capturedStatus != null)
+                        capturedStatus.text = GetResolutionStatusText(capturedSelf, capturedOther);
+                });
+            LayoutElement useOtherLe = useOtherBtn.gameObject.AddComponent<LayoutElement>();
+            useOtherLe.preferredWidth = 100f;
+            useOtherLe.minWidth = 85f;
+            useOtherLe.preferredHeight = 24f;
+
+            Button mergeBtn = UiBuilder.MakeButton(btnRow.transform, "Btn_merge",
+                "Keep Both", UiBuilder.BgDeep, UiBuilder.TextSecondary,
+                () =>
+                {
+                    _conflictStore?.SetResolution(capturedSelf, capturedOther, "merge");
+                    _conflictStore?.Save();
+                    if (capturedStatus != null)
+                        capturedStatus.text = GetResolutionStatusText(capturedSelf, capturedOther);
+                });
+            LayoutElement mergeLe = mergeBtn.gameObject.AddComponent<LayoutElement>();
+            mergeLe.preferredWidth = 80f;
+            mergeLe.minWidth = 70f;
+            mergeLe.preferredHeight = 24f;
+
+            Button showDiffBtn = UiBuilder.MakeButton(btnRow.transform, "Btn_ShowDiff",
+                "Show Diff", UiBuilder.BgSurface, UiBuilder.Accent,
+                () => OpenDiffModal(capturedSelf, capturedOther, capturedOverlap));
+            LayoutElement showDiffLe = showDiffBtn.gameObject.AddComponent<LayoutElement>();
+            showDiffLe.preferredWidth = 80f;
+            showDiffLe.minWidth = 70f;
+            showDiffLe.preferredHeight = 24f;
+        }
+
+        /// <summary>Returns a human-readable summary of the stored resolution for the given pack pair.</summary>
+        private string GetResolutionStatusText(string selfId, string otherId)
+        {
+            string? res = _conflictStore?.GetResolution(selfId, otherId);
+            if (string.IsNullOrEmpty(res) || string.Equals(res, "merge", StringComparison.Ordinal))
+                return "Resolution: Keep Both (default)";
+            if (string.Equals(res, "prefer_self", StringComparison.Ordinal))
+                return "Resolution: Prefer \"" + selfId + "\"";
+            if (string.Equals(res, "prefer_other", StringComparison.Ordinal))
+                return "Resolution: Prefer \"" + otherId + "\"";
+            return "Resolution: " + res;
+        }
+
         private void OnToggleSelected()
         {
             int index = _presenter.SelectedIndex;
@@ -1975,6 +2467,144 @@ namespace DINOForge.Runtime.UI
             }
             string contentPart = totalContent > 0 ? $"  ({totalContent} content files)" : "";
             return $"{enabledCount}/{_presenter.Packs.Count} packs active{errPart}{contentPart}";
+        }
+
+        // ── Update banner (#899) ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Displays an "Updates Available" banner showing each pending update with a
+        /// "View on GitHub" button. Hides the banner when the list is empty or null.
+        /// Must be called on the Unity main thread.
+        /// </summary>
+        public void SetUpdatesAvailable(IReadOnlyList<Updates.UpdateInfo> updates)
+        {
+            // Lazily build the banner the first time updates arrive.
+            if (_updateBannerRoot == null && updates != null && updates.Count > 0)
+            {
+                BuildUpdateBanner();
+            }
+
+            if (_updateBannerRoot == null) return;
+
+            bool hasUpdates = updates != null && updates.Count > 0;
+            _updateBannerRoot.SetActive(hasUpdates);
+
+            if (!hasUpdates || _updateBannerContent == null) return;
+
+            // Clear existing rows.
+            for (int i = _updateBannerContent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _updateBannerContent.GetChild(i);
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
+
+            foreach (Updates.UpdateInfo info in updates!)
+            {
+                string rowLabel = $"{info.DisplayName}: {info.CurrentVersion} → {info.NewVersion}";
+                string capturedUrl = info.ReleaseUrl;
+
+                GameObject row = new GameObject($"UpdateRow_{info.ComponentId}", typeof(RectTransform));
+                row.transform.SetParent(_updateBannerContent, false);
+
+                HorizontalLayoutGroup rowHlg = row.AddComponent<HorizontalLayoutGroup>();
+                rowHlg.spacing = 6f;
+                rowHlg.childForceExpandHeight = false;
+                rowHlg.childForceExpandWidth = false;
+                rowHlg.padding = new RectOffset(8, 8, 2, 2);
+
+                LayoutElement rowLe = row.AddComponent<LayoutElement>();
+                rowLe.preferredHeight = UpdateBannerRowHeight;
+                rowLe.flexibleWidth = 1f;
+
+                Text labelText = UiBuilder.MakeText(row.transform, "UpdateLabel", rowLabel, 11, UiBuilder.Accent);
+                LayoutElement labelLe = labelText.gameObject.AddComponent<LayoutElement>();
+                labelLe.flexibleWidth = 1f;
+                labelLe.minWidth = 60f;
+
+                Button viewBtn = UiBuilder.MakeButton(
+                    row.transform, "ViewBtn", "View on GitHub",
+                    UiBuilder.BgSurface, UiBuilder.TextPrimary,
+                    () =>
+                    {
+                        try { Application.OpenURL(capturedUrl); }
+                        catch { } // safe-swallow: OpenURL is best-effort
+                    });
+                LayoutElement viewLe = viewBtn.gameObject.AddComponent<LayoutElement>();
+                viewLe.preferredWidth = 110f;
+                viewLe.minWidth = 90f;
+                viewLe.preferredHeight = UpdateBannerRowHeight - 4f;
+            }
+
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_updateBannerContent);
+        }
+
+        /// <summary>Lazily builds the amber update banner anchored just below the header bar.</summary>
+        private void BuildUpdateBanner()
+        {
+            if (_panelRt == null) return;
+
+            GameObject bannerRoot = UiBuilder.MakePanel(_panelRt, "UpdateBanner",
+                UiBuilder.HexColor("#3a2a00", 1f), Vector2.zero);
+            RectTransform bannerRt = bannerRoot.GetComponent<RectTransform>();
+            bannerRt.anchorMin = new Vector2(0f, 1f);
+            bannerRt.anchorMax = new Vector2(1f, 1f);
+            bannerRt.pivot = new Vector2(0.5f, 1f);
+            bannerRt.anchoredPosition = new Vector2(0f, -(HeaderHeight + 1f));
+            bannerRt.sizeDelta = Vector2.zero;
+
+            ContentSizeFitter bannerCsf = bannerRoot.AddComponent<ContentSizeFitter>();
+            bannerCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            VerticalLayoutGroup bannerVlg = bannerRoot.AddComponent<VerticalLayoutGroup>();
+            bannerVlg.childForceExpandWidth = true;
+            bannerVlg.childForceExpandHeight = false;
+            bannerVlg.spacing = 0f;
+            bannerVlg.padding = new RectOffset(0, 0, 4, 4);
+
+            GameObject titleRow = new GameObject("BannerTitle", typeof(RectTransform));
+            titleRow.transform.SetParent(bannerRoot.transform, false);
+            titleRow.AddComponent<LayoutElement>().preferredHeight = 18f;
+            UiBuilder.AddHorizontalLayout(titleRow, 4f, new RectOffset(8, 8, 2, 2));
+            Text titleTxt = UiBuilder.MakeText(titleRow.transform, "BannerTitleText",
+                "Updates Available", 11, UiBuilder.Accent, bold: true);
+            titleTxt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject content = new GameObject("UpdateBannerContent", typeof(RectTransform));
+            content.transform.SetParent(bannerRoot.transform, false);
+            _updateBannerContent = content.GetComponent<RectTransform>();
+            VerticalLayoutGroup contentVlg = content.AddComponent<VerticalLayoutGroup>();
+            contentVlg.childForceExpandWidth = true;
+            contentVlg.childForceExpandHeight = false;
+            contentVlg.spacing = 2f;
+            ContentSizeFitter contentCsf = content.AddComponent<ContentSizeFitter>();
+            contentCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            content.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            _updateBannerRoot = bannerRoot;
+            bannerRoot.SetActive(false);
+        }
+
+        // ── Conflict resolution stubs (#903 — pending) ────────────────────────────
+
+        /// <summary>
+        /// Builds the diff modal overlay. Full implementation in task #903.
+        /// Stub prevents compile error while the feature is in progress.
+        /// </summary>
+        private void BuildDiffModal()
+        {
+            // #903 stub — _diffModal/_diffModalTitle/_diffLeftText/_diffRightText remain null.
+        }
+
+        /// <summary>
+        /// Refreshes conflict-resolution action buttons in the detail pane.
+        /// Full implementation in task #903.
+        /// </summary>
+        private void RefreshConflictButtons(PackDisplayInfo pack)
+        {
+            // #903 stub — hide the conflict section until the feature ships.
+            if (_conflictSection != null)
+                _conflictSection.gameObject.SetActive(false);
         }
     }
 }

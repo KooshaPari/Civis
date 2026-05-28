@@ -22,7 +22,8 @@ cargo run -p civ-bevy-ref
 Live window (WebSocket attach + HUD overlay):
 
 ```bash
-# Headless protocol smoke (no window): F3D0 tick + voxel ground + standalone compile
+# Headless CI gate (no GPU): F3D0 WS smoke, live_ground, live_stream, minimap UV tests, compile checks
+# P-W1 item 41 / FR-CIV-BEVY-016 — run before merging live-attach changes
 just civis-3d-live-smoke
 
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
@@ -32,10 +33,29 @@ cargo run -p civ-server
 CIVIS_TICK_BROADCAST=binary cargo run -p civ-server
 
 cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
-
-# Standalone gameplay client on a remote civ-server (e.g. Tailscale proxy):
-# just civis-3d-standalone-live-url URL=ws://host:3000/ws?tick_format=binary
 ```
+
+### Live attach smoke (`just civis-3d-live-smoke`)
+
+Headless gate for live attach — no window or running civ-server required:
+
+| Step | Command (via recipe) |
+|------|----------------------|
+| F3D0 encode/decode | `cargo test -p civ-server frame_triple` |
+| WS binary tick after sim tick | `cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick` |
+| Voxel column ground anchoring | `cargo test -p civ-bevy-ref --features bevy --lib live_ground::` |
+| Shared frame apply (`live_stream`) | `cargo test -p civ-bevy-ref --features bevy --lib live_stream::` |
+| Minimap UV mapping (`world_xz_to_minimap_uv` path) | `cargo test -p civ-bevy-ref --lib chunk_to_minimap` + `minimap_uv_to_chunk` |
+| Client compile | `cargo check … civ-standalone`, `cargo check … civ-bevy-window` |
+
+### Remote civ-server URL recipes
+
+| Client | Local default | Remote (Tailscale / LAN) |
+|--------|---------------|---------------------------|
+| `civ-bevy-window` | `CIVIS_WS_URL` or `CIVIS_WS_ADDR` → `ws://127.0.0.1:3000/ws` | Set env before run, e.g. `CIVIS_WS_URL=ws://100.x.x.x:3000/ws?tick_format=binary` |
+| `civ-standalone` (live attach) | `just civis-3d-standalone-live` (`CIVIS_ATTACH=server`) | `just civis-3d-standalone-live-url URL=ws://host:3000/ws?tick_format=binary` |
+
+Prefer `tick_format=binary` on the URL when the server runs with `CIVIS_TICK_BROADCAST=binary`.
 
 ### WebSocket binary tick frames (`F3D0`)
 

@@ -275,10 +275,10 @@ namespace DINOForge.SDK.Assets
         /// TODO (v0.26.0): Implement full eviction logic.
         ///
         /// Algorithm:
-        ///   1. If total cache < max size: return (no eviction needed)
+        ///   1. If total cache &lt; max size: return (no eviction needed)
         ///   2. Calculate target size = max size * 90%
         ///   3. Sort cached assets by AccessedAt (oldest first)
-        ///   4. Delete oldest assets until total < target
+        ///   4. Delete oldest assets until total &lt; target
         ///   5. Update assets.db to reflect deletions
         /// </remarks>
         internal void EvictLruIfNeeded()

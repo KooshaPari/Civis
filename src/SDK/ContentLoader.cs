@@ -362,8 +362,21 @@ namespace DINOForge.SDK
                 perPackDicts.Add(packDict);
             }
 
+            // Even when no targeted packs have content (or all targets are missing),
+            // emit informational messages for each patch set that references an absent target pack.
             if (perPackDicts.Count == 0)
+            {
+                HashSet<string> loadedPackIds = new HashSet<string>(
+                    manifests.Select(m => m.Manifest.Id), StringComparer.OrdinalIgnoreCase);
+                foreach ((string sourcePackId, PatchSet patchSet) in allPatchSets)
+                {
+                    if (!loadedPackIds.Contains(patchSet.TargetPack))
+                    {
+                        errors.Add($"[patch] [Patching] Skipping patch set from '{sourcePackId}' targeting '{patchSet.TargetPack}': target pack not loaded.");
+                    }
+                }
                 return; // Targeted packs had no discoverable content.
+            }
 
             Dictionary<string, Dictionary<string, Dictionary<string, object>>> unified =
                 PackContentBuilder.Merge(perPackDicts);

@@ -1080,6 +1080,23 @@ namespace DINOForge.Runtime
             });
             yield return null;
 
+            RunPhaseWithAbortGuard("PackSettingsStore.Initialize", () =>
+            {
+                try
+                {
+                    // Fix(iter-148): use BepInEx root path so settings land under BepInEx/,
+                    // not next to the game executable (AppDomain.CurrentDomain.BaseDirectory bug).
+                    var store = Settings.PackSettingsStore.GetOrCreate(BepInEx.Paths.BepInExRootPath);
+                    store.SetLogger(_log);
+                    _log.LogInfo($"[RuntimeDriver] PackSettingsStore initialised at '{BepInEx.Paths.BepInExRootPath}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] PackSettingsStore initialisation failed: {ex.Message}");
+                }
+            });
+            yield return null;
+
             RunPhaseWithAbortGuard("MainThreadDispatcher/DebugOverlay", () =>
             {
                 // Add MainThreadDispatcher for IPC bridge support.

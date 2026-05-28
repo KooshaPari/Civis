@@ -1,5 +1,6 @@
 #nullable enable
 using System.CommandLine;
+using System.Security;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Spectre.Console;
@@ -78,8 +79,17 @@ internal static class PackDiffCommand
         CancellationToken ct)
     {
         var repoRoot = FindRepositoryRoot();
-        var packPathA = Path.Combine(repoRoot, "packs", packA);
-        var packPathB = Path.Combine(repoRoot, "packs", packB);
+        // Fix(iter-148): canonicalise and check containment BEFORE Directory.Exists
+        // to prevent path traversal (e.g. packA = "../../etc/passwd").
+        string packsBase = Path.GetFullPath(Path.Combine(repoRoot, "packs"));
+        string packPathA = Path.GetFullPath(Path.Combine(packsBase, packA));
+        string packPathB = Path.GetFullPath(Path.Combine(packsBase, packB));
+
+        string packsBaseWithSep = packsBase + Path.DirectorySeparatorChar;
+        if (!packPathA.StartsWith(packsBaseWithSep, StringComparison.OrdinalIgnoreCase))
+            throw new SecurityException($"Pack path escapes the packs directory: {packA}");
+        if (!packPathB.StartsWith(packsBaseWithSep, StringComparison.OrdinalIgnoreCase))
+            throw new SecurityException($"Pack path escapes the packs directory: {packB}");
 
         if (!Directory.Exists(packPathA))
             throw new InvalidOperationException($"Pack not found: {packPathA}");

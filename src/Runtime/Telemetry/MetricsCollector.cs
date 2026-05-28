@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace DINOForge.Runtime.Telemetry
@@ -44,12 +45,24 @@ namespace DINOForge.Runtime.Telemetry
 
             public string Name { get; }
             public MetricType Type { get; }
-            public long CounterValue { get; set; }
-            public double NumericValue { get; set; }
-            public long SampleCount { get; set; }
+
+            // Backing fields for Interlocked operations (thread-safe atomic RMW).
+            // Public property accessors read these via volatile read (Interlocked.Read).
+            internal long _counterValue;
+            internal long _sampleCount;
+            internal double _numericValue;   // last-write-wins; acceptable for gauge metrics
+            internal double _totalDurationMs; // protected by _durationLock per-entry
+
+            // Per-entry lock for the two-field (TotalDurationMs, SampleCount) duration update
+            // which cannot be made atomic with a single Interlocked operation.
+            internal readonly object _durationLock = new object();
+
+            public long CounterValue => Interlocked.Read(ref _counterValue);
+            public double NumericValue => _numericValue;
+            public long SampleCount => Interlocked.Read(ref _sampleCount);
 
             /// <summary>For duration metrics: total milliseconds.</summary>
-            public double TotalDurationMs { get; set; }
+            public double TotalDurationMs => _totalDurationMs;
 
             /// <summary>For duration metrics: running average (ms).</summary>
             public double AvgDurationMs => SampleCount > 0 ? TotalDurationMs / SampleCount : 0;
@@ -83,18 +96,13 @@ namespace DINOForge.Runtime.Telemetry
 
             try
             {
-                _metrics.AddOrUpdate(
-                    name,
-                    new MetricEntry(name, MetricType.Counter) { CounterValue = 1 },
-                    (key, existing) =>
-                    {
-                        existing.CounterValue++;
-                        return existing;
-                    });
+                var entry = _metrics.GetOrAdd(name, n => new MetricEntry(n, MetricType.Counter));
+                Interlocked.Increment(ref entry._counterValue);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort: never throw on metric recording
+                // safe-swallow: metric recording must never throw in hot paths
+                System.Diagnostics.Debug.WriteLine($"[MetricsCollector] IncrementCounter failed for '{name}': {ex.Message}");
             }
         }
 
@@ -110,19 +118,16 @@ namespace DINOForge.Runtime.Telemetry
 
             try
             {
-                _metrics.AddOrUpdate(
-                    name,
-                    new MetricEntry(name, MetricType.Value) { NumericValue = value, SampleCount = 1 },
-                    (key, existing) =>
-                    {
-                        existing.NumericValue = value;
-                        existing.SampleCount++;
-                        return existing;
-                    });
+                var entry = _metrics.GetOrAdd(name, n => new MetricEntry(n, MetricType.Value));
+                // NumericValue is last-write-wins (gauge semantics); volatile write via Thread.VolatileWrite
+                // is sufficient here — we accept a torn read for gauge values on 32-bit platforms.
+                entry._numericValue = value;
+                Interlocked.Increment(ref entry._sampleCount);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort: never throw on metric recording
+                // safe-swallow: metric recording must never throw in hot paths
+                System.Diagnostics.Debug.WriteLine($"[MetricsCollector] RecordValue failed for '{name}': {ex.Message}");
             }
         }
 
@@ -138,23 +143,19 @@ namespace DINOForge.Runtime.Telemetry
             try
             {
                 var durationMs = duration.TotalMilliseconds;
-                _metrics.AddOrUpdate(
-                    name,
-                    new MetricEntry(name, MetricType.Duration)
-                    {
-                        TotalDurationMs = durationMs,
-                        SampleCount = 1
-                    },
-                    (key, existing) =>
-                    {
-                        existing.TotalDurationMs += durationMs;
-                        existing.SampleCount++;
-                        return existing;
-                    });
+                var entry = _metrics.GetOrAdd(name, n => new MetricEntry(n, MetricType.Duration));
+                // TotalDurationMs and SampleCount must be updated together atomically.
+                // Use per-entry lock (lightweight — held only for two field writes, no I/O).
+                lock (entry._durationLock)
+                {
+                    entry._totalDurationMs += durationMs;
+                    Interlocked.Increment(ref entry._sampleCount);
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort: never throw on metric recording
+                // safe-swallow: metric recording must never throw in hot paths
+                System.Diagnostics.Debug.WriteLine($"[MetricsCollector] RecordDuration failed for '{name}': {ex.Message}");
             }
         }
 

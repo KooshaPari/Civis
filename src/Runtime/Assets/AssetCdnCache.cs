@@ -55,7 +55,7 @@ namespace DINOForge.Runtime.Assets
         public AssetCdnCache(
             string packId,
             string cacheDir,
-            long maxCacheSizeBytes = 2 * 1024 * 1024 * 1024)
+            long maxCacheSizeBytes = 2L * 1024 * 1024 * 1024)
         {
             if (string.IsNullOrWhiteSpace(packId))
                 throw new ArgumentException("Pack ID cannot be empty.", nameof(packId));
@@ -223,7 +223,7 @@ namespace DINOForge.Runtime.Assets
             using (var stream = File.OpenRead(filePath))
             {
                 byte[] hash = sha256.ComputeHash(stream);
-                return Convert.ToHexString(hash).ToLowerInvariant();
+                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
             }
         }
     }

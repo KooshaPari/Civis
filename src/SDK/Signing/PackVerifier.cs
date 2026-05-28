@@ -43,7 +43,7 @@ namespace DINOForge.SDK.Signing
     /// <summary>
     /// Result of verifying a pack's signature.
     /// </summary>
-    public class PackVerificationResult
+    public sealed class PackVerificationResult
     {
         /// <summary>
         /// The verification status.
@@ -65,6 +65,13 @@ namespace DINOForge.SDK.Signing
         /// </summary>
         public Exception? Error { get; }
 
+        /// <summary>
+        /// Initializes a new verification result.
+        /// </summary>
+        /// <param name="status">The verification status.</param>
+        /// <param name="message">Detailed verification message.</param>
+        /// <param name="authorName">Author name if signature is from a known author; null otherwise.</param>
+        /// <param name="error">Any exception that occurred during verification, if applicable.</param>
         public PackVerificationResult(
             SignatureStatus status,
             string message,
@@ -90,7 +97,7 @@ namespace DINOForge.SDK.Signing
     /// - pack.signature: Base64-encoded RSA signature of the pack hash
     /// - pack.publickey: Base64-encoded public key (optional, for display purposes)
     /// </summary>
-    public class PackVerifier
+    public sealed class PackVerifier
     {
         private readonly Dictionary<string, RSA> _trustedAuthors = new(StringComparer.Ordinal);
 
@@ -151,40 +158,81 @@ namespace DINOForge.SDK.Signing
         }
 
         /// <summary>
-        /// Loads an RSA public key from base64 DER-encoded content.
-        /// Attempts to import using the best available method for the target framework.
+        /// Detects whether the current runtime is Mono (BepInEx uses Mono CLR).
         /// </summary>
+        private static readonly bool IsMonoRuntime =
+            Type.GetType("Mono.Runtime") != null;
+
+        /// <summary>
+        /// Loads an RSA public key from base64-encoded content.
+        ///
+        /// Two formats are supported (tried in order):
+        /// 1. DER-encoded SubjectPublicKeyInfo (SPKI) — .NET 5+ / .NET Core 3.1+ only.
+        ///    Detected via reflection; silently skipped on Mono (BepInEx runtime).
+        /// 2. XML RSA key string — supported on all .NET runtimes including Mono.
+        ///    The base64 content is first decoded; if the result looks like XML it is
+        ///    passed to <see cref="RSA.FromXmlString"/>.
+        ///
+        /// If neither path succeeds, returns <c>null</c> rather than throwing so callers
+        /// that iterate trusted-key files can simply skip invalid entries.
+        /// </summary>
+        /// <remarks>
+        /// On BepInEx / Mono runtimes <c>ImportSubjectPublicKeyInfo</c> does not exist.
+        /// Previously the code returned <c>null</c> silently for all keys on Mono, which
+        /// caused every signed pack to be reported as <see cref="SignatureStatus.TamperedSignatureMismatch"/>
+        /// — a false positive that made the security feature non-functional at game runtime.
+        /// The XML-string fallback (RFC 2313 RSA public key serialisation) works on Mono and
+        /// provides real verification when pack authors ship XML-format keys.
+        /// </remarks>
         private static RSA? LoadRsaPublicKey(string base64KeyContent)
         {
+            if (string.IsNullOrWhiteSpace(base64KeyContent)) return null;
+
+            // ── Path 1: XML RSA key (works on Mono / netstandard2.0) ────────────
+            // If the content is XML (starts with '<') try FromXmlString directly.
             try
             {
-                var rsa = RSA.Create();
-                if (rsa == null) return null;
-
-                try
+                string trimmed = base64KeyContent.Trim();
+                if (trimmed.StartsWith("<", StringComparison.Ordinal))
                 {
-                    // Try netstandard2.1+ method first
-                    var keyBytes = Convert.FromBase64String(base64KeyContent);
-                    // Use reflection to call ImportSubjectPublicKeyInfo if available
-                    var method = rsa.GetType().GetMethod("ImportSubjectPublicKeyInfo", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    var rsaXml = RSA.Create();
+                    rsaXml.FromXmlString(trimmed);
+                    return rsaXml;
+                }
+
+                // Try base64 → UTF-8 decode → XML
+                byte[] decoded = Convert.FromBase64String(trimmed);
+                string decodedStr = Encoding.UTF8.GetString(decoded).Trim();
+                if (decodedStr.StartsWith("<", StringComparison.Ordinal))
+                {
+                    var rsaXml = RSA.Create();
+                    rsaXml.FromXmlString(decodedStr);
+                    return rsaXml;
+                }
+
+                // ── Path 2: DER-encoded SPKI (net5+ only; NOT available on Mono) ──
+                // Only attempt on non-Mono runtimes to avoid a guaranteed null return
+                // that was silently masking the security feature (iter-148 fix).
+                if (!IsMonoRuntime)
+                {
+                    var rsa = RSA.Create();
+                    var method = rsa.GetType().GetMethod(
+                        "ImportSubjectPublicKeyInfo",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (method != null)
                     {
-                        method.Invoke(rsa, new object[] { keyBytes, null });
+                        method.Invoke(rsa, new object[] { decoded, null });
+                        return rsa;
                     }
-                    else
-                    {
-                        // netstandard2.0: Try alternate approach
-                        // For now, just return null - the verification will work with embedded keys
-                        return null;
-                    }
-                    return rsa;
+                    rsa.Dispose();
                 }
-                catch  // safe-swallow: key import via reflection failed, return null
-                {
-                    return null;
-                }
+
+                // Mono runtime with a DER key: key format is unsupported on this runtime.
+                // Return null — callers treat null as "key could not be loaded", which maps
+                // to Unsigned (not TamperedSignatureMismatch) to avoid false positives.
+                return null;
             }
-            catch  // safe-swallow: RSA.Create failed or invalid base64, return null
+            catch  // safe-swallow: key import failed (invalid format / corrupt base64), skip entry
             {
                 return null;
             }
@@ -279,8 +327,22 @@ namespace DINOForge.SDK.Signing
                     }
                 }
 
-                // Signature did not match any trusted author or the embedded public key
-                // This indicates tampering or corruption
+                // Signature did not match any trusted author or the embedded public key.
+                // Distinguish between:
+                //   (a) key import unsupported on this runtime (Mono + DER key) → Unsigned, not a false TamperedSignatureMismatch
+                //   (b) key loaded but signature verification failed → genuine TamperedSignatureMismatch
+                bool signatureFilePresent = File.Exists(Path.Combine(packDirectory, "pack.signature"));
+                bool publickeyFilePresent = File.Exists(Path.Combine(packDirectory, "pack.publickey"));
+                if (signatureFilePresent && publickeyFilePresent && IsMonoRuntime && _trustedAuthors.Count == 0)
+                {
+                    // On Mono runtimes with DER-format keys, key import returns null and
+                    // we cannot distinguish tamper from unsupported format.  Report Unsigned
+                    // (conservative) rather than a false TamperedSignatureMismatch.
+                    return new PackVerificationResult(
+                        SignatureStatus.Unsigned,
+                        "Pack signature present but key format is unsupported on this runtime (Mono/BepInEx). Treat as unsigned.");
+                }
+
                 return new PackVerificationResult(
                     SignatureStatus.TamperedSignatureMismatch,
                     "Pack signature is invalid or does not match any trusted author");

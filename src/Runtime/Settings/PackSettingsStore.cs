@@ -18,22 +18,33 @@ namespace DINOForge.Runtime.Settings
         private static readonly object _lockObj = new object();
 
         /// <summary>
-        /// Gets or creates the singleton instance.
+        /// Gets or creates the singleton instance, initialised with the BepInEx root path.
+        /// Must be called once from Plugin.Awake() before any other access.
+        /// </summary>
+        public static PackSettingsStore GetOrCreate(string bepInExRootPath)
+        {
+            if (_instance == null)
+            {
+                lock (_lockObj)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = new PackSettingsStore(bepInExRootPath);
+                    }
+                }
+            }
+            return _instance;
+        }
+
+        /// <summary>
+        /// Gets the singleton instance. Throws if <see cref="GetOrCreate"/> has not been called yet.
         /// </summary>
         public static PackSettingsStore Instance
         {
             get
             {
                 if (_instance == null)
-                {
-                    lock (_lockObj)
-                    {
-                        if (_instance == null)
-                        {
-                            _instance = new PackSettingsStore();
-                        }
-                    }
-                }
+                    throw new InvalidOperationException("[PackSettingsStore] Instance not initialised — call GetOrCreate(bepInExRootPath) first.");
                 return _instance;
             }
         }
@@ -44,14 +55,42 @@ namespace DINOForge.Runtime.Settings
         private readonly object _settingsLock = new object();
         private ManualLogSource? _log;
 
+        // ── Shared JSON options (Pattern #109: one static instance, not per-call) ─
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
         // ── Constructor ──────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Initializes the settings store and loads from disk if the file exists.
+        /// Initializes the settings store using the BepInEx root path for storage.
+        /// </summary>
+        /// <param name="bepInExRootPath">
+        /// The BepInEx root directory (e.g. <c>BepInEx.Paths.BepInExRootPath</c>).
+        /// Settings are stored alongside other DINOForge persistence files under this directory.
+        /// </param>
+        public PackSettingsStore(string bepInExRootPath)
+        {
+            if (string.IsNullOrEmpty(bepInExRootPath))
+                throw new ArgumentNullException(nameof(bepInExRootPath), "[PackSettingsStore] BepInEx root path must not be null or empty.");
+
+            _settingsPath = Path.Combine(bepInExRootPath, "dinoforge-pack-settings.json");
+            Load();
+        }
+
+        /// <summary>
+        /// Parameterless constructor retained for unit-test scenarios where the BepInEx
+        /// environment is unavailable. Falls back to a temp directory rather than the
+        /// game executable directory (avoids writing alongside the game EXE).
+        /// Do NOT use this constructor in BepInEx plugin code — use <see cref="GetOrCreate"/>.
         /// </summary>
         public PackSettingsStore()
         {
-            _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dinoforge-pack-settings.json");
+            _settingsPath = Path.Combine(Path.GetTempPath(), "DINOForge", "dinoforge-pack-settings.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
             Load();
         }
 
@@ -98,8 +137,7 @@ namespace DINOForge.Runtime.Settings
                     // Try JSON round-trip for numeric conversions (e.g., long to float)
                     if (value is JsonElement je)
                     {
-                        var options = GetJsonOptions();
-                        return JsonSerializer.Deserialize<T>(je.GetRawText(), options) ?? defaultValue;
+                        return JsonSerializer.Deserialize<T>(je.GetRawText(), JsonOptions) ?? defaultValue;
                     }
 
                     return defaultValue;
@@ -184,8 +222,7 @@ namespace DINOForge.Runtime.Settings
                 try
                 {
                     var json = File.ReadAllText(_settingsPath);
-                    var options = GetJsonOptions();
-                    var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json, options);
+                    var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json, JsonOptions);
 
                     if (data != null)
                     {
@@ -212,8 +249,7 @@ namespace DINOForge.Runtime.Settings
             {
                 try
                 {
-                    var options = GetJsonOptions();
-                    var json = JsonSerializer.Serialize(_settings, options);
+                    var json = JsonSerializer.Serialize(_settings, JsonOptions);
                     File.WriteAllText(_settingsPath, json);
                     _log?.LogDebug($"[PackSettingsStore] Saved settings to {_settingsPath}");
                 }
@@ -222,21 +258,6 @@ namespace DINOForge.Runtime.Settings
                     _log?.LogWarning($"[PackSettingsStore] Failed to save settings: {ex.Message}");
                 }
             }
-        }
-
-        // ── Utilities ────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Gets the JSON serializer options for consistent serialization.
-        /// </summary>
-        private static JsonSerializerOptions GetJsonOptions()
-        {
-            return new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = false,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
         }
 
         // ── IDisposable ──────────────────────────────────────────────────────────

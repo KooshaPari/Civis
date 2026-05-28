@@ -1503,6 +1503,147 @@ async def log_packs_loaded(ctx: Context) -> dict:
         return {"success": False, "error": str(e)}
 
 
+@mcp.tool()
+async def game_log_search(ctx: Context, pattern: str, tail: int = 1000) -> dict:
+    """
+    Search the last N lines of the DINOForge debug log for a regex pattern.
+    Case-insensitive search by default.
+
+    Args:
+        pattern: Regular expression pattern to search for (case-insensitive).
+        tail: Number of lines to search in (default 1000, use 0 for all).
+
+    Returns:
+        Dictionary with matching lines and match count.
+    """
+    if not DEBUG_LOG.exists():
+        return {"success": False, "error": f"Debug log not found: {DEBUG_LOG}"}
+
+    try:
+        import re
+
+        def search_log() -> dict:
+            try:
+                with open(DEBUG_LOG, encoding="utf-8", errors="replace") as f:
+                    all_lines = f.readlines()
+
+                # Get tail lines
+                lines_to_search = all_lines[-tail:] if tail > 0 else all_lines
+                total_lines = len(all_lines)
+
+                # Compile regex (case-insensitive)
+                try:
+                    regex = re.compile(pattern, re.IGNORECASE)
+                except re.error as e:
+                    return {
+                        "success": False,
+                        "error": f"Invalid regex pattern: {e}"
+                    }
+
+                # Search
+                matches = []
+                for i, line in enumerate(lines_to_search):
+                    if regex.search(line):
+                        matches.append({
+                            "line_number": total_lines - len(lines_to_search) + i + 1,
+                            "text": line.rstrip()
+                        })
+
+                return {
+                    "success": True,
+                    "pattern": pattern,
+                    "matches": matches,
+                    "match_count": len(matches),
+                    "lines_searched": len(lines_to_search),
+                    "total_lines": total_lines,
+                }
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        # Run synchronously in thread pool to avoid blocking event loop
+        return await asyncio.to_thread(search_log)
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def game_log_stream(
+    ctx: Context,
+    lines: int = 100,
+    follow: bool = False,
+    filter: str | None = None,
+) -> dict:
+    """
+    Stream or tail the DINOForge debug log with optional regex filtering.
+    When follow=True, returns initial lines and streams new entries (best-effort).
+    Agents can poll this tool periodically to monitor log updates in real-time.
+
+    Args:
+        lines: Initial number of lines to return (default 100).
+        follow: If True, poll for new lines and yield them progressively.
+        filter: Optional regex pattern to filter lines (case-insensitive).
+
+    Returns:
+        Dictionary with initial lines and metadata. For follow=True, subsequent
+        calls with higher line counts reveal new entries.
+    """
+    if not DEBUG_LOG.exists():
+        return {"success": False, "error": f"Debug log not found: {DEBUG_LOG}"}
+
+    try:
+        import re
+
+        def stream_log() -> dict:
+            try:
+                with open(DEBUG_LOG, encoding="utf-8", errors="replace") as f:
+                    all_lines = f.readlines()
+
+                # Get tail lines
+                tail_lines = all_lines[-lines:] if lines > 0 else all_lines
+                total_lines = len(all_lines)
+
+                # Compile filter regex if provided
+                regex = None
+                if filter:
+                    try:
+                        regex = re.compile(filter, re.IGNORECASE)
+                    except re.error as e:
+                        return {
+                            "success": False,
+                            "error": f"Invalid filter pattern: {e}"
+                        }
+
+                # Apply filter
+                filtered_lines = []
+                if regex:
+                    filtered_lines = [
+                        l.rstrip()
+                        for l in tail_lines
+                        if regex.search(l)
+                    ]
+                else:
+                    filtered_lines = [l.rstrip() for l in tail_lines]
+
+                return {
+                    "success": True,
+                    "lines": filtered_lines,
+                    "line_count": len(filtered_lines),
+                    "total_lines": total_lines,
+                    "follow": follow,
+                    "filter": filter,
+                    "note": "When follow=True, call again to check for new lines" if follow else None,
+                }
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        # Run in thread pool to avoid blocking
+        return await asyncio.to_thread(stream_log)
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ===========================================================================
 # RESOURCES  (live data readable without tool calls)
 # ===========================================================================

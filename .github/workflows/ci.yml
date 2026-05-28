@@ -59,14 +59,96 @@ jobs:
 
       # Unit + Integration tests — build via dotnet test (not in CI.NoRuntime.sln; pulls Runtime)
       - name: Test (Unit)
-        run: dotnet test src/Tests/DINOForge.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=unit-test-results.trx" /p:GameInstalled=false
+        run: >-
+          dotnet test src/Tests/DINOForge.Tests.csproj
+          --configuration Release
+          --verbosity normal
+          --logger "trx;LogFileName=unit-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory coverage-results
+          /p:GameInstalled=false
         env:
           CI: 'true'
 
       - name: Test (Integration)
-        run: dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=integration-test-results.trx" /p:GameInstalled=false
+        run: >-
+          dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj
+          --configuration Release
+          --verbosity normal
+          --logger "trx;LogFileName=integration-test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory coverage-results
+          /p:GameInstalled=false
         env:
           CI: 'true'
+
+      # ── Coverage gate ────────────────────────────────────────────────────────
+      # Fails the build if line coverage drops more than 5 percentage points below the
+      # stored baseline in docs/test-results/coverage-baseline.json.
+      # On the first run (no baseline yet) it writes the baseline and succeeds.
+      - name: Coverage gate (5% drop limit)
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, glob, os, sys, xml.etree.ElementTree as ET, datetime
+
+          # ── Parse Cobertura XML produced by XPlat Code Coverage ──
+          coverage_files = glob.glob("coverage-results/**/coverage.cobertura.xml", recursive=True)
+          if not coverage_files:
+              print("No coverage files found — skipping coverage gate (coverlet not installed).")
+              sys.exit(0)
+
+          total_lines = total_covered = 0
+          for cov_file in coverage_files:
+              tree = ET.parse(cov_file)
+              root = tree.getroot()
+              for pkg in root.findall(".//package"):
+                  for cls in pkg.findall(".//class"):
+                      for line in cls.findall(".//line"):
+                          total_lines += 1
+                          if int(line.get("hits", "0")) > 0:
+                              total_covered += 1
+
+          if total_lines == 0:
+              print("Zero lines instrumented — skipping coverage gate.")
+              sys.exit(0)
+
+          current_pct = round(total_covered / total_lines * 100, 2)
+          print(f"Current coverage: {current_pct}% ({total_covered}/{total_lines} lines)")
+
+          baseline_path = "docs/test-results/coverage-baseline.json"
+          os.makedirs("docs/test-results", exist_ok=True)
+
+          if not os.path.exists(baseline_path):
+              # First run — write baseline and succeed.
+              baseline = {"coverage_pct": current_pct, "updated_at": datetime.datetime.utcnow().isoformat()}
+              with open(baseline_path, "w") as f:
+                  json.dump(baseline, f, indent=2)
+              print(f"Coverage baseline written: {current_pct}%")
+              sys.exit(0)
+
+          with open(baseline_path) as f:
+              baseline = json.load(f)
+
+          baseline_pct = float(baseline.get("coverage_pct", 0))
+          drop_threshold = 5.0  # threshold-ok: 5% acceptable regression window
+
+          drop = baseline_pct - current_pct
+          if drop > drop_threshold:
+              print(f"COVERAGE DROP: {current_pct}% is {drop:.1f}pp below baseline {baseline_pct}%")
+              print(f"Threshold: {drop_threshold}pp. Fix coverage regression or update baseline.")
+              sys.exit(1)
+
+          print(f"Coverage OK: {current_pct}% (baseline {baseline_pct}%, drop {drop:.1f}pp)")
+
+          # Update baseline if coverage improved.
+          if current_pct > baseline_pct:
+              baseline["coverage_pct"] = current_pct
+              baseline["updated_at"] = datetime.datetime.utcnow().isoformat()
+              with open(baseline_path, "w") as f:
+                  json.dump(baseline, f, indent=2)
+              print(f"Baseline updated to {current_pct}%")
+          PYEOF
 
       - name: SPEC-007 regression gate (validate-only, no game)
         shell: pwsh

@@ -844,7 +844,7 @@ namespace DINOForge.Runtime
             Add("visuals", manifest.Loads.Visuals);
             Add("localization", manifest.Loads.Localization);
             Add("faction_patches", manifest.Loads.FactionPatches);
-            // Fields below don't exist on PackLoads yet — add when SDK PackManifest gains them
+            // PackLoads fields below are planned but not yet in SDK PackManifest
 
             if (manifest.Overrides != null)
             {

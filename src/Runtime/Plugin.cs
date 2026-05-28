@@ -1274,11 +1274,12 @@ namespace DINOForge.Runtime
             int _themeRetryCount = 0;
             while (!_destroyed)
             {
-                // Retry MainMenuThemer if canvas wasn't ready during Step 7
-                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
+                // Retry MainMenuThemer if canvas wasn't ready during Step 7.
+                // Cap at 600 iterations (~600 frames ≈ 10-60s depending on framerate).
+                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 600)
                 {
                     _themeRetryCount++;
-                    if (_themeRetryCount % 5 == 0) // every ~5 frames
+                    if (_themeRetryCount % 30 == 0) // every ~30 frames
                     {
                         try
                         {
@@ -2080,6 +2081,22 @@ namespace DINOForge.Runtime
             ContextualModMenuHost contextualHost = new ContextualModMenuHost(
                 _dfCanvas.ModMenuPanel, nativeHost);
             _nativeMenuInjector.SetModMenuHost(contextualHost);
+
+            // Wire the native mods page data provider and callbacks so the full-screen
+            // pack browser can display live pack data and relay toggle/reload actions.
+            _nativeMenuInjector.PackDataProvider = () => _modPlatform?.GetLoadedPackDisplayInfos()
+                ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+            _nativeMenuInjector.OnNativePackToggled = (packId, isEnabled) =>
+            {
+                try { RequestPackToggle(packId, isEnabled); }
+                catch (System.Exception ex) { _log?.LogWarning($"[RuntimeDriver] NativeModsPage pack toggle error: {ex}"); }
+            };
+            _nativeMenuInjector.OnNativeReloadRequested = () =>
+            {
+                try { _modPlatform?.LoadPacks(); }
+                catch (System.Exception ex) { _log?.LogWarning($"[RuntimeDriver] NativeModsPage reload error: {ex}"); }
+            };
+
             _log?.LogInfo("[RuntimeDriver] NativeMenuInjector wired via ContextualModMenuHost (native stub active, overlay fallback).");
         }
 

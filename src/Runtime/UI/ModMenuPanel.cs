@@ -47,6 +47,13 @@ namespace DINOForge.Runtime.UI
         private readonly ModMenuPresenter _presenter = new ModMenuPresenter();
         private ManualLogSource? _log;
 
+        // ── Filter state ─────────────────────────────────────────────────────────
+        private string _searchText = "";
+        private string _tierFilter = "All";  // All, Engine Extension, Content, Total Conversion, Baseline
+        private string _stateFilter = "All"; // All, Enabled, Disabled, Has Errors
+        private string _sortBy = "Name";     // Name, Type, Version, Recently Updated
+        private readonly List<int> _filteredIndices = new List<int>();
+
         // ── Animation ────────────────────────────────────────────────────────────
         private CanvasGroup? _canvasGroup;
         private RectTransform? _panelRt;
@@ -55,6 +62,11 @@ namespace DINOForge.Runtime.UI
         // ── UI references ────────────────────────────────────────────────────────
         private Text? _headerStatusText;
         private RectTransform? _listContent;
+        private Text? _listCounterText; // "N of M packs"
+        private InputField? _searchInput;
+        private Dropdown? _tierDropdown;
+        private Dropdown? _stateDropdown;
+        private Dropdown? _sortDropdown;
         private GameObject? _detailPane;
         private Text? _detailName;
         private Text? _detailMeta;
@@ -76,6 +88,22 @@ namespace DINOForge.Runtime.UI
         private GameObject? _screenshotModal;
         private Image? _modalImage;
 
+        // ── Conflict resolution (#903) ────────────────────────────────────────
+        private RectTransform? _conflictSection;
+        private GameObject? _diffModal;
+        private Text? _diffModalTitle;
+        private Text? _diffLeftText;
+        private Text? _diffRightText;
+        private ConflictResolutionStore? _conflictStore;
+        private string _packsDirectory = string.Empty;
+
+        // ── Update banner (#899) ──────────────────────────────────────────────
+        /// <summary>Container row for the updates-available banner (hidden until updates found).</summary>
+        private GameObject? _updateBannerRoot;
+        /// <summary>Vertical content inside the banner — one row per pending update.</summary>
+        private RectTransform? _updateBannerContent;
+        private const float UpdateBannerRowHeight = 24f;
+
         /// <summary>Canvas root used to anchor the dependency prompt dialog.</summary>
         private Transform? _canvasRoot;
 
@@ -89,6 +117,24 @@ namespace DINOForge.Runtime.UI
         {
             _log = log;
             _log?.LogInfo("[ModMenuPanel] Initialized with logger.");
+        }
+
+        /// <summary>
+        /// Provides the packs directory path so the diff modal can read definition YAML files.
+        /// Call before or after Build(); safe to call at any time.
+        /// </summary>
+        public void SetPacksDirectory(string packsDirectory)
+        {
+            _packsDirectory = packsDirectory ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Provides the conflict-resolution persistence store.
+        /// Call before or after Build(); safe to call at any time.
+        /// </summary>
+        public void SetConflictResolutionStore(ConflictResolutionStore store)
+        {
+            _conflictStore = store;
         }
 
         /// <summary>
@@ -377,6 +423,9 @@ namespace DINOForge.Runtime.UI
             listHeaderLe.minWidth = ListWidth;
             listHeaderLe.preferredHeight = 32f;
 
+            // Build filter controls
+            BuildListFilters(pane.transform);
+
             // Scroll view for pack items
             _log?.LogInfo("[ModMenuPanel.BuildListPane] Creating scroll view...");
             (ScrollRect scrollRect, RectTransform content) = UiBuilder.MakeScrollView(
@@ -578,6 +627,24 @@ namespace DINOForge.Runtime.UI
             // Store the content RT by tagging the galleryHost for later lookup.
             galleryHost.name = "GalleryRow";
 
+            // ── Conflict resolution section (#903) ────────────────────────────
+            // Populated dynamically in RefreshConflictButtons(); hidden when no conflicts.
+            UiBuilder.MakeHorizontalSeparator(c, UiBuilder.Border);
+
+            GameObject conflictHost = new GameObject("ConflictSection", typeof(RectTransform));
+            conflictHost.transform.SetParent(c, false);
+            _conflictSection = conflictHost.GetComponent<RectTransform>();
+            VerticalLayoutGroup conflictVlg = conflictHost.AddComponent<VerticalLayoutGroup>();
+            conflictVlg.spacing = 6f;
+            conflictVlg.childForceExpandWidth = true;
+            conflictVlg.childForceExpandHeight = false;
+            conflictVlg.padding = new RectOffset(0, 0, 4, 4);
+            ContentSizeFitter conflictCsf = conflictHost.AddComponent<ContentSizeFitter>();
+            conflictCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            LayoutElement conflictHostLe = conflictHost.AddComponent<LayoutElement>();
+            conflictHostLe.flexibleWidth = 1f;
+            conflictHost.SetActive(false); // hidden until conflicts present
+
             // ── Fixed action-buttons row (outside scroll) ────────────────────
             GameObject btnRow = new GameObject("ActionButtons", typeof(RectTransform));
             btnRow.transform.SetParent(_detailPane.transform, false);
@@ -601,6 +668,9 @@ namespace DINOForge.Runtime.UI
 
             // ── Screenshot modal (full-size overlay, initially hidden) ────────
             BuildScreenshotModal();
+
+            // ── Diff modal (#903) ─────────────────────────────────────────────
+            BuildDiffModal();
         }
 
         /// <summary>Adds a LayoutElement to a GO that occupies one full-width row.</summary>
@@ -820,6 +890,306 @@ namespace DINOForge.Runtime.UI
 
             // Drive layout immediately so the ScrollRect sees the correct content bounds
             // even when the panel is currently hidden.
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_listContent);
+        }
+
+        /// <summary>Builds the filter control UI (search, tier filter, state filter, sort) above the pack list.</summary>
+        private void BuildListFilters(Transform parent)
+        {
+            // Filters container
+            GameObject filterContainer = new GameObject("FilterContainer", typeof(RectTransform));
+            filterContainer.transform.SetParent(parent, false);
+            RectTransform fcRt = filterContainer.GetComponent<RectTransform>();
+
+            VerticalLayoutGroup fcLayout = filterContainer.AddComponent<VerticalLayoutGroup>();
+            fcLayout.childForceExpandWidth = true;
+            fcLayout.childForceExpandHeight = false;
+            fcLayout.spacing = 4f;
+            fcLayout.padding = new RectOffset(8, 8, 4, 4);
+
+            LayoutElement fcLe = filterContainer.AddComponent<LayoutElement>();
+            fcLe.preferredHeight = 140f;  // Enough for 3 rows of controls
+            fcLe.minHeight = 100f;
+            fcLe.flexibleWidth = 1f;
+
+            // Search row
+            GameObject searchRow = new GameObject("SearchRow", typeof(RectTransform));
+            searchRow.transform.SetParent(filterContainer.transform, false);
+            HorizontalLayoutGroup searchHlg = searchRow.AddComponent<HorizontalLayoutGroup>();
+            searchHlg.spacing = 4f;
+            searchHlg.childForceExpandWidth = true;
+            searchHlg.childForceExpandHeight = false;
+            LayoutElement searchRowLe = searchRow.AddComponent<LayoutElement>();
+            searchRowLe.preferredHeight = 28f;
+
+            _searchInput = UiBuilder.MakeInputField(searchRow.transform, "SearchInput", "Search packs...",
+                OnSearchChanged);
+            LayoutElement searchInputLe = _searchInput.gameObject.AddComponent<LayoutElement>();
+            searchInputLe.preferredHeight = 28f;
+            searchInputLe.flexibleWidth = 1f;
+            searchInputLe.minWidth = 100f;
+
+            // Filter row 1: Tier filter
+            GameObject filterRow1 = new GameObject("FilterRow1", typeof(RectTransform));
+            filterRow1.transform.SetParent(filterContainer.transform, false);
+            HorizontalLayoutGroup filterHlg1 = filterRow1.AddComponent<HorizontalLayoutGroup>();
+            filterHlg1.spacing = 4f;
+            filterHlg1.childForceExpandWidth = false;
+            filterHlg1.childForceExpandHeight = false;
+            LayoutElement filterRow1Le = filterRow1.AddComponent<LayoutElement>();
+            filterRow1Le.preferredHeight = 28f;
+            filterRow1Le.flexibleWidth = 1f;
+
+            Text tierLabel = UiBuilder.MakeText(filterRow1.transform, "TierLabel", "Tier:", 11, UiBuilder.TextSecondary);
+            LayoutElement tierLabelLe = tierLabel.gameObject.AddComponent<LayoutElement>();
+            tierLabelLe.preferredWidth = 40f;
+
+            _tierDropdown = MakeDropdown(filterRow1.transform, "TierDropdown",
+                new[] { "All", "Engine Extension", "Content", "Total Conversion", "Baseline" },
+                OnTierFilterChanged);
+            LayoutElement tierDdLe = _tierDropdown.gameObject.AddComponent<LayoutElement>();
+            tierDdLe.preferredWidth = 90f;
+            tierDdLe.minWidth = 80f;
+            tierDdLe.preferredHeight = 28f;
+
+            // Filter row 2: State filter
+            GameObject filterRow2 = new GameObject("FilterRow2", typeof(RectTransform));
+            filterRow2.transform.SetParent(filterContainer.transform, false);
+            HorizontalLayoutGroup filterHlg2 = filterRow2.AddComponent<HorizontalLayoutGroup>();
+            filterHlg2.spacing = 4f;
+            filterHlg2.childForceExpandWidth = false;
+            filterHlg2.childForceExpandHeight = false;
+            LayoutElement filterRow2Le = filterRow2.AddComponent<LayoutElement>();
+            filterRow2Le.preferredHeight = 28f;
+            filterRow2Le.flexibleWidth = 1f;
+
+            Text stateLabel = UiBuilder.MakeText(filterRow2.transform, "StateLabel", "State:", 11, UiBuilder.TextSecondary);
+            LayoutElement stateLabelLe = stateLabel.gameObject.AddComponent<LayoutElement>();
+            stateLabelLe.preferredWidth = 40f;
+
+            _stateDropdown = MakeDropdown(filterRow2.transform, "StateDropdown",
+                new[] { "All", "Enabled", "Disabled", "Has Errors" },
+                OnStateFilterChanged);
+            LayoutElement stateDdLe = _stateDropdown.gameObject.AddComponent<LayoutElement>();
+            stateDdLe.preferredWidth = 90f;
+            stateDdLe.minWidth = 80f;
+            stateDdLe.preferredHeight = 28f;
+
+            // Sort row
+            GameObject sortRow = new GameObject("SortRow", typeof(RectTransform));
+            sortRow.transform.SetParent(filterContainer.transform, false);
+            HorizontalLayoutGroup sortHlg = sortRow.AddComponent<HorizontalLayoutGroup>();
+            sortHlg.spacing = 4f;
+            sortHlg.childForceExpandWidth = false;
+            sortHlg.childForceExpandHeight = false;
+            LayoutElement sortRowLe = sortRow.AddComponent<LayoutElement>();
+            sortRowLe.preferredHeight = 28f;
+            sortRowLe.flexibleWidth = 1f;
+
+            Text sortLabel = UiBuilder.MakeText(sortRow.transform, "SortLabel", "Sort:", 11, UiBuilder.TextSecondary);
+            LayoutElement sortLabelLe = sortLabel.gameObject.AddComponent<LayoutElement>();
+            sortLabelLe.preferredWidth = 40f;
+
+            _sortDropdown = MakeDropdown(sortRow.transform, "SortDropdown",
+                new[] { "Name", "Type", "Version" },
+                OnSortChanged);
+            LayoutElement sortDdLe = _sortDropdown.gameObject.AddComponent<LayoutElement>();
+            sortDdLe.preferredWidth = 90f;
+            sortDdLe.minWidth = 80f;
+            sortDdLe.preferredHeight = 28f;
+
+            // Counter text (flexible space, then counter)
+            GameObject spacer = new GameObject("Spacer", typeof(RectTransform));
+            spacer.transform.SetParent(sortRow.transform, false);
+            LayoutElement spacerLe = spacer.AddComponent<LayoutElement>();
+            spacerLe.flexibleWidth = 1f;
+
+            _listCounterText = UiBuilder.MakeText(sortRow.transform, "CounterText", "0 of 0", 10, UiBuilder.TextSecondary);
+            LayoutElement counterLe = _listCounterText.gameObject.AddComponent<LayoutElement>();
+            counterLe.preferredWidth = 60f;
+        }
+
+        /// <summary>Creates a dropdown with the given options and callback.</summary>
+        private Dropdown MakeDropdown(Transform parent, string name, string[] options, Action<int> onValueChanged)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Dropdown));
+            go.transform.SetParent(parent, false);
+
+            Image bgImg = go.GetComponent<Image>();
+            bgImg.color = UiBuilder.BgDeep;
+
+            Dropdown dropdown = go.GetComponent<Dropdown>();
+
+            // Populate options
+            dropdown.options.Clear();
+            foreach (string option in options)
+            {
+                dropdown.options.Add(new Dropdown.OptionData(option));
+            }
+            dropdown.value = 0;
+
+            // Setup label
+            GameObject label = new GameObject("Label", typeof(RectTransform), typeof(Text));
+            label.transform.SetParent(go.transform, false);
+            RectTransform labelRt = label.GetComponent<RectTransform>();
+            labelRt.anchorMin = Vector2.zero;
+            labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = new Vector2(8f, 0f);
+            labelRt.offsetMax = new Vector2(-8f, 0f);
+
+            Text labelText = label.GetComponent<Text>();
+            labelText.text = options[0];
+            labelText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            labelText.fontSize = 12;
+            labelText.color = UiBuilder.TextPrimary;
+            labelText.alignment = TextAnchor.MiddleLeft;
+
+            dropdown.targetGraphic = bgImg;
+            dropdown.onValueChanged.AddListener(onValueChanged);
+
+            return dropdown;
+        }
+
+        private void OnSearchChanged(string text)
+        {
+            _searchText = text;
+            ApplyFilters();
+        }
+
+        private void OnTierFilterChanged(int index)
+        {
+            if (_tierDropdown != null)
+                _tierFilter = _tierDropdown.options[index].text;
+            ApplyFilters();
+        }
+
+        private void OnStateFilterChanged(int index)
+        {
+            if (_stateDropdown != null)
+                _stateFilter = _stateDropdown.options[index].text;
+            ApplyFilters();
+        }
+
+        private void OnSortChanged(int index)
+        {
+            if (_sortDropdown != null)
+                _sortBy = _sortDropdown.options[index].text;
+            ApplyFilters();
+        }
+
+        /// <summary>Applies all filters and sorts the pack list, rebuilding the UI.</summary>
+        private void ApplyFilters()
+        {
+            _filteredIndices.Clear();
+
+            for (int i = 0; i < _presenter.Packs.Count; i++)
+            {
+                PackDisplayInfo pack = _presenter.Packs[i];
+
+                // Search filter
+                if (!string.IsNullOrWhiteSpace(_searchText))
+                {
+                    string searchLower = _searchText.ToLowerInvariant();
+                    if (!pack.Name.ToLowerInvariant().Contains(searchLower) &&
+                        !pack.Id.ToLowerInvariant().Contains(searchLower))
+                    {
+                        continue;
+                    }
+                }
+
+                // Tier filter
+                if (_tierFilter != "All")
+                {
+                    bool matches = false;
+                    if (_tierFilter == "Engine Extension" && pack.Classification == "engine_extension")
+                        matches = true;
+                    if (_tierFilter == "Content" && pack.Classification == "content")
+                        matches = true;
+                    if (_tierFilter == "Total Conversion" && pack.Classification == "total_conversion")
+                        matches = true;
+                    if (_tierFilter == "Baseline" && pack.Classification == "baseline")
+                        matches = true;
+
+                    if (!matches) continue;
+                }
+
+                // State filter
+                if (_stateFilter != "All")
+                {
+                    bool matches = false;
+                    if (_stateFilter == "Enabled" && pack.IsEnabled)
+                        matches = true;
+                    if (_stateFilter == "Disabled" && !pack.IsEnabled)
+                        matches = true;
+                    if (_stateFilter == "Has Errors" && pack.Errors.Count > 0)
+                        matches = true;
+
+                    if (!matches) continue;
+                }
+
+                _filteredIndices.Add(i);
+            }
+
+            // Apply sorting
+            ApplySorting();
+
+            // Update counter
+            if (_listCounterText != null)
+            {
+                _listCounterText.text = $"{_filteredIndices.Count} of {_presenter.Packs.Count}";
+            }
+
+            // Rebuild the filtered list
+            RebuildFilteredPackList();
+        }
+
+        /// <summary>Sorts the filtered pack indices according to the current sort selection.</summary>
+        private void ApplySorting()
+        {
+            if (_sortBy == "Type")
+            {
+                _filteredIndices.Sort((a, b) =>
+                    _presenter.Packs[a].Type.CompareTo(_presenter.Packs[b].Type));
+            }
+            else if (_sortBy == "Version")
+            {
+                // Simple string version sort (not semver)
+                _filteredIndices.Sort((a, b) =>
+                    _presenter.Packs[a].Version.CompareTo(_presenter.Packs[b].Version));
+            }
+            else // Name (default)
+            {
+                _filteredIndices.Sort((a, b) =>
+                    _presenter.Packs[a].Name.CompareTo(_presenter.Packs[b].Name));
+            }
+        }
+
+        /// <summary>Renders only the filtered packs into the scroll list.</summary>
+        private void RebuildFilteredPackList()
+        {
+            if (_listContent == null) return;
+
+            // Clear existing items
+            for (int i = _listContent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _listContent.GetChild(i);
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
+
+            // Render filtered items
+            for (int displayIndex = 0; displayIndex < _filteredIndices.Count; displayIndex++)
+            {
+                int realIndex = _filteredIndices[displayIndex];
+                BuildPackListItem(_presenter.Packs[realIndex], realIndex);
+            }
+
+            // Update content height
+            float padding_top = 4f, padding_bottom = 4f, spacing = 2f, itemHeight = 40f;
+            float calculatedHeight = padding_top + (_filteredIndices.Count * itemHeight) +
+                                      (Mathf.Max(0, _filteredIndices.Count - 1) * spacing) + padding_bottom;
+            _listContent.sizeDelta = new Vector2(_listContent.sizeDelta.x, calculatedHeight);
+
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_listContent);
         }
 
@@ -1092,6 +1462,9 @@ namespace DINOForge.Runtime.UI
 
             // ── Screenshot gallery (lazy-load textures via coroutine) ─────────
             RefreshGallery(p);
+
+            // ── Conflict resolution buttons (#903) ────────────────────────────
+            RefreshConflictButtons(p);
 
             // ── Toggle button label ───────────────────────────────────────────
             if (_detailPane != null)

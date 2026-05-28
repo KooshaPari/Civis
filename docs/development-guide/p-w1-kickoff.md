@@ -77,6 +77,7 @@
 | FR-CIV-TACTICS-075 | implemented | `mod.permission_violation.v1` on replay bus + snapshot/SSE |
 | FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
 | FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
+| FR-CIV-BEVY-001 | implemented | `civ-standalone` gameplay plugins (sim bridge, HUD, spawn tools, minimap) |
 
 ## First PR slice (recommended)
 
@@ -104,8 +105,8 @@
 22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
-25. **Bevy gameplay client (item 26)** — **in progress** on `feat/p-w1-bevy-gameplay-026`: export `sim_bridge` / `spawn_tools` / `game_ui` / `minimap` in `civ-bevy-ref`, wire `civ-standalone` plugins, spawn-tool → `Simulation`, `civ-native-hal-probe` DX12 `as_hal`, OmniRoute env for `agent-orchestrator`.
-26. **Next:** TBD (post–item-26: live WS attach + render-to-texture minimap).
+25. **Bevy gameplay client** — **done** (item 26): export gameplay modules in `civ-bevy-ref`, `civ-standalone` with `bevy,egui`, sim tick + spawn-tool → `Simulation`, HUD/minimap plugins.
+26. **Next:** live WS attach parity + render-to-texture minimap (item 27).
 
 ## Run
 
@@ -113,5 +114,6 @@
 cargo test -p civ-tactics
 cargo test -p civ-engine pending_damage
 cargo test -p civ-engine war_bridge_records
+cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
 just civis-3d-verify
 ```

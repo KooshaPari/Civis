@@ -161,6 +161,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
 | FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
 | FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
+| FR-CIV-BEVY-001 | `civ-standalone` gameplay plugins (sim tick, HUD, spawn tools, minimap). | `clients/bevy-ref` | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
 
 ---
 

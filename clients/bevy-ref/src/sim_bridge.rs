@@ -54,7 +54,8 @@ fn advance_simulation(
     mut timer: ResMut<SimTickTimer>,
     mut sim: ResMut<SimState>,
 ) {
-    if timer.0.tick(time.delta()) {
+    timer.0.tick(time.delta());
+    if timer.0.just_finished() {
         sim.0.tick();
     }
 }

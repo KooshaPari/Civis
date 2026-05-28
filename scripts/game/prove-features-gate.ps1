@@ -62,12 +62,44 @@ function Write-GateResult([hashtable]$Result) {
     $Result | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $gateResultPath -Encoding utf8
 }
 
-function Test-GameAvailable {
+$script:GameProcessBaseName = 'Diplomacy is Not an Option'
+$script:GameExecutableFileName = 'Diplomacy is Not an Option.exe'
+
+function Stop-StrayGameLaunchProcesses {
+    Write-Gate 'Stopping stray game processes (pre/post flight)' 'Warn'
+    foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
+        Get-Process -Name $procName -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 2
+}
+
+function Resolve-DinoGameExePath {
     $path = $env:DINO_GAME_PATH
-    return (-not [string]::IsNullOrWhiteSpace($path)) -and (Test-Path -LiteralPath $path)
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        return $null
+    }
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        return $path
+    }
+    if (Test-Path -LiteralPath $path -PathType Container) {
+        $exe = Join-Path $path $script:GameExecutableFileName
+        if (Test-Path -LiteralPath $exe) {
+            return $exe
+        }
+    }
+    return $null
+}
+
+function Test-GameAvailable {
+    return $null -ne (Resolve-DinoGameExePath)
 }
 
 function Get-GameInstallRoot {
+    $exe = Resolve-DinoGameExePath
+    if ($exe) {
+        return Split-Path -Parent $exe
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:DINO_GAME_PATH)) {
         return $env:DINO_GAME_PATH
     }
@@ -214,29 +246,41 @@ function Invoke-FullGate {
     }
 
     if (Test-GameAvailable) {
-        Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
-        dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
-            -c Release `
-            --filter 'Category=GameLaunch' `
-            --verbosity minimal
-        $gameExit = $LASTEXITCODE
-        if ($gameExit -ne 0) {
+        $resolvedExe = Resolve-DinoGameExePath
+        if ($resolvedExe) {
+            $env:DINO_GAME_PATH = $resolvedExe
+            Write-Gate "Using game executable: $resolvedExe"
+        }
+
+        Stop-StrayGameLaunchProcesses
+        try {
+            Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
+            dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
+                -c Release `
+                --filter 'Category=GameLaunch' `
+                --verbosity minimal
+            $gameExit = $LASTEXITCODE
+            if ($gameExit -ne 0) {
+                Write-GateResult @{
+                    timestamp = (Get-Date).ToUniversalTime().ToString('o')
+                    status    = 'FAILED'
+                    mode      = 'full'
+                    reason    = 'GameLaunch tests failed'
+                }
+                exit $gameExit
+            }
             Write-GateResult @{
                 timestamp = (Get-Date).ToUniversalTime().ToString('o')
-                status    = 'FAILED'
+                status    = 'PASSED'
                 mode      = 'full'
-                reason    = 'GameLaunch tests failed'
+                reason    = 'GameLaunch SPEC-007 tests passed'
             }
-            exit $gameExit
+            Write-Gate 'Full game gate PASSED' 'Success'
+            exit 0
         }
-        Write-GateResult @{
-            timestamp = (Get-Date).ToUniversalTime().ToString('o')
-            status    = 'PASSED'
-            mode      = 'full'
-            reason    = 'GameLaunch SPEC-007 tests passed'
+        finally {
+            Stop-StrayGameLaunchProcesses
         }
-        Write-Gate 'Full game gate PASSED' 'Success'
-        exit 0
     }
 
     if (-not (Test-Path -LiteralPath $claudeGate)) {

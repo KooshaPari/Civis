@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.
 
 ### Changed
+- `prove-features-gate.ps1`: kill stray game processes before/after live runs; resolve `DINO_GAME_PATH` to `.exe` when a directory is set.
 - GameLaunch bridge ping SLA: 1000ms round-trip on self-hosted (was 500ms flake under load).
 - Agent scripts default to `main`; add `scripts/agent-worktrees.ps1` for parallel worktrees under `~/.cursor/worktrees/Dino`.
 - CI stabilization (iter-145/146): proof gate freshness, workflow pins, MCP bridge dedupe, GameClient connect timeout on Windows.

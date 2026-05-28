@@ -106,6 +106,7 @@ rootCommand.Add(WatchCommand.Create());
 rootCommand.Add(AssetctlCommand.Create(serviceProvider));
 rootCommand.Add(SyncCommand.Create());
 rootCommand.Add(NewPackCommand.Create());
+rootCommand.Add(DevToolsCommand.Create());
 
 ParseResult parseResult = rootCommand.Parse(args);
 return await parseResult.InvokeAsync().ConfigureAwait(false);

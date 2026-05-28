@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -146,21 +147,43 @@ namespace DINOForge.Tools.PackCompiler
             // bundlesCommand.Subcommands.Add(bundlesInspectCommand);
             // bundlesCommand.Subcommands.Add(bundlesValidateCommand);
 
-            // Thunderstore command
-            var thunderstorePackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
-            var authorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
-            var thunderstoreOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory (defaults to pack-path)" };
-            var thunderstoreCommand = new Command("thunderstore") { Description = "Generate Thunderstore-compatible manifest.json from a DINOForge pack" };
-            thunderstoreCommand.Arguments.Add(thunderstorePackDirArg);
-            thunderstoreCommand.Options.Add(authorOption);
-            thunderstoreCommand.Options.Add(thunderstoreOutputOption);
-            thunderstoreCommand.SetAction(parseResult =>
+            // Thunderstore command group
+            var thunderstoreCommand = new Command("thunderstore") { Description = "Thunderstore publishing tools" };
+
+            // thunderstore manifest - generate manifest.json
+            var tsManifestPackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
+            var tsManifestAuthorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
+            var tsManifestOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory (defaults to pack-path)" };
+            var tsManifestCommand = new Command("manifest") { Description = "Generate Thunderstore-compatible manifest.json" };
+            tsManifestCommand.Arguments.Add(tsManifestPackDirArg);
+            tsManifestCommand.Options.Add(tsManifestAuthorOption);
+            tsManifestCommand.Options.Add(tsManifestOutputOption);
+            tsManifestCommand.SetAction(parseResult =>
             {
-                string packPath = parseResult.GetValue(thunderstorePackDirArg)!;
-                string author = parseResult.GetValue(authorOption) ?? GetDefaultAuthor();
-                string? outputDir = parseResult.GetValue(thunderstoreOutputOption);
+                string packPath = parseResult.GetValue(tsManifestPackDirArg)!;
+                string author = parseResult.GetValue(tsManifestAuthorOption) ?? GetDefaultAuthor();
+                string? outputDir = parseResult.GetValue(tsManifestOutputOption);
                 GenerateThunderstoreManifest(packPath, author, outputDir ?? "");
             });
+
+            // thunderstore package - create full Thunderstore ZIP
+            var tsPackPackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
+            var tsPackAuthorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
+            var tsPackOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory for ZIP (defaults to dist/)" };
+            var tsPackCommand = new Command("package") { Description = "Create Thunderstore-compatible ZIP package" };
+            tsPackCommand.Arguments.Add(tsPackPackDirArg);
+            tsPackCommand.Options.Add(tsPackAuthorOption);
+            tsPackCommand.Options.Add(tsPackOutputOption);
+            tsPackCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(tsPackPackDirArg)!;
+                string author = parseResult.GetValue(tsPackAuthorOption) ?? GetDefaultAuthor();
+                string? outputDir = parseResult.GetValue(tsPackOutputOption);
+                CreateThunderstorePackage(packPath, author, outputDir ?? "dist");
+            });
+
+            thunderstoreCommand.Subcommands.Add(tsManifestCommand);
+            thunderstoreCommand.Subcommands.Add(tsPackCommand);
 
             // Validate total conversion command
             var validateTcCommand = new Command("validate-tc") { Description = "Validate a total conversion pack manifest" };
@@ -591,6 +614,173 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
+        private static void CreateThunderstorePackage(string packPath, string author, string outputDir)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]Thunderstore Package Creation[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                AnsiConsole.MarkupLine($"Author: {author}");
+                AnsiConsole.MarkupLine($"Output Directory: {outputDir}");
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                    return;
+                }
+
+                string manifestPath = Path.Combine(packPath, "pack.yaml");
+                if (!File.Exists(manifestPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] pack.yaml not found in directory");
+                    Environment.Exit(1);
+                    return;
+                }
+
+                AnsiConsole.MarkupLine("[yellow]Loading manifest...[/]");
+                var loader = new PackLoader();
+                var manifest = loader.LoadFromFile(manifestPath);
+
+                // Build Thunderstore package name: "Author-PackId" (sanitized to alphanumeric + dash)
+                string safeName = System.Text.RegularExpressions.Regex.Replace(
+                    manifest.Id, @"[^a-zA-Z0-9_]", "-");
+                string tsName = $"{author}-{safeName}";
+
+                // Map DINOForge depends_on to Thunderstore format
+                var dependencies = new List<string> { "BepInEx-BepInExPack-5.4.2100" };
+                if (manifest.DependsOn != null && manifest.DependsOn.Count > 0)
+                {
+                    foreach (string dep in manifest.DependsOn)
+                    {
+                        string safeDep = System.Text.RegularExpressions.Regex.Replace(dep, @"[^a-zA-Z0-9_]", "-");
+                        dependencies.Add($"{author}-{safeDep}-1.0.0");
+                    }
+                }
+
+                // Truncate description to 250 chars (Thunderstore limit)
+                string description = manifest.Description ?? $"DINOForge pack: {manifest.Name}";
+                if (description.Length > 250)
+                    description = description[..247] + "...";
+
+                // Create staging directory
+                string stagingDir = Path.Combine(outputDir, tsName);
+                if (Directory.Exists(stagingDir))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Clearing existing staging directory...[/]");
+                    Directory.Delete(stagingDir, true);
+                }
+                Directory.CreateDirectory(stagingDir);
+
+                AnsiConsole.MarkupLine("[yellow]Copying pack contents (excluding raw assets)...[/]");
+
+                // Copy pack files, excluding raw asset working directories
+                var excludedPatterns = new[] { "assets/raw", "assets/working", @"\.blend$", @"\.fbx$", @"\.psd$" };
+                CopyDirectoryExcluding(packPath, stagingDir, excludedPatterns);
+
+                // Generate manifest.json manually (trimming-safe approach)
+                AnsiConsole.MarkupLine("[yellow]Generating manifest.json...[/]");
+                string manifestJsonPath = Path.Combine(stagingDir, "manifest.json");
+                var manifestJson = BuildThunderstoreManifestJson(tsName, manifest.Version, GetDefaultWebsiteUrl(), description, dependencies);
+                File.WriteAllText(manifestJsonPath, manifestJson, Encoding.UTF8);
+                AnsiConsole.MarkupLine($"[green]✓[/] manifest.json created");
+
+                // Check for icon.png (required by Thunderstore)
+                string iconPath = Path.Combine(stagingDir, "icon.png");
+                if (!File.Exists(iconPath))
+                {
+                    AnsiConsole.MarkupLine("[yellow]⚠[/] Warning: icon.png not found. Thunderstore requires a 256x256 PNG icon.");
+                    AnsiConsole.MarkupLine($"    Place icon.png at: {Markup.Escape(iconPath)}");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] icon.png found");
+                }
+
+                // Check for README.md (optional but recommended)
+                string readmePath = Path.Combine(stagingDir, "README.md");
+                if (!File.Exists(readmePath))
+                {
+                    AnsiConsole.MarkupLine("[yellow]ℹ[/] Info: README.md not found. Creating a basic one...");
+                    string basicReadme = $@"# {manifest.Name}
+
+{manifest.Description ?? $"A DINOForge mod pack for Diplomacy is Not an Option"}
+
+## Installation
+
+1. Install [BepInEx](https://valheim.thunderstore.io/package/denikson/BepInExPack/)
+2. Extract this mod to your BepInEx plugins folder
+3. Launch the game
+
+## Dependencies
+
+- BepInEx 5.4.2100+
+{(manifest.DependsOn?.Count > 0 ? $"- {string.Join("\n- ", manifest.DependsOn)}" : "")}
+
+## Version
+
+{manifest.Version}
+
+## Author
+
+{author}
+";
+                    File.WriteAllText(readmePath, basicReadme, Encoding.UTF8);
+                    AnsiConsole.MarkupLine("[green]✓[/] Basic README.md created");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] README.md found");
+                }
+
+                // Create ZIP archive
+                string zipFileName = $"{tsName}-{manifest.Version}.zip";
+                string zipPath = Path.Combine(outputDir, zipFileName);
+
+                if (File.Exists(zipPath))
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Removing existing ZIP: {zipPath}[/]");
+                    File.Delete(zipPath);
+                }
+
+                AnsiConsole.MarkupLine("[yellow]Creating ZIP archive...[/]");
+                using (var zipFile = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    foreach (string file in Directory.GetFiles(stagingDir, "*", SearchOption.AllDirectories))
+                    {
+                        string relativePath = Path.GetRelativePath(stagingDir, file);
+                        // Normalize path separators for ZIP (always forward slash)
+                        string zipPath_normalized = relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                        ZipFileExtensions.CreateEntryFromFile(zipFile, file, zipPath_normalized);
+                    }
+                }
+
+                // Compute ZIP size
+                long zipSize = new FileInfo(zipPath).Length;
+
+                // Clean up staging directory
+                AnsiConsole.MarkupLine("[yellow]Cleaning up staging directory...[/]");
+                Directory.Delete(stagingDir, true);
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold green]Package created successfully![/]");
+                AnsiConsole.MarkupLine($"[bold]ZIP:[/] {zipPath}");
+                AnsiConsole.MarkupLine($"[bold]Size:[/] {FormatBytes(zipSize)}");
+                AnsiConsole.MarkupLine($"[bold]Package Name:[/] {tsName}");
+                AnsiConsole.MarkupLine($"[bold]Version:[/] {manifest.Version}");
+                AnsiConsole.MarkupLine($"[bold]Dependencies:[/] {dependencies.Count}");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[green]Ready to upload to Thunderstore![/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Package creation failed:[/] {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private static void GenerateThunderstoreManifest(string packPath, string author, string outputDir)
         {
             try
@@ -741,6 +931,66 @@ namespace DINOForge.Tools.PackCompiler
                 string destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
                 CopyDirectory(dir, destSubDir);
             }
+        }
+
+        /// <summary>
+        /// Copies a directory tree, excluding paths matching any of the exclusion patterns.
+        /// Patterns can be directory names (e.g., "assets/raw") or file extensions (e.g., "\.blend$").
+        /// </summary>
+        private static void CopyDirectoryExcluding(string sourceDir, string destDir, string[] excludePatterns)
+        {
+            Directory.CreateDirectory(destDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                string relativePath = Path.GetRelativePath(sourceDir, file);
+                if (ShouldExclude(relativePath, excludePatterns))
+                    continue;
+
+                string destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.GetRelativePath(sourceDir, dir);
+
+                if (ShouldExclude(relativePath, excludePatterns))
+                    continue;
+
+                string destSubDir = Path.Combine(destDir, dirName);
+                CopyDirectoryExcluding(dir, destSubDir, excludePatterns);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the given path matches any of the exclusion patterns.
+        /// </summary>
+        private static bool ShouldExclude(string path, string[] patterns)
+        {
+            // Normalize path separators for consistent matching
+            string normalizedPath = path.Replace(Path.DirectorySeparatorChar, '/');
+
+            foreach (var pattern in patterns)
+            {
+                // Direct substring match (e.g., "assets/raw")
+                if (normalizedPath.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // Regex pattern match (e.g., "\.blend$")
+                if (pattern.StartsWith(@"\.") || pattern.Contains("$"))
+                {
+                    try
+                    {
+                        if (System.Text.RegularExpressions.Regex.IsMatch(normalizedPath, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            return true;
+                    }
+                    catch { /* skip invalid regex patterns */ }
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateTotalConversion(string manifestPath)
@@ -1388,6 +1638,35 @@ namespace DINOForge.Tools.PackCompiler
                 AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {ex.Message}");
                 Environment.Exit(1);
             }
+        }
+
+        /// <summary>
+        /// Builds Thunderstore manifest.json manually to avoid reflection-based serialization issues.
+        /// Trimming-safe: doesn't rely on anonymous type reflection.
+        /// </summary>
+        private static string BuildThunderstoreManifestJson(string name, string version, string websiteUrl, string description, List<string> dependencies)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+
+            writer.WriteStartObject();
+            writer.WriteString("name", name);
+            writer.WriteString("version_number", version);
+            writer.WriteString("website_url", websiteUrl);
+            writer.WriteString("description", description);
+
+            writer.WritePropertyName("dependencies");
+            writer.WriteStartArray();
+            foreach (var dep in dependencies)
+            {
+                writer.WriteStringValue(dep);
+            }
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+            writer.Flush();
+
+            return Encoding.UTF8.GetString(stream.ToArray());
         }
 
         private static string GetDefaultAuthor()

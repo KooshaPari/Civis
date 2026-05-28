@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Patching;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK
@@ -138,6 +139,42 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "overrides")]
         public PackOverrides? Overrides { get; set; }
+
+        /// <summary>
+        /// Optional GitHub release update-check configuration.
+        /// When set, the runtime polls the specified repository for newer releases and
+        /// displays an "Update available" row in the F10 mod menu.
+        /// </summary>
+        [YamlMember(Alias = "update_check")]
+        public PackUpdateCheck? UpdateCheck { get; set; }
+
+        /// <summary>
+        /// RimWorld-style cross-pack patch operations.
+        /// Each entry targets another loaded pack and applies a sequence of field mutations
+        /// (replace, add, remove, multiply) AFTER all packs are loaded but BEFORE registries
+        /// are populated. Patches are applied by <see cref="DINOForge.SDK.Patching.PatchApplicator"/>.
+        /// </summary>
+        [YamlMember(Alias = "patches")]
+        public List<PatchSet>? Patches { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+    }
+
+    /// <summary>
+    /// GitHub release update-check configuration for a pack.
+    /// Maps to the <c>update_check</c> key in pack.yaml.
+    /// </summary>
+    public sealed class PackUpdateCheck
+    {
+        /// <summary>
+        /// GitHub repository owner (user or organisation), e.g. "KooshaPari".
+        /// </summary>
+        [YamlMember(Alias = "owner")]
+        public string Owner { get; set; } = "";
+
+        /// <summary>
+        /// GitHub repository name, e.g. "warfare-starwars".
+        /// </summary>
+        [YamlMember(Alias = "repo")]
+        public string Repo { get; set; } = "";
     }
 
     /// <summary>

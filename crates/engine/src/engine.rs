@@ -10,7 +10,10 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
-use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
+use civ_planet::{
+    compute_climate, compute_weather, defaults_earthlike, Climate, MoonConfig, PlanetConfig,
+    WeatherCell,
+};
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
@@ -413,6 +416,8 @@ pub struct Simulation {
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
+    /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
+    weather_grid: Vec<WeatherCell>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -568,6 +573,8 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState::default();
 
         Self {
@@ -608,6 +615,7 @@ impl Simulation {
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
     }
 
@@ -622,6 +630,8 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -665,6 +675,7 @@ impl Simulation {
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
     }
 
@@ -1100,11 +1111,18 @@ impl Simulation {
         Ok(sim)
     }
 
-    /// Planet phase - recompute climate from the current tick and apply the
-    /// resulting tide offset to any registered coastal water columns
-    /// (FR-CIV-PLANET-020).
+    /// Planet phase - recompute climate and weather grid from the current tick,
+    /// then apply the resulting tide offset to any registered coastal water
+    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
+        let axial_tilt_fp = i32::from(self.planet.axial_tilt_deg) * 1_000;
+        self.weather_grid = compute_weather(
+            self.state.tick,
+            self.weather_grid.len().max(1) as u32,
+            axial_tilt_fp,
+            self.planet.year_length_ticks,
+        );
         self.apply_tide_offset();
     }
 
@@ -1711,6 +1729,7 @@ impl Simulation {
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
+            weather_grid: self.weather_grid.clone(),
         }
     }
 }
@@ -1795,6 +1814,11 @@ pub struct SimulationSnapshot {
     /// Deterministic climate snapshot computed by `phase_planet` for the current tick
     /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
     pub climate: Climate,
+    /// Per-region weather grid for the current tick (FR-CIV-PLANET-030).
+    ///
+    /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
+    /// The grid is re-derived from `tick` and `planet.axial_tilt_deg` every tick.
+    pub weather_grid: Vec<WeatherCell>,
 }
 
 // ============================================================================
@@ -2078,7 +2102,9 @@ mod tests {
 
         // Tick 1 -> moon_phase = 0.25 -> tide_offset = +1.0 -> peak.
         sim.tick();
-        let peak = sim.coastal_water_level(x, z).expect("water level after peak tick");
+        let peak = sim
+            .coastal_water_level(x, z)
+            .expect("water level after peak tick");
         let peak_delta = peak - base_y;
         assert!(
             (peak_delta - amplitude_units).abs() <= tolerance,
@@ -2098,7 +2124,9 @@ mod tests {
 
         // Tick 2 -> moon_phase = 0.5 -> tide_offset = 0 -> back to baseline.
         sim.tick();
-        let mid = sim.coastal_water_level(x, z).expect("water level at zero crossing");
+        let mid = sim
+            .coastal_water_level(x, z)
+            .expect("water level at zero crossing");
         let mid_delta = mid - base_y;
         assert!(
             mid_delta.abs() <= tolerance,
@@ -2107,7 +2135,9 @@ mod tests {
 
         // Tick 3 -> moon_phase = 0.75 -> tide_offset = -1.0 -> trough.
         sim.tick();
-        let trough = sim.coastal_water_level(x, z).expect("water level after trough tick");
+        let trough = sim
+            .coastal_water_level(x, z)
+            .expect("water level after trough tick");
         let trough_delta = trough - base_y;
         assert!(
             (trough_delta + amplitude_units).abs() <= tolerance,
@@ -2123,7 +2153,9 @@ mod tests {
 
         // Tick 4 -> moon_phase = 0 -> back to baseline.
         sim.tick();
-        let close = sim.coastal_water_level(x, z).expect("water level at cycle close");
+        let close = sim
+            .coastal_water_level(x, z)
+            .expect("water level at cycle close");
         assert!(
             (close - base_y).abs() <= tolerance,
             "expected end-of-cycle delta ≈ 0, got {}",
@@ -2757,5 +2789,57 @@ mod tests {
         // After a cadence tick with ≥2 opposing military units the pulses list
         // must be non-empty; the snapshot field must match.
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
+    }
+
+    /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
+    /// year phase (summer equatorial > winter equatorial) and results are
+    /// deterministic across re-runs.
+    #[test]
+    fn weather_grid_temperature_varies_with_year_phase() {
+        // Earth-like defaults: year_length_ticks = 8_766_000, tilt = 23°.
+        let year_length_ticks = 8_766_000_u64;
+        let equatorial_idx = 8_usize; // middle of 16-region grid
+
+        // Northern summer: year ¼ → sin(year_phase) is at peak
+        let summer_tick = year_length_ticks / 4;
+        // Northern winter: year ¾ → sin(year_phase) is at trough
+        let winter_tick = year_length_ticks * 3 / 4;
+
+        let mut sim_s = Simulation::with_seed(0);
+        // Fast-forward to summer_tick by running ticks (use state manipulation
+        // for test speed: set tick directly and recompute phase_planet).
+        sim_s.state.tick = summer_tick;
+        let planet_s = *sim_s.planet();
+        let moon_s = *sim_s.moon();
+        sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
+        let axial_tilt_fp = i32::from(planet_s.axial_tilt_deg) * 1_000;
+        sim_s.weather_grid =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        let snap_summer = sim_s.snapshot();
+
+        let mut sim_w = Simulation::with_seed(0);
+        sim_w.state.tick = winter_tick;
+        let planet_w = *sim_w.planet();
+        let moon_w = *sim_w.moon();
+        sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
+        sim_w.weather_grid =
+            compute_weather(winter_tick, 16, axial_tilt_fp, planet_w.year_length_ticks);
+        let snap_winter = sim_w.snapshot();
+
+        let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
+        let winter_temp = snap_winter.weather_grid[equatorial_idx].temp_c_fp;
+
+        assert!(
+            summer_temp > winter_temp,
+            "summer equatorial temp ({summer_temp} fp) should exceed winter ({winter_temp} fp)"
+        );
+
+        // Determinism: re-running the same ticks must produce identical grids.
+        let summer_grid_2 =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        assert_eq!(
+            snap_summer.weather_grid, summer_grid_2,
+            "weather grid must be deterministic across re-runs"
+        );
     }
 }

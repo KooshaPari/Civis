@@ -104,7 +104,8 @@
 22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
-25. **Next:** TBD (post–kickoff slice planning).
+25. **Bevy gameplay client (item 26)** — **in progress** on `feat/p-w1-bevy-gameplay-026`: export `sim_bridge` / `spawn_tools` / `game_ui` / `minimap` in `civ-bevy-ref`, wire `civ-standalone` plugins, spawn-tool → `Simulation`, `civ-native-hal-probe` DX12 `as_hal`, OmniRoute env for `agent-orchestrator`.
+26. **Next:** TBD (post–item-26: live WS attach + render-to-texture minimap).
 
 ## Run
 

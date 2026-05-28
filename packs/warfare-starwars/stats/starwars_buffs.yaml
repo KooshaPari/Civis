@@ -2,24 +2,24 @@
 # Buffs to make Star Wars pack noticeable in-game
 
 overrides:
-  # Clone Trooper Elite - Republic gets better troops
+  # Clone Trooper Elite - Republic gets dramatically tougher troops (VISIBLE TEST)
   - target: unit.stats.hp
-    value: 1.5
+    value: 5.0
     mode: multiply
     filter: Components.MeleeUnit
 
   - target: unit.stats.attack_cooldown
-    value: 0.8
+    value: 0.2
     mode: multiply
     filter: Components.MeleeUnit
 
-  # Battle Droids - CIS gets swarms but weaker
+  # Battle Droids - CIS gets fast swarms (VISIBLE TEST)
   - target: unit.stats.hp
-    value: 0.8
+    value: 0.3
     mode: multiply
     filter: Components.RangeUnit
 
   - target: unit.stats.speed
-    value: 1.2
+    value: 3.0
     mode: multiply
     filter: Components.RangeUnit

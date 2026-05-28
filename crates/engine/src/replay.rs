@@ -71,6 +71,16 @@ pub enum ReplayEvent {
         #[serde(default)]
         bus_json: String,
     },
+    /// Mod capability denial (`mod.permission_violation.v1`, FR-MOD-004 partial).
+    ModPermissionViolation {
+        tick: u64,
+        mod_id: String,
+        call: String,
+        #[serde(default)]
+        domain: Option<String>,
+        #[serde(default)]
+        bus_json: String,
+    },
 }
 
 /// Persistent replay log.
@@ -257,6 +267,56 @@ impl ReplayLog {
         });
     }
 
+    /// Record a `mod.permission_violation.v1` event with replay-bus JSON (CIV-0700).
+    pub fn record_mod_permission_violation(
+        &mut self,
+        mod_id: &str,
+        tick: u64,
+        call: &str,
+        domain: Option<civ_mod_host::WorldDomain>,
+    ) {
+        let bus_json =
+            civ_mod_host::format_mod_permission_violation_json(mod_id, tick, call, domain);
+        self.events.push(ReplayEvent::ModPermissionViolation {
+            tick,
+            mod_id: mod_id.to_string(),
+            call: call.to_string(),
+            domain: domain.map(|d| format!("{d:?}")),
+            bus_json,
+        });
+    }
+
+    /// `mod.permission_violation.v1` JSON payloads recorded at a specific tick.
+    #[must_use]
+    pub fn mod_permission_violation_bus_at_tick(&self, tick: u64) -> Vec<String> {
+        self.events
+            .iter()
+            .filter_map(|event| match event {
+                ReplayEvent::ModPermissionViolation {
+                    tick: event_tick,
+                    bus_json,
+                    ..
+                } if *event_tick == tick && !bus_json.is_empty() => Some(bus_json.clone()),
+                ReplayEvent::ModPermissionViolation {
+                    tick: event_tick,
+                    mod_id,
+                    call,
+                    domain,
+                    ..
+                } if *event_tick == tick => {
+                    let parsed_domain = domain.as_deref().and_then(parse_world_domain_label);
+                    Some(civ_mod_host::format_mod_permission_violation_json(
+                        mod_id,
+                        *event_tick,
+                        call,
+                        parsed_domain,
+                    ))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
     /// `mod.loaded.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
     #[must_use]
     pub fn mod_loaded_bus_at_tick(&self, tick: u64) -> Vec<String> {
@@ -285,6 +345,32 @@ impl ReplayLog {
                 _ => None,
             })
             .collect()
+    }
+
+    /// Record a `mod.permission_violation.v1` event from replay-bus JSON emitted by mod-host.
+    pub fn record_mod_permission_violation_bus(&mut self, tick: u64, bus_json: &str) {
+        let parsed = serde_json::from_str::<serde_json::Value>(bus_json).unwrap_or_default();
+        let mod_id = parsed
+            .get("mod_id")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string();
+        let call = parsed
+            .get("call")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string();
+        let domain = parsed
+            .get("domain")
+            .and_then(|value| value.as_str())
+            .map(|label| label.to_string());
+        self.events.push(ReplayEvent::ModPermissionViolation {
+            tick,
+            mod_id,
+            call,
+            domain,
+            bus_json: bus_json.to_string(),
+        });
     }
 
     /// `session.saved.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
@@ -452,15 +538,43 @@ impl ReplayLog {
                 ReplayEvent::ModLoaded { .. } => {}
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}
+                ReplayEvent::ModPermissionViolation { .. } => {}
             }
         }
         Ok(())
     }
 }
 
+fn parse_world_domain_label(label: &str) -> Option<civ_mod_host::WorldDomain> {
+    match label {
+        "Economy" => Some(civ_mod_host::WorldDomain::Economy),
+        "Military" => Some(civ_mod_host::WorldDomain::Military),
+        "Climate" => Some(civ_mod_host::WorldDomain::Climate),
+        "Diplomacy" => Some(civ_mod_host::WorldDomain::Diplomacy),
+        "Citizens" => Some(civ_mod_host::WorldDomain::Citizens),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mod_permission_violation_records_bus_json_at_tick() {
+        let mut log = ReplayLog::default();
+        let bus_json = civ_mod_host::format_mod_permission_violation_json(
+            "demo-mod",
+            42,
+            "action_emit",
+            None,
+        );
+        log.record_mod_permission_violation_bus(42, &bus_json);
+        let at_tick = log.mod_permission_violation_bus_at_tick(42);
+        assert_eq!(at_tick.len(), 1);
+        assert!(at_tick[0].contains("mod.permission_violation.v1"));
+        assert!(at_tick[0].contains("demo-mod"));
+    }
 
     #[test]
     fn session_saved_records_bus_json_at_tick() {
@@ -482,4 +596,5 @@ mod tests {
             log.session_saved_bus_at_tick(42)
         );
     }
+
 }

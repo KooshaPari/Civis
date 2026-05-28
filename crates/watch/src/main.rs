@@ -461,6 +461,10 @@ struct ModCatalogEntry {
     mod_type: String,
     kind: String,
     installed: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    signed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    author_pubkey_hex: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -513,6 +517,97 @@ const REMOTE_MOD_MAX_BYTES: usize = 50 * 1024 * 1024;
 const REMOTE_FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 const REMOTE_MOD_META_NAME: &str = "meta.json";
 const REMOTE_MOD_ARCHIVE_NAME: &str = "mod.civmod";
+const REMOTE_REGISTRY_NAME: &str = "remote-registry.json";
+
+#[derive(Debug, Clone, Default, Deserialize)]
+struct RemoteModRegistry {
+    #[serde(default)]
+    require_registry: bool,
+    #[serde(default)]
+    entries: Vec<RemoteModRegistryEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RemoteModRegistryEntry {
+    url_prefix: String,
+    #[serde(default)]
+    mod_id: Option<String>,
+    #[serde(default)]
+    require_signature: bool,
+    #[serde(default)]
+    allowed_pubkeys: Vec<String>,
+}
+
+fn load_remote_mod_registry(mods_dir: &Path) -> RemoteModRegistry {
+    let path = mods_dir.join(REMOTE_REGISTRY_NAME);
+    let Ok(contents) = std::fs::read_to_string(path) else {
+        return RemoteModRegistry::default();
+    };
+    serde_json::from_str(&contents).unwrap_or_default()
+}
+
+fn match_registry_entry<'a>(
+    registry: &'a RemoteModRegistry,
+    url: &str,
+) -> Option<&'a RemoteModRegistryEntry> {
+    let trimmed = url.trim();
+    registry
+        .entries
+        .iter()
+        .find(|entry| trimmed.starts_with(entry.url_prefix.trim()))
+}
+
+fn validate_remote_fetch_against_registry<'a>(
+    registry: &'a RemoteModRegistry,
+    url: &str,
+    mod_id: Option<&str>,
+) -> Result<Option<&'a RemoteModRegistryEntry>, String> {
+    let matched = match_registry_entry(registry, url);
+    if registry.require_registry && matched.is_none() {
+        return Err(format!("url not in signed remote mod registry: {}", url.trim()));
+    }
+    if let (Some(entry), Some(requested_id)) = (matched, mod_id) {
+        if let Some(expected) = entry.mod_id.as_deref() {
+            if expected != requested_id {
+                return Err(format!(
+                    "mod_id {requested_id} does not match registry entry ({expected})"
+                ));
+            }
+        }
+    }
+    Ok(matched)
+}
+
+fn validate_remote_mod_against_registry(
+    entry: Option<&RemoteModRegistryEntry>,
+    manifest: &civ_mod_host::ModManifest,
+) -> Result<(), String> {
+    let Some(entry) = entry else {
+        return Ok(());
+    };
+    if let Some(expected) = entry.mod_id.as_deref() {
+        if manifest.meta.id != expected {
+            return Err(format!(
+                "archive mod id `{}` does not match registry (`{expected}`)",
+                manifest.meta.id
+            ));
+        }
+    }
+    if entry.require_signature && manifest.meta.author_pubkey_hex.is_none() {
+        return Err("remote mod must be signed (author_pubkey_hex missing)".into());
+    }
+    if let Some(pk) = manifest.meta.author_pubkey_hex.as_deref() {
+        if !entry.allowed_pubkeys.is_empty()
+            && !entry
+                .allowed_pubkeys
+                .iter()
+                .any(|allowed| allowed.eq_ignore_ascii_case(pk))
+        {
+            return Err("author pubkey not in registry allowlist".into());
+        }
+    }
+    Ok(())
+}
 
 #[derive(Debug, Deserialize)]
 struct FetchModReq {
@@ -534,6 +629,10 @@ struct RemoteModMeta {
     id: String,
     url: String,
     fetched_at: u64,
+    #[serde(default)]
+    signed: bool,
+    #[serde(default)]
+    author_pubkey_hex: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -542,6 +641,9 @@ struct RemoteModEntry {
     path: String,
     fetched_at: u64,
     url: String,
+    signed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author_pubkey_hex: Option<String>,
 }
 
 #[tokio::main]
@@ -1136,6 +1238,23 @@ fn game_events(
         events.push(GameEvent {
             tick,
             kind: "session.saved".to_string(),
+            message,
+            faction_id: None,
+        });
+    }
+
+    for bus in sim.replay_log().mod_permission_violation_bus_at_tick(tick) {
+        let message = serde_json::from_str::<serde_json::Value>(&bus)
+            .ok()
+            .and_then(|value| {
+                let mod_id = value.get("mod_id").and_then(|id| id.as_str())?;
+                let call = value.get("call").and_then(|call| call.as_str())?;
+                Some(format!("Mod {mod_id} denied: {call}"))
+            })
+            .unwrap_or_else(|| "Mod permission denied".to_string());
+        events.push(GameEvent {
+            tick,
+            kind: "mod.permission_violation".to_string(),
             message,
             faction_id: None,
         });
@@ -2251,6 +2370,8 @@ fn catalog_entry_from_manifest(
     kind: &str,
     manifest: &civ_mod_host::ModManifest,
     installed_ids: &std::collections::HashSet<String>,
+    signed: bool,
+    author_pubkey_hex: Option<String>,
 ) -> ModCatalogEntry {
     ModCatalogEntry {
         source,
@@ -2260,6 +2381,8 @@ fn catalog_entry_from_manifest(
         mod_type: mod_type_label(manifest.meta.mod_type).to_owned(),
         kind: kind.to_owned(),
         installed: installed_ids.contains(&manifest.meta.id),
+        signed,
+        author_pubkey_hex,
     }
 }
 
@@ -2291,6 +2414,8 @@ fn civmod_catalog_entries(
                 "civmod",
                 &manifest,
                 installed_ids,
+                false,
+                None,
             ));
         }
     }
@@ -2343,6 +2468,8 @@ fn scan_mod_catalog(mods_dir: &Path, installed_ids: &std::collections::HashSet<S
                 "dir",
                 &manifest,
                 installed_ids,
+                false,
+                None,
             ));
         }
     }
@@ -2533,7 +2660,20 @@ fn is_zip_payload(bytes: &[u8]) -> bool {
     bytes.len() >= 4 && bytes.starts_with(b"PK\x03\x04")
 }
 
-fn validate_remote_mod_bytes(bytes: &[u8], scratch_path: &Path) -> Result<(), String> {
+fn format_remote_mod_validation_error(err: civ_mod_host::ManifestError) -> String {
+    let msg = err.to_string();
+    if msg.contains("signature") || msg.contains("mod.wasm.sig") || msg.contains("author_pubkey_hex") {
+        format!("civmod signature verification failed: {msg}")
+    } else {
+        format!("invalid civmod archive: {msg}")
+    }
+}
+
+fn validate_remote_mod_bytes(
+    bytes: &[u8],
+    scratch_path: &Path,
+    registry_entry: Option<&RemoteModRegistryEntry>,
+) -> Result<(civ_mod_host::ModManifest, bool), String> {
     if bytes.is_empty() {
         return Err("downloaded payload is empty".into());
     }
@@ -2550,11 +2690,23 @@ fn validate_remote_mod_bytes(bytes: &[u8], scratch_path: &Path) -> Result<(), St
         std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
     }
     std::fs::write(scratch_path, bytes).map_err(|err| err.to_string())?;
-    let result = read_civmod_archive(scratch_path).map(|_| ());
-    if result.is_err() {
-        let _ = std::fs::remove_file(scratch_path);
+    match read_civmod_archive(scratch_path) {
+        Ok((manifest, wasm)) => {
+            let signed =
+                manifest.meta.author_pubkey_hex.is_some() && wasm.is_some();
+            match validate_remote_mod_against_registry(registry_entry, &manifest) {
+                Ok(()) => Ok((manifest, signed)),
+                Err(err) => {
+                    let _ = std::fs::remove_file(scratch_path);
+                    Err(err)
+                }
+            }
+        }
+        Err(err) => {
+            let _ = std::fs::remove_file(scratch_path);
+            Err(format_remote_mod_validation_error(err))
+        }
     }
-    result.map_err(|err| format!("invalid civmod archive: {err}"))
 }
 
 fn write_remote_mod_meta(cache_dir: &Path, meta: &RemoteModMeta) -> Result<(), String> {
@@ -2581,14 +2733,18 @@ fn persist_remote_mod_cache(
     cache_id: &str,
     url: &str,
     bytes: &[u8],
+    registry_entry: Option<&RemoteModRegistryEntry>,
 ) -> Result<(PathBuf, String), String> {
     let cache_dir = remote_mod_cache_dir(mods_dir, cache_id);
     let archive_path = cache_dir.join(REMOTE_MOD_ARCHIVE_NAME);
-    validate_remote_mod_bytes(bytes, &archive_path)?;
+    let (manifest, signed) = validate_remote_mod_bytes(bytes, &archive_path, registry_entry)?;
+    let author_pubkey_hex = manifest.meta.author_pubkey_hex.clone();
     let meta = RemoteModMeta {
         id: cache_id.to_owned(),
         url: url.trim().to_owned(),
         fetched_at: unix_timestamp_secs(),
+        signed,
+        author_pubkey_hex,
     };
     write_remote_mod_meta(&cache_dir, &meta)?;
     let source = remote_mod_source_path(&repo_root(), &cache_dir);
@@ -2649,11 +2805,16 @@ fn remote_civmod_catalog_entries(
             continue;
         }
         if let Ok(manifest) = read_manifest_from_civmod(&archive) {
+            let cache_meta = read_remote_mod_meta(&dir);
+            let signed = cache_meta.as_ref().map(|m| m.signed).unwrap_or(false);
+            let author_pubkey_hex = cache_meta.and_then(|m| m.author_pubkey_hex);
             entries.push(catalog_entry_from_manifest(
                 source,
                 "civmod",
                 &manifest,
                 installed_ids,
+                signed,
+                author_pubkey_hex,
             ));
         }
     }
@@ -2690,6 +2851,8 @@ fn scan_remote_mod_cache(mods_dir: &Path) -> Vec<RemoteModEntry> {
                 .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|duration| duration.as_secs())
                 .unwrap_or(0),
+            signed: false,
+            author_pubkey_hex: None,
         });
         let path = archive
             .strip_prefix(&repo)
@@ -2700,6 +2863,8 @@ fn scan_remote_mod_cache(mods_dir: &Path) -> Vec<RemoteModEntry> {
             path,
             fetched_at: meta.fetched_at,
             url: meta.url,
+            signed: meta.signed,
+            author_pubkey_hex: meta.author_pubkey_hex,
         });
     }
     entries.sort_by(|a, b| a.id.cmp(&b.id));
@@ -2933,6 +3098,21 @@ async fn fetch_mod_handler(
     State(state): State<AppState>,
     Json(req): Json<FetchModReq>,
 ) -> Result<Json<FetchModResponse>, (StatusCode, Json<ControlOk>)> {
+    let registry = load_remote_mod_registry(state.mods_dir.as_ref());
+    let registry_entry = validate_remote_fetch_against_registry(
+        &registry,
+        &req.url,
+        req.mod_id.as_deref(),
+    )
+    .map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
     let cache_id = resolve_remote_cache_id(&req.url, req.mod_id.as_deref()).map_err(|message| {
         (
             StatusCode::BAD_REQUEST,
@@ -2953,18 +3133,22 @@ async fn fetch_mod_handler(
                 }),
             )
         })?;
-    let (path, source) =
-        persist_remote_mod_cache(state.mods_dir.as_ref(), &cache_id, &req.url, &bytes).map_err(
-            |message| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(ControlOk {
-                        ok: false,
-                        message: Some(message),
-                    }),
-                )
-            },
-        )?;
+    let (path, source) = persist_remote_mod_cache(
+        state.mods_dir.as_ref(),
+        &cache_id,
+        &req.url,
+        &bytes,
+        registry_entry,
+    )
+    .map_err(|message| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ControlOk {
+                ok: false,
+                message: Some(message),
+            }),
+        )
+    })?;
     Ok(Json(FetchModResponse {
         ok: true,
         id: cache_id,
@@ -3811,6 +3995,159 @@ write_policy = true
         buffer
     }
 
+    fn signed_upload_civmod_bytes(mod_id: &str) -> (Vec<u8>, String) {
+        use ed25519_dalek::Signer;
+        use rand::rngs::OsRng;
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        use zip::ZipWriter;
+
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 3)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);
+        let signature = signing_key.sign(&wasm);
+        let pk_hex: String = signing_key
+            .verifying_key()
+            .as_bytes()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        let manifest = format!(
+            r#"
+[mod]
+id = "{mod_id}"
+name = "Signed Upload Test"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+author_pubkey_hex = "{pk_hex}"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#
+        );
+        let mut buffer = Vec::new();
+        {
+            let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
+            let options = SimpleFileOptions::default();
+            zip.start_file(CIVMOD_MANIFEST_NAME, options)
+                .expect("manifest");
+            zip.write_all(manifest.as_bytes()).expect("write manifest");
+            zip.start_file("mod.wasm", options).expect("wasm");
+            zip.write_all(&wasm).expect("write wasm");
+            zip.start_file("mod.wasm.sig", options).expect("sig");
+            zip.write_all(signature.to_bytes().as_slice())
+                .expect("write sig");
+            zip.finish().expect("finish");
+        }
+        (buffer, pk_hex)
+    }
+
+    #[test]
+    fn format_remote_mod_validation_error_prefixes_signature_failures() {
+        let err = civ_mod_host::ManifestError::Validation {
+            path: PathBuf::from("mod.civmod"),
+            message: "missing mod.wasm.sig for signed mod".to_owned(),
+        };
+        let formatted = format_remote_mod_validation_error(err);
+        assert!(
+            formatted.contains("signature verification failed"),
+            "unexpected: {formatted}"
+        );
+    }
+
+    #[test]
+    fn validate_remote_mod_bytes_rejects_unsigned_wasm_with_pubkey() {
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        use zip::ZipWriter;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let scratch = dir.path().join("mod.civmod");
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (result i32)
+                i32.const 3)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let manifest = r#"
+[mod]
+id = "unsigned-with-pk"
+name = "Upload Test"
+version = "0.0.1"
+api_version = "1"
+mod_type = "policy"
+author = "t"
+description = "d"
+author_pubkey_hex = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#;
+        let mut buffer = Vec::new();
+        {
+            let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
+            let options = SimpleFileOptions::default();
+            zip.start_file(CIVMOD_MANIFEST_NAME, options)
+                .expect("manifest");
+            zip.write_all(manifest.as_bytes()).expect("write manifest");
+            zip.start_file("mod.wasm", options).expect("wasm");
+            zip.write_all(&wasm).expect("write wasm");
+            zip.finish().expect("finish");
+        }
+        let err = validate_remote_mod_bytes(&buffer, &scratch, None).expect_err("must fail");
+        assert!(
+            err.contains("signature"),
+            "expected signature error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn persist_remote_mod_cache_marks_signed_mods() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let cache_id = format!("remote-signed-test-{nanos}");
+        let mods_dir = repo_root().join("mods");
+        let cache_dir = remote_mod_cache_dir(&mods_dir, &cache_id);
+        let (bytes, pk_hex) = signed_upload_civmod_bytes(&cache_id);
+        let url = "https://example.com/signed.civmod";
+        let (archive_path, source) =
+            persist_remote_mod_cache(&mods_dir, &cache_id, url, &bytes, None).expect("persist");
+        assert!(archive_path.is_file());
+
+        let meta = read_remote_mod_meta(&cache_dir).expect("meta");
+        assert!(meta.signed);
+        assert_eq!(meta.author_pubkey_hex.as_deref(), Some(pk_hex.as_str()));
+
+        let remote_list = scan_remote_mod_cache(&mods_dir);
+        assert!(remote_list.iter().any(|entry| {
+            entry.id == cache_id && entry.signed && entry.author_pubkey_hex.as_deref() == Some(pk_hex.as_str())
+        }));
+
+        let catalog = scan_mod_catalog(&mods_dir, &std::collections::HashSet::new());
+        assert!(catalog.iter().any(|entry| {
+            entry.source == source && entry.signed && entry.author_pubkey_hex.as_deref() == Some(pk_hex.as_str())
+        }));
+
+        let _ = std::fs::remove_dir_all(cache_dir);
+    }
+
     #[tokio::test]
     async fn post_mods_upload_round_trip_catalog_and_install() {
         use base64::Engine as _;
@@ -4022,6 +4359,31 @@ write_policy = true
     }
 
     #[test]
+    fn remote_registry_rejects_url_when_required() {
+        let registry = RemoteModRegistry {
+            require_registry: true,
+            entries: vec![RemoteModRegistryEntry {
+                url_prefix: "https://mods.example.com/".to_string(),
+                mod_id: Some("demo-mod".to_string()),
+                require_signature: false,
+                allowed_pubkeys: vec![],
+            }],
+        };
+        assert!(
+            validate_remote_fetch_against_registry(&registry, "https://evil.example/mod.civmod", None)
+                .is_err()
+        );
+        assert!(
+            validate_remote_fetch_against_registry(
+                &registry,
+                "https://mods.example.com/demo.civmod",
+                Some("demo-mod")
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
     fn resolve_remote_cache_id_uses_mod_id_or_url_hash() {
         let url = "https://example.com/mods/demo.civmod";
         assert_eq!(
@@ -4053,7 +4415,7 @@ write_policy = true
         let bytes = minimal_upload_civmod_bytes(&cache_id);
         let url = "https://example.com/test.civmod";
         let (archive_path, source) =
-            persist_remote_mod_cache(&mods_dir, &cache_id, url, &bytes).expect("persist");
+            persist_remote_mod_cache(&mods_dir, &cache_id, url, &bytes, None).expect("persist");
         assert!(archive_path.is_file());
         assert!(source.contains("mods/remote"));
         assert!(source.ends_with(REMOTE_MOD_ARCHIVE_NAME));
@@ -4061,9 +4423,13 @@ write_policy = true
         let meta = read_remote_mod_meta(&cache_dir).expect("meta");
         assert_eq!(meta.id, cache_id);
         assert_eq!(meta.url, url);
+        assert!(!meta.signed);
+        assert!(meta.author_pubkey_hex.is_none());
 
         let remote_list = scan_remote_mod_cache(&mods_dir);
-        assert!(remote_list.iter().any(|entry| entry.id == cache_id && entry.url == url));
+        assert!(remote_list.iter().any(|entry| {
+            entry.id == cache_id && entry.url == url && !entry.signed
+        }));
 
         let catalog = scan_mod_catalog(&mods_dir, &std::collections::HashSet::new());
         assert!(catalog.iter().any(|entry| entry.source == source && entry.id == cache_id));

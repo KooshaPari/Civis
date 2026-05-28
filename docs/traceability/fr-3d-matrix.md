@@ -158,6 +158,9 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-072 | `session.saved.v1` on replay bus + snapshot. | `engine/replay.rs`, `civ-watch` | `session_saved_*` | implemented |
 | FR-CIV-TACTICS-073 | Web remote mod fetch UI. | `web/dashboard/mods_panel.tsx` | manual / tsc | implemented |
 | FR-CIV-TACTICS-074 | PolicyMod trait surface (CIV-0700 §5). | `civlab-sdk/policy.rs` | `policy::*` | implemented |
+| FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
+| FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
+| FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
 
 ---
 

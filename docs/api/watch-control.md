@@ -15,7 +15,7 @@ Successful mod operations return route-specific payloads documented below.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/control/mods/catalog` | List installable mods (examples, uploads, publish, remote cache) |
+| `GET` | `/control/mods/catalog` | List installable mods (examples, uploads, publish, remote cache). Remote cache entries include `signed` and optional `author_pubkey_hex` when verified at fetch time. |
 | `POST` | `/control/mods/upload` | Upload a `.civmod` archive (base64 body) to `mods/uploads/` |
 | `POST` | `/control/mods/publish` | Copy a validated `.civmod` into `mods/publish/` |
 | `GET` | `/control/mods/published` | List published mods |
@@ -79,11 +79,18 @@ Cache layout:
 ```text
 mods/remote/{id}/
   mod.civmod   # validated archive bytes
-  meta.json    # { "id", "url", "fetched_at" }
+  meta.json    # { "id", "url", "fetched_at", "signed", "author_pubkey_hex"? }
 ```
 
+`meta.json` fields:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `signed` | `boolean` | `true` when `author_pubkey_hex` is present and WASM signature verified at fetch time; omitted/defaults to `false` in older caches |
+| `author_pubkey_hex` | `string` | Hex Ed25519 public key from manifest when signed; omitted when unsigned |
+
 Fetch failures from the origin server return HTTP `502` with `{ "ok": false, "message": "…" }`.
-Invalid archives return HTTP `400`.
+Invalid archives return HTTP `400`. Signature verification failures return HTTP `400` with a message containing `signature`.
 
 ### `GET /control/mods/remote`
 
@@ -95,10 +102,17 @@ Returns cached remote mods:
     "id": "demo-mod",
     "path": "mods/remote/demo-mod/mod.civmod",
     "fetched_at": 1710000000,
-    "url": "https://example.com/mods/demo.civmod"
+    "url": "https://example.com/mods/demo.civmod",
+    "signed": true,
+    "author_pubkey_hex": "a1b2…"
   }
 ]
 ```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `signed` | `boolean` | Whether the cached archive passed Ed25519 WASM signature verification |
+| `author_pubkey_hex` | `string` | Present when `signed` is true; hex-encoded manifest pubkey |
 
 Install a cached mod with `POST /control/mods/install` using the returned `path`
 as `source` (repo-relative, e.g. `mods/remote/demo-mod/mod.civmod`).

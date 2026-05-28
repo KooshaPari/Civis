@@ -401,6 +401,8 @@ pub struct SnapshotFields {
     pub mod_lifecycle: Vec<String>,
     /// `session.saved.v1` replay-bus JSON from the most recent tick (slot/autosave).
     pub session_saved: Vec<String>,
+    /// `mod.permission_violation.v1` replay-bus JSON from the most recent tick.
+    pub mod_permission_violations: Vec<String>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -523,6 +525,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.session_saved).unwrap_or(Value::Null),
         );
     }
+    if !fields.mod_permission_violations.is_empty() {
+        obj.insert(
+            "mod_permission_violations".to_owned(),
+            serde_json::to_value(&fields.mod_permission_violations).unwrap_or(Value::Null),
+        );
+    }
     Value::Object(obj)
 }
 
@@ -605,6 +613,9 @@ pub fn snapshot_fields_from_sim(
             .replay_log()
             .mod_loaded_bus_at_tick(sim.state.tick),
         session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
+        mod_permission_violations: sim
+            .replay_log()
+            .mod_permission_violation_bus_at_tick(sim.state.tick),
     }
 }
 
@@ -1928,6 +1939,7 @@ mod tests {
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
+                    mod_permission_violations: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1982,6 +1994,7 @@ mod tests {
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
+                    mod_permission_violations: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2041,6 +2054,7 @@ mod tests {
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
+                    mod_permission_violations: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,

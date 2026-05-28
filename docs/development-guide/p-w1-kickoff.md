@@ -74,6 +74,9 @@
 | FR-CIV-TACTICS-072 | implemented | `session.saved.v1` on replay bus + snapshot feed |
 | FR-CIV-TACTICS-073 | implemented | web remote mod fetch UI (`GET/POST` mods/remote) |
 | FR-CIV-TACTICS-074 | implemented | `PolicyMod` trait surface in civlab-sdk (CIV-0700 §5) |
+| FR-CIV-TACTICS-075 | implemented | `mod.permission_violation.v1` on replay bus + snapshot/SSE |
+| FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
+| FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
 
 ## First PR slice (recommended)
 
@@ -100,7 +103,8 @@
 21. **Save/mod distribution v2** — **done** (item 22): `save.slot` / `save.load` / `save.list` on civ-server; web server slot UI; `mods/publish` + publish API; `POST /control/mods/reload`.
 22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
-24. **Next:** replay bus for `mod.permission_violation.v1`; civ-server session DB; signed remote mod registry.
+24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
+25. **Next:** TBD (post–kickoff slice planning).
 
 ## Run
 

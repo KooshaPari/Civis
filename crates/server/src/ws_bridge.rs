@@ -20,6 +20,7 @@ use axum::{
 };
 use civ_agents::{Tools, Wardrobe};
 use civ_engine::{decode_civreplay, encode_civreplay, Citizen, CivSaveBundle, Simulation};
+use civ_save_db::SaveDb;
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
     AgentAppearanceUpdate, BuildingDiffFrame, BuildingProvenance, Frame3d,
@@ -126,6 +127,21 @@ impl Default for WsBridgeConfig {
 
 type TickBroadcastTx = mpsc::UnboundedSender<Arc<[Message]>>;
 
+fn resolve_session_id() -> String {
+    std::env::var("CIVIS_SESSION_ID")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+}
+
+fn save_db_path_for_saves_dir(saves_dir: &std::path::Path) -> PathBuf {
+    saves_dir
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("saves.db")
+}
+
 #[derive(Clone)]
 struct AppState {
     sim: Arc<Mutex<Simulation>>,
@@ -136,6 +152,8 @@ struct AppState {
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
     saves_dir: PathBuf,
+    save_db: Arc<SaveDb>,
+    session_id: String,
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -180,6 +198,13 @@ async fn serve_ws_bridge(
     sim: Arc<Mutex<Simulation>>,
 ) {
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
+    let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
+    let save_db = Arc::new(
+        SaveDb::open(&save_db_path)
+            .unwrap_or_else(|err| panic!("open save db at {save_db_path:?}: {err}")),
+    );
+    let session_id = resolve_session_id();
+    tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
@@ -189,6 +214,8 @@ async fn serve_ws_bridge(
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
         saves_dir: config.saves_dir,
+        save_db,
+        session_id,
     };
 
     let app = Router::new()
@@ -551,6 +578,28 @@ async fn apply_dispatch_effect(
             };
             match save_result {
                 Ok(()) => {
+                    let byte_size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+                    let file_path = path.display().to_string();
+                    match state.save_db.record_slot_save(
+                        &state.session_id,
+                        &slot_name,
+                        tick,
+                        &file_path,
+                        byte_size,
+                    ) {
+                        Ok(save_id) => {
+                            let mut sim = state.sim.lock().await;
+                            sim.record_session_saved(
+                                &state.session_id,
+                                &save_id,
+                                &slot_name,
+                                byte_size,
+                            );
+                        }
+                        Err(err) => {
+                            tracing::warn!(?err, "failed to record save metadata in save db");
+                        }
+                    }
                     if let Some(result) = response.result.as_mut() {
                         if let Some(obj) = result.as_object_mut() {
                             obj.insert("tick".to_owned(), serde_json::json!(tick));
@@ -676,7 +725,34 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_save_db::SessionSaveRecord;
     use civ_voxel::{MaterialId, WorldCoord};
+
+    fn test_app_state(
+        sim: Arc<Mutex<Simulation>>,
+        tick: u64,
+        speed_multiplier: u32,
+        require_role: bool,
+    ) -> (tempfile::TempDir, AppState) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let saves_dir = dir.path().join("saves");
+        std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let save_db_path = save_db_path_for_saves_dir(&saves_dir);
+        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
+        let state = AppState {
+            sim,
+            tick: Arc::new(AtomicU64::new(tick)),
+            speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
+            clients: Arc::new(Mutex::new(Vec::new())),
+            max_clients: 1,
+            require_role,
+            tick_broadcast_format: TickBroadcastFormat::Both,
+            saves_dir,
+            save_db,
+            session_id: "test-session".to_string(),
+        };
+        (dir, state)
+    }
 
     #[test]
     fn tick_broadcast_both_sends_text_then_binary() {
@@ -835,16 +911,7 @@ mod tests {
     async fn frame_triple_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
-            let state = AppState {
-                sim,
-                tick: Arc::new(AtomicU64::new(0)),
-                speed_multiplier: Arc::new(AtomicU32::new(1)),
-                clients: Arc::new(Mutex::new(Vec::new())),
-                max_clients: 1,
-                require_role: false,
-                tick_broadcast_format: TickBroadcastFormat::Both,
-                saves_dir: PathBuf::from("saves"),
-            };
+            let (_dir, state) = test_app_state(sim, 0, 1, false);
             tick_once(&state).await.expect("tick");
             state.tick.load(Ordering::SeqCst)
         };
@@ -855,16 +922,8 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_invalid_json_returns_parse_error() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(9))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text("{not json", &state, &mut connection_role).await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("error response json");
@@ -883,16 +942,7 @@ mod tests {
             let guard = sim.lock().await;
             guard.snapshot().population
         };
-        let state = AppState {
-            sim,
-            tick: Arc::new(AtomicU64::new(5)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let (_dir, state) = test_app_state(sim, 5, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
@@ -934,16 +984,7 @@ mod tests {
                     .expect("hash chain root after tick"),
             )
         };
-        let state = AppState {
-            sim,
-            tick: Arc::new(AtomicU64::new(5)),
-            speed_multiplier: Arc::new(AtomicU32::new(4)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let (_dir, state) = test_app_state(sim, 5, 4, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
@@ -993,16 +1034,8 @@ mod tests {
 
     #[tokio::test]
     async fn healthz_exposes_latest_tick() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(3))),
-            tick: Arc::new(AtomicU64::new(123)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(3)));
+        let (_dir, state) = test_app_state(sim, 123, 1, false);
         let response = healthz(State(state)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
     }
@@ -1016,16 +1049,8 @@ mod tests {
         let bytes = encode_civreplay(source.replay_log()).expect("encode replay");
         let expected_tick = source.state.tick;
 
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(99))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_import(State(state.clone()), bytes.into())
             .await
             .expect("replay import")
@@ -1047,16 +1072,8 @@ mod tests {
 
     #[tokio::test]
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(31))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_export(State(state))
             .await
             .expect("replay export")
@@ -1081,16 +1098,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_policy_updates_simulation_policy() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = AppState {
-            sim: sim.clone(),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
@@ -1122,16 +1130,8 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_set_speed_stores_multiplier() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(5))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
@@ -1153,16 +1153,8 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_get_speed_returns_stored_multiplier() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(5))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let set_text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
@@ -1192,16 +1184,8 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_command_tick_rejects_wrong_role_when_enforced() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(9))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: true,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: PathBuf::from("saves"),
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
+        let (_dir, state) = test_app_state(sim, 0, 1, true);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
@@ -1219,6 +1203,55 @@ mod tests {
                 .pointer("/error/data/required_role")
                 .and_then(|v| v.as_str()),
             Some("operator")
+        );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_save_slot_records_save_db_and_replay_bus() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));
+        {
+            let mut guard = sim.lock().await;
+            guard.tick();
+        }
+        let saved_tick = sim.lock().await.state.tick;
+        let (_dir, state) = test_app_state(sim.clone(), saved_tick, 1, false);
+        let mut connection_role = None;
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,
+            &state,
+            &mut connection_role,
+        )
+        .await;
+        let value: serde_json::Value = serde_json::from_str(&text).expect("save.slot json");
+        assert_eq!(value.get("id"), Some(&serde_json::json!(70)));
+        assert_eq!(
+            value.pointer("/result/tick").and_then(|v| v.as_u64()),
+            Some(saved_tick)
+        );
+        assert!(
+            state
+                .saves_dir
+                .join("slot-1.civsave.zst")
+                .is_file(),
+            "expected slot archive on disk"
+        );
+
+        let records = state
+            .save_db
+            .list_for_session("test-session")
+            .expect("list save db");
+        assert_eq!(records.len(), 1);
+        let SessionSaveRecord::Slot(slot) = &records[0] else {
+            panic!("expected slot record");
+        };
+        assert_eq!(slot.slot_name, "slot-1");
+        assert_eq!(slot.tick, i64::try_from(saved_tick).unwrap_or(i64::MAX));
+        assert!(slot.byte_size > 0);
+
+        let guard = sim.lock().await;
+        assert_eq!(
+            guard.replay_log().session_saved_bus_at_tick(saved_tick).len(),
+            1
         );
     }
 }

@@ -121,10 +121,10 @@ fn scan_function_body(
                     stack.push(StackSlot::Int);
                 }
             }
-            Operator::I32ReinterpretF32 | Operator::I64ReinterpretF64 => {
-                if stack.pop().is_some() {
-                    stack.push(StackSlot::FloatDerivedInt);
-                }
+            Operator::I32ReinterpretF32 | Operator::I64ReinterpretF64
+                if stack.pop().is_some() =>
+            {
+                stack.push(StackSlot::FloatDerivedInt);
             }
             Operator::Drop => {
                 stack.pop();

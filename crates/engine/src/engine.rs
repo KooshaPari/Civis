@@ -1033,6 +1033,17 @@ impl Simulation {
         &self.last_tick_mod_lifecycle
     }
 
+    /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
+    fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
+        for line in lines {
+            if line.contains("mod.permission_violation.v1") {
+                self.replay_log
+                    .record_mod_permission_violation_bus(tick, &line);
+            }
+            tracing::debug!(mod_log = %line, phase = phase, "mod phase");
+        }
+    }
+
     /// Record `session.saved.v1` on the replay bus (slot or autosave; CIV-1000).
     pub fn record_session_saved(
         &mut self,
@@ -1305,9 +1316,9 @@ impl Simulation {
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
 
-        for line in self.mod_host.military_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod military phase");
-        }
+        let tick = self.state.tick;
+        let lines = self.mod_host.military_tick(tick);
+        self.ingest_mod_phase_lines(lines, tick, "military");
 
         let phase_cfg = self.military_phase;
 
@@ -1461,12 +1472,11 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
-        for line in self.mod_host.tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod policy phase");
-        }
-        for line in self.mod_host.economy_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod economy phase");
-        }
+        let tick = self.state.tick;
+        let policy_lines = self.mod_host.tick(tick);
+        self.ingest_mod_phase_lines(policy_lines, tick, "policy");
+        let economy_lines = self.mod_host.economy_tick(tick);
+        self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;

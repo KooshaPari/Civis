@@ -43,6 +43,10 @@ Default builds (no `mod-dev`) enforce determinism and verify signatures when pub
 
 `POST /control/mods/publish` accepts JSON `{ "source": "mods/uploads/my-mod.civmod" }` (path under repo `mods/`, no `..`). The archive is copied to `mods/publish/<manifest.meta.id>.civmod` and returned as `{ "ok": true, "published_source": "mods/publish/my-mod-id.civmod" }`. List published entries with `GET /control/mods/published` (`id`, `name`, `version`, `source`). Published `.civmod` files appear in the mod catalog and can be installed like uploads.
 
+## Remote fetch registry
+
+`mods/remote-registry.json` gates `POST /control/mods/fetch` when `require_registry` is true. Each entry may set `url_prefix`, optional `mod_id`, `require_signature`, and `allowed_pubkeys` (hex). With `require_registry: false` (default), any `http`/`https` URL is allowed; archives still pass `.civmod` validation and Ed25519 checks when `author_pubkey_hex` and `mod.wasm.sig` are present.
+
 ## Verify
 
 ```bash

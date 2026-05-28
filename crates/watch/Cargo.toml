@@ -41,3 +41,6 @@ http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
 zip = "2"
 wat = "1"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+tempfile = "3"

@@ -1472,20 +1472,11 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
-<<<<<<< HEAD
         let tick = self.state.tick;
         let policy_lines = self.mod_host.tick(tick);
         self.ingest_mod_phase_lines(policy_lines, tick, "policy");
         let economy_lines = self.mod_host.economy_tick(tick);
         self.ingest_mod_phase_lines(economy_lines, tick, "economy");
-=======
-        for line in self.mod_host.tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod policy phase");
-        }
-        for line in self.mod_host.economy_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod economy phase");
-        }
->>>>>>> origin/main
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
@@ -1501,7 +1492,6 @@ impl Simulation {
         self.market_state.step(self.state.tick);
     }
 
-<<<<<<< HEAD
     fn tick_trade_routes(&mut self) {
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
@@ -1563,8 +1553,6 @@ impl Simulation {
         }
     }
 
-=======
->>>>>>> origin/main
     /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
     pub fn configure_military_fog(&mut self, vision_radius: Option<u32>, grid_size: u32) {
         if let Some(radius) = vision_radius {

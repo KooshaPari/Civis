@@ -10,19 +10,14 @@
 
 ```bash
 just civis-3d-mod-wasm
-<<<<<<< HEAD
 just civis-3d-mod-package       # example-policy.civmod
 just civis-3d-mod-package-all   # policy + economic .civmod archives
-=======
-just civis-3d-mod-package   # optional example-policy.civmod ZIP
->>>>>>> origin/main
 ```
 
 Artifacts (`mod.wasm`, `*.civmod`) are gitignored; build via `just` (target: `wasm32-unknown-unknown`).
 
 After `just civis-3d-mod-wasm`, `cargo test -p civ-mod-host example_policy_dir_wasm` and `example_economic_dir_wasm` assert live WASM ticks.
 
-<<<<<<< HEAD
 ## Signing (partial, FR-CIV-TACTICS-043)
 
 Production loads verify `mod.wasm` when **both** are present:
@@ -52,15 +47,10 @@ Default builds (no `mod-dev`) enforce determinism and verify signatures when pub
 
 `mods/remote-registry.json` gates `POST /control/mods/fetch` when `require_registry` is true. Each entry may set `url_prefix`, optional `mod_id`, `require_signature`, and `allowed_pubkeys` (hex). With `require_registry: false` (default), any `http`/`https` URL is allowed; archives still pass `.civmod` validation and Ed25519 checks when `author_pubkey_hex` and `mod.wasm.sig` are present.
 
-=======
->>>>>>> origin/main
 ## Verify
 
 ```bash
 cargo test -p civ-mod-host
-<<<<<<< HEAD
 cargo test -p civ-mod-host signed_mod --quiet
-=======
->>>>>>> origin/main
 just civis-3d-scenario-check
 ```

@@ -1,12 +1,9 @@
 /target
-<<<<<<< HEAD
 /target-audit/
 *.db
 !**/*.db.example
 saves.db
 crates/server/saves.db
-=======
->>>>>>> origin/main
 mods/example-policy/mod.wasm
 mods/example-policy/example-policy.civmod
 /.process-compose/

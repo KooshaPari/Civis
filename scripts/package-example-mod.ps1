@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Package a CivLab example mod directory into a .civmod archive.
 param(
     [ValidateSet("example-policy", "example-economic")]
@@ -15,20 +14,6 @@ if (-not (Test-Path -LiteralPath $Manifest)) { throw "Missing $Manifest" }
 if (-not (Test-Path -LiteralPath $WasmPath)) {
     Push-Location $RepoRoot
     try { & just civis-3d-mod-wasm } finally { Pop-Location }
-=======
-# Package mods/example-policy into example-policy.civmod.
-param(
-    [string]$ModDir = (Join-Path $PSScriptRoot "..\mods\example-policy"),
-    [string]$WasmPath = (Join-Path $PSScriptRoot "..\mods\example-policy\mod.wasm"),
-    [string]$OutPath = (Join-Path $PSScriptRoot "..\mods\example-policy\example-policy.civmod")
-)
-$ErrorActionPreference = "Stop"
-$ModDir = Resolve-Path $ModDir
-$Manifest = Join-Path $ModDir "manifest.toml"
-if (-not (Test-Path -LiteralPath $Manifest)) { throw "Missing $Manifest" }
-if (-not (Test-Path -LiteralPath $WasmPath)) {
-    & just civis-3d-mod-wasm
->>>>>>> origin/main
 }
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem

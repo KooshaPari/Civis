@@ -76,7 +76,6 @@ civis-3d-mod-wasm:
 
 # Package example-policy as example-policy.civmod.
 civis-3d-mod-package: civis-3d-mod-wasm
-<<<<<<< HEAD
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
 
 # Sign example mod.wasm (prints author_pubkey_hex for manifest.toml).
@@ -87,9 +86,6 @@ civis-3d-mod-sign MOD="example-policy":
 civis-3d-mod-package-all: civis-3d-mod-wasm
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
-=======
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1
->>>>>>> origin/main
 
 # 3D verification gate: check + test + clippy --all-targets + fmt --check.
 # Uses cargo check (not build) so the gate works when service binaries are

@@ -50,7 +50,6 @@
 | FR-CIV-TACTICS-048 | implemented | `mods/example-economic` + economy WASM tick test |
 | FR-CIV-TACTICS-049 | implemented | `civlab::memory_read` / `memory_write` host imports |
 | FR-CIV-TACTICS-050 | implemented | scenario `military:` cadence/range overrides |
-<<<<<<< HEAD
 | FR-CIV-TACTICS-051 | implemented | `baseline.yaml` loads `mods/example-economic` |
 | FR-CIV-TACTICS-052 | implemented | per-mod guest memory snapshots on `ModHost` |
 | FR-CIV-TACTICS-053 | implemented | `civlab::sim_tick` + `HOST_CAPABILITY_IMPORTS` |
@@ -78,8 +77,6 @@
 | FR-CIV-TACTICS-075 | implemented | `mod.permission_violation.v1` on replay bus + snapshot/SSE |
 | FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
 | FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
-=======
->>>>>>> origin/main
 
 ## First PR slice (recommended)
 
@@ -96,7 +93,6 @@
 11. **Fog in war bridge + mod signing + WASM capability surface** — **done** (item 12).
 12. **Scenario fog + economic WASM + capability host imports** — **done** (item 13).
 13. **Example economic mod + memory imports + scenario military tuning** — **done** (item 14).
-<<<<<<< HEAD
 14. **Baseline economic mod + memory snapshots + capability API** — **done** (item 15).
 15. **Guest memory save/load + mod browser + determinism scan** — **done** (item 16).
 16. **CIV-1000 civsave folder + float scan report + mod packaging** — **done** (item 17).
@@ -109,9 +105,6 @@
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
 25. **Next:** TBD (post–kickoff slice planning).
-=======
-14. **Next:** Wire example-economic in baseline scenario, host memory snapshots, full capability API.
->>>>>>> origin/main
 
 ## Run
 

@@ -10,7 +10,6 @@ use axum::{
 use base64::Engine as _;
 use civ_engine::{load_manifest, ModType};
 use civ_mod_host::{read_civmod_archive, read_manifest_from_civmod, CIVMOD_MANIFEST_NAME};
-use reqwest;
 use sha2::{Digest, Sha256};
 
 use crate::app::{
@@ -903,4 +902,3 @@ pub(crate) async fn list_remote_mods_handler(
 ) -> Json<Vec<RemoteModEntry>> {
     Json(scan_remote_mod_cache(state.mods_dir.as_ref()))
 }
-

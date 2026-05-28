@@ -55,13 +55,8 @@ Legend: **Mature** = documented + tested + automatable · **Partial** = works bu
 |----|-----|----------|------------------|
 | UX-01 | **`job` on `civ_pins`** wired from `Citizen` on agent entities | `spectator.rs` reads `Citizen.job`; `attach_citizen_to_agents` | **Mature** — `civ-engine` `civ_pins_include_job_when_citizen_component_present` |
 | UX-02 | ~~Cross-client spawn palette~~ **Partial–Good** | [`client-attach-matrix.md`](../guides/client-attach-matrix.md) — all five `kind`s on WS; `ws_smoke` covers civilian + vehicle | Optional `ws_smoke` per `port` / `hangar` |
-<<<<<<< HEAD
 | UX-03 | **F3D0 voxel stream** partial–good | Bevy: binary `Frame3d`; Godot/Unreal: **16³ procedural mesh** when dense `voxels` (4096), else markers + throttle | Full-world mesh budget; chunk-dot overlays on web minimap |
 | UX-04 | ~~Minimap conventions~~ **Done** | Bevy/Godot/web + Unreal `UCivMinimapWidget` click-to-focus | Keep [`minimap-conventions.md`](../guides/minimap-conventions.md) in sync |
-=======
-| UX-03 | **F3D0 voxel stream** partial–good | Bevy: binary `Frame3d`; Godot/Unreal: **16³ procedural mesh** when dense `voxels` (4096), else markers + throttle | Unreal click-to-focus; full-world mesh budget |
-| UX-04 | **Minimap conventions** — Bevy/Godot/web; Unreal partial | `ACivMinimapCapture` + `UCivMinimapWidget` in CivShow | Click-to-focus + parity tests when product needs it |
->>>>>>> origin/main
 | UX-05 | **spectator_mode default** differs (Godot true, web false) | Confusing for demos | Document in attach matrix; align defaults or query params |
 | UX-06 | **Manor Lords L5** incremental only | `fr-l5-visual-pass.md` IN PROGRESS | Close scoped slices; defer art to Quixel |
 | UX-07 | ~~Modder-facing surface~~ **Partial–Good** | Web **Mods** panel; `mods` on `sim.snapshot`; watch event feed `mod.loaded` | Hot reload + publish store post-MVP |
@@ -191,15 +186,9 @@ VS 2022 without `VC\Tools\MSVC` remains insufficient until the C++ workload is i
 |------|--------|
 | `.\scripts\agent-smoke.ps1` | **PASS** — `ws_smoke`, catalog/scenario/mod-host/godot gates, civ-watch, Unreal preflight |
 | `.\scripts\agent-smoke.ps1 -FullUnreal` | **PASS** when UE 5.7 + VS 2026 present — full `build.ps1` |
-<<<<<<< HEAD
 | `just civis-3d-verify` | **PASS** — workspace check/clippy/fmt + catalog/scenario/web/mod-host |
 | `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm`, `mods/example-economic/mod.wasm` (gitignored) |
 | `just godot-test` | **PASS** — `cargo test --manifest-path clients/godot-ref/rust/Cargo.toml` (F3D0 mesh + WS decode) |
-=======
-| `just civis-3d-verify` | **PASS** — workspace check/test/clippy/fmt + catalog/scenario/web/mod-host |
-| `just civis-3d-mod-wasm` | **Local** — `mods/example-policy/mod.wasm` (gitignored) |
-| `just godot-test` | **PASS** — F3D0 mesh + WS decode (13 tests) |
->>>>>>> origin/main
 | `just civis-3d-catalog-check` | **PASS** — 14 methods: `jsonrpc.rs` ↔ `jsonrpc-surface.md` |
 | `just civis-3d-scenario-check` | **PASS** — `civ-engine` `scenario::*` tests (`-j 1` on Windows; see `agent-smoke.md`) |
 | `cargo test -p civ-mod-host -- mod_loaded` + `signed_mod` | **PASS** — `mod_loaded_event_json_has_required_keys` + `signed_mod_rejects_tampered_wasm` |

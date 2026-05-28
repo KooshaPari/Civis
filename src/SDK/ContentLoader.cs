@@ -330,11 +330,6 @@ namespace DINOForge.SDK
                         $"Duplicate pack ID '{manifest.Id}' in {existing.Directory} — using {directory} instead.");
                     byId[manifest.Id] = (directory, manifest);
                 }
-                else if (!existingIsDisabled && candidateIsDisabled)
-                {
-                    errors.Add(
-                        $"Duplicate pack ID '{manifest.Id}' in {directory} — pack will be skipped.");
-                }
                 else
                 {
                     errors.Add(

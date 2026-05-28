@@ -18,6 +18,13 @@ impl Default for DayNightCycle {
     }
 }
 
+impl DayNightCycle {
+    /// Snap presentation phase from a live `sim.snapshot` `is_day` flag.
+    pub fn set_from_is_day(&mut self, is_day: bool) {
+        self.time_of_day = if is_day { 0.75 } else { 0.25 };
+    }
+}
+
 #[derive(Component)]
 pub struct SunLight;
 
@@ -115,9 +122,13 @@ pub fn animate_water(
     time: Res<Time>,
     mut query: Query<&mut Transform, With<WaterSurface>>,
     mut cycle: ResMut<DayNightCycle>,
+    live: Option<Res<crate::live_attach::LiveAttachState>>,
 ) {
-    let delta = time.delta_secs() / DAY_LENGTH_SECONDS;
-    cycle.time_of_day = (cycle.time_of_day + delta).fract();
+    let live_connected = live.map(|state| state.connected).unwrap_or(false);
+    if !live_connected {
+        let delta = time.delta_secs() / DAY_LENGTH_SECONDS;
+        cycle.time_of_day = (cycle.time_of_day + delta).fract();
+    }
     for mut transform in &mut query {
         transform.translation.y = WATER_LEVEL - 0.8 + (time.elapsed_secs() * 1.6).sin() * 0.06;
     }

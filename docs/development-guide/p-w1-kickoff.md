@@ -106,7 +106,8 @@
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
 25. **Bevy gameplay client** — **done** (item 26): export gameplay modules in `civ-bevy-ref`, `civ-standalone` with `bevy,egui`, sim tick + spawn-tool → `Simulation`, HUD/minimap plugins.
-26. **Next:** live WS attach parity + render-to-texture minimap (item 27).
+26. **Live WS attach + render-to-texture minimap** — **done** (item 27): `civ-standalone` server attach via `CIVIS_ATTACH=server` / `CIV_WS_URL`, `LiveAttachPlugin`, RTT minimap camera.
+27. **Next:** extend live attach scene sync (voxel/agent frames) in standalone mode.
 
 ## Run
 

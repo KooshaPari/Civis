@@ -8,6 +8,7 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
 use crate::terrain::WORLD_SIZE;
+use crate::{live_attach::is_server_attach_mode, AttachMode};
 
 /// Live simulation state shared by the minimap, HUD, and spawn tools.
 #[derive(Resource)]
@@ -25,6 +26,10 @@ const SIM_TICK_SECONDS: f32 = 0.1;
 #[derive(Resource)]
 struct SimTickTimer(Timer);
 
+fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
+    !is_server_attach_mode(*mode)
+}
+
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
@@ -39,13 +44,16 @@ impl Plugin for SimBridgePlugin {
             .add_systems(
                 Update,
                 (
-                    advance_simulation,
-                    apply_spawn_civilian_requests,
-                    apply_spawn_building_requests,
+                    advance_simulation.run_if(in_process_sim_active),
+                    apply_spawn_civilian_requests.run_if(in_process_sim_active),
+                    apply_spawn_building_requests.run_if(in_process_sim_active),
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_game_ui_snapshot);
+        app.add_systems(
+            Update,
+            sync_game_ui_snapshot.run_if(in_process_sim_active),
+        );
     }
 }
 

@@ -1,9 +1,14 @@
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::{ClearColorConfig, RenderTarget, ScalingMode};
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::Civilian as AgentCivilian;
 use civ_engine::Building;
 
 use crate::sim_bridge::SimState;
+use crate::terrain::WORLD_SIZE;
 
 /// Minimap side length in UI pixels.
 pub const MINIMAP_SIZE: f32 = 200.0;
@@ -12,6 +17,13 @@ const MINIMAP_WORLD_MIN: f32 = 0.0;
 const MINIMAP_WORLD_MAX: f32 = 256.0;
 const MINIMAP_CIVILIAN_DOT: f32 = 4.0;
 const MINIMAP_BUILDING_DOT: f32 = 5.0;
+const MINIMAP_TEXTURE_SIZE: u32 = 256;
+const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
+
+#[derive(Resource, Clone)]
+struct MinimapRenderTarget {
+    image: Handle<Image>,
+}
 
 #[derive(Component)]
 struct MinimapRoot;
@@ -19,35 +31,92 @@ struct MinimapRoot;
 #[derive(Component)]
 struct MinimapDot;
 
+#[derive(Component)]
+struct MinimapCamera;
+
 /// Plugin that renders a top-down minimap and lets the player click to teleport the main camera.
 pub struct MinimapPlugin;
 
 impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_minimap)
-            .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
+        app.add_systems(
+            Startup,
+            (setup_minimap_render_target, setup_minimap).chain(),
+        )
+        .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
     }
 }
 
-fn setup_minimap(mut commands: Commands) {
+fn setup_minimap_render_target(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+) {
+    let extent = Extent3d {
+        width: MINIMAP_TEXTURE_SIZE,
+        height: MINIMAP_TEXTURE_SIZE,
+        depth_or_array_layers: 1,
+    };
+    let image = Image::new_fill(
+        extent,
+        TextureDimension::D2,
+        &[24, 32, 40, 255],
+        TextureFormat::Bgra8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    let handle = images.add(image);
+    commands.insert_resource(MinimapRenderTarget {
+        image: handle.clone(),
+    });
+
     commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            right: Val::Px(MINIMAP_INSET),
-            bottom: Val::Px(MINIMAP_INSET),
-            width: Val::Px(MINIMAP_SIZE),
-            height: Val::Px(MINIMAP_SIZE),
-            border: UiRect::all(Val::Px(1.0)),
-            overflow: Overflow::clip(),
+        Camera3d::default(),
+        Camera {
+            order: 1,
+            clear_color: ClearColorConfig::Custom(Color::srgba(0.05, 0.08, 0.12, 1.0)),
             ..default()
         },
-        BackgroundColor(Color::srgba(0.02, 0.04, 0.06, 0.94)),
-        BorderColor::all(Color::srgba(0.35, 0.42, 0.50, 0.75)),
-        Interaction::default(),
-        RelativeCursorPosition::default(),
-        FocusPolicy::Pass,
-        MinimapRoot,
+        RenderTarget::Image(handle.into()),
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: WORLD_SIZE,
+            },
+            ..OrthographicProjection::default_3d()
+        }),
+        Transform::from_xyz(0.0, MINIMAP_CAMERA_HEIGHT, 0.0).looking_at(Vec3::ZERO, Vec3::NEG_Z),
+        MinimapCamera,
     ));
+}
+
+fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget>) {
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                right: Val::Px(MINIMAP_INSET),
+                bottom: Val::Px(MINIMAP_INSET),
+                width: Val::Px(MINIMAP_SIZE),
+                height: Val::Px(MINIMAP_SIZE),
+                border: UiRect::all(Val::Px(1.0)),
+                overflow: Overflow::clip(),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.02, 0.04, 0.06, 0.94)),
+            BorderColor::all(Color::srgba(0.35, 0.42, 0.50, 0.75)),
+            Interaction::default(),
+            RelativeCursorPosition::default(),
+            FocusPolicy::Pass,
+            MinimapRoot,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                ImageNode::new(minimap_target.image.clone()),
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..default()
+                },
+            ));
+        });
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {
@@ -71,7 +140,11 @@ fn civilian_color(civilian: &AgentCivilian) -> Color {
 
 fn world_position_for_civilian(_civilian: &AgentCivilian, position: &civ_agents::Position3d) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
-    Vec3::new(position.coord.x as f32 / scale, 0.0, position.coord.z as f32 / scale)
+    Vec3::new(
+        position.coord.x as f32 / scale,
+        0.0,
+        position.coord.z as f32 / scale,
+    )
 }
 
 fn world_position_for_building(building: &Building) -> Vec3 {
@@ -143,7 +216,7 @@ fn sync_minimap_dots(
 fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
-    mut cameras: Query<&mut Transform, With<Camera3d>>,
+    mut cameras: Query<&mut Transform, (With<Camera3d>, Without<MinimapCamera>)>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;

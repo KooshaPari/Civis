@@ -9,15 +9,35 @@ use civ_bevy_ref::{
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
+    live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
+    resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
+    AttachMode,
 };
 
 fn main() {
-    App::new()
-        .insert_resource(DayNightCycle::default())
+    let attach_mode = resolve_attach_mode_from_env();
+    let window_title = match attach_mode {
+        AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
+        AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
+    };
+
+    let mut app = App::new();
+    app.insert_resource(DayNightCycle::default())
         .insert_resource(CameraRig::default())
-        .add_plugins(DefaultPlugins.set(native_render_plugin()))
+        .insert_resource(attach_mode)
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: window_title,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(native_render_plugin()),
+        )
         .add_plugins(GpuFeaturesPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
@@ -31,8 +51,13 @@ fn main() {
         .add_systems(
             Update,
             (camera_input, update_camera, animate_water, update_lighting),
-        )
-        .run();
+        );
+
+    if attach_mode == AttachMode::Server {
+        app.add_plugins(LiveAttachPlugin);
+    }
+
+    app.run();
 }
 
 fn setup_world(

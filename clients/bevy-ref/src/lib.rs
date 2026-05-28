@@ -24,6 +24,8 @@ pub mod game_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
+pub mod live_attach;
+#[cfg(feature = "bevy")]
 pub mod minimap;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
@@ -247,6 +249,41 @@ pub fn resolve_live_ws_url() -> String {
     } else {
         base
     }
+}
+
+/// How the Bevy standalone client runs simulation state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub enum AttachMode {
+    /// In-process [`civ_engine::Simulation`] tick (default sandbox).
+    #[default]
+    Standalone,
+    /// Live attach to `civ-server` over WebSocket (`CIVIS_ATTACH=server` or `CIV_WS_URL`).
+    Server,
+}
+
+/// Resolve attach mode from environment (mirrors web dashboard precedence for server attach).
+#[must_use]
+pub fn resolve_attach_mode_from_env() -> AttachMode {
+    resolve_attach_mode(
+        std::env::var("CIVIS_ATTACH").ok().as_deref(),
+        std::env::var("CIV_WS_URL").ok().as_deref(),
+    )
+}
+
+/// Resolve attach mode from explicit env strings (testable without mutating process env).
+#[must_use]
+pub fn resolve_attach_mode(civis_attach: Option<&str>, civ_ws_url: Option<&str>) -> AttachMode {
+    if civis_attach
+        .map(|value| value.trim().eq_ignore_ascii_case("server"))
+        .unwrap_or(false)
+    {
+        return AttachMode::Server;
+    }
+    if civ_ws_url.map(|value| !value.trim().is_empty()).unwrap_or(false) {
+        return AttachMode::Server;
+    }
+    AttachMode::Standalone
 }
 
 /// Resolve attach URL without the binary broadcast hint query parameter.
@@ -724,6 +761,34 @@ mod tests {
         let m = MeshBuffer::default();
         assert!(m.vertices.is_empty());
         assert!(m.indices.is_empty());
+    }
+
+    #[test]
+    fn resolve_attach_mode_defaults_to_standalone() {
+        assert_eq!(
+            resolve_attach_mode(None, None),
+            AttachMode::Standalone
+        );
+        assert_eq!(
+            resolve_attach_mode(Some("watch"), None),
+            AttachMode::Standalone
+        );
+    }
+
+    #[test]
+    fn resolve_attach_mode_server_from_env_strings() {
+        assert_eq!(
+            resolve_attach_mode(Some("server"), None),
+            AttachMode::Server
+        );
+        assert_eq!(
+            resolve_attach_mode(None, Some("ws://127.0.0.1:3000/ws")),
+            AttachMode::Server
+        );
+        assert_eq!(
+            resolve_attach_mode(Some("standalone"), Some("ws://127.0.0.1:3000/ws")),
+            AttachMode::Server
+        );
     }
 
     #[test]

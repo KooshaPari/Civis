@@ -1,12 +1,79 @@
+# DINOForge CODEOWNERS
+# This file defines who must review changes to different parts of the codebase.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for all files not matched by more specific patterns
 * @KooshaPari
 
+# Critical infrastructure and governance files
 /.github/ @KooshaPari
 /CHANGELOG.md @KooshaPari
 /CONTRIBUTING.md @KooshaPari
 /RELEASING.md @KooshaPari
 /SECURITY.md @KooshaPari
+/CLAUDE.md @KooshaPari
+/CODE_OF_CONDUCT.md @KooshaPari
 /VERSION @KooshaPari
-/docs/ @KooshaPari
-/packs/ @KooshaPari
+/global.json @KooshaPari
+/Directory.Build.props @KooshaPari
+
+# Runtime — netstandard2.0 critical path for BepInEx compatibility
+# Any changes here must verify zero-IL2CPP compatibility
+/src/Runtime/ @KooshaPari
+/src/Runtime/Bridge/ @KooshaPari
+/src/Runtime/UI/ @KooshaPari
+/src/Runtime/HotReload/ @KooshaPari
+
+# SDK — public API surface, schema validation, content loading
+# Changes here impact all domain plugins and user packs
+/src/SDK/ @KooshaPari
+/src/SDK/Assets/ @KooshaPari
+/src/SDK/Dependencies/ @KooshaPari
+/src/SDK/Models/ @KooshaPari
+/src/SDK/Registry/ @KooshaPari
+/src/SDK/Validation/ @KooshaPari
+/src/SDK/Universe/ @KooshaPari
+/src/SDK/HotReload/ @KooshaPari
+
+# Bridge — IPC, protocol contracts, client serialization
+# Changes affect game-tool communication and pack distribution
+/src/Bridge/Protocol/ @KooshaPari
+/src/Bridge/Client/ @KooshaPari
+
+# Domain plugins — extensible gameplay systems
+/src/Domains/Warfare/ @KooshaPari
+/src/Domains/Economy/ @KooshaPari
+/src/Domains/Scenario/ @KooshaPari
+/src/Domains/UI/ @KooshaPari
+
+# Tools — user-facing CLI, build automation, debugging
+/src/Tools/Cli/ @KooshaPari
+/src/Tools/PackCompiler/ @KooshaPari
+/src/Tools/DumpTools/ @KooshaPari
+/src/Tools/DinoforgeMcp/ @KooshaPari
+/src/Tools/Installer/ @KooshaPari
+/src/Tools/DesktopCompanion/ @KooshaPari
+/src/Tools/McpServer/ @KooshaPari
+
+# Tests — quality gates and regression detection
+/src/Tests/ @KooshaPari
+/src/Analyzers/ @KooshaPari
+
+# Schemas — data contracts and validation rules
 /schemas/ @KooshaPari
-/src/ @KooshaPari
+
+# Content packs — example content and reference implementations
+/packs/ @KooshaPari
+/packs/example-balance/ @KooshaPari
+/packs/warfare-modern/ @KooshaPari
+/packs/warfare-starwars/ @KooshaPari
+/packs/economy-balanced/ @KooshaPari
+/packs/scenario-tutorial/ @KooshaPari
+
+# Documentation — project narrative and user guides
+/docs/ @KooshaPari
+/docs/guide/ @KooshaPari
+/docs/adr/ @KooshaPari
+/docs/proof/ @KooshaPari
+/docs/screenshots/ @KooshaPari
+/docs/qa/ @KooshaPari

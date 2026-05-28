@@ -1,0 +1,54 @@
+name: Build Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'packs/**'
+      - 'Directory.Build.props'
+      - '*.sln'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+
+jobs:
+  build-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+          include-prerelease: true
+      - run: dotnet build src/SDK/DINOForge.SDK.csproj -c Release --verbosity normal
+
+  build-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+          include-prerelease: true
+      - run: dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=netstandard2.0 --verbosity normal
+
+  build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+          include-prerelease: true
+      - run: dotnet build src/Tools/Cli/DINOForge.Tools.Cli.csproj -c Release --verbosity normal
+
+  build-packcompiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+          include-prerelease: true
+      - run: dotnet build src/Tools/PackCompiler/ -c Release --verbosity normal

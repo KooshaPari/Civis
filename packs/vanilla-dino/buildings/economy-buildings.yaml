@@ -1,0 +1,285 @@
+# Vanilla DINO - Economy and Infrastructure Buildings (Shared Across Factions)
+
+# Resource Gathering Buildings
+- id: vanilla_lumber_mill
+  display_name: Lumber Mill
+  description: Harvests wood from forest resources. Fundamental for early-game economy.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Lumber_Mill"
+  cost:
+    wood: 50
+    stone: 20
+    gold: 5
+  production:
+    wood: 3
+
+- id: vanilla_stone_mine
+  display_name: Stone Mine
+  description: Extracts stone from quarries. Essential for building fortifications and advanced structures.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Stone_Mine"
+  cost:
+    wood: 50
+    stone: 20
+    gold: 5
+  production:
+    stone: 2
+
+- id: vanilla_farm
+  display_name: Farm
+  description: Agricultural cultivation of crops. Primary food source.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Farm"
+  cost:
+    wood: 40
+    stone: 10
+    gold: 2
+  production:
+    food: 3
+
+- id: vanilla_fisherman_hut
+  display_name: Fisherman's Hut
+  description: Fishing for aquatic food sources. Consistent but slower than other food methods.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Fisherman's_Hut"
+  cost:
+    wood: 30
+    stone: 10
+    gold: 1
+  production:
+    food: 1
+
+- id: vanilla_berry_picker_house
+  display_name: Berry Picker's House
+  description: Gathering berries from wild sources. Fast but requires travel to exhausted bushes.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Berry_Picker's_House"
+  cost:
+    wood: 25
+    stone: 5
+    gold: 1
+  production:
+    food: 3
+
+- id: vanilla_iron_mine
+  display_name: Iron Mine
+  description: Mining precious iron ore. Requires advanced civilization (Town Hall II).
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Iron_Mine"
+  cost:
+    wood: 80
+    stone: 60
+    gold: 20
+  production:
+    iron: 1
+
+- id: vanilla_gold_mine
+  display_name: Gold Mine
+  description: Extraction of precious metals for late-game economy. Essential for advanced units.
+  faction_id: null
+  building_type: resource_gathering
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Gold_Mine"
+  cost:
+    wood: 100
+    stone: 80
+    gold: 0
+  production:
+    gold: 1
+
+# Defense Buildings
+- id: vanilla_wooden_gate
+  display_name: Wooden Gate
+  description: Basic defensive gate. Allows passage control on fortified walls.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Wooden_Gate"
+  cost:
+    wood: 100
+    stone: 30
+    gold: 10
+
+- id: vanilla_stone_gate
+  display_name: Stone Gate
+  description: Reinforced stone gate. More durable than wooden variant.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Stone_Gate"
+  cost:
+    wood: 80
+    stone: 100
+    gold: 20
+
+- id: vanilla_palisade_wall
+  display_name: Palisade Wall
+  description: Wooden fortified wall for basic defense.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Palisade_Wall"
+  cost:
+    wood: 60
+    stone: 20
+    gold: 5
+
+- id: vanilla_stone_wall
+  display_name: Stone Wall
+  description: Stone-built fortification. Superior to palisade.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Stone_Wall"
+  cost:
+    wood: 40
+    stone: 100
+    gold: 15
+
+- id: vanilla_guard_tower
+  display_name: Guard Tower
+  description: Defensive tower supporting ranged units and providing area defense.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Guard_Tower"
+  cost:
+    wood: 80
+    stone: 60
+    gold: 15
+
+- id: vanilla_stone_obelisk
+  display_name: Stone Obelisk
+  description: Defensive structure providing substantial fortification bonus.
+  faction_id: null
+  building_type: defense
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Stone_Obelisk"
+  cost:
+    wood: 100
+    stone: 150
+    gold: 30
+
+# Housing and Population
+- id: vanilla_house_tier_1
+  display_name: House (Tier 1)
+  description: Basic residential dwelling. Houses 6 citizens.
+  faction_id: null
+  building_type: housing
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#House_I"
+  cost:
+    wood: 25
+    stone: 0
+    gold: 0
+
+- id: vanilla_house_tier_2
+  display_name: House (Tier 2)
+  description: Improved residential dwelling. Houses 12 citizens.
+  faction_id: null
+  building_type: housing
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#House_II"
+  cost:
+    wood: 25
+    stone: 14
+    gold: 0
+
+- id: vanilla_house_tier_3
+  display_name: House (Tier 3)
+  description: Advanced residential dwelling. Houses 18 citizens. Requires Town Hall II.
+  faction_id: null
+  building_type: housing
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#House_III"
+  cost:
+    wood: 40
+    stone: 30
+    gold: 5
+
+# Storage and Trade
+- id: vanilla_granary
+  display_name: Granary
+  description: Expands food storage capacity significantly.
+  faction_id: null
+  building_type: storage
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Granary"
+  cost:
+    wood: 50
+    stone: 30
+    gold: 10
+
+- id: vanilla_storage_building
+  display_name: Storage Building
+  description: Expands shared storage for wood, stone, and iron.
+  faction_id: null
+  building_type: storage
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Storage_Building"
+  cost:
+    wood: 40
+    stone: 50
+    gold: 10
+
+- id: vanilla_market
+  display_name: Market
+  description: Trading hub for commerce and gold transactions. Requires Town Hall II.
+  faction_id: null
+  building_type: economy
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Market"
+  cost:
+    wood: 100
+    stone: 60
+    gold: 30
+
+# Special Economy Buildings
+- id: vanilla_hospital
+  display_name: Hospital
+  description: Medical care facility improving citizen health and welfare.
+  faction_id: null
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Hospital"
+  cost:
+    wood: 100
+    stone: 80
+    gold: 40
+
+- id: vanilla_university
+  display_name: University
+  description: Advanced research institution. Improves research speed and citizen welfare.
+  faction_id: null
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#University"
+  cost:
+    wood: 150
+    stone: 120
+    gold: 60
+
+# Core Government Buildings
+- id: vanilla_town_hall_tier_1
+  display_name: Town Hall (Tier 1)
+  description: Seat of government. Research hub. Food storage 100. Base structure.
+  faction_id: null
+  building_type: government
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Town_Hall"
+  cost:
+    wood: 200
+    stone: 150
+    gold: 75
+
+- id: vanilla_town_hall_tier_2
+  display_name: Town Hall (Tier 2)
+  description: Seat of government. Unlocks iron mining and advanced buildings. 200 food storage.
+  faction_id: null
+  building_type: government
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Town_Hall_II"
+  cost:
+    wood: 150
+    stone: 100
+    gold: 50
+
+- id: vanilla_town_hall_tier_3
+  display_name: Town Hall (Tier 3)
+  description: Seat of government. Unlocks tier 3 buildings and advanced units.
+  faction_id: null
+  building_type: government
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Town_Hall_III"
+  cost:
+    wood: 200
+    stone: 150
+    gold: 100

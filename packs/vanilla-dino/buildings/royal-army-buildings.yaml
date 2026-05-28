@@ -1,0 +1,85 @@
+# Royal Army - Vanilla DINO Buildings
+
+- id: vanilla_royal_barracks
+  display_name: Royal Barracks
+  description: Professional military training facility. Produces disciplined infantry.
+  faction_id: royal_army
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Royal_Barracks"
+  cost:
+    wood: 120
+    stone: 80
+    gold: 40
+  upkeep_per_turn: 3
+  production_slots: 2
+  units_produced:
+    - vanilla_royal_footman
+    - vanilla_royal_archer
+    - vanilla_royal_spearman
+    - vanilla_royal_crossbowman
+
+- id: vanilla_royal_stables
+  display_name: Royal Stables
+  description: Professional cavalry training grounds. Produces mounted knights.
+  faction_id: royal_army
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Royal_Stables"
+  cost:
+    wood: 140
+    stone: 100
+    gold: 60
+  upkeep_per_turn: 4
+  production_slots: 1
+  units_produced:
+    - vanilla_royal_herald
+    - vanilla_royal_cavalry
+    - vanilla_royal_lieutenant
+    - vanilla_royal_paladin
+
+- id: vanilla_royal_armory
+  display_name: Royal Armory
+  description: Master smithy for elite armor and weapons crafting.
+  faction_id: royal_army
+  building_type: production
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Royal_Armory"
+  cost:
+    wood: 180
+    stone: 120
+    gold: 70
+  upkeep_per_turn: 5
+  production_slots: 1
+  units_produced:
+    - vanilla_royal_veteran
+    - vanilla_royal_champion
+
+- id: vanilla_royal_siege_workshop
+  display_name: Royal Siege Workshop
+  description: Advanced siege engine construction and maintenance.
+  faction_id: royal_army
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Royal_Siege_Workshop"
+  cost:
+    wood: 220
+    stone: 160
+    gold: 120
+  upkeep_per_turn: 7
+  production_slots: 1
+  units_produced:
+    - vanilla_royal_ballista
+    - vanilla_royal_ram
+    - vanilla_royal_siege_machine
+
+- id: vanilla_royal_throne_room
+  display_name: Royal Throne Room
+  description: Royal seat of power. Center of the kingdom's military might.
+  faction_id: royal_army
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Royal_Throne_Room"
+  cost:
+    wood: 300
+    stone: 250
+    gold: 200
+  upkeep_per_turn: 10
+  production_slots: 1
+  units_produced:
+    - vanilla_royal_healer

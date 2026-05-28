@@ -1,7 +1,0 @@
-
-Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
-A total of 1 test files matched the specified pattern.
-[xUnit.net 00:00:42.75]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [SKIP]
-  Skipped DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [1 ms]
-
-Passed!  - Failed:     0, Passed:    27, Skipped:     1, Total:    28, Duration: 1 m 24 s - DINOForge.Tests.GameLaunch.dll (net11.0)

@@ -1,0 +1,57 @@
+# Undead - Vanilla DINO Buildings
+
+- id: vanilla_undead_tomb
+  display_name: Undead Tomb
+  description: Necromantic chamber for raising the dead. Produces undead infantry.
+  faction_id: undead
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Undead_Tomb"
+  cost:
+    wood: 80
+    stone: 60
+    gold: 10
+  upkeep_per_turn: 2
+  production_slots: 2
+  units_produced:
+    - vanilla_undead_walking_corpse
+    - vanilla_undead_shambler
+    - vanilla_undead_archer_skeleton
+    - vanilla_undead_swordsman
+
+- id: vanilla_undead_necromancy_lab
+  display_name: Necromancy Lab
+  description: Dark magic laboratory for experimentation and creature crafting.
+  faction_id: undead
+  building_type: production
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Necromancy_Lab"
+  cost:
+    wood: 100
+    stone: 80
+    gold: 30
+  upkeep_per_turn: 3
+  production_slots: 1
+  units_produced:
+    - vanilla_undead_hulk
+    - vanilla_undead_ghoul
+    - vanilla_undead_machine_o_flesh
+    - vanilla_undead_thing
+
+- id: vanilla_undead_crypt
+  display_name: Undead Crypt
+  description: Ancient burial ground and necromantic nexus. Spawns powerful undead.
+  faction_id: undead
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Undead_Crypt"
+  cost:
+    wood: 120
+    stone: 100
+    gold: 50
+  upkeep_per_turn: 5
+  production_slots: 1
+  units_produced:
+    - vanilla_undead_shepherd
+    - vanilla_undead_horsy
+    - vanilla_undead_drake
+    - vanilla_undead_magister
+    - vanilla_undead_nightmare_general
+    - vanilla_undead_grim_pilgrim

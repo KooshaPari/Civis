@@ -1,0 +1,46 @@
+# Lord's Troops - Vanilla DINO Faction
+# Player-aligned faction: disciplined humans under feudal rule
+# Archetype: Order (balanced, elite-focused, moderate costs)
+
+faction:
+  id: lords_troops
+  display_name: "Lord's Troops"
+  description: "The player's faction. Disciplined human soldiers under feudal rule, capable of mixed-arms tactics and elite specialization."
+  vanilla_dino_name: "Lord's Troops"
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Lord's_Troops"
+  theme: medieval
+  archetype: order
+  doctrine: combined_arms
+
+economy:
+  gather_bonus: 1.0
+  upkeep_modifier: 1.0
+  research_speed: 1.0
+  build_speed: 1.0
+
+army:
+  morale_style: disciplined
+  unit_cap_modifier: 1.0
+  elite_cost_modifier: 1.0
+  spawn_rate_modifier: 1.0
+
+roster:
+  cheap_infantry: vanilla_swordsman
+  line_infantry: vanilla_archer
+  elite_infantry: vanilla_foot_knight
+  anti_armor: vanilla_spearman
+  support_weapon: vanilla_healer
+  recon: vanilla_horseman
+  light_vehicle: vanilla_horseman
+  heavy_vehicle: vanilla_mounted_knight
+  artillery: vanilla_catapult
+  hero_commander: vanilla_lord_commander
+
+buildings:
+  barracks: vanilla_barracks
+  stables: vanilla_stables
+  workshop: vanilla_engineer_guild
+  artillery_foundry: vanilla_siege_workshop
+  special: vanilla_lord_hall
+
+color: "#4488FF"

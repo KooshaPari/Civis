@@ -9,684 +9,612 @@ using UnityEngine.UI;
 namespace DINOForge.Runtime.UI
 {
     /// <summary>
-    /// Full-screen native mods page that lives INSIDE the MainMenu canvas.
-    /// Replaces the floating UGUI overlay with a settings-style page that
-    /// hides the main menu content and shows a pack browser with detail pane.
+    /// Full-screen UGUI panel for the mods menu that clones DINO's native Options canvas
+    /// for styling consistency. Provides a pack list, detail pane, and back navigation.
     ///
     /// Layout:
-    ///   - Title bar: "MODS" + Back button
-    ///   - Left panel: scrollable pack list (name, version, type, enable/disable)
-    ///   - Right panel: detail pane for selected pack
+    /// <code>
+    /// ┌─────────────────────────────────────────┐
+    /// │  MODS                         [Back]    │  ← Title bar
+    /// ├──────────────┬──────────────────────────┤
+    /// │  Pack List   │  Detail Pane             │
+    /// │  (scroll)    │  Name, Version, Author   │
+    /// │              │  Description, Toggle      │
+    /// │              │                           │
+    /// └──────────────┴──────────────────────────┘
+    /// </code>
     ///
-    /// Colors (dark theme):
-    ///   Background: #1A1A2E   Text: #E0E0E0   Accent: #4ECDC4   Selected: #2C3E50
+    /// Instantiated as a MonoBehaviour on a DontDestroyOnLoad GameObject.
+    /// Clones DINO's Options canvas to inherit native fonts, sprites, and colors.
+    /// Falls back to a dark theme when the Options canvas is not found.
     /// </summary>
-    public sealed class NativeModsPage : MonoBehaviour
+    internal sealed class NativeModsPage : MonoBehaviour
     {
-        // ── Color palette ──────────────────────────────────────────────────────
-        private static readonly Color BgColor = new Color(0.102f, 0.102f, 0.180f, 1f);       // #1A1A2E
-        private static readonly Color TextColor = new Color(0.878f, 0.878f, 0.878f, 1f);      // #E0E0E0
-        private static readonly Color AccentColor = new Color(0.306f, 0.804f, 0.769f, 1f);    // #4ECDC4
-        private static readonly Color SelectedColor = new Color(0.173f, 0.243f, 0.314f, 1f);  // #2C3E50
-        private static readonly Color PanelBgColor = new Color(0.133f, 0.133f, 0.220f, 1f);   // slightly lighter
-        private static readonly Color RowHoverColor = new Color(0.15f, 0.15f, 0.25f, 1f);
-        private static readonly Color ErrorColor = new Color(0.9f, 0.3f, 0.3f, 1f);
-        private static readonly Color DisabledColor = new Color(0.5f, 0.5f, 0.5f, 1f);
-        private static readonly Color EnabledBadgeColor = new Color(0.3f, 0.8f, 0.4f, 1f);
+        // ── Fallback theme colors ────────────────────────────────────────────────
+        private static readonly Color FallbackBg = UiBuilder.HexColor("#1A1A2E", 0.95f);
+        private static readonly Color FallbackText = UiBuilder.HexColor("#E0E0E0", 1f);
+        private static readonly Color FallbackAccent = UiBuilder.HexColor("#4ECDC4", 1f);
+        private static readonly Color FallbackDarkBg = UiBuilder.HexColor("#12122A", 1f);
+        private static readonly Color FallbackRowHover = UiBuilder.HexColor("#2A2A4E", 1f);
+        private static readonly Color FallbackBadgeBg = UiBuilder.HexColor("#333366", 1f);
 
-        private const string Tag = "NativeModsPage";
+        // ── Layout constants ─────────────────────────────────────────────────────
+        private const float ListWidthFraction = 0.35f;
+        private const float RowHeight = 48f;
+        private const float TitleBarHeight = 56f;
+        private const float PaddingOuter = 12f;
 
-        // ── State ──────────────────────────────────────────────────────────────
+        // ── Callbacks ────────────────────────────────────────────────────────────
+
+        /// <summary>Invoked when the Back button is clicked.</summary>
+        public Action? OnBackClicked;
+
+        /// <summary>Invoked when a pack is toggled enabled/disabled (packId, isEnabled).</summary>
+        public Action<string, bool>? OnPackToggled;
+
+        /// <summary>Invoked when the user clicks Reload.</summary>
+        public Action? OnReloadRequested;
+
+        // ── State ────────────────────────────────────────────────────────────────
         private ManualLogSource? _log;
-        private IReadOnlyList<PackDisplayInfo> _packs = Array.Empty<PackDisplayInfo>();
-        private int _selectedIndex = -1;
-
-        // ── Callbacks ──────────────────────────────────────────────────────────
-        /// <summary>Called when user toggles a pack (packId, isEnabled).</summary>
-        public Action<string, bool>? OnPackToggled { get; set; }
-
-        /// <summary>Called when user requests pack reload.</summary>
-        public Action? OnReloadRequested { get; set; }
-
-        /// <summary>Called when user presses Back to return to the main menu.</summary>
-        public Action? OnBackPressed { get; set; }
-
-        // ── References to main menu content we hide/show ───────────────────────
-        private GameObject? _mainMenuContent;
-        private Font? _font;
-
-        // ── UI hierarchy built at Show time ────────────────────────────────────
-        private GameObject? _root;
-        private RectTransform? _packListContent;
-        private readonly List<GameObject> _packRows = new List<GameObject>();
-
-        // Detail pane elements
-        private Text? _detailTitle;
+        private GameObject? _rootPanel;
+        private RectTransform? _listContent;
+        private GameObject? _detailPane;
+        private Text? _detailName;
         private Text? _detailVersion;
         private Text? _detailAuthor;
         private Text? _detailType;
         private Text? _detailDescription;
-        private Text? _detailContent;
-        private Text? _detailErrors;
-        private GameObject? _detailPanel;
+        private IReadOnlyList<PackDisplayInfo>? _packs;
+        private readonly List<GameObject> _packRows = new List<GameObject>();
+        private int _selectedIndex = -1;
+        private bool _visible;
 
-        // ── Public API ─────────────────────────────────────────────────────────
+        // Cloned style references (from Options canvas or fallback)
+        private Font? _font;
+        private Color _bgColor = FallbackBg;
+        private Color _textColor = FallbackText;
+        private Color _accentColor = FallbackAccent;
 
-        public void SetLogger(ManualLogSource log) => _log = log;
+        // References to main menu content to hide/show
+        private Canvas? _mainMenuCanvas;
+
+        // ── Public API ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Updates the pack list displayed by the page.
-        /// If visible, rebuilds the pack list UI immediately.
+        /// Sets the BepInEx logger.
+        /// </summary>
+        public void SetLogger(ManualLogSource log)
+        {
+            _log = log;
+        }
+
+        /// <summary>
+        /// Populates the pack list with the given packs.
         /// </summary>
         public void SetPacks(IReadOnlyList<PackDisplayInfo> packs)
         {
-            _packs = packs ?? Array.Empty<PackDisplayInfo>();
-            if (_root != null && _root.activeSelf)
+            _packs = packs;
+            if (_rootPanel != null)
             {
                 RebuildPackList();
-                RefreshDetailPane();
             }
         }
 
         /// <summary>
-        /// Shows the mods page, hiding the main menu content.
+        /// Shows the mods page and hides the main menu content.
         /// </summary>
-        /// <param name="mainMenuCanvas">The MainMenu canvas to parent into.</param>
-        /// <param name="mainMenuContent">The content container to hide (re-shown on Back).</param>
-        public void Show(Canvas mainMenuCanvas, GameObject? mainMenuContent)
+        public void Show()
         {
-            _mainMenuContent = mainMenuContent;
+            if (_rootPanel == null)
+            {
+                BuildPanel();
+            }
 
-            if (_mainMenuContent != null)
-                _mainMenuContent.SetActive(false);
+            if (_rootPanel != null)
+            {
+                _rootPanel.SetActive(true);
+                _visible = true;
+            }
 
-            if (_root == null)
-                BuildUI(mainMenuCanvas.transform);
+            // Hide main menu content
+            if (_mainMenuCanvas != null)
+            {
+                // Disable the main menu canvas rendering but keep it alive
+                _mainMenuCanvas.enabled = false;
+            }
 
-            _root!.SetActive(true);
-            RebuildPackList();
-            RefreshDetailPane();
-
-            LogInfo("NativeModsPage shown");
+            _log?.LogInfo("[NativeModsPage] Show()");
+            DebugLog.Write("NativeModsPage", "Shown");
         }
 
-        /// <summary>Hides the mods page and re-shows the main menu content.</summary>
+        /// <summary>
+        /// Hides the mods page and shows the main menu content.
+        /// </summary>
         public void Hide()
         {
-            if (_root != null)
-                _root.SetActive(false);
+            if (_rootPanel != null)
+            {
+                _rootPanel.SetActive(false);
+                _visible = false;
+            }
 
-            if (_mainMenuContent != null)
-                _mainMenuContent.SetActive(true);
+            // Restore main menu content
+            if (_mainMenuCanvas != null)
+            {
+                _mainMenuCanvas.enabled = true;
+            }
 
-            LogInfo("NativeModsPage hidden");
+            _log?.LogInfo("[NativeModsPage] Hide()");
+            DebugLog.Write("NativeModsPage", "Hidden");
         }
 
         /// <summary>Whether the page is currently visible.</summary>
-        public bool IsVisible => _root != null && _root.activeSelf;
+        public bool IsVisible => _visible;
 
-        // ── UI Construction ────────────────────────────────────────────────────
+        // ── Panel construction ───────────────────────────────────────────────────
 
-        private Font GetFont()
+        private void BuildPanel()
         {
-            if (_font != null) return _font;
-            _font = Font.CreateDynamicFontFromOSFont("Arial", 16);
-            return _font;
-        }
-
-        private void BuildUI(Transform parent)
-        {
-            // Root panel — full-screen overlay inside the MainMenu canvas
-            _root = CreatePanel("DINOForge_NativeModsPage", parent);
-            RectTransform rootRt = _root.GetComponent<RectTransform>();
-            rootRt.anchorMin = Vector2.zero;
-            rootRt.anchorMax = Vector2.one;
-            rootRt.offsetMin = Vector2.zero;
-            rootRt.offsetMax = Vector2.zero;
-
-            Image rootBg = _root.GetComponent<Image>();
-            rootBg.color = BgColor;
-
-            // Vertical layout: title bar + body
-            VerticalLayoutGroup rootLayout = _root.AddComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(20, 20, 10, 10);
-            rootLayout.spacing = 10;
-            rootLayout.childForceExpandWidth = true;
-            rootLayout.childForceExpandHeight = false;
-            rootLayout.childControlWidth = true;
-            rootLayout.childControlHeight = true;
-
-            // ── Title bar ──────────────────────────────────────────────────────
-            BuildTitleBar(_root.transform);
-
-            // ── Body: left pack list + right detail ────────────────────────────
-            BuildBody(_root.transform);
-        }
-
-        private void BuildTitleBar(Transform parent)
-        {
-            GameObject titleBar = CreatePanel("TitleBar", parent);
-            Image titleBg = titleBar.GetComponent<Image>();
-            titleBg.color = PanelBgColor;
-
-            HorizontalLayoutGroup titleLayout = titleBar.AddComponent<HorizontalLayoutGroup>();
-            titleLayout.padding = new RectOffset(16, 16, 8, 8);
-            titleLayout.spacing = 16;
-            titleLayout.childForceExpandWidth = false;
-            titleLayout.childForceExpandHeight = true;
-            titleLayout.childControlWidth = true;
-            titleLayout.childControlHeight = true;
-            titleLayout.childAlignment = TextAnchor.MiddleLeft;
-
-            LayoutElement titleLe = titleBar.AddComponent<LayoutElement>();
-            titleLe.preferredHeight = 50;
-            titleLe.flexibleHeight = 0;
-
-            // Back button
-            GameObject backBtn = CreateButton("BackButton", titleBar.transform, "Back", () =>
+            try
             {
-                Hide();
-                OnBackPressed?.Invoke();
-            });
-            LayoutElement backLe = backBtn.AddComponent<LayoutElement>();
-            backLe.preferredWidth = 80;
-            backLe.preferredHeight = 36;
+                // Try to clone style from DINO's Options canvas
+                CloneStyleFromOptionsCanvas();
 
-            // Title text
-            GameObject titleObj = CreateTextObj("TitleText", titleBar.transform, "MODS", 24, AccentColor);
-            LayoutElement titleTextLe = titleObj.AddComponent<LayoutElement>();
-            titleTextLe.flexibleWidth = 1;
+                // Resolve fallback font
+                if (_font == null)
+                {
+                    _font = Font.CreateDynamicFontFromOSFont("Arial", 16);
+                }
 
-            // Reload button
-            GameObject reloadBtn = CreateButton("ReloadButton", titleBar.transform, "Reload Packs", () =>
+                // Create root panel
+                _rootPanel = new GameObject("DINOForge_NativeModsPage", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                _rootPanel.transform.SetParent(transform, false);
+                DontDestroyOnLoad(_rootPanel);
+
+                Canvas canvas = _rootPanel.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 32766; // just below DFCanvas
+
+                CanvasScaler scaler = _rootPanel.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+
+                // Pattern #235: ensure EventSystem exists before adding GraphicRaycaster
+                Plugin.EnsureEventSystemAlive();
+
+                RectTransform rootRt = _rootPanel.GetComponent<RectTransform>();
+                UiBuilder.FillParent(rootRt);
+
+                // Background
+                GameObject bgGo = new GameObject("Background", typeof(RectTransform), typeof(Image));
+                bgGo.transform.SetParent(_rootPanel.transform, false);
+                Image bgImg = bgGo.GetComponent<Image>();
+                bgImg.color = _bgColor;
+                bgImg.raycastTarget = true;
+                UiBuilder.FillParent(bgGo.GetComponent<RectTransform>());
+
+                // Title bar
+                BuildTitleBar(_rootPanel.transform);
+
+                // Content area (below title bar)
+                GameObject contentGo = new GameObject("ContentArea", typeof(RectTransform));
+                contentGo.transform.SetParent(_rootPanel.transform, false);
+                RectTransform contentRt = contentGo.GetComponent<RectTransform>();
+                contentRt.anchorMin = Vector2.zero;
+                contentRt.anchorMax = Vector2.one;
+                contentRt.offsetMin = new Vector2(PaddingOuter, PaddingOuter);
+                contentRt.offsetMax = new Vector2(-PaddingOuter, -(TitleBarHeight + PaddingOuter));
+
+                // Left panel: scrollable pack list
+                BuildPackListPanel(contentRt);
+
+                // Right panel: detail pane
+                BuildDetailPane(contentRt);
+
+                _rootPanel.SetActive(false);
+
+                if (_packs != null && _packs.Count > 0)
+                {
+                    RebuildPackList();
+                }
+
+                _log?.LogInfo("[NativeModsPage] Panel built successfully.");
+            }
+            catch (Exception ex)
             {
-                OnReloadRequested?.Invoke();
-            });
-            LayoutElement reloadLe = reloadBtn.AddComponent<LayoutElement>();
-            reloadLe.preferredWidth = 120;
-            reloadLe.preferredHeight = 36;
-        }
-
-        private void BuildBody(Transform parent)
-        {
-            GameObject body = CreatePanel("Body", parent);
-            Image bodyBg = body.GetComponent<Image>();
-            bodyBg.color = new Color(0, 0, 0, 0); // transparent
-
-            HorizontalLayoutGroup bodyLayout = body.AddComponent<HorizontalLayoutGroup>();
-            bodyLayout.spacing = 12;
-            bodyLayout.childForceExpandWidth = false;
-            bodyLayout.childForceExpandHeight = true;
-            bodyLayout.childControlWidth = true;
-            bodyLayout.childControlHeight = true;
-
-            LayoutElement bodyLe = body.AddComponent<LayoutElement>();
-            bodyLe.flexibleHeight = 1;
-
-            // ── Left panel: pack list ──────────────────────────────────────────
-            BuildPackListPanel(body.transform);
-
-            // ── Right panel: detail pane ───────────────────────────────────────
-            BuildDetailPanel(body.transform);
-        }
-
-        private void BuildPackListPanel(Transform parent)
-        {
-            GameObject panel = CreatePanel("PackListPanel", parent);
-            Image panelBg = panel.GetComponent<Image>();
-            panelBg.color = PanelBgColor;
-
-            VerticalLayoutGroup panelLayout = panel.AddComponent<VerticalLayoutGroup>();
-            panelLayout.padding = new RectOffset(8, 8, 8, 8);
-            panelLayout.spacing = 4;
-            panelLayout.childForceExpandWidth = true;
-            panelLayout.childForceExpandHeight = false;
-            panelLayout.childControlWidth = true;
-            panelLayout.childControlHeight = true;
-
-            LayoutElement panelLe = panel.AddComponent<LayoutElement>();
-            panelLe.preferredWidth = 360;
-            panelLe.flexibleWidth = 0.4f;
-            panelLe.flexibleHeight = 1;
-
-            // Header
-            CreateTextObj("PackListHeader", panel.transform, "Installed Packs", 18, AccentColor);
-
-            // Scroll view
-            GameObject scrollView = CreateScrollView("PackListScroll", panel.transform);
-            LayoutElement scrollLe = scrollView.AddComponent<LayoutElement>();
-            scrollLe.flexibleHeight = 1;
-            scrollLe.flexibleWidth = 1;
-
-            // Content container inside the scroll view
-            Transform viewport = scrollView.transform.Find("Viewport");
-            if (viewport != null)
-            {
-                Transform content = viewport.Find("Content");
-                if (content != null)
-                    _packListContent = content.GetComponent<RectTransform>();
+                _log?.LogWarning($"[NativeModsPage] BuildPanel failed: {ex}");
+                DebugLog.Write("NativeModsPage", $"BuildPanel exception: {ex.Message}");
             }
         }
 
-        private void BuildDetailPanel(Transform parent)
+        private void CloneStyleFromOptionsCanvas()
         {
-            _detailPanel = CreatePanel("DetailPanel", parent);
-            Image detailBg = _detailPanel.GetComponent<Image>();
-            detailBg.color = PanelBgColor;
+            try
+            {
+                Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+                Canvas? optionsCanvas = null;
 
-            VerticalLayoutGroup detailLayout = _detailPanel.AddComponent<VerticalLayoutGroup>();
-            detailLayout.padding = new RectOffset(16, 16, 12, 12);
-            detailLayout.spacing = 6;
-            detailLayout.childForceExpandWidth = true;
-            detailLayout.childForceExpandHeight = false;
-            detailLayout.childControlWidth = true;
-            detailLayout.childControlHeight = true;
+                foreach (Canvas c in allCanvases)
+                {
+                    if (c == null) continue;
+                    if (c.name != null && c.name.IndexOf("Options", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        optionsCanvas = c;
+                        break;
+                    }
+                }
 
-            LayoutElement detailLe = _detailPanel.AddComponent<LayoutElement>();
-            detailLe.flexibleWidth = 0.6f;
-            detailLe.flexibleHeight = 1;
+                if (optionsCanvas == null)
+                {
+                    _log?.LogInfo("[NativeModsPage] Options canvas not found — using fallback dark theme.");
+                    return;
+                }
 
-            // Detail fields
-            _detailTitle = CreateTextObj("DetailTitle", _detailPanel.transform, "", 22, AccentColor).GetComponent<Text>();
-            _detailVersion = CreateLabeledField("Version", _detailPanel.transform);
-            _detailAuthor = CreateLabeledField("Author", _detailPanel.transform);
-            _detailType = CreateLabeledField("Type", _detailPanel.transform);
+                _log?.LogInfo($"[NativeModsPage] Cloning style from Options canvas: '{optionsCanvas.name}'");
+                _mainMenuCanvas = FindMainMenuCanvas();
 
-            // Separator
-            CreateSeparator(_detailPanel.transform);
+                // Extract font from first Text component found
+                Text[] texts = optionsCanvas.GetComponentsInChildren<Text>(true);
+                if (texts.Length > 0 && texts[0].font != null)
+                {
+                    _font = texts[0].font;
+                    _textColor = texts[0].color;
+                    _log?.LogInfo($"[NativeModsPage] Cloned font: '{_font.name}', text color: {ColorUtility.ToHtmlStringRGBA(_textColor)}");
+                }
 
-            // Description header + body
-            CreateTextObj("DescHeader", _detailPanel.transform, "Description", 16, AccentColor);
-            GameObject descObj = CreateTextObj("DetailDescription", _detailPanel.transform, "Select a pack to view details.", 14, TextColor);
-            _detailDescription = descObj.GetComponent<Text>();
+                // Try TMP font via reflection as well
+                if (_font == null)
+                {
+                    Type? tmpType = Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro");
+                    if (tmpType != null)
+                    {
+                        Component? tmpComp = optionsCanvas.GetComponentInChildren(tmpType, true);
+                        if (tmpComp != null)
+                        {
+                            System.Reflection.PropertyInfo? colorProp = tmpType.GetProperty("color");
+                            object? colorObj = colorProp?.GetValue(tmpComp);
+                            if (colorObj is Color c)
+                            {
+                                _textColor = c;
+                            }
+                        }
+                    }
+                }
 
-            CreateSeparator(_detailPanel.transform);
+                // Extract background color from largest Image
+                Image[] images = optionsCanvas.GetComponentsInChildren<Image>(true);
+                Image? largest = null;
+                float largestArea = 0f;
+                foreach (Image img in images)
+                {
+                    if (img == null) continue;
+                    RectTransform? rt = img.GetComponent<RectTransform>();
+                    if (rt == null) continue;
+                    float area = rt.rect.width * rt.rect.height;
+                    if (area > largestArea)
+                    {
+                        largestArea = area;
+                        largest = img;
+                    }
+                }
+                if (largest != null)
+                {
+                    _bgColor = largest.color;
+                    _bgColor.a = 0.95f;
+                    _log?.LogInfo($"[NativeModsPage] Cloned bg color: {ColorUtility.ToHtmlStringRGBA(_bgColor)}");
+                }
 
-            // Content summary
-            CreateTextObj("ContentHeader", _detailPanel.transform, "Content Summary", 16, AccentColor);
-            GameObject contentObj = CreateTextObj("DetailContent", _detailPanel.transform, "", 14, TextColor);
-            _detailContent = contentObj.GetComponent<Text>();
-
-            // Errors
-            GameObject errorsObj = CreateTextObj("DetailErrors", _detailPanel.transform, "", 14, ErrorColor);
-            _detailErrors = errorsObj.GetComponent<Text>();
+                // Extract accent from first Button/Selectable
+                Selectable[] selectables = optionsCanvas.GetComponentsInChildren<Selectable>(true);
+                if (selectables.Length > 0)
+                {
+                    _accentColor = selectables[0].colors.highlightedColor;
+                    _log?.LogInfo($"[NativeModsPage] Cloned accent color: {ColorUtility.ToHtmlStringRGBA(_accentColor)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[NativeModsPage] CloneStyleFromOptionsCanvas failed: {ex.Message}");
+            }
         }
 
-        // ── Pack list population ───────────────────────────────────────────────
+        private Canvas? FindMainMenuCanvas()
+        {
+            Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+            foreach (Canvas c in allCanvases)
+            {
+                if (c == null) continue;
+                if (c.name != null && c.name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0
+                    && c.gameObject.activeInHierarchy)
+                {
+                    return c;
+                }
+            }
+            return null;
+        }
+
+        // ── Title bar ────────────────────────────────────────────────────────────
+
+        private void BuildTitleBar(Transform parent)
+        {
+            GameObject barGo = new GameObject("TitleBar", typeof(RectTransform), typeof(Image));
+            barGo.transform.SetParent(parent, false);
+
+            Image barImg = barGo.GetComponent<Image>();
+            barImg.color = new Color(_bgColor.r * 0.7f, _bgColor.g * 0.7f, _bgColor.b * 0.7f, 0.98f);
+            barImg.raycastTarget = false;
+
+            RectTransform barRt = barGo.GetComponent<RectTransform>();
+            barRt.anchorMin = new Vector2(0f, 1f);
+            barRt.anchorMax = Vector2.one;
+            barRt.pivot = new Vector2(0.5f, 1f);
+            barRt.sizeDelta = new Vector2(0f, TitleBarHeight);
+            barRt.offsetMin = new Vector2(0f, barRt.offsetMin.y);
+            barRt.offsetMax = new Vector2(0f, 0f);
+
+            HorizontalLayoutGroup hlg = barGo.AddComponent<HorizontalLayoutGroup>();
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = true;
+            hlg.spacing = 8f;
+            hlg.padding = new RectOffset(16, 16, 6, 6);
+            hlg.childAlignment = TextAnchor.MiddleLeft;
+
+            // Title text
+            Text titleText = CreateText(barGo.transform, "TitleText", "MODS", 28, _textColor, FontStyle.Bold);
+            LayoutElement titleLe = titleText.gameObject.AddComponent<LayoutElement>();
+            titleLe.flexibleWidth = 1f;
+
+            // Back button
+            GameObject backGo = CreateButtonGo(barGo.transform, "BackButton", "Back", () =>
+            {
+                OnBackClicked?.Invoke();
+            });
+            LayoutElement backLe = backGo.AddComponent<LayoutElement>();
+            backLe.preferredWidth = 100f;
+            backLe.preferredHeight = 36f;
+        }
+
+        // ── Pack list panel ──────────────────────────────────────────────────────
+
+        private void BuildPackListPanel(RectTransform contentParent)
+        {
+            GameObject listPanelGo = new GameObject("PackListPanel", typeof(RectTransform), typeof(Image));
+            listPanelGo.transform.SetParent(contentParent, false);
+
+            Image listBg = listPanelGo.GetComponent<Image>();
+            listBg.color = FallbackDarkBg;
+            listBg.raycastTarget = true;
+
+            RectTransform listRt = listPanelGo.GetComponent<RectTransform>();
+            listRt.anchorMin = Vector2.zero;
+            listRt.anchorMax = new Vector2(ListWidthFraction, 1f);
+            listRt.offsetMin = Vector2.zero;
+            listRt.offsetMax = new Vector2(-4f, 0f);
+
+            // Scroll view
+            (ScrollRect scrollRect, RectTransform scrollContent) = UiBuilder.MakeScrollView(
+                listPanelGo.transform, "PackListScroll", Vector2.zero);
+
+            RectTransform scrollRt = scrollRect.GetComponent<RectTransform>();
+            UiBuilder.FillParent(scrollRt);
+            scrollRt.offsetMin = new Vector2(4f, 4f);
+            scrollRt.offsetMax = new Vector2(-4f, -4f);
+
+            _listContent = scrollContent;
+        }
+
+        // ── Detail pane ──────────────────────────────────────────────────────────
+
+        private void BuildDetailPane(RectTransform contentParent)
+        {
+            GameObject detailGo = new GameObject("DetailPane", typeof(RectTransform), typeof(Image));
+            detailGo.transform.SetParent(contentParent, false);
+
+            Image detailBg = detailGo.GetComponent<Image>();
+            detailBg.color = FallbackDarkBg;
+            detailBg.raycastTarget = false;
+
+            RectTransform detailRt = detailGo.GetComponent<RectTransform>();
+            detailRt.anchorMin = new Vector2(ListWidthFraction, 0f);
+            detailRt.anchorMax = Vector2.one;
+            detailRt.offsetMin = new Vector2(4f, 0f);
+            detailRt.offsetMax = Vector2.zero;
+
+            _detailPane = detailGo;
+
+            // Vertical layout for detail fields
+            VerticalLayoutGroup vlg = detailGo.AddComponent<VerticalLayoutGroup>();
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            vlg.spacing = 8f;
+            vlg.padding = new RectOffset(16, 16, 16, 16);
+
+            _detailName = CreateText(detailGo.transform, "DetailName", "", 24, _textColor, FontStyle.Bold);
+            _detailVersion = CreateText(detailGo.transform, "DetailVersion", "", 16, _textColor);
+            _detailAuthor = CreateText(detailGo.transform, "DetailAuthor", "", 16, _textColor);
+            _detailType = CreateText(detailGo.transform, "DetailType", "", 16, _accentColor);
+
+            // Separator
+            UiBuilder.MakeHorizontalSeparator(detailGo.transform, new Color(_textColor.r, _textColor.g, _textColor.b, 0.3f));
+
+            _detailDescription = CreateText(detailGo.transform, "DetailDescription", "Select a pack to view details.", 14, _textColor);
+            _detailDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _detailDescription.verticalOverflow = VerticalWrapMode.Overflow;
+
+            // Reload button at bottom
+            GameObject reloadGo = CreateButtonGo(detailGo.transform, "ReloadButton", "Reload Packs", () =>
+            {
+                OnReloadRequested?.Invoke();
+            });
+            LayoutElement reloadLe = reloadGo.AddComponent<LayoutElement>();
+            reloadLe.preferredHeight = 36f;
+        }
+
+        // ── Pack list population ─────────────────────────────────────────────────
 
         private void RebuildPackList()
         {
+            if (_listContent == null || _packs == null) return;
+
             // Clear existing rows
             foreach (GameObject row in _packRows)
             {
                 if (row != null) Destroy(row);
             }
             _packRows.Clear();
-
-            if (_packListContent == null) return;
+            _selectedIndex = -1;
 
             for (int i = 0; i < _packs.Count; i++)
             {
                 PackDisplayInfo pack = _packs[i];
-                int index = i; // capture for closure
+                int capturedIndex = i;
 
-                GameObject row = CreatePackRow(pack, index);
-                row.transform.SetParent(_packListContent, false);
-                _packRows.Add(row);
+                GameObject rowGo = new GameObject($"PackRow_{pack.Id}", typeof(RectTransform), typeof(Image));
+                rowGo.transform.SetParent(_listContent, false);
+
+                Image rowBg = rowGo.GetComponent<Image>();
+                rowBg.color = (i % 2 == 0) ? FallbackDarkBg : FallbackRowHover;
+                rowBg.raycastTarget = true;
+
+                LayoutElement rowLe = rowGo.AddComponent<LayoutElement>();
+                rowLe.preferredHeight = RowHeight;
+                rowLe.flexibleWidth = 1f;
+
+                HorizontalLayoutGroup rowHlg = rowGo.AddComponent<HorizontalLayoutGroup>();
+                rowHlg.childForceExpandWidth = false;
+                rowHlg.childForceExpandHeight = true;
+                rowHlg.spacing = 6f;
+                rowHlg.padding = new RectOffset(8, 8, 4, 4);
+                rowHlg.childAlignment = TextAnchor.MiddleLeft;
+
+                // Enable/disable toggle
+                Toggle toggle = UiBuilder.MakeToggle(rowGo.transform, $"Toggle_{pack.Id}", pack.IsEnabled, (bool enabled) =>
+                {
+                    OnPackToggled?.Invoke(pack.Id, enabled);
+                });
+                LayoutElement toggleLe = toggle.gameObject.AddComponent<LayoutElement>();
+                toggleLe.preferredWidth = 24f;
+                toggleLe.preferredHeight = 24f;
+
+                // Pack name (clickable to select)
+                GameObject nameButtonGo = CreateButtonGo(rowGo.transform, $"Name_{pack.Id}", pack.Name, () =>
+                {
+                    SelectPack(capturedIndex);
+                });
+                LayoutElement nameLe = nameButtonGo.AddComponent<LayoutElement>();
+                nameLe.flexibleWidth = 1f;
+
+                // Version text
+                Text versionText = CreateText(rowGo.transform, $"Version_{pack.Id}", pack.Version, 12, new Color(_textColor.r, _textColor.g, _textColor.b, 0.6f));
+                LayoutElement versionLe = versionText.gameObject.AddComponent<LayoutElement>();
+                versionLe.preferredWidth = 50f;
+
+                // Type badge
+                GameObject badgeGo = new GameObject($"Badge_{pack.Id}", typeof(RectTransform), typeof(Image));
+                badgeGo.transform.SetParent(rowGo.transform, false);
+                Image badgeBg = badgeGo.GetComponent<Image>();
+                badgeBg.color = FallbackBadgeBg;
+
+                LayoutElement badgeLe = badgeGo.AddComponent<LayoutElement>();
+                badgeLe.preferredWidth = 70f;
+                badgeLe.preferredHeight = 20f;
+
+                Text badgeText = CreateText(badgeGo.transform, "BadgeText", pack.Type, 10, _accentColor, FontStyle.Normal, TextAnchor.MiddleCenter);
+                UiBuilder.FillParent(badgeText.GetComponent<RectTransform>());
+
+                _packRows.Add(rowGo);
             }
         }
 
-        private GameObject CreatePackRow(PackDisplayInfo pack, int index)
+        private void SelectPack(int index)
         {
-            bool isSelected = index == _selectedIndex;
+            if (_packs == null || index < 0 || index >= _packs.Count) return;
+            _selectedIndex = index;
+            PackDisplayInfo pack = _packs[index];
 
-            GameObject row = new GameObject($"PackRow_{pack.Id}");
-            RectTransform rowRt = row.AddComponent<RectTransform>();
-
-            Image rowBg = row.AddComponent<Image>();
-            rowBg.color = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
-
-            HorizontalLayoutGroup rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-            rowLayout.padding = new RectOffset(8, 8, 4, 4);
-            rowLayout.spacing = 8;
-            rowLayout.childForceExpandWidth = false;
-            rowLayout.childForceExpandHeight = true;
-            rowLayout.childControlWidth = true;
-            rowLayout.childControlHeight = true;
-            rowLayout.childAlignment = TextAnchor.MiddleLeft;
-
-            LayoutElement rowLe = row.AddComponent<LayoutElement>();
-            rowLe.preferredHeight = 36;
-            rowLe.flexibleWidth = 1;
-
-            // Make the whole row clickable
-            Button rowButton = row.AddComponent<Button>();
-            rowButton.targetGraphic = rowBg;
-            ColorBlock cb = rowButton.colors;
-            cb.normalColor = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
-            cb.highlightedColor = RowHoverColor;
-            cb.pressedColor = SelectedColor;
-            cb.selectedColor = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
-            rowButton.colors = cb;
-
-            rowButton.onClick.AddListener(() =>
-            {
-                _selectedIndex = index;
-                RebuildPackList();
-                RefreshDetailPane();
-            });
-
-            // Enable/disable toggle
-            GameObject toggleObj = new GameObject("Toggle");
-            toggleObj.transform.SetParent(row.transform, false);
-            toggleObj.AddComponent<RectTransform>();
-            Toggle toggle = toggleObj.AddComponent<Toggle>();
-
-            // Toggle background
-            GameObject toggleBg = new GameObject("Background");
-            toggleBg.transform.SetParent(toggleObj.transform, false);
-            RectTransform toggleBgRt = toggleBg.AddComponent<RectTransform>();
-            toggleBgRt.sizeDelta = new Vector2(20, 20);
-            Image toggleBgImg = toggleBg.AddComponent<Image>();
-            toggleBgImg.color = new Color(0.2f, 0.2f, 0.3f, 1f);
-
-            // Toggle checkmark
-            GameObject checkmark = new GameObject("Checkmark");
-            checkmark.transform.SetParent(toggleBg.transform, false);
-            RectTransform checkRt = checkmark.AddComponent<RectTransform>();
-            checkRt.anchorMin = new Vector2(0.15f, 0.15f);
-            checkRt.anchorMax = new Vector2(0.85f, 0.85f);
-            checkRt.offsetMin = Vector2.zero;
-            checkRt.offsetMax = Vector2.zero;
-            Image checkImg = checkmark.AddComponent<Image>();
-            checkImg.color = AccentColor;
-
-            toggle.targetGraphic = toggleBgImg;
-            toggle.graphic = checkImg;
-            toggle.isOn = pack.IsEnabled;
-
-            LayoutElement toggleLe = toggleObj.AddComponent<LayoutElement>();
-            toggleLe.preferredWidth = 24;
-            toggleLe.preferredHeight = 24;
-
-            string packId = pack.Id;
-            bool currentEnabled = pack.IsEnabled;
-            toggle.onValueChanged.AddListener((bool val) =>
-            {
-                OnPackToggled?.Invoke(packId, val);
-            });
-
-            // Pack name
-            GameObject nameObj = CreateTextObj($"Name_{pack.Id}", row.transform, pack.Name, 15, TextColor);
-            LayoutElement nameLe = nameObj.AddComponent<LayoutElement>();
-            nameLe.flexibleWidth = 1;
-
-            // Version badge
-            GameObject versionObj = CreateTextObj($"Version_{pack.Id}", row.transform, $"v{pack.Version}", 12, DisabledColor);
-            LayoutElement versionLe = versionObj.AddComponent<LayoutElement>();
-            versionLe.preferredWidth = 60;
-
-            // Type badge
-            GameObject typeObj = CreateTextObj($"Type_{pack.Id}", row.transform, pack.Type, 12, AccentColor);
-            LayoutElement typeLe = typeObj.AddComponent<LayoutElement>();
-            typeLe.preferredWidth = 70;
-
-            // Status indicator
-            Color statusColor = pack.Errors.Count > 0 ? ErrorColor
-                : pack.IsEnabled ? EnabledBadgeColor
-                : DisabledColor;
-            string statusText = pack.Errors.Count > 0 ? "ERR"
-                : pack.IsEnabled ? "ON"
-                : "OFF";
-            GameObject statusObj = CreateTextObj($"Status_{pack.Id}", row.transform, statusText, 12, statusColor);
-            LayoutElement statusLe = statusObj.AddComponent<LayoutElement>();
-            statusLe.preferredWidth = 35;
-
-            return row;
-        }
-
-        // ── Detail pane ────────────────────────────────────────────────────────
-
-        private void RefreshDetailPane()
-        {
-            if (_selectedIndex < 0 || _selectedIndex >= _packs.Count)
-            {
-                // No selection
-                if (_detailTitle != null) _detailTitle.text = "";
-                if (_detailVersion != null) _detailVersion.text = "";
-                if (_detailAuthor != null) _detailAuthor.text = "";
-                if (_detailType != null) _detailType.text = "";
-                if (_detailDescription != null) _detailDescription.text = "Select a pack to view details.";
-                if (_detailContent != null) _detailContent.text = "";
-                if (_detailErrors != null) _detailErrors.text = "";
-                return;
-            }
-
-            PackDisplayInfo pack = _packs[_selectedIndex];
-
-            if (_detailTitle != null)
-                _detailTitle.text = pack.Name;
-
-            if (_detailVersion != null)
-                _detailVersion.text = pack.Version;
-
-            if (_detailAuthor != null)
-                _detailAuthor.text = pack.Author;
-
-            if (_detailType != null)
-                _detailType.text = pack.Type;
-
+            if (_detailName != null) _detailName.text = pack.Name;
+            if (_detailVersion != null) _detailVersion.text = $"Version: {pack.Version}";
+            if (_detailAuthor != null) _detailAuthor.text = $"Author: {pack.Author}";
+            if (_detailType != null) _detailType.text = $"Type: {pack.Type}";
             if (_detailDescription != null)
-                _detailDescription.text = string.IsNullOrEmpty(pack.Description) ? "(No description)" : pack.Description;
-
-            // Content summary
-            if (_detailContent != null)
             {
-                if (pack.ContentSummary != null && pack.ContentSummary.Count > 0)
-                {
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
-                    foreach (var kvp in pack.ContentSummary)
-                    {
-                        if (sb.Length > 0) sb.Append("\n");
-                        sb.Append($"  {kvp.Key}: {kvp.Value}");
-                    }
-                    _detailContent.text = sb.ToString();
-                }
-                else
-                {
-                    _detailContent.text = "(none declared)";
-                }
+                _detailDescription.text = !string.IsNullOrEmpty(pack.Description)
+                    ? pack.Description
+                    : "(No description provided.)";
             }
 
-            // Errors
-            if (_detailErrors != null)
-            {
-                if (pack.Errors.Count > 0)
-                {
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
-                    sb.Append("Errors:\n");
-                    foreach (string err in pack.Errors)
-                    {
-                        sb.Append($"  - {err}\n");
-                    }
-                    _detailErrors.text = sb.ToString();
-                }
-                else
-                {
-                    _detailErrors.text = "";
-                }
-            }
+            _log?.LogInfo($"[NativeModsPage] Selected pack: {pack.Id} ({pack.Name})");
         }
 
-        // ── UI Helpers ─────────────────────────────────────────────────────────
+        // ── UI factory helpers ───────────────────────────────────────────────────
 
-        private GameObject CreatePanel(string name, Transform parent)
+        private Text CreateText(
+            Transform parent,
+            string name,
+            string text,
+            int fontSize,
+            Color color,
+            FontStyle style = FontStyle.Normal,
+            TextAnchor alignment = TextAnchor.MiddleLeft)
         {
-            GameObject go = new GameObject(name);
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
-            go.AddComponent<RectTransform>();
-            go.AddComponent<Image>();
-            return go;
-        }
 
-        private GameObject CreateTextObj(string name, Transform parent, string text, int fontSize, Color color)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<RectTransform>();
-            Text t = go.AddComponent<Text>();
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(200f, fontSize + 8f);
+
+            Text t = go.GetComponent<Text>();
             t.text = text;
-            t.font = GetFont();
             t.fontSize = fontSize;
             t.color = color;
-            t.alignment = TextAnchor.MiddleLeft;
+            t.alignment = alignment;
+            t.fontStyle = style;
+            t.supportRichText = true;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Truncate;
-            t.supportRichText = true;
+
+            if (_font != null)
+            {
+                t.font = _font;
+            }
+            else
+            {
+                // Fallback: create dynamic OS font
+                Font? fallbackFont = Font.CreateDynamicFontFromOSFont("Arial", fontSize);
+                if (fallbackFont != null)
+                    t.font = fallbackFont;
+            }
+
+            return t;
+        }
+
+        private GameObject CreateButtonGo(Transform parent, string name, string label, Action onClick)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+
+            Image img = go.GetComponent<Image>();
+            img.color = _accentColor;
+            img.raycastTarget = true;
+
+            Button btn = go.GetComponent<Button>();
+            ColorBlock cb = btn.colors;
+            cb.normalColor = _accentColor;
+            cb.highlightedColor = Color.Lerp(_accentColor, Color.white, 0.2f);
+            cb.pressedColor = Color.Lerp(_accentColor, Color.black, 0.3f);
+            cb.selectedColor = _accentColor;
+            cb.fadeDuration = 0.1f;
+            btn.colors = cb;
+
+            btn.onClick.AddListener(() => onClick());
+
+            Text txt = CreateText(go.transform, "Label", label, 14, _textColor, FontStyle.Bold, TextAnchor.MiddleCenter);
+            UiBuilder.FillParent(txt.GetComponent<RectTransform>());
+
             return go;
-        }
-
-        private Text CreateLabeledField(string label, Transform parent)
-        {
-            GameObject row = new GameObject($"Field_{label}");
-            row.transform.SetParent(parent, false);
-            row.AddComponent<RectTransform>();
-
-            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-
-            LayoutElement rowLe = row.AddComponent<LayoutElement>();
-            rowLe.preferredHeight = 22;
-
-            // Label
-            GameObject labelObj = CreateTextObj($"Label_{label}", row.transform, $"{label}:", 14, DisabledColor);
-            LayoutElement labelLe = labelObj.AddComponent<LayoutElement>();
-            labelLe.preferredWidth = 80;
-
-            // Value
-            GameObject valueObj = CreateTextObj($"Value_{label}", row.transform, "", 14, TextColor);
-            LayoutElement valueLe = valueObj.AddComponent<LayoutElement>();
-            valueLe.flexibleWidth = 1;
-
-            return valueObj.GetComponent<Text>();
-        }
-
-        private void CreateSeparator(Transform parent)
-        {
-            GameObject sep = new GameObject("Separator");
-            sep.transform.SetParent(parent, false);
-            sep.AddComponent<RectTransform>();
-            Image sepImg = sep.AddComponent<Image>();
-            sepImg.color = new Color(1, 1, 1, 0.1f);
-            LayoutElement sepLe = sep.AddComponent<LayoutElement>();
-            sepLe.preferredHeight = 1;
-            sepLe.flexibleWidth = 1;
-        }
-
-        private GameObject CreateButton(string name, Transform parent, string label, Action onClick)
-        {
-            GameObject btn = new GameObject(name);
-            btn.transform.SetParent(parent, false);
-            btn.AddComponent<RectTransform>();
-
-            Image btnBg = btn.AddComponent<Image>();
-            btnBg.color = AccentColor;
-
-            Button button = btn.AddComponent<Button>();
-            button.targetGraphic = btnBg;
-            ColorBlock colors = button.colors;
-            colors.normalColor = AccentColor;
-            colors.highlightedColor = new Color(AccentColor.r * 1.2f, AccentColor.g * 1.2f, AccentColor.b * 1.2f, 1f);
-            colors.pressedColor = new Color(AccentColor.r * 0.8f, AccentColor.g * 0.8f, AccentColor.b * 0.8f, 1f);
-            button.colors = colors;
-
-            button.onClick.AddListener(() => onClick?.Invoke());
-
-            // Label
-            GameObject labelObj = new GameObject("Label");
-            labelObj.transform.SetParent(btn.transform, false);
-            RectTransform labelRt = labelObj.AddComponent<RectTransform>();
-            labelRt.anchorMin = Vector2.zero;
-            labelRt.anchorMax = Vector2.one;
-            labelRt.offsetMin = Vector2.zero;
-            labelRt.offsetMax = Vector2.zero;
-
-            Text text = labelObj.AddComponent<Text>();
-            text.text = label;
-            text.font = GetFont();
-            text.fontSize = 14;
-            text.color = new Color(0.1f, 0.1f, 0.15f, 1f); // dark text on accent bg
-            text.alignment = TextAnchor.MiddleCenter;
-            text.fontStyle = FontStyle.Bold;
-
-            return btn;
-        }
-
-        private GameObject CreateScrollView(string name, Transform parent)
-        {
-            // ScrollRect root
-            GameObject scrollGo = new GameObject(name);
-            scrollGo.transform.SetParent(parent, false);
-            RectTransform scrollRt = scrollGo.AddComponent<RectTransform>();
-
-            Image scrollBg = scrollGo.AddComponent<Image>();
-            scrollBg.color = new Color(0, 0, 0, 0); // transparent
-
-            ScrollRect scrollRect = scrollGo.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-
-            // Viewport (masks content)
-            GameObject viewport = new GameObject("Viewport");
-            viewport.transform.SetParent(scrollGo.transform, false);
-            RectTransform vpRt = viewport.AddComponent<RectTransform>();
-            vpRt.anchorMin = Vector2.zero;
-            vpRt.anchorMax = Vector2.one;
-            vpRt.offsetMin = Vector2.zero;
-            vpRt.offsetMax = Vector2.zero;
-
-            Image vpImage = viewport.AddComponent<Image>();
-            vpImage.color = new Color(1, 1, 1, 0.003f); // near-invisible but needed for mask
-            Mask vpMask = viewport.AddComponent<Mask>();
-            vpMask.showMaskGraphic = false;
-
-            // Content container (vertical layout)
-            GameObject content = new GameObject("Content");
-            content.transform.SetParent(viewport.transform, false);
-            RectTransform contentRt = content.AddComponent<RectTransform>();
-            contentRt.anchorMin = new Vector2(0, 1);
-            contentRt.anchorMax = new Vector2(1, 1);
-            contentRt.pivot = new Vector2(0.5f, 1);
-            contentRt.offsetMin = Vector2.zero;
-            contentRt.offsetMax = Vector2.zero;
-
-            VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
-            contentLayout.spacing = 2;
-            contentLayout.childForceExpandWidth = true;
-            contentLayout.childForceExpandHeight = false;
-            contentLayout.childControlWidth = true;
-            contentLayout.childControlHeight = true;
-
-            ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            scrollRect.viewport = vpRt;
-            scrollRect.content = contentRt;
-
-            return scrollGo;
-        }
-
-        // ── Logging helpers ────────────────────────────────────────────────────
-
-        private void LogInfo(string message)
-        {
-            _log?.LogInfo($"[{Tag}] {message}");
-            DebugLog.Write(Tag, message);
         }
     }
 }

@@ -8,17 +8,18 @@
 //! - **Building diffs** — `BuildingGraph` mutations tagged with provenance
 //!   (procedural vs freehand).
 //! - **Agent appearance** — per-civilian wardrobe / tools state updates.
+//! - **Climate** — per-tick deterministic planet climate + weather-grid snapshot.
 //!
 //! This crate ships the wire-format types, a versioning gate, and a minimal
 //! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`).
 //! Full zstd-compressed production framing and WebSocket attach land in
 //! `civ-server` once the schema stabilises.
 //!
-//! **Tick batch coalescing:** the server sends three separate `F3D0` frames per
-//! tick (voxel, building, agent) rather than one length-prefixed batch blob.
+//! **Tick batch coalescing:** the server sends separate `F3D0` frames per
+//! tick (voxel, building, agent, climate) rather than one length-prefixed batch blob.
 //! Clients already decode individual frames; merging them would require a new
 //! magic/batch envelope and break existing decoders for a small WebSocket
-//! framing win (3 headers ≈ 27 bytes vs 1).
+//! framing win (4 headers ≈ 36 bytes vs 1).
 //!
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-PROTO3D-*`.
 
@@ -394,7 +395,10 @@ mod tests {
             bincode::serde::decode_from_slice(&encoded, config).expect("bincode decode");
 
         assert_eq!(consumed, encoded.len(), "all bytes consumed");
-        assert_eq!(frame, decoded, "ClimateFrame must be bit-identical after bincode round-trip");
+        assert_eq!(
+            frame, decoded,
+            "ClimateFrame must be bit-identical after bincode round-trip"
+        );
 
         // Verify a second encode produces identical bytes (determinism).
         let encoded2: Vec<u8> =

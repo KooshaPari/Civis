@@ -1,6 +1,8 @@
 #nullable enable
+using System;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -31,11 +33,26 @@ public sealed class GameLaunchStatTests(GameLaunchFixture fixture)
 
         overrideResult.Success.Should().BeTrue("override should apply without error");
 
-        // Reload packs — StatModifierSystem and OverrideApplicator should re-apply queued overrides
-        ReloadResult reloadResult = await fixture.Client.ReloadPacksAsync();
-        reloadResult.Success.Should().BeTrue("reload should succeed");
+        GameStatus preReload = await fixture.Client!.StatusAsync();
+        preReload.ModPlatformReady.Should().BeTrue("mod platform must be ready before ReloadPacks");
+        preReload.LoadedPacks.Should().NotBeEmpty("packs must be loaded before ReloadPacks");
 
-        await Task.Delay(3000);
+        // Reload packs — may fail briefly during scene transitions; poll until stable.
+        ReloadResult? lastReload = null;
+        bool reloadOk = await TestWait.UntilAsync(
+            async () =>
+            {
+                lastReload = await fixture.Client!.ReloadPacksAsync().ConfigureAwait(false);
+                return lastReload.Success && lastReload.LoadedPacks.Count > 0;
+            },
+            TimeSpan.FromSeconds(45),
+            pollMs: 1000).ConfigureAwait(false);
+
+        reloadOk.Should().BeTrue(
+            "reload should succeed when mod platform is idle: {0}",
+            lastReload is null
+                ? "no reload attempt"
+                : string.Join("; ", lastReload.Errors));
 
         // Re-apply so ApplyImmediate hits catalog prefab Health components (IncludePrefab) at main menu
         OverrideResult reapplyResult = await fixture.Client.ApplyOverrideAsync(

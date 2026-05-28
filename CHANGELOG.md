@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- GameLaunch GL-004/GL-005: Phase2 clone trooper test enters gameplay and uses `getCatalog` (not `queryEntities` category); stat reload polls until `ReloadPacks` succeeds; default bootstrap timeout 180s.
+- warfare-aerial: drop empty `stats/aerial_buffs.yaml` load (empty overrides failed `ReloadPacks` / GL-005).
 - GameLaunch bootstrap: pre-flight process cleanup, wait for mod platform + loaded packs; skip `*.disabled` pack folders on deploy/discovery and dedupe duplicate pack IDs (fixes empty `LoadedPacks` after stash integration).
 - `prove-features-gate.ps1`: fail full game gate when all GameLaunch tests skip (xUnit exit 0 on all-skipped).
 - GameLaunch HUD bootstrap test: wait for `CountLabel` with `exists` (HudStrip is alpha-hidden until hover).

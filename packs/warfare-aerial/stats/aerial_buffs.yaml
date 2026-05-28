@@ -1,6 +1,0 @@
-# Aerial Warfare Stat Overrides
-# NOTE: Aerial units are DINOForge-custom entities (AerialUnitComponent),
-# not vanilla DINO ECS archetypes. The stat override system currently only
-# resolves vanilla game component types via reflection. These overrides are
-# placeholders for when custom-component stat injection is implemented.
-overrides: []

@@ -36,7 +36,8 @@ public sealed class GameLaunchFixture : IAsyncLifetime
 {
     private const string GameExecutableName = GameLaunchProcessCleanup.GameProcessBaseName + ".exe";
 
-    private const int DefaultBootstrapTimeoutMs = 90_000;
+    // Cold starts often need ~80s for the named pipe; mod platform + pack load needs more headroom after connect.
+    private const int DefaultBootstrapTimeoutMs = 180_000;
     private const int PollIntervalMs = 500;
     private const int PerAttemptConnectTimeoutMs = 10_000;
     private const int PerAttemptWorldWaitMs = 15_000;

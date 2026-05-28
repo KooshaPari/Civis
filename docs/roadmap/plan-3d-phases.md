@@ -1,7 +1,8 @@
 # Civis 3D — Phase Plan (P-V0 → P-U1)
 
-**Status:** PROPOSED (additive to `PLAN.md` Phases 0–6)
+**Status:** IN PROGRESS (additive to `PLAN.md` Phases 0–6)
 **Date:** 2026-05-22
+**Last updated:** 2026-05-28
 **Branch:** `feat/civis-3d-foundation`
 
 > Per Civis `CLAUDE.md` — agent-time only; no calendar weeks.
@@ -34,18 +35,18 @@ the Phase 4 war system).
 
 ## Phases
 
-| Phase | Crate(s) | FR namespace | Depends on | Acceptance |
-|---|---|---|---|---|
-| **P-V0** Phenotype voxel kernel | (new repo `phenotype-voxel`) | n/a | — | New repo green; SVO + dense leaf storage; deterministic dirty queue; `Mesher` trait; Bevy reference adapter. |
-| **P-V1** Voxel foundation | `civ-voxel`, `civ-protocol-3d`, `clients/voxel-bridge` | FR-CIV-VOXEL-* | P-V0 | Adaptive substrate wired into the engine tick; protocol carries voxel deltas; all three reference clients render empty terrain at 60 FPS. |
-| **P-V2** Building substrate | `civ-build` | FR-CIV-BUILD-* | P-V1 | `BuildingGraph` schema; era grammars (mud-brick → arcology); freehand authoring tools (paint/extrude/loft/mirror/radial/copy-rotate); autonomous demand-driven allocation; all three clients render procedural blocks. |
-| **P-G1** Genetics + species | `civ-genetics`, `civ-species` | FR-CIV-GENETICS-*, FR-CIV-SPECIES-* | (independent) | DNA byte-vectors; mutation + recombination + fitness; speciation thresholds; deterministic DNA → phenotype mapping; WorldBox-style spawn API exposed via protocol. |
-| **P-A1** Civilian agents | `civ-agents`, `civ-diffusion` | FR-CIV-AGENTS-*, FR-CIV-DIFFUSION-* | P-V2, P-G1 | Utility-AI + GOAP + BT layered tick; LOD-aware sim; per-civilian wardrobe + tools state; Bass/Rogers S-curve adoption; civilians visibly age across eras. |
-| **P-L1** Physics-law DB | `civ-laws` | FR-CIV-LAWS-* | (independent) | Versioned RON schema; validator; era unlock graph; futurism extension rules typed as `kind: fictional_extension`. |
-| **P-R1** Hybrid research | `civ-research` | FR-CIV-RESEARCH-* | P-L1, P-A1 | LLM proposal pipeline; hash-keyed cache (blake3); Canonical-mode refusal path; replay determinism holds (ADR-006). |
-| **P-W1** Tactical warfare | `civ-tactics` | FR-CIV-TACTICS-* | P-V1, P-A1 | Voxel-destructible per-soldier combat; doctrine evolution genetic-algo; integration with existing Phase 4 war system. |
-| **P-P1** Planet + moon | `civ-planet` | FR-CIV-PLANET-* | P-V1 | Geology, weather, day/night cycle, moon tides — deterministic. |
-| **P-U1** WorldBox UX | `clients/godot-ref` | FR-CIV-UX-* | P-A1, P-V2 | Spawn-anything UI; era timelapse view; drag-place vehicles/buildings/airports/hangars/ports. |
+| Phase | Crate(s) | FR namespace | Depends on | Acceptance | Status |
+|---|---|---|---|---|---|
+| **P-V0** Phenotype voxel kernel | (new repo `phenotype-voxel`) | n/a | — | New repo green; SVO + dense leaf storage; deterministic dirty queue; `Mesher` trait; Bevy reference adapter. | COMPLETE |
+| **P-V1** Voxel foundation | `civ-voxel`, `civ-protocol-3d`, `clients/voxel-bridge` | FR-CIV-VOXEL-* | P-V0 | Adaptive substrate wired into the engine tick; protocol carries voxel deltas; all three reference clients render empty terrain at 60 FPS. | COMPLETE |
+| **P-W1** Tactical warfare | `civ-tactics` | FR-CIV-TACTICS-* | P-V1, P-A1 | Voxel-destructible per-soldier combat; doctrine evolution genetic-algo; integration with existing Phase 4 war system. | COMPLETE |
+| **P-V2** Building substrate | `civ-build` | FR-CIV-BUILD-* | P-V1 | `BuildingGraph` schema; era grammars (mud-brick → arcology); freehand authoring tools (paint/extrude/loft/mirror/radial/copy-rotate); autonomous demand-driven allocation; all three clients render procedural blocks. | PLANNED |
+| **P-G1** Genetics + species | `civ-genetics`, `civ-species` | FR-CIV-GENETICS-*, FR-CIV-SPECIES-* | (independent) | DNA byte-vectors; mutation + recombination + fitness; speciation thresholds; deterministic DNA → phenotype mapping; WorldBox-style spawn API exposed via protocol. | PLANNED |
+| **P-A1** Civilian agents | `civ-agents`, `civ-diffusion` | FR-CIV-AGENTS-*, FR-CIV-DIFFUSION-* | P-V2, P-G1 | Utility-AI + GOAP + BT layered tick; LOD-aware sim; per-civilian wardrobe + tools state; Bass/Rogers S-curve adoption; civilians visibly age across eras. | PLANNED |
+| **P-L1** Physics-law DB | `civ-laws` | FR-CIV-LAWS-* | (independent) | Versioned RON schema; validator; era unlock graph; futurism extension rules typed as `kind: fictional_extension`. | PLANNED |
+| **P-R1** Hybrid research | `civ-research` | FR-CIV-RESEARCH-* | P-L1, P-A1 | LLM proposal pipeline; hash-keyed cache (blake3); Canonical-mode refusal path; replay determinism holds (ADR-006). | PLANNED |
+| **P-P1** Planet + moon | `civ-planet` | FR-CIV-PLANET-* | P-V1 | Geology, weather, day/night cycle, moon tides — deterministic. | PLANNED |
+| **P-U1** WorldBox UX | `clients/godot-ref` | FR-CIV-UX-* | P-A1, P-V2 | Spawn-anything UI; era timelapse view; drag-place vehicles/buildings/airports/hangars/ports. | PLANNED |
 
 ## Per-phase workflow
 

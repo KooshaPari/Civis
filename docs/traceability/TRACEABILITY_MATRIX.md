@@ -36,8 +36,8 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 | FR-CORE-002 | The engine SHALL produce identical output for identical seed and input sequence (determinism). | CIV-0001 | `crates/engine/src/engine.rs` | `determinism_same_seed_same_output`, `test_determinism`, `determinism_holds_with_all_phases_enabled` | in_progress |
 | FR-CORE-003 | The engine SHALL use ChaCha20Rng seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/lib.rs` (`ChaCha8Rng` today) | *(no dedicated test)* | in_progress |
 | FR-CORE-004 | Each tick SHALL complete within 100 ms wall-clock on the reference hardware profile. | CIV-0001 | `crates/engine/src/engine.rs` | `perf::tick_under_100ms` | planned |
-| FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | *(not present — target `hash_chain.rs`)* | `hash_chain::tick_hash_emitted` | planned |
-| FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | *(not present — target `hash_chain.rs`)* | `hash_chain::chain_includes_prior` | planned |
+| FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::tick_hash_emitted` | implemented |
+| FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::chain_includes_prior` | implemented |
 | FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | *(not present — target `integrity.rs`)* | `integrity::mismatch_event_emitted` | planned |
 | FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`) | `world::no_global_resources` | in_progress |
 | FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/engine.rs` (`Position {x,y}` only) | `grid::axial_roundtrip` | planned |
@@ -281,4 +281,4 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 
 ---
 
-*Last updated: 2026-05-25. Maintainer: add new strategic FRs here only; put 3D IDs in [`fr-3d-matrix.md`](fr-3d-matrix.md) and web IDs in [`fr-web-matrix.md`](fr-web-matrix.md). Cross-check `Cargo.toml` and [`docs/IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) before marking `implemented`.*
+*Last updated: 2026-05-28. Maintainer: add new strategic FRs here only; put 3D IDs in [`fr-3d-matrix.md`](fr-3d-matrix.md) and web IDs in [`fr-web-matrix.md`](fr-web-matrix.md). Cross-check `Cargo.toml` and [`docs/IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) before marking `implemented`.*

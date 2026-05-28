@@ -189,6 +189,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-PROTO3D-001 | Voxel delta frames binary serialize; lossless round-trip. | `crates/protocol-3d/` | `protocol3d::voxel_delta_roundtrip` | implemented |
 | FR-CIV-PROTO3D-002 | Building diff frames carry procedural vs freehand provenance. | `crates/protocol-3d/` | `protocol3d::building_diff_provenance` | implemented |
 | FR-CIV-PROTO3D-008 | Building diff entries + agent `WorldXZ` positions on wire. | `crates/protocol-3d/` | `building_and_agent_position_extensions_roundtrip` | implemented |
+| FR-CIV-PROTO3D-009 | Optional `BuildingGraph` snapshot on `BuildingDiffFrame`. | `crates/protocol-3d/` | `building_graph_snapshot_roundtrips` | implemented |
 
 ---
 

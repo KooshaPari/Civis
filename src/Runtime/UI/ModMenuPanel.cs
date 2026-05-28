@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using BepInEx.Logging;
 using DINOForge.Runtime.Conflicts;
+using DINOForge.Runtime.Profiles;
 using DINOForge.Runtime.Settings;
 using DINOForge.Runtime.Updates;
 using DINOForge.SDK;

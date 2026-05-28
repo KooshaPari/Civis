@@ -253,8 +253,31 @@ namespace DINOForge.Runtime.UI
             panelLe.flexibleWidth = 0.4f;
             panelLe.flexibleHeight = 1;
 
-            // Header
-            CreateTextObj("PackListHeader", panel.transform, "Installed Packs", 18, AccentColor);
+            // Header with colored section bar
+            GameObject headerContainer = CreatePanel("HeaderContainer", panel.transform);
+            Image headerBg = headerContainer.GetComponent<Image>();
+            headerBg.color = new Color(0, 0, 0, 0); // transparent
+
+            VerticalLayoutGroup headerLayout = headerContainer.AddComponent<VerticalLayoutGroup>();
+            headerLayout.padding = new RectOffset(0, 0, 0, 0);
+            headerLayout.spacing = 0;
+            headerLayout.childForceExpandWidth = true;
+            headerLayout.childForceExpandHeight = false;
+
+            LayoutElement headerLe = headerContainer.AddComponent<LayoutElement>();
+            headerLe.preferredHeight = 28;
+            headerLe.flexibleWidth = 1;
+
+            // Top colored bar (4px tall)
+            GameObject colorBar = CreatePanel("AccentBar", headerContainer.transform);
+            Image colorBarImg = colorBar.GetComponent<Image>();
+            colorBarImg.color = AccentColor;
+            LayoutElement colorBarLe = colorBar.AddComponent<LayoutElement>();
+            colorBarLe.preferredHeight = 4;
+            colorBarLe.flexibleWidth = 1;
+
+            // Header text
+            CreateTextObj("PackListHeader", headerContainer.transform, "INSTALLED PACKS", 14, AccentColor);
 
             // Scroll view
             GameObject scrollView = CreateScrollView("PackListScroll", panel.transform);
@@ -290,8 +313,33 @@ namespace DINOForge.Runtime.UI
             detailLe.flexibleWidth = 0.6f;
             detailLe.flexibleHeight = 1;
 
-            // Detail fields
-            _detailTitle = CreateTextObj("DetailTitle", _detailPanel.transform, "", 22, AccentColor).GetComponent<Text>();
+            // Header with colored section bar
+            GameObject detailHeaderContainer = CreatePanel("DetailHeaderContainer", _detailPanel.transform);
+            Image detailHeaderBg = detailHeaderContainer.GetComponent<Image>();
+            detailHeaderBg.color = new Color(0, 0, 0, 0); // transparent
+
+            VerticalLayoutGroup detailHeaderLayout = detailHeaderContainer.AddComponent<VerticalLayoutGroup>();
+            detailHeaderLayout.padding = new RectOffset(0, 0, 0, 0);
+            detailHeaderLayout.spacing = 0;
+            detailHeaderLayout.childForceExpandWidth = true;
+            detailHeaderLayout.childForceExpandHeight = false;
+
+            LayoutElement detailHeaderLe = detailHeaderContainer.AddComponent<LayoutElement>();
+            detailHeaderLe.preferredHeight = 28;
+            detailHeaderLe.flexibleWidth = 1;
+
+            // Top colored bar (4px tall)
+            GameObject detailColorBar = CreatePanel("AccentBar", detailHeaderContainer.transform);
+            Image detailColorBarImg = detailColorBar.GetComponent<Image>();
+            detailColorBarImg.color = AccentColor;
+            LayoutElement detailColorBarLe = detailColorBar.AddComponent<LayoutElement>();
+            detailColorBarLe.preferredHeight = 4;
+            detailColorBarLe.flexibleWidth = 1;
+
+            // Detail fields: title in header, rest below
+            _detailTitle = CreateTextObj("DetailTitle", detailHeaderContainer.transform, "", 18, AccentColor).GetComponent<Text>();
+
+            // Metadata fields
             _detailVersion = CreateLabeledField("Version", _detailPanel.transform);
             _detailAuthor = CreateLabeledField("Author", _detailPanel.transform);
             _detailType = CreateLabeledField("Type", _detailPanel.transform);
@@ -348,7 +396,10 @@ namespace DINOForge.Runtime.UI
             RectTransform rowRt = row.AddComponent<RectTransform>();
 
             Image rowBg = row.AddComponent<Image>();
-            rowBg.color = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
+            // Zebra striping: even rows #1A1F2E / odd rows #1F2536
+            bool isEvenRow = index % 2 == 0;
+            Color stripedBg = isEvenRow ? new Color(0.102f, 0.122f, 0.180f, 1f) : new Color(0.122f, 0.145f, 0.212f, 1f);
+            rowBg.color = isSelected ? SelectedColor : stripedBg;
 
             HorizontalLayoutGroup rowLayout = row.AddComponent<HorizontalLayoutGroup>();
             rowLayout.padding = new RectOffset(8, 8, 4, 4);
@@ -367,10 +418,11 @@ namespace DINOForge.Runtime.UI
             Button rowButton = row.AddComponent<Button>();
             rowButton.targetGraphic = rowBg;
             ColorBlock cb = rowButton.colors;
-            cb.normalColor = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
+            cb.normalColor = isSelected ? SelectedColor : stripedBg;
             cb.highlightedColor = RowHoverColor;
             cb.pressedColor = SelectedColor;
-            cb.selectedColor = isSelected ? SelectedColor : new Color(0, 0, 0, 0);
+            cb.selectedColor = isSelected ? SelectedColor : stripedBg;
+            cb.fadeDuration = 0.05f;
             rowButton.colors = cb;
 
             rowButton.onClick.AddListener(() =>

@@ -12,6 +12,8 @@ namespace DINOForge.Runtime.UI
     /// </summary>
     public static class UiBuilder
     {
+        private static Font? _cachedFont;
+        private static bool _fontResolved;
         // ── Palette ─────────────────────────────────────────────────────────────
         public static readonly Color BgDeep = HexColor("#0d1a0f", 0.92f);
         public static readonly Color BgSurface = HexColor("#1c2b1e", 1f);
@@ -129,27 +131,25 @@ namespace DINOForge.Runtime.UI
             t.fontSize = fontSize;
             t.color = color;
             t.alignment = alignment;
-            // Unity 2021.3 renamed the built-in font from "Arial.ttf" to "LegacyRuntime.ttf".
-            // Try both names, then fall back to OS font, then leave the Text default font intact
-            // (never assign null — a null font causes Text to render nothing).
-            Font? resolvedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (resolvedFont == null)
-                resolvedFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (resolvedFont == null)
-                resolvedFont = Resources.Load<Font>("Arial");
-            if (resolvedFont == null)
+            if (!_fontResolved)
             {
-                // Last resort: create a font from an OS-installed typeface.
-                resolvedFont = Font.CreateDynamicFontFromOSFont("Arial", fontSize);
+                _fontResolved = true;
+                _cachedFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (_cachedFont == null)
+                    _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (_cachedFont == null)
+                    _cachedFont = Font.CreateDynamicFontFromOSFont("Arial", 14);
             }
-            if (resolvedFont != null)
-                t.font = resolvedFont;
-            // If resolvedFont is still null, leave t.font as the Unity default (never assign null).
+            if (_cachedFont != null)
+            {
+                t.font = _cachedFont;
+                _cachedFont.RequestCharactersInTexture(text, fontSize,
+                    bold ? FontStyle.Bold : FontStyle.Normal);
+            }
             t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
             t.supportRichText = true;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
-            t.verticalOverflow = VerticalWrapMode.Overflow;  // Allow vertical overflow to prevent clipping
+            t.verticalOverflow = VerticalWrapMode.Overflow;
 
             return t;
         }

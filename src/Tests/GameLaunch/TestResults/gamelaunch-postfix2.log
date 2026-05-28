@@ -1,0 +1,302 @@
+
+Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:01:09.20]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay [28 s]
+  Error Message:
+   Expected modsVisible to be True because native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe), but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 209
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 54
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:16.12]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [SKIP]
+  Skipped DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [1 ms]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [28 s]
+  Error Message:
+   Expected modsVisible to be True because native Mods button should be injected on main menu (poll, LoadScene, or clickButton probe), but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 209
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 112
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:44.75]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [27 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'queryUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.QueryModsButtonVisibleAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 225
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.<PollModsButtonVisibleAsync>b__9_0() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 216
+   at DINOForge.Tests.Support.TestWait.UntilAsync(Func`1 predicate, TimeSpan timeout, Int32 pollMs, CancellationToken ct) in C:\Users\koosh\Dino\src\Tests\Support\TestWait.cs:line 50
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PollModsButtonVisibleAsync(TimeSpan timeout, Int32 pollMs) in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 215
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 198
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 143
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:12.22]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [FAIL]
+[xUnit.net 00:02:15.28]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'queryUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.QueryModsButtonVisibleAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 225
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.<PollModsButtonVisibleAsync>b__9_0() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 216
+   at DINOForge.Tests.Support.TestWait.UntilAsync(Func`1 predicate, TimeSpan timeout, Int32 pollMs, CancellationToken ct) in C:\Users\koosh\Dino\src\Tests\Support\TestWait.cs:line 50
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PollModsButtonVisibleAsync(TimeSpan timeout, Int32 pollMs) in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 215
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.EnsureMainMenuWithModsButtonAsync() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 188
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 38
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:18.33]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_TogglesPersistentDebugOverlay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_TogglesPersistentDebugOverlay [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'toggleUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_TogglesPersistentDebugOverlay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 66
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:21.37]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.RuntimeDriver_Survives600FramesAndBeyond [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.RuntimeDriver_Survives600FramesAndBeyond [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.RuntimeDriver_Survives600FramesAndBeyond() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 251
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:24.41]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F10_ModMenuToggle_PreservesRuntime [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F10_ModMenuToggle_PreservesRuntime [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F10_ModMenuToggle_PreservesRuntime() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 173
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:27.44]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'toggleUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 107
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:30.49]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'loadScene' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 32
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:33.56]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_AssertDebugPanelVisible_AtMainMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_AssertDebugPanelVisible_AtMainMenu [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'toggleUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_AssertDebugPanelVisible_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 89
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:36.63]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'startGame' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 136
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:40.15]     DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_Loads28Units_InLiveCatalog [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_Loads28Units_InLiveCatalog [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_Loads28Units_InLiveCatalog() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchPackTests.cs:line 53
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:43.18]     DINOForge.Tests.GameLaunch.GameLaunchPackTests.Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchPackTests.Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchPackTests.Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchPackTests.cs:line 31
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:46.26]     DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_IsListedInLoadedPacks [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_IsListedInLoadedPacks [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_IsListedInLoadedPacks() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchPackTests.cs:line 87
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:49.30]     DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_Ping_RoundTripUnder500Ms [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_Ping_RoundTripUnder500Ms [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'ping' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_Ping_RoundTripUnder500Ms() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchSmokeTests.cs:line 34
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:52.34]     DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_IsHealthy_AfterBootstrap [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_IsHealthy_AfterBootstrap [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'status' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_IsHealthy_AfterBootstrap() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchSmokeTests.cs:line 23
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:55.39]     DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'applyOverride' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchStatTests.cs:line 26
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:02:58.42]     DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_SecondToggle_ClosesModMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_SecondToggle_ClosesModMenu [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'toggleUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_SecondToggle_ClosesModMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchUiTests.cs:line 41
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+[xUnit.net 00:03:01.48]     DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_F10_TogglesModMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_F10_TogglesModMenu [3 s]
+  Error Message:
+   DINOForge.Bridge.Client.GameClientException : Failed to execute 'toggleUi' after 4 attempts.
+---- System.IO.IOException : Pipe is broken.
+  Stack Trace:
+     at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 514
+   at DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_F10_TogglesModMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchUiTests.cs:line 25
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.IO.Pipes.PipeStream.CheckWriteOperations()
+   at System.IO.StreamWriter.<FlushAsyncInternal>g__Core|78_0(Boolean flushStream, Boolean flushEncoder, CancellationToken cancellationToken)
+   at System.IO.StreamWriter.WriteAsyncInternal(ReadOnlyMemory`1 source, Boolean appendNewLine, CancellationToken cancellationToken)
+   at DINOForge.Bridge.Client.GameClient.SendRequestCoreAsync[T](String method, Object parameters, CancellationToken ct, Nullable`1 sendTimeout, Nullable`1 readTimeout) in C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs:line 557
+   at DINOForge.Bridge.Client.GameClient.SendRequestAsync[T](String method, Object parameters, CancellationToken ct)
+
+Failed!  - Failed:    19, Passed:     8, Skipped:     1, Total:    28, Duration: 2 m 59 s - DINOForge.Tests.GameLaunch.dll (net11.0)

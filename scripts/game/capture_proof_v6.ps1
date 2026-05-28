@@ -200,8 +200,19 @@ function Wait-For-Main-Menu {
 function Request-Screenshot {
     param([string]$OutputPath, [int]$TimeoutSeconds = 60)
     Log-Step "Requesting screenshot: $OutputPath"
-    Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue
-    Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    if (Test-Path $DoneFile) {
+        [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+            (Resolve-Path $DoneFile).ProviderPath,
+            [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+            [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+    }
+    if (Test-Path $OutputPath) {
+        [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+            (Resolve-Path $OutputPath).ProviderPath,
+            [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+            [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+    }
     $hw = [WF8]::FindWindowByPid([uint32]$script:pid2)
     FocusGame $hw
     Start-Sleep -Milliseconds 300
@@ -209,7 +220,10 @@ function Request-Screenshot {
     $dl = [DateTime]::Now.AddSeconds($TimeoutSeconds)
     while ([DateTime]::Now -lt $dl) {
         if (Test-Path $DoneFile) {
-            Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+                (Resolve-Path $DoneFile).ProviderPath,
+                [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
             Start-Sleep -Milliseconds 800
             if (Test-Path $OutputPath) {
                 $item = Get-Item $OutputPath
@@ -235,8 +249,19 @@ Log-Step "========== DINOForge Proof-of-Features Capture v6 =========="
 # Kill any existing game instances
 Log-Step "Killing existing game instances..."
 Get-Process -Name "Diplomacy is Not an Option" -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Kill() } catch {} }
-Remove-Item $ReqFile -Force -ErrorAction SilentlyContinue
-Remove-Item $DoneFile -Force -ErrorAction SilentlyContinue
+Add-Type -AssemblyName Microsoft.VisualBasic
+if (Test-Path $ReqFile) {
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+        (Resolve-Path $ReqFile).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+}
+if (Test-Path $DoneFile) {
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+        (Resolve-Path $DoneFile).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+}
 Start-Sleep -Seconds 3
 
 # Launch game

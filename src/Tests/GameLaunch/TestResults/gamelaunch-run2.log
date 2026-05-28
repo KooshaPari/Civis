@@ -1,0 +1,100 @@
+
+Test run for C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll (.NETCoreApp,Version=v11.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:33.36]     DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad [31 s]
+  Error Message:
+   Expected patchExists to be True because AssetSwapSystem phase 1 should write patched bundles to G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_patched_bundles or log swap success after frame 600, but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchAssetSwapTests.cs:line 51
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:44.58]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [SKIP]
+  Skipped DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened [1 ms]
+[xUnit.net 00:00:50.61]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges [6 s]
+  Error Message:
+   Expected finalQuery.MatchCount to be greater than 0 because Mods button should persist after scene transition cycle, but found 0.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.BeGreaterThan(T expected, String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 122
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:52.56]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection [1 s]
+  Error Message:
+   Expected modsQuery.MatchCount to be greater than 0 because Mods button must be injected before comparing visual style, but found 0.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.BeGreaterThan(T expected, String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 139
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:54.49]     DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection [1 s]
+  Error Message:
+   Expected result.MatchCount to be greater than 0 because UI should contain a 'Mods' button or element in the main menu, but found 0.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.BeGreaterThan(T expected, String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs:line 36
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:12.41]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu [3 s]
+  Error Message:
+   Expected modMenuPanel.MatchedNode!.Visible to be False because ModMenuPanel should start hidden (CanvasGroup alpha 0) before F10 toggle, but found True.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeFalse(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 50
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:19.75]     DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay [6 s]
+  Error Message:
+   Expected debugWait.Ready to be True because debug panel should be visible after F9 toggle during gameplay, but found False.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs:line 148
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:25.25]     DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload [FAIL]
+  Failed DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload [3 s]
+  Error Message:
+   Expected reapplyResult.ModifiedCount to be greater than 0 because post-reload apply should touch Health on catalog prefab entities, but found 0.
+  Stack Trace:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.BeGreaterThan(T expected, String because, Object[] becauseArgs)
+   at DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchStatTests.cs:line 48
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     7, Passed:    20, Skipped:     1, Total:    28, Duration: 1 m 25 s - DINOForge.Tests.GameLaunch.dll (net11.0)

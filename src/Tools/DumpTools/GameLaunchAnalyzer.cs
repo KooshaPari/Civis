@@ -479,9 +479,9 @@ namespace DINOForge.Tools.DumpTools
     public class FailureAnalysisResult
     {
         public string RootCause { get; set; } = "Unknown";
-        public List<string> AffectedSystems { get; set; } = new();
-        public List<string> AllLogs { get; set; } = new();
-        public List<string> TimelineLastEvents { get; set; } = new();
+        public List<string> AffectedSystems { get; set; } = new(); // public-mutable-ok: result accumulator populated during analysis
+        public List<string> AllLogs { get; set; } = new(); // public-mutable-ok: result accumulator populated during analysis
+        public List<string> TimelineLastEvents { get; set; } = new(); // public-mutable-ok: result accumulator populated during analysis
         public string? LastSuccessfulEvent { get; set; }
         public string ErrorPattern { get; set; } = "Unknown error";
     }

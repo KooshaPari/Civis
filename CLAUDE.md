@@ -164,12 +164,12 @@ DINOForge/
       Scenario/          #   Scenario domain plugin (scripting, conditions, validation)
       UI/                #   UI/UX domain plugin (HUD injection, menu management)
     Tools/
-      Cli/               #   dinoforge CLI — 21 commands:
+      Cli/               #   dinoforge CLI — 22 commands:
                          #     Core:    status, install (status|repair), query, dump, override,
                          #              resources, verify-pack, reload, screenshot, record,
                          #              component-map
                          #     UI:      ui-tree, ui-query, ui-click, ui-wait, ui-expect
-                         #     Packs:   pack, watch
+                         #     Packs:   pack, watch, new
                          #     Assets:  assetctl (incl. asset-library), sync
       DinoforgeMcp/      #   FastMCP server for Claude Code integration (HTTP/SSE + stdio)
       PackCompiler/      #   Pack compiler: validate, build, package packs

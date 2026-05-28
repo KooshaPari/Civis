@@ -64,6 +64,7 @@ DINOForge specifications are divided into two primary documents:
 | SPEC-005 | [Duplicate Instance Bypass](./SPEC-005-duplicate-instance-bypass.md) | Cancelled / Superseded |
 | SPEC-006 | [Prove-Features Video Pipeline v1](./SPEC-006-prove-features-video-pipeline.md) | Superseded |
 | SPEC-007 | [Runtime Features Baseline](./SPEC-007-runtime-features-baseline.md) | Active |
+| SPEC-008 | [Mod Conflict Detection Engine](./SPEC-008-mod-conflict-detection-engine.md) | Proposed |
 | M13 | [Runtime Survival, HMR & Concurrency](./M13-runtime-survival-hmr-concurrency.md) | Draft |
 
 **Supersession notes**:

@@ -128,4 +128,4 @@ if ($isWindows) {
 Write-Host "✓ $toolName installed successfully" -ForegroundColor Green
 
 # Cleanup
-Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: installer download temp dir in $env:TEMP

@@ -255,6 +255,66 @@ public class C
             diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
         }
 
+        // Gap #1: `catch { return; }` — return-only with no logging (void return)
+        [Fact]
+        public async Task ReturnOnlyBodyVoid_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public class C
+{
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception) { return; }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
+        // Gap #1: `catch (Exception ex) { return; }` — return-only with exception variable (void return)
+        [Fact]
+        public async Task ReturnOnlyBodyWithExceptionVar_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public class C
+{
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception ex) { return; }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
+        // Gap #3: `catch (Exception ex) { /* comment only */ }` — comment-only body
+        [Fact]
+        public async Task CommentOnlyBody_ReportsDF0111()
+        {
+            const string source = @"
+using System;
+
+public class C
+{
+    public void M()
+    {
+        try { System.Console.WriteLine(); }
+        catch (Exception ex)
+        {
+            // This is just a comment, no executable code
+        }
+    }
+}";
+            var diagnostics = await RunAnalyzerAsync(source);
+            diagnostics.Should().ContainSingle().Which.Id.Should().Be("DF0111");
+        }
+
         // Gap F: `catch { ; }` — empty statement only
         [Fact]
         public async Task EmptyStatementBody_ReportsDF0111()

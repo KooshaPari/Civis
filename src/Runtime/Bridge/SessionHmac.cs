@@ -75,16 +75,16 @@ namespace DINOForge.Runtime.Bridge
                 + "\",\"world_frame\":" + worldFrame.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 + "}";
             byte[] bytes = Encoding.UTF8.GetBytes(canonical);
-            // HMACSHA256 instances are NOT thread-safe (per MS docs). Construct
-            // per-call against the immutable key material so concurrent receipt
-            // signing from multiple threads cannot corrupt internal state.
-            // ctor cost is negligible (~allocation + key copy); avoids the
-            // serialization bottleneck of a shared-instance + lock.
+            // HMACSHA256 instances are NOT thread-safe (per MS docs). Clone the
+            // key inside the lock to prevent Dispose() from zeroing it mid-use,
+            // then construct a per-call HMACSHA256 outside the lock.
+            byte[] keyCopy;
             lock (_stateLock)
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(SessionHmac));
+                keyCopy = (byte[])KeyMaterial.Clone();
             }
-            using var hmac = new HMACSHA256(KeyMaterial);
+            using var hmac = new HMACSHA256(keyCopy);
             return ToHexLower(hmac.ComputeHash(bytes));
         }
 

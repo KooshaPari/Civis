@@ -182,7 +182,7 @@ try {
         $targetLink = "$sandboxPath\$($link.name)"
         if (Test-Path $link.source) {
             if (Test-Path $targetLink) {
-                Remove-Item $targetLink -ErrorAction SilentlyContinue
+                Remove-Item $targetLink -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: sandbox symlink path, replaced immediately by mklink
             }
             New-Item -ItemType SymbolicLink -Path $targetLink -Target $link.source -Force -ErrorAction SilentlyContinue | Out-Null
             if (Test-Path $targetLink) {

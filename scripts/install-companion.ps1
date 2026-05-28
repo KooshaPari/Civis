@@ -93,11 +93,16 @@ try {
 # ── Extract ────────────────────────────────────────────────────────────────────
 Write-Step "Installing to $InstallDir..."
 if (Test-Path $InstallDir) {
-    Remove-Item $InstallDir -Recurse -Force
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+        (Resolve-Path $InstallDir).ProviderPath,
+        [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+        [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
 }
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Expand-Archive -Path $ZipTmp -DestinationPath $InstallDir -Force
-Remove-Item $ZipTmp -Force
+# ZipTmp is in $env:TEMP — temp directory cleanup (exempt from Recycle Bin protocol)
+Remove-Item $ZipTmp -Force # remove-item-ok: temp-cleanup-ok: zip archive in $env:TEMP, not a repo artifact
 Write-OK "Extracted to $InstallDir"
 
 # ── Desktop shortcut ──────────────────────────────────────────────────────────

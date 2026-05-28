@@ -18,7 +18,7 @@ namespace DINOForge.Tests
         // Represents the contract: a JSON object with a "disabled" array of pack IDs.
         private sealed class DisabledPacksDto
         {
-            public List<string> Disabled { get; set; } = new List<string>();
+            public List<string> Disabled { get; set; } = new List<string>(); // public-mutable-ok: JSON deserializer test fixture requires mutable List
         }
 
         // ─── serialisation ────────────────────────────────────────────────────

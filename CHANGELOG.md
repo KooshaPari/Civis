@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - GameLaunch bootstrap: pre-flight process cleanup, wait for mod platform + loaded packs; skip `*.disabled` pack folders on deploy/discovery and dedupe duplicate pack IDs (fixes empty `LoadedPacks` after stash integration).
+- `prove-features-gate.ps1`: fail full game gate when all GameLaunch tests skip (xUnit exit 0 on all-skipped).
+- GameLaunch HUD bootstrap test: wait for `CountLabel` with `exists` (HudStrip is alpha-hidden until hover).
 - Pre-push unit tests: stabilize GameClient connect/send timeouts under CI load, DumpTools subprocess build-once + kill-on-timeout, framing tests assert timeout values not wall clock.
 - Post-PR188 follow-up: GameLaunch attach-mode bridge restart, Sonar batch-4 exclusions, packages.lock.json refresh for CI.
 - `PackLoads` SDK model: add missing YAML load lists (`resources`, `economy_profiles`, etc.) so `ModPlatform` and `DeployToGame` builds succeed locally.

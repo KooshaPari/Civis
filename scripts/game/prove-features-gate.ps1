@@ -89,6 +89,24 @@ function Stop-StrayGameLaunchProcesses {
     }
 }
 
+function Test-GameLaunchAllSkipped([string]$TestOutput) {
+    if ([string]::IsNullOrWhiteSpace($TestOutput)) {
+        return $false
+    }
+    if ($TestOutput -notmatch 'Skipped:\s+(\d+),\s+Total:\s+(\d+)') {
+        return $false
+    }
+    $skipped = [int]$Matches[1]
+    $total = [int]$Matches[2]
+    if ($total -le 0 -or $skipped -ne $total) {
+        return $false
+    }
+    if ($TestOutput -match 'Passed:\s+(\d+)') {
+        return [int]$Matches[1] -eq 0
+    }
+    return $true
+}
+
 function Resolve-DinoGameExePath {
     $path = $env:DINO_GAME_PATH
     if ([string]::IsNullOrWhiteSpace($path)) {
@@ -278,13 +296,18 @@ function Invoke-FullGate {
         }
 
         $gameExit = 0
+        $gameTestOutput = ''
         try {
             Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
-            dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
+            $gameTestOutput = dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
                 -c Release `
                 --filter 'Category=GameLaunch' `
-                --verbosity minimal
+                --verbosity minimal 2>&1 | Out-String
             $gameExit = $LASTEXITCODE
+            if ($gameExit -eq 0 -and (Test-GameLaunchAllSkipped $gameTestOutput)) {
+                Write-Gate 'GameLaunch tests all skipped (fixture not initialized) — treating as failure' 'Error'
+                $gameExit = 1
+            }
         }
         finally {
             if (-not (Test-GameAttachOnlyMode)) {

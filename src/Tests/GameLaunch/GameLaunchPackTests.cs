@@ -33,8 +33,23 @@ public sealed class GameLaunchPackTests(GameLaunchFixture fixture)
         status.LoadedPacks.Should().NotBeEmpty(
             "status JSON should list pack IDs from ModPlatform._lastLoadResult.LoadedPacks");
 
+        // Ensure main menu + DFCanvas are active (cold start can report packs before UGUI is built).
+        LoadSceneResult sceneResult = await fixture.Client.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex);
+        if (sceneResult.Success)
+        {
+            await Task.Delay(3000);
+        }
+
+        // DFCanvas/HudStrip may finish building after mod platform reports ready (alpha=0 strip is "exists" not "visible").
+        UiWaitResult hudReady = await fixture.Client.WaitForUiAsync(
+            "name=CountLabel",
+            "exists",
+            timeoutMs: 15_000);
+        hudReady.Ready.Should().BeTrue(
+            "HudStrip CountLabel should exist on DFCanvas after bootstrap (DFCanvas may lag mod platform)");
+
         UiActionResult hudLabel = await fixture.Client.QueryUiAsync("name=CountLabel");
-        hudLabel.Success.Should().BeTrue("HudStrip CountLabel should exist on DFCanvas after bootstrap");
+        hudLabel.Success.Should().BeTrue("HudStrip CountLabel should be queryable after waitForUi");
         hudLabel.MatchedNode.Should().NotBeNull();
         hudLabel.MatchedNode!.Label.Should().NotBe("0 packs",
             "HUD strip label should reflect OnHudCountsChanged, not the Build() placeholder");

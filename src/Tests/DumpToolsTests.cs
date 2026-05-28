@@ -1,19 +1,61 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
 namespace DINOForge.Tests
 {
+    [CollectionDefinition("DumpTools", DisableParallelization = true)]
+    public class DumpToolsCollection;
+
     /// <summary>
     /// Integration tests for DumpTools command-line tool.
     /// Exercises the parse path for dump files by running against a synthetic fixture.
     /// </summary>
+    [Collection("DumpTools")]
     public class DumpToolsTests
     {
+        private static readonly Lazy<string> DumpToolsProjectPath = new(() =>
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Tools", "DumpTools", "DINOForge.Tools.DumpTools.csproj")));
+
+        private static readonly object BuildGate = new();
+        private static bool _dumpToolsBuilt;
+
+        public DumpToolsTests()
+        {
+            EnsureDumpToolsBuilt();
+        }
+
+        private static void EnsureDumpToolsBuilt()
+        {
+            lock (BuildGate)
+            {
+                if (_dumpToolsBuilt)
+                {
+                    return;
+                }
+
+                var build = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"build \"{DumpToolsProjectPath.Value}\" -c Release --verbosity quiet",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                build!.WaitForExit();
+                if (build.ExitCode != 0)
+                {
+                    throw new InvalidOperationException("Failed to build DumpTools for integration tests");
+                }
+
+                _dumpToolsBuilt = true;
+            }
+        }
+
         private string GetFixturePath()
         {
             string repoRoot = GetRepoRoot();
@@ -57,7 +99,7 @@ namespace DINOForge.Tests
             var psi = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project src/Tools/DumpTools -- {args}",
+                Arguments = $"run --project \"{DumpToolsProjectPath.Value}\" -c Release --no-build -- {args}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -67,13 +109,28 @@ namespace DINOForge.Tests
 
             using var proc = Process.Start(psi);
             if (proc == null)
+            {
                 throw new InvalidOperationException("Failed to start DumpTools process");
+            }
 
             // Read streams while the process runs to avoid pipe buffer deadlock.
             var stdoutTask = proc.StandardOutput.ReadToEndAsync();
             var stderrTask = proc.StandardError.ReadToEndAsync();
 
-            bool exited = proc.WaitForExit(60_000);
+            const int timeoutMs = 60_000;
+            bool exited = proc.WaitForExit(timeoutMs);
+            if (!exited)
+            {
+                try
+                {
+                    proc.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Process may have exited between WaitForExit and Kill.
+                }
+            }
+
             exited.Should().BeTrue("DumpTools process should exit within 60 seconds");
 
             Task.WaitAll(stdoutTask, stderrTask);
@@ -188,7 +245,9 @@ namespace DINOForge.Tests
             finally
             {
                 if (Directory.Exists(tempDir))
+                {
                     Directory.Delete(tempDir, true);
+                }
             }
         }
     }

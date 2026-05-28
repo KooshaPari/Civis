@@ -172,7 +172,9 @@ public sealed class GameClient : IGameClient, IDisposable
                 // NamedPipeClientStream.ConnectAsync may ignore cancellation on some hosts; race connect
                 // against an independent delay and cancel the linked token when the delay wins.
                 Task connectTask = _pipe.ConnectAsync(linkedCts.Token);
-                Task delayTask = Task.Delay(timeout, linkedCts.Token);
+                // Wall-clock delay (no linked token): under CI thread-pool saturation a linked
+                // Task.Delay can fail to win the race before ConnectAsync's ~30s OS timeout.
+                Task delayTask = Task.Delay(timeout);
                 Task<Task> whenAnyTask = Task.WhenAny(connectTask, delayTask);
                 Task finished = await whenAnyTask.ConfigureAwait(false);
                 if (finished != connectTask)
@@ -598,7 +600,14 @@ public sealed class GameClient : IGameClient, IDisposable
                 else
                 {
                     // null-forgiveness-ok: _writer set in ConnectAsync before any write
-                    await Task.Run(() => _writer!.WriteLineAsync(requestJson), sendLinkedCts.Token).ConfigureAwait(false);
+                    Task writeTask = _writer!.WriteLineAsync(requestJson);
+                    if (await Task.WhenAny(writeTask, Task.Delay(effectiveSendTimeout)).ConfigureAwait(false) != writeTask)
+                    {
+                        sendTimeoutCts.Cancel(); // NOSONAR S6966 — CancelAsync requires netstandard2.1+
+                        throw new OperationCanceledException(sendTimeoutCts.Token);
+                    }
+
+                    await writeTask.ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException ex) when (sendTimeoutCts.Token.IsCancellationRequested)

@@ -535,7 +535,7 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
     }
     obj.insert(
         "climate".to_owned(),
-        serde_json::to_value(&fields.climate).unwrap_or(Value::Null),
+        serde_json::to_value(fields.climate).unwrap_or(Value::Null),
     );
     Value::Object(obj)
 }

@@ -2900,6 +2900,7 @@ dependencies = [
  "civ-engine",
  "civ-mod-host",
  "civ-protocol-3d",
+ "civ-save-db",
  "civ-voxel",
  "futures",
  "http 1.4.1",
@@ -2912,6 +2913,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2963,13 +2965,16 @@ dependencies = [
  "civ-server",
  "civ-tactics",
  "civ-voxel",
+ "ed25519-dalek",
  "futures",
  "hecs",
  "http-body-util",
+ "rand 0.8.6",
  "reqwest",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tower",

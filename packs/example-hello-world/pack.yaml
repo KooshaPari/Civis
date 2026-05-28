@@ -1,0 +1,32 @@
+# DINOForge Hello World Example Pack
+# A minimal example demonstrating core modding concepts.
+# Use this as a template for your first mod pack.
+
+id: example-hello-world
+name: Hello World Example
+version: 1.0.0
+framework_version: ">=0.24.0 <0.26.0"
+author: DINOForge
+type: content
+description: |
+  A minimal example mod pack demonstrating core DINOForge concepts:
+
+  - Custom faction declaration (HelloWorld faction)
+  - Unit override (Swordsman stat boost)
+  - Setting configuration in pack.yaml
+
+  This pack is safe to enable alongside other mods. It adds no conflicts
+  and loads early (load_order: 50) to ensure stable integration.
+
+  Use this as a template for your first pack. Every file is documented
+  with "Why this matters" explanations.
+
+depends_on: []
+conflicts_with: []
+load_order: 50
+
+loads:
+  factions:
+    - factions/hello-world-faction.yaml
+  units:
+    - units/hello-world-swordsman.yaml

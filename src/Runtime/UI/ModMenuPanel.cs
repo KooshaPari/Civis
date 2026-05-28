@@ -113,6 +113,15 @@ namespace DINOForge.Runtime.UI
         private RectTransform? _updateBannerContent;
         private const float UpdateBannerRowHeight = 24f;
 
+        // ── Profile manager (#918) ────────────────────────────────────────────
+        private Profiles.ProfileManager? _profileManager;
+        private Dropdown? _profileDropdown;
+        private InputField? _profileNameInput;
+        private GameObject? _profileSaveModal;
+
+        /// <summary>Callback invoked when the user loads a profile. Arg = list of pack IDs to enable.</summary>
+        public Action<System.Collections.Generic.IReadOnlyList<string>>? OnProfileLoaded { get; set; }
+
         // ── Pack settings panel (#925) ────────────────────────────────────────
         /// <summary>Container for the per-pack settings section in the detail pane.</summary>
         private GameObject? _settingsSection;
@@ -150,6 +159,19 @@ namespace DINOForge.Runtime.UI
         public void SetConflictResolutionStore(ConflictResolutionStore store)
         {
             _conflictStore = store;
+        }
+
+        /// <summary>
+        /// Provides the profile manager that backs the Profiles section (#918).
+        /// Call before or after Build(); safe to call at any time.
+        /// When set before Build() the profile dropdown is populated immediately;
+        /// when set after Build() the dropdown is refreshed on the next call to
+        /// <see cref="RefreshProfileDropdown"/>.
+        /// </summary>
+        internal void SetProfileManager(Profiles.ProfileManager profileManager)
+        {
+            _profileManager = profileManager;
+            RefreshProfileDropdown();
         }
 
         /// <summary>
@@ -477,27 +499,39 @@ namespace DINOForge.Runtime.UI
 
         private void BuildHeader(Transform parent)
         {
-            GameObject header = UiBuilder.MakePanel(parent, "Header",
-                UiBuilder.BgSurface, new Vector2(0f, HeaderHeight));
-            RectTransform hRt = header.GetComponent<RectTransform>();
-            hRt.anchorMin = new Vector2(0f, 1f);
-            hRt.anchorMax = Vector2.one;
-            hRt.pivot = new Vector2(0.5f, 1f);
-            hRt.offsetMin = Vector2.zero;
-            hRt.offsetMax = Vector2.zero;
-            hRt.sizeDelta = new Vector2(0f, HeaderHeight);
+            // Gradient background: top dark gray #1A1F2E → bottom slightly lighter #232938
+            GameObject headerGradient = UiBuilder.MakePanel(parent, "HeaderGradient",
+                HexColor("#1A1F2E"), new Vector2(0f, HeaderHeight));
+            RectTransform hGradRt = headerGradient.GetComponent<RectTransform>();
+            hGradRt.anchorMin = new Vector2(0f, 1f);
+            hGradRt.anchorMax = Vector2.one;
+            hGradRt.pivot = new Vector2(0.5f, 1f);
+            hGradRt.offsetMin = Vector2.zero;
+            hGradRt.offsetMax = Vector2.zero;
+            hGradRt.sizeDelta = new Vector2(0f, HeaderHeight);
 
-            UiBuilder.AddHorizontalLayout(header, 8f, new RectOffset(12, 8, 6, 6));
+            // Overlay gradient layer (lighter at bottom)
+            GameObject headerGradient2 = UiBuilder.MakePanel(headerGradient.transform, "GradientOverlay",
+                HexColor("#232938"), new Vector2(0f, HeaderHeight));
+            RectTransform hGrad2Rt = headerGradient2.GetComponent<RectTransform>();
+            hGrad2Rt.anchorMin = Vector2.zero;
+            hGrad2Rt.anchorMax = Vector2.one;
+            hGrad2Rt.offsetMin = Vector2.zero;
+            hGrad2Rt.offsetMax = Vector2.zero;
+            Image grad2Img = headerGradient2.GetComponent<Image>();
+            grad2Img.color = new Color(grad2Img.color.r, grad2Img.color.g, grad2Img.color.b, 0.4f);
+
+            UiBuilder.AddHorizontalLayout(headerGradient, 8f, new RectOffset(12, 8, 6, 6));
 
             // Title
-            Text title = UiBuilder.MakeText(header.transform, "Title", "DINOForge", 16,
+            Text title = UiBuilder.MakeText(headerGradient.transform, "Title", "DINOForge", 16,
                 UiBuilder.Accent, bold: true);
             LayoutElement titleLe = title.gameObject.AddComponent<LayoutElement>();
             titleLe.preferredWidth = 120f;
             titleLe.minWidth = 80f;
 
             // Status text (flexible)
-            _headerStatusText = UiBuilder.MakeText(header.transform, "Status",
+            _headerStatusText = UiBuilder.MakeText(headerGradient.transform, "Status",
                 BuildStatusLine(), 12, UiBuilder.TextSecondary);
             LayoutElement statusLe = _headerStatusText.gameObject.AddComponent<LayoutElement>();
             statusLe.preferredWidth = 300f;
@@ -505,7 +539,7 @@ namespace DINOForge.Runtime.UI
 
             // Close button
             Button closeBtn = UiBuilder.MakeButton(
-                header.transform, "CloseBtn", "×",
+                headerGradient.transform, "CloseBtn", "×",
                 UiBuilder.BgDeep, UiBuilder.TextSecondary,
                 () =>
                 {
@@ -525,6 +559,14 @@ namespace DINOForge.Runtime.UI
             sepRt.pivot = new Vector2(0.5f, 1f);
             sepRt.anchoredPosition = new Vector2(0f, -HeaderHeight);
             sepRt.sizeDelta = new Vector2(0f, 1f);
+        }
+
+        /// <summary>Helper to create a hex color without needing to reference external hex parser.</summary>
+        private static Color HexColor(string hex)
+        {
+            if (ColorUtility.TryParseHtmlString(hex, out Color c))
+                return c;
+            return new Color(1f, 0f, 1f, 1f); // magenta fallback
         }
 
         private void BuildBody(Transform parent)
@@ -1091,6 +1133,36 @@ namespace DINOForge.Runtime.UI
         /// <summary>Builds the filter control UI (search, tier filter, state filter, sort) above the pack list.</summary>
         private void BuildListFilters(Transform parent)
         {
+            // Section header bar with colored accent
+            GameObject headerBar = new GameObject("FilterHeader", typeof(RectTransform));
+            headerBar.transform.SetParent(parent, false);
+            RectTransform headerBarRt = headerBar.GetComponent<RectTransform>();
+
+            // Top colored bar (4px)
+            GameObject colorBar = UiBuilder.MakePanel(headerBar.transform, "AccentBar",
+                UiBuilder.Accent, new Vector2(0f, 4f));
+            RectTransform colorBarRt = colorBar.GetComponent<RectTransform>();
+            colorBarRt.anchorMin = new Vector2(0f, 1f);
+            colorBarRt.anchorMax = Vector2.one;
+            colorBarRt.pivot = new Vector2(0.5f, 1f);
+            colorBarRt.offsetMin = Vector2.zero;
+            colorBarRt.offsetMax = new Vector2(0f, -4f);
+            colorBarRt.sizeDelta = new Vector2(0f, 4f);
+
+            LayoutElement headerLe = headerBar.AddComponent<LayoutElement>();
+            headerLe.preferredHeight = 28f;
+
+            HorizontalLayoutGroup headerLayout = headerBar.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.padding = new RectOffset(8, 8, 4, 4);
+            headerLayout.spacing = 0f;
+            headerLayout.childForceExpandWidth = true;
+            headerLayout.childForceExpandHeight = false;
+
+            Text headerTitle = UiBuilder.MakeText(headerBar.transform, "HeaderTitle", "FILTERS", 12,
+                UiBuilder.TextSecondary, bold: true);
+            LayoutElement headerTitleLe = headerTitle.gameObject.AddComponent<LayoutElement>();
+            headerTitleLe.flexibleWidth = 1f;
+
             // Filters container
             GameObject filterContainer = new GameObject("FilterContainer", typeof(RectTransform));
             filterContainer.transform.SetParent(parent, false);
@@ -1100,12 +1172,15 @@ namespace DINOForge.Runtime.UI
             fcLayout.childForceExpandWidth = true;
             fcLayout.childForceExpandHeight = false;
             fcLayout.spacing = 4f;
-            fcLayout.padding = new RectOffset(8, 8, 4, 4);
+            fcLayout.padding = new RectOffset(8, 8, 8, 8);
 
             LayoutElement fcLe = filterContainer.AddComponent<LayoutElement>();
-            fcLe.preferredHeight = 140f;  // Enough for 3 rows of controls
-            fcLe.minHeight = 100f;
+            fcLe.preferredHeight = 212f;  // Enough for profiles row + 3 rows of controls
+            fcLe.minHeight = 160f;
             fcLe.flexibleWidth = 1f;
+
+            // ── Profiles row (#918) ──────────────────────────────────────────
+            BuildProfilesSection(filterContainer.transform);
 
             // Search row
             GameObject searchRow = new GameObject("SearchRow", typeof(RectTransform));
@@ -1402,8 +1477,10 @@ namespace DINOForge.Runtime.UI
             bool hasErrors = pack.Errors.Count > 0;
             bool hasConflicts = pack.Conflicts.Count > 0;
 
-            // Card
-            Color bgColor = isSelected ? UiBuilder.BgSurface : UiBuilder.BgDeep;
+            // Zebra striping: alternate row colors
+            // Even rows (#1A1F2E) / Odd rows (#1F2536)
+            bool isEvenRow = index % 2 == 0;
+            Color bgColor = isSelected ? UiBuilder.BgSurface : (isEvenRow ? HexColor("#1A1F2E") : HexColor("#1F2536"));
             Color alpha = pack.IsEnabled ? Color.white : new Color(1f, 1f, 1f, 0.6f);
 
             GameObject card = UiBuilder.MakePanel(_listContent, $"PackItem_{pack.Id}", bgColor, new Vector2(0f, ItemHeight));
@@ -1420,28 +1497,24 @@ namespace DINOForge.Runtime.UI
             cardLe.flexibleWidth = 1f;
             _log?.LogInfo($"[ModMenuPanel.BuildPackListItem] Item {index} LayoutElement set: minHeight={cardLe.minHeight}, preferredHeight={cardLe.preferredHeight}");
 
-            // Amber left-border strip for enabled packs
-            if (pack.IsEnabled)
-            {
-                GameObject border = UiBuilder.MakePanel(card.transform, "EnabledBorder",
-                    UiBuilder.Accent, new Vector2(4f, 0f));
-                RectTransform bRt = border.GetComponent<RectTransform>();
-                bRt.anchorMin = new Vector2(0f, 0f);
-                bRt.anchorMax = new Vector2(0f, 1f);
-                bRt.pivot = new Vector2(0f, 0.5f);
-                bRt.offsetMin = Vector2.zero;
-                bRt.offsetMax = new Vector2(4f, 0f);
-                bRt.anchoredPosition = Vector2.zero;
-            }
-
-            // Content layout
+            // Content layout with improved spacing (8px padding, 4px rows)
             HorizontalLayoutGroup hlg = card.AddComponent<HorizontalLayoutGroup>();
             hlg.spacing = 6f;
-            hlg.padding = new RectOffset(pack.IsEnabled ? 10 : 6, 6, 4, 4);
+            hlg.padding = new RectOffset(8, 8, 4, 4);
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
             hlg.childControlWidth = true;
             hlg.childControlHeight = true;
+
+            // Status indicator dot (green=enabled, red=error, yellow=conflict)
+            Color dotColor = hasErrors ? UiBuilder.Error : (hasConflicts ? UiBuilder.Warning : (pack.IsEnabled ? UiBuilder.Success : new Color(0.5f, 0.5f, 0.5f, 1f)));
+            GameObject dotGo = UiBuilder.MakePanel(card.transform, "StatusDot", dotColor, new Vector2(8f, 8f));
+            RectTransform dotRt = dotGo.GetComponent<RectTransform>();
+            LayoutElement dotLe = dotGo.AddComponent<LayoutElement>();
+            dotLe.preferredWidth = 8f;
+            dotLe.preferredHeight = 8f;
+            dotLe.minWidth = 8f;
+            dotLe.minHeight = 8f;
 
             // Pack name
             Color nameColor = pack.IsEnabled ? UiBuilder.TextPrimary : UiBuilder.TextSecondary;
@@ -1500,10 +1573,12 @@ namespace DINOForge.Runtime.UI
             Button btn = card.AddComponent<Button>();
             ColorBlock cb = btn.colors;
             cb.normalColor = bgColor;
-            cb.highlightedColor = Color.Lerp(bgColor, Color.white, 0.08f);
-            cb.pressedColor = Color.Lerp(bgColor, Color.black, 0.1f);
+            // Hover: lighten by ~10%
+            cb.highlightedColor = Color.Lerp(bgColor, Color.white, 0.1f);
+            cb.pressedColor = Color.Lerp(bgColor, Color.black, 0.15f);
             cb.selectedColor = bgColor;
             cb.colorMultiplier = 1f;
+            cb.fadeDuration = 0.05f;
             btn.colors = cb;
             btn.targetGraphic = card.GetComponent<Image>();
             btn.onClick.AddListener(() => SelectPack(capturedIndex));
@@ -1731,6 +1806,18 @@ namespace DINOForge.Runtime.UI
             }
         }
 
+        /// <summary>
+        /// Returns true only for absolute http/https URLs.
+        /// Prevents javascript:, file:, and other dangerous schemes from reaching
+        /// <see cref="Application.OpenURL"/>.
+        /// </summary>
+        private static bool IsSafeWebUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)) return false;
+            return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+        }
+
         /// <summary>Populates the external-links button row (homepage, GitHub, Discord).</summary>
         private void RefreshLinksRow(PackDisplayInfo p)
         {
@@ -1763,8 +1850,15 @@ namespace DINOForge.Runtime.UI
                     label, UiBuilder.BgSurface, accent,
                     () =>
                     {
-                        try { Application.OpenURL(capturedUrl); }
-                        catch { } // safe-swallow: OpenURL is best-effort
+                        if (IsSafeWebUrl(capturedUrl))
+                        {
+                            try { Application.OpenURL(capturedUrl); }
+                            catch { } // safe-swallow: OpenURL is best-effort
+                        }
+                        else
+                        {
+                            _log?.LogWarning($"[ModMenuPanel] Refusing unsafe URL: {capturedUrl}");
+                        }
                     });
                 LayoutElement le = btn.gameObject.AddComponent<LayoutElement>();
                 le.preferredWidth = label.Length * 7f + 20f; // threshold-ok: button width estimate
@@ -2808,8 +2902,15 @@ namespace DINOForge.Runtime.UI
                     UiBuilder.BgSurface, UiBuilder.TextPrimary,
                     () =>
                     {
-                        try { Application.OpenURL(capturedUrl); }
-                        catch { } // safe-swallow: OpenURL is best-effort
+                        if (IsSafeWebUrl(capturedUrl))
+                        {
+                            try { Application.OpenURL(capturedUrl); }
+                            catch { } // safe-swallow: OpenURL is best-effort
+                        }
+                        else
+                        {
+                            _log?.LogWarning($"[ModMenuPanel] Refusing unsafe URL: {capturedUrl}");
+                        }
                     });
                 LayoutElement viewLe = viewBtn.gameObject.AddComponent<LayoutElement>();
                 viewLe.preferredWidth = 110f;
@@ -2818,6 +2919,392 @@ namespace DINOForge.Runtime.UI
             }
 
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_updateBannerContent);
+        }
+
+        // ── Profiles section (#918) ────────────────────────────────────────────
+
+        /// <summary>
+        /// Builds the Profiles row: dropdown of saved profiles + Load / Save As / Export /
+        /// Import / Delete buttons.  Inserted above the search / filter controls.
+        /// </summary>
+        private void BuildProfilesSection(Transform parent)
+        {
+            // Section label row
+            GameObject labelRow = new GameObject("ProfileLabelRow", typeof(RectTransform));
+            labelRow.transform.SetParent(parent, false);
+            HorizontalLayoutGroup labelHlg = labelRow.AddComponent<HorizontalLayoutGroup>();
+            labelHlg.spacing = 4f;
+            labelHlg.childForceExpandWidth = true;
+            labelHlg.childForceExpandHeight = false;
+            LayoutElement labelRowLe = labelRow.AddComponent<LayoutElement>();
+            labelRowLe.preferredHeight = 18f;
+            labelRowLe.flexibleWidth = 1f;
+
+            Text sectionLabel = UiBuilder.MakeText(labelRow.transform, "ProfilesLabel", "Profiles", 11,
+                UiBuilder.Accent, bold: true);
+            sectionLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            // Dropdown row
+            GameObject ddRow = new GameObject("ProfileDropdownRow", typeof(RectTransform));
+            ddRow.transform.SetParent(parent, false);
+            HorizontalLayoutGroup ddHlg = ddRow.AddComponent<HorizontalLayoutGroup>();
+            ddHlg.spacing = 4f;
+            ddHlg.childForceExpandWidth = false;
+            ddHlg.childForceExpandHeight = false;
+            LayoutElement ddRowLe = ddRow.AddComponent<LayoutElement>();
+            ddRowLe.preferredHeight = 26f;
+            ddRowLe.flexibleWidth = 1f;
+
+            _profileDropdown = MakeDropdown(ddRow.transform, "ProfileDropdown",
+                new[] { "(no profiles)" }, _ => { });
+            LayoutElement profileDdLe = _profileDropdown.gameObject.AddComponent<LayoutElement>();
+            profileDdLe.flexibleWidth = 1f;
+            profileDdLe.preferredHeight = 26f;
+
+            // Action buttons row
+            GameObject btnRow = new GameObject("ProfileButtonsRow", typeof(RectTransform));
+            btnRow.transform.SetParent(parent, false);
+            HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
+            btnHlg.spacing = 3f;
+            btnHlg.childForceExpandWidth = false;
+            btnHlg.childForceExpandHeight = false;
+            LayoutElement btnRowLe = btnRow.AddComponent<LayoutElement>();
+            btnRowLe.preferredHeight = 24f;
+            btnRowLe.flexibleWidth = 1f;
+
+            // Load
+            Button loadBtn = UiBuilder.MakeButton(btnRow.transform, "ProfileLoadBtn", "Load",
+                UiBuilder.BgSurface, UiBuilder.TextPrimary, OnProfileLoad);
+            loadBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
+            loadBtn.gameObject.GetComponent<LayoutElement>().preferredHeight = 22f;
+
+            // Save As
+            Button saveBtn = UiBuilder.MakeButton(btnRow.transform, "ProfileSaveBtn", "Save…",
+                UiBuilder.BgSurface, UiBuilder.Accent, OnProfileSaveAs);
+            saveBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 46f;
+            saveBtn.gameObject.GetComponent<LayoutElement>().preferredHeight = 22f;
+
+            // Export to clipboard
+            Button exportBtn = UiBuilder.MakeButton(btnRow.transform, "ProfileExportBtn", "Export",
+                UiBuilder.BgSurface, UiBuilder.TextSecondary, OnProfileExport);
+            exportBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 48f;
+            exportBtn.gameObject.GetComponent<LayoutElement>().preferredHeight = 22f;
+
+            // Import from clipboard
+            Button importBtn = UiBuilder.MakeButton(btnRow.transform, "ProfileImportBtn", "Import",
+                UiBuilder.BgSurface, UiBuilder.TextSecondary, OnProfileImport);
+            importBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 48f;
+            importBtn.gameObject.GetComponent<LayoutElement>().preferredHeight = 22f;
+
+            // Delete
+            Button deleteBtn = UiBuilder.MakeButton(btnRow.transform, "ProfileDeleteBtn", "Del",
+                UiBuilder.BgDeep, UiBuilder.Error, OnProfileDelete);
+            deleteBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 30f;
+            deleteBtn.gameObject.GetComponent<LayoutElement>().preferredHeight = 22f;
+
+            // Spacer
+            GameObject spacer = new GameObject("ProfileBtnSpacer", typeof(RectTransform));
+            spacer.transform.SetParent(btnRow.transform, false);
+            spacer.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            // Separator below profiles section
+            UiBuilder.MakeHorizontalSeparator(parent, UiBuilder.Border);
+
+            RefreshProfileDropdown();
+        }
+
+        /// <summary>Refreshes the profile dropdown options from the ProfileManager.</summary>
+        private void RefreshProfileDropdown()
+        {
+            if (_profileDropdown == null) return;
+
+            _profileDropdown.options.Clear();
+
+            IReadOnlyList<string> names = _profileManager?.ListProfiles() ?? new List<string>();
+            if (names.Count == 0)
+            {
+                _profileDropdown.options.Add(new Dropdown.OptionData("(no profiles)"));
+            }
+            else
+            {
+                foreach (string name in names)
+                    _profileDropdown.options.Add(new Dropdown.OptionData(name));
+            }
+
+            _profileDropdown.value = 0;
+            _profileDropdown.RefreshShownValue();
+        }
+
+        /// <summary>Returns the currently selected profile name, or null if none.</summary>
+        private string? SelectedProfileName()
+        {
+            if (_profileDropdown == null) return null;
+            if (_profileDropdown.options.Count == 0) return null;
+            string name = _profileDropdown.options[_profileDropdown.value].text;
+            if (name == "(no profiles)") return null;
+            return name;
+        }
+
+        private void OnProfileLoad()
+        {
+            if (_profileManager == null)
+            {
+                _log?.LogWarning("[ModMenuPanel] OnProfileLoad: no ProfileManager.");
+                return;
+            }
+
+            string? name = SelectedProfileName();
+            if (name == null)
+            {
+                _log?.LogInfo("[ModMenuPanel] OnProfileLoad: no profile selected.");
+                return;
+            }
+
+            ModProfile? profile = _profileManager.Load(name);
+            if (profile == null)
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileLoad: failed to load profile '{name}'.");
+                return;
+            }
+
+            _log?.LogInfo($"[ModMenuPanel] OnProfileLoad: applying profile '{name}' ({profile.EnabledPacks.Count} packs).");
+            OnProfileLoaded?.Invoke(profile.EnabledPacks);
+        }
+
+        private void OnProfileSaveAs()
+        {
+            if (_profileManager == null)
+            {
+                _log?.LogWarning("[ModMenuPanel] OnProfileSaveAs: no ProfileManager.");
+                return;
+            }
+
+            if (_panelRt == null) return;
+
+            // Build inline save-as modal
+            ShowProfileSaveModal();
+        }
+
+        private void ShowProfileSaveModal()
+        {
+            if (_panelRt == null) return;
+
+            // Destroy any existing modal
+            if (_profileSaveModal != null)
+            {
+                Destroy(_profileSaveModal);
+                _profileSaveModal = null;
+            }
+
+            GameObject overlay = new GameObject("ProfileSaveModal", typeof(RectTransform));
+            overlay.transform.SetParent(_panelRt, false);
+            RectTransform overlayRt = overlay.GetComponent<RectTransform>();
+            overlayRt.anchorMin = Vector2.zero;
+            overlayRt.anchorMax = Vector2.one;
+            overlayRt.offsetMin = Vector2.zero;
+            overlayRt.offsetMax = Vector2.zero;
+
+            Image backdrop = overlay.AddComponent<Image>();
+            backdrop.color = new Color(0f, 0f, 0f, 0.72f);
+            backdrop.raycastTarget = true;
+
+            GameObject dialog = UiBuilder.MakePanel(overlay.transform, "SaveAsDialog",
+                UiBuilder.BgSurface, new Vector2(320f, 160f));
+            RectTransform dialogRt = dialog.GetComponent<RectTransform>();
+            dialogRt.anchorMin = new Vector2(0.5f, 0.5f);
+            dialogRt.anchorMax = new Vector2(0.5f, 0.5f);
+            dialogRt.pivot = new Vector2(0.5f, 0.5f);
+            dialogRt.anchoredPosition = Vector2.zero;
+
+            VerticalLayoutGroup vlg = dialog.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 8f;
+            vlg.padding = new RectOffset(14, 14, 12, 12);
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            Text titleTxt = UiBuilder.MakeText(dialog.transform, "ModalTitle",
+                "Save Profile As…", 13, UiBuilder.Accent, bold: true);
+            titleTxt.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+            _profileNameInput = UiBuilder.MakeInputField(dialog.transform, "ProfileNameInput",
+                "Profile name…", _ => { });
+            LayoutElement inputLe = _profileNameInput.gameObject.AddComponent<LayoutElement>();
+            inputLe.preferredHeight = 28f;
+            inputLe.flexibleWidth = 1f;
+
+            // Pre-fill with currently selected profile name if any
+            string? currentName = SelectedProfileName();
+            if (!string.IsNullOrEmpty(currentName))
+                _profileNameInput.text = currentName;
+
+            GameObject btnRow = new GameObject("BtnRow", typeof(RectTransform));
+            btnRow.transform.SetParent(dialog.transform, false);
+            HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
+            btnHlg.spacing = 8f;
+            btnHlg.childForceExpandWidth = false;
+            btnHlg.childForceExpandHeight = false;
+            btnHlg.childAlignment = TextAnchor.MiddleRight;
+            btnRow.AddComponent<LayoutElement>().preferredHeight = 30f;
+
+            GameObject spacer = new GameObject("Spacer", typeof(RectTransform));
+            spacer.transform.SetParent(btnRow.transform, false);
+            spacer.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            InputField capturedInput = _profileNameInput;
+            GameObject capturedOverlay = overlay;
+
+            Button cancelBtn = UiBuilder.MakeButton(btnRow.transform, "CancelBtn", "Cancel",
+                UiBuilder.BgDeep, UiBuilder.TextSecondary,
+                () => { Destroy(capturedOverlay); });
+            cancelBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 64f;
+
+            Button saveBtn = UiBuilder.MakeButton(btnRow.transform, "SaveBtn", "Save",
+                UiBuilder.Accent, Color.black,
+                () =>
+                {
+                    string profileName = capturedInput != null ? capturedInput.text.Trim() : string.Empty;
+                    if (string.IsNullOrWhiteSpace(profileName))
+                    {
+                        _log?.LogWarning("[ModMenuPanel] Save profile: name is empty.");
+                        return;
+                    }
+
+                    // Collect currently enabled packs
+                    List<string> enabledIds = new List<string>();
+                    foreach (PackDisplayInfo pack in _presenter.Packs)
+                    {
+                        if (pack.IsEnabled)
+                            enabledIds.Add(pack.Id);
+                    }
+
+                    _profileManager?.SaveCurrent(profileName, enabledIds);
+                    Destroy(capturedOverlay);
+                    RefreshProfileDropdown();
+
+                    // Select the newly saved profile in the dropdown
+                    if (_profileDropdown != null)
+                    {
+                        for (int i = 0; i < _profileDropdown.options.Count; i++)
+                        {
+                            if (_profileDropdown.options[i].text == profileName)
+                            {
+                                _profileDropdown.value = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    _log?.LogInfo($"[ModMenuPanel] Profile '{profileName}' saved.");
+                });
+            saveBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 56f;
+
+            _profileSaveModal = overlay;
+        }
+
+        private void OnProfileExport()
+        {
+            if (_profileManager == null) return;
+
+            string? name = SelectedProfileName();
+            if (name == null)
+            {
+                _log?.LogInfo("[ModMenuPanel] OnProfileExport: no profile selected.");
+                return;
+            }
+
+            string json = _profileManager.ExportJson(name);
+            if (string.IsNullOrEmpty(json))
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileExport: ExportJson returned empty for '{name}'.");
+                return;
+            }
+
+            try
+            {
+                GUIUtility.systemCopyBuffer = json;
+                _log?.LogInfo($"[ModMenuPanel] Profile '{name}' exported to clipboard.");
+                SetStatus($"Profile '{name}' copied to clipboard");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileExport clipboard write failed: {ex.Message}");
+            }
+        }
+
+        private void OnProfileImport()
+        {
+            if (_profileManager == null)
+            {
+                _log?.LogWarning("[ModMenuPanel] OnProfileImport: no ProfileManager.");
+                return;
+            }
+
+            string json;
+            try
+            {
+                json = GUIUtility.systemCopyBuffer ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileImport clipboard read failed: {ex.Message}");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                _log?.LogInfo("[ModMenuPanel] OnProfileImport: clipboard is empty.");
+                SetStatus("Clipboard is empty — nothing to import");
+                return;
+            }
+
+            try
+            {
+                _profileManager.ImportJson(json);
+                RefreshProfileDropdown();
+                SetStatus("Profile imported from clipboard");
+                _log?.LogInfo("[ModMenuPanel] Profile imported from clipboard.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileImport validation failed: {ex.Message}");
+                SetStatus($"Import failed: {ex.Message}", 1);
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[ModMenuPanel] OnProfileImport unexpected error: {ex.Message}");
+                SetStatus("Import failed — see log for details", 1);
+            }
+        }
+
+        private void OnProfileDelete()
+        {
+            if (_profileManager == null) return;
+
+            string? name = SelectedProfileName();
+            if (name == null)
+            {
+                _log?.LogInfo("[ModMenuPanel] OnProfileDelete: no profile selected.");
+                return;
+            }
+
+            // Show confirm dialog before deleting
+            ShowConfirmDialog(
+                $"Delete profile \"{name}\"?\nThis cannot be undone.",
+                onConfirm: () =>
+                {
+                    bool deleted = _profileManager.Delete(name);
+                    if (deleted)
+                    {
+                        RefreshProfileDropdown();
+                        SetStatus($"Profile '{name}' deleted");
+                        _log?.LogInfo($"[ModMenuPanel] Profile '{name}' deleted.");
+                    }
+                    else
+                    {
+                        _log?.LogWarning($"[ModMenuPanel] OnProfileDelete: profile '{name}' not found.");
+                    }
+                },
+                onCancel: () => { /* cancelled, nothing to do */ });
         }
 
         /// <summary>Lazily builds the amber update banner anchored just below the header bar.</summary>

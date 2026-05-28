@@ -23,6 +23,12 @@ param(
     [switch]$Force
 )
 
+# Pinned release — update hash when bumping version (see tools/unityexplorer/README.md)
+$PinnedVersion    = "4.9.0"
+$PinnedAssetName  = "UnityExplorer.BepInEx5.Mono.zip"
+$PinnedUrl        = "https://github.com/sinai-dev/UnityExplorer/releases/download/$PinnedVersion/$PinnedAssetName"
+$ExpectedSha256   = "0A125BDEEB22BC9763E7A69E74862BA60E61B4ED0F1A90CC3BFF0D7B51B09F00"
+
 $ErrorActionPreference = "Continue"
 
 # Resolve game path
@@ -72,37 +78,30 @@ if (-not (Test-Path $DevToolsDir)) {
     Write-Host "Created $DevToolsDir"
 }
 
-# Download latest release
-Write-Host "`nDownloading UnityExplorer from GitHub..."
-$tempZip = Join-Path $env:TEMP "UnityExplorer.BepInEx.Mono.zip"
+# Download pinned release (dynamic "latest" fetch is intentionally disabled — the pinned hash
+# only matches the exact version declared above; fetching an unknown latest would always fail
+# the integrity check and confuse users).
+Write-Host "`nDownloading UnityExplorer $PinnedVersion from GitHub..."
+$tempZip = Join-Path $env:TEMP $PinnedAssetName
 
 try {
-    $releaseUrl = "https://github.com/sinai-dev/UnityExplorer/releases/download/4.8.2/UnityExplorer.BepInEx.Mono.zip"
-
-    # Try to get latest release dynamically
-    try {
-        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/sinai-dev/UnityExplorer/releases/latest" `
-            -TimeoutSec 10 -ErrorAction SilentlyContinue
-        if ($releases -and $releases.assets) {
-            $asset = $releases.assets | Where-Object { $_.name -match "BepInEx.Mono" } | Select-Object -First 1
-            if ($asset) {
-                $releaseUrl = $asset.browser_download_url
-            }
-        }
-    }
-    catch {
-        Write-Warning "Could not fetch latest release info, using fallback URL"
-    }
-
-    Write-Host "Downloading from: $releaseUrl"
-    Invoke-WebRequest -Uri $releaseUrl -OutFile $tempZip -TimeoutSec 30
+    Write-Host "Downloading from: $PinnedUrl"
+    Invoke-WebRequest -Uri $PinnedUrl -OutFile $tempZip -TimeoutSec 60
 
     if (-not (Test-Path $tempZip)) {
         Write-Warning "Download failed. Please check your internet connection."
         exit 1
     }
 
-    Write-Host "Downloaded successfully" -ForegroundColor Green
+    # ── Integrity check ───────────────────────────────────────────────────────
+    $actualHash = (Get-FileHash $tempZip -Algorithm SHA256).Hash
+    if ($actualHash -ne $ExpectedSha256) {
+        Write-Error "[security] UnityExplorer ZIP hash mismatch.`n  Expected : $ExpectedSha256`n  Actual   : $actualHash`nAborting. To update the pinned hash see tools/unityexplorer/README.md."
+        Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+        exit 1
+    }
+
+    Write-Host "Downloaded and verified successfully (SHA256 OK)" -ForegroundColor Green
 }
 catch {
     Write-Warning "Failed to download UnityExplorer: $_"

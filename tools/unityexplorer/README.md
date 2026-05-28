@@ -21,6 +21,18 @@ This is an optional dependency. It is not required for normal mod development or
 - Inspect attached components and serialized fields.
 - Use the REPL to evaluate C# against live runtime objects.
 
+## Updating the Pinned Version
+
+The install scripts pin UnityExplorer to a specific release and verify the download via SHA256 before extracting. To update to a newer version:
+
+1. Find the new release on https://github.com/sinai-dev/UnityExplorer/releases
+2. Download `UnityExplorer.BepInEx5.Mono.zip` for that release
+3. Compute its SHA256:
+   - PowerShell: `(Get-FileHash .\UnityExplorer.BepInEx5.Mono.zip -Algorithm SHA256).Hash`
+   - Bash: `sha256sum UnityExplorer.BepInEx5.Mono.zip`
+4. Update `$PinnedVersion`, `$PinnedUrl`, and `$ExpectedSha256` in `scripts/install-dev-tools.ps1`
+5. Update `PINNED_VERSION`, `PINNED_URL`, and `EXPECTED_SHA256` in `scripts/install-dev-tools.sh`
+
 ## Common Development Uses
 
 - Inspect UI canvases while iterating on menu layout and theming.

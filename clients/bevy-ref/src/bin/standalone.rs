@@ -3,14 +3,15 @@ use bevy::input::mouse::MouseMotion;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use civ_bevy_ref::{gpu_features::GpuFeaturesPlugin, native_backend::native_render_plugin};
 use std::f32::consts::{PI, TAU};
 
 const GRID: usize = 256;
 const WORLD_SIZE: f32 = 256.0;
-const HEIGHT_SCALE: f32 = 46.0;
+const HEIGHT_SCALE: f32 = 120.0;
 const DAY_LENGTH_SECONDS: f32 = 10.0 * 60.0;
-const CAMERA_START: Vec3 = Vec3::new(128.0, 200.0, 300.0);
-const CAMERA_TARGET_START: Vec3 = Vec3::new(128.0, 0.0, 128.0);
+const CAMERA_START: Vec3 = Vec3::new(60.0, 80.0, 60.0);
+const CAMERA_TARGET_START: Vec3 = Vec3::new(128.0, 30.0, 128.0);
 const STAR_COUNT: usize = 240;
 const STAR_SHELL_RADIUS: f32 = 1_500.0;
 
@@ -61,7 +62,8 @@ fn main() {
         })
         .insert_resource(DayNightCycle::default())
         .insert_resource(CameraRig::default())
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(native_render_plugin()))
+        .add_plugins(GpuFeaturesPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, (camera_input, update_camera, advance_day_night_cycle, update_day_night_lighting))
         .run();

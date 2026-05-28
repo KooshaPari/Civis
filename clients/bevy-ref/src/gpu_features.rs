@@ -61,13 +61,13 @@ pub fn detect_capabilities(render_device: &RenderDevice, adapter_info: &RenderAd
     let is_intel = vendor == 0x8086;
     let is_apple = vendor == 0x106B;
 
-    // wgpu 27 / Bevy 0.18: no stable RT feature flag; stage vendor/backend inference only.
-    let ray_tracing = is_nvidia && matches!(info.backend, wgpu::Backend::Dx12)
+    // Prefer adapter-reported experimental flags; fall back to vendor/backend heuristics.
+    let ray_tracing = features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY)
+        || (is_nvidia && matches!(info.backend, wgpu::Backend::Dx12))
         || (is_apple && matches!(info.backend, wgpu::Backend::Metal));
 
-    // wgpu 0.20 does not expose mesh shader capability directly, so this is a
-    // backend/vendor inference for the DX12 Ultimate path we want to stage.
-    let mesh_shaders = is_nvidia && matches!(info.backend, wgpu::Backend::Dx12)
+    let mesh_shaders = features.contains(wgpu::Features::EXPERIMENTAL_MESH_SHADER)
+        || (is_nvidia && matches!(info.backend, wgpu::Backend::Dx12))
         || (is_amd && matches!(info.backend, wgpu::Backend::Dx12));
 
     let dlss_available = is_nvidia && matches!(info.backend, wgpu::Backend::Dx12);

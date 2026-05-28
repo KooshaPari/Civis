@@ -15,6 +15,8 @@
 
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
+#[cfg(feature = "bevy")]
+pub mod native_backend;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

@@ -15,6 +15,7 @@ use civ_bevy_ref::{
     chunk_distance_from_camera, chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
     decode_chunk_id, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
+    live_ground::{live_ground_y, ChunkVoxelCache},
     mesh_lod_level, minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
@@ -23,8 +24,11 @@ use civ_bevy_ref::{
     CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, AGENT_MARKER_DEPTH,
     AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,
 };
-use civ_protocol_3d::{agent_world_translation, AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
-use civ_voxel::{ChunkId, ChunkView, LodLevel};
+use civ_protocol_3d::{
+    agent_world_translation, AgentAppearanceFrame, BuildingDiffFrame, BuildingKind3d, Frame3d,
+    VoxelDeltaFrame,
+};
+use civ_voxel::{ChunkId, ChunkView, LodLevel, MaterialId};
 
 const CHUNK_EDGE: usize = 16;
 const CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];
@@ -42,6 +46,8 @@ const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 const MINIMAP_SIZE: f32 = 160.0;
 const MINIMAP_DOT: f32 = 4.0;
 const MINIMAP_INSET: f32 = 6.0;
+const AGENT_GROUND_Y: f32 = 0.8;
+const BUILDING_GROUND_Y: f32 = 1.25;
 
 /// Live orbit state derived from [`CameraTarget`]; updated by mouse drag and scroll.
 #[derive(Resource, Debug, Clone, Copy)]
@@ -96,8 +102,11 @@ struct LiveBridge {
 #[derive(Resource, Default)]
 struct LiveScene {
     chunks: HashMap<u64, Entity>,
+    chunk_voxels: ChunkVoxelCache,
     agents: HashMap<u64, Entity>,
+    buildings: HashMap<u64, Entity>,
     agent_materials: HashMap<u64, Handle<StandardMaterial>>,
+    building_materials: HashMap<u64, Handle<StandardMaterial>>,
 }
 
 #[derive(Resource)]
@@ -172,9 +181,16 @@ struct AgentTag {
 #[derive(Component)]
 struct AgentLabel;
 
+#[derive(Component)]
+struct BuildingTag {
+    #[allow(dead_code)]
+    id: u64,
+}
+
 #[derive(Resource)]
 struct AgentVisualAssets {
     mesh: Handle<Mesh>,
+    building_mesh: Handle<Mesh>,
 }
 
 fn main() {
@@ -264,6 +280,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             AGENT_MARKER_HEIGHT,
             AGENT_MARKER_DEPTH,
         )),
+        building_mesh: meshes.add(Cuboid::new(2.0, 2.5, 2.0)),
     });
     commands.insert_resource(LiveBridge {
         client: WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default()),
@@ -400,7 +417,13 @@ fn apply_live_frames(
             Frame3d::AgentAppearance(agents) => {
                 apply_agent_appearance(&mut commands, &mut scene, &mut materials, &assets, agents)
             }
-            Frame3d::BuildingDiff(_) => {}
+            Frame3d::BuildingDiff(building) => apply_building_diff(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                &assets,
+                building,
+            ),
         }
     }
 }
@@ -699,6 +722,12 @@ fn apply_voxel_delta(
 
     for chunk in delta.deltas {
         let chunk_id = chunk.event.chunk_id;
+        if chunk.voxels.len() == CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
+            scene
+                .chunk_voxels
+                .insert(chunk_id, chunk.voxels.clone());
+        }
+
         if !should_render_chunk(chunk_id, eye, max_dist) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
@@ -796,7 +825,8 @@ fn apply_agent_appearance(
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
-        let (x, y, z) = agent_world_translation(&update, 0.8);
+        let (x, _, z) = agent_world_translation(&update, 0.0);
+        let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -851,4 +881,79 @@ fn chunk_transform(id: ChunkId) -> Transform {
         y as f32 * CHUNK_EDGE as f32,
         z as f32 * CHUNK_EDGE as f32,
     )
+}
+
+fn building_kind_color(kind: BuildingKind3d) -> Color {
+    match kind {
+        BuildingKind3d::Farm => Color::srgb(0.55, 0.75, 0.35),
+        BuildingKind3d::Mine => Color::srgb(0.52, 0.48, 0.42),
+        BuildingKind3d::Barracks => Color::srgb(0.72, 0.34, 0.34),
+        BuildingKind3d::Temple => Color::srgb(0.72, 0.62, 0.88),
+        BuildingKind3d::Market => Color::srgb(0.88, 0.67, 0.25),
+        BuildingKind3d::House => Color::srgb(0.79, 0.59, 0.40),
+        BuildingKind3d::CityCenter => Color::srgb(0.38, 0.58, 0.86),
+    }
+}
+
+fn apply_building_diff(
+    commands: &mut Commands,
+    scene: &mut LiveScene,
+    materials: &mut Assets<StandardMaterial>,
+    assets: &AgentVisualAssets,
+    frame: BuildingDiffFrame,
+) {
+    let BuildingDiffFrame {
+        buildings,
+        graph: _,
+        ..
+    } = frame;
+
+    if buildings.is_empty() {
+        return;
+    }
+
+    let incoming: std::collections::HashSet<u64> = buildings.iter().map(|entry| entry.id).collect();
+    for (id, entity) in scene.buildings.clone() {
+        if !incoming.contains(&id) {
+            commands.entity(entity).despawn();
+            scene.buildings.remove(&id);
+            scene.building_materials.remove(&id);
+        }
+    }
+
+    for entry in buildings {
+        let base_color = building_kind_color(entry.kind);
+        let material_handle = scene
+            .building_materials
+            .entry(entry.id)
+            .or_insert_with(|| {
+                materials.add(StandardMaterial {
+                    base_color,
+                    perceptual_roughness: 0.75,
+                    ..default()
+                })
+            })
+            .clone();
+        if let Some(material) = materials.get_mut(&material_handle) {
+            material.base_color = base_color;
+        }
+
+        let ground = live_ground_y(
+            &scene.chunk_voxels,
+            entry.position.x,
+            entry.position.z,
+            BUILDING_GROUND_Y,
+        );
+        let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
+        let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
+            commands
+                .spawn(BuildingTag { id: entry.id })
+                .id()
+        });
+        commands.entity(entity).insert((
+            Mesh3d(assets.building_mesh.clone()),
+            MeshMaterial3d(material_handle),
+            transform,
+        ));
+    }
 }

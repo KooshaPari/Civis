@@ -12,17 +12,17 @@ use civ_protocol_3d::{
     BuildingGraph, BuildingKind3d, BuildingProvenance, FacadeStyle, Frame3d, ParcelKind, WorldXZ,
     VoxelDeltaFrame,
 };
-use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
+use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
+use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::camera::CameraRig;
-use crate::terrain::terrain_surface_y;
 use crate::{
     agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
-    chunk_fade_complete, decode_chunk_id, encode_chunk_id, mesh_lod_level, should_render_chunk,
-    AttachMode, DebugRender, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    chunk_fade_complete, decode_chunk_id, mesh_lod_level, should_render_chunk, AttachMode,
+    DebugRender, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
 
 const CHUNK_EDGE: usize = 16;
@@ -60,8 +60,7 @@ impl Default for LiveSceneFocus {
 #[derive(Resource)]
 pub struct LiveScene {
     chunks: HashMap<u64, Entity>,
-    /// Cached voxel payloads for ground-height sampling (retained when meshes are culled).
-    chunk_voxels: HashMap<u64, Vec<MaterialId>>,
+    chunk_voxels: ChunkVoxelCache,
     agents: HashMap<u64, Entity>,
     buildings: HashMap<u64, Entity>,
     graph_parcels: HashMap<u64, Entity>,
@@ -75,7 +74,7 @@ impl Default for LiveScene {
     fn default() -> Self {
         Self {
             chunks: HashMap::new(),
-            chunk_voxels: HashMap::new(),
+            chunk_voxels: ChunkVoxelCache::new(),
             agents: HashMap::new(),
             buildings: HashMap::new(),
             graph_parcels: HashMap::new(),
@@ -240,7 +239,7 @@ fn apply_voxel_delta(
         if chunk.voxels.len() == CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
             scene
                 .chunk_voxels
-                .insert(chunk_id.0, chunk.voxels.clone());
+                .insert(chunk_id, chunk.voxels.clone());
         }
 
         if !should_render_chunk(chunk_id, eye, max_dist) {
@@ -306,7 +305,7 @@ fn apply_agent_appearance(
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
-        let y = live_ground_y(scene, x, z, AGENT_GROUND_Y);
+        let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -407,7 +406,12 @@ fn apply_building_diff(
             material.perceptual_roughness = roughness;
         }
 
-        let ground = live_ground_y(scene, entry.position.x, entry.position.z, BUILDING_GROUND_Y);
+        let ground = live_ground_y(
+            &scene.chunk_voxels,
+            entry.position.x,
+            entry.position.z,
+            BUILDING_GROUND_Y,
+        );
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
         let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
             commands
@@ -475,7 +479,7 @@ fn apply_building_graph(
         }
 
         let anchor = WorldXZ::from_fixed_coord(&parcel.origin);
-        let ground = live_ground_y(scene, anchor.x, anchor.z, 0.0);
+        let ground = live_ground_y(&scene.chunk_voxels, anchor.x, anchor.z, 0.0);
         let height = parcel.size[1] as f32 / scale;
         let width = parcel.size[0] as f32 / scale;
         let depth = parcel.size[2] as f32 / scale;
@@ -834,73 +838,4 @@ fn chunk_transform(id: ChunkId) -> Transform {
         y as f32 * CHUNK_EDGE as f32,
         z as f32 * CHUNK_EDGE as f32,
     )
-}
-
-fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {
-    ix + iy * CHUNK_EDGE + iz * CHUNK_EDGE * CHUNK_EDGE
-}
-
-fn is_solid_voxel(material: MaterialId) -> bool {
-    material.0 != 0
-}
-
-/// Top Y of the highest solid voxel in the world column at `(x, z)` from cached live chunks.
-#[must_use]
-pub(crate) fn live_voxel_surface_y(scene: &LiveScene, x: f32, z: f32) -> Option<f32> {
-    let edge_i = CHUNK_EDGE as i32;
-    let edge_f = CHUNK_EDGE as f32;
-    let cx = (x / edge_f).floor() as i32;
-    let cz = (z / edge_f).floor() as i32;
-    let ix = (x.floor() as i32).rem_euclid(edge_i) as usize;
-    let iz = (z.floor() as i32).rem_euclid(edge_i) as usize;
-
-    let mut best: Option<f32> = None;
-    for (&chunk_raw, voxels) in &scene.chunk_voxels {
-        if voxels.len() != CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
-            continue;
-        }
-        let (chunk_cx, chunk_cy, chunk_cz) = decode_chunk_id(ChunkId(chunk_raw));
-        if chunk_cx != cx || chunk_cz != cz {
-            continue;
-        }
-        for iy in (0..CHUNK_EDGE).rev() {
-            if is_solid_voxel(voxels[voxel_index(ix, iy, iz)]) {
-                let surface_y = (chunk_cy * edge_i + iy as i32 + 1) as f32;
-                best = Some(best.map_or(surface_y, |current| current.max(surface_y)));
-                break;
-            }
-        }
-    }
-    best
-}
-
-/// Ground height at `(x, z)` from streamed voxels when available, else procedural terrain.
-#[must_use]
-pub(crate) fn live_ground_y(scene: &LiveScene, x: f32, z: f32, offset: f32) -> f32 {
-    live_voxel_surface_y(scene, x, z).unwrap_or_else(|| terrain_surface_y(x, z)) + offset
-}
-
-#[cfg(test)]
-mod voxel_ground_tests {
-    use super::*;
-    use civ_voxel::MaterialId;
-
-    #[test]
-    fn voxel_column_surface_finds_top_solid() {
-        let mut voxels = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
-        let id = encode_chunk_id(0, 0, 0);
-        let mut scene = LiveScene::default();
-        scene.chunk_voxels.insert(id.0, voxels);
-        let y = live_voxel_surface_y(&scene, 4.5, 5.5).expect("surface");
-        assert!((y - 4.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn live_ground_y_falls_back_to_terrain_without_chunks() {
-        let scene = LiveScene::default();
-        let y = live_ground_y(&scene, 64.0, 128.0, AGENT_GROUND_Y);
-        let expected = terrain_surface_y(64.0, 128.0) + AGENT_GROUND_Y;
-        assert!((y - expected).abs() < 0.01);
-    }
 }

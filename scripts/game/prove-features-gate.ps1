@@ -52,7 +52,8 @@ function Write-Gate([string]$Message, [string]$Level = 'Info') {
         'Warn' { 'Yellow' }
         default { 'Cyan' }
     }
-    Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [SPEC-007] $Message" -ForegroundColor $color
+    $ts = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
+    Write-Host "${ts}Z [SPEC-007] $Message" -ForegroundColor $color
 }
 
 function Write-GateResult([hashtable]$Result) {
@@ -65,13 +66,27 @@ function Write-GateResult([hashtable]$Result) {
 $script:GameProcessBaseName = 'Diplomacy is Not an Option'
 $script:GameExecutableFileName = 'Diplomacy is Not an Option.exe'
 
+function Test-GameAttachOnlyMode {
+    $value = $env:DINO_GAME_ALREADY_RUNNING
+    return (-not [string]::IsNullOrWhiteSpace($value)) -and
+        ($value -eq '1' -or $value -ieq 'true')
+}
+
 function Stop-StrayGameLaunchProcesses {
     Write-Gate 'Stopping stray game processes (pre/post flight)' 'Warn'
     foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
         Get-Process -Name $procName -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
     }
-    Start-Sleep -Seconds 2
+    # Game Launch Protocol: wait 3s and verify no processes remain
+    Start-Sleep -Seconds 3
+    $remaining = @()
+    foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
+        $remaining += @(Get-Process -Name $procName -ErrorAction SilentlyContinue)
+    }
+    if ($remaining.Count -gt 0) {
+        Write-Gate "Warning: $($remaining.Count) game-related process(es) still running after cleanup" 'Warn'
+    }
 }
 
 function Resolve-DinoGameExePath {
@@ -80,7 +95,10 @@ function Resolve-DinoGameExePath {
         return $null
     }
     if (Test-Path -LiteralPath $path -PathType Leaf) {
-        return $path
+        if ([string]::Equals([IO.Path]::GetFileName($path), $script:GameExecutableFileName, [StringComparison]::OrdinalIgnoreCase)) {
+            return $path
+        }
+        return $null
     }
     if (Test-Path -LiteralPath $path -PathType Container) {
         $exe = Join-Path $path $script:GameExecutableFileName
@@ -252,7 +270,14 @@ function Invoke-FullGate {
             Write-Gate "Using game executable: $resolvedExe"
         }
 
-        Stop-StrayGameLaunchProcesses
+        if (-not (Test-GameAttachOnlyMode)) {
+            Stop-StrayGameLaunchProcesses
+        }
+        else {
+            Write-Gate 'Attach-only mode (DINO_GAME_ALREADY_RUNNING) — skipping pre-flight process cleanup' 'Warn'
+        }
+
+        $gameExit = 0
         try {
             Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
             dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
@@ -260,27 +285,31 @@ function Invoke-FullGate {
                 --filter 'Category=GameLaunch' `
                 --verbosity minimal
             $gameExit = $LASTEXITCODE
-            if ($gameExit -ne 0) {
-                Write-GateResult @{
-                    timestamp = (Get-Date).ToUniversalTime().ToString('o')
-                    status    = 'FAILED'
-                    mode      = 'full'
-                    reason    = 'GameLaunch tests failed'
-                }
-                exit $gameExit
-            }
-            Write-GateResult @{
-                timestamp = (Get-Date).ToUniversalTime().ToString('o')
-                status    = 'PASSED'
-                mode      = 'full'
-                reason    = 'GameLaunch SPEC-007 tests passed'
-            }
-            Write-Gate 'Full game gate PASSED' 'Success'
-            exit 0
         }
         finally {
-            Stop-StrayGameLaunchProcesses
+            if (-not (Test-GameAttachOnlyMode)) {
+                Stop-StrayGameLaunchProcesses
+            }
         }
+
+        if ($gameExit -ne 0) {
+            Write-GateResult @{
+                timestamp = (Get-Date).ToUniversalTime().ToString('o')
+                status    = 'FAILED'
+                mode      = 'full'
+                reason    = 'GameLaunch tests failed'
+            }
+            exit $gameExit
+        }
+
+        Write-GateResult @{
+            timestamp = (Get-Date).ToUniversalTime().ToString('o')
+            status    = 'PASSED'
+            mode      = 'full'
+            reason    = 'GameLaunch SPEC-007 tests passed'
+        }
+        Write-Gate 'Full game gate PASSED' 'Success'
+        exit 0
     }
 
     if (-not (Test-Path -LiteralPath $claudeGate)) {

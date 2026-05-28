@@ -225,6 +225,7 @@
   -->
   <Target Name="DeployDll" AfterTargets="Build"
           Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <!-- Always deploy the Runtime DLL itself -->
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
           DestinationFolder="$(BepInExDir)\plugins"
           SkipUnchangedFiles="false"
@@ -234,7 +235,22 @@
           SkipUnchangedFiles="false"
           OverwriteReadOnlyFiles="true"
           Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    <!--
+      [#942] Deploy all first-party DINOForge.*.dll companions (SDK, Bridge.Protocol, Domains, etc.)
+      so a stale deployed DLL can never cause TypeLoadException when SDK/Protocol types change.
+      Only DINOForge.*.dll are copied — Unity, BepInEx, and third-party DLLs are intentionally
+      excluded (the game provides those at runtime).
+    -->
+    <ItemGroup>
+      <DinoForgeDeployDlls Include="$(OutputPath)DINOForge.*.dll"
+                            Exclude="$(OutputPath)$(AssemblyName).dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DinoForgeDeployDlls)"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
     <Message Text="[DeployDll] Deployed $(AssemblyName).dll to $(BepInExDir)\plugins" Importance="high" />
+    <Message Text="[DeployDll] Also deployed companion DLLs: @(DinoForgeDeployDlls->'%(Filename)%(Extension)', ', ')" Importance="high" Condition="'@(DinoForgeDeployDlls)' != ''" />
   </Target>
 
   <!--

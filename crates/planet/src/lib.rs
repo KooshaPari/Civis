@@ -6,6 +6,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod geology;
+pub use geology::{BiomeKind, GeologyMap, RegionBiome};
 pub mod weather;
 pub use weather::{compute_weather, WeatherCell};
 

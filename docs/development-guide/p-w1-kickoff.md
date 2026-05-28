@@ -119,9 +119,10 @@
 34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
 35. **Shared live_stream frame apply** — **done** (item 36): `live_stream` module dedupes `LiveScenePlugin` and `bevy_window`; graph parcels render in both paths.
 36. **bevy_window live minimap parity** — **done** (item 37): HUD minimap shows streamed agents, buildings, graph parcels, and camera position (matches `live_scene`).
-37. **live_stream unit tests** — **done** (item 39): `#[cfg(test)]` in `live_stream.rs` — color/provenance helpers, parcel→kind mapping, `live_ground_y` offsets, minimal `VoxelDeltaFrame` apply via Bevy `World`.
-38. **bevy_window live scene focus** — **done** (item 40): shared `live_focus`; orbit centre lerps to streamed bounds when WS connected; minimap UV + click pan use focus rect (FR-CIV-BEVY-015).
-39. **Live attach HUD scene stats** — **done** (item 42): `LiveHudSnapshot` overlay shows tick, connection, C/A/B/G counts, optional `sim.snapshot` RTT; wired in `civ-bevy-window` and `civ-standalone` server attach (`FR-CIV-BEVY-017`).
+37. **Shared live_minimap module** — **done** (item 38): `live_minimap` dedupes dot layout, UV mapping, colors, and spawn helpers for `live_scene` and `bevy_window` (`FR-CIV-BEVY-013`).
+38. **live_stream unit tests** — **done** (item 39): `#[cfg(test)]` in `live_stream.rs` — color/provenance helpers, parcel→kind mapping, `live_ground_y` offsets, minimal `VoxelDeltaFrame` apply via Bevy `World`.
+39. **bevy_window live scene focus** — **done** (item 40): shared `live_focus`; orbit centre lerps to streamed bounds when WS connected; minimap UV + click pan use focus rect (FR-CIV-BEVY-015).
+40. **Live attach HUD scene stats** — **done** (item 42): `LiveHudSnapshot` overlay shows tick, connection, C/A/B/G counts, optional `sim.snapshot` RTT; wired in `civ-bevy-window` and `civ-standalone` server attach (`FR-CIV-BEVY-017`).
 
 ## Run
 

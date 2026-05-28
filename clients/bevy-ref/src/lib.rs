@@ -26,6 +26,10 @@ pub mod gpu_features;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
+pub mod live_focus;
+#[cfg(feature = "bevy")]
+pub mod live_minimap;
+#[cfg(feature = "bevy")]
 pub mod live_ground;
 #[cfg(feature = "bevy")]
 pub mod live_scene;
@@ -140,7 +144,8 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     Some(WsSpectatorMeta { is_day, tick })
 }
 
-/// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket status).
+/// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LiveHudSnapshot {
     /// Whether the WebSocket client is connected and receiving frames.
@@ -149,11 +154,35 @@ pub struct LiveHudSnapshot {
     pub tick: Option<u64>,
     /// Smoothed frames-per-second estimate from the renderer loop.
     pub fps: f32,
+    /// Streamed voxel chunks currently in the live scene.
+    pub chunk_count: usize,
+    /// Streamed agent entities in the live scene.
+    pub agent_count: usize,
+    /// Streamed building entities in the live scene.
+    pub building_count: usize,
+    /// Streamed building-graph parcel entities in the live scene.
+    pub graph_parcel_count: usize,
+    /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
+    pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
     pub focused_chunk: Option<ChunkId>,
 }
 
 impl LiveHudSnapshot {
+    /// Copy streamed entity counts from a live attach scene map.
+    pub fn sync_scene_counts(
+        &mut self,
+        chunks: usize,
+        agents: usize,
+        buildings: usize,
+        graph_parcels: usize,
+    ) {
+        self.chunk_count = chunks;
+        self.agent_count = agents;
+        self.building_count = buildings;
+        self.graph_parcel_count = graph_parcels;
+    }
+
     /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
     #[must_use]
     pub fn format_overlay(&self) -> String {
@@ -166,7 +195,13 @@ impl LiveHudSnapshot {
             .tick
             .map(|value| value.to_string())
             .unwrap_or_else(|| "—".to_string());
-        let mut line = format!("FPS: {:.0} | tick: {tick} | {status}", self.fps);
+        let mut line = format!(
+            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{}",
+            self.fps, self.chunk_count, self.agent_count, self.building_count, self.graph_parcel_count
+        );
+        if let Some(rtt) = self.ws_rtt_ms {
+            line.push_str(&format!(" | RTT: {rtt:.0}ms"));
+        }
         if let Some(chunk) = self.focused_chunk {
             line.push_str(&format!(" | chunk: {}", chunk.0));
         }
@@ -704,12 +739,33 @@ mod tests {
             connected: true,
             tick: Some(42),
             fps: 59.7,
+            chunk_count: 3,
+            agent_count: 5,
+            building_count: 2,
+            graph_parcel_count: 1,
             ..Default::default()
         }
         .format_overlay();
         assert!(line.contains("60"));
         assert!(line.contains("42"));
         assert!(line.contains("connected"));
+        assert!(line.contains("C:3"));
+        assert!(line.contains("A:5"));
+        assert!(line.contains("B:2"));
+        assert!(line.contains("G:1"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_ws_rtt_when_present() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            ws_rtt_ms: Some(12.4),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("RTT: 12ms"));
     }
 
     #[test]
@@ -732,6 +788,7 @@ mod tests {
             tick: Some(1),
             fps: 60.0,
             focused_chunk: Some(ChunkId(42)),
+            ..Default::default()
         }
         .format_overlay();
         assert!(line.contains("chunk: 42"));

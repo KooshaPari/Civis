@@ -289,10 +289,10 @@ namespace DINOForge.Tests
                 "the list pane should have an explicit fixed width");
             body.Should().Contain("paneLe.minWidth = ListWidth;",
                 "the list pane minimum width should match ListWidth");
-            body.Should().Contain("_listContent = contentRt;",
+            body.Should().Contain("_listContent = content;",
                 "the list pane should wire the pack list content container");
-            body.Should().Contain("contentRt.offsetMax = new Vector2(0f, -32f);",
-                "list content should reserve space below the header");
+            body.Should().Contain("scrollRt.offsetMax = new Vector2(0f, -32f);",
+                "scroll rect should reserve space below the list header");
         }
 
         /// <summary>

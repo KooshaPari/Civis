@@ -550,8 +550,7 @@
           "SketchFabApi.Net": "[1.0.4, )",
           "Spectre.Console": "[0.*, )",
           "System.CommandLine": "[2.*, )",
-          "System.Drawing.Common": "[8.*, )",
-          "System.Windows.Forms": "[8.*, )"
+          "System.Drawing.Common": "[8.*, )"
         }
       },
       "dinoforge.tools.installer": {

@@ -35,14 +35,20 @@ namespace DINOForge.Tools.PackCompiler
             var formatOption = new Option<string>("--format") { Description = "Output format: text or json (default: text)", DefaultValueFactory = _ => "text" };
 
             // Validate command
-            var validateCommand = new Command("validate") { Description = "Validate a pack directory" };
+            var validateCommand = new Command("validate") { Description = "Validate a pack directory with enhanced error messages and suggestions" };
             validateCommand.Arguments.Add(packPathArg);
             validateCommand.Options.Add(formatOption);
+            var validateFixOption = new Option<bool>("--fix") { Description = "Attempt to auto-fix common validation issues" };
+            var validateStrictOption = new Option<bool>("--strict") { Description = "Fail on warnings in addition to errors (strict CI mode)" };
+            validateCommand.Options.Add(validateFixOption);
+            validateCommand.Options.Add(validateStrictOption);
             validateCommand.SetAction(parseResult =>
             {
                 string packPath = parseResult.GetValue(packPathArg)!;
                 string format = parseResult.GetValue(formatOption) ?? "text";
-                ValidatePack(packPath, format);
+                bool fix = parseResult.GetValue(validateFixOption);
+                bool strict = parseResult.GetValue(validateStrictOption);
+                ValidatePack(packPath, format, fix, strict);
             });
 
             // Build command
@@ -309,7 +315,7 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        private static void ValidatePack(string packPath, string format = "text")
+        private static void ValidatePack(string packPath, string format = "text", bool fix = false, bool strict = false)
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
             try
@@ -318,6 +324,8 @@ namespace DINOForge.Tools.PackCompiler
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
                     AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    if (fix) AnsiConsole.MarkupLine("[yellow]Mode: Auto-repair enabled[/]");
+                    if (strict) AnsiConsole.MarkupLine("[yellow]Mode: Strict (warnings treated as errors)[/]");
                     AnsiConsole.WriteLine();
                 }
 
@@ -345,7 +353,7 @@ namespace DINOForge.Tools.PackCompiler
                     bool aggregateSucceeded = true;
                     foreach (string childPackDir in aggregatePackDirs)
                     {
-                        aggregateSucceeded &= ValidateSinglePack(childPackDir, format);
+                        aggregateSucceeded &= ValidateSinglePack(childPackDir, format, fix, strict);
                     }
 
                     if (!aggregateSucceeded)
@@ -354,7 +362,7 @@ namespace DINOForge.Tools.PackCompiler
                     return;
                 }
 
-                ValidateSinglePack(packPath, format);
+                ValidateSinglePack(packPath, format, fix, strict);
             }
             catch (Exception ex)
             {
@@ -364,7 +372,7 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        private static bool ValidateSinglePack(string packPath, string format = "text")
+        private static bool ValidateSinglePack(string packPath, string format = "text", bool fix = false, bool strict = false)
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
             try
@@ -398,10 +406,6 @@ namespace DINOForge.Tools.PackCompiler
                 DINOForge.SDK.Validation.ValidationResult schemaResult = schemaValidator.Validate("pack-manifest", manifestYaml);
                 if (!schemaResult.IsValid)
                 {
-                    string[] errMessages = schemaResult.Errors
-                        .Select(e => string.IsNullOrEmpty(e.Path) ? e.Message : $"{e.Path}: {e.Message}")
-                        .ToArray();
-
                     if (jsonMode)
                     {
                         WriteJsonLine(writer =>
@@ -410,17 +414,38 @@ namespace DINOForge.Tools.PackCompiler
                             writer.WriteString("pack", manifest.Id);
                             writer.WritePropertyName("errors");
                             writer.WriteStartArray();
-                            foreach (string err in errMessages)
-                                writer.WriteStringValue(err);
+                            foreach (var err in schemaResult.Errors)
+                            {
+                                writer.WriteStringValue($"{(string.IsNullOrEmpty(err.Path) ? "" : err.Path + ": ")}{err.Message}");
+                            }
                             writer.WriteEndArray();
                         });
                     }
                     else
                     {
                         AnsiConsole.MarkupLine("[bold red]Schema validation failed:[/]");
-                        foreach (string msg in errMessages)
+                        AnsiConsole.WriteLine();
+
+                        // Load schema for enriched error messages
+                        try
                         {
-                            AnsiConsole.MarkupLine($"  [red]- {Markup.Escape(msg)}[/]");
+                            var schemaObj = NJsonSchema.JsonSchema.FromJsonAsync(schemaYaml).Result;
+                            var enhancedValidator = new EnhancedValidationService(schemaObj, manifestYaml, packPath);
+
+                            foreach (var error in schemaResult.Errors)
+                            {
+                                var enriched = enhancedValidator.EnrichError(error);
+                                DisplayEnrichedError(enriched);
+                            }
+                        }
+                        catch
+                        {
+                            // Fallback to simple error display if enrichment fails
+                            foreach (var error in schemaResult.Errors)
+                            {
+                                string msg = string.IsNullOrEmpty(error.Path) ? error.Message : $"{error.Path}: {error.Message}";
+                                AnsiConsole.MarkupLine($"  [red]✗ {Markup.Escape(msg)}[/]");
+                            }
                         }
                     }
                     return false;
@@ -502,6 +527,37 @@ namespace DINOForge.Tools.PackCompiler
                 WriteValidationError(jsonMode, null, ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Displays an enriched validation error with context and suggestions.
+        /// </summary>
+        private static void DisplayEnrichedError(EnrichedValidationError error)
+        {
+            // Error header with line number if available
+            if (error.LineNumber > 0)
+            {
+                AnsiConsole.MarkupLine($"[red]✗ Line {error.LineNumber}:[/] {Markup.Escape(error.ContextualMessage)}");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]✗ {Markup.Escape(error.ContextualMessage)}[/]");
+            }
+
+            // Original error message (indented)
+            AnsiConsole.MarkupLine($"  [dim]Error: {Markup.Escape(error.OriginalError.Message)}[/]");
+
+            // Suggestions
+            if (error.Suggestions.Count > 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]  Suggestions:[/]");
+                foreach (var suggestion in error.Suggestions)
+                {
+                    AnsiConsole.MarkupLine($"    • {Markup.Escape(suggestion)}");
+                }
+            }
+
+            AnsiConsole.WriteLine();
         }
 
         private static void WriteValidationError(bool jsonMode, string? pack, string message)

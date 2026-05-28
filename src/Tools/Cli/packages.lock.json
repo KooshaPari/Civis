@@ -139,6 +139,15 @@
         "resolved": "2.0.8",
         "contentHash": "FbpgF8p/ClXnoXEWLjQB34kNh5rsLewEgIgLyVzLDucAOQ4cNs7ec9Cam7gdKPruSb6zp4Mx8htZGTL4/5PJPg=="
       },
+      "System.Drawing.Common": {
+        "type": "Direct",
+        "requested": "[8.*, )",
+        "resolved": "8.0.27",
+        "contentHash": "G/4T2mE+RElzXxHO+PdCngA2lEjGbZvEMyfsFjZHZXROdbI6n5AQC3LHcTKJ2wTHILf4U5eA5zF/ili0YAj+BQ==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "8.0.0"
+        }
+      },
       "AssetsTools.NET": {
         "type": "Transitive",
         "resolved": "3.0.4",
@@ -304,6 +313,11 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "9opKRyOKMCi2xJ7Bj7kxtZ1r9vbzosMvRrdEhVhDz8j8MoBGgB+WmC94yH839NPH+BclAjtQ/pyagvi/8gDLkw=="
+      },
       "Namotion.Reflection": {
         "type": "Transitive",
         "resolved": "2.1.2",
@@ -394,8 +408,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0-dev, )",
+          "DINOForge.SDK": "[0.26.0-dev, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -423,12 +437,17 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.26.0-dev, )",
           "Octokit": "[13.0.1, )"
         }
       }
     },
     "net11.0/win-x64": {
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "9opKRyOKMCi2xJ7Bj7kxtZ1r9vbzosMvRrdEhVhDz8j8MoBGgB+WmC94yH839NPH+BclAjtQ/pyagvi/8gDLkw=="
+      },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.6",

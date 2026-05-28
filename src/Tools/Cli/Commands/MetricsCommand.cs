@@ -20,15 +20,11 @@ internal static class MetricsCommand
     {
         var command = new Command("metrics", "Runtime telemetry metrics and visualization");
 
-        // Subcommand: show (default behavior)
-        var showCommand = new Command("show", "Display metrics in terminal (default)")
-        {
-            IsHidden = true  // Hidden since it's the default
-        };
+        // Default action: display metrics in terminal
         Option<string> formatOpt = CommandOutput.CreateFormatOption();
-        showCommand.Add(formatOpt);
+        command.Add(formatOpt);
 
-        showCommand.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
             bool json = CommandOutput.IsJson(parseResult, formatOpt);
             using GameClient? client = await CommandHelper.ConnectAsync(ct, writeErrors: !json).ConfigureAwait(false);
@@ -88,16 +84,8 @@ internal static class MetricsCommand
             AnsiConsole.Write(table);
         });
 
-        // Subcommand: view (new)
-        var viewCommand = TelemetryViewCommand.Create();
-
-        // Set default action to show (backward compat)
-        command.SetAction(showCommand.Action);
-        command.Add(formatOpt);
-
-        // Add subcommands
-        command.Add(showCommand);
-        command.Add(viewCommand);
+        // Add subcommand: view (for HTML visualization)
+        command.Add(TelemetryViewCommand.Create());
 
         return command;
     }

@@ -11,9 +11,14 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 | Full 3D workspace | `just civis-3d-verify` (catalog + scenario + web + mod-host, then check/test/clippy/fmt) |
 | JSON-RPC catalog drift | `just civis-3d-catalog-check` |
 | Scenario YAML | `just civis-3d-scenario-check` |
+<<<<<<< HEAD
 | Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` + `mods/example-economic/mod.wasm` |
 | Example `.civmod` | `just civis-3d-mod-package` → `example-policy.civmod`; `just civis-3d-mod-package-all` → policy + economic |
 | Example mod sign | `just civis-3d-mod-sign` → `scripts/sign-example-mod.ps1` (prints `author_pubkey_hex`) |
+=======
+| Example mod WASM | `just civis-3d-mod-wasm` (`wasm32-unknown-unknown`) → `mods/example-policy/mod.wasm` |
+| Example `.civmod` | `just civis-3d-mod-package` → `mods/example-policy/example-policy.civmod` |
+>>>>>>> origin/main
 | Quality manifest (optional UE) | `scripts/quality/README.md`; `CIVIS_QUALITY_UNREAL=1` + `emit-quality-manifest.ps1` |
 | Web dashboard | `cd web && npm test` and `cd web && npm run build` |
 | Godot GDExtension | `just godot-test` (`--manifest-path clients/godot-ref/rust/Cargo.toml`) |

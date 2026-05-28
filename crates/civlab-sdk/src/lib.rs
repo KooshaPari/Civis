@@ -10,6 +10,7 @@
 #![cfg_attr(not(target_arch = "wasm32"), forbid(unsafe_code))]
 #![warn(missing_docs)]
 
+<<<<<<< HEAD
 mod policy;
 
 pub use policy::{
@@ -22,6 +23,23 @@ pub use policy::{
 /// Capability surface version echoed by host and guest (FR-CIV-TACTICS-044).
 pub const CAPABILITY_API_VERSION: &str = "0.1.0";
 
+=======
+/// Capability surface version echoed by host and guest (FR-CIV-TACTICS-044).
+pub const CAPABILITY_API_VERSION: &str = "0.1.0";
+
+/// Host import module namespace (`civlab`).
+pub const HOST_IMPORT_MODULE: &str = "civlab";
+
+/// Host imports available to WASM guests (FR-CIV-TACTICS-053).
+pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
+    "capability_api_version",
+    "sim_tick",
+    "memory_size",
+    "memory_read",
+    "memory_write",
+];
+
+>>>>>>> origin/main
 /// Policy-phase hook (no-op until host wires full capability API).
 #[must_use]
 pub fn policy_tick(tick: u64) -> i32 {
@@ -87,4 +105,13 @@ mod tests {
     fn capability_version_is_non_empty() {
         assert!(!CAPABILITY_API_VERSION.is_empty());
     }
+<<<<<<< HEAD
+=======
+
+    #[test]
+    fn host_capability_imports_match_mod_host() {
+        assert_eq!(HOST_IMPORT_MODULE, "civlab");
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"sim_tick"));
+    }
+>>>>>>> origin/main
 }

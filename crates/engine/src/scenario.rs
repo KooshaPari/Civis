@@ -265,10 +265,60 @@ mod tests {
         assert_eq!(scenario.fog_grid_size, 64);
         assert_eq!(scenario.military.war_cadence_ticks, Some(16));
         assert_eq!(scenario.military.engage_range_grid, Some(10));
+<<<<<<< HEAD
         assert_eq!(
             scenario.mods,
             vec!["mods/example-policy", "mods/example-economic"]
         );
+    }
+
+    #[test]
+    fn scenario_fog_wires_military_phase() {
+        let scenario = Scenario {
+            version: SCENARIO_SCHEMA_VERSION,
+            name: "fog".into(),
+            tick_start: 0,
+            population: 100,
+            base_consumption_joules: 1,
+            scarcity_multiplier: 1.0,
+            mods: vec![],
+            fog_vision_radius: Some(6),
+            fog_grid_size: 32,
+            military: ScenarioMilitary::default(),
+        };
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, 32);
+    }
+
+    #[test]
+    fn scenario_military_wires_military_phase() {
+        let scenario = Scenario {
+            version: SCENARIO_SCHEMA_VERSION,
+            name: "mil".into(),
+            tick_start: 0,
+            population: 100,
+            base_consumption_joules: 1,
+            scarcity_multiplier: 1.0,
+            mods: vec![],
+            fog_vision_radius: None,
+            fog_grid_size: default_fog_grid_size(),
+            military: ScenarioMilitary {
+                movement_cadence_ticks: Some(8),
+                movement_pulses_per_cadence: Some(3),
+                war_cadence_ticks: Some(32),
+                engage_range_grid: Some(12),
+            },
+        };
+        let sim = scenario.into_simulation(1);
+        let cfg = sim.military_phase_config();
+        assert_eq!(cfg.movement.cadence_ticks, 8);
+        assert_eq!(cfg.movement_pulses_per_cadence, 3);
+        assert_eq!(cfg.war.cadence_ticks, 32);
+        assert_eq!(cfg.war.engage_range_grid, 12);
+=======
+        assert_eq!(scenario.mods, vec!["mods/example-policy"]);
+>>>>>>> origin/main
     }
 
     #[test]

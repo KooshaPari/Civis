@@ -19,8 +19,11 @@ pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
     "memory_size",
     "memory_read",
     "memory_write",
+<<<<<<< HEAD
     "world_read",
     "action_emit",
+=======
+>>>>>>> origin/main
 ];
 
 /// Packed capability API major version returned by host import `capability_api_version`.
@@ -30,6 +33,7 @@ pub const HOST_CAPABILITY_API_VERSION: i32 = 1;
 pub const HOST_GUEST_MEMORY_CAP: usize = 65_536;
 
 /// Per-instance host state for capability imports.
+<<<<<<< HEAD
 #[derive(Debug)]
 pub struct HostState {
     guest_memory: Vec<u8>,
@@ -47,6 +51,12 @@ impl Default for HostState {
             enforcement: ModEnforcementCtx::default(),
         }
     }
+=======
+#[derive(Debug, Default)]
+pub struct HostState {
+    guest_memory: Vec<u8>,
+    sim_tick: u64,
+>>>>>>> origin/main
 }
 
 /// Errors from guest instantiation or export calls.
@@ -69,10 +79,13 @@ fn trim_guest_memory(mem: &mut Vec<u8>) {
     }
 }
 
+<<<<<<< HEAD
 fn record_permission_denial(state: &mut HostState, call: &str, domain: Option<WorldDomain>) {
     state.enforcement.record_denial(call, domain);
 }
 
+=======
+>>>>>>> origin/main
 fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Error> {
     linker.func_wrap(
         HOST_IMPORT_MODULE,
@@ -126,6 +139,7 @@ fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Err
             Ok(())
         },
     )?;
+<<<<<<< HEAD
 
     linker.func_wrap(
         HOST_IMPORT_MODULE,
@@ -171,6 +185,8 @@ fn link_host_imports(linker: &mut Linker<HostState>) -> Result<(), wasmtime::Err
             }
         },
     )?;
+=======
+>>>>>>> origin/main
     Ok(())
 }
 
@@ -178,8 +194,11 @@ fn with_guest_instance<R>(
     wasm_bytes: &[u8],
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
+<<<<<<< HEAD
     capabilities: ModCapabilitySet,
     enforcement: &mut ModEnforcementCtx,
+=======
+>>>>>>> origin/main
     invoke: impl FnOnce(Instance, &mut Store<HostState>) -> Result<R, WasmGuestError>,
 ) -> Result<R, WasmGuestError> {
     trim_guest_memory(guest_memory);
@@ -192,6 +211,7 @@ fn with_guest_instance<R>(
         HostState {
             guest_memory: guest_memory.clone(),
             sim_tick,
+<<<<<<< HEAD
             capabilities,
             enforcement: ModEnforcementCtx {
                 violations: enforcement.violations,
@@ -199,6 +219,8 @@ fn with_guest_instance<R>(
                 last_call: enforcement.last_call.clone(),
                 last_domain: enforcement.last_domain,
             },
+=======
+>>>>>>> origin/main
         },
     );
     let instance = linker
@@ -206,10 +228,13 @@ fn with_guest_instance<R>(
         .map_err(WasmGuestError::Engine)?;
     let result = invoke(instance, &mut store)?;
     *guest_memory = store.data().guest_memory.clone();
+<<<<<<< HEAD
     enforcement.violations = store.data().enforcement.violations;
     enforcement.suspended = store.data().enforcement.suspended;
     enforcement.last_call = store.data().enforcement.last_call.clone();
     enforcement.last_domain = store.data().enforcement.last_domain;
+=======
+>>>>>>> origin/main
     trim_guest_memory(guest_memory);
     Ok(result)
 }
@@ -218,6 +243,7 @@ fn invoke_tick_export(
     wasm_bytes: &[u8],
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
+<<<<<<< HEAD
     capabilities: ModCapabilitySet,
     enforcement: &mut ModEnforcementCtx,
     primary: &str,
@@ -288,6 +314,54 @@ fn invoke_tick_with_sim_tick(
         ),
         Err(err) => Err(err),
     }
+=======
+    primary: &str,
+    fallback: &str,
+) -> Result<i32, WasmGuestError> {
+    with_guest_instance(wasm_bytes, sim_tick, guest_memory, |instance, store| {
+        if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, primary) {
+            return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
+        }
+        if let Ok(func) = instance.get_typed_func::<(), i32>(&mut *store, fallback) {
+            return func.call(&mut *store, ()).map_err(WasmGuestError::Engine);
+        }
+        Err(WasmGuestError::MissingExport {
+            export: primary.to_owned(),
+        })
+    })
+>>>>>>> origin/main
+}
+
+fn invoke_tick_with_sim_tick(
+    wasm_bytes: &[u8],
+    sim_tick: u64,
+    guest_memory: &mut Vec<u8>,
+    primary: &str,
+    fallback: &str,
+) -> Result<i32, WasmGuestError> {
+    let tick_arg = i64::try_from(sim_tick).unwrap_or(i64::MAX);
+    let result = with_guest_instance(wasm_bytes, sim_tick, guest_memory, |instance, store| {
+        if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, primary) {
+            return func
+                .call(&mut *store, tick_arg)
+                .map_err(WasmGuestError::Engine);
+        }
+        if let Ok(func) = instance.get_typed_func::<i64, i32>(&mut *store, fallback) {
+            return func
+                .call(&mut *store, tick_arg)
+                .map_err(WasmGuestError::Engine);
+        }
+        Err(WasmGuestError::MissingExport {
+            export: primary.to_owned(),
+        })
+    });
+    match result {
+        Ok(code) => Ok(code),
+        Err(WasmGuestError::MissingExport { .. }) => {
+            invoke_tick_export(wasm_bytes, sim_tick, guest_memory, primary, fallback)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 /// Invoke the policy-phase export from a WASM guest (`civlab_policy_tick`, else `policy_tick`).
@@ -296,6 +370,7 @@ pub fn invoke_policy_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
+<<<<<<< HEAD
     invoke_policy_tick_with_capabilities(
         wasm_bytes,
         sim_tick,
@@ -322,6 +397,9 @@ pub fn invoke_policy_tick_with_capabilities(
         "civlab_policy_tick",
         "policy_tick",
     )
+=======
+    invoke_tick_with_sim_tick(wasm_bytes, sim_tick, guest_memory, "civlab_policy_tick", "policy_tick")
+>>>>>>> origin/main
 }
 
 /// Invoke the economy-phase export (`civlab_economy_tick`, else `economy_tick`).
@@ -330,6 +408,7 @@ pub fn invoke_economy_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
+<<<<<<< HEAD
     invoke_economy_tick_with_capabilities(
         wasm_bytes,
         sim_tick,
@@ -347,12 +426,17 @@ pub fn invoke_economy_tick_with_capabilities(
     capabilities: ModCapabilitySet,
     enforcement: &mut ModEnforcementCtx,
 ) -> Result<i32, WasmGuestError> {
+=======
+>>>>>>> origin/main
     invoke_tick_with_sim_tick(
         wasm_bytes,
         sim_tick,
         guest_memory,
+<<<<<<< HEAD
         capabilities,
         enforcement,
+=======
+>>>>>>> origin/main
         "civlab_economy_tick",
         "economy_tick",
     )
@@ -364,6 +448,7 @@ pub fn invoke_military_tick(
     sim_tick: u64,
     guest_memory: &mut Vec<u8>,
 ) -> Result<i32, WasmGuestError> {
+<<<<<<< HEAD
     invoke_military_tick_with_capabilities(
         wasm_bytes,
         sim_tick,
@@ -381,12 +466,17 @@ pub fn invoke_military_tick_with_capabilities(
     capabilities: ModCapabilitySet,
     enforcement: &mut ModEnforcementCtx,
 ) -> Result<i32, WasmGuestError> {
+=======
+>>>>>>> origin/main
     invoke_tick_with_sim_tick(
         wasm_bytes,
         sim_tick,
         guest_memory,
+<<<<<<< HEAD
         capabilities,
         enforcement,
+=======
+>>>>>>> origin/main
         "civlab_military_tick",
         "military_tick",
     )
@@ -395,7 +485,10 @@ pub fn invoke_military_tick_with_capabilities(
 #[cfg(test)]
 mod tests {
     use super::*;
+<<<<<<< HEAD
     use crate::capability::ERR_PERMISSION_DENIED;
+=======
+>>>>>>> origin/main
 
     #[test]
     fn host_memory_import_read_write() {
@@ -456,6 +549,7 @@ mod tests {
         "#;
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
+<<<<<<< HEAD
         assert_eq!(invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"), 17);
     }
 
@@ -557,6 +651,11 @@ mod tests {
             invoke_policy_tick_with_capabilities(&wasm, 0, &mut mem, caps, &mut enforcement)
                 .expect("invoke"),
             1
+=======
+        assert_eq!(
+            invoke_policy_tick(&wasm, 17, &mut mem).expect("invoke"),
+            17
+>>>>>>> origin/main
         );
     }
 }

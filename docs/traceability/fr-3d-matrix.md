@@ -134,6 +134,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-048 | Example economic mod directory + WASM tick. | `mods/example-economic/`, `mod-host` | `example_economic_dir_wasm_ticks_when_built` | implemented |
 | FR-CIV-TACTICS-049 | Host guest memory read/write imports. | `wasm_guest.rs` | `host_memory_import_read_write` | implemented |
 | FR-CIV-TACTICS-050 | Scenario military cadence/range tuning. | `scenario.rs`, `baseline.yaml` | `scenario_military_wires_military_phase` | implemented |
+<<<<<<< HEAD
 | FR-CIV-TACTICS-051 | Baseline scenario loads example-economic mod. | `scenarios/baseline.yaml` | `baseline_yaml_parses` | implemented |
 | FR-CIV-TACTICS-052 | Per-mod guest memory snapshots on ModHost. | `mod-host` | `guest_memory_persists_across_invocations` | implemented |
 | FR-CIV-TACTICS-053 | Full capability host imports (`sim_tick`, import list). | `wasm_guest.rs`, `civlab-sdk` | `sim_tick_host_import_visible_to_guest` | implemented |
@@ -161,6 +162,8 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
 | FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
 | FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
+=======
+>>>>>>> origin/main
 
 ---
 

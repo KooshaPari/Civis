@@ -1,3 +1,5 @@
+#![cfg(all(feature = "bevy", feature = "egui"))]
+
 //! Bevy Egui gameplay HUD for the Civis reference client.
 //!
 //! This module keeps the HUD state isolated from the renderer binaries. The

@@ -19,21 +19,43 @@ impl Default for SimState {
     }
 }
 
+/// In-process simulation tick interval for the standalone client.
+const SIM_TICK_SECONDS: f32 = 0.1;
+
+#[derive(Resource)]
+struct SimTickTimer(Timer);
+
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
 
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SimState>().add_systems(
-            Update,
-            (
-                apply_spawn_civilian_requests,
-                apply_spawn_building_requests,
-            ),
-        );
+        app.init_resource::<SimState>()
+            .insert_resource(SimTickTimer(Timer::from_seconds(
+                SIM_TICK_SECONDS,
+                TimerMode::Repeating,
+            )))
+            .add_systems(
+                Update,
+                (
+                    advance_simulation,
+                    apply_spawn_civilian_requests,
+                    apply_spawn_building_requests,
+                ),
+            );
         #[cfg(feature = "egui")]
         app.add_systems(Update, sync_game_ui_snapshot);
+    }
+}
+
+fn advance_simulation(
+    time: Res<Time>,
+    mut timer: ResMut<SimTickTimer>,
+    mut sim: ResMut<SimState>,
+) {
+    if timer.0.tick(time.delta()) {
+        sim.0.tick();
     }
 }
 

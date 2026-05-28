@@ -229,6 +229,7 @@ namespace DINOForge.SDK
                     : ContentLoadResult.Success(new List<string>().AsReadOnly());
             }
 
+            manifests = DeduplicateManifestsByPackId(manifests, errors);
             DependencyResult dependencyResult = _dependencyResolver.ComputeLoadOrder(manifests.Select(item => item.Manifest));
             if (!dependencyResult.IsSuccess)
             {
@@ -296,6 +297,47 @@ namespace DINOForge.SDK
             }
 
             return manifests;
+        }
+
+        /// <summary>
+        /// Collapses duplicate pack IDs (e.g. <c>economy-balanced</c> and <c>economy-balanced.disabled</c>)
+        /// before dependency resolution. Prefers directories whose folder name does not end with
+        /// <c>.disabled</c>.
+        /// </summary>
+        private static List<(string Directory, PackManifest Manifest)> DeduplicateManifestsByPackId(
+            List<(string Directory, PackManifest Manifest)> manifests,
+            List<string> errors)
+        {
+            Dictionary<string, (string Directory, PackManifest Manifest)> byId =
+                new Dictionary<string, (string Directory, PackManifest Manifest)>(StringComparer.OrdinalIgnoreCase);
+
+            foreach ((string directory, PackManifest manifest) in manifests)
+            {
+                if (!byId.TryGetValue(manifest.Id, out (string Directory, PackManifest Manifest) existing))
+                {
+                    byId[manifest.Id] = (directory, manifest);
+                    continue;
+                }
+
+                bool existingIsDisabled = Path.GetFileName(existing.Directory)
+                    .EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
+                bool candidateIsDisabled = Path.GetFileName(directory)
+                    .EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
+
+                if (existingIsDisabled && !candidateIsDisabled)
+                {
+                    errors.Add(
+                        $"Duplicate pack ID '{manifest.Id}' in {existing.Directory} — using {directory} instead.");
+                    byId[manifest.Id] = (directory, manifest);
+                }
+                else
+                {
+                    errors.Add(
+                        $"Duplicate pack ID '{manifest.Id}' in {directory} — pack will be skipped.");
+                }
+            }
+
+            return byId.Values.ToList();
         }
 
         private void LoadManifestContent(string packDirectory, PackManifest manifest, List<string> errors)

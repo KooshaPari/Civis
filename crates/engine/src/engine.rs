@@ -11,8 +11,8 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_planet::{
-    compute_climate, compute_weather, defaults_earthlike, Climate, MoonConfig, PlanetConfig,
-    WeatherCell,
+    compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
+    PlanetConfig, WeatherCell,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
@@ -1730,6 +1730,7 @@ impl Simulation {
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
+            geology_map: GeologyMap::seed(&self.planet),
         }
     }
 }
@@ -1819,6 +1820,10 @@ pub struct SimulationSnapshot {
     /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
     /// The grid is re-derived from `tick` and `planet.axial_tilt_deg` every tick.
     pub weather_grid: Vec<WeatherCell>,
+    /// Deterministic geology map for the planet (FR-CIV-PLANET-040).
+    ///
+    /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
+    pub geology_map: GeologyMap,
 }
 
 // ============================================================================

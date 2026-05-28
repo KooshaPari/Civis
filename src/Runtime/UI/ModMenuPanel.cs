@@ -169,7 +169,7 @@ namespace DINOForge.Runtime.UI
         /// when set after Build() the dropdown is refreshed on the next call to
         /// <see cref="RefreshProfileDropdown"/>.
         /// </summary>
-        public void SetProfileManager(ProfileManager profileManager)
+        internal void SetProfileManager(ProfileManager profileManager)
         {
             _profileManager = profileManager;
             RefreshProfileDropdown();

@@ -14,6 +14,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
 using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
@@ -958,6 +959,9 @@ namespace DINOForge.Runtime
         // HMR tiered reloader — created once ModPlatform is available.
         private HotReload.HmrTieredReloader? _hmrTieredReloader;
 
+        // Profiles manager (#918) — created once BepInEx root path is known.
+        private Profiles.ProfileManager? _profileManager;
+
         // ── Step 8: Update checker (#899) ─────────────────────────────────────────
         // The Task is fired on the thread pool after pack-load and polled in the
         // deferred-work coroutine loop. Results are pushed to the UI panel when ready.
@@ -1041,6 +1045,22 @@ namespace DINOForge.Runtime
                 {
                     _log.LogError($"[RuntimeDriver] ModPlatform initialization failed: {ex}");
                     _modPlatform = null;
+                }
+            });
+            yield return null;
+
+            RunPhaseWithAbortGuard("ProfileManager.Initialize", () =>
+            {
+                try
+                {
+                    string profilesDir = System.IO.Path.Combine(
+                        BepInEx.Paths.BepInExRootPath, "dinoforge-profiles");
+                    _profileManager = new Profiles.ProfileManager(profilesDir, _log);
+                    _log.LogInfo($"[RuntimeDriver] ProfileManager initialised at '{profilesDir}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] ProfileManager initialisation failed: {ex.Message}");
                 }
             });
             yield return null;
@@ -2169,6 +2189,39 @@ namespace DINOForge.Runtime
                 _dfCanvas.ModMenuPanel.OnReloadRequested = () => RequestPackReload("UGUI reload button");
                 _dfCanvas.ModMenuPanel.OnPackToggled = RequestPackToggle;
 
+                // ── Profiles (#918) ──────────────────────────────────────────
+                if (_profileManager != null)
+                {
+                    RuntimeDriver capturedDriver = this;
+                    _dfCanvas.ModMenuPanel.SetProfileManager(_profileManager);
+                    _dfCanvas.ModMenuPanel.OnProfileLoaded = enabledPackIds =>
+                    {
+                        try
+                        {
+                            // Disable all packs then enable only those in the profile
+                            foreach (UI.PackDisplayInfo p in platform.GetLoadedPackDisplayInfos())
+                            {
+                                bool shouldEnable = false;
+                                foreach (string id in enabledPackIds)
+                                {
+                                    if (string.Equals(id, p.Id, StringComparison.Ordinal))
+                                    {
+                                        shouldEnable = true;
+                                        break;
+                                    }
+                                }
+                                if (p.IsEnabled != shouldEnable)
+                                    capturedDriver.RequestPackToggle(p.Id, shouldEnable);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _log?.LogWarning($"[RuntimeDriver] OnProfileLoaded failed: {ex.Message}");
+                        }
+                    };
+                    _log.LogInfo("[RuntimeDriver] ProfileManager wired to ModMenuPanel.");
+                }
+
                 TryWireNativeMenuInjectorHost();
 
                 // Wire UGUI DebugPanel to ModPlatform so it displays platform status
@@ -2355,6 +2408,20 @@ namespace DINOForge.Runtime
             {
                 DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
             }
+            // #923: Persist metrics snapshot on shutdown (best-effort).
+            try
+            {
+                string snapshotPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge-metrics-snapshot.json");
+                string metricsJson = MetricsCollector.Instance.DumpJson();
+                File.WriteAllText(snapshotPath, metricsJson, System.Text.Encoding.UTF8);
+                DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: metrics snapshot written to '{snapshotPath}'.");
+            }
+            catch (Exception ex)
+            {
+                // Best-effort: metrics persistence must never throw from OnDestroy
+                DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: metrics snapshot failed (non-fatal): {ex.Message}");
+            }
+
             DebugLog.Write("Plugin", "[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
         }
     }

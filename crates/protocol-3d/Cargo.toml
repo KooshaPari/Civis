@@ -9,10 +9,12 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+bincode = { version = "2.0", features = ["serde"] }
 tracing = "0.1"
 civ-voxel = { path = "../voxel" }
 civ-build = { path = "../build" }
 civ-agents = { path = "../agents" }
+civ-planet = { path = "../planet" }
 
 [dev-dependencies]
 proptest = "1.4"

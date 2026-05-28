@@ -281,10 +281,11 @@ namespace DINOForge.Runtime.UI
 
             Debug.Log($"[DebugPanel.RefreshContent] Building content. _modPlatform={(_modPlatform != null ? "SET" : "NULL")}, childCount before={_contentRoot.childCount}");
 
-            // Destroy previous content
+            // Destroy previous content immediately so new children don't coexist
+            // with deferred-destroy ghosts from the same frame (#905).
             for (int i = _contentRoot.childCount - 1; i >= 0; i--)
             {
-                Destroy(_contentRoot.GetChild(i).gameObject);
+                DestroyImmediate(_contentRoot.GetChild(i).gameObject);
             }
 
             // Platform Status section

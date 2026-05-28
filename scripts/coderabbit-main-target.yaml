@@ -1,0 +1,27 @@
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  # Bot approval for agent-driven PRs (same flow as PR #188).
+  auto_approve:
+    enabled: true
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+  path_instructions:
+    - path: "src/Runtime/**"
+      instructions: "This is the BepInEx runtime plugin. It references Unity ECS and game DLLs. Review for null safety and ECS lifecycle correctness."
+    - path: "src/SDK/**"
+      instructions: "This is the public SDK. Review for API stability, backwards compatibility, and proper schema validation."
+    - path: "src/Domains/Warfare/**"
+      instructions: "This is the warfare domain plugin. Review for game balance and stat validation."
+    - path: "packs/**"
+      instructions: "These are YAML content packs. Validate against schemas and check for ID consistency."
+    - path: "schemas/**"
+      instructions: "These are JSON schemas. Ensure they match the C# model definitions."
+chat:
+  auto_reply: true

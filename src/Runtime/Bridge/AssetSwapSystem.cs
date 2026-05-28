@@ -118,6 +118,7 @@ namespace DINOForge.Runtime.Bridge
                 _resetPending = false;
                 _frameCount = 0;
                 _reportedFailures.Clear();
+                _swappedEntityIndices.Clear();
                 DebugLog.Write("AssetSwap", "AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
@@ -254,11 +255,21 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Set of entity indices that have already been swapped in this session.
+        /// Prevents double-swapping when multiple bundles target the same archetype
+        /// component (e.g. militia + line_infantry both map to Components.MeleeUnit).
+        /// Cleared on ScheduleReset().
+        /// </summary>
+        private readonly HashSet<int> _swappedEntityIndices = new HashSet<int>();
+
+        /// <summary>
         /// Attempts to load a Mesh or Material from the mod bundle and apply it to ECS entities
         /// carrying a RenderMesh shared component.
         /// When <paramref name="vanillaMapping"/> is provided the entity query is narrowed to only
         /// entities that also carry the corresponding unit-archetype component (e.g.
         /// <c>Components.MeleeUnit</c>), preventing the replacement from touching unrelated geometry.
+        /// Within the matched archetype, entities are further filtered to avoid double-swapping:
+        /// only entities not yet swapped in this session receive new mesh data.
         /// </summary>
         private bool TrySwapRenderMeshFromBundle(
             string modBundlePath, string assetName, string? vanillaMapping)

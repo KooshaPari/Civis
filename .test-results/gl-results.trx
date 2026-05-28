@@ -1,0 +1,557 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="0eed438f-1d6e-4d9b-9aab-497a1d4ee961" name="koosh@KOOSHAPARI-DESK 2026-05-26 03:40:56" runUser="KOOSHAPARI-DESK\koosh" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-05-26T03:40:56.9975410-07:00" queuing="2026-05-26T03:40:56.9975414-07:00" start="2026-05-26T03:40:54.7859444-07:00" finish="2026-05-26T03:43:06.0946411-07:00" />
+  <TestSettings name="default" id="b4525fa7-cafc-4ced-bf8d-af59e6575ea9">
+    <Deployment runDeploymentRoot="koosh_KOOSHAPARI-DESK_2026-05-26_03_40_56" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b2d38b98-7b0e-4de3-a54c-bb0c96e0a06e" testId="3abab9ce-a256-a605-5686-93aa7e4ad07f" testName="DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_SecondToggle_ClosesModMenu" computerName="KOOSHAPARI-DESK" duration="00:00:00.4073743" startTime="2026-05-26T03:43:05.2601611-07:00" endTime="2026-05-26T03:43:05.2601612-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b2d38b98-7b0e-4de3-a54c-bb0c96e0a06e" />
+    <UnitTestResult executionId="14fe1b60-66cb-4a36-81b5-51175b4bd021" testId="f9b55eea-e6de-e4e9-5ab2-2666b69616e0" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay" computerName="KOOSHAPARI-DESK" duration="00:00:04.4433730" startTime="2026-05-26T03:42:59.3222221-07:00" endTime="2026-05-26T03:42:59.3222223-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="14fe1b60-66cb-4a36-81b5-51175b4bd021" />
+    <UnitTestResult executionId="d75d5662-512a-4198-bd7e-80489b139a06" testId="856eabde-ce66-bb7d-3490-db0a9500ccfe" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_AssertDebugPanelVisible_AtMainMenu" computerName="KOOSHAPARI-DESK" duration="00:00:00.9174215" startTime="2026-05-26T03:42:54.8782915-07:00" endTime="2026-05-26T03:42:54.8782917-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d75d5662-512a-4198-bd7e-80489b139a06" />
+    <UnitTestResult executionId="54aa8a8d-720d-485b-bfb8-0c0c106c2139" testId="e4b094bf-8b5e-f27c-7d5f-39ffe4bf89f1" testName="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection" computerName="KOOSHAPARI-DESK" duration="00:00:09.4842717" startTime="2026-05-26T03:42:28.7314898-07:00" endTime="2026-05-26T03:42:28.7314899-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="54aa8a8d-720d-485b-bfb8-0c0c106c2139" />
+    <UnitTestResult executionId="76f91015-6ecd-473c-a6ee-1c36d2628132" testId="835fe2be-04c6-6e60-06ab-7b9f2fdd1446" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu" computerName="KOOSHAPARI-DESK" duration="00:00:06.1390958" startTime="2026-05-26T03:42:48.3950292-07:00" endTime="2026-05-26T03:42:48.3950295-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="76f91015-6ecd-473c-a6ee-1c36d2628132" />
+    <UnitTestResult executionId="0b1e60c0-de13-482d-ae02-fb8e0b8d5ed9" testId="0be5e9e0-f0f0-669c-5348-b2a8d12861bf" testName="DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_F10_TogglesModMenu" computerName="KOOSHAPARI-DESK" duration="00:00:00.7517794" startTime="2026-05-26T03:43:06.0124672-07:00" endTime="2026-05-26T03:43:06.0124674-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0b1e60c0-de13-482d-ae02-fb8e0b8d5ed9" />
+    <UnitTestResult executionId="56647b1c-653a-4c4c-84b4-4184fa5ce38a" testId="c7eecb30-0708-9d50-e9a6-7d415a46b1a2" testName="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened" computerName="KOOSHAPARI-DESK" duration="00:00:08.4014163" startTime="2026-05-26T03:41:37.7004469-07:00" endTime="2026-05-26T03:41:37.7004471-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="56647b1c-653a-4c4c-84b4-4184fa5ce38a" />
+    <UnitTestResult executionId="949edf88-c565-467d-b1f4-b8042e22f3f3" testId="7dcd5b9b-09fa-98c7-3371-d8fa7a7d0fc1" testName="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad" computerName="KOOSHAPARI-DESK" duration="00:00:00.0010000" startTime="2026-05-26T03:40:57.8116425-07:00" endTime="2026-05-26T03:40:57.8116433-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="949edf88-c565-467d-b1f4-b8042e22f3f3">
+      <Output>
+        <ErrorInfo>
+          <Message>DINO_GAME_PATH must resolve to the game install directory (folder containing Diplomacy is Not an Option.exe), not steamapps/common or its parent.</Message>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="73557dc3-fd3a-48de-866f-9e3d74b00cf6" testId="8a733c79-5976-37fb-6d66-5dccf67e3f9b" testName="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_IsHealthy_AfterBootstrap" computerName="KOOSHAPARI-DESK" duration="00:00:00.2155860" startTime="2026-05-26T03:43:00.9903884-07:00" endTime="2026-05-26T03:43:00.9903886-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73557dc3-fd3a-48de-866f-9e3d74b00cf6" />
+    <UnitTestResult executionId="897606db-b97e-48a3-8995-9502ad369404" testId="c1d8318d-3c22-3a50-4750-578c9bc25ada" testName="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_IsLoaded_AfterBootstrap" computerName="KOOSHAPARI-DESK" duration="00:00:00.2157408" startTime="2026-05-26T03:40:58.2471109-07:00" endTime="2026-05-26T03:40:58.2471113-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="897606db-b97e-48a3-8995-9502ad369404" />
+    <UnitTestResult executionId="5a0cec82-3328-4851-b8b5-161f732ccda4" testId="530b0340-3d20-7373-b082-1bffafff12a8" testName="DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_Loads28Units_InLiveCatalog" computerName="KOOSHAPARI-DESK" duration="00:00:00.5862433" startTime="2026-05-26T03:42:59.9092517-07:00" endTime="2026-05-26T03:42:59.9092520-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a0cec82-3328-4851-b8b5-161f732ccda4" />
+    <UnitTestResult executionId="27c778a3-c749-449a-874c-57dba681717c" testId="71a673b5-8c85-5a4e-3137-ade452d40135" testName="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges" computerName="KOOSHAPARI-DESK" duration="00:00:31.5468597" startTime="2026-05-26T03:42:09.2486936-07:00" endTime="2026-05-26T03:42:09.2486937-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="27c778a3-c749-449a-874c-57dba681717c" />
+    <UnitTestResult executionId="36f32f2f-63b1-4051-a921-dcdc928dbcca" testId="7d950aa4-56ce-eec7-a542-de896a7d306f" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.RuntimeDriver_Survives600FramesAndBeyond" computerName="KOOSHAPARI-DESK" duration="00:00:10.4296939" startTime="2026-05-26T03:42:40.6134895-07:00" endTime="2026-05-26T03:42:40.6134898-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="36f32f2f-63b1-4051-a921-dcdc928dbcca" />
+    <UnitTestResult executionId="cdf1f9b9-30cf-4e3f-a72f-eb909193499a" testId="b722a10b-7812-6586-879d-5715017a358f" testName="DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload" computerName="KOOSHAPARI-DESK" duration="00:00:03.8608440" startTime="2026-05-26T03:43:04.8519718-07:00" endTime="2026-05-26T03:43:04.8519720-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cdf1f9b9-30cf-4e3f-a72f-eb909193499a" />
+    <UnitTestResult executionId="d0b4c913-bc8a-412e-af5e-9244fc90f1ec" testId="d71bf745-158c-0c17-1282-3dceacaf8565" testName="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.AssetVisualAcceptance_WarfareStarwarsLoaded_CapturesScreenshotWithReceipt" computerName="KOOSHAPARI-DESK" duration="00:00:00.9506860" startTime="2026-05-26T03:40:57.7928872-07:00" endTime="2026-05-26T03:40:57.7928875-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d0b4c913-bc8a-412e-af5e-9244fc90f1ec" />
+    <UnitTestResult executionId="7f49f854-3237-4f88-8ed9-3048a7096d04" testId="efc7a406-2729-c5a8-f5cc-522f7395bfe9" testName="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_Ping_RoundTripUnder500Ms" computerName="KOOSHAPARI-DESK" duration="00:00:00.2198318" startTime="2026-05-26T03:43:00.7742438-07:00" endTime="2026-05-26T03:43:00.7742440-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7f49f854-3237-4f88-8ed9-3048a7096d04" />
+    <UnitTestResult executionId="91e182d3-6b50-4e29-b62e-3491706ddbe7" testId="b9963d05-2ae1-701b-9a3e-7c1aae8b21fb" testName="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_ResourceValues_AreReasonable" computerName="KOOSHAPARI-DESK" duration="00:00:00.2196603" startTime="2026-05-26T03:40:58.9157234-07:00" endTime="2026-05-26T03:40:58.9157237-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="91e182d3-6b50-4e29-b62e-3491706ddbe7" />
+    <UnitTestResult executionId="f4349e91-b21a-4dd4-85fc-909a7847bd52" testId="ad2fd79d-022a-14da-8ae5-6bbc0c32c254" testName="DINOForge.Tests.GameLaunch.GameLaunchPackTests.Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud" computerName="KOOSHAPARI-DESK" duration="00:00:00.4253692" startTime="2026-05-26T03:43:00.3351324-07:00" endTime="2026-05-26T03:43:00.3351345-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f4349e91-b21a-4dd4-85fc-909a7847bd52" />
+    <UnitTestResult executionId="107a3937-600b-4a8f-8689-548b6a4a8452" testId="8a8109e2-72a2-1b3a-d1a3-0733baee50dd" testName="DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests.HotReload_PackYamlChange_TriggersReloadWithin5Seconds" computerName="KOOSHAPARI-DESK" duration="00:00:20.4132536" startTime="2026-05-26T03:41:19.3400718-07:00" endTime="2026-05-26T03:41:19.3400720-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="107a3937-600b-4a8f-8689-548b6a4a8452">
+      <Output>
+        <ErrorInfo>
+          <Message>Expected reloadDetected to be True because pack hot reload should appear in BepInEx/LogOutput.log or status within 20s (SDK debounce default 15s; took 20.1s, log=n/a), but found False.</Message>
+          <StackTrace>   at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)&#xD;
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)&#xD;
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)&#xD;
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)&#xD;
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)&#xD;
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)&#xD;
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)&#xD;
+   at DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests.HotReload_PackYamlChange_TriggersReloadWithin5Seconds() in C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchHotReloadTests.cs:line 87&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3335435b-54e6-4c09-bfaa-c0c2d6a04682" testId="49ee8b7d-b16a-841b-1627-2be00de2e14f" testName="DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_IsListedInLoadedPacks" computerName="KOOSHAPARI-DESK" duration="00:00:00.2180975" startTime="2026-05-26T03:43:00.5536998-07:00" endTime="2026-05-26T03:43:00.5537000-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3335435b-54e6-4c09-bfaa-c0c2d6a04682" />
+    <UnitTestResult executionId="8afd34c8-a6c4-4dfb-9ade-2effa5470e1d" testId="7b432cb4-f1e7-b862-0787-9dcb46b88290" testName="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_Resources_AvailableViaSnapshot" computerName="KOOSHAPARI-DESK" duration="00:00:00.2176554" startTime="2026-05-26T03:40:58.0306057-07:00" endTime="2026-05-26T03:40:58.0306059-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8afd34c8-a6c4-4dfb-9ade-2effa5470e1d" />
+    <UnitTestResult executionId="fca1bfef-6b82-4447-8ca5-23e91c480d3f" testId="9c5bfdf4-7756-938f-fc92-7ca5a8bae788" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F10_ModMenuToggle_PreservesRuntime" computerName="KOOSHAPARI-DESK" duration="00:00:01.6410104" startTime="2026-05-26T03:42:42.2551924-07:00" endTime="2026-05-26T03:42:42.2551926-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fca1bfef-6b82-4447-8ca5-23e91c480d3f" />
+    <UnitTestResult executionId="72c1dec4-f79c-4fcd-b0bf-77136ccef0a9" testId="a29646bf-bdca-cb17-3e31-d42c71764a91" testName="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection" computerName="KOOSHAPARI-DESK" duration="00:00:09.9968964" startTime="2026-05-26T03:42:19.2463899-07:00" endTime="2026-05-26T03:42:19.2463903-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="72c1dec4-f79c-4fcd-b0bf-77136ccef0a9" />
+    <UnitTestResult executionId="82a9c15f-5118-4cc6-9a0a-cc8c393d6f3b" testId="4af19047-0b7e-8929-dcb6-3d2422e56b5e" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_TogglesPersistentDebugOverlay" computerName="KOOSHAPARI-DESK" duration="00:00:01.4505665" startTime="2026-05-26T03:42:30.1829925-07:00" endTime="2026-05-26T03:42:30.1829940-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="82a9c15f-5118-4cc6-9a0a-cc8c393d6f3b" />
+    <UnitTestResult executionId="78d4f16f-f3e2-4681-9c8e-f2a3af99b21c" testId="5dfefce0-c114-bf77-84fb-68d86603ef0e" testName="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_ManifestIsValid_AndLoadable" computerName="KOOSHAPARI-DESK" duration="00:00:00.4476615" startTime="2026-05-26T03:40:58.6954743-07:00" endTime="2026-05-26T03:40:58.6954745-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="78d4f16f-f3e2-4681-9c8e-f2a3af99b21c" />
+    <UnitTestResult executionId="32e466c1-0525-48e2-846b-358cf8fc05ae" testId="dc113434-9dfb-f205-15cc-79f2acb2b0eb" testName="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu" computerName="KOOSHAPARI-DESK" duration="00:00:05.5644990" startTime="2026-05-26T03:42:53.9602400-07:00" endTime="2026-05-26T03:42:53.9602404-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="32e466c1-0525-48e2-846b-358cf8fc05ae" />
+    <UnitTestResult executionId="9f06fdc9-5481-486b-87b3-f2fdfcb1e8f2" testId="51156138-f581-0063-c5f2-316a88ee88e2" testName="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay" computerName="KOOSHAPARI-DESK" duration="00:00:09.9656972" startTime="2026-05-26T03:41:29.2978598-07:00" endTime="2026-05-26T03:41:29.2978601-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9f06fdc9-5481-486b-87b3-f2fdfcb1e8f2" />
+    <UnitTestResult executionId="b500da82-1477-44c9-b932-8daacf20cd17" testId="00f9c59a-87a0-bd94-b1fb-a5b8f2cba9fb" testName="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase2_CloneTrooper_EntityRegistered" computerName="KOOSHAPARI-DESK" duration="00:00:00.4722909" startTime="2026-05-26T03:40:56.8388229-07:00" endTime="2026-05-26T03:40:56.8388661-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b500da82-1477-44c9-b932-8daacf20cd17" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchPackTests.Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="ad2fd79d-022a-14da-8ae5-6bbc0c32c254">
+      <Execution id="f4349e91-b21a-4dd4-85fc-909a7847bd52" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchPackTests" name="Bootstrap_LoadedPackCount_IsGreaterThanZero_ViaStatusAndHud" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_StyleMatchesSettings_AfterInjection" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="a29646bf-bdca-cb17-3e31-d42c71764a91">
+      <Execution id="72c1dec4-f79c-4fcd-b0bf-77136ccef0a9" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests" name="MainMenu_ModsButton_StyleMatchesSettings_AfterInjection" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_OpensOverlay" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="51156138-f581-0063-c5f2-316a88ee88e2">
+      <Execution id="9f06fdc9-5481-486b-87b3-f2fdfcb1e8f2" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests" name="MainMenu_ModsButton_OpensOverlay" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_Loads28Units_InLiveCatalog" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="530b0340-3d20-7373-b082-1bffafff12a8">
+      <Execution id="5a0cec82-3328-4851-b8b5-161f732ccda4" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchPackTests" name="WarfareStarwars_Loads28Units_InLiveCatalog" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_ModsButton_PersistsAcrossSceneChanges" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="71a673b5-8c85-5a4e-3137-ade452d40135">
+      <Execution id="27c778a3-c749-449a-874c-57dba681717c" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests" name="MainMenu_ModsButton_PersistsAcrossSceneChanges" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="835fe2be-04c6-6e60-06ab-7b9f2fdd1446">
+      <Execution id="76f91015-6ecd-473c-a6ee-1c36d2628132" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_F9_SecondToggle_ClosesDebugPanel_AtMainMenu" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_IsLoaded_AfterBootstrap" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="c1d8318d-3c22-3a50-4750-578c9bc25ada">
+      <Execution id="897606db-b97e-48a3-8995-9502ad369404" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests" name="EconomyPack_IsLoaded_AfterBootstrap" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="7dcd5b9b-09fa-98c7-3371-d8fa7a7d0fc1">
+      <Execution id="949edf88-c565-467d-b1f4-b8042e22f3f3" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests" name="Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_ManifestIsValid_AndLoadable" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="5dfefce0-c114-bf77-84fb-68d86603ef0e">
+      <Execution id="78d4f16f-f3e2-4681-9c8e-f2a3af99b21c" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests" name="EconomyPack_ManifestIsValid_AndLoadable" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_F10_TogglesModMenu" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="0be5e9e0-f0f0-669c-5348-b2a8d12861bf">
+      <Execution id="0b1e60c0-de13-482d-ae02-fb8e0b8d5ed9" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchUiTests" name="Overlay_F10_TogglesModMenu" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchUiTests.Overlay_SecondToggle_ClosesModMenu" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="3abab9ce-a256-a605-5686-93aa7e4ad07f">
+      <Execution id="b2d38b98-7b0e-4de3-a54c-bb0c96e0a06e" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchUiTests" name="Overlay_SecondToggle_ClosesModMenu" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_Ping_RoundTripUnder500Ms" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="efc7a406-2729-c5a8-f5cc-522f7395bfe9">
+      <Execution id="7f49f854-3237-4f88-8ed9-3048a7096d04" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests" name="Bridge_Ping_RoundTripUnder500Ms" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests.HotReload_PackYamlChange_TriggersReloadWithin5Seconds" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="8a8109e2-72a2-1b3a-d1a3-0733baee50dd">
+      <Execution id="107a3937-600b-4a8f-8689-548b6a4a8452" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests" name="HotReload_PackYamlChange_TriggersReloadWithin5Seconds" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_Resources_AvailableViaSnapshot" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="7b432cb4-f1e7-b862-0787-9dcb46b88290">
+      <Execution id="8afd34c8-a6c4-4dfb-9ade-2effa5470e1d" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests" name="EconomyPack_Resources_AvailableViaSnapshot" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.PauseMenu_HasModsButton_WhenOpened" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="c7eecb30-0708-9d50-e9a6-7d415a46b1a2">
+      <Execution id="56647b1c-653a-4c4c-84b4-4184fa5ce38a" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests" name="PauseMenu_HasModsButton_WhenOpened" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.RuntimeDriver_Survives600FramesAndBeyond" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="7d950aa4-56ce-eec7-a542-de896a7d306f">
+      <Execution id="36f32f2f-63b1-4051-a921-dcdc928dbcca" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="RuntimeDriver_Survives600FramesAndBeyond" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests.MainMenu_HasModsButton_AfterInjection" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="e4b094bf-8b5e-f27c-7d5f-39ffe4bf89f1">
+      <Execution id="54aa8a8d-720d-485b-bfb8-0c0c106c2139" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchNativeMenuTests" name="MainMenu_HasModsButton_AfterInjection" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.AssetVisualAcceptance_WarfareStarwarsLoaded_CapturesScreenshotWithReceipt" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="d71bf745-158c-0c17-1282-3dceacaf8565">
+      <Execution id="d0b4c913-bc8a-412e-af5e-9244fc90f1ec" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests" name="AssetVisualAcceptance_WarfareStarwarsLoaded_CapturesScreenshotWithReceipt" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_AssertDebugPanelVisible_AtMainMenu" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="856eabde-ce66-bb7d-3490-db0a9500ccfe">
+      <Execution id="d75d5662-512a-4198-bd7e-80489b139a06" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_F9_AssertDebugPanelVisible_AtMainMenu" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchStatTests.StatOverride_HP_PersistsAfterReload" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="b722a10b-7812-6586-879d-5715017a358f">
+      <Execution id="cdf1f9b9-30cf-4e3f-a72f-eb909193499a" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchStatTests" name="StatOverride_HP_PersistsAfterReload" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase2_CloneTrooper_EntityRegistered" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="00f9c59a-87a0-bd94-b1fb-a5b8f2cba9fb">
+      <Execution id="b500da82-1477-44c9-b932-8daacf20cd17" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests" name="Phase2_CloneTrooper_EntityRegistered" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchPackTests.WarfareStarwars_IsListedInLoadedPacks" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="49ee8b7d-b16a-841b-1627-2be00de2e14f">
+      <Execution id="3335435b-54e6-4c09-bfaa-c0c2d6a04682" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchPackTests" name="WarfareStarwars_IsListedInLoadedPacks" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F10_ModMenuToggle_PreservesRuntime" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="9c5bfdf4-7756-938f-fc92-7ca5a8bae788">
+      <Execution id="fca1bfef-6b82-4447-8ca5-23e91c480d3f" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_F10_ModMenuToggle_PreservesRuntime" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_Panels_HiddenByDefault_AtMainMenu" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="dc113434-9dfb-f205-15cc-79f2acb2b0eb">
+      <Execution id="32e466c1-0525-48e2-846b-358cf8fc05ae" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_Panels_HiddenByDefault_AtMainMenu" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests.Bridge_IsHealthy_AfterBootstrap" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="8a733c79-5976-37fb-6d66-5dccf67e3f9b">
+      <Execution id="73557dc3-fd3a-48de-866f-9e3d74b00cf6" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchSmokeTests" name="Bridge_IsHealthy_AfterBootstrap" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_TogglesPersistentDebugOverlay" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="4af19047-0b7e-8929-dcb6-3d2422e56b5e">
+      <Execution id="82a9c15f-5118-4cc6-9a0a-cc8c393d6f3b" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_F9_TogglesPersistentDebugOverlay" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests.EconomyPack_ResourceValues_AreReasonable" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="b9963d05-2ae1-701b-9a3e-7c1aae8b21fb">
+      <Execution id="91e182d3-6b50-4e29-b62e-3491706ddbe7" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchEconomyTests" name="EconomyPack_ResourceValues_AreReasonable" />
+    </UnitTest>
+    <UnitTest name="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests.Overlay_F9_F10_ToggleDuringGameplay" storage="c:\users\koosh\dino\src\tests\gamelaunch\bin\release\net11.0\dinoforge.tests.gamelaunch.dll" id="f9b55eea-e6de-e4e9-5ab2-2666b69616e0">
+      <Execution id="14fe1b60-66cb-4a36-81b5-51175b4bd021" />
+      <TestMethod codeBase="C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="DINOForge.Tests.GameLaunch.GameLaunchOverlayTests" name="Overlay_F9_F10_ToggleDuringGameplay" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="3abab9ce-a256-a605-5686-93aa7e4ad07f" executionId="b2d38b98-7b0e-4de3-a54c-bb0c96e0a06e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f9b55eea-e6de-e4e9-5ab2-2666b69616e0" executionId="14fe1b60-66cb-4a36-81b5-51175b4bd021" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="856eabde-ce66-bb7d-3490-db0a9500ccfe" executionId="d75d5662-512a-4198-bd7e-80489b139a06" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e4b094bf-8b5e-f27c-7d5f-39ffe4bf89f1" executionId="54aa8a8d-720d-485b-bfb8-0c0c106c2139" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="835fe2be-04c6-6e60-06ab-7b9f2fdd1446" executionId="76f91015-6ecd-473c-a6ee-1c36d2628132" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0be5e9e0-f0f0-669c-5348-b2a8d12861bf" executionId="0b1e60c0-de13-482d-ae02-fb8e0b8d5ed9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7eecb30-0708-9d50-e9a6-7d415a46b1a2" executionId="56647b1c-653a-4c4c-84b4-4184fa5ce38a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7dcd5b9b-09fa-98c7-3371-d8fa7a7d0fc1" executionId="949edf88-c565-467d-b1f4-b8042e22f3f3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a733c79-5976-37fb-6d66-5dccf67e3f9b" executionId="73557dc3-fd3a-48de-866f-9e3d74b00cf6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c1d8318d-3c22-3a50-4750-578c9bc25ada" executionId="897606db-b97e-48a3-8995-9502ad369404" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="530b0340-3d20-7373-b082-1bffafff12a8" executionId="5a0cec82-3328-4851-b8b5-161f732ccda4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="71a673b5-8c85-5a4e-3137-ade452d40135" executionId="27c778a3-c749-449a-874c-57dba681717c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7d950aa4-56ce-eec7-a542-de896a7d306f" executionId="36f32f2f-63b1-4051-a921-dcdc928dbcca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b722a10b-7812-6586-879d-5715017a358f" executionId="cdf1f9b9-30cf-4e3f-a72f-eb909193499a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d71bf745-158c-0c17-1282-3dceacaf8565" executionId="d0b4c913-bc8a-412e-af5e-9244fc90f1ec" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="efc7a406-2729-c5a8-f5cc-522f7395bfe9" executionId="7f49f854-3237-4f88-8ed9-3048a7096d04" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b9963d05-2ae1-701b-9a3e-7c1aae8b21fb" executionId="91e182d3-6b50-4e29-b62e-3491706ddbe7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ad2fd79d-022a-14da-8ae5-6bbc0c32c254" executionId="f4349e91-b21a-4dd4-85fc-909a7847bd52" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a8109e2-72a2-1b3a-d1a3-0733baee50dd" executionId="107a3937-600b-4a8f-8689-548b6a4a8452" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="49ee8b7d-b16a-841b-1627-2be00de2e14f" executionId="3335435b-54e6-4c09-bfaa-c0c2d6a04682" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7b432cb4-f1e7-b862-0787-9dcb46b88290" executionId="8afd34c8-a6c4-4dfb-9ade-2effa5470e1d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9c5bfdf4-7756-938f-fc92-7ca5a8bae788" executionId="fca1bfef-6b82-4447-8ca5-23e91c480d3f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a29646bf-bdca-cb17-3e31-d42c71764a91" executionId="72c1dec4-f79c-4fcd-b0bf-77136ccef0a9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4af19047-0b7e-8929-dcb6-3d2422e56b5e" executionId="82a9c15f-5118-4cc6-9a0a-cc8c393d6f3b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5dfefce0-c114-bf77-84fb-68d86603ef0e" executionId="78d4f16f-f3e2-4681-9c8e-f2a3af99b21c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dc113434-9dfb-f205-15cc-79f2acb2b0eb" executionId="32e466c1-0525-48e2-846b-358cf8fc05ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="51156138-f581-0063-c5f2-316a88ee88e2" executionId="9f06fdc9-5481-486b-87b3-f2fdfcb1e8f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="00f9c59a-87a0-bd94-b1fb-a5b8f2cba9fb" executionId="b500da82-1477-44c9-b932-8daacf20cd17" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="28" executed="27" passed="26" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 11.0.0-preview.2.26159.112)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: DINOForge.Tests.GameLaunch&#xD;
+[xUnit.net 00:00:00.21]   Discovered:  DINOForge.Tests.GameLaunch&#xD;
+[xUnit.net 00:00:00.22]   Starting:    DINOForge.Tests.GameLaunch&#xD;
+[03:40:55 INF] Connecting to pipe 'dinoforge-game-bridge' with timeout 10000ms&#xD;
+[03:40:55 INF] Successfully connected to pipe 'dinoforge-game-bridge'&#xD;
+[03:40:55 DBG] Sending request 'connect' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:56 INF] Request 'connect' completed successfully in 220ms&#xD;
+[03:40:56 INF] Captured session_id 53ec58abb6224972aeca963ac0892947 from connect handshake&#xD;
+[03:40:56 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:56 INF] Request 'waitForWorld' completed successfully in 216ms&#xD;
+[03:40:56 DBG] Sending request 'queryEntities' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:56 INF] Request 'queryEntities' completed successfully in 225ms&#xD;
+[03:40:56 DBG] Sending request 'queryEntities' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:56 INF] Request 'queryEntities' completed successfully in 216ms&#xD;
+[03:40:56 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:57 INF] Request 'status' completed successfully in 214ms&#xD;
+[03:40:57 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:57 INF] Request 'status' completed successfully in 214ms&#xD;
+[03:40:57 DBG] Sending request 'queryEntities' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:57 INF] Request 'queryEntities' completed successfully in 230ms&#xD;
+[03:40:57 DBG] Sending request 'screenshot' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:57 INF] Request 'screenshot' completed successfully in 219ms&#xD;
+[xUnit.net 00:00:02.33]       DINO_GAME_PATH must resolve to the game install directory (folder containing Diplomacy is Not an Option.exe), not steamapps/common or its parent.&#xD;
+[03:40:57 DBG] Sending request 'getResources' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:58 INF] Request 'getResources' completed successfully in 214ms&#xD;
+[03:40:58 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:58 INF] Request 'status' completed successfully in 210ms&#xD;
+[03:40:58 DBG] Sending request 'getCatalog' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+Test 'DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad' was skipped in the test run.&#xD;
+[03:40:58 INF] Request 'getCatalog' completed successfully in 240ms&#xD;
+[03:40:58 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:58 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:40:58 DBG] Sending request 'getResources' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:58 INF] Request 'getResources' completed successfully in 215ms&#xD;
+[03:40:58 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:59 INF] Request 'status' completed successfully in 209ms&#xD;
+[03:40:59 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:40:59 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:41:00 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:00 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:01 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:01 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:01 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:01 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:41:02 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:02 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:41:03 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:03 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:03 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:04 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:41:04 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:04 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:05 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:05 INF] Request 'status' completed successfully in 218ms&#xD;
+[03:41:06 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:06 INF] Request 'status' completed successfully in 216ms&#xD;
+[03:41:06 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:07 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:07 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:07 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:08 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:08 INF] Request 'status' completed successfully in 215ms&#xD;
+[03:41:08 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:09 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:09 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:09 INF] Request 'status' completed successfully in 216ms&#xD;
+[03:41:10 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:10 INF] Request 'status' completed successfully in 216ms&#xD;
+[03:41:11 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:11 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:11 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:12 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:12 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:12 INF] Request 'status' completed successfully in 217ms&#xD;
+[03:41:13 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:13 INF] Request 'status' completed successfully in 218ms&#xD;
+[03:41:14 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:14 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:14 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:14 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:15 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:15 INF] Request 'status' completed successfully in 205ms&#xD;
+[03:41:16 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:16 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:41:16 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:17 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:17 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:17 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:41:18 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:18 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:19 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:19 INF] Request 'status' completed successfully in 202ms&#xD;
+[xUnit.net 00:00:23.85]       Expected reloadDetected to be True because pack hot reload should appear in BepInEx/LogOutput.log or status within 20s (SDK debounce default 15s; took 20.1s, log=n/a), but found False.&#xD;
+[xUnit.net 00:00:23.85]       Stack Trace:&#xD;
+[03:41:19 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)&#xD;
+[xUnit.net 00:00:23.85]            at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:23.85]         C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchHotReloadTests.cs(87,0): at DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests.HotReload_PackYamlChange_TriggersReloadWithin5Seconds()&#xD;
+[xUnit.net 00:00:23.85]         --- End of stack trace from previous location ---&#xD;
+[03:41:19 INF] Request 'loadScene' completed successfully in 210ms&#xD;
+[03:41:24 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:24 INF] Request 'waitForWorld' completed successfully in 216ms&#xD;
+[03:41:24 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:24 INF] Request 'waitForUi' completed successfully in 215ms&#xD;
+[03:41:24 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:25 INF] Request 'invokeMethod' completed successfully in 205ms&#xD;
+[03:41:27 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:27 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:41:28 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:28 INF] Request 'waitForUi' completed successfully in 202ms&#xD;
+[03:41:28 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:28 INF] Request 'queryUi' completed successfully in 217ms&#xD;
+[03:41:28 DBG] Sending request 'clickUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:29 INF] Request 'clickUi' completed successfully in 215ms&#xD;
+[03:41:29 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:29 INF] Request 'waitForUi' completed successfully in 215ms&#xD;
+[03:41:29 DBG] Sending request 'startGame' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:29 INF] Request 'startGame' completed successfully in 215ms&#xD;
+[03:41:32 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:32 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:41:32 DBG] Sending request 'togglePauseMenu' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:33 INF] Request 'togglePauseMenu' completed successfully in 419ms&#xD;
+[03:41:33 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:34 INF] Request 'queryUi' completed successfully in 215ms&#xD;
+[03:41:34 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:34 INF] Request 'queryUi' completed successfully in 217ms&#xD;
+[03:41:34 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:34 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:41:37 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:37 INF] Request 'queryUi' completed successfully in 204ms&#xD;
+[03:41:37 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:37 INF] Request 'queryUi' completed successfully in 203ms&#xD;
+[03:41:37 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:37 INF] Request 'queryUi' completed successfully in 216ms&#xD;
+[03:41:37 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:37 INF] Request 'loadScene' completed successfully in 214ms&#xD;
+[03:41:42 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:43 INF] Request 'waitForWorld' completed successfully in 202ms&#xD;
+[03:41:43 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:43 INF] Request 'waitForUi' completed successfully in 205ms&#xD;
+[03:41:43 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:43 INF] Request 'invokeMethod' completed successfully in 215ms&#xD;
+[03:41:46 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:46 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:41:46 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:46 INF] Request 'waitForUi' completed successfully in 217ms&#xD;
+[03:41:47 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:47 INF] Request 'queryUi' completed successfully in 216ms&#xD;
+[03:41:47 DBG] Sending request 'startGame' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:47 INF] Request 'startGame' completed successfully in 203ms&#xD;
+[03:41:50 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:50 INF] Request 'status' completed successfully in 215ms&#xD;
+[03:41:50 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:50 INF] Request 'loadScene' completed successfully in 203ms&#xD;
+[03:41:55 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:56 INF] Request 'waitForWorld' completed successfully in 202ms&#xD;
+[03:41:56 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:56 INF] Request 'waitForUi' completed successfully in 218ms&#xD;
+[03:41:56 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:56 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:41:59 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:59 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:41:59 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:41:59 INF] Request 'loadScene' completed successfully in 203ms&#xD;
+[03:42:04 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:05 INF] Request 'waitForWorld' completed successfully in 216ms&#xD;
+[03:42:05 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:05 INF] Request 'waitForUi' completed successfully in 214ms&#xD;
+[03:42:05 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:05 INF] Request 'invokeMethod' completed successfully in 206ms&#xD;
+[03:42:08 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:08 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:42:08 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:09 INF] Request 'waitForUi' completed successfully in 202ms&#xD;
+[03:42:09 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:09 INF] Request 'queryUi' completed successfully in 217ms&#xD;
+[03:42:09 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:09 INF] Request 'loadScene' completed successfully in 213ms&#xD;
+[03:42:14 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:14 INF] Request 'waitForWorld' completed successfully in 202ms&#xD;
+[03:42:14 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:14 INF] Request 'waitForUi' completed successfully in 203ms&#xD;
+[03:42:14 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:15 INF] Request 'invokeMethod' completed successfully in 217ms&#xD;
+[03:42:17 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:17 INF] Request 'invokeMethod' completed successfully in 202ms&#xD;
+[03:42:18 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:18 INF] Request 'waitForUi' completed successfully in 203ms&#xD;
+[03:42:18 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:18 INF] Request 'queryUi' completed successfully in 216ms&#xD;
+[03:42:18 DBG] Sending request 'getUiTree' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:19 INF] Request 'getUiTree' completed successfully in 487ms&#xD;
+[03:42:19 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:19 INF] Request 'loadScene' completed successfully in 216ms&#xD;
+[03:42:24 DBG] Sending request 'waitForWorld' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:24 INF] Request 'waitForWorld' completed successfully in 203ms&#xD;
+[03:42:24 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:24 INF] Request 'waitForUi' completed successfully in 204ms&#xD;
+[03:42:24 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:25 INF] Request 'invokeMethod' completed successfully in 216ms&#xD;
+[03:42:27 DBG] Sending request 'invokeMethod' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:27 INF] Request 'invokeMethod' completed successfully in 204ms&#xD;
+[03:42:28 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:28 INF] Request 'waitForUi' completed successfully in 202ms&#xD;
+[03:42:28 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:28 INF] Request 'queryUi' completed successfully in 202ms&#xD;
+[03:42:28 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:28 INF] Request 'toggleUi' completed successfully in 215ms&#xD;
+[03:42:29 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:29 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:29 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:29 INF] Request 'toggleUi' completed successfully in 202ms&#xD;
+[03:42:29 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:30 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:42:30 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:30 INF] Request 'status' completed successfully in 214ms&#xD;
+[03:42:30 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:30 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:31 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:31 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:31 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:32 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:42:32 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:32 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:33 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:33 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:33 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:34 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:34 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:34 INF] Request 'status' completed successfully in 205ms&#xD;
+[03:42:35 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:35 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:36 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:36 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:36 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:37 INF] Request 'status' completed successfully in 201ms&#xD;
+[03:42:37 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:37 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:38 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:38 INF] Request 'status' completed successfully in 203ms&#xD;
+[03:42:38 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:39 INF] Request 'status' completed successfully in 216ms&#xD;
+[03:42:39 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:39 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:40 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:40 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:40 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:40 INF] Request 'status' completed successfully in 200ms&#xD;
+[03:42:40 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:41 INF] Request 'toggleUi' completed successfully in 203ms&#xD;
+[03:42:41 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:41 INF] Request 'status' completed successfully in 205ms&#xD;
+[03:42:41 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:41 INF] Request 'toggleUi' completed successfully in 202ms&#xD;
+[03:42:42 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:42 INF] Request 'status' completed successfully in 202ms&#xD;
+[03:42:42 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:42 INF] Request 'loadScene' completed successfully in 212ms&#xD;
+[03:42:45 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:45 INF] Request 'queryUi' completed successfully in 205ms&#xD;
+[03:42:45 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:45 INF] Request 'toggleUi' completed successfully in 201ms&#xD;
+[03:42:46 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:46 INF] Request 'queryUi' completed successfully in 263ms&#xD;
+[03:42:46 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:46 INF] Request 'toggleUi' completed successfully in 405ms&#xD;
+[03:42:46 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:47 INF] Request 'waitForUi' completed successfully in 461ms&#xD;
+[03:42:47 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:47 INF] Request 'toggleUi' completed successfully in 201ms&#xD;
+[03:42:47 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:48 INF] Request 'waitForUi' completed successfully in 460ms&#xD;
+[03:42:48 DBG] Sending request 'loadScene' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:48 INF] Request 'loadScene' completed successfully in 208ms&#xD;
+[03:42:51 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:51 INF] Request 'queryUi' completed successfully in 217ms&#xD;
+[03:42:51 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:52 INF] Request 'queryUi' completed successfully in 203ms&#xD;
+[03:42:52 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:52 INF] Request 'toggleUi' completed successfully in 203ms&#xD;
+[03:42:52 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:53 INF] Request 'queryUi' completed successfully in 478ms&#xD;
+[03:42:53 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:53 INF] Request 'queryUi' completed successfully in 207ms&#xD;
+[03:42:53 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:53 INF] Request 'toggleUi' completed successfully in 216ms&#xD;
+[03:42:53 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:54 INF] Request 'toggleUi' completed successfully in 416ms&#xD;
+[03:42:54 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:54 INF] Request 'waitForUi' completed successfully in 498ms&#xD;
+[03:42:54 DBG] Sending request 'startGame' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:55 INF] Request 'startGame' completed successfully in 215ms&#xD;
+[03:42:58 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:58 INF] Request 'status' completed successfully in 204ms&#xD;
+[03:42:58 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:58 INF] Request 'toggleUi' completed successfully in 403ms&#xD;
+[03:42:58 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:58 INF] Request 'waitForUi' completed successfully in 202ms&#xD;
+[03:42:58 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:59 INF] Request 'toggleUi' completed successfully in 201ms&#xD;
+[03:42:59 DBG] Sending request 'waitForUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:59 INF] Request 'waitForUi' completed successfully in 205ms&#xD;
+[03:42:59 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:59 INF] Request 'status' completed successfully in 213ms&#xD;
+[03:42:59 DBG] Sending request 'getCatalog' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:42:59 INF] Request 'getCatalog' completed successfully in 204ms&#xD;
+[03:42:59 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:00 INF] Request 'status' completed successfully in 204ms&#xD;
+[03:43:00 DBG] Sending request 'queryUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:00 INF] Request 'queryUi' completed successfully in 217ms&#xD;
+[03:43:00 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:00 INF] Request 'status' completed successfully in 216ms&#xD;
+[03:43:00 DBG] Sending request 'ping' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:00 INF] Request 'ping' completed successfully in 217ms&#xD;
+[03:43:00 DBG] Sending request 'status' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:00 INF] Request 'status' completed successfully in 213ms&#xD;
+[03:43:00 DBG] Sending request 'applyOverride' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:01 INF] Request 'applyOverride' completed successfully in 214ms&#xD;
+[03:43:01 DBG] Sending request 'reloadPacks' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:01 INF] Request 'reloadPacks' completed successfully in 420ms&#xD;
+[03:43:04 DBG] Sending request 'applyOverride' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:04 INF] Request 'applyOverride' completed successfully in 217ms&#xD;
+[03:43:04 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:05 INF] Request 'toggleUi' completed successfully in 203ms&#xD;
+[03:43:05 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:05 INF] Request 'toggleUi' completed successfully in 202ms&#xD;
+[03:43:05 DBG] Sending request 'toggleUi' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:05 INF] Request 'toggleUi' completed successfully in 216ms&#xD;
+[03:43:05 DBG] Sending request 'getUiTree' to pipe 'dinoforge-game-bridge' (attempt 1/4)&#xD;
+[03:43:06 INF] Request 'getUiTree' completed successfully in 533ms&#xD;
+[xUnit.net 00:02:10.53]   Finished:    DINOForge.Tests.GameLaunch&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="KOOSHAPARI-DESK" outcome="Warning" timestamp="2026-05-26T03:40:57.8108376-07:00">
+        <Text>[xUnit.net 00:00:02.32]     DINOForge.Tests.GameLaunch.GameLaunchAssetSwapTests.Phase1_PatchedBundleExistsOnDisk_BeforeEntityLoad [SKIP]</Text>
+      </RunInfo>
+      <RunInfo computerName="KOOSHAPARI-DESK" outcome="Error" timestamp="2026-05-26T03:41:19.3360374-07:00">
+        <Text>[xUnit.net 00:00:23.85]     DINOForge.Tests.GameLaunch.GameLaunchHotReloadTests.HotReload_PackYamlChange_TriggersReloadWithin5Seconds [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

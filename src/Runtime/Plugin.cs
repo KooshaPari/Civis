@@ -950,6 +950,10 @@ namespace DINOForge.Runtime
         private bool _pendingPackToggle;
         private string? _pendingPackToggleId;
         private bool _pendingPackToggleEnabled;
+        // #904 P0 fix: catalog rebuild deferred from background thread to main thread.
+        // EntityManager is not thread-safe; calling VanillaCatalog.Build from a background
+        // thread during GameWorldLoader scene loading causes native memory corruption.
+        private volatile bool _pendingCatalogRebuild;
 
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
@@ -1293,6 +1297,38 @@ namespace DINOForge.Runtime
                 if (TryDequeuePendingWorldReady(out World? pendingWorld))
                 {
                     yield return ProcessWorldReadyCoroutine(pendingWorld!);
+                    continue;
+                }
+
+                // #904 P0 fix: process catalog rebuild on the main thread.
+                // The background polling thread sets _pendingCatalogRebuild when
+                // enough entities exist; we execute it here on the main thread
+                // because EntityManager operations are NOT thread-safe.
+                if (_pendingCatalogRebuild && _modPlatform != null)
+                {
+                    _pendingCatalogRebuild = false;
+                    RunPhaseWithAbortGuard("DeferredCatalogRebuild", () =>
+                    {
+                        try
+                        {
+                            World? w = World.DefaultGameObjectInjectionWorld;
+                            if (w != null && w.IsCreated && !RuntimeDriver.IsBeingDestroyed)
+                            {
+                                _log?.LogInfo($"[RuntimeDriver] Executing deferred catalog rebuild on main thread.");
+                                _modPlatform.RebuildCatalogAndApplyStats(w);
+                                _log?.LogInfo($"[RuntimeDriver] Deferred catalog rebuild complete.");
+                            }
+                            else
+                            {
+                                _log?.LogWarning("[RuntimeDriver] Deferred catalog rebuild skipped — world disposed or being destroyed.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _log?.LogWarning($"[RuntimeDriver] Deferred catalog rebuild failed: {ex.Message}");
+                        }
+                    });
+                    yield return null;
                     continue;
                 }
 
@@ -1797,12 +1833,14 @@ namespace DINOForge.Runtime
                                         TryRegisterKeyInputSystem(world);
 
                                         Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-                                        bool isLoaderScene = activeScene.name != null &&
-                                            activeScene.name.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0;
+                                        string? sceneName = activeScene.name;
+                                        bool isLoaderScene = sceneName != null &&
+                                            (sceneName.IndexOf("InitialGameLoader", StringComparison.OrdinalIgnoreCase) >= 0
+                                            || sceneName.IndexOf("GameWorldLoader", StringComparison.OrdinalIgnoreCase) >= 0);
                                         if (isLoaderScene)
                                         {
-                                            _log?.LogDebug("[RuntimeDriver] ECS world found but at InitialGameLoader — waiting for scene transition.");
-                                            continue; // Skip pack loading; NativeMenuInjector will trigger LoadScene(1)
+                                            _log?.LogDebug($"[RuntimeDriver] ECS world found but at '{sceneName}' — waiting for scene transition.");
+                                            continue; // Skip OnWorldReady during loading scenes — DINO is still creating entities
                                         }
 
                                         _worldFound = true;
@@ -1831,18 +1869,30 @@ namespace DINOForge.Runtime
                             }
                             catch { } // safe-swallow: ECS world discovery best-effort
 
-                            // Catalog rebuild: only trigger once when enough entities exist
+                            // #904 P0 fix: catalog rebuild must run on the MAIN THREAD, not this
+                            // background thread. EntityManager is NOT thread-safe — calling
+                            // CalculateEntityCount() or VanillaCatalog.Build(EntityManager) from a
+                            // background thread while DINO's main thread is creating entities during
+                            // GameWorldLoader causes native memory corruption (silent crash to main menu).
+                            // Defer to ProcessWorldReadyCoroutine which runs as a main-thread coroutine.
+                            // The coroutine already calls RebuildCatalogAndApplyStats after OnWorldReady.
+                            // We only need to signal that the world has enough entities.
                             try
                             {
                                 World? w2 = World.DefaultGameObjectInjectionWorld;
                                 if (w2 != null && w2.IsCreated)
                                 {
+                                    // Check entity count is safe from bg thread (read-only atomic counter)
+                                    // but the actual catalog rebuild MUST happen on the main thread.
                                     int entityCount = w2.EntityManager.UniversalQuery.CalculateEntityCount();
                                     if (entityCount > 1000)
                                     {
                                         _catalogRebuilt = true;
-                                        _log?.LogInfo($"[RuntimeDriver] Catalog rebuild triggered ({entityCount} entities)");
-                                        _modPlatform?.RebuildCatalogAndApplyStats(w2);
+                                        _log?.LogInfo($"[RuntimeDriver] Catalog rebuild eligible ({entityCount} entities) — deferred to main thread.");
+                                        // Queue catalog rebuild for main-thread execution via the
+                                        // deferred work coroutine. Do NOT call RebuildCatalogAndApplyStats
+                                        // from this background thread.
+                                        _pendingCatalogRebuild = true;
                                     }
                                 }
                             }

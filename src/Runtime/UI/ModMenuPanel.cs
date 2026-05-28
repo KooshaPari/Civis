@@ -115,7 +115,7 @@ namespace DINOForge.Runtime.UI
         private const float UpdateBannerRowHeight = 24f;
 
         // ── Profile manager (#918) ────────────────────────────────────────────
-        private Profiles.ProfileManager? _profileManager;
+        private ProfileManager? _profileManager;
         private Dropdown? _profileDropdown;
         private InputField? _profileNameInput;
         private GameObject? _profileSaveModal;
@@ -169,7 +169,7 @@ namespace DINOForge.Runtime.UI
         /// when set after Build() the dropdown is refreshed on the next call to
         /// <see cref="RefreshProfileDropdown"/>.
         /// </summary>
-        internal void SetProfileManager(Profiles.ProfileManager profileManager)
+        public void SetProfileManager(ProfileManager profileManager)
         {
             _profileManager = profileManager;
             RefreshProfileDropdown();

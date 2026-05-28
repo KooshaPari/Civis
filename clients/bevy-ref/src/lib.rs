@@ -14,9 +14,27 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "bevy")]
+pub mod atmosphere;
+#[cfg(feature = "bevy")]
+pub mod camera;
+#[cfg(feature = "bevy")]
+pub mod decorations;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod game_ui;
+#[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
+pub mod minimap;
+#[cfg(feature = "bevy")]
 pub mod native_backend;
+#[cfg(feature = "bevy")]
+pub mod native_renderer;
+#[cfg(feature = "bevy")]
+pub mod sim_bridge;
+#[cfg(feature = "bevy")]
+pub mod spawn_tools;
+#[cfg(feature = "bevy")]
+pub mod terrain;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

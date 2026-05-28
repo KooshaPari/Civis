@@ -4,7 +4,7 @@ use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
     atmosphere::{
-        animate_water, setup_atmosphere, update_lighting, DayNightCycle, SunLight, WaterSurface,
+        animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface,
     },
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,

@@ -69,4 +69,9 @@ required-features = ["bevy"]
 [[bin]]
 name = "civ-standalone"
 path = "src/bin/standalone.rs"
+required-features = ["bevy", "egui"]
+
+[[bin]]
+name = "civ-native-hal-probe"
+path = "src/bin/native_hal_probe.rs"
 required-features = ["bevy"]

@@ -165,6 +165,17 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "settings")]
         public List<PackSetting>? Settings { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
+        /// Author-declared badges for this pack.
+        /// Valid author-declared values: <c>early-access</c>, <c>total-conversion</c>.
+        /// Curated values (<c>verified-author</c>, <c>editors-choice</c>) are assigned externally
+        /// via a signed list and will be silently stripped if declared directly in pack.yaml.
+        /// Auto-computed values (<c>popular</c>, <c>compatibility-tested</c>) are appended at runtime
+        /// based on download counters and CI results — do not declare them here.
+        /// </summary>
+        [YamlMember(Alias = "badges")]
+        public List<string>? Badges { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
     }
 
     /// <summary>

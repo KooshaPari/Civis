@@ -144,6 +144,24 @@ properties:
         items:
           type: string
 
+  badges:
+    type: array
+    description: |
+      Author-declared quality/status badges for this pack.
+      Only the values listed below may be self-declared; curated and auto-computed
+      badges (verified-author, editors-choice, popular, compatibility-tested) are
+      assigned by the DINOForge team or computed at runtime.
+    items:
+      type: string
+      enum:
+        - early-access
+        - total-conversion
+        - verified-author
+        - editors-choice
+        - popular
+        - compatibility-tested
+    default: []
+
   asset_policy:
     type: object
     description: Asset sourcing and licensing metadata

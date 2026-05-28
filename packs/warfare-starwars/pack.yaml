@@ -33,6 +33,10 @@ description: |
   Experience the conflict between biological discipline and mechanical coordination in a galaxy far, far away.
 type: total_conversion
 
+badges:
+  - total-conversion
+  - early-access
+
 depends_on: []
 conflicts_with: []
 

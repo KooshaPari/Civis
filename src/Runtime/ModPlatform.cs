@@ -1264,6 +1264,9 @@ namespace DINOForge.Runtime
             List<string> screenshotPaths = ScanScreenshots(packDirectory, maxCount: 10);
             List<string> tags = manifest.Tags != null ? new List<string>(manifest.Tags) : new List<string>();
 
+            // #928-935: Merge author-declared badges with auto-computed badges.
+            List<string> badges = BadgeComputer.ComputeBadges(manifest);
+
             // #902: Derive pack tier from classification.
             PackTier tier = DerivePackTier(manifest.Classification, manifest.Id);
 
@@ -1291,7 +1294,8 @@ namespace DINOForge.Runtime
                 factionNames: factionNames.AsReadOnly(),
                 screenshotPaths: screenshotPaths.AsReadOnly(),
                 classification: manifest.Classification,
-                tier: tier);
+                tier: tier,
+                badges: badges.AsReadOnly());
 
             _packDisplayInfoCache[manifestPath] = new CachedPackDisplayInfo(
                 manifestFile.LastWriteTimeUtc,

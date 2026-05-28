@@ -21,6 +21,9 @@ description: |
   Use this as a template for your first pack. Every file is documented
   with "Why this matters" explanations.
 
+badges:
+  - verified-author
+
 depends_on: []
 conflicts_with: []
 load_order: 50

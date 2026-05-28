@@ -1,0 +1,100 @@
+{
+  "categories": [
+    {
+      "name": "Getting Started",
+      "items": [
+        {
+          "q": "How do I install a pack?",
+          "a": "Drop the pack folder into BepInEx/dinoforge_packs/, then press F10 in-game to enable it. The pack must have a valid pack.yaml manifest."
+        },
+        {
+          "q": "Where do packs go?",
+          "a": "Packs are installed in BepInEx/dinoforge_packs/ subfolder. Each pack is a separate folder with its own pack.yaml, YAML/JSON content files, and optional assets."
+        },
+        {
+          "q": "What's a total conversion?",
+          "a": "A total conversion is a pack that replaces core game content (factions, units, buildings) rather than adding to it. Mark your pack as type: total_conversion in pack.yaml."
+        },
+        {
+          "q": "What's the difference between a mod and a pack?",
+          "a": "In DINOForge, packs ARE mods. Every mod is a pack with a pack.yaml manifest, content files, and optional dependencies and conflict rules."
+        },
+        {
+          "q": "Can I enable multiple packs at once?",
+          "a": "Yes. DINOForge detects conflicts and will warn you if packs overlap. Enable/disable packs from the F10 mod menu."
+        }
+      ]
+    },
+    {
+      "name": "Keyboard Shortcuts",
+      "items": [
+        {
+          "q": "F9 =?",
+          "a": "Opens the debug overlay. Shows FPS, garbage collection stats, loaded entity count, active packs, and memory usage. Press F9 again to close."
+        },
+        {
+          "q": "F10 =?",
+          "a": "Opens the mod menu. Enable/disable packs, view pack metadata, see dependencies and conflicts, configure per-pack settings."
+        },
+        {
+          "q": "Esc =?",
+          "a": "Closes the current panel. If debug overlay (F9) is open, Esc closes it. If mod menu (F10) is open, Esc closes it."
+        },
+        {
+          "q": "Ctrl+R =?",
+          "a": "Hot-reload packs. Reloads all pack YAML files without restarting the game. Use after editing pack content locally."
+        }
+      ]
+    },
+    {
+      "name": "Troubleshooting",
+      "items": [
+        {
+          "q": "Mod not showing up in F10?",
+          "a": "Check: (1) Pack folder is in BepInEx/dinoforge_packs/. (2) pack.yaml exists and is valid YAML. (3) Run 'dinoforge verify-pack <path>' to validate structure."
+        },
+        {
+          "q": "Game crashes on New Game?",
+          "a": "This usually means a pack has invalid content. Disable all packs via F10, then enable them one at a time to isolate the problem. Check BepInEx/LogOutput.log for errors."
+        },
+        {
+          "q": "Asset swaps not visible in-game?",
+          "a": "Asset swaps require valid asset bundle files in packs/*/assets/bundles/. Check F9 debug overlay to verify the pack loaded. Check BepInEx/dinoforge_debug.log for asset swap errors."
+        },
+        {
+          "q": "Pack loads but has no content?",
+          "a": "Your pack.yaml is valid, but the content files (units.yaml, factions.yaml, etc) may have errors. Run 'dinoforge verify-pack <path>' to check for schema violations."
+        },
+        {
+          "q": "BepInEx not running DINOForge?",
+          "a": "Ensure BepInEx/plugins/DINOForge.Runtime.dll exists. Check BepInEx/LogOutput.log for load errors. Re-run the DINOForge installer or deploy manually via 'dotnet build -p:DeployToGame=true'."
+        }
+      ]
+    },
+    {
+      "name": "Advanced",
+      "items": [
+        {
+          "q": "What's HMR?",
+          "a": "Hot Module Reload (HMR) lets you edit pack YAML files and press Ctrl+R in-game to reload without restarting. Use for rapid iteration on balance changes and content."
+        },
+        {
+          "q": "How do I write a pack from scratch?",
+          "a": "Use 'dinoforge new <pack-name>' to scaffold a pack. Or copy the example-balance pack as a template. Edit pack.yaml, then add units.yaml, factions.yaml, buildings.yaml, etc."
+        },
+        {
+          "q": "What's the SDK?",
+          "a": "The DINOForge SDK is a C# NuGet package for writing plugins and custom content loaders in code (not YAML). See docs at kooshapari.github.io/Dino/sdk."
+        },
+        {
+          "q": "How do I report a bug?",
+          "a": "Open an issue at github.com/KooshaPari/Dino/issues. Include game version, BepInEx version, loaded packs (from F9), and BepInEx/LogOutput.log output."
+        },
+        {
+          "q": "What's the best way to debug a pack?",
+          "a": "Use 'dinoforge verify-pack <path>' to check structure. Check BepInEx/LogOutput.log and BepInEx/dinoforge_debug.log for errors. Use F9 debug overlay to inspect loaded data."
+        }
+      ]
+    }
+  ]
+}

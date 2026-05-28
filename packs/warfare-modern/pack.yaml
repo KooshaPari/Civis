@@ -21,7 +21,9 @@ description: |
 
   Gameplay shifts from medieval pacing to tactical modern warfare with emphasis on combined-arms coordination.
 type: total_conversion
-classification: content
+
+badges:
+  - early-access
 
 depends_on: []
 conflicts_with: []

@@ -42,6 +42,8 @@
     <Compile Remove="UI\UiSelectorEngine.cs" />
     <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
     <Compile Remove="UI\UiBuilder.cs" />
+    <Compile Remove="UI\BadgeComputer.cs" />
+    <Compile Remove="UI\Badges\BadgeRenderer.cs" />
   </ItemGroup>
 
   <!-- BepInEx core - only when game is installed -->
@@ -281,6 +283,31 @@
     <Message Text="[RustAssetPipeline] DLL not found — P/Invoke will gracefully degrade"
              Importance="low"
              Condition="'@(RustAssetPipelineDll)' == ''" />
+  </Target>
+
+  <!--
+    Deploy badge PNG placeholders to BepInEx/plugins/dinoforge-ui-assets/badges/.
+    BadgeRenderer.LoadBadgeSprite() looks for badges/{name}.png under the same asset root
+    as Kenney sprites.  Placeholder PNGs live at assets/badges/ in the repo root and are
+    generated once by scripts/generate-badge-placeholders.ps1.
+  -->
+  <Target Name="DeployBadgeAssets" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup>
+      <BadgePngFiles Include="$(MSBuildThisFileDirectory)..\..\..\assets\badges\*.png" />
+    </ItemGroup>
+    <MakeDir Directories="$(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+             Condition="'@(BadgePngFiles)' != '' And !Exists('$(BepInExDir)\plugins\dinoforge-ui-assets\badges')" />
+    <Copy SourceFiles="@(BadgePngFiles)"
+          DestinationFolder="$(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+          SkipUnchangedFiles="true"
+          Condition="'@(BadgePngFiles)' != ''" />
+    <Message Text="[DeployBadgeAssets] Deployed $(BadgePngFiles->Count()) badge PNGs to $(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+             Importance="normal"
+             Condition="'@(BadgePngFiles)' != ''" />
+    <Message Text="[DeployBadgeAssets] No badge PNGs found at assets/badges/ — run scripts/generate-badge-placeholders.ps1 first."
+             Importance="normal"
+             Condition="'@(BadgePngFiles)' == ''" />
   </Target>
 
   <!-- Deploy packs from repo to game directory -->

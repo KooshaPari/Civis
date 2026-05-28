@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.SDK;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
@@ -58,6 +59,7 @@ namespace DINOForge.Runtime.Bridge
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
 
+            var __metricsSw = System.Diagnostics.Stopwatch.StartNew();
             Action<string> write = log ?? (_ => { });
 
             // Gate on total entity count: in MainMenu only prefab templates exist (~100s of entities)
@@ -131,6 +133,20 @@ namespace DINOForge.Runtime.Bridge
             write($"[PackStatInjector] Done. " +
                   $"Processed {unitsProcessed} unit(s), skipped {unitsSkipped}, " +
                   $"total writes {totalWrites}.");
+
+            // #920: Telemetry — record stat injection metrics.
+            try
+            {
+                __metricsSw.Stop();
+                MetricsCollector.Instance.RecordValue("stat_inject.writes_total", totalWrites);
+                MetricsCollector.Instance.RecordValue("stat_inject.units_processed", unitsProcessed);
+                MetricsCollector.Instance.RecordDuration("stat_inject.duration_ms", __metricsSw.Elapsed);
+            }
+            catch
+            {
+                // Best-effort: telemetry must never throw
+            }
+
             return totalWrites;
         }
 

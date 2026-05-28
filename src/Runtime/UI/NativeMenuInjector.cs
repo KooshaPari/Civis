@@ -3,6 +3,7 @@ using System;
 using System.Text;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -307,6 +308,9 @@ namespace DINOForge.Runtime.UI
             _injectionAttemptCount++;
             long attemptId = _injectionAttemptCount;
 
+            // #920: Telemetry — count each injection attempt.
+            try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_attempts"); } catch { /* best-effort */ }
+
             try
             {
                 LogInfo($"[NativeMenuInjector::{_sessionId}] ═══ INJECTION ATTEMPT #{attemptId} at {System.DateTime.UtcNow:HH:mm:ss.fff} UTC ═══");
@@ -356,6 +360,8 @@ namespace DINOForge.Runtime.UI
                             if (_injected)
                             {
                                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ SELECTABLE-DONOR INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                                // #920: Telemetry — count successful injections (selectable-donor path).
+                                try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_success"); } catch { /* best-effort */ }
                                 TakeAutoCheckpointScreenshot("cp1_mods_injected_selectable", 180);
                                 return;
                             }
@@ -374,6 +380,8 @@ namespace DINOForge.Runtime.UI
                     if (_injected)
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                        // #920: Telemetry — count successful injections.
+                        try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_success"); } catch { /* best-effort */ }
                         // Auto-checkpoint screenshot: schedule 180 frames later (Update-based, may not fire)
                         TakeAutoCheckpointScreenshot("cp1_mods_injected", 180);
                         return;

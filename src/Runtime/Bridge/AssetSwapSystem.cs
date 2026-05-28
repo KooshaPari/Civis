@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.SDK.Assets;
 // #613 dedup: was alias to DINOForge.Runtime.Assets.AssetService (retired); now points to SDK canonical impl.
 using RuntimeAssetService = DINOForge.SDK.Assets.AssetService;
@@ -166,6 +167,9 @@ namespace DINOForge.Runtime.Bridge
 
             _frameCount++;
 
+            // #920: Telemetry — count every OnUpdate invocation.
+            try { MetricsCollector.Instance.IncrementCounter("asset_swap.update_calls"); } catch { /* best-effort */ }
+
             if (_frameCount < MinFrameDelay)
                 return;
 
@@ -178,6 +182,9 @@ namespace DINOForge.Runtime.Bridge
             // templates (~25 entities). The actual gameplay world has 49K+ entities. Find
             // the world with the most entities (likely the gameplay world) and use its EM.
             EntityManager bestEm = FindBestEntityManager(out int bestCount, out string bestName);
+
+            // #920: Telemetry — record current best world entity count.
+            try { MetricsCollector.Instance.RecordValue("asset_swap.world_entity_count", bestCount); } catch { /* best-effort */ }
             if (bestCount < 1000)
             {
                 if (_frameCount % 60 == 0)

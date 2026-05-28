@@ -14,6 +14,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Bridge;
 using DINOForge.Runtime.HotReload;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
 using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
@@ -559,6 +560,7 @@ namespace DINOForge.Runtime
 
         private ContentLoadResult LoadPacksImpl()
         {
+            var __metricsSw = System.Diagnostics.Stopwatch.StartNew();
             // Iter-144 #547 H6 gray-freeze fix: short-circuit if RuntimeDriver is being destroyed.
             // Pack-load can race scene teardown — a new RuntimeDriver may attempt LoadPacks while
             // the previous one's OnDestroy chain is still running and disposing shared state
@@ -708,6 +710,19 @@ namespace DINOForge.Runtime
 
             // Update UI
             UpdateUI(result);
+
+            // #920: Telemetry instrumentation — record pack load duration and counts.
+            try
+            {
+                __metricsSw.Stop();
+                MetricsCollector.Instance.RecordDuration("pack_load.duration_ms", __metricsSw.Elapsed);
+                MetricsCollector.Instance.RecordValue("pack_load.count_loaded", result.LoadedPacks.Count);
+                MetricsCollector.Instance.RecordValue("pack_load.count_failed", result.Errors.Count);
+            }
+            catch
+            {
+                // Best-effort: telemetry must never throw
+            }
 
             return result;
         }

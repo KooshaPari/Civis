@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using DINOForge.Bridge.Protocol;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
 using RuntimeDriver = DINOForge.Runtime.RuntimeDriver;
 using Newtonsoft.Json;
@@ -583,6 +584,8 @@ namespace DINOForge.Runtime.Bridge
                     return HandleToggleUi(parameters);
                 case "invokeMethod":
                     return HandleInvokeMethod(parameters);
+                case "getMetrics":
+                    return HandleGetMetrics();
                 default:
                     throw new InvalidOperationException($"Method not found: {method}");
             }
@@ -1430,6 +1433,21 @@ namespace DINOForge.Runtime.Bridge
                 WorldName = ""
             };
             return JToken.FromObject(timeoutResult);
+        }
+
+        // #923: Telemetry — return current MetricsCollector snapshot as JSON.
+        private JToken HandleGetMetrics()
+        {
+            try
+            {
+                string json = MetricsCollector.Instance.DumpJson();
+                return JToken.Parse(json);
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleGetMetrics failed: {ex.Message}");
+                return JToken.FromObject(new { error = ex.Message });
+            }
         }
 
         // ──────────────────────────────────────────────

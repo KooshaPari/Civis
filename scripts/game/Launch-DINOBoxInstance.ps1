@@ -140,9 +140,9 @@ public class DesktopLauncher
         & csc.exe $csharpFile 2>&1 | Out-Null
         $exeName = $csharpFile -replace "\.cs$", ".exe"
         & $exeName $gameExe $BoxPath
-        Remove-Item $exeName -Force -ErrorAction SilentlyContinue
+        Remove-Item $exeName -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: ephemeral csc-compiled launcher binary, not a repo artifact
     } finally {
-        Remove-Item $csharpFile -Force -ErrorAction SilentlyContinue
+        Remove-Item $csharpFile -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: ephemeral csc source temp file, not a repo artifact
     }
 } else {
     # Normal launch

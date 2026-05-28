@@ -1,0 +1,9 @@
+id: wood
+name: Wood
+description: |
+  Primary building material for structures and siege weapons. Harvested from forests.
+  Used in most construction projects. No decay.
+production_rate: 0.8
+storage_capacity: 2000.0
+decay_rate: 0.0
+is_tradeable_default: true

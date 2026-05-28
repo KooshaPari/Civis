@@ -221,7 +221,7 @@ dotnet run --project src/Tools/PackCompiler -- \
 **Provenance Index**: `registry/provenance_index.json`
 **Intake Rules**: `policies/intake_rules.yaml`
 **Risk Rules**: `policies/risk_rules.yaml`
-**Schema**: `schemas/asset_manifest.schema.json`
+**Schema**: `schemas/asset-manifest.schema.json`
 
 ---
 

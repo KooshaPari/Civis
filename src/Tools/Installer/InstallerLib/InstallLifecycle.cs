@@ -485,7 +485,7 @@ namespace DINOForge.Tools.Installer
         public string SchemaVersion { get; set; } = "1";
         public string InstallerVersion { get; set; } = "unknown";
         public string InstalledAtUtc { get; set; } = string.Empty;
-        public List<InstalledFileRecord> Files { get; set; } = new List<InstalledFileRecord>();
+        public List<InstalledFileRecord> Files { get; set; } = new List<InstalledFileRecord>(); // public-mutable-ok: JSON deserializer requires mutable List for install manifest
 
         private static readonly Regex Sha256Regex = new Regex(
             @"^[0-9a-fA-F]{64}$", RegexOptions.Compiled);

@@ -105,10 +105,7 @@ rootCommand.Add(PackCommand.Create());
 rootCommand.Add(WatchCommand.Create());
 rootCommand.Add(AssetctlCommand.Create(serviceProvider));
 rootCommand.Add(SyncCommand.Create());
-rootCommand.Add(BuildCommand.Create());
-rootCommand.Add(DeployCommand.Create());
-rootCommand.Add(RelaunchCommand.Create());
-rootCommand.Add(SmokeCommand.Create());
+rootCommand.Add(NewPackCommand.Create());
 
 ParseResult parseResult = rootCommand.Parse(args);
 return await parseResult.InvokeAsync().ConfigureAwait(false);

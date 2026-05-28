@@ -66,18 +66,22 @@ function Write-GateResult([hashtable]$Result) {
 $script:GameProcessBaseName = 'Diplomacy is Not an Option'
 $script:GameExecutableFileName = 'Diplomacy is Not an Option.exe'
 
+<<<<<<< Updated upstream
 function Test-GameAttachOnlyMode {
     $value = $env:DINO_GAME_ALREADY_RUNNING
     return (-not [string]::IsNullOrWhiteSpace($value)) -and
         ($value -eq '1' -or $value -ieq 'true')
 }
 
+=======
+>>>>>>> Stashed changes
 function Stop-StrayGameLaunchProcesses {
     Write-Gate 'Stopping stray game processes (pre/post flight)' 'Warn'
     foreach ($procName in @($script:GameProcessBaseName, 'UnityCrashHandler64')) {
         Get-Process -Name $procName -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
     }
+<<<<<<< Updated upstream
     # Game Launch Protocol: wait 3s and verify no processes remain
     Start-Sleep -Seconds 3
     $remaining = @()
@@ -87,6 +91,9 @@ function Stop-StrayGameLaunchProcesses {
     if ($remaining.Count -gt 0) {
         Write-Gate "Warning: $($remaining.Count) game-related process(es) still running after cleanup" 'Warn'
     }
+=======
+    Start-Sleep -Seconds 2
+>>>>>>> Stashed changes
 }
 
 function Resolve-DinoGameExePath {
@@ -95,10 +102,14 @@ function Resolve-DinoGameExePath {
         return $null
     }
     if (Test-Path -LiteralPath $path -PathType Leaf) {
+<<<<<<< Updated upstream
         if ([string]::Equals([IO.Path]::GetFileName($path), $script:GameExecutableFileName, [StringComparison]::OrdinalIgnoreCase)) {
             return $path
         }
         return $null
+=======
+        return $path
+>>>>>>> Stashed changes
     }
     if (Test-Path -LiteralPath $path -PathType Container) {
         $exe = Join-Path $path $script:GameExecutableFileName
@@ -270,6 +281,7 @@ function Invoke-FullGate {
             Write-Gate "Using game executable: $resolvedExe"
         }
 
+<<<<<<< Updated upstream
         if (-not (Test-GameAttachOnlyMode)) {
             Stop-StrayGameLaunchProcesses
         }
@@ -278,6 +290,9 @@ function Invoke-FullGate {
         }
 
         $gameExit = 0
+=======
+        Stop-StrayGameLaunchProcesses
+>>>>>>> Stashed changes
         try {
             Write-Gate 'Running GameLaunch E2E tests (DINO_GAME_PATH detected)'
             dotnet test 'src/Tests/GameLaunch/DINOForge.Tests.GameLaunch.csproj' `
@@ -285,6 +300,7 @@ function Invoke-FullGate {
                 --filter 'Category=GameLaunch' `
                 --verbosity minimal
             $gameExit = $LASTEXITCODE
+<<<<<<< Updated upstream
         }
         finally {
             if (-not (Test-GameAttachOnlyMode)) {
@@ -293,23 +309,38 @@ function Invoke-FullGate {
         }
 
         if ($gameExit -ne 0) {
+=======
+            if ($gameExit -ne 0) {
+                Write-GateResult @{
+                    timestamp = (Get-Date).ToUniversalTime().ToString('o')
+                    status    = 'FAILED'
+                    mode      = 'full'
+                    reason    = 'GameLaunch tests failed'
+                }
+                exit $gameExit
+            }
+>>>>>>> Stashed changes
             Write-GateResult @{
                 timestamp = (Get-Date).ToUniversalTime().ToString('o')
-                status    = 'FAILED'
+                status    = 'PASSED'
                 mode      = 'full'
-                reason    = 'GameLaunch tests failed'
+                reason    = 'GameLaunch SPEC-007 tests passed'
             }
-            exit $gameExit
+            Write-Gate 'Full game gate PASSED' 'Success'
+            exit 0
         }
+<<<<<<< Updated upstream
 
         Write-GateResult @{
             timestamp = (Get-Date).ToUniversalTime().ToString('o')
             status    = 'PASSED'
             mode      = 'full'
             reason    = 'GameLaunch SPEC-007 tests passed'
+=======
+        finally {
+            Stop-StrayGameLaunchProcesses
+>>>>>>> Stashed changes
         }
-        Write-Gate 'Full game gate PASSED' 'Success'
-        exit 0
     }
 
     if (-not (Test-Path -LiteralPath $claudeGate)) {

@@ -95,7 +95,7 @@ for ($i = 1; $i -le $Count; $i++) {
         if (-not (Test-Path $linkPath)) {
             # Remove if exists (shouldn't happen on first run)
             if (Test-Path $linkPath) {
-                Remove-Item $linkPath -Force -ErrorAction SilentlyContinue
+                Remove-Item $linkPath -Force -ErrorAction SilentlyContinue # remove-item-ok: temp-cleanup-ok: stale symlink, replaced immediately by mklink
             }
 
             cmd /c mklink /d "$linkPath" "$($link.Target)" 2>&1 | Out-Null

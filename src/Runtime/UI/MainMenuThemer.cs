@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
 using UnityEngine;
@@ -10,513 +9,474 @@ using UnityEngine.UI;
 
 namespace DINOForge.Runtime.UI
 {
-    /// <summary>
-    /// Reads the active total_conversion pack's <c>ui_theme</c> section from its <c>pack.yaml</c>
-    /// on disk and applies in-place UI element replacement to DINO's main menu canvas.
-    ///
-    /// Instantiated by RuntimeDriver after pack-load (not a MonoBehaviour).
-    /// Uses lightweight string parsing for YAML — Runtime targets netstandard2.0 and does not
-    /// reference YamlDotNet.
-    /// </summary>
     internal sealed class MainMenuThemer
     {
-#pragma warning disable DF1006 // _log is externally owned — we do not dispose it
         private readonly ManualLogSource _log;
-#pragma warning restore DF1006
         private readonly string _packsDirectory;
         private bool _applied;
 
-        /// <summary>Whether the theme has been successfully applied to the main menu.</summary>
-        public bool IsApplied => _applied;
-
-        /// <summary>
-        /// Creates a new MainMenuThemer.
-        /// </summary>
-        /// <param name="log">BepInEx logger for diagnostics.</param>
-        /// <param name="packsDirectory">Absolute path to the packs directory on disk.</param>
-        public MainMenuThemer(ManualLogSource log, string packsDirectory)
+        internal MainMenuThemer(ManualLogSource log, string packsDirectory)
         {
-            _log = log ?? throw new ArgumentNullException(nameof(log));
-            _packsDirectory = packsDirectory ?? throw new ArgumentNullException(nameof(packsDirectory));
+            _log = log;
+            _packsDirectory = packsDirectory;
         }
 
-        /// <summary>
-        /// Called on scene change to reset the applied state so the theme can be re-applied
-        /// to the new scene's main menu canvas.
-        /// </summary>
-        public void OnSceneChanged()
-        {
-            _applied = false;
-        }
+        internal bool IsApplied => _applied;
 
-        /// <summary>
-        /// Finds the total_conversion pack with a <c>ui_theme:</c> section in its pack.yaml
-        /// and applies the theme to the MainMenu canvas.
-        /// </summary>
-        /// <param name="packs">Currently loaded pack display infos.</param>
-        public void TryApplyTheme(IReadOnlyList<PackDisplayInfo> packs)
+        internal void TryApplyTheme(IReadOnlyList<PackDisplayInfo> packs)
         {
             if (_applied) return;
-            if (packs == null || packs.Count == 0) return;
 
-            try
+            // Find the best total_conversion pack: prefer one with ui_theme on disk
+            PackDisplayInfo? tcPack = null;
+            PackDisplayInfo? tcFallback = null;
+            foreach (var p in packs)
             {
-                ThemeData? theme = FindThemeFromPacks(packs);
-                if (theme == null)
+                if (!string.Equals(p.Type, "total_conversion", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string manifestPath = Path.Combine(_packsDirectory, p.Id, "pack.yaml");
+                if (File.Exists(manifestPath))
                 {
-                    _log.LogInfo("[MainMenuThemer] No total_conversion pack with ui_theme found.");
-                    return;
+                    string content = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
+                    if (content.IndexOf("ui_theme:", StringComparison.Ordinal) >= 0)
+                    {
+                        tcPack = p;
+                        break;
+                    }
                 }
 
-                _log.LogInfo($"[MainMenuThemer] Found theme from pack '{theme.PackId}': title='{theme.Title}', subtitle='{theme.Subtitle}'");
-                DebugLog.Write("MainMenuThemer", $"Theme resolved: pack={theme.PackId} title={theme.Title}");
+                if (tcFallback == null) tcFallback = p;
+            }
 
-                Canvas? mainMenuCanvas = FindMainMenuCanvas();
-                if (mainMenuCanvas == null)
+            if (tcPack == null) tcPack = tcFallback;
+
+            if (tcPack == null)
+            {
+                DebugLog.Write("MainMenuThemer", "No total_conversion pack found among loaded packs.");
+                return;
+            }
+
+            _log.LogInfo($"[MainMenuThemer] Found total_conversion pack: '{tcPack.Name}' ({tcPack.Id})");
+
+            var theme = ReadThemeFromDisk(tcPack.Id);
+            if (theme == null)
+            {
+                _log.LogInfo("[MainMenuThemer] No ui_theme section in pack.yaml — using pack name as fallback.");
+                theme = new ThemeData
                 {
-                    _log.LogInfo("[MainMenuThemer] MainMenu canvas not found — will retry.");
-                    return;
-                }
-
-                _log.LogInfo($"[MainMenuThemer] Found MainMenu canvas: '{mainMenuCanvas.name}'");
-                DumpHierarchy(mainMenuCanvas.transform, 0, 5);
-
-                ApplyThemeToCanvas(mainMenuCanvas, theme);
-                _applied = true;
-                _log.LogInfo("[MainMenuThemer] Theme applied successfully.");
-                DebugLog.Write("MainMenuThemer", "Theme applied successfully.");
+                    Title = tcPack.Name,
+                    Subtitle = tcPack.Description ?? "",
+                    PrimaryColor = "#4ECDC4",
+                    SecondaryColor = "#2C3E50",
+                    TextColor = "#FFFFFF"
+                };
             }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[MainMenuThemer] TryApplyTheme failed: {ex}");
-                DebugLog.Write("MainMenuThemer", $"TryApplyTheme exception: {ex.Message}");
-            }
+
+            ApplyToMainMenu(theme, tcPack);
         }
 
-        // ── Theme data extraction ────────────────────────────────────────────────
-
-        private ThemeData? FindThemeFromPacks(IReadOnlyList<PackDisplayInfo> packs)
-        {
-            // First pass: prefer total_conversion packs with ui_theme
-            for (int i = 0; i < packs.Count; i++)
-            {
-                PackDisplayInfo pack = packs[i];
-                if (!pack.IsEnabled) continue;
-                if (string.Compare(pack.Type, "total_conversion", StringComparison.OrdinalIgnoreCase) != 0) continue;
-
-                ThemeData? theme = TryReadThemeFromPackYaml(pack.Id);
-                if (theme != null) return theme;
-            }
-
-            // Second pass: any enabled pack with ui_theme
-            for (int i = 0; i < packs.Count; i++)
-            {
-                PackDisplayInfo pack = packs[i];
-                if (!pack.IsEnabled) continue;
-
-                ThemeData? theme = TryReadThemeFromPackYaml(pack.Id);
-                if (theme != null) return theme;
-            }
-
-            return null;
-        }
-
-        private ThemeData? TryReadThemeFromPackYaml(string packId)
+        private ThemeData? ReadThemeFromDisk(string packId)
         {
             try
             {
-                string packYamlPath = Path.Combine(_packsDirectory, packId, "pack.yaml");
-                if (!File.Exists(packYamlPath))
+                string manifestPath = Path.Combine(_packsDirectory, packId, "pack.yaml");
+                if (!File.Exists(manifestPath))
                 {
-                    packYamlPath = Path.Combine(_packsDirectory, packId, "pack.yml");
-                    if (!File.Exists(packYamlPath)) return null;
+                    _log.LogWarning($"[MainMenuThemer] pack.yaml not found at {manifestPath}");
+                    return null;
                 }
 
-                // Pattern #106: explicit UTF-8 encoding
-                string content = File.ReadAllText(packYamlPath, Encoding.UTF8);
+                string yaml = File.ReadAllText(manifestPath, System.Text.Encoding.UTF8);
 
-                // Lightweight string parsing — find ui_theme: block
-                int themeIndex = content.IndexOf("ui_theme:", StringComparison.OrdinalIgnoreCase);
-                if (themeIndex < 0) return null;
+                // Lightweight YAML parsing — extract ui_theme block without pulling in YamlDotNet
+                // (Runtime targets netstandard2.0 and YamlDotNet may not be available at this layer).
+                int themeIdx = yaml.IndexOf("ui_theme:", StringComparison.Ordinal);
+                if (themeIdx < 0) return null;
 
-                string themeBlock = content.Substring(themeIndex);
+                var theme = new ThemeData();
+                theme.Title = ExtractYamlValue(yaml, themeIdx, "title");
+                theme.Subtitle = ExtractYamlValue(yaml, themeIdx, "subtitle");
+                theme.PrimaryColor = ExtractYamlValue(yaml, themeIdx, "primary_color") ?? "#4ECDC4";
+                theme.SecondaryColor = ExtractYamlValue(yaml, themeIdx, "secondary_color") ?? "#2C3E50";
+                theme.AccentColor = ExtractYamlValue(yaml, themeIdx, "accent_color") ?? "#E74C3C";
+                theme.TextColor = ExtractYamlValue(yaml, themeIdx, "text_color") ?? "#FFFFFF";
+                theme.BackgroundTint = ExtractYamlValue(yaml, themeIdx, "background_tint");
 
-                ThemeData theme = new ThemeData { PackId = packId };
-                theme.Title = ExtractYamlValue(themeBlock, "title");
-                theme.Subtitle = ExtractYamlValue(themeBlock, "subtitle");
-                theme.PrimaryColor = ParseColorOrDefault(ExtractYamlValue(themeBlock, "primary_color"), new Color(0.3f, 0.6f, 1f));
-                theme.SecondaryColor = ParseColorOrDefault(ExtractYamlValue(themeBlock, "secondary_color"), new Color(0.2f, 0.4f, 0.8f));
-                theme.AccentColor = ParseColorOrDefault(ExtractYamlValue(themeBlock, "accent_color"), new Color(1f, 0.84f, 0f));
-                theme.TextColor = ParseColorOrDefault(ExtractYamlValue(themeBlock, "text_color"), Color.white);
-                theme.BackgroundTint = ParseColorOrDefault(ExtractYamlValue(themeBlock, "background_tint"), new Color(0.05f, 0.05f, 0.15f));
-
+                _log.LogInfo($"[MainMenuThemer] Parsed ui_theme: title='{theme.Title}' primary={theme.PrimaryColor}");
                 return theme;
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[MainMenuThemer] Failed to read pack.yaml for '{packId}': {ex}");
+                _log.LogWarning($"[MainMenuThemer] Failed to read theme from disk: {ex.Message}");
                 return null;
             }
         }
 
-        /// <summary>
-        /// Extracts a simple YAML value for a given key from a block of text.
-        /// Handles: <c>key: value</c> and <c>key: "value"</c>.
-        /// Returns empty string if not found.
-        /// </summary>
-        private static string ExtractYamlValue(string block, string key)
+        private static string? ExtractYamlValue(string yaml, int blockStart, string key)
         {
             string searchKey = key + ":";
-            int keyIndex = -1;
-            int searchFrom = 0;
-            while (searchFrom < block.Length)
-            {
-                int idx = block.IndexOf(searchKey, searchFrom, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0) break;
+            int keyIdx = yaml.IndexOf(searchKey, blockStart, StringComparison.Ordinal);
+            if (keyIdx < 0) return null;
 
-                // Ensure we're at line start or after whitespace (not a substring of another key)
-                if (idx > 0)
+            // Don't read past the next top-level key (a line starting without indentation)
+            int nextTopLevel = -1;
+            int searchFrom = blockStart + "ui_theme:".Length;
+            for (int i = searchFrom; i < yaml.Length; i++)
+            {
+                if (i > 0 && yaml[i - 1] == '\n' && i < yaml.Length && yaml[i] != ' ' && yaml[i] != '\r' && yaml[i] != '\n')
                 {
-                    char before = block[idx - 1];
-                    if (before != '\n' && before != '\r' && before != ' ' && before != '\t')
-                    {
-                        searchFrom = idx + searchKey.Length;
-                        continue;
-                    }
+                    nextTopLevel = i;
+                    break;
+                }
+            }
+
+            if (nextTopLevel >= 0 && keyIdx >= nextTopLevel) return null;
+
+            int valueStart = keyIdx + searchKey.Length;
+            int lineEnd = yaml.IndexOf('\n', valueStart);
+            if (lineEnd < 0) lineEnd = yaml.Length;
+
+            string raw = yaml.Substring(valueStart, lineEnd - valueStart).Trim();
+            if (raw.Length >= 2 && raw[0] == '"' && raw[raw.Length - 1] == '"')
+                raw = raw.Substring(1, raw.Length - 2);
+            if (raw.Length >= 2 && raw[0] == '\'' && raw[raw.Length - 1] == '\'')
+                raw = raw.Substring(1, raw.Length - 2);
+
+            return string.IsNullOrEmpty(raw) ? null : raw;
+        }
+
+        private void ApplyToMainMenu(ThemeData theme, PackDisplayInfo pack)
+        {
+            try
+            {
+                ColorUtility.TryParseHtmlString(theme.PrimaryColor, out Color primaryColor);
+                ColorUtility.TryParseHtmlString(theme.SecondaryColor, out Color secondaryColor);
+                ColorUtility.TryParseHtmlString(theme.TextColor, out Color textColor);
+                ColorUtility.TryParseHtmlString(theme.AccentColor ?? "#E74C3C", out Color accentColor);
+
+                Canvas? menuCanvas = FindMainMenuCanvas();
+                if (menuCanvas == null)
+                {
+                    _log.LogWarning("[MainMenuThemer] Could not find MainMenu canvas — will retry on next scene change.");
+                    return;
                 }
 
-                keyIndex = idx;
-                break;
+                _log.LogInfo($"[MainMenuThemer] Applying theme to canvas '{menuCanvas.name}'");
+
+                // Dump hierarchy for diagnostics
+                DumpCanvasHierarchy(menuCanvas);
+
+                // 1. Replace the game title/logo text with mod title
+                ReplaceGameTitle(menuCanvas, theme, primaryColor);
+
+                // 2. Tint the background image
+                TintBackgroundImage(menuCanvas, theme, secondaryColor);
+
+                // 3. Restyle all menu buttons in-place
+                RestyleMenuButtons(menuCanvas, primaryColor, secondaryColor, textColor, accentColor);
+
+                // 4. Rewrite button labels for total conversion flavor
+                RewriteButtonLabels(menuCanvas, theme, textColor);
+
+                _applied = true;
+                _log.LogInfo($"[MainMenuThemer] Theme applied: '{theme.Title}' on canvas '{menuCanvas.name}'");
+                DebugLog.Write("MainMenuThemer", $"Theme applied: title='{theme.Title}' primary={theme.PrimaryColor} canvas='{menuCanvas.name}'");
             }
-
-            if (keyIndex < 0) return string.Empty;
-
-            int valueStart = keyIndex + searchKey.Length;
-            int lineEnd = block.IndexOf('\n', valueStart);
-            if (lineEnd < 0) lineEnd = block.Length;
-
-            string raw = block.Substring(valueStart, lineEnd - valueStart).Trim();
-
-            // Strip surrounding quotes
-            if (raw.Length >= 2 && ((raw[0] == '"' && raw[raw.Length - 1] == '"') || (raw[0] == '\'' && raw[raw.Length - 1] == '\'')))
+            catch (Exception ex)
             {
-                raw = raw.Substring(1, raw.Length - 2);
+                _log.LogError($"[MainMenuThemer] ApplyToMainMenu failed: {ex}");
             }
-
-            return raw;
         }
 
-        private static Color ParseColorOrDefault(string hex, Color defaultColor)
+        private void DumpCanvasHierarchy(Canvas canvas)
         {
-            if (string.IsNullOrEmpty(hex)) return defaultColor;
-            // Ensure hex starts with #
-            if (hex[0] != '#') hex = "#" + hex;
-            if (ColorUtility.TryParseHtmlString(hex, out Color c))
-                return c;
-            return defaultColor;
+            var sb = new System.Text.StringBuilder(4096);
+            sb.AppendLine("[MainMenuThemer] Canvas hierarchy dump:");
+            DumpTransform(canvas.transform, sb, 0, 3);
+            _log.LogInfo(sb.ToString());
         }
 
-        // ── Canvas discovery ─────────────────────────────────────────────────────
+        private void DumpTransform(Transform t, System.Text.StringBuilder sb, int depth, int maxDepth)
+        {
+            if (depth > maxDepth) return;
+            string indent = new string(' ', depth * 2);
+            string components = "";
+
+            var img = t.GetComponent<Image>();
+            if (img != null) components += $" [Image sprite={(img.sprite != null ? img.sprite.name : "null")} color={img.color}]";
+
+            var txt = t.GetComponent<Text>();
+            if (txt != null) components += $" [Text='{(txt.text?.Length > 30 ? txt.text.Substring(0, 30) + "..." : txt.text)}']";
+
+            // Check for TMP_Text via reflection (may not be available)
+            try
+            {
+                var tmpType = t.GetComponent("TMPro.TMP_Text");
+                if (tmpType != null)
+                {
+                    var textProp = tmpType.GetType().GetProperty("text");
+                    string? tmpText = textProp?.GetValue(tmpType) as string;
+                    if (tmpText != null) components += $" [TMP='{(tmpText.Length > 30 ? tmpText.Substring(0, 30) + "..." : tmpText)}']";
+                }
+            }
+            catch { /* safe-swallow: TMP reflection is diagnostic only */ }
+
+            sb.AppendLine($"{indent}{t.name}{components}");
+
+            for (int i = 0; i < t.childCount; i++)
+                DumpTransform(t.GetChild(i), sb, depth + 1, maxDepth);
+        }
 
         private Canvas? FindMainMenuCanvas()
         {
-            Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
-            foreach (Canvas canvas in allCanvases)
+            Canvas[] canvases = UnityEngine.Object.FindObjectsOfType<Canvas>();
+            foreach (Canvas c in canvases)
             {
-                if (canvas == null) continue;
-                if (canvas.name != null && canvas.name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0
-                    && canvas.gameObject.activeInHierarchy)
-                {
-                    return canvas;
-                }
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                if (c.name.Contains("MainMenu") || c.name.Contains("mainmenu"))
+                    return c;
             }
+
+            // Fallback: find any canvas with buttons (likely the menu)
+            foreach (Canvas c in canvases)
+            {
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                if (c.name.Contains("DINOForge") || c.name.Contains("DFCanvas")) continue;
+                Button[] buttons = c.GetComponentsInChildren<Button>(false);
+                if (buttons.Length >= 3) return c;
+            }
+
             return null;
         }
 
-        // ── Hierarchy dump ───────────────────────────────────────────────────────
-
-        private void DumpHierarchy(Transform root, int depth, int maxDepth)
+        private void ReplaceGameTitle(Canvas canvas, ThemeData theme, Color primaryColor)
         {
-            if (depth > maxDepth || root == null) return;
+            if (string.IsNullOrEmpty(theme.Title)) return;
 
-            string indent = new string(' ', depth * 2);
-            StringBuilder info = new StringBuilder(256);
-            info.Append(indent).Append(root.name);
-
-            // Note component types
-            Component[] components = root.GetComponents<Component>();
-            if (components.Length > 0)
-            {
-                info.Append(" [");
-                for (int i = 0; i < components.Length; i++)
-                {
-                    if (i > 0) info.Append(", ");
-                    info.Append(components[i] != null ? components[i].GetType().Name : "null");
-                }
-                info.Append("]");
-            }
-
-            _log.LogInfo($"[MainMenuThemer:Hierarchy] {info}");
-
-            for (int i = 0; i < root.childCount; i++)
-            {
-                DumpHierarchy(root.GetChild(i), depth + 1, maxDepth);
-            }
-        }
-
-        // ── Theme application ────────────────────────────────────────────────────
-
-        private void ApplyThemeToCanvas(Canvas canvas, ThemeData theme)
-        {
-            Transform root = canvas.transform;
-
-            // 1. Replace game title text (TMP_Text via reflection, priority 1; legacy Text fallback)
-            if (!string.IsNullOrEmpty(theme.Title))
-            {
-                ReplaceTitle(root, theme);
-            }
-
-            // 2. Tint the largest background Image with background_tint at 0.85 alpha
-            TintLargestBackground(root, theme.BackgroundTint);
-
-            // 3. Restyle ALL Selectable components with theme colors
-            RestyleSelectables(root, theme);
-
-            // 4. Rewrite button labels
-            RewriteButtonLabels(root);
-        }
-
-        private void ReplaceTitle(Transform root, ThemeData theme)
-        {
-            // Try TMP_Text first via reflection
-            Type? tmpType = Type.GetType("TMPro.TextMeshProUGUI, Unity.TextMeshPro")
-                         ?? Type.GetType("TMPro.TextMeshProUGUI, Assembly-CSharp");
-
-            if (tmpType != null)
-            {
-                Component[] tmpTexts = root.GetComponentsInChildren(tmpType, true);
-                if (tmpTexts.Length > 0)
-                {
-                    // Find the largest text component (likely the title)
-                    Component? bestCandidate = null;
-                    float bestSize = 0f;
-
-                    System.Reflection.PropertyInfo? fontSizeProp = tmpType.GetProperty("fontSize");
-                    System.Reflection.PropertyInfo? textProp = tmpType.GetProperty("text");
-                    System.Reflection.PropertyInfo? colorProp = tmpType.GetProperty("color");
-
-                    foreach (Component tmp in tmpTexts)
-                    {
-                        if (tmp == null) continue;
-                        object? sizeObj = fontSizeProp?.GetValue(tmp);
-                        float size = sizeObj is float f ? f : 0f;
-                        if (size > bestSize)
-                        {
-                            bestSize = size;
-                            bestCandidate = tmp;
-                        }
-                    }
-
-                    if (bestCandidate != null && textProp != null)
-                    {
-                        textProp.SetValue(bestCandidate, theme.Title);
-                        colorProp?.SetValue(bestCandidate, theme.TextColor);
-                        _log.LogInfo($"[MainMenuThemer] Set TMP title to '{theme.Title}' (fontSize={bestSize})");
-
-                        // Apply subtitle to the second-largest if available
-                        if (!string.IsNullOrEmpty(theme.Subtitle) && tmpTexts.Length > 1)
-                        {
-                            Component? secondBest = null;
-                            float secondBestSize = 0f;
-                            foreach (Component tmp in tmpTexts)
-                            {
-                                if (tmp == null || tmp == bestCandidate) continue;
-                                object? sizeObj = fontSizeProp?.GetValue(tmp);
-                                float size = sizeObj is float f2 ? f2 : 0f;
-                                if (size > secondBestSize)
-                                {
-                                    secondBestSize = size;
-                                    secondBest = tmp;
-                                }
-                            }
-                            if (secondBest != null)
-                            {
-                                textProp.SetValue(secondBest, theme.Subtitle);
-                                colorProp?.SetValue(secondBest, theme.TextColor);
-                                _log.LogInfo($"[MainMenuThemer] Set TMP subtitle to '{theme.Subtitle}'");
-                            }
-                        }
-                        return;
-                    }
-                }
-            }
-
-            // Fallback: legacy UnityEngine.UI.Text
-            Text[] texts = root.GetComponentsInChildren<Text>(true);
-            if (texts.Length == 0) return;
-
-            Text? largestText = null;
-            int largestFontSize = 0;
+            // Walk all Text and TMP_Text in the canvas looking for the game title
+            // DINO's main menu typically has the game title as a large Text or Image element
+            Text[] texts = canvas.GetComponentsInChildren<Text>(true);
+            int replaced = 0;
             foreach (Text t in texts)
             {
-                if (t == null) continue;
-                if (t.fontSize > largestFontSize)
+                if (t == null || t.text == null) continue;
+                string lower = t.text.ToLowerInvariant();
+                // Match the game title or any prominent heading text
+                if (lower.Contains("diplomacy") || lower.Contains("not an option") || lower.Contains("dino"))
                 {
-                    largestFontSize = t.fontSize;
-                    largestText = t;
+                    _log.LogInfo($"[MainMenuThemer] Replacing title text '{t.text}' → '{theme.Title}'");
+                    t.text = theme.Title;
+                    t.color = primaryColor;
+                    t.fontStyle = FontStyle.Bold;
+                    replaced++;
                 }
             }
 
-            if (largestText != null)
+            // Also try TMP_Text via reflection
+            try
             {
-                largestText.text = theme.Title;
-                largestText.color = theme.TextColor;
-                _log.LogInfo($"[MainMenuThemer] Set legacy Text title to '{theme.Title}' (fontSize={largestFontSize})");
-
-                if (!string.IsNullOrEmpty(theme.Subtitle) && texts.Length > 1)
+                var allTmp = canvas.GetComponentsInChildren<Component>(true);
+                foreach (var c in allTmp)
                 {
-                    Text? secondLargest = null;
-                    int secondLargestSize = 0;
-                    foreach (Text t in texts)
+                    if (c == null) continue;
+                    var cType = c.GetType();
+                    if (cType.FullName != "TMPro.TMP_Text" && !cType.FullName.StartsWith("TMPro.TextMeshPro")) continue;
+
+                    var textProp = cType.GetProperty("text");
+                    if (textProp == null) continue;
+                    string? tmpText = textProp.GetValue(c) as string;
+                    if (tmpText == null) continue;
+
+                    string lower = tmpText.ToLowerInvariant();
+                    if (lower.Contains("diplomacy") || lower.Contains("not an option") || lower.Contains("dino"))
                     {
-                        if (t == null || t == largestText) continue;
-                        if (t.fontSize > secondLargestSize)
-                        {
-                            secondLargestSize = t.fontSize;
-                            secondLargest = t;
-                        }
-                    }
-                    if (secondLargest != null)
-                    {
-                        secondLargest.text = theme.Subtitle;
-                        secondLargest.color = theme.TextColor;
-                        _log.LogInfo($"[MainMenuThemer] Set legacy Text subtitle to '{theme.Subtitle}'");
+                        _log.LogInfo($"[MainMenuThemer] Replacing TMP title '{tmpText}' → '{theme.Title}'");
+                        textProp.SetValue(c, theme.Title);
+
+                        var colorProp = cType.GetProperty("color");
+                        colorProp?.SetValue(c, primaryColor);
+                        replaced++;
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[MainMenuThemer] TMP title replacement failed: {ex.Message}"); // pattern-96-ok: diagnostic only
+            }
+
+            _log.LogInfo($"[MainMenuThemer] Title replacement: {replaced} element(s) updated.");
         }
 
-        private void TintLargestBackground(Transform root, Color tint)
+        private void TintBackgroundImage(Canvas canvas, ThemeData theme, Color secondaryColor)
         {
-            Image[] images = root.GetComponentsInChildren<Image>(true);
-            if (images.Length == 0) return;
-
-            Image? largest = null;
-            float largestArea = 0f;
+            // Find the largest Image in the canvas — likely the background
+            Image[] images = canvas.GetComponentsInChildren<Image>(true);
+            Image? largestImg = null;
+            float largestArea = 0;
 
             foreach (Image img in images)
             {
                 if (img == null) continue;
-                RectTransform? rt = img.GetComponent<RectTransform>();
+                // Skip DINOForge elements
+                if (img.gameObject.name.Contains("DINOForge") || img.gameObject.name.Contains("DFCanvas")) continue;
+
+                RectTransform rt = img.GetComponent<RectTransform>();
                 if (rt == null) continue;
                 float area = rt.rect.width * rt.rect.height;
                 if (area > largestArea)
                 {
                     largestArea = area;
-                    largest = img;
+                    largestImg = img;
                 }
             }
 
-            if (largest != null)
+            if (largestImg != null)
             {
-                Color applied = tint;
-                applied.a = 0.85f;
-                largest.color = applied;
-                _log.LogInfo($"[MainMenuThemer] Tinted largest background '{largest.name}' (area={largestArea:F0}) with {ColorUtility.ToHtmlStringRGBA(applied)}");
+                Color bgTint = theme.BackgroundTint != null && ColorUtility.TryParseHtmlString(theme.BackgroundTint, out Color parsed)
+                    ? new Color(parsed.r, parsed.g, parsed.b, 0.6f)
+                    : new Color(secondaryColor.r, secondaryColor.g, secondaryColor.b, 0.5f);
+
+                _log.LogInfo($"[MainMenuThemer] Tinting background '{largestImg.name}' (area={largestArea:F0})");
+                largestImg.color = bgTint;
             }
         }
 
-        private void RestyleSelectables(Transform root, ThemeData theme)
+        private void RestyleMenuButtons(Canvas canvas, Color primaryColor, Color secondaryColor, Color textColor, Color accentColor)
         {
-            // Restyle ALL Selectable components — DINO uses MainMenuButton:Selectable, not just Button
-            Selectable[] selectables = root.GetComponentsInChildren<Selectable>(true);
-            int count = 0;
+            Button[] buttons = canvas.GetComponentsInChildren<Button>(false);
+            int styled = 0;
 
-            foreach (Selectable sel in selectables)
+            foreach (Button btn in buttons)
             {
-                if (sel == null) continue;
+                if (btn == null || btn.gameObject == null) continue;
+                if (btn.gameObject.name.Contains("DINOForge") || btn.gameObject.name.Contains("Mods_Button")) continue;
 
-                ColorBlock cb = sel.colors;
-                cb.normalColor = theme.PrimaryColor;
-                cb.highlightedColor = theme.AccentColor;
-                cb.pressedColor = theme.SecondaryColor;
-                cb.selectedColor = theme.AccentColor;
-                cb.disabledColor = new Color(theme.PrimaryColor.r, theme.PrimaryColor.g, theme.PrimaryColor.b, 0.4f);
-                cb.colorMultiplier = 1f;
-                cb.fadeDuration = 0.1f;
-                sel.colors = cb;
-                count++;
+                try
+                {
+                    // Restyle the button's color block
+                    var colors = btn.colors;
+                    colors.normalColor = new Color(secondaryColor.r, secondaryColor.g, secondaryColor.b, 0.9f);
+                    colors.highlightedColor = new Color(primaryColor.r, primaryColor.g, primaryColor.b, 0.85f);
+                    colors.pressedColor = new Color(accentColor.r, accentColor.g, accentColor.b, 1f);
+                    colors.selectedColor = new Color(primaryColor.r, primaryColor.g, primaryColor.b, 0.7f);
+                    btn.colors = colors;
+
+                    // Tint child Image (button background)
+                    Image? btnImg = btn.GetComponent<Image>();
+                    if (btnImg != null)
+                    {
+                        btnImg.color = new Color(secondaryColor.r, secondaryColor.g, secondaryColor.b, btnImg.color.a);
+                    }
+
+                    // Restyle button text
+                    Text? btnText = btn.GetComponentInChildren<Text>();
+                    if (btnText != null)
+                    {
+                        btnText.color = textColor;
+                    }
+
+                    // Also try TMP_Text
+                    try
+                    {
+                        var tmpComponents = btn.GetComponentsInChildren<Component>(false);
+                        foreach (var c in tmpComponents)
+                        {
+                            if (c == null) continue;
+                            if (!c.GetType().FullName.StartsWith("TMPro.")) continue;
+                            var colorProp = c.GetType().GetProperty("color");
+                            colorProp?.SetValue(c, textColor);
+                        }
+                    }
+                    catch { /* safe-swallow: TMP text styling is best-effort */ }
+
+                    styled++;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[MainMenuThemer] Failed to restyle button '{btn.name}': {ex.Message}"); // pattern-96-ok: diagnostic only
+                }
             }
 
-            _log.LogInfo($"[MainMenuThemer] Restyled {count} Selectable components with theme colors.");
+            _log.LogInfo($"[MainMenuThemer] Restyled {styled} menu buttons.");
         }
 
-#pragma warning disable DF1006 // static readonly Dictionary — not a lifecycle-managed disposable
-        private static readonly Dictionary<string, string> ButtonLabelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private void RewriteButtonLabels(Canvas canvas, ThemeData theme, Color textColor)
         {
-            { "New Game", "New Campaign" },
-            { "Continue", "Resume Campaign" },
-            { "Load Game", "Load Campaign" },
-            { "Special Missions", "Clone Wars Missions" },
-        };
-#pragma warning restore DF1006
+            // Map vanilla labels to themed equivalents
+            var labelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "New Game", "New Campaign" },
+                { "Continue", "Resume Campaign" },
+                { "Load Game", "Load Campaign" },
+                { "Special Missions", "Clone Wars Missions" },
+            };
 
-        private void RewriteButtonLabels(Transform root)
-        {
+            Text[] texts = canvas.GetComponentsInChildren<Text>(true);
             int rewritten = 0;
-
-            // Legacy Text labels
-            Text[] texts = root.GetComponentsInChildren<Text>(true);
             foreach (Text t in texts)
             {
-                if (t == null || string.IsNullOrEmpty(t.text)) continue;
-                if (ButtonLabelMap.TryGetValue(t.text.Trim(), out string? replacement))
+                if (t == null || t.text == null) continue;
+                foreach (var kv in labelMap)
                 {
-                    _log.LogInfo($"[MainMenuThemer] Rewriting label '{t.text}' -> '{replacement}'");
-                    t.text = replacement;
-                    rewritten++;
-                }
-            }
-
-            // TMP_Text labels via reflection
-            Type? tmpType = Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro")
-                         ?? Type.GetType("TMPro.TMP_Text, Assembly-CSharp");
-            if (tmpType != null)
-            {
-                System.Reflection.PropertyInfo? textProp = tmpType.GetProperty("text");
-                if (textProp != null)
-                {
-                    Component[] tmpTexts = root.GetComponentsInChildren(tmpType, true);
-                    foreach (Component tmp in tmpTexts)
+                    if (string.Equals(t.text.Trim(), kv.Key, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (tmp == null) continue;
-                        string? currentText = textProp.GetValue(tmp) as string;
-                        if (string.IsNullOrEmpty(currentText)) continue;
-                        if (ButtonLabelMap.TryGetValue(currentText!.Trim(), out string? replacement2) && replacement2 != null)
-                        {
-                            _log.LogInfo($"[MainMenuThemer] Rewriting TMP label '{currentText}' -> '{replacement2}'");
-                            textProp.SetValue(tmp, replacement2!);
-                            rewritten++;
-                        }
+                        _log.LogInfo($"[MainMenuThemer] Rewriting label '{t.text}' → '{kv.Value}'");
+                        t.text = kv.Value;
+                        t.color = textColor;
+                        rewritten++;
+                        break;
                     }
                 }
             }
 
+            // TMP_Text variant
+            try
+            {
+                var allComponents = canvas.GetComponentsInChildren<Component>(true);
+                foreach (var c in allComponents)
+                {
+                    if (c == null) continue;
+                    var cType = c.GetType();
+                    if (!cType.FullName.StartsWith("TMPro.")) continue;
+                    var textProp = cType.GetProperty("text");
+                    if (textProp == null) continue;
+                    string? tmpText = textProp.GetValue(c) as string;
+                    if (tmpText == null) continue;
+
+                    foreach (var kv in labelMap)
+                    {
+                        if (string.Equals(tmpText.Trim(), kv.Key, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _log.LogInfo($"[MainMenuThemer] Rewriting TMP label '{tmpText}' → '{kv.Value}'");
+                            textProp.SetValue(c, kv.Value);
+                            var colorProp = cType.GetProperty("color");
+                            colorProp?.SetValue(c, textColor);
+                            rewritten++;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch { /* safe-swallow: TMP label rewrite is best-effort */ }
+
             _log.LogInfo($"[MainMenuThemer] Rewrote {rewritten} button labels.");
         }
 
-        // ── Inner types ──────────────────────────────────────────────────────────
-
-        private sealed class ThemeData
+        internal void OnSceneChanged()
         {
-            public string PackId = string.Empty;
-            public string Title = string.Empty;
-            public string Subtitle = string.Empty;
-            public Color PrimaryColor;
-            public Color SecondaryColor;
-            public Color AccentColor;
-            public Color TextColor;
-            public Color BackgroundTint;
+            _applied = false;
+        }
+
+        internal sealed class ThemeData
+        {
+            internal string? Title;
+            internal string? Subtitle;
+            internal string PrimaryColor = "#4ECDC4";
+            internal string SecondaryColor = "#2C3E50";
+            internal string? AccentColor = "#E74C3C";
+            internal string TextColor = "#FFFFFF";
+            internal string? BackgroundTint;
         }
     }
 }

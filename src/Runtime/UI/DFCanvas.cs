@@ -36,6 +36,7 @@ namespace DINOForge.Runtime.UI
 
         // ── Private state ─────────────────────────────────────────────────────────
         private ManualLogSource? _log;
+        private string _lastEventSystemSnapshotKey = "";
         private Canvas? _canvas;
         private bool _ready;
         private int _eventSystemDiagTick;
@@ -192,7 +193,12 @@ namespace DINOForge.Runtime.UI
                     names[i] = systems[i] != null ? systems[i].gameObject.name : "NULL";
                 }
 
-                _log?.LogInfo($"[DFCanvas.Update] EventSystem snapshot: count={systems.Length}, current={currentName}, systems=[{string.Join(", ", names)}]");
+                string snapshotKey = $"{systems.Length}|{currentName}";
+                if (snapshotKey != _lastEventSystemSnapshotKey)
+                {
+                    _lastEventSystemSnapshotKey = snapshotKey;
+                    _log?.LogInfo($"[DFCanvas.Update] EventSystem snapshot changed: count={systems.Length}, current={currentName}, systems=[{string.Join(", ", names)}]");
+                }
             }
 
             Plugin.EnsureEventSystemAlive();

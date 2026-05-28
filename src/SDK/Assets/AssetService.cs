@@ -1,4 +1,7 @@
-// DUPLICATE CODE WARNING: src/SDK/Assets/AssetService.cs and src/Runtime/Assets/AssetService.cs are near-duplicate implementations. Changes to one MUST be ported to the other until #613 deduplication lands.
+// CANONICAL IMPLEMENTATION — see #613 / #856 for dedup history.
+// src/Runtime/Assets/AssetService.cs is the netstandard2.0 mirror of this file (BepInEx test compat).
+// All production callers MUST use this SDK version. The Runtime copy exists only for test TFM parity.
+// When changing public API or behaviour here, mirror the change in src/Runtime/Assets/AssetService.cs.
 using System;
 using System.Collections.Generic;
 using System.IO;

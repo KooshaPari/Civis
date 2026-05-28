@@ -32,7 +32,7 @@ public sealed class SourceRulesDocument
     /// Ranked source tier definitions.
     /// </summary>
     [YamlMember(Alias = "source_tiers")]
-    public List<SourceTier> SourceTiers { get; set; } = new List<SourceTier>();
+    public List<SourceTier> SourceTiers { get; set; } = new List<SourceTier>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
     /// <summary>
     /// Risk rules by <c>ip_status</c> key.
@@ -74,19 +74,19 @@ public sealed class PolicySection
     /// Sources explicitly allowed for automated intake.
     /// </summary>
     [YamlMember(Alias = "allow_release_safe_mark")]
-    public List<string> AllowReleaseSafeMark { get; set; } = new List<string>();
+    public List<string> AllowReleaseSafeMark { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
     /// <summary>
     /// IP gates that block release.
     /// </summary>
     [YamlMember(Alias = "forbid_release_if_ip_status_not")]
-    public List<string> ForbidReleaseIfIpStatusNot { get; set; } = new List<string>();
+    public List<string> ForbidReleaseIfIpStatusNot { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 
     /// <summary>
     /// Preferred acquisition order.
     /// </summary>
     [YamlMember(Alias = "prefer_acquisition_order")]
-    public List<string> PreferAcquisitionOrder { get; set; } = new List<string>();
+    public List<string> PreferAcquisitionOrder { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 }
 
 /// <summary>
@@ -146,7 +146,7 @@ public sealed class SourceCapabilities
     public bool ApiDownload { get; set; }
 
     [YamlMember(Alias = "formats")]
-    public List<string> Formats { get; set; } = new List<string>();
+    public List<string> Formats { get; set; } = new List<string>(); // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
 }
 
 /// <summary>

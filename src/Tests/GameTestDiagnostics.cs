@@ -423,7 +423,7 @@ namespace DINOForge.Tests
         public string? RootCause { get; set; }
 
         [JsonPropertyName("affected_systems")]
-        public List<string> AffectedSystems { get; set; } = new();
+        public List<string> AffectedSystems { get; set; } = new(); // public-mutable-ok: JSON deserializer requires mutable List for test diagnostics DTO
 
         [JsonPropertyName("last_successful_event")]
         public string? LastSuccessfulEvent { get; set; }

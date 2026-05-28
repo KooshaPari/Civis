@@ -293,6 +293,9 @@ namespace DINOForge.SDK.Assets
             }
         }
 
+        /// <summary>
+        /// Disposes the cache manager and releases resources.
+        /// </summary>
         public void Dispose()
         {
             _disposed = true;

@@ -45,10 +45,11 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "citizen_lifecycle",
     "military",
     "economy",
+    "planet",
+    "diplomacy",
     "tactics",
     "voxel",
     "compact",
-    "planet",
     "buildings",
     "diffusion",
 ];
@@ -992,12 +993,12 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.phase_planet();
         self.diplomacy_events.clear();
         self.phase_diplomacy();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
-        self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
         self.replay_log.record_tick(self.state.tick);
@@ -1600,6 +1601,7 @@ impl Simulation {
             diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
+            climate: self.climate,
         }
     }
 }
@@ -1681,6 +1683,9 @@ pub struct SimulationSnapshot {
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,
+    /// Deterministic climate snapshot computed by `phase_planet` for the current tick
+    /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
+    pub climate: Climate,
 }
 
 // ============================================================================
@@ -1752,10 +1757,11 @@ mod tests {
                 "citizen_lifecycle",
                 "military",
                 "economy",
+                "planet",
+                "diplomacy",
                 "tactics",
                 "voxel",
                 "compact",
-                "planet",
                 "buildings",
                 "diffusion",
             ]
@@ -1886,6 +1892,48 @@ mod tests {
         sim.tick();
         let expected = compute_climate(sim.state.tick, &planet, &moon);
         assert_eq!(sim.climate(), &expected);
+    }
+
+    /// FR-CIV-PLANET-010 — `Simulation::snapshot()` surfaces the deterministic
+    /// `Climate` produced by `phase_planet`, bit-identical to `compute_climate`.
+    #[test]
+    fn engine_tick_includes_climate_in_snapshot() {
+        let mut sim = Simulation::with_seed(2026);
+        let planet = *sim.planet();
+        let moon = *sim.moon();
+
+        // Tick 0 — pre-tick climate is computed at construction time.
+        let snap0 = sim.snapshot();
+        let expected0 = compute_climate(sim.state.tick, &planet, &moon);
+        assert_eq!(snap0.tick, 0);
+        assert_eq!(snap0.climate, expected0);
+
+        // Advance ticks and confirm snapshot.climate stays bit-identical.
+        for _ in 0..5 {
+            sim.tick();
+            let snap = sim.snapshot();
+            let expected = compute_climate(sim.state.tick, &planet, &moon);
+
+            assert_eq!(snap.tick, sim.state.tick);
+            assert_eq!(snap.climate.tick, expected.tick);
+            assert_eq!(
+                snap.climate.day_phase.to_bits(),
+                expected.day_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.year_phase.to_bits(),
+                expected.year_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.moon_phase.to_bits(),
+                expected.moon_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.tide_offset.to_bits(),
+                expected.tide_offset.to_bits()
+            );
+            assert_eq!(snap.climate, *sim.climate());
+        }
     }
 
     /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.

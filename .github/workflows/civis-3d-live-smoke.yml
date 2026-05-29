@@ -1,0 +1,53 @@
+name: Civis 3D Live Smoke
+
+# Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
+# FR-CIV-BEVY-021 / P-W1 kickoff item 46 — mirrors `just civis-3d-live-smoke`.
+on:
+  pull_request:
+    paths:
+      - 'clients/bevy-ref/**'
+      - 'crates/server/**'
+      - 'crates/protocol-3d/**'
+      - 'justfile'
+      - '.github/workflows/civis-3d-live-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'clients/bevy-ref/**'
+      - 'crates/server/**'
+      - 'crates/protocol-3d/**'
+      - 'justfile'
+      - '.github/workflows/civis-3d-live-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    name: headless live-attach smoke (no GPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux deps (Bevy / wgpu link)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libasound2-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxrandr-dev
+
+      - uses: extractions/setup-just@v2
+
+      - name: civis-3d-live-smoke
+        run: just civis-3d-live-smoke

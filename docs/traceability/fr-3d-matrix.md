@@ -178,6 +178,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-BEVY-015 | `civ-bevy-window` live scene focus — orbit centre and minimap bounds follow streamed agents, buildings, graph, and chunks (parity with `live_scene`). | `clients/bevy-ref` (`live_focus`, `bevy_window`) | `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
 | FR-CIV-BEVY-016 | P-W1 kickoff **item 41**: extend `civis-3d-live-smoke` CI gate — F3D0 WS, `live_ground`, `live_stream::`, minimap UV lib tests, Bevy compile checks; document live attach + remote URL recipes. | `justfile` (`civis-3d-live-smoke`), `clients/bevy-ref/README.md` | `just civis-3d-live-smoke`, `cargo test -p civ-bevy-ref --lib chunk_to_minimap`, `cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk` | implemented |
 | FR-CIV-BEVY-017 | Live attach HUD overlay shows streamed scene stats (chunks, agents, buildings, graph parcels) and optional WS RTT. | `clients/bevy-ref` (`lib.rs` `LiveHudSnapshot`, `bevy_window`, `live_attach`, `game_ui`, `ws_client`) | `live_hud_overlay_*`, `cargo check … civ-bevy-window`, `cargo check … civ-standalone` | implemented |
+| FR-CIV-BEVY-021 | P-W1 kickoff **item 46**: GitHub Actions workflow runs headless `just civis-3d-live-smoke` on PR/push when Bevy live-attach paths change (no GPU). | `.github/workflows/civis-3d-live-smoke.yml`, `justfile` (`civis-3d-live-smoke`) | `just civis-3d-live-smoke`, workflow **Civis 3D Live Smoke** on path-filtered PR/push | implemented |
 
 ---
 
